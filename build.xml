@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<project name="jklol" default="jar">
+  <property name="tst-dir" location="test" />
+
+  <path id="classpath.base">
+  </path>
+  <path id="classpath.test">
+    <pathelement location="/usr/share/java/junit.jar" />
+    <pathelement location="build" />
+    <path refid="classpath.base" />
+  </path>
+
+  <target name="compile">
+    <mkdir dir="build" />
+    <javac srcdir="src" destdir="build" debug="on"/>
+  </target>
+
+  <target name="compile-test" depends="compile">
+    <mkdir dir="build" />
+    <javac srcdir="${tst-dir}" destdir="build" debug="on">
+      <classpath refid="classpath.test"/>
+    </javac>
+  </target>
+
+  <target name="test" depends="compile-test">
+    <junit fork="yes">
+      <assertions>
+         <enable/>
+      </assertions>
+      <classpath refid="classpath.test" />
+      <formatter type="brief" usefile="false" />
+      <test name="IndexedListTest" />
+      <test name="VariableTest" />
+      <test name="AssignmentTest" />
+      <test name="TableFactorTest" />
+      <test name="FactorGraphTest" />
+      <test name="JunctionTreeTest" />
+      <test name="GrammarTest" />
+      <test name="CfgParserTest" />
+      <test name="StochasticGradientTrainerTest" />
+      <test name="BNCountTrainerTest" />
+      <test name="EMTrainerTest" />
+      <test name="CfgFactorTest" />
+    </junit>
+  </target>
+
+  <target name="perf" depends="compile-test">
+    <junit fork="yes">
+      <assertions>
+         <enable/>
+      </assertions>
+      <classpath refid="classpath.test" />
+      <formatter type="brief" usefile="false" />
+      <test name="SparseOutcomeTablePerformanceTest" />
+      <test name="JunctionTreePerformanceTest" />
+    </junit>
+  </target>
+
+
+  <target name="jar" depends="compile">
+    <jar destfile="jklol.jar" basedir="build" />
+  </target>
+
+  <target name="clean">
+    <delete dir="build" />
+    <delete file="jklol.jar" />
+  </target>
+  
+</project>

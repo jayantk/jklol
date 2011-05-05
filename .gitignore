@@ -1,0 +1,6 @@
+# Ignore emacs temp files
+*~
+
+# ignore jklol.jar and build files
+/jklol.jar
+/build

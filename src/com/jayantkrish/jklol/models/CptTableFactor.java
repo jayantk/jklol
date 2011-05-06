@@ -5,7 +5,7 @@ import java.lang.StringBuilder;
 
 
 /**
- * A CptFactor is a factor in a Bayes Net, parameterized by a single conditional probability table.
+ * A CptTableFactor is a factor in a Bayes Net, parameterized by a single conditional probability table.
  */
 public class CptTableFactor extends CptFactor {
 

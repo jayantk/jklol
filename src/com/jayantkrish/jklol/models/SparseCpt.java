@@ -9,26 +9,19 @@ import java.util.*;
  *
  * Also stores sufficient statistics for estimating this same CPT.
  */ 
-public class SparseCpt {
+public class SparseCpt extends Cpt {
 
-    // Child / parent variables define possible outcomes.
-    private List<Variable> childVars;
-    private List<Variable> parentVars;
-    private List<Integer> parentNums;
-    private List<Integer> childNums;
+    public SparseCpt(List<Variable> parents, List<Variable> children) {
+	super(parents, children);
+    }
 
-    private List<Integer> allNums;
-    private List<Variable> allVars;
-
-    // TODO: Maybe these should be dense? It's unclear...
-    private SparseOutcomeTable<Double> childStatistics;
-    private SparseOutcomeTable<Double> parentStatistics;
-
-
+    public void setNonZeroProbabilityOutcome(Assignment a) {
+	if (!childStatistics.containsKey(a)) {
+	    setOutcomeCount(a, 0.0);
+	}
+    }
 
     public Iterator<Assignment> assignmentIterator() {
 	return childStatistics.assignmentIterator();
     }
-
-
 }

@@ -54,6 +54,16 @@ public class BayesNet extends FactorGraph {
      * with its own (new) Cpt.
      */
     public CptTableFactor addCptFactorWithNewCpt(List<String> parentVariables, List<String> childVariables) {
+	return addCptFactorWithNewCpt(parentVariables, childVariables, false);
+    }
+
+    /**
+     * Adds a new CptTableFactor, like the previous method, except that it also initializes the factor
+     * with its own (new) Cpt. If isSparse, then the factor is initialized with a sparse CPT (that must be
+     * initialized by the caller)!
+     */
+    public CptTableFactor addCptFactorWithNewCpt(List<String> parentVariables, 
+	    List<String> childVariables, boolean isSparse) {
 	CptTableFactor factor = addCptFactor(parentVariables, childVariables);
 
 	List<Integer> parentVarNums = new ArrayList<Integer>();
@@ -63,7 +73,13 @@ public class BayesNet extends FactorGraph {
 	List<Variable> childVars = new ArrayList<Variable>();
 	lookupVarStrings(childVariables, childVarNums, childVars);
 
-	Cpt cpt = new Cpt(parentVars, childVars);
+	Cpt cpt = null;
+	if (isSparse) {
+	    cpt = new SparseCpt(parentVars, childVars);
+	} else {
+	    cpt = new Cpt(parentVars, childVars);
+	}
+
 	Map<Integer, Integer> nodeCptMap = new HashMap<Integer, Integer>();
 	for (int i = 0; i < parentVarNums.size(); i++) {
 	    nodeCptMap.put(parentVarNums.get(i), i);

@@ -83,6 +83,13 @@ public abstract class Factor {
     }
 
     /**
+     * Get the assignment corresponding to a particular setting of the variables in this factor.
+     */
+    public Assignment outcomeToAssignment(Object[] outcome) {
+	return outcomeToAssignment(Arrays.asList(outcome));
+    }
+
+    /**
      * Compute the unnormalized probability of an outcome.
      */
     public double getUnnormalizedProbability(List<? extends Object> outcome) {

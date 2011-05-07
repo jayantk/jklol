@@ -104,6 +104,13 @@ public class FactorGraph {
     }
 
     /**
+     * Get the variables in the factor graph.
+     */
+    public List<Variable> getVariables() {
+	return Collections.unmodifiableList(variables);
+    }
+
+    /**
      * Get an iterator over all possible assignments to a set of variables.
      */
     public Iterator<Assignment> assignmentIterator(List<String> factorVariables) {

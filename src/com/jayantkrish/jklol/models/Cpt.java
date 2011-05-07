@@ -4,7 +4,7 @@ import java.util.*;
 
 /**
  * A conditional probability table (for a BN). Stores a conditional probability over a set of children
- * conditioned on a set of parents. This CPT is dense.
+ * conditioned on a set of parents. This CPT is stored sparsely.
  *
  * Also stores sufficient statistics for estimating a CPT.
  */ 
@@ -20,8 +20,8 @@ public class Cpt {
     private List<Variable> allVars;
 
     // TODO: Maybe these should be dense? It's unclear...
-    private SparseOutcomeTable<Double> childStatistics;
-    private SparseOutcomeTable<Double> parentStatistics;
+    protected SparseOutcomeTable<Double> childStatistics;
+    protected SparseOutcomeTable<Double> parentStatistics;
 
     public Cpt(List<Variable> parents, List<Variable> children) {
 	childVars = children;

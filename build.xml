@@ -33,6 +33,7 @@
       <test name="VariableTest" />
       <test name="AssignmentTest" />
       <test name="TableFactorTest" />
+      <test name="SparseCptTest" />
       <test name="FactorGraphTest" />
       <test name="JunctionTreeTest" />
       <test name="GrammarTest" />

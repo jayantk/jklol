@@ -3,11 +3,12 @@ package com.jayantkrish.jklol.models;
 import com.jayantkrish.jklol.util.*;
 
 import java.util.*;
+import java.io.Serializable;
 
 /**
  * A FactorGraph represents a Markov network.
  */
-public class FactorGraph {
+public class FactorGraph implements Serializable {
 
     private List<Variable> variables;
     private Map<String, Integer> variableNumMap;
@@ -83,6 +84,13 @@ public class FactorGraph {
     }
 
     /**
+     * Get the index of a factor.
+     */
+    public int getFactorIndex(Factor f) {
+	return factors.getIndex(f);
+    }
+
+    /**
      * Get all factors.
      */
     public List<Factor> getFactors() {
@@ -125,6 +133,13 @@ public class FactorGraph {
     /**
      * Get an assignment for the named set of variables.
      */
+    public Assignment outcomeToAssignment(String[] factorVariables, Object[] outcome) {
+	return outcomeToAssignment(Arrays.asList(factorVariables), Arrays.asList(outcome));
+    }
+
+    /**
+     * Get an assignment for the named set of variables.
+     */
     public Assignment outcomeToAssignment(List<String> factorVariables, List<? extends Object> outcome) {
 	assert factorVariables.size() == outcome.size();
 
@@ -148,8 +163,6 @@ public class FactorGraph {
 	}
 	return objectVals;
     }
-
-    
 
     /**
      * Get all of the factors which contain the passed-in varNum
@@ -182,5 +195,4 @@ public class FactorGraph {
 	    vars.add(variables.get(variableNumMap.get(variableName)));
 	}
     }
-
 }

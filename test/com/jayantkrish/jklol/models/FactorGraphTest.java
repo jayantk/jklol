@@ -58,6 +58,10 @@ public class FactorGraphTest extends TestCase {
 
 	assertEquals(18, returnedValues.size());
     }
+
+    public void testSerialize() {
+	
+    }
     
 
 }

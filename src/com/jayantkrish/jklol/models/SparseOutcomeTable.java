@@ -1,21 +1,31 @@
 package com.jayantkrish.jklol.models;
 
+import com.jayantkrish.jklol.util.HashMultimap;
+
 import java.util.*;
+import java.io.Serializable;
 
 /**
  * A SparseOutcomeTable sparsely stores a mapping from
  * Assignments to whatever you want.
  */
-public class SparseOutcomeTable<T> {
+public class SparseOutcomeTable<T> implements Serializable {
 
     private List<Integer> varNums;
     private Map<List<Integer>, T> outcomes;
+
+    // An index storing assignments containing particular variable values.
+    private List<HashMultimap<Integer, Assignment>> varValueAssignmentIndex;
 
     public SparseOutcomeTable(List<Integer> varNums) {
 	this.varNums = new ArrayList<Integer>(varNums);
 	Collections.sort(this.varNums);
 	
 	outcomes = new HashMap<List<Integer>, T>();
+	varValueAssignmentIndex = new ArrayList<HashMultimap<Integer, Assignment>>();
+	for (int i = 0; i < varNums.size(); i++) {
+	    varValueAssignmentIndex.add(new HashMultimap<Integer, Assignment>());
+	}
     }
 
     /**
@@ -26,9 +36,39 @@ public class SparseOutcomeTable<T> {
 	return Collections.unmodifiableList(this.varNums);
     }
 
+    /**
+     * Assign an outcome to the given assignment key.
+     */
     public void put(Assignment key, T outcome) {
 	assert key.getVarNumsSorted().equals(varNums);
 	outcomes.put(key.getVarValuesInKeyOrder(), outcome);
+	
+	Assignment copy = new Assignment(key);
+	List<Integer> varNums = getVarNums();
+	for (int i = 0; i < varNums.size(); i++) {
+	    varValueAssignmentIndex.get(i).put(copy.getVarValue(varNums.get(i)), copy);
+	}
+    }
+
+    /**
+     * Returns all of the keys in this table where varNum has a value in varValues.
+     */
+    public Set<Assignment> getKeysWithVarValue(int varNum, Set<Integer> varValues) {
+	int varIndex = -1;
+	List<Integer> varNums = getVarNums();
+	for (int i = 0; i < varNums.size(); i++) {
+	    if (varNums.get(i) == varNum) {
+		varIndex = i;
+		break;
+	    }
+	}
+	assert varIndex != -1;
+
+	Set<Assignment> possibleAssignments = new HashSet<Assignment>();
+	for (Integer varValue : varValues) {
+	    possibleAssignments.addAll(varValueAssignmentIndex.get(varIndex).get(varValue));
+	}
+	return possibleAssignments;
     }
 
     public boolean containsKey(Assignment key) {

@@ -37,7 +37,7 @@ public class SparseCptTest extends TestCase {
 				      {"F", "F", "F", "F"},
 				      {"F", "F", "T", "T"}};
 	for (int i = 0; i < assignments.length; i++) {
-	    sparse.setNonZeroProbabilityOutcome(f.outcomeToAssignment(Arrays.asList(assignments[i])));
+	    sparse.setNonZeroProbabilityOutcome(f.outcomeToAssignment(assignments[i]));
 	}
 	f.setCpt(sparse, cptVarNumMap);
     }
@@ -49,6 +49,22 @@ public class SparseCptTest extends TestCase {
 	assertEquals(0.5, f.getUnnormalizedProbability(f.outcomeToAssignment(assignments[0])));
 	assertEquals(0.0, f.getUnnormalizedProbability(f.outcomeToAssignment(new Object[] {"T", "T", "F", "F"})));
 	assertEquals(1.0, f.getUnnormalizedProbability(f.outcomeToAssignment(assignments[2])));
+    }
+
+    public void testIteration() {
+	Iterator<Assignment> iter = f.outcomeIterator();
+
+	Set<Assignment> shouldBeInIter = new HashSet<Assignment>();
+	for (int i = 0; i < assignments.length; i++) {
+	    shouldBeInIter.add(f.outcomeToAssignment(assignments[i]));
+	}
+	
+	while (iter.hasNext()) {
+	    Assignment a = iter.next();
+	    assertTrue(shouldBeInIter.contains(a));
+	    // If this outcome isn't possible, this method will throw a runtime exception
+	    f.getUnnormalizedProbability(a);
+	}
     }
 
     public void testUnsetParentError() {

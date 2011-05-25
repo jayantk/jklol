@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.inference;
 import com.jayantkrish.jklol.util.*;
 import com.jayantkrish.jklol.models.*;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
@@ -26,17 +27,41 @@ public class JunctionTree implements InferenceEngine {
     private CliqueTree cliqueTree;
     private boolean useSumProduct;
 
+    private int[] upstreamOrder;
+
     public JunctionTree() {
 	this.factorGraph = null;
 	this.cachedMarginals = new HashMap<Integer, Factor>();
 	this.cliqueTree = null;
 	useSumProduct = true;
+	upstreamOrder = null;
     }
+
+    /**
+     * upstreamOrder defines the order in which cliques (numbered by clique tree number) are 
+     * traversed during upstream message passing.
+     */
+    public JunctionTree(int[] upstreamOrder) {
+	this.factorGraph = null;
+	this.cachedMarginals = new HashMap<Integer, Factor>();
+	this.cliqueTree = null;
+	useSumProduct = true;
+	this.upstreamOrder = upstreamOrder;
+    }
+
 
     public void setFactorGraph(FactorGraph f) {
 	factorGraph = f;
+
+	if (upstreamOrder == null) {
+	    upstreamOrder = new int[f.numFactors()];
+	    for (int i = 0; i < upstreamOrder.length; i++) {
+		upstreamOrder[i] = i;
+	    }
+	}
+
 	// TODO: this assumes the factor graph is already tree structured
-	cliqueTree = new CliqueTree(f);
+	cliqueTree = new CliqueTree(f, upstreamOrder);
 	cachedMarginals.clear();
     }
 
@@ -78,7 +103,7 @@ public class JunctionTree implements InferenceEngine {
 	boolean keepGoing = true;
 	while (keepGoing) {
 	    keepGoing = false;
-	    for (int factorNum = 0; factorNum < cliqueTree.numFactors(); factorNum++) {
+	    for (int factorNum : cliqueTree.getEliminationOrder()) {
 		Set<Integer> incomingFactors = cliqueTree.getIncomingFactors(factorNum);
 		Set<Integer> adjacentFactors = cliqueTree.getNeighboringFactors(factorNum);
 		Set<Integer> outboundFactors = cliqueTree.getOutboundFactors(factorNum);
@@ -93,8 +118,8 @@ public class JunctionTree implements InferenceEngine {
 		    // There should only be one adjacent factor!
 		    assert tempCopy.size() == 1;
 		    for (Integer adjacent : tempCopy) {
-			// System.out.println("up:" + factorNum + "-->" + adjacent);
-			passMessage(factorNum, adjacent);
+			System.out.println("up:" + factorNum + "-->" + adjacent);
+			passUpMessage(factorNum, adjacent);
 		    }
 		}
 	    }
@@ -117,8 +142,8 @@ public class JunctionTree implements InferenceEngine {
 		    Set<Integer> tempCopy = new HashSet<Integer>(adjacentFactors);
 		    tempCopy.removeAll(outboundFactors);
 		    for (Integer adjacent : tempCopy) {
-			//System.out.println("down:" + factorNum + "-->" + adjacent);
-			passMessage(factorNum, adjacent);
+			System.out.println("down:" + factorNum + "-->" + adjacent);
+			passDownMessage(factorNum, adjacent);
 		    }
 		}
 	    }
@@ -126,9 +151,10 @@ public class JunctionTree implements InferenceEngine {
     }
 
     /*
-     * Compute the message that gets passed from startFactor to destFactor.
+     * Compute the message that gets passed from startFactor to destFactor on the upward pass of
+     * junction tree.
      */
-    private void passMessage(int startFactor, int destFactor) {
+    private void passUpMessage(int startFactor, int destFactor) {
 	Set<Integer> sharedVars = new HashSet<Integer>();
 	sharedVars.addAll(cliqueTree.getFactor(startFactor).getVarNums());
 	sharedVars.retainAll(cliqueTree.getFactor(destFactor).getVarNums());
@@ -152,6 +178,33 @@ public class JunctionTree implements InferenceEngine {
 
 	cliqueTree.addMessage(startFactor, destFactor, messageFactor);
     }
+
+    /*
+     * Compute the message that gets passed from startFactor to destFactor on the downward pass.
+     */
+    private void passDownMessage(int startFactor, int destFactor) {
+	Set<Integer> sharedVars = new HashSet<Integer>();
+	sharedVars.addAll(cliqueTree.getFactor(startFactor).getVarNums());
+	sharedVars.retainAll(cliqueTree.getFactor(destFactor).getVarNums());
+	Set<Integer> toEliminate = new HashSet<Integer>(cliqueTree.getFactor(startFactor).getVarNums());
+	toEliminate.removeAll(sharedVars);
+
+	Factor marginal = computeMarginal(startFactor);
+	Factor toDivide = cliqueTree.getMessage(destFactor, startFactor);
+
+	Factor messageFactor = null;
+	if (useSumProduct) {
+	    messageFactor = marginal.marginalize(toEliminate);
+	} else {
+	    messageFactor = marginal.maxMarginalize(toEliminate);
+	}
+	messageFactor = messageFactor.divide(toDivide);
+	//// System.out.println(factorsToCombine);
+	//// System.out.println(startFactor + " --> " + destFactor + " : " + messageFactor);
+
+	cliqueTree.addMessage(startFactor, destFactor, messageFactor);
+    }
+
 
 
     /**
@@ -226,6 +279,7 @@ public class JunctionTree implements InferenceEngine {
 
     private class CliqueTree {
 
+	private List<Integer> eliminationOrder;
 	private List<Factor> cliqueFactors;
 	private List<Factor> cliqueConditionalFactors;
 
@@ -235,10 +289,11 @@ public class JunctionTree implements InferenceEngine {
 
 	private HashMultimap<Integer, Integer> varCliqueFactorMap;
 
-	public CliqueTree(FactorGraph factorGraph) {
+	public CliqueTree(FactorGraph factorGraph, int[] factorEliminationOrder) {
 	    factorEdges = new HashMultimap<Integer, Integer>();
 	    messages = new ArrayList<Map<Integer, Factor>>();
 	    cliqueFactors = new ArrayList<Factor>();
+	    eliminationOrder = new ArrayList<Integer>();
 	    cliqueConditionalFactors = new ArrayList<Factor>();
 
 	    // Store factors which contain each variable so that we can eliminate
@@ -259,26 +314,19 @@ public class JunctionTree implements InferenceEngine {
 		    varFactorMap.put(varNum, f);
 		}
 
-		// Check if any previous factor is a strict subset of this one.
-		/*
-		Set<Integer> factorVars = new HashSet<Integer>(f.getVarNums());
-		for (Factor cliqueFactor : cliqueFactors) {
-		    if (factorVars.containsAll(cliqueFactor.getVarNums())) {
-			mergeableFactors.add(cliqueFactor);
-		    }
-		}
-		*/
-
 		if (mergeableFactors.size() > 0) {
 		    // Arbitrarily select a factor to merge this factor in to.
 		    Factor superset = mergeableFactors.iterator().next();
 		    int cliqueNum = factorCliqueMap.get(superset);
 		    cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(f));
+		    eliminationOrder.set(cliqueNum, Math.max(eliminationOrder.get(cliqueNum), 
+				    factorEliminationOrder[factorGraph.getFactorIndex(f)]));
 		    factorCliqueMap.put(f, cliqueNum);
 		} else {
 		    int chosenNum = cliqueFactors.size();
 		    factorCliqueMap.put(f, chosenNum);
 		    cliqueFactors.add(f);
+		    eliminationOrder.add(factorEliminationOrder[factorGraph.getFactorIndex(f)]);
 		    messages.add(new HashMap<Integer, Factor>());
 
 		    for (Integer varNum : f.getVarNums()) {
@@ -294,10 +342,26 @@ public class JunctionTree implements InferenceEngine {
 		    factorEdges.remove(i, i);
 		}
 	    }
+
+	    List<Integer> tempElimOrder = new ArrayList<Integer>();
+	    for (int i = 0; i < cliqueFactors.size(); i++) {
+		int ind = 0;
+		for (int j = 0; j < cliqueFactors.size(); j++) {
+		    if (eliminationOrder.get(j) < eliminationOrder.get(i)) {
+			ind++;
+		    }
+		}
+		tempElimOrder.add(ind);
+	    }
+	    eliminationOrder = tempElimOrder;
 	}
 
 	public int numFactors() {
 	    return cliqueFactors.size();
+	}
+
+	public List<Integer> getEliminationOrder() {
+	    return eliminationOrder;
 	}
 
 	public Factor getFactor(int factorNum) {

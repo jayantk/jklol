@@ -156,6 +156,26 @@ public class JunctionTreeTest extends TestCase {
 	t2.computeMarginals();
 
 	Factor m = t2.getMarginal(Arrays.asList(new Integer[] {0}));
+	assertEquals(8.0, 
+		m.getUnnormalizedProbability(Arrays.asList(new String[] {"F"})));
+	assertEquals(25.0,
+		m.getUnnormalizedProbability(Arrays.asList(new String[] {"T"})));
+	assertEquals(0.0,
+		m.getUnnormalizedProbability(Arrays.asList(new String[] {"U"})));
+    }
+
+    public void testOrdering() {
+	t2 = new JunctionTree(new int[] {2, 1, 0});
+	t2.setFactorGraph(f2);
+	t2.computeMarginals();
+
+	Factor m = t2.getMarginal(Arrays.asList(new Integer[] {0}));
+	assertEquals(8.0, 
+		m.getUnnormalizedProbability(Arrays.asList(new String[] {"F"})));
+	assertEquals(25.0,
+		m.getUnnormalizedProbability(Arrays.asList(new String[] {"T"})));
+	assertEquals(0.0,
+		m.getUnnormalizedProbability(Arrays.asList(new String[] {"U"})));	
     }
 
 }

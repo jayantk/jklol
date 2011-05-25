@@ -4,11 +4,12 @@ import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
 
 import java.util.*;
+import java.io.Serializable;
 
 /**
  * A Factor in a Markov Network.
  */
-public abstract class Factor {
+public abstract class Factor implements Serializable {
 
     protected List<Integer> varNums;
     protected List<Variable> vars;
@@ -188,6 +189,13 @@ public abstract class Factor {
 	return this.product(allFactors);
     }
 
+    /**
+     * Takes this factor and divides the probability of each outcome by 
+     * the probability of the same outcome in f.
+     */
+    public Factor divide(Factor f) {
+	return product(new InverseFactor(f));
+    }
 
 
     /**

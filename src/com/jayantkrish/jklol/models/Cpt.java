@@ -117,6 +117,10 @@ public class Cpt {
 	return childStatistics.get(a) / parentStatistics.get(subAssignment);
     }
 
+    public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Integer> varValues) {
+	return childStatistics.getKeysWithVarValue(varNum, varValues);
+    }
+
     public Iterator<Assignment> assignmentIterator() {
 	return new AllAssignmentIterator(allNums, allVars);
     }

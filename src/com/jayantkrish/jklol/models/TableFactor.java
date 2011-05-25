@@ -27,10 +27,6 @@ public class TableFactor extends Factor {
     // more efficient.
     private SparseOutcomeTable<Double> weights;
 
-    // An index storing assignments containing particular variable values.
-    private List<HashMultimap<Integer, Assignment>> varValueAssignmentIndex;
-    private List<Integer> keyCache;
-
     /**
      * Construct a TableFactor involving the specified variable numbers (whose possible values are
      * in variables).
@@ -38,13 +34,8 @@ public class TableFactor extends Factor {
     public TableFactor(List<Integer> varNums, List<Variable> variables) {
 	super(varNums, variables);
 
-	this.keyCache = new ArrayList<Integer>();
 	this.defaultWeight = 0.0;
 	weights = new SparseOutcomeTable<Double>(varNums);
-	varValueAssignmentIndex = new ArrayList<HashMultimap<Integer, Assignment>>(varNums.size());
-	for (int i = 0; i < varNums.size(); i++) {
-	    varValueAssignmentIndex.add(new HashMultimap<Integer, Assignment>());
-	}
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -65,21 +56,7 @@ public class TableFactor extends Factor {
     }
 
     public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Integer> varValues) {
-	int varIndex = -1;
-	List<Integer> varNums = getVarNums();
-	for (int i = 0; i < varNums.size(); i++) {
-	    if (varNums.get(i) == varNum) {
-		varIndex = i;
-		break;
-	    }
-	}
-	assert varIndex != -1;
-
-	Set<Assignment> possibleAssignments = new HashSet<Assignment>();
-	for (Integer varValue : varValues) {
-	    possibleAssignments.addAll(varValueAssignmentIndex.get(varIndex).get(varValue));
-	}
-	return possibleAssignments;
+	return weights.getKeysWithVarValue(varNum, varValues);
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -102,12 +79,6 @@ public class TableFactor extends Factor {
     public void setWeight(Assignment a, double weight) {
 	assert weight >= 0.0;
 	weights.put(a, weight);
-
-	Assignment copy = new Assignment(a);
-	List<Integer> varNums = getVarNums();
-	for (int i = 0; i < varNums.size(); i++) {
-	    varValueAssignmentIndex.get(i).put(copy.getVarValue(varNums.get(i)), copy);
-	}
     }
 
 
@@ -173,6 +144,9 @@ public class TableFactor extends Factor {
 	return returnFactor;
     }
 
+    /**
+     * Returns the result of multiplying together all of the factors in toMultiply.
+     */
     public static TableFactor productFactor(List<Factor> toMultiply) {
 	SortedMap<Integer, Variable> allVarMap = new TreeMap<Integer, Variable>();
 	for (Factor f : toMultiply) {

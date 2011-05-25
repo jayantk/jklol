@@ -38,7 +38,7 @@ public class Variable<T> {
     public int getValueIndex(T typedValue) {
 	if (!values.contains(typedValue)) {
 	    if (!openValueClass) {
-		throw new NoSuchElementException("Tried accessing " + typedValue + " of a closed variable class");
+		throw new NoSuchElementException("Tried accessing " + typedValue + " of closed variable class \"" + name + "\"");
 	    }
 	    values.add(typedValue);
 	}

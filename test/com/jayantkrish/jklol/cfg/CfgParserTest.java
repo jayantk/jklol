@@ -93,8 +93,6 @@ public class CfgParserTest extends TestCase {
 	    {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}),
 		prod("S"));
 
-	System.out.println(c);
-
 	Map<Production, Double> rootProductions = c.getMarginalEntries(0, 3);
 	assertEquals(1, rootProductions.size());
 	assertEquals(1.0, rootProductions.get(prod("S")) / c.getPartitionFunction());
@@ -139,31 +137,33 @@ public class CfgParserTest extends TestCase {
     public void testParseMaxMarginal() {
 	ParseChart c = p.parseMaxMarginal(Arrays.asList(new Production[] 
 	    {prod("baz"), prod("bbb")}), prod("barP"));
-	// System.out.println("max-marginals:");
-	// System.out.println(c);
-
 	Map<Production, Double> prods = c.getInsideEntries(0, 1);
 	assertEquals(1, prods.size());
 	assertEquals(.5, prods.get(prod("barP")));	
     }
 
-
     public void testParseMaxMarginalTree() {
 	ParseChart c = p.parseInsideMarginal(Arrays.asList(new Production[] 
 	    {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), false);
-	// System.out.println("max-marginals:");
-	// System.out.println(c);
-
 	ParseTree t = c.getBestParseTrees(prod("S"), 1).get(0);
-	System.out.println(t);
+	assertEquals(prod("S"), t.getRoot());
+	assertEquals(prod("N"), t.getLeft().getRoot());
+	assertEquals(prod("VP"), t.getRight().getRoot());
+	assertEquals(prod("V"), t.getRight().getLeft().getRoot());
     }
 
     public void testMostLikelyProductions() {
 	ParseChart c = p.mostLikelyProductions(prod("barP"), 2, 2);
 
 	List<ParseTree> trees = c.getBestParseTrees(prod("barP"), 2);
-	for (ParseTree tree : trees) {
-	    System.out.println(tree.getProbability() + " : "+ tree.getTerminalProductions() + " : " + tree);
-	}
+	assertEquals(0.5, trees.get(0).getProbability());
+	assertTrue(trees.get(0).isTerminal());
+	assertEquals(Arrays.asList(new Production[] {prod("baz"), prod("bbb")}),
+		trees.get(0).getTerminalProductions());
+	assertEquals(0.125, trees.get(1).getProbability());
+	assertEquals(prod("bar"), trees.get(1).getLeft().getRoot());
+	assertEquals(prod("bar"), trees.get(1).getRight().getRoot());
+	assertEquals(Arrays.asList(new Production[] {prod("bbb"), prod("baz")}),
+		trees.get(1).getTerminalProductions());
     }
 }

@@ -101,7 +101,13 @@ public class Cpt {
 	parentStatistics.put(subAssignment,
 		parentStatistics.get(subAssignment) + count);
     }
-    
+
+    public void addUniformSmoothing(double virtualCounts) {
+	Iterator<Assignment> assignmentIter = assignmentIterator();
+	while (assignmentIter.hasNext()) {
+	    setOutcomeCount(assignmentIter.next(), virtualCounts);
+	}
+    }
 
     /**
      * Get the probability of a particular assignment.

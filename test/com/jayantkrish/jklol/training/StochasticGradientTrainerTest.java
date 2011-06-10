@@ -12,6 +12,8 @@ public class StochasticGradientTrainerTest extends TestCase {
     StochasticGradientTrainer t;    
 
     List<Assignment> trainingData;
+    Set<Assignment> positiveFeatureAssignments;
+    Assignment factor2LeastProbable;
 
     public void setUp() {
 	f = new LogLinearModel();
@@ -54,15 +56,24 @@ public class StochasticGradientTrainerTest extends TestCase {
 	    trainingData.add(a3);
 	}
 
+	/*
+	Set<Assignment> positiveFeatureAssignments = new HashSet<Assignment>();
+	positiveFeatureAssignments.add(f.outcomeToAssignment(clique1Names,
+			Arrays.asList(new String[] {"T", "T", "T"})));
+	positiveFeatureAssignments.add(f.outcomeToAssignment(clique1Names,
+			Arrays.asList(new String[] {"F", "F", "F"})));
+	factor2LeastProbable = f.outcomeToAssignment(clique2Names,
+		Arrays.asList(new String[] {"F", "T"}));
+	*/
+
 	t = new StochasticGradientTrainer(new JunctionTree(), 10);
     }
 
     public void testTrain() {
 	t.train(f, trainingData);
-
-	System.out.println("Does this look reasonable?");
 	FeatureSet fs = f.getFeatureSet();
 	for (FeatureFunction feat : fs.getFeatures()) {
+	    // feat.getNonzeroAssignments().next()
 	    System.out.println(fs.getFeatureWeight(feat) + ": " + feat);
 	}
     }

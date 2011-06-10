@@ -56,16 +56,12 @@ public class CptTableFactor extends CptFactor {
     // CPT Factor methods
     /////////////////////////////////////////////////////////////////
 
-
     public void clearCpt() {
 	this.cpt.clearOutcomeCounts();
     }
 
     public void addUniformSmoothing(double virtualCounts) {
-	Iterator<Assignment> assignmentIter = cpt.assignmentIterator();
-	while (assignmentIter.hasNext()) {
-	    cpt.setOutcomeCount(assignmentIter.next(), virtualCounts);
-	}
+	cpt.addUniformSmoothing(virtualCounts);
     }
 
     public void incrementOutcomeCount(Assignment a, double count) {

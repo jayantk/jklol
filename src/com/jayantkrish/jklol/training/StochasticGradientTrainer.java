@@ -23,7 +23,6 @@ public class StochasticGradientTrainer {
     }
 
     public void train(LogLinearModel factorGraph, List<Assignment> trainingData) {
-
 	inferenceEngine.setFactorGraph(factorGraph);
 
 	Collections.shuffle(trainingData);	

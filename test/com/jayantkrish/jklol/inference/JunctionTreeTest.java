@@ -130,14 +130,12 @@ public class JunctionTreeTest extends TestCase {
 	t.computeMaxMarginals();
 
 	Factor m = t.getMarginal(Arrays.asList(new Integer[] {1}));	
-	System.out.println(m);
 	assertEquals(6.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {"bar"})));
 	assertEquals(9.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {"foo"})));
 
 	m = t.getMarginal(Arrays.asList(new Integer[] {0,2}));
-	System.out.println(m);
 	assertEquals(9.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T"})));
 

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.training;
 
 import com.jayantkrish.jklol.models.*;
+import com.jayantkrish.jklol.util.Pair;
 
 import java.util.*;
 
@@ -16,18 +17,20 @@ public class BNCountTrainer {
     }
 
     public void train(BayesNet bn, List<Assignment> trainingData) {
+	train(new BayesNetWrapperFactory(bn), trainingData);
+    }
 
-	// Set all CPT statistics to the smoothing value
-	for (CptFactor cptFactor : bn.getCptFactors()) {
-	    cptFactor.clearCpt();
-	    cptFactor.addUniformSmoothing(smoothingCounts);
-	}
+    public <E> void train(BayesNetFactory<E> bnFactory, List<E> factoryExamples) {
+	bnFactory.addUniformSmoothing(smoothingCounts);
 
 	// For each training example, increment sufficient statistics appropriately.
-	for (Assignment trainingExample : trainingData) {
+	for (E trainingExample : factoryExamples) {
+	    Pair<BayesNet, Assignment> p = bnFactory.instantiateFactorGraph(trainingExample);
+	    BayesNet bn = p.getLeft();
+	    Assignment assignment = p.getRight();
 	    double probability = 1.0;
 	    for (CptFactor cptFactor : bn.getCptFactors()) {
-		cptFactor.incrementOutcomeCount(trainingExample, probability);
+		cptFactor.incrementOutcomeCount(assignment, probability);
 	    }
 	}
     }

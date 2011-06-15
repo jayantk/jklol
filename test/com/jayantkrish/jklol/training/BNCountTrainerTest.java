@@ -18,15 +18,11 @@ public class BNCountTrainerTest extends TestCase {
 	bn.addVariable("Var0", tfVar);
 	bn.addVariable("Var1", tfVar);
 	bn.addVariable("Var2", tfVar);
-	// bn.addVariable("Var3", tfVar);
-	// bn.addVariable("Var4", tfVar);
 
 	CptTableFactor f0 = bn.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var0"}));
 	CptTableFactor f1 = bn.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var1"}));
 	CptTableFactor f2 = bn.addCptFactor(Arrays.asList(new String[] {"Var0", "Var1"}), 
 		Arrays.asList(new String[] {"Var2"}));
-	// CptFactor f3 = bn.addCptFactor(Arrays.asList(new String[] {"Var2"}), Arrays.asList(new String[] {"Var3"}));
-	// CptFactor f4 = bn.addCptFactor(Arrays.asList(new String[] {"Var2"}), Arrays.asList(new String[] {"Var4"}));
 
 	Cpt noNodeCpt = new Cpt(Collections.EMPTY_LIST, Arrays.asList(new Variable[] {tfVar}));
 	Cpt vCpt = new Cpt(Arrays.asList(new Variable[] {tfVar, tfVar}), Arrays.asList(new Variable[] {tfVar}));
@@ -58,7 +54,6 @@ public class BNCountTrainerTest extends TestCase {
 	    trainingData.add(a2);
 	    trainingData.add(a3);
 	}
-
 	t = new BNCountTrainer(1);
     }
 

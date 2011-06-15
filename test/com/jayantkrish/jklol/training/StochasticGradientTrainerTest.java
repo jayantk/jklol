@@ -10,10 +10,10 @@ public class StochasticGradientTrainerTest extends TestCase {
 
     LogLinearModel f;
     StochasticGradientTrainer t;    
+    List<String> clique1Names;
+    List<String> clique2Names;
 
     List<Assignment> trainingData;
-    Set<Assignment> positiveFeatureAssignments;
-    Assignment factor2LeastProbable;
 
     public void setUp() {
 	f = new LogLinearModel();
@@ -26,10 +26,10 @@ public class StochasticGradientTrainerTest extends TestCase {
 	f.addVariable("Var2", tfVar);
 	f.addVariable("Var3", tfVar);
 
-	List<String> clique1Names = Arrays.asList(new String[] {"Var0", "Var1", "Var2"});
+	clique1Names = Arrays.asList(new String[] {"Var0", "Var1", "Var2"});
 	LogLinearFactor l1 = f.addLogLinearFactor(clique1Names);
 
-	List<String> clique2Names = Arrays.asList(new String[] {"Var2", "Var3"});
+	clique2Names = Arrays.asList(new String[] {"Var2", "Var3"});
 	LogLinearFactor l2 = f.addLogLinearFactor(clique2Names);
 
 	Iterator<Assignment> assignmentIter = f.assignmentIterator(clique1Names);
@@ -55,28 +55,33 @@ public class StochasticGradientTrainerTest extends TestCase {
 	    trainingData.add(a2);
 	    trainingData.add(a3);
 	}
-
-	/*
-	Set<Assignment> positiveFeatureAssignments = new HashSet<Assignment>();
-	positiveFeatureAssignments.add(f.outcomeToAssignment(clique1Names,
-			Arrays.asList(new String[] {"T", "T", "T"})));
-	positiveFeatureAssignments.add(f.outcomeToAssignment(clique1Names,
-			Arrays.asList(new String[] {"F", "F", "F"})));
-	factor2LeastProbable = f.outcomeToAssignment(clique2Names,
-		Arrays.asList(new String[] {"F", "T"}));
-	*/
-
 	t = new StochasticGradientTrainer(new JunctionTree(), 10);
     }
 
     public void testTrain() {
+	// These assignments should have positive weight for clique 1
+	Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
+	clique1PositiveAssignments.add(f.outcomeToAssignment(clique1Names,
+			Arrays.asList(new String[] {"T", "T", "T"})));
+	clique1PositiveAssignments.add(f.outcomeToAssignment(clique1Names,
+			Arrays.asList(new String[] {"F", "F", "F"})));
+
+	Set<Assignment> clique2NegativeAssignments = new HashSet<Assignment>();
+	clique2NegativeAssignments.add(f.outcomeToAssignment(clique2Names,
+			Arrays.asList(new String[] {"F", "T"})));
+
 	t.train(f, trainingData);
 	FeatureSet fs = f.getFeatureSet();
 	for (FeatureFunction feat : fs.getFeatures()) {
-	    // feat.getNonzeroAssignments().next()
-	    System.out.println(fs.getFeatureWeight(feat) + ": " + feat);
+	    // System.out.println(fs.getFeatureWeight(feat) + ": " + feat);
+	    Assignment a = feat.getNonzeroAssignments().next();
+	    if (a.getVarNumsSorted().size() == 3) {
+		assertTrue(clique1PositiveAssignments.contains(a) ||
+			fs.getFeatureWeight(feat) < 0.0);
+	    } else {
+		assertTrue(clique2NegativeAssignments.contains(a) ||
+		 	fs.getFeatureWeight(feat) > -1.0);
+	    }
 	}
     }
-
-
 }

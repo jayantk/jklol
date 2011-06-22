@@ -78,7 +78,7 @@ public class JunctionTreeTest extends TestCase {
     public void testMarginals() {
 	t.computeMarginals();
 
-	Factor m = t.getMarginal(Arrays.asList(new Integer[] {1}));
+	DiscreteFactor m = t.getMarginal(Arrays.asList(new Integer[] {1}));
 	
 	assertEquals(27.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {"foo"})));
@@ -105,7 +105,7 @@ public class JunctionTreeTest extends TestCase {
 	t.computeMarginals(f.outcomeToAssignment(Arrays.asList(new String[]{"Var2"}),
 			Arrays.asList(new String[]{"F"})));
 
-	Factor m = t.getMarginal(Arrays.asList(new Integer[] {1}));
+	DiscreteFactor m = t.getMarginal(Arrays.asList(new Integer[] {1}));
 	assertEquals(12.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {"foo"})));
 	assertEquals(6.0,
@@ -129,7 +129,7 @@ public class JunctionTreeTest extends TestCase {
     public void testMaxMarginals() {
 	t.computeMaxMarginals();
 
-	Factor m = t.getMarginal(Arrays.asList(new Integer[] {1}));	
+	DiscreteFactor m = t.getMarginal(Arrays.asList(new Integer[] {1}));	
 	assertEquals(6.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {"bar"})));
 	assertEquals(9.0,
@@ -153,7 +153,7 @@ public class JunctionTreeTest extends TestCase {
     public void testNonTreeStructured() {
 	t2.computeMarginals();
 
-	Factor m = t2.getMarginal(Arrays.asList(new Integer[] {0}));
+	DiscreteFactor m = t2.getMarginal(Arrays.asList(new Integer[] {0}));
     }
 
 }

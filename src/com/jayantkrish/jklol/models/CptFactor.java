@@ -8,7 +8,7 @@ import java.lang.StringBuilder;
  * A CptFactor is a factor in a Bayes Net, parameterized by one or more
  * conditional probability tables.
  */
-public abstract class CptFactor extends Factor {
+public abstract class CptFactor extends DiscreteFactor {
 
     public CptFactor(List<Integer> varNums, List<Variable> variables) {
 	super(varNums, variables);
@@ -37,7 +37,7 @@ public abstract class CptFactor extends Factor {
      * Update the probability of an assignment by adding count * marginal
      * to each assignment represented in marginal.
      */ 
-    public abstract void incrementOutcomeCount(Factor marginal, double count);
+    public abstract void incrementOutcomeCount(DiscreteFactor marginal, double count);
 
 }
 

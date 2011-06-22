@@ -4,6 +4,7 @@ import com.jayantkrish.jklol.inference.*;
 import com.jayantkrish.jklol.training.*;
 
 import junit.framework.*;
+
 import java.util.*;
 
 /**

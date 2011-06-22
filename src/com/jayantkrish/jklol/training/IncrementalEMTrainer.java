@@ -13,7 +13,7 @@ import java.lang.Math;
 public class IncrementalEMTrainer {
 
     private InferenceEngine inferenceEngine;
-    private Factor[][] exampleCptMarginalMap;
+    private DiscreteFactor[][] exampleCptMarginalMap;
     private int numIterations;
     private double smoothing;
     private LogFunction log;
@@ -41,7 +41,7 @@ public class IncrementalEMTrainer {
 	inferenceEngine.setFactorGraph(bn);
 
 	List<CptFactor> cptFactors = bn.getCptFactors();
-	exampleCptMarginalMap = new Factor[trainingData.size()][cptFactors.size()];
+	exampleCptMarginalMap = new DiscreteFactor[trainingData.size()][cptFactors.size()];
 
 	for (int i = 0; i < numIterations; i++) {
 	    if (log != null) {log.notifyIterationStart(i);}
@@ -53,7 +53,7 @@ public class IncrementalEMTrainer {
 		if (i > 0) {
 		    // Subtract out old statistics if they exist.
 		    for (int k = 0; k < cptFactors.size(); k++) {
-			Factor oldMarginal = exampleCptMarginalMap[j][k];
+			DiscreteFactor oldMarginal = exampleCptMarginalMap[j][k];
 			cptFactors.get(k).incrementOutcomeCount(oldMarginal, -1.0);
 		    }
 		}
@@ -61,7 +61,7 @@ public class IncrementalEMTrainer {
 		inferenceEngine.computeMarginals(trainingExample);
 		for (int k = 0; k < cptFactors.size(); k++) {
 		    CptFactor cptFactor = cptFactors.get(k);
-		    Factor marginal = inferenceEngine.getMarginal(cptFactor.getVarNums());
+		    DiscreteFactor marginal = inferenceEngine.getMarginal(cptFactor.getVarNums());
 		    exampleCptMarginalMap[j][k] = marginal;
 		    cptFactor.incrementOutcomeCount(marginal, 1.0);
 

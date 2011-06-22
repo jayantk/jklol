@@ -23,6 +23,14 @@ public class Variable<T> {
 	openValueClass = false;
     }
 
+    /**
+     * Get the index of an arbitrary value in this factor. Useful for
+     * initializing things that don't care about the particular value.
+     */
+    public int getArbitraryValueIndex() {
+	return 0;
+    }
+
     public int numValues() {
 	return values.size();
     }

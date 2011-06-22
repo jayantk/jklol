@@ -21,7 +21,7 @@ public class CfgFactor extends CptFactor {
     private CptProductionDistribution productionDist;
     private CfgParser parser;
 
-    private Factor multipliedWith;
+    private DiscreteFactor multipliedWith;
 
     /**
      * This factor should always be instantiated over exactly two variables: the parent variable is
@@ -50,7 +50,7 @@ public class CfgFactor extends CptFactor {
      */
     private CfgFactor(Variable<Production> parentVar, Variable<List<Production>> childVar,
 	    int parentVarNum, int childVarNum, CptProductionDistribution productionDist, 
-	    CfgParser parser, Factor multipliedWith) {
+	    CfgParser parser, DiscreteFactor multipliedWith) {
 	super(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
 		Arrays.asList(new Variable[] {parentVar, childVar}));
 
@@ -108,7 +108,7 @@ public class CfgFactor extends CptFactor {
 	throw new UnsupportedOperationException("");
     }
 
-    public void incrementOutcomeCount(Factor marginal, double count) {
+    public void incrementOutcomeCount(DiscreteFactor marginal, double count) {
 	if (marginal instanceof ChartFactor) {
 	    ChartFactor cf = (ChartFactor) marginal;
 	    ParseChart chart = cf.getChart();
@@ -139,7 +139,7 @@ public class CfgFactor extends CptFactor {
     /**
      * Re-implement sum-product to use the CFG parser effectively.
      */
-    public Factor sumProduct(List<Factor> inboundMessages, Collection<Integer> variablesToRetain) {
+    public DiscreteFactor sumProduct(List<DiscreteFactor> inboundMessages, Collection<Integer> variablesToRetain) {
 	throw new UnsupportedOperationException();
 	/*
 	assert variablesToRetain.size() <= 2;
@@ -187,8 +187,8 @@ public class CfgFactor extends CptFactor {
 	*/
     }
 
-    public Factor product(List<Factor> factors) {
-	for (Factor f : factors) {
+    public DiscreteFactor product(List<DiscreteFactor> factors) {
+	for (DiscreteFactor f : factors) {
 	    assert f.getVarNums().size() == 1 && f.getVarNums().contains(parentVarNum);
 	}
 
@@ -201,7 +201,7 @@ public class CfgFactor extends CptFactor {
 	}
     }
 
-    public Factor conditional(Assignment a) {
+    public DiscreteFactor conditional(Assignment a) {
 	Set<Integer> intersection = new HashSet<Integer>(varNums);
 	intersection.retainAll(a.getVarNumsSorted());
 
@@ -232,13 +232,13 @@ public class CfgFactor extends CptFactor {
 
 	ChartFactor chartFactor = new ChartFactor(c, parentVar, childVar, parentVarNum, childVarNum, childDist);
 	if (multipliedWith != null) {
-	    return chartFactor.sumProduct(Arrays.asList(new Factor[] {multipliedWith}),
+	    return chartFactor.sumProduct(Arrays.asList(new DiscreteFactor[] {multipliedWith}),
 		    Arrays.asList(new Integer[] {parentVarNum, childVarNum}));
 	}
 	return chartFactor;
     }
 
-    public Factor marginalize(Collection<Integer> varNumsToEliminate) {
+    public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
 	throw new UnsupportedOperationException();
 	/*
 	Set<Integer> varsToRetain = new HashSet<Integer>();

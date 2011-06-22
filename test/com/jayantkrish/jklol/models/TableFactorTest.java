@@ -1,7 +1,7 @@
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.FeatureFunction;
 import com.jayantkrish.jklol.models.IndicatorFeatureFunction;
-import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Assignment;
 import com.jayantkrish.jklol.models.Variable;
 import junit.framework.*;
@@ -128,7 +128,7 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testMarginalize() {
-	Factor m = f.marginalize(Arrays.asList(new Integer[] {5, 2}));
+	DiscreteFactor m = f.marginalize(Arrays.asList(new Integer[] {5, 2}));
 
 	assertEquals(Arrays.asList(new Integer[] {0, 3}), m.getVarNums());
 	assertEquals(1.0, 
@@ -138,14 +138,14 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testMarginalizeToNothing() {
-	Factor m = f.marginalize(Arrays.asList(new Integer[] {0, 3, 2, 5}));
+	DiscreteFactor m = f.marginalize(Arrays.asList(new Integer[] {0, 3, 2, 5}));
 
 	assertEquals(6.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {})));
     }
 
     public void testMaxMarginalize() {
-	Factor m = f.maxMarginalize(Arrays.asList(new Integer[] {5, 2}));
+	DiscreteFactor m = f.maxMarginalize(Arrays.asList(new Integer[] {5, 2}));
 
 	assertEquals(Arrays.asList(new Integer[] {0, 3}), m.getVarNums());
 	assertEquals(3.0, 
@@ -155,14 +155,14 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testMaxMarginalizeToNothing() {
-	Factor m = f.maxMarginalize(Arrays.asList(new Integer[] {0, 3, 2, 5}));
+	DiscreteFactor m = f.maxMarginalize(Arrays.asList(new Integer[] {0, 3, 2, 5}));
 
 	assertEquals(3.0,
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {})));
     }
 
     public void testConditionalNone() {
-	Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {6, 8}),
+	DiscreteFactor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {6, 8}),
 			Arrays.asList(new Integer[] {1, 1})));
 	// Nothing should change.
 	assertEquals(1.0,
@@ -172,7 +172,7 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testConditionalAll() {
-	Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2, 3, 5}),
+	DiscreteFactor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2, 3, 5}),
 			Arrays.asList(new Integer[] {0, 0, 1, 0})));
 	
 	assertEquals(3.0,
@@ -186,7 +186,7 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testConditionalPartial() {
-	Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 3}),
+	DiscreteFactor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 3}),
 			Arrays.asList(new Integer[] {0, 1})));
 	
 	assertEquals(3.0,
@@ -203,8 +203,8 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testSumProduct() {
-	List<Factor> factors = Arrays.asList(new Factor[] {f,g});
-	Factor t = TableFactor.sumProductTableFactor(factors, 
+	List<DiscreteFactor> factors = Arrays.asList(new DiscreteFactor[] {f,g});
+	DiscreteFactor t = TableFactor.sumProductTableFactor(factors, 
 		Arrays.asList(new Integer[] {0, 3}));
 
 	assertEquals(90.0,
@@ -220,8 +220,8 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testMaxProduct() {
-	List<Factor> factors = Arrays.asList(new Factor[] {f,g});
-	Factor t = TableFactor.maxProductTableFactor(factors, 
+	List<DiscreteFactor> factors = Arrays.asList(new DiscreteFactor[] {f,g});
+	DiscreteFactor t = TableFactor.maxProductTableFactor(factors, 
 		Arrays.asList(new Integer[] {0, 3}));
 
 	assertEquals(33.0,
@@ -238,7 +238,7 @@ public class TableFactorTest extends TestCase {
 
     public void testProduct() {
 
-	TableFactor t = TableFactor.productFactor(Arrays.asList(new Factor[] {f, g}));
+	TableFactor t = TableFactor.productFactor(Arrays.asList(new DiscreteFactor[] {f, g}));
 
 	assertEquals(14.0,
 		t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "U", "T", "F", "U"})));
@@ -248,9 +248,9 @@ public class TableFactorTest extends TestCase {
     }
 
     public void testProductEmptyFactor() {
-	Factor m = f.marginalize(Arrays.asList(new Integer[] {0, 3, 2, 5}));
+	DiscreteFactor m = f.marginalize(Arrays.asList(new Integer[] {0, 3, 2, 5}));
 
-	TableFactor t = TableFactor.productFactor(Arrays.asList(new Factor[] {m, f}));
+	TableFactor t = TableFactor.productFactor(Arrays.asList(new DiscreteFactor[] {m, f}));
 
 	assertEquals(18.0,
 		t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "F", "T"})));

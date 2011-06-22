@@ -68,7 +68,7 @@ public class CptTableFactor extends CptFactor {
 	cpt.incrementOutcomeCount(a.mappedAssignment(cptVarNumMap), count);
     }
 
-    public void incrementOutcomeCount(Factor marginal, double count) {
+    public void incrementOutcomeCount(DiscreteFactor marginal, double count) {
 	Iterator<Assignment> assignmentIter = marginal.outcomeIterator();
 	while (assignmentIter.hasNext()) {
 	    Assignment a = assignmentIter.next();

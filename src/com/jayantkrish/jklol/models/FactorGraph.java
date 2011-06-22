@@ -10,11 +10,12 @@ import java.util.*;
 public class FactorGraph {
 
     private List<Variable> variables;
+    private List<Integer> varNums;
     private Map<String, Integer> variableNumMap;
     private HashMultimap<Integer, Integer> variableFactorMap;
     private HashMultimap<Integer, Integer> factorVariableMap;
 
-    private IndexedList<Factor> factors;
+    private IndexedList<DiscreteFactor> factors;
 
     /**
      * Create an empty factor graph.
@@ -24,7 +25,7 @@ public class FactorGraph {
 	variableNumMap = new HashMap<String, Integer>();
 	variableFactorMap = new HashMultimap<Integer, Integer>();
 	factorVariableMap = new HashMultimap<Integer, Integer>();
-	factors = new IndexedList<Factor>();
+	factors = new IndexedList<DiscreteFactor>();
     }
 
     /**
@@ -56,7 +57,7 @@ public class FactorGraph {
      * Add a new factor to the model, returning the unique number
      * assigned to it.
      */
-    protected int addFactor(Factor factor) {
+    protected int addFactor(DiscreteFactor factor) {
 	int factorNum = factors.size();
 	factors.add(factor);
 
@@ -78,14 +79,14 @@ public class FactorGraph {
     /**
      * Get a factor using its index number.
      */
-    public Factor getFactorFromIndex(int factorNum) {
+    public DiscreteFactor getFactorFromIndex(int factorNum) {
 	return factors.get(factorNum);
     }
 
     /**
      * Get all factors.
      */
-    public List<Factor> getFactors() {
+    public List<DiscreteFactor> getFactors() {
 	return factors.items();
     }
 
@@ -108,6 +109,13 @@ public class FactorGraph {
      */
     public List<Variable> getVariables() {
 	return Collections.unmodifiableList(variables);
+    }
+
+    /**
+     * Get the variable numbers of all variables in the factor graph.
+     */
+    public List<Integer> getVarNums() {
+	throw new UnsupportedOperationException("Not yet implemented");
     }
 
     /**
@@ -149,7 +157,6 @@ public class FactorGraph {
 	return objectVals;
     }
 
-    
 
     /**
      * Get all of the factors which contain the passed-in varNum

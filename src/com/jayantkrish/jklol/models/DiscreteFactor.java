@@ -8,14 +8,14 @@ import java.util.*;
 /**
  * A Factor in a Markov Network.
  */
-public abstract class Factor {
+public abstract class DiscreteFactor {
 
     protected List<Integer> varNums;
     protected List<Variable> vars;
 
     protected double partitionFunction;
 
-    public Factor(List<Integer> varNums, List<Variable> variables) {
+    public DiscreteFactor(List<Integer> varNums, List<Variable> variables) {
 	SortedMap<Integer, Variable> sortedVars = new TreeMap<Integer, Variable>();
 	for (int i = 0; i < varNums.size(); i++) {
 	    sortedVars.put(varNums.get(i), variables.get(i));
@@ -151,8 +151,8 @@ public abstract class Factor {
      * In most cases, this default method should be sufficient. Factors may choose to override this
      * in order to provide specialized functionality.
      */ 
-    public Factor sumProduct(List<Factor> inboundMessages, Collection<Integer> variablesToRetain) {
-	List<Factor> allFactors = new ArrayList<Factor>(inboundMessages);
+    public DiscreteFactor sumProduct(List<DiscreteFactor> inboundMessages, Collection<Integer> variablesToRetain) {
+	List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(inboundMessages);
 	allFactors.add(this);
 	return TableFactor.sumProductTableFactor(allFactors, variablesToRetain);
     }
@@ -164,8 +164,8 @@ public abstract class Factor {
      * In most cases, this default method should be sufficient. Factors may choose to override this
      * in order to provide specialized functionality.
      */ 
-    public Factor maxProduct(List<Factor> inboundMessages, Collection<Integer> variablesToRetain) {
-	List<Factor> allFactors = new ArrayList<Factor>(inboundMessages);
+    public DiscreteFactor maxProduct(List<DiscreteFactor> inboundMessages, Collection<Integer> variablesToRetain) {
+	List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(inboundMessages);
 	allFactors.add(this);
 	return TableFactor.maxProductTableFactor(allFactors, variablesToRetain);
     }
@@ -173,8 +173,8 @@ public abstract class Factor {
     /**
      * Returns the result of multiplying the provided factors with this one.
      */
-    public Factor product(List<Factor> factors) {
-	List<Factor> allFactors = new ArrayList<Factor>(factors);
+    public DiscreteFactor product(List<DiscreteFactor> factors) {
+	List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(factors);
 	allFactors.add(this);
 	return TableFactor.productFactor(allFactors);
     }
@@ -182,13 +182,11 @@ public abstract class Factor {
     /**
      * Convenience wrapper for multiplying two factors.
      */
-    public Factor product(Factor f) {
-	List<Factor> allFactors = new ArrayList<Factor>(1);
+    public DiscreteFactor product(DiscreteFactor f) {
+	List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(1);
 	allFactors.add(f);
 	return this.product(allFactors);
     }
-
-
 
     /**
      * Get a new factor which conditions on the observed variables in the
@@ -197,7 +195,7 @@ public abstract class Factor {
      * The returned factor still contains the same variables as the original, but has appropriate
      * portions of the factor distribution zeroed out.
      */
-    public Factor conditional(Assignment a) {
+    public DiscreteFactor conditional(Assignment a) {
 	
 	Set<Integer> intersection = new HashSet<Integer>(varNums);
 	intersection.retainAll(a.getVarNumsSorted());
@@ -248,28 +246,28 @@ public abstract class Factor {
     /**
      * Return a factor with the specified variable marginalized out (by summing)
      */ 
-    public Factor marginalize(Integer varNum) {
+    public DiscreteFactor marginalize(Integer varNum) {
 	return marginalize(Arrays.asList(new Integer[] {varNum}));
     }
 
     /**
      * Return a factor with the specified variables marginalized out.
      */ 
-    public Factor marginalize(Collection<Integer> varNumsToEliminate) {
+    public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
 	return marginalize(varNumsToEliminate, true);
     }
 
     /**
      * Return a factor with the specified variable marginalized out (by maximizing)
      */ 
-    public Factor maxMarginalize(Integer varNum) {
+    public DiscreteFactor maxMarginalize(Integer varNum) {
 	return maxMarginalize(Arrays.asList(new Integer[] {varNum}));
     }
 
     /**
      * Return a factor with the specified variables marginalized out (by maximizing)
      */ 
-    public Factor maxMarginalize(Collection<Integer> varNumsToEliminate) {
+    public DiscreteFactor maxMarginalize(Collection<Integer> varNumsToEliminate) {
 	return marginalize(varNumsToEliminate, false);
     }
 
@@ -277,7 +275,7 @@ public abstract class Factor {
      * Sums or maximizes out a particular set of variables. If useSum is true,
      * probabilities are summed.
      */
-    protected Factor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
+    protected DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
 	Set<Integer> varNumsToEliminateSet = new HashSet<Integer>(varNumsToEliminate);
 
 	List<Variable> varsToRetain = new ArrayList<Variable>();
@@ -341,6 +339,23 @@ public abstract class Factor {
 	    partitionFunction += getUnnormalizedProbability(outcomeIterator.next());
 	}
 	return partitionFunction;
+    }
+
+    /**
+     * Sample a random assignment to the variables in this factor according to this factor's
+     * probability distribution.
+     */
+    public Assignment sample() {
+	double draw = Math.random();
+	double partitionFunction = getPartitionFunction();
+	double sumProb = 0.0;
+	Iterator<Assignment> iter = outcomeIterator();
+	Assignment a = null;
+	while (iter.hasNext() && sumProb <= draw) {
+	    a = iter.next();
+	    sumProb += getUnnormalizedProbability(a) / partitionFunction;
+	}
+	return a;	
     }
 
     /**

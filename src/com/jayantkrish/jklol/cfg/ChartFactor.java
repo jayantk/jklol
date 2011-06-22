@@ -9,7 +9,7 @@ import java.util.*;
  * A ChartFactor represents conditional distributions over the root variable of 
  * CFG parses.
  */
-public class ChartFactor extends Factor {
+public class ChartFactor extends DiscreteFactor {
 
     private ParseChart chart;
     private int parentVarNum;
@@ -17,7 +17,7 @@ public class ChartFactor extends Factor {
     private Variable<Production> parentVar;
     private Variable<List<Production>> childVar;
 
-    private Factor parentFactor;
+    private DiscreteFactor parentFactor;
     private Map<List<Production>, Double> childProbs;
 
     public ChartFactor(ParseChart chart, Variable<Production> parentVar, 
@@ -56,7 +56,7 @@ public class ChartFactor extends Factor {
      * the other probability distributions.
      */
     public ChartFactor(ParseChart chart, Variable<Production> parentVar, Variable<List<Production>> childVar,
-	    int parentVarNum, int childVarNum, Map<List<Production>, Double> childProbs, Factor parentFactor) {
+	    int parentVarNum, int childVarNum, Map<List<Production>, Double> childProbs, DiscreteFactor parentFactor) {
 	super(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
 		Arrays.asList(new Variable[] {parentVar, childVar}));
 
@@ -135,7 +135,7 @@ public class ChartFactor extends Factor {
     /**
      * Re-implementation of sum-product to be aware of the CFG parse chart.
      */
-    public Factor sumProduct(List<Factor> inboundMessages, Collection<Integer> variablesToRetain) {
+    public DiscreteFactor sumProduct(List<DiscreteFactor> inboundMessages, Collection<Integer> variablesToRetain) {
 	if (variablesToRetain.size() <= 1) {
 	    return parentFactor.sumProduct(inboundMessages, variablesToRetain);
 	} else {
@@ -147,7 +147,7 @@ public class ChartFactor extends Factor {
     /**
      * Re-implementation of max-product to be aware of the CFG parse chart.
      */
-    public Factor maxProduct(List<Factor> inboundMessages, Collection<Integer> variablesToRetain) {
+    public DiscreteFactor maxProduct(List<DiscreteFactor> inboundMessages, Collection<Integer> variablesToRetain) {
 	if (variablesToRetain.size() <= 1) {
 	    return parentFactor.maxProduct(inboundMessages, variablesToRetain);
 	} else {
@@ -160,7 +160,7 @@ public class ChartFactor extends Factor {
      * Marginalization on this factor can only correspond to retaining both parent and child, or
      * retaining just the parent.
      */
-    protected Factor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
+    protected DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
 	Set<Integer> varsToRetain = new HashSet<Integer>();
 	varsToRetain.addAll(getVarNums());
 	varsToRetain.removeAll(varNumsToEliminate);

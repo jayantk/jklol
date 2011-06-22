@@ -19,7 +19,7 @@ import java.lang.UnsupportedOperationException;
  * A LogLinearFactor represents a probability distribution as the exponential of a weighted sum of
  * feature functions.
  */ 
-public class LogLinearFactor extends Factor {
+public class LogLinearFactor extends DiscreteFactor {
 
     private FeatureSet featureSet;
     private Set<FeatureFunction> myFeatures;

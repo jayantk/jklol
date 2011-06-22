@@ -1,6 +1,6 @@
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.Assignment;
 import junit.framework.*;

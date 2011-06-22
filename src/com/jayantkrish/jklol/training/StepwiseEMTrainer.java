@@ -60,7 +60,7 @@ public class StepwiseEMTrainer {
 	inferenceEngine.setFactorGraph(bn);
 
 	List<CptFactor> cptFactors = bn.getCptFactors();
-	Factor[][] storedMarginals = new Factor[cptFactors.size()][batchSize];
+	DiscreteFactor[][] storedMarginals = new DiscreteFactor[cptFactors.size()][batchSize];
 	int numUpdates = 0;
 
 	for (int i = 0; i < numIterations; i++) {
@@ -79,7 +79,7 @@ public class StepwiseEMTrainer {
 		inferenceEngine.computeMarginals(trainingExample);
 		for (int k = 0; k < cptFactors.size(); k++) {
 		    CptFactor cptFactor = cptFactors.get(k);
-		    Factor marginal = inferenceEngine.getMarginal(cptFactor.getVarNums());
+		    DiscreteFactor marginal = inferenceEngine.getMarginal(cptFactor.getVarNums());
 
 		    storedMarginals[k][exampleIterNum % batchSize] = marginal;
 		    
@@ -91,7 +91,7 @@ public class StepwiseEMTrainer {
     }
 
 
-    public void performParameterUpdate(List<CptFactor> factorsToUpdate, Factor[][] marginals, 
+    public void performParameterUpdate(List<CptFactor> factorsToUpdate, DiscreteFactor[][] marginals, 
 	    int numValidEntries, int numUpdates) {
 
 	// Instead of multiplying the sufficient statistics (dense update)

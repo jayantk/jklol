@@ -1,9 +1,10 @@
 package com.jayantkrish.jklol.inference;
 
-import com.jayantkrish.jklol.models.*;
-
-import java.util.Map;
 import java.util.List;
+
+import com.jayantkrish.jklol.models.Assignment;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.FactorGraph;
 
 /**
  * An InferenceEngine is an algorithm for computing marginal distributions
@@ -40,10 +41,8 @@ public interface InferenceEngine {
      */
     public void computeMaxMarginals(Assignment assignment);
     
-
     /**
      * Retrieve an already computed marginal distribution.     
      */
-    public Factor getMarginal(List<Integer> varNums);
-
+    public DiscreteFactor getMarginal(List<Integer> varNums);
 }

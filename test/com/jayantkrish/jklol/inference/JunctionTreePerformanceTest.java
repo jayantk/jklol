@@ -53,7 +53,7 @@ public class JunctionTreePerformanceTest extends TestCase {
 	System.out.println("testFactorProductSubset");
 	long start = System.currentTimeMillis();
 	
-	TableFactor.productFactor(Arrays.asList(new Factor[] {factor2, factor3}));
+	TableFactor.productFactor(Arrays.asList(new DiscreteFactor[] {factor2, factor3}));
 
 	long elapsed = System.currentTimeMillis() - start;
 	System.out.println("Elapsed: " + elapsed + " ms");
@@ -63,7 +63,7 @@ public class JunctionTreePerformanceTest extends TestCase {
 	System.out.println("testFactorSumProductSubset");
 	long start = System.currentTimeMillis();
 	
-	TableFactor.sumProductTableFactor(Arrays.asList(new Factor[] {factor2, factor3}),
+	TableFactor.sumProductTableFactor(Arrays.asList(new DiscreteFactor[] {factor2, factor3}),
 		Arrays.asList(new Integer[] {1}));
 
 	long elapsed = System.currentTimeMillis() - start;

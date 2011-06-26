@@ -1,10 +1,9 @@
 package com.jayantkrish.jklol.cfg;
 
-import com.jayantkrish.jklol.util.DefaultHashMap;
-
 import java.util.Map;
 import java.util.Set;
-import java.util.HashMap;
+
+import com.jayantkrish.jklol.util.DefaultHashMap;
 
 /**
  * A CptTableProductionDistribution maintains a separate CPT for each production rule

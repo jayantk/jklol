@@ -78,5 +78,15 @@ public class AssignmentTest extends TestCase {
 		j.getVarValuesInKeyOrder());
 
     }
+    
+    public void testRemoveAll() {
+    	Assignment result = a.removeAll(Arrays.asList(new Integer[] {1,3,4}));
+    	assertEquals(Arrays.asList(new Integer[] {0,5}),
+    			result.getVarNumsSorted());
+ 
+    	result = a.removeAll(Arrays.asList(new Integer[] {}));
+    	assertEquals(Arrays.asList(new Integer[] {0,1,3,5}),
+    			result.getVarNumsSorted());
+    }
 
 }

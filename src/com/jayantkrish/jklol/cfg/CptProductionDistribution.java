@@ -1,10 +1,6 @@
 package com.jayantkrish.jklol.cfg;
 
-import com.jayantkrish.jklol.util.DefaultHashMap;
-
 import java.util.Map;
-import java.util.Set;
-import java.util.HashMap;
 
 /**
  * CptProductionDistribution is the standard generative model

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -152,6 +153,10 @@ public class TableFactor extends DiscreteFactor {
 	return returnFactor;
     }
 
+    public static TableFactor productFactor(DiscreteFactor ... factors) {
+    	return productFactor(Arrays.asList(factors));
+    }
+    
     public static TableFactor productFactor(List<DiscreteFactor> toMultiply) {
     	
     	VariableNumMap allVars = new VariableNumMap(Collections.EMPTY_LIST, Collections.EMPTY_LIST);

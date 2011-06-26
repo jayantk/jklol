@@ -1,10 +1,12 @@
-import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.models.*;
-import junit.framework.*;
-
 import java.util.Arrays;
-import java.util.List;
-import java.util.ArrayList;
+
+import junit.framework.TestCase;
+
+import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.Variable;
 
 public class JunctionTreeTest extends TestCase {
 
@@ -149,11 +151,13 @@ public class JunctionTreeTest extends TestCase {
 		m.getUnnormalizedProbability(Arrays.asList(new String[] {"U", "U"})));
     }
 
-
     public void testNonTreeStructured() {
 	t2.computeMarginals();
 
 	DiscreteFactor m = t2.getMarginal(Arrays.asList(new Integer[] {0}));
+	assertEquals(8.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"F"})));
+	assertEquals(25.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"T"})));
+	assertEquals(0.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"U"})));
     }
 
 }

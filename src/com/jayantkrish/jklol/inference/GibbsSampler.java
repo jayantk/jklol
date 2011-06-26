@@ -47,21 +47,22 @@ public class GibbsSampler implements InferenceEngine {
 	}
 
 	private void doSample(int varNum) {
-		// TODO: subAssignment is like exactly wrong.
-		Assignment a = curAssignment.subAssignment(
+		// Retain the assignments to all other variables.
+		Assignment otherVarAssignment = curAssignment.removeAll(
 				Collections.singletonList(varNum));
+		
+		// Multiply together all of the factors which define a probability distribution over 
+		// variable varNum, conditioned on all other variables.
 		Set<Integer> factorNums = factorGraph.getFactorsWithVariable(varNum);
-		DiscreteFactor toSampleFrom = null;
+		List<DiscreteFactor> factorsToCombine = new ArrayList<DiscreteFactor>();
 		for (Integer factorNum : factorNums) {
-			DiscreteFactor next = factorGraph.getFactorFromIndex(factorNum).conditional(a);
-			if (toSampleFrom == null) {
-				toSampleFrom = next;
-			} else {
-				toSampleFrom = toSampleFrom.product(next);
-			}
+			factorsToCombine.add(factorGraph.getFactorFromIndex(factorNum).conditional(otherVarAssignment));
 		}
+		DiscreteFactor toSampleFrom = TableFactor.productFactor(factorsToCombine);
+		
+		// Draw the sample and update the sampler's current assignment. 
 		Assignment subsetValues = toSampleFrom.sample();
-		a = a.jointAssignment(subsetValues);
+		curAssignment = otherVarAssignment.jointAssignment(subsetValues);
 	}
 	
 	public void computeMarginals() {
@@ -76,7 +77,7 @@ public class GibbsSampler implements InferenceEngine {
 		
 		marginal = new TableFactor(new VariableNumMap(assignment.getVarNumsSorted(), marginalVars));
 		// Initialize sampler with an arbitrary assignment.
-		List<Variable> vars = factorGraph.getVariables();
+		List<Variable<?>> vars = factorGraph.getVariables();
 		List<Integer> valueNums = new ArrayList<Integer>();
 		for (int i = 0; i < vars.size(); i++) {
 			valueNums.add(vars.get(i).getArbitraryValueIndex());

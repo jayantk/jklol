@@ -24,26 +24,8 @@ public class BayesNet extends FactorGraph {
      * by the caller.
      */
     public CptTableFactor addCptFactor(List<String> parentVariables, List<String> childVariables) {
-	List<Integer> parentVarNums = new ArrayList<Integer>();
-	List<Variable> parentVars = new ArrayList<Variable>();
-	lookupVarStrings(parentVariables, parentVarNums, parentVars);
-	List<Integer> childVarNums = new ArrayList<Integer>();
-	List<Variable> childVars = new ArrayList<Variable>();
-	lookupVarStrings(childVariables, childVarNums, childVars);
-
-
-	List<Integer> allVarNums = new ArrayList<Integer>();
-	List<Variable> allVars = new ArrayList<Variable>();
-	for (int i = 0; i < parentVarNums.size(); i++) {
-	    allVarNums.add(parentVarNums.get(i));
-	    allVars.add(parentVars.get(i));
-	}
-	for (int i = 0; i < childVarNums.size(); i++) {
-	    allVarNums.add(childVarNums.get(i));
-	    allVars.add(childVars.get(i));
-	}
-
-	CptTableFactor factor = new CptTableFactor(allVarNums, allVars, parentVarNums, parentVars, childVarNums, childVars);
+	CptTableFactor factor = new CptTableFactor(lookupVarStrings(parentVariables), 
+			lookupVarStrings(childVariables));
 	cptFactors.add(factor);
 	addFactor(factor);
 	return factor;
@@ -62,30 +44,26 @@ public class BayesNet extends FactorGraph {
      * with its own (new) Cpt. If isSparse, then the factor is initialized with a sparse CPT (that must be
      * initialized by the caller)!
      */
-    public CptTableFactor addCptFactorWithNewCpt(List<String> parentVariables, 
-	    List<String> childVariables, boolean isSparse) {
-	CptTableFactor factor = addCptFactor(parentVariables, childVariables);
-
-	List<Integer> parentVarNums = new ArrayList<Integer>();
-	List<Variable> parentVars = new ArrayList<Variable>();
-	lookupVarStrings(parentVariables, parentVarNums, parentVars);
-	List<Integer> childVarNums = new ArrayList<Integer>();
-	List<Variable> childVars = new ArrayList<Variable>();
-	lookupVarStrings(childVariables, childVarNums, childVars);
+    public CptTableFactor addCptFactorWithNewCpt(List<String> parentVariableNames, 
+	    List<String> childVariableNames, boolean isSparse) {
+	CptTableFactor factor = addCptFactor(parentVariableNames, childVariableNames);
+	VariableNumMap parentVars = lookupVarStrings(parentVariableNames);
+	VariableNumMap childVars = lookupVarStrings(childVariableNames);
 
 	Cpt cpt = null;
 	if (isSparse) {
-	    cpt = new SparseCpt(parentVars, childVars);
+	    cpt = new SparseCpt(parentVars.getVariables(), childVars.getVariables());
 	} else {
-	    cpt = new Cpt(parentVars, childVars);
+	    cpt = new Cpt(parentVars.getVariables(), childVars.getVariables());
 	}
 
 	Map<Integer, Integer> nodeCptMap = new HashMap<Integer, Integer>();
-	for (int i = 0; i < parentVarNums.size(); i++) {
-	    nodeCptMap.put(parentVarNums.get(i), i);
+	for (int i = 0; i < parentVars.getVariableNums().size(); i++) {
+	    nodeCptMap.put(parentVars.getVariableNums().get(i), i);
 	}
-	for (int i = 0; i < childVarNums.size(); i++) {
-	    nodeCptMap.put(childVarNums.get(i), i + parentVarNums.size());
+	for (int i = 0; i < childVars.getVariableNums().size(); i++) {
+	    nodeCptMap.put(childVars.getVariableNums().get(i), 
+	    		i + parentVars.getVariableNums().size());
 	}
 
 	factor.setCpt(cpt, nodeCptMap);
@@ -97,25 +75,12 @@ public class BayesNet extends FactorGraph {
      */
     public CfgFactor addCfgCptFactor(String parentVarName, String childVarName, 
 	    Grammar grammar, CptProductionDistribution productionDist) {
-	List<Integer> parentVarNums = new ArrayList<Integer>();
-	List<Variable> parentVars = new ArrayList<Variable>();
-	lookupVarStrings(Arrays.asList(new String[] {parentVarName}), parentVarNums, parentVars);
-	List<Integer> childVarNums = new ArrayList<Integer>();
-	List<Variable> childVars = new ArrayList<Variable>();
-	lookupVarStrings(Arrays.asList(new String[] {childVarName}), childVarNums, childVars);
+	VariableNumMap parentVars = lookupVarStrings(Arrays.asList(new String[] {parentVarName}));
+	VariableNumMap childVars = lookupVarStrings(Arrays.asList(new String[] {childVarName}));
 
-	Variable parentVar = parentVars.get(0);
-	Variable childVar = childVars.get(0);
-
-	/*
-	if (!(parentVar instanceof Variable<Production> && childVar instanceof Variable<Production[]>)) {
-	    throw new RuntimeException("Variables must be of type Production and Production[]!");
-	}
-	*/
-
-	CfgFactor factor = new CfgFactor((Variable<Production>) parentVars.get(0), 
-		(Variable<List<Production>>) childVars.get(0), parentVarNums.get(0), 
-		childVarNums.get(0), grammar, productionDist);
+	CfgFactor factor = new CfgFactor((Variable<Production>) parentVars.getVariables().get(0), 
+		(Variable<List<Production>>) childVars.getVariables().get(0), parentVars.getVariableNums().get(0), 
+		childVars.getVariableNums().get(0), grammar, productionDist);
 
 	cptFactors.add(factor);
 	addFactor(factor);

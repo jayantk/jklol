@@ -25,11 +25,11 @@ public class LogLinearFactor extends DiscreteFactor {
     private Set<FeatureFunction> myFeatures;
     private SparseOutcomeTable<Set<FeatureFunction>> sparseFeatures;
 
-    public LogLinearFactor(List<Integer> varNums, List<Variable> variables, FeatureSet featureSet) {
-	super(varNums, variables);
+    public LogLinearFactor(VariableNumMap vars, FeatureSet featureSet) {
+	super(vars);
 	this.featureSet = featureSet;
 	myFeatures = new HashSet<FeatureFunction>();
-	this.sparseFeatures = new SparseOutcomeTable<Set<FeatureFunction>>(varNums);
+	this.sparseFeatures = new SparseOutcomeTable<Set<FeatureFunction>>(vars.getVariableNums());
     }
 
     /////////////////////////////////////////////////////////////
@@ -37,7 +37,7 @@ public class LogLinearFactor extends DiscreteFactor {
     /////////////////////////////////////////////////////////////
 
     public Iterator<Assignment> outcomeIterator() {
-	return new AllAssignmentIterator(getVarNums(), getVars());
+	return new AllAssignmentIterator(getVars());
     }
 
     public double getUnnormalizedProbability(Assignment assignment) {

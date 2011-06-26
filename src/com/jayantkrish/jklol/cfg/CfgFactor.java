@@ -31,8 +31,8 @@ public class CfgFactor extends CptFactor {
     public CfgFactor(Variable<Production> parentVar, Variable<List<Production>> childVar,
 	    int parentVarNum, int childVarNum, Grammar grammar, 
 	    CptProductionDistribution productionDist) {
-	super(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-		Arrays.asList(new Variable[] {parentVar, childVar}));
+	super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+			Arrays.asList(new Variable<?>[] {parentVar, childVar})));
 
 	this.parentVarNum = parentVarNum;
 	this.parentVar = parentVar;
@@ -51,8 +51,8 @@ public class CfgFactor extends CptFactor {
     private CfgFactor(Variable<Production> parentVar, Variable<List<Production>> childVar,
 	    int parentVarNum, int childVarNum, CptProductionDistribution productionDist, 
 	    CfgParser parser, DiscreteFactor multipliedWith) {
-	super(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-		Arrays.asList(new Variable[] {parentVar, childVar}));
+	super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+		Arrays.asList(new Variable<?>[] {parentVar, childVar})));
 
 	this.parentVarNum = parentVarNum;
 	this.parentVar = parentVar;
@@ -75,7 +75,7 @@ public class CfgFactor extends CptFactor {
     /////////////////////////////////////////////////////////////
 
     public Iterator<Assignment> outcomeIterator() {
-	return new AllAssignmentIterator(getVarNums(), getVars());
+	return new AllAssignmentIterator(getVars());
     }
 
     public double getUnnormalizedProbability(Assignment a) {
@@ -189,7 +189,7 @@ public class CfgFactor extends CptFactor {
 
     public DiscreteFactor product(List<DiscreteFactor> factors) {
 	for (DiscreteFactor f : factors) {
-	    assert f.getVarNums().size() == 1 && f.getVarNums().contains(parentVarNum);
+	    assert f.getVars().size() == 1 && f.getVars().containsVariableNum(parentVarNum);
 	}
 
 	if (multipliedWith == null) {
@@ -202,23 +202,22 @@ public class CfgFactor extends CptFactor {
     }
 
     public DiscreteFactor conditional(Assignment a) {
-	Set<Integer> intersection = new HashSet<Integer>(varNums);
-	intersection.retainAll(a.getVarNumsSorted());
-
+	VariableNumMap intersection = getVars().intersection(new HashSet<Integer>(a.getVarNumsSorted()));
+	
 	if (intersection.size() == 0) {
 	    return this;
 	}
 
-	TableFactor returnFactor = new TableFactor(varNums, vars);
-	Assignment subAssignment = a.subAssignment(new ArrayList<Integer>(intersection));
-	if (intersection.size() == getVarNums().size()) {
+	TableFactor returnFactor = new TableFactor(getVars());
+	Assignment subAssignment = a.subAssignment(intersection.getVariableNums());
+	if (intersection.size() == getVars().size()) {
 	    returnFactor.setWeight(subAssignment, 
 		    getUnnormalizedProbability(subAssignment));
 	    return returnFactor;
 	}
 
 	// Use the parser to get a conditional distribution.
-	if (intersection.contains(parentVarNum)) {
+	if (intersection.containsVariableNum(parentVarNum)) {
 	    // Can't handle this case.
 	    throw new RuntimeException("Cannot condition on parent");
 	}

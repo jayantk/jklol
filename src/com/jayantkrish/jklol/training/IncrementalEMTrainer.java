@@ -61,7 +61,7 @@ public class IncrementalEMTrainer {
 		inferenceEngine.computeMarginals(trainingExample);
 		for (int k = 0; k < cptFactors.size(); k++) {
 		    CptFactor cptFactor = cptFactors.get(k);
-		    DiscreteFactor marginal = inferenceEngine.getMarginal(cptFactor.getVarNums());
+		    DiscreteFactor marginal = inferenceEngine.getMarginal(cptFactor.getVars().getVariableNums());
 		    exampleCptMarginalMap[j][k] = marginal;
 		    cptFactor.incrementOutcomeCount(marginal, 1.0);
 

@@ -63,30 +63,30 @@ public class BNCountTrainerTest extends TestCase {
 	List<CptFactor> cptFactors = bn.getCptFactors();
 	CptFactor m0 = cptFactors.get(0);
 	assertEquals(7.0 / 20.0,
-		m0.getUnnormalizedProbability(m0.outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
+		m0.getUnnormalizedProbability(m0.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
 
 	assertEquals(13.0 / 20.0,
-		m0.getUnnormalizedProbability(m0.outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
+		m0.getUnnormalizedProbability(m0.getVars().outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
 
 	CptFactor m1 = cptFactors.get(1);
 	assertEquals(7.0 / 20.0,
-		m1.getUnnormalizedProbability(m1.outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
+		m1.getUnnormalizedProbability(m1.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
 
 	assertEquals(13.0 / 20.0,
-		m1.getUnnormalizedProbability(m1.outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
+		m1.getUnnormalizedProbability(m1.getVars().outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
 
 	CptFactor m2 = cptFactors.get(2);
 	
 	assertEquals(0.8,
-		m2.getUnnormalizedProbability(m2.outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "F"}))));
+		m2.getUnnormalizedProbability(m2.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "F"}))));
 	assertEquals(0.2,
-		m2.getUnnormalizedProbability(m2.outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "T"}))));
+		m2.getUnnormalizedProbability(m2.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "T"}))));
 	assertEquals(0.8,
-		m2.getUnnormalizedProbability(m2.outcomeToAssignment(Arrays.asList(new String[] {"F", "F", "F"}))));
+		m2.getUnnormalizedProbability(m2.getVars().outcomeToAssignment(Arrays.asList(new String[] {"F", "F", "F"}))));
 
 	// Only smoothing applies to this conditional probability
 	assertEquals(0.5,
-		m2.getUnnormalizedProbability(m2.outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T"}))));
+		m2.getUnnormalizedProbability(m2.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T"}))));
     }
 
 }

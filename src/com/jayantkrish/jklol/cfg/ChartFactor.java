@@ -23,8 +23,8 @@ public class ChartFactor extends DiscreteFactor {
     public ChartFactor(ParseChart chart, Variable<Production> parentVar, 
 	    Variable<List<Production>> childVar, int parentVarNum, int childVarNum, 
 	    Map<List<Production>, Double> childProbs) {
-	super(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-		Arrays.asList(new Variable[] {parentVar, childVar}));
+	super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+		Arrays.asList(new Variable<?>[] {parentVar, childVar})));
 
 	assert chart.getInsideCalculated() == true;
 	assert chart.getOutsideCalculated() == false;
@@ -38,8 +38,9 @@ public class ChartFactor extends DiscreteFactor {
 	this.childProbs = childProbs;
 
 	// Using a helper table factor makes many methods trivial to implement.
-	TableFactor tempFactor = new TableFactor(Arrays.asList(new Integer[] {parentVarNum}), 
-		Arrays.asList(new Variable[] {parentVar}));
+	TableFactor tempFactor = new TableFactor(new VariableNumMap(
+			Arrays.asList(new Integer[] {parentVarNum}), 
+			Arrays.asList(new Variable<?>[] {parentVar})));
 	Map<Production, Double> rootEntries = chart.getInsideEntries(0, chart.chartSize() - 1);
 	List<Production> value = new ArrayList<Production>();
 	value.add(null);
@@ -57,8 +58,8 @@ public class ChartFactor extends DiscreteFactor {
      */
     public ChartFactor(ParseChart chart, Variable<Production> parentVar, Variable<List<Production>> childVar,
 	    int parentVarNum, int childVarNum, Map<List<Production>, Double> childProbs, DiscreteFactor parentFactor) {
-	super(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-		Arrays.asList(new Variable[] {parentVar, childVar}));
+	super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+		Arrays.asList(new Variable<?>[] {parentVar, childVar})));
 
 	assert chart.getInsideCalculated() == true;
 	assert chart.getOutsideCalculated() == false;
@@ -162,7 +163,7 @@ public class ChartFactor extends DiscreteFactor {
      */
     protected DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
 	Set<Integer> varsToRetain = new HashSet<Integer>();
-	varsToRetain.addAll(getVarNums());
+	varsToRetain.addAll(getVars().getVariableNums());
 	varsToRetain.removeAll(varNumsToEliminate);
 	
 	if (useSum) {

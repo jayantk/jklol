@@ -1,13 +1,12 @@
 package com.jayantkrish.jklol.models;
 
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.SortedMap;
-import java.util.HashMap;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * An Assignment represents a set of values assigned to a set of variables.
@@ -29,6 +28,10 @@ public class Assignment {
     public Assignment(int varNum, int valueNum) {
 	varValueMap = new TreeMap<Integer, Integer>();
 	varValueMap.put(varNum, valueNum);
+    }
+    
+    public Assignment(Map<Integer, Integer> varValues) {
+    	varValueMap = new TreeMap<Integer, Integer>(varValues);    	
     }
 
     /**
@@ -85,18 +88,22 @@ public class Assignment {
      *
      * varNums may not contain indices which are not represented in this assignment. 
      */
-    public Assignment subAssignment(List<Integer> varNums) {
-	List<Integer> retVal = new ArrayList<Integer>();
-	for (Integer varNum : varNums) {
-	    if (varValueMap.containsKey(varNum)) {
-		retVal.add(varValueMap.get(varNum));
-	    }
-	}
-	assert retVal.size() == varNums.size();
+    public Assignment subAssignment(Collection<Integer> varNums) {
+    	List<Integer> varNumList = new ArrayList<Integer>(varNums);
+    	List<Integer> retVal = new ArrayList<Integer>();
+    	for (Integer varNum : varNumList) {
+    		if (varValueMap.containsKey(varNum)) {
+    			retVal.add(varValueMap.get(varNum));
+    		}
+    	}
+    	assert retVal.size() == varNums.size();
 
-	return new Assignment(varNums, retVal);
+    	return new Assignment(varNumList, retVal);
     }
 
+    public Assignment subAssignment(VariableNumMap vars) {
+    	return subAssignment(vars.getVariableNums());
+    }
 
     /**
      * Combines two assignments into a single joint assignment to

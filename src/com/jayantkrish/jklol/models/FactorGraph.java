@@ -44,11 +44,7 @@ public class FactorGraph {
      * Adds a new Factor to the Markov network connecting the specified variables.
      */
     public TableFactor addTableFactor(List<String> factorVariables) {
-	List<Integer> varNums = new ArrayList<Integer>();
-	List<Variable> vars = new ArrayList<Variable>();
-	lookupVarStrings(factorVariables, varNums, vars);
-
-	TableFactor factor = new TableFactor(varNums, vars);
+	TableFactor factor = new TableFactor(lookupVarStrings(factorVariables));
 	addFactor(factor);
 	return factor;
     }
@@ -61,7 +57,7 @@ public class FactorGraph {
 	int factorNum = factors.size();
 	factors.add(factor);
 
-	for (Integer i : factor.getVarNums()) {
+	for (Integer i : factor.getVars().getVariableNums()) {
 	    variableFactorMap.put(i, factorNum);
 	    factorVariableMap.put(factorNum, i);
 	}
@@ -122,11 +118,7 @@ public class FactorGraph {
      * Get an iterator over all possible assignments to a set of variables.
      */
     public Iterator<Assignment> assignmentIterator(List<String> factorVariables) {
-	List<Integer> varNums = new ArrayList<Integer>();
-	List<Variable> vars = new ArrayList<Variable>();
-	lookupVarStrings(factorVariables, varNums, vars);
-
-	return new AllAssignmentIterator(varNums, vars);
+	return new AllAssignmentIterator(lookupVarStrings(factorVariables));
     }
 
 
@@ -179,15 +171,17 @@ public class FactorGraph {
      * Get the variable numbers and variables corresponding to a particular set of variable
      * names. The resulting values are appended to varNums and vars, respectively.
      */
-    protected void lookupVarStrings(List<String> factorVariables, 
-	    List<Integer> varNums, List<Variable> vars) {
-	for (String variableName : factorVariables) {
-	    if (!variableNumMap.containsKey(variableName)) {
-		throw new RuntimeException("Must use an already specified variable name.");
-	    }
-	    varNums.add(variableNumMap.get(variableName));
-	    vars.add(variables.get(variableNumMap.get(variableName)));
-	}
+    protected VariableNumMap lookupVarStrings(List<String> factorVariables) {
+    	List<Integer> varNums = new ArrayList<Integer>();
+    	List<Variable<?>> vars = new ArrayList<Variable<?>>();
+    	for (String variableName : factorVariables) {
+    		if (!variableNumMap.containsKey(variableName)) {
+    			throw new IllegalArgumentException("Must use an already specified variable name.");
+    		}
+    		varNums.add(variableNumMap.get(variableName));
+    		vars.add(variables.get(variableNumMap.get(variableName)));
+    	}
+    	return new VariableNumMap(varNums, vars);
     }
 
 }

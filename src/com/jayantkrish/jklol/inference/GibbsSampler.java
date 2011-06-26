@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
  * An implementation of Gibbs sampling for computing approximate marginals.
@@ -68,12 +69,12 @@ public class GibbsSampler implements InferenceEngine {
 	}
 
 	public void computeMarginals(Assignment assignment) {
-		List<Variable> marginalVars = new ArrayList<Variable>();
+		List<Variable<?>> marginalVars = new ArrayList<Variable<?>>();
 		for (int varNum : assignment.getVarNumsSorted()) {
 			marginalVars.add(factorGraph.getVariableFromIndex(varNum));
 		}
 		
-		marginal = new TableFactor(assignment.getVarNumsSorted(), marginalVars);
+		marginal = new TableFactor(new VariableNumMap(assignment.getVarNumsSorted(), marginalVars));
 		// Initialize sampler with an arbitrary assignment.
 		List<Variable> vars = factorGraph.getVariables();
 		List<Integer> valueNums = new ArrayList<Integer>();
@@ -99,7 +100,7 @@ public class GibbsSampler implements InferenceEngine {
 
 	public DiscreteFactor getMarginal(List<Integer> varNumsToRetain) {
 		assert marginal != null;
-		Set<Integer> varNumsToEliminate = new HashSet<Integer>(marginal.getVarNums());
+		Set<Integer> varNumsToEliminate = new HashSet<Integer>(marginal.getVars().getVariableNums());
 		varNumsToEliminate.removeAll(varNumsToRetain);
 		return marginal.marginalize(varNumsToEliminate);
 	}

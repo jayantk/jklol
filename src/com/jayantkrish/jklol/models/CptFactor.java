@@ -10,8 +10,8 @@ import java.lang.StringBuilder;
  */
 public abstract class CptFactor extends DiscreteFactor {
 
-    public CptFactor(List<Integer> varNums, List<Variable> variables) {
-	super(varNums, variables);
+    public CptFactor(VariableNumMap vars) {
+	super(vars);
     }
 
     /**

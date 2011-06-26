@@ -10,24 +10,12 @@ import java.util.*;
  */
 public abstract class DiscreteFactor {
 
-    protected List<Integer> varNums;
-    protected List<Variable> vars;
+	private VariableNumMap vars;
+	private double partitionFunction;
 
-    protected double partitionFunction;
-
-    public DiscreteFactor(List<Integer> varNums, List<Variable> variables) {
-	SortedMap<Integer, Variable> sortedVars = new TreeMap<Integer, Variable>();
-	for (int i = 0; i < varNums.size(); i++) {
-	    sortedVars.put(varNums.get(i), variables.get(i));
-	}
-
-	this.varNums = new ArrayList<Integer>(sortedVars.keySet());
-	this.vars = new ArrayList<Variable>();
-	for (int i = 0; i < this.varNums.size(); i++) {
-	    this.vars.add(sortedVars.get(this.varNums.get(i)));
-	}
-
-	this.partitionFunction = -1.0;
+    public DiscreteFactor(VariableNumMap vars) {
+    	this.vars = vars;
+    	this.partitionFunction = -1.0;
     }
 
     /**
@@ -53,70 +41,20 @@ public abstract class DiscreteFactor {
 	}
 	return allOutcomes;
     }
-    /**
-     * Get the variable numbers of all variables that participate in this factor. Variables will
-     * always be returned in ascending order by variable number.
-     */
-    public List<Integer> getVarNums() {
-	return Collections.unmodifiableList(varNums);
-    }
 
     /**
-     * Get the base variables which define the possible values for each index. The list of variables
-     * is the same length as the list of variable numbers and each index is a corresponding pair.
+     * Get the set of model variables which this factor is defined over. 
      */
-    public List<Variable> getVars() {
-	return Collections.unmodifiableList(vars);
-    }
-
-    /**
-     * Get the assignment corresponding to a particular setting of the variables in this factor.
-     */
-    public Assignment outcomeToAssignment(List<? extends Object> outcome) {
-	assert outcome.size() == varNums.size();
-
-	List<Integer> outcomeValueInds = new ArrayList<Integer>(outcome.size());
-	for (int i = 0; i < vars.size(); i++) {
-	    outcomeValueInds.add(vars.get(i).getValueIndexObject(outcome.get(i)));
-	}
-	return new Assignment(varNums, outcomeValueInds);
-    }
-
-    /**
-     * Get the assignment corresponding to a particular setting of the variables in this factor.
-     */
-    public Assignment outcomeToAssignment(Object[] outcome) {
-	return outcomeToAssignment(Arrays.asList(outcome));
+    public VariableNumMap getVars() {
+	return vars;
     }
 
     /**
      * Compute the unnormalized probability of an outcome.
      */
     public double getUnnormalizedProbability(List<? extends Object> outcome) {
-	Assignment a = outcomeToAssignment(outcome);
-	return getUnnormalizedProbability(a);
-    }
-
-    /**
-     * Compute the unnormalized probability of an outcome, using the given
-     * variables in the given order.
-     */
-    public double getUnnormalizedProbability(List<Integer> varNumOrder, List<? extends Object> outcome) {
-	List<Integer> usedVarNums = new ArrayList<Integer>(outcome.size());
-	List<Integer> outcomeValueInds = new ArrayList<Integer>(outcome.size());
-	for (int j = 0; j < varNumOrder.size(); j++) {
-	    for (int i = 0; i < vars.size(); i++) {
-		if (varNums.get(i) == varNumOrder.get(j)) {
-		    usedVarNums.add(varNums.get(i));
-		    outcomeValueInds.add(vars.get(i).getValueIndexObject(outcome.get(j)));
-		}
-	    }
-	}
-
-	assert usedVarNums.size() == varNums.size();
-
-	Assignment a = new Assignment(usedVarNums, outcomeValueInds);
-	return getUnnormalizedProbability(a);
+    	Assignment a = vars.outcomeToAssignment(outcome);
+    	return getUnnormalizedProbability(a);
     }
 
     /**
@@ -197,7 +135,7 @@ public abstract class DiscreteFactor {
      */
     public DiscreteFactor conditional(Assignment a) {
 	
-	Set<Integer> intersection = new HashSet<Integer>(varNums);
+	Set<Integer> intersection = new HashSet<Integer>(vars.getVariableNums());
 	intersection.retainAll(a.getVarNumsSorted());
 
 	// If the assignment doesn't share any variables with this factor, then this factor is unaffected.
@@ -205,25 +143,22 @@ public abstract class DiscreteFactor {
 	    return this;
 	}
 
-	TableFactor returnFactor = new TableFactor(varNums, vars);
+	TableFactor returnFactor = new TableFactor(vars);
 	Assignment subAssignment = a.subAssignment(new ArrayList<Integer>(intersection));
 	// Another easy case that's not handled by the later code.
-	if (intersection.size() == varNums.size()) {
+	if (intersection.size() == vars.size()) {
 	    returnFactor.setWeight(subAssignment, 
 		    getUnnormalizedProbability(subAssignment));
 	    return returnFactor;
 	}
 
-	// Some variables are conditioned on, and some are not.
-	List<Integer> remainingNums = new ArrayList<Integer>();
-	List<Variable> remainingVars = new ArrayList<Variable>();
-	for (int i = 0; i < varNums.size(); i++) {
-	    if (!intersection.contains(varNums.get(i))) {
-		remainingNums.add(varNums.get(i));
-		remainingVars.add(vars.get(i));
-	    }
-	}
+	// If we get here, some variables in this factor are conditioned on, and others are not.
+	// Get the set of variables which are *not* conditioned on.
+	VariableNumMap remainingVars = vars.removeAll(intersection);	
 
+	// Efficiency improvement: instead of iterating over all possible assignments to this factor
+	// and retaining only those with the desired assignment, first intersect all possible assignments
+	// with the conditioned-on values.
 	Set<Assignment> possibleAssignments = null;
 	for (Integer varNum : intersection) {
 	    if (possibleAssignments == null) {
@@ -233,10 +168,9 @@ public abstract class DiscreteFactor {
 	    }
 	}
 
-	// new AllAssignmentIterator(remainingNums, remainingVars); 
 	Iterator<Assignment> iter = possibleAssignments.iterator();
 	while (iter.hasNext()) {
-	    Assignment partialAssignment = iter.next().subAssignment(remainingNums);
+	    Assignment partialAssignment = iter.next().subAssignment(remainingVars.getVariableNums());
 	    Assignment full = partialAssignment.jointAssignment(subAssignment);
 	    returnFactor.setWeight(full, getUnnormalizedProbability(full));
 	}
@@ -278,23 +212,13 @@ public abstract class DiscreteFactor {
     protected DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
 	Set<Integer> varNumsToEliminateSet = new HashSet<Integer>(varNumsToEliminate);
 
-	List<Variable> varsToRetain = new ArrayList<Variable>();
-	List<Integer> varNumsToRetain = new ArrayList<Integer>();
-	List<Integer> varNumIndicesToRetain = new ArrayList<Integer>();
-	for (int i = 0; i < vars.size(); i++) {
-	    if (!varNumsToEliminateSet.contains(varNums.get(i))) {
-		varNumIndicesToRetain.add(i);
-		varsToRetain.add(vars.get(i));
-		varNumsToRetain.add(varNums.get(i));
-	    }
-	}
-	
-	TableFactor returnFactor = new TableFactor(varNumsToRetain, varsToRetain);
+	VariableNumMap retainedVars = vars.removeAll(varNumsToEliminateSet);
+	TableFactor returnFactor = new TableFactor(retainedVars);
 
 	Iterator<Assignment> outcomeIterator = outcomeIterator();
 	while (outcomeIterator.hasNext()) {
 	    Assignment assignment = outcomeIterator.next();
-	    Assignment subAssignment = assignment.subAssignment(varNumsToRetain);
+	    Assignment subAssignment = assignment.subAssignment(retainedVars.getVariableNums());
 
 	    double val = 0.0;
 	    if (useSum) {

@@ -25,14 +25,10 @@ public class LogLinearModel extends FactorGraph {
      * Adds a new Factor with log-linear weights connecting the specified variables.
      */
     public LogLinearFactor addLogLinearFactor(List<String> factorVariables) {
-	List<Integer> varNums = new ArrayList<Integer>();
-	List<Variable> vars = new ArrayList<Variable>();
-	lookupVarStrings(factorVariables, varNums, vars);
-
-	LogLinearFactor factor = new LogLinearFactor(varNums, vars, features);
-	logLinearFactors.add(factor);
-	addFactor(factor);
-	return factor;
+    	LogLinearFactor factor = new LogLinearFactor(lookupVarStrings(factorVariables), features);
+    	logLinearFactors.add(factor);
+    	addFactor(factor);
+    	return factor;
     }
 
     /**

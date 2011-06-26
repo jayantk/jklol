@@ -130,8 +130,8 @@ public class JunctionTree implements InferenceEngine {
      */
     private void passMessage(int startFactor, int destFactor) {
 	Set<Integer> sharedVars = new HashSet<Integer>();
-	sharedVars.addAll(cliqueTree.getFactor(startFactor).getVarNums());
-	sharedVars.retainAll(cliqueTree.getFactor(destFactor).getVarNums());
+	sharedVars.addAll(cliqueTree.getFactor(startFactor).getVars().getVariableNums());
+	sharedVars.retainAll(cliqueTree.getFactor(destFactor).getVars().getVariableNums());
 
 	List<DiscreteFactor> factorsToCombine = new ArrayList<DiscreteFactor>();
 	for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(startFactor)) {
@@ -185,7 +185,7 @@ public class JunctionTree implements InferenceEngine {
 
 	DiscreteFactor marginal = computeMarginal(chosenFactorNum);
 	// Marginalize out any remaining variables...
-	Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVarNums());
+	Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());
 	allVarNums.removeAll(varNumsToRetain);
 	if (useSumProduct) {
 	    return marginal.marginalize(allVarNums);
@@ -204,7 +204,7 @@ public class JunctionTree implements InferenceEngine {
 	    return cachedMarginals.get(startFactor);
 	}
 	
-	List<Integer> vars = cliqueTree.getFactor(startFactor).getVarNums();
+	List<Integer> vars = cliqueTree.getFactor(startFactor).getVars().getVariableNums();
 	//System.out.println(vars);
 
 	List<DiscreteFactor> factorsToCombine = new ArrayList<DiscreteFactor>();
@@ -246,7 +246,7 @@ public class JunctionTree implements InferenceEngine {
 	    List<DiscreteFactor> factorGraphFactors = new ArrayList<DiscreteFactor>(factorGraph.getFactors());
 	    Collections.sort(factorGraphFactors, new Comparator<DiscreteFactor>(){
 			public int compare(DiscreteFactor f1, DiscreteFactor f2) {
-			    return f2.getVarNums().size() - f1.getVarNums().size();
+			    return f2.getVars().getVariableNums().size() - f1.getVars().getVariableNums().size();
 			}
 		    });
 	    Map<DiscreteFactor, Integer> factorCliqueMap = new HashMap<DiscreteFactor, Integer>();
@@ -254,20 +254,10 @@ public class JunctionTree implements InferenceEngine {
 	    varCliqueFactorMap = new HashMultimap<Integer, Integer>();
 	    for (DiscreteFactor f : factorGraphFactors) {
 		Set<DiscreteFactor> mergeableFactors = new HashSet<DiscreteFactor>(factorGraph.getFactors());
-		for (Integer varNum : f.getVarNums()) {
+		for (Integer varNum : f.getVars().getVariableNums()) {
 		    mergeableFactors.retainAll(varFactorMap.get(varNum));
 		    varFactorMap.put(varNum, f);
 		}
-
-		// Check if any previous factor is a strict subset of this one.
-		/*
-		Set<Integer> factorVars = new HashSet<Integer>(f.getVarNums());
-		for (Factor cliqueFactor : cliqueFactors) {
-		    if (factorVars.containsAll(cliqueFactor.getVarNums())) {
-			mergeableFactors.add(cliqueFactor);
-		    }
-		}
-		*/
 
 		if (mergeableFactors.size() > 0) {
 		    // Arbitrarily select a factor to merge this factor in to.
@@ -281,7 +271,7 @@ public class JunctionTree implements InferenceEngine {
 		    cliqueFactors.add(f);
 		    messages.add(new HashMap<Integer, DiscreteFactor>());
 
-		    for (Integer varNum : f.getVarNums()) {
+		    for (Integer varNum : f.getVars().getVariableNums()) {
 			varCliqueFactorMap.put(varNum, chosenNum);
 		    }
 		}
@@ -289,7 +279,7 @@ public class JunctionTree implements InferenceEngine {
 
 	    for (int i = 0; i < cliqueFactors.size(); i++) {
 		DiscreteFactor c = cliqueFactors.get(i);
-		for (Integer varNum : c.getVarNums()) {
+		for (Integer varNum : c.getVars().getVariableNums()) {
 		    factorEdges.putAll(i, varCliqueFactorMap.get(varNum));
 		    factorEdges.remove(i, i);
 		}

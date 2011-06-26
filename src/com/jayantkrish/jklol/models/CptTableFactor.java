@@ -9,11 +9,9 @@ import java.lang.StringBuilder;
  */
 public class CptTableFactor extends CptFactor {
 
-    private List<Integer> children;
-    private List<Variable> childVars;
-    private List<Integer> parents;
-    private List<Variable> parentVars;
-
+	private VariableNumMap parentVars;
+	private VariableNumMap childVars;
+	
     private Cpt cpt;
     private Map<Integer, Integer> cptVarNumMap;
 
@@ -25,16 +23,12 @@ public class CptTableFactor extends CptFactor {
      *
      * The factor's CPT comes uninitialized.
      */
-    public CptTableFactor(List<Integer> allVarNums, List<Variable> allVars, 
-	    List<Integer> parentNums, List<Variable> parentVars, 
-	    List<Integer> childrenNums, List<Variable> childrenVars) {
-	super(allVarNums, allVars);
+    public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars) {
+	super(parentVars.union(childVars));
 
-	this.parents = parentNums;
 	this.parentVars = parentVars;
-	this.children = childrenNums;
-	this.childVars = childrenVars;
-
+	this.childVars = childVars;
+	
 	cpt = null;
 	cptVarNumMap = null;
     }
@@ -45,7 +39,7 @@ public class CptTableFactor extends CptFactor {
 
     public Iterator<Assignment> outcomeIterator() {
 	// TODO: mapper iterator for sparse outcomes
-	return new AllAssignmentIterator(getVarNums(), getVars());
+	return new AllAssignmentIterator(getVars());
     }
 
     public double getUnnormalizedProbability(Assignment assignment) {
@@ -102,14 +96,14 @@ public class CptTableFactor extends CptFactor {
      * Get an iterator over all possible assignments to the parent variables
      */
     public Iterator<Assignment> parentAssignmentIterator() {
-	return new AllAssignmentIterator(parents, parentVars);
+	return new AllAssignmentIterator(parentVars);
     }
 
     /**
      * Get an iterator over all possible assignments to the child variables
      */
     public Iterator<Assignment> childAssignmentIterator() {
-	return new AllAssignmentIterator(children, childVars);
+	return new AllAssignmentIterator(childVars);
     }
 
     public String toString() {

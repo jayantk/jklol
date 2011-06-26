@@ -66,4 +66,12 @@ public class Variable<T> {
     public String toString() {
 	return values.toString();
     }
+    
+    public boolean equals(Object o) {
+    	if (o instanceof Variable<?>) {
+    		Variable<? >v = (Variable<?>) o;
+    		return name.equals(v.name) && values.equals(v.values) && openValueClass == v.openValueClass; 
+    	}
+    	return false;
+    }
 }

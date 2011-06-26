@@ -94,6 +94,10 @@ public class IndexedList<T> {
     public List<T> items() {
 	return Collections.unmodifiableList(items);
     }
+    
+    public boolean equals(Object o) {
+    	return o instanceof IndexedList<?> && items.equals(((IndexedList<?>) o).items);   		
+    }
 
     public String toString() {
 	return items.toString();

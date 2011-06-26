@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.models;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * An iterator over all possible assignments to a set of variables.
@@ -15,15 +17,31 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
     public AllAssignmentIterator(List<Integer> varNums, List<Variable> vars) {
 	this.vars = vars;
 	this.varNums = varNums;
-	this.currentValues = new ArrayList<Integer>(vars.size());
-	this.finalValues = new ArrayList<Integer>(vars.size());
-	for (int i = 0; i < vars.size(); i++) {
-	    currentValues.add(0);
-	    finalValues.add(vars.get(i).numValues() - 1);
-	}
-	// Set the last index to one higher than the actual number of values; when we increment
-	// currentValues to this point, we will be done.
-	finalValues.set(vars.size() - 1, finalValues.get(vars.size() - 1) + 1);
+	initializeValueState();
+    }
+        
+    public AllAssignmentIterator(VariableNumMap varNumMap) {
+    	this.varNums = new ArrayList<Integer>(varNumMap.getVariableNums());
+    	this.vars = new ArrayList<Variable>();
+    	for (Integer varNum : varNums) {
+    		vars.add(varNumMap.getVariable(varNum));
+    	}
+    	initializeValueState();
+    }
+    
+    /*
+     * Initializes the variable values controlling the iteration position. 
+     */
+    private void initializeValueState() {
+    	this.currentValues = new ArrayList<Integer>(vars.size());
+    	this.finalValues = new ArrayList<Integer>(vars.size());
+    	for (int i = 0; i < vars.size(); i++) {
+    	    currentValues.add(0);
+    	    finalValues.add(vars.get(i).numValues() - 1);
+    	}
+    	// Set the last index to one higher than the actual number of values; when we increment
+    	// currentValues to this point, we will be done.
+    	finalValues.set(vars.size() - 1, finalValues.get(vars.size() - 1) + 1);    	
     }
     
     public boolean hasNext() {

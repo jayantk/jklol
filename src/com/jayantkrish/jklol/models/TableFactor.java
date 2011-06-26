@@ -1,18 +1,14 @@
 package com.jayantkrish.jklol.models;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.List;
-import java.util.Arrays;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Collection;
 import java.util.Collections;
-import java.lang.UnsupportedOperationException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.jayantkrish.jklol.util.HashMultimap;
 
@@ -22,27 +18,23 @@ import com.jayantkrish.jklol.util.HashMultimap;
  */
 public class TableFactor extends DiscreteFactor {
 
-    private double defaultWeight;
     // I'm assuming factors are going to be sparse, otherwise a double[] would be
     // more efficient.
     private SparseOutcomeTable<Double> weights;
 
     // An index storing assignments containing particular variable values.
     private List<HashMultimap<Integer, Assignment>> varValueAssignmentIndex;
-    private List<Integer> keyCache;
 
     /**
      * Construct a TableFactor involving the specified variable numbers (whose possible values are
      * in variables).
      */
-    public TableFactor(List<Integer> varNums, List<Variable> variables) {
-	super(varNums, variables);
+    public TableFactor(VariableNumMap vars) {
+	super(vars);
 
-	this.keyCache = new ArrayList<Integer>();
-	this.defaultWeight = 0.0;
-	weights = new SparseOutcomeTable<Double>(varNums);
-	varValueAssignmentIndex = new ArrayList<HashMultimap<Integer, Assignment>>(varNums.size());
-	for (int i = 0; i < varNums.size(); i++) {
+	weights = new SparseOutcomeTable<Double>(vars.getVariableNums());
+	varValueAssignmentIndex = new ArrayList<HashMultimap<Integer, Assignment>>(vars.getVariableNums().size());
+	for (int i = 0; i < vars.getVariableNums().size(); i++) {
 	    varValueAssignmentIndex.add(new HashMultimap<Integer, Assignment>());
 	}
     }
@@ -66,7 +58,7 @@ public class TableFactor extends DiscreteFactor {
 
     public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Integer> varValues) {
 	int varIndex = -1;
-	List<Integer> varNums = getVarNums();
+	List<Integer> varNums = getVars().getVariableNums();
 	for (int i = 0; i < varNums.size(); i++) {
 	    if (varNums.get(i) == varNum) {
 		varIndex = i;
@@ -90,13 +82,8 @@ public class TableFactor extends DiscreteFactor {
      * General purpose method for setting a factor weight.
      */ 
     public void setWeightList(List<? extends Object> varValues, double weight) {
-	assert vars.size() == varValues.size();
-
-	List<Integer> valueInds = new ArrayList<Integer>();
-	for (int i = 0; i < varValues.size(); i++) {
-	    valueInds.add(vars.get(i).getValueIndexObject(varValues.get(i)));
-	}
-	setWeight(new Assignment(varNums, valueInds), weight);
+	assert getVars().size() == varValues.size();
+	setWeight(getVars().outcomeToAssignment(varValues), weight);
     }
 
     public void setWeight(Assignment a, double weight) {
@@ -104,7 +91,7 @@ public class TableFactor extends DiscreteFactor {
 	weights.put(a, weight);
 
 	Assignment copy = new Assignment(a);
-	List<Integer> varNums = getVarNums();
+	List<Integer> varNums = getVars().getVariableNums();
 	for (int i = 0; i < varNums.size(); i++) {
 	    varValueAssignmentIndex.get(i).put(copy.getVarValue(varNums.get(i)), copy);
 	}
@@ -115,28 +102,20 @@ public class TableFactor extends DiscreteFactor {
 	return weights.toString();
     }
     
-    private double getWeight(List<Integer> key) {
-	Assignment a = new Assignment(getVarNums(), key);
-	if (weights.containsKey(a)) {
-	    return weights.get(a);
-	}
-	return defaultWeight;
-    }
-    
     ///////////////////////////////////////////////////////////////////////////////////
     // Static methods, mostly for computing sums / products of factors
     ///////////////////////////////////////////////////////////////////////////////////
 
     public static DiscreteFactor sumProductTableFactor(List<DiscreteFactor> toSum, Collection<Integer> variablesToRetain) {
 	TableFactor p = TableFactor.productFactor(toSum);
-	List<Integer> vars = new ArrayList<Integer>(p.getVarNums());
+	List<Integer> vars = new ArrayList<Integer>(p.getVars().getVariableNums());
 	vars.removeAll(variablesToRetain);
 	return p.marginalize(vars);
     }
 
     public static DiscreteFactor maxProductTableFactor(List<DiscreteFactor> toSum, Collection<Integer> variablesToRetain) {
 	TableFactor p = TableFactor.productFactor(toSum);
-	List<Integer> vars = new ArrayList<Integer>(p.getVarNums());
+	List<Integer> vars = new ArrayList<Integer>(p.getVars().getVariableNums());
 	vars.removeAll(variablesToRetain);
 	return p.maxMarginalize(vars);
     }
@@ -158,12 +137,12 @@ public class TableFactor extends DiscreteFactor {
 	} else {
 	    iter = whole.outcomeIterator();
 	}
-	TableFactor returnFactor = new TableFactor(whole.getVarNums(), whole.getVars());
+	TableFactor returnFactor = new TableFactor(whole.getVars());
 	while (iter.hasNext()) {
 	    Assignment a = iter.next();
 	    double prob = whole.getUnnormalizedProbability(a);
 	    for (DiscreteFactor subset : subsets) {
-		Assignment sub = a.subAssignment(subset.getVarNums());
+		Assignment sub = a.subAssignment(subset.getVars().getVariableNums());
 		prob  *=  subset.getUnnormalizedProbability(sub);
 	    }
 	    if (prob > 0) {
@@ -174,51 +153,55 @@ public class TableFactor extends DiscreteFactor {
     }
 
     public static TableFactor productFactor(List<DiscreteFactor> toMultiply) {
-	SortedMap<Integer, Variable> allVarMap = new TreeMap<Integer, Variable>();
-	for (DiscreteFactor f : toMultiply) {
-	    List<Integer> fVarNums = f.getVarNums();
-	    List<Variable> fVars = f.getVars();
-	    for (int i = 0; i < fVarNums.size(); i++) {
-		allVarMap.put(fVarNums.get(i), fVars.get(i));
-	    }
-	}
-	List<Integer> varNums = new ArrayList<Integer>(allVarMap.keySet());
-	List<Variable> vars = new ArrayList<Variable>();
-	for (Integer varInd : varNums) {
-	    vars.add(allVarMap.get(varInd));
-	}
+    	
+    	VariableNumMap allVars = new VariableNumMap(Collections.EMPTY_LIST, Collections.EMPTY_LIST);
+    	for (DiscreteFactor f : toMultiply) {
+    		allVars = allVars.union(f.getVars());
+    	}
 
-	// Check if we can use a faster multiplication algorithm that doesn't
-	// enumerate all plausible assignments
-	DiscreteFactor whole = null;
-	List<DiscreteFactor> others = new ArrayList<DiscreteFactor>();
-	for (DiscreteFactor f : toMultiply) {
-	    if (whole == null && f.getVarNums().equals(varNums)) {
-		whole = f;
-	    } else {
-		others.add(f);
-	    }
-	}
-	if (whole != null) {
-	    return subsetProductFactor(whole, others);
-	}
+    	// Check if we can use a faster multiplication algorithm that doesn't
+    	// enumerate all plausible assignments
+    	DiscreteFactor whole = null;
+    	List<DiscreteFactor> others = new ArrayList<DiscreteFactor>();
+    	for (DiscreteFactor f : toMultiply) {
+    		if (whole == null && f.getVars().equals(allVars)) {
+    			whole = f;
+    		} else {
+    			others.add(f);
+    		}
+    	}
+    	if (whole != null) {
+    		return subsetProductFactor(whole, others);
+    	}
 
-	// Can't use the faster algorithm. Find all possible value assignments to each variable,
-	// then try each possible combination and calculate its probability.
-	List<Object> varValues = new ArrayList<Object>(allVarMap.size());
-	for (int i = 0; i < allVarMap.size(); i++) {
-	    varValues.add(null);
-	}
+    	// Can't use the faster algorithm. Find all possible value assignments to each variable,
+    	// then try each possible combination and calculate its probability.
+    	List<Object> varValues = new ArrayList<Object>(allVars.size());
+    	for (int i = 0; i < allVars.size(); i++) {
+    		varValues.add(null);
+    	}
 
-	Map<Integer, Set<Integer>> varValueMap = getPossibleVariableValues(toMultiply);
+    	TableFactor returnFactor = new TableFactor(allVars);
+    	Iterator<Assignment> assignmentIter = new AllAssignmentIterator(allVars);
+    	while (assignmentIter.hasNext()) {
+    		Assignment a = assignmentIter.next();
+    		double weight = 1.0;
+    		for (DiscreteFactor f : toMultiply) {
+    			weight *= f.getUnnormalizedProbability(a.subAssignment(f.getVars()));
+    		}
+    		if (weight > 0) {
+    			returnFactor.setWeight(a, weight);
+    		}
+    	}
 
-	TableFactor returnFactor = new TableFactor(varNums, vars);
-
-	recursiveFactorInitialization(varNums, vars, 0, varValues, toMultiply, returnFactor, varValueMap);
-	return returnFactor;
+    	// TODO(jayantk): this algorithm was faster when lots of variables have 0 probability entries.
+    	// Map<Integer, Set<Integer>> varValueMap = getPossibleVariableValues(toMultiply);
+    	// recursiveFactorInitialization(varNums, vars, 0, varValues, toMultiply, returnFactor, varValueMap);
+    	return returnFactor;
     }
+    
 
-
+    /*
     private static void recursiveFactorInitialization(List<Integer> varNums, List<Variable> vars, int curInd, 
 	    List<Object> varAssignments, List<DiscreteFactor> factors, TableFactor returnFactor, Map<Integer, Set<Integer>> varValueMap) {
 	
@@ -241,6 +224,7 @@ public class TableFactor extends DiscreteFactor {
 	    }
 	}
     }
+    */
 
     /*
      * Helper method for deciding all possible assignments to each variable in the provided list of factors.
@@ -259,7 +243,7 @@ public class TableFactor extends DiscreteFactor {
 		}
 	    }
 
-	    for (Integer varNum : f.getVarNums()) {
+	    for (Integer varNum : f.getVars().getVariableNums()) {
 		if (!varValueMap.containsKey(varNum)) {
 		    varValueMap.put(varNum, new HashSet<Integer>(factorValueMap.get(varNum)));
 		} else {

@@ -19,10 +19,10 @@ public class SparseCptTest extends TestCase {
 	v = new Variable<String>("Two values",
 		Arrays.asList(new String[] {"T", "F"}));
 
-	f = new CptTableFactor(Arrays.asList(new Integer[] {0, 1, 2, 3}), Arrays.asList(new Variable[] {v, v, v, v,}),
-		Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new Variable[] {v, v}),
-		Arrays.asList(new Integer[] {2, 3}), Arrays.asList(new Variable[] {v, v}));
-
+	f = new CptTableFactor(
+		new VariableNumMap(Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new Variable<?>[] {v, v})),
+		new VariableNumMap(Arrays.asList(new Integer[] {2, 3}), Arrays.asList(new Variable<?>[] {v, v})));
+	
 	sparse = new SparseCpt(Arrays.asList(new Variable[] {v, v}), Arrays.asList(new Variable[] {v, v}));
 	
 	Map<Integer, Integer> cptVarNumMap = new HashMap<Integer, Integer>();
@@ -37,7 +37,7 @@ public class SparseCptTest extends TestCase {
 				      {"F", "F", "F", "F"},
 				      {"F", "F", "T", "T"}};
 	for (int i = 0; i < assignments.length; i++) {
-	    sparse.setNonZeroProbabilityOutcome(f.outcomeToAssignment(Arrays.asList(assignments[i])));
+	    sparse.setNonZeroProbabilityOutcome(f.getVars().outcomeToAssignment(Arrays.asList(assignments[i])));
 	}
 	f.setCpt(sparse, cptVarNumMap);
     }
@@ -46,14 +46,14 @@ public class SparseCptTest extends TestCase {
     public void testSmoothing() {
 	f.addUniformSmoothing(1.0);
 
-	assertEquals(0.5, f.getUnnormalizedProbability(f.outcomeToAssignment(assignments[0])));
-	assertEquals(0.0, f.getUnnormalizedProbability(f.outcomeToAssignment(new Object[] {"T", "T", "F", "F"})));
-	assertEquals(1.0, f.getUnnormalizedProbability(f.outcomeToAssignment(assignments[2])));
+	assertEquals(0.5, f.getUnnormalizedProbability(f.getVars().outcomeToAssignment(assignments[0])));
+	assertEquals(0.0, f.getUnnormalizedProbability(f.getVars().outcomeToAssignment(new Object[] {"T", "T", "F", "F"})));
+	assertEquals(1.0, f.getUnnormalizedProbability(f.getVars().outcomeToAssignment(assignments[2])));
     }
 
     public void testUnsetParentError() {
 	try {
-	    f.getUnnormalizedProbability(f.outcomeToAssignment(new Object[] {"F", "T", "T", "T"}));
+	    f.getUnnormalizedProbability(f.getVars().outcomeToAssignment(new Object[] {"F", "T", "T", "T"}));
 	} catch (RuntimeException e) {
 	    return;
 	}

@@ -10,47 +10,50 @@ import java.util.TreeMap;
 
 /**
  * An Assignment represents a set of values assigned to a set of variables.
+ * Assignments are immutable.
  */ 
-public class Assignment {
+public class Assignment { 
 
 	public static final Assignment EMPTY = new Assignment(Arrays.asList(new Integer[] {}),
-			Arrays.asList(new Integer[] {}));
+			Arrays.asList(new Object[] {}));
 
-	private SortedMap<Integer, Integer> varValueMap;
+	private SortedMap<Integer, Object> varValueMap;
 
-	public Assignment(List<Integer> varNums, List<Integer> valueNums) {
-		assert varNums.size() == valueNums.size();
-		varValueMap = new TreeMap<Integer, Integer>();
+	public Assignment(List<Integer> varNums, List<? extends Object> values) {
+		// TODO: Store actual variables (VariableNumMap) and ensure that 
+		// assigned values are compatible.
+		assert varNums.size() == values.size();
+		varValueMap = new TreeMap<Integer, Object>();
 		for (int i = 0; i < varNums.size(); i++) {
-			varValueMap.put(varNums.get(i), valueNums.get(i));
+			varValueMap.put(varNums.get(i), values.get(i));
 		}
 	}
 
-	public Assignment(int varNum, int valueNum) {
-		varValueMap = new TreeMap<Integer, Integer>();
-		varValueMap.put(varNum, valueNum);
+	public Assignment(int varNum, Object value) {
+		varValueMap = new TreeMap<Integer, Object>();
+		varValueMap.put(varNum, value);
 	}
 
-	public Assignment(Map<Integer, Integer> varValues) {
-		varValueMap = new TreeMap<Integer, Integer>(varValues);    	
+	public Assignment(Map<Integer, Object> varValues) {
+		varValueMap = new TreeMap<Integer, Object>(varValues);    	
 	}
 
 	/**
 	 * Copy constructor
 	 */
 	public Assignment(Assignment a) {
-		varValueMap = new TreeMap<Integer, Integer>(a.varValueMap);
+		varValueMap = new TreeMap<Integer, Object>(a.varValueMap);
 	}
 
 	public List<Integer> getVarNumsSorted() {
 		return new ArrayList<Integer>(varValueMap.keySet());
 	}
 
-	public List<Integer> getVarValuesInKeyOrder() {
-		return new ArrayList<Integer>(varValueMap.values());
+	public List<Object> getVarValuesInKeyOrder() {
+		return new ArrayList<Object>(varValueMap.values());
 	}
 
-	public int getVarValue(int varNum) {
+	public Object getVarValue(int varNum) {
 		return varValueMap.get(varNum);
 	}
 
@@ -58,10 +61,13 @@ public class Assignment {
 		return varValueMap.containsKey(varNum);
 	}
 
-	public void setVarValue(int varNum, int value) {
+	// TODO(jayantk): Delete the shit out of this method!!
+	/*
+	public void setVarValue(int varNum, Object value) {
 		assert varValueMap.containsKey(varNum);
 		varValueMap.put(varNum, value);
 	}
+	*/
 
 	/**
 	 * If varNums is a subset of the variables in this assignment, this method returns the value
@@ -70,11 +76,11 @@ public class Assignment {
 	 * Puts the return value into "returnValue" if it is non-null, otherwise allocates and returns a
 	 * new list.
 	 */
-	public List<Integer> subAssignment(List<Integer> varNums,
-			List<Integer> returnValue) {
-		List<Integer> retVal = returnValue;
+	public List<Object> subAssignment(List<Integer> varNums,
+			List<Object> returnValue) {
+		List<Object> retVal = returnValue;
 		if (retVal == null) {
-			retVal = new ArrayList<Integer>();
+			retVal = new ArrayList<Object>();
 		}
 
 		for (Integer varNum : varNums) {
@@ -91,14 +97,13 @@ public class Assignment {
 	 */
 	public Assignment subAssignment(Collection<Integer> varNums) {
 		List<Integer> varNumList = new ArrayList<Integer>(varNums);
-		List<Integer> retVal = new ArrayList<Integer>();
+		List<Object> retVal = new ArrayList<Object>();
 		for (Integer varNum : varNumList) {
 			if (varValueMap.containsKey(varNum)) {
 				retVal.add(varValueMap.get(varNum));
 			}
 		}
 		assert retVal.size() == varNums.size();
-
 		return new Assignment(varNumList, retVal);
 	}
 
@@ -116,11 +121,11 @@ public class Assignment {
 		// Merge varnums / values
 		List<Integer> otherNums = other.getVarNumsSorted();
 		List<Integer> myNums = getVarNumsSorted();
-		List<Integer> otherVals = other.getVarValuesInKeyOrder();
-		List<Integer> myVals = getVarValuesInKeyOrder();
+		List<Object> otherVals = other.getVarValuesInKeyOrder();
+		List<Object> myVals = getVarValuesInKeyOrder();
 
 		List<Integer> mergedNums = new ArrayList<Integer>();
-		List<Integer> mergedVals = new ArrayList<Integer>();
+		List<Object> mergedVals = new ArrayList<Object>();
 
 		int i = 0;
 		int j = 0;
@@ -159,7 +164,7 @@ public class Assignment {
 	 * @return
 	 */
 	public Assignment removeAll(Collection<Integer> varNumsToRemove) {
-		SortedMap<Integer, Integer> newVarValueMap = new TreeMap<Integer, Integer>(varValueMap);
+		SortedMap<Integer, Object> newVarValueMap = new TreeMap<Integer, Object>(varValueMap);
 		for (Integer varNum : varNumsToRemove) {
 			if (newVarValueMap.containsKey(varNum)) {
 				newVarValueMap.remove(varNum);
@@ -174,7 +179,7 @@ public class Assignment {
 	 */
 	public Assignment mappedAssignment(Map<Integer, Integer> varMap) {
 		List<Integer> newVarNums = new ArrayList<Integer>();
-		List<Integer> newVarVals = new ArrayList<Integer>();
+		List<Object> newVarVals = new ArrayList<Object>();
 		for (Integer k : varValueMap.keySet()) {
 			if (varMap.containsKey(k)) {
 				newVarNums.add(varMap.get(k));
@@ -199,5 +204,4 @@ public class Assignment {
 	public String toString() {
 		return varValueMap.keySet().toString() + "=" + varValueMap.values().toString();
 	}
-
 }

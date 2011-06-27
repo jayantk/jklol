@@ -23,7 +23,7 @@ public class SparseCptTest extends TestCase {
 		new VariableNumMap(Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new Variable<?>[] {v, v})),
 		new VariableNumMap(Arrays.asList(new Integer[] {2, 3}), Arrays.asList(new Variable<?>[] {v, v})));
 	
-	sparse = new SparseCpt(Arrays.asList(new Variable[] {v, v}), Arrays.asList(new Variable[] {v, v}));
+	sparse = new SparseCpt(Arrays.asList(new Variable<?>[] {v, v}), Arrays.asList(new Variable<?>[] {v, v}));
 	
 	Map<Integer, Integer> cptVarNumMap = new HashMap<Integer, Integer>();
 	for (int i = 0; i < 4; i++) {

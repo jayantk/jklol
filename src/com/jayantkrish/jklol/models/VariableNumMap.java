@@ -10,7 +10,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-
 /**
  * A VariableNumMap represents an set of variables in a graphical model. 
  * VariableNumMaps are immutable.
@@ -66,8 +65,8 @@ public class VariableNumMap {
 	 * Get the variable types in this map, ordered by variable index. 
 	 * @return
 	 */
-	public List<Variable> getVariables() {
-		return new ArrayList<Variable>(varMap.values());
+	public List<Variable<?>> getVariables() {
+		return new ArrayList<Variable<?>>(varMap.values());
 	}
 	
 	/**
@@ -76,7 +75,7 @@ public class VariableNumMap {
 	 * @param variableNum
 	 * @return
 	 */
-	public Variable getVariable(int variableNum) {
+	public Variable<?> getVariable(int variableNum) {
 		return varMap.get(variableNum);
 	}
 	
@@ -166,10 +165,11 @@ public class VariableNumMap {
 	public Assignment outcomeToAssignment(List<? extends Object> outcome) {
 		assert outcome.size() == varMap.size();
 
-		Map<Integer, Integer> varValueMap = new HashMap<Integer, Integer>();
+		Map<Integer, Object> varValueMap = new HashMap<Integer, Object>();
 		int i = 0;
 		for (Map.Entry<Integer, Variable<?>> varIndex : varMap.entrySet()) {
-			varValueMap.put(varIndex.getKey(), varIndex.getValue().getValueIndexObject(outcome.get(i)));
+			assert varIndex.getValue().canTakeValue(outcome.get(i));
+			varValueMap.put(varIndex.getKey(), outcome.get(i));
 			i++;
 		}
 

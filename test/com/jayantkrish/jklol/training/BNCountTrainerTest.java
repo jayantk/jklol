@@ -24,8 +24,8 @@ public class BNCountTrainerTest extends TestCase {
 	CptTableFactor f2 = bn.addCptFactor(Arrays.asList(new String[] {"Var0", "Var1"}), 
 		Arrays.asList(new String[] {"Var2"}));
 
-	Cpt noNodeCpt = new Cpt(Collections.EMPTY_LIST, Arrays.asList(new Variable[] {tfVar}));
-	Cpt vCpt = new Cpt(Arrays.asList(new Variable[] {tfVar, tfVar}), Arrays.asList(new Variable[] {tfVar}));
+	Cpt noNodeCpt = new Cpt(Collections.EMPTY_LIST, Arrays.asList(new Variable<?>[] {tfVar}));
+	Cpt vCpt = new Cpt(Arrays.asList(new Variable<?>[] {tfVar, tfVar}), Arrays.asList(new Variable<?>[] {tfVar}));
 
 	Map<Integer, Integer> nodeCptMap0 = new HashMap<Integer, Integer>();
 	nodeCptMap0.put(0, 0);

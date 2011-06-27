@@ -1,8 +1,16 @@
 package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import java.util.*;
+import com.jayantkrish.jklol.util.HashMultimap;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A FactorGraph represents a Markov network.
@@ -107,19 +115,11 @@ public class FactorGraph {
 	}
 
 	/**
-	 * Get the variable numbers of all variables in the factor graph.
-	 */
-	public List<Integer> getVarNums() {
-		throw new UnsupportedOperationException("Not yet implemented");
-	}
-
-	/**
 	 * Get an iterator over all possible assignments to a set of variables.
 	 */
 	public Iterator<Assignment> assignmentIterator(List<String> factorVariables) {
 		return new AllAssignmentIterator(lookupVarStrings(factorVariables));
 	}
-
 
 	/**
 	 * Get an assignment for the named set of variables.
@@ -128,11 +128,11 @@ public class FactorGraph {
 		assert factorVariables.size() == outcome.size();
 
 		List<Integer> varNums = new ArrayList<Integer>(factorVariables.size());
-		List<Integer> outcomeValueInds = new ArrayList<Integer>(outcome.size());
-		for (int i = 0; i < factorVariables.size(); i++) {
+		List<Object> outcomeValueInds = new ArrayList<Object>(outcome.size());
+		for (int i = 0; i < factorVariables.size(); i++) {			
 			int varInd = getVariableIndex(factorVariables.get(i));
-			varNums.add(varInd);	    
-			outcomeValueInds.add(variables.get(varInd).getValueIndexObject(outcome.get(i)));
+			varNums.add(varInd);
+			outcomeValueInds.add(outcome.get(i));
 		}
 		return new Assignment(varNums, outcomeValueInds);
 	}
@@ -142,7 +142,7 @@ public class FactorGraph {
 		for (String varName : variableNumMap.keySet()) {
 			int varNum = variableNumMap.get(varName);
 			if (a.containsVar(varNum)) {
-				objectVals.put(varName, variables.get(varNum).getValue(a.getVarValue(varNum)));
+				objectVals.put(varName, a.getVarValue(varNum));
 			}
 		}
 		return objectVals;

@@ -9,34 +9,35 @@ public class Variable<T> {
 
 	private String name;
 	private IndexedList<T> values;
-	private boolean openValueClass;
-
-	public Variable(String name) {
-		this.name = name;
-		this.values = new IndexedList<T>();
-		openValueClass = false;
-	}
 
 	public Variable(String name, Collection<T> values) {
 		this.name = name;
 		this.values = new IndexedList<T>(values);
-		openValueClass = false;
 	}
 
 	/**
-	 * Get the index of an arbitrary value in this factor. Useful for
+	 * Get an arbitrary value v which can be assigned to this variable. Useful for
 	 * initializing things that don't care about the particular value.
 	 */
-	public int getArbitraryValueIndex() {
+	public Object getArbitraryValue() {
 		return 0;
 	}
 
+	/**
+	 * Get the number of possible values that this variable can take on.
+	 * @return
+	 */
 	public int numValues() {
 		return values.size();
 	}
-
-	public void addValue(T value) {
-		values.add(value);
+	
+	/**
+	 * Returns true if value is a legitimate setting for this variable.
+	 * @param value
+	 * @return
+	 */
+	public boolean canTakeValue(Object value) {	
+		return values.contains((T) value);
 	}
 
 	public T getValue(int index) {
@@ -45,10 +46,7 @@ public class Variable<T> {
 
 	public int getValueIndex(T typedValue) {
 		if (!values.contains(typedValue)) {
-			if (!openValueClass) {
-				throw new NoSuchElementException("Tried accessing " + typedValue + " of a closed variable class");
-			}
-			values.add(typedValue);
+			throw new NoSuchElementException("Tried accessing " + typedValue + " of a closed variable class");
 		}
 		return values.getIndex(typedValue);
 	}
@@ -70,7 +68,7 @@ public class Variable<T> {
 	public boolean equals(Object o) {
 		if (o instanceof Variable<?>) {
 			Variable<? >v = (Variable<?>) o;
-			return name.equals(v.name) && values.equals(v.values) && openValueClass == v.openValueClass; 
+			return name.equals(v.name) && values.equals(v.values); 
 		}
 		return false;
 	}

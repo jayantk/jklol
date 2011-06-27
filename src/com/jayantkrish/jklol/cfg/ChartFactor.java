@@ -83,8 +83,7 @@ public class ChartFactor extends DiscreteFactor {
 		Iterator<Assignment> iter = parentFactor.outcomeIterator();
 		while (iter.hasNext()) {
 			Assignment a = iter.next();
-			marginal.put(parentVar.getValue(a.getVarValue(parentVarNum)), 
-					parentFactor.getUnnormalizedProbability(a));
+			marginal.put((Production) a.getVarValue(parentVarNum), parentFactor.getUnnormalizedProbability(a));
 		}
 		return marginal;
 	}
@@ -103,18 +102,18 @@ public class ChartFactor extends DiscreteFactor {
 	}
 
 	public double getUnnormalizedProbability(Assignment a) {
-		if (childProbs.containsKey(childVar.getValue(a.getVarValue(childVarNum)))) {
+		if (childProbs.containsKey(a.getVarValue(childVarNum))) {
 			return parentFactor.getUnnormalizedProbability(
 					a.subAssignment(Arrays.asList(new Integer[] {parentVarNum})));
 		}
 		return 0.0;
 	}
 
-	public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Integer> varValues) {
+	public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Object> varValues) {
 		assert varNum == childVarNum || varNum == parentVarNum;
 
 		Set<Assignment> possibleAssignments = new HashSet<Assignment>();
-		int childVarValue = childVar.getValueIndex(childProbs.keySet().iterator().next());
+		List<Production> childVarValue = childProbs.keySet().iterator().next();
 		if (varNum == childVarNum) {
 			if (varValues.contains(childVarValue)) {
 				Iterator<Assignment> assignmentIter = parentFactor.outcomeIterator();

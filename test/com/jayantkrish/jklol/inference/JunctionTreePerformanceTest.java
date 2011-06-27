@@ -85,7 +85,7 @@ public class JunctionTreePerformanceTest extends TestCase {
 	long start = System.currentTimeMillis();
 	
 	t.computeMarginals(new Assignment(Arrays.asList(new Integer[] {0, 2}),
-			Arrays.asList(new Integer[] {0,0})));
+			Arrays.asList(new Object[] {0,0})));
 
 	long elapsed = System.currentTimeMillis() - start;
 	System.out.println("Elapsed: " + elapsed + " ms");

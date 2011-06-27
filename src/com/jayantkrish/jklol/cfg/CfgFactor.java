@@ -238,7 +238,7 @@ public class CfgFactor extends CptFactor {
 		}
 
 		// Child is being conditioned on.
-		List<Production> childVarValue = childVar.getValue(a.getVarValue(childVarNum));
+		List<Production> childVarValue = (List<Production>) a.getVarValue(childVarNum);
 		ParseChart c = parser.parseInsideMarginal(childVarValue, true);
 
 		Map<List<Production>, Double> childDist = new HashMap<List<Production>, Double>();

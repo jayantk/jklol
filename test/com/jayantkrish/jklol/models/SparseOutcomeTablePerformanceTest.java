@@ -42,11 +42,9 @@ public class SparseOutcomeTablePerformanceTest extends TestCase {
     public void testPutAssignmentSet() {
 	System.out.println("testPutAssignmentSet");
 	long start = System.currentTimeMillis();
-	Assignment a = new Assignment(varNums, Arrays.asList(new Integer[] {0,0,0}));
 	for (int i = 0; i < 10000; i++) {
-	    a.setVarValue(0, i / 100);
-	    a.setVarValue(1, (i / 10) % 10);
-	    a.setVarValue(2, i % 10);
+		Assignment a = new Assignment(varNums, 
+				Arrays.asList(new Integer[] {i / 100, (i / 10) % 10, i % 10}));
 	    table.put(a, 1.0);
 	}
 
@@ -79,7 +77,7 @@ public class SparseOutcomeTablePerformanceTest extends TestCase {
 
 	Iterator<Assignment> iter = table.assignmentIterator();
 	while (iter.hasNext()) {
-	    Assignment a = iter.next();
+	    iter.next();
 	}
 
 	long elapsed = System.currentTimeMillis() - start;

@@ -8,61 +8,75 @@ import java.util.List;
  * An iterator over all possible assignments to a set of variables.
  */
 public class AllAssignmentIterator implements Iterator<Assignment> {
-    
-    private List<Variable> vars;
-    private List<Integer> varNums;
-    private List<Integer> currentValues;
-    private List<Integer> finalValues;
-    
-    public AllAssignmentIterator(List<Integer> varNums, List<Variable> vars) {
-	this.vars = vars;
-	this.varNums = varNums;
-	initializeValueState();
-    }
-        
-    public AllAssignmentIterator(VariableNumMap varNumMap) {
-    	this.varNums = new ArrayList<Integer>(varNumMap.getVariableNums());
-    	this.vars = new ArrayList<Variable>();
-    	for (Integer varNum : varNums) {
-    		vars.add(varNumMap.getVariable(varNum));
-    	}
-    	initializeValueState();
-    }
-    
-    /*
-     * Initializes the variable values controlling the iteration position. 
-     */
-    private void initializeValueState() {
-    	this.currentValues = new ArrayList<Integer>(vars.size());
-    	this.finalValues = new ArrayList<Integer>(vars.size());
-    	for (int i = 0; i < vars.size(); i++) {
-    	    currentValues.add(0);
-    	    finalValues.add(vars.get(i).numValues() - 1);
-    	}
-    	// Set the last index to one higher than the actual number of values; when we increment
-    	// currentValues to this point, we will be done.
-    	finalValues.set(vars.size() - 1, finalValues.get(vars.size() - 1) + 1);    	
-    }
-    
-    public boolean hasNext() {
-	return !(currentValues.get(vars.size() - 1).equals(finalValues.get(vars.size() - 1)));
-    }
-    
-    public Assignment next() {
-	Assignment a = new Assignment(varNums, currentValues);
-	currentValues.set(0, currentValues.get(0) + 1);
-	int i = 0;
-	while (i < currentValues.size() - 1 && 
-		currentValues.get(i) > finalValues.get(i)) {
-	    currentValues.set(i, 0);
-	    currentValues.set(i + 1, currentValues.get(i + 1) + 1);
-	    i++;
+
+	private VariableNumMap vars;
+	private List<Integer> currentValueInds;
+	private List<Integer> finalValueInds;
+	private List<Object> currentValues;
+
+	public AllAssignmentIterator(List<Integer> varNums, List<Variable<?>> varList) {
+		this.vars = new VariableNumMap(varNums, varList);
+		initializeValueState();
 	}
-	return a;
-    }
-    
-    public void remove() {
-	throw new UnsupportedOperationException();
-    }
-    
+
+	public AllAssignmentIterator(VariableNumMap varNumMap) {
+		this.vars = varNumMap;
+		initializeValueState();
+	}
+
+	/*
+	 * Initializes the variable values controlling the iteration position. 
+	 */
+	private void initializeValueState() {
+		this.currentValueInds = new ArrayList<Integer>(vars.size());
+		this.currentValues = new ArrayList<Object>(vars.size());
+		this.finalValueInds = new ArrayList<Integer>(vars.size());
+		for (Integer varNum : vars.getVariableNums()) {
+			currentValueInds.add(0);
+			currentValues.add(null);
+			finalValueInds.add(vars.getVariable(varNum).numValues() - 1);
+		}
+		// Set the last index to one higher than the actual number of values; when we increment
+		// currentValues to this point, we will be done.
+		finalValueInds.set(vars.size() - 1, finalValueInds.get(vars.size() - 1) + 1);    	
+	}
+
+	public boolean hasNext() {
+		return !(currentValueInds.get(vars.size() - 1).equals(finalValueInds.get(vars.size() - 1)));
+	}
+	
+	public Assignment next() {
+		Assignment a = getCurrentAssignment();
+		incrementCurrentValueInds();
+		return a;
+	}
+
+	/*
+	 * Translates currentValueInds into an assignment.
+	 */
+	private Assignment getCurrentAssignment() {
+		List<Integer> varNums = vars.getVariableNums();
+		for (int i = 0; i < currentValueInds.size(); i++) {
+			currentValues.set(i, vars.getVariable(varNums.get(i)).getValue(currentValueInds.get(i)));
+		}
+		return new Assignment(vars.getVariableNums(), currentValues);
+	}
+	
+	/*
+	 * Advances the internal state of the iterator (currentValueInds) to the next value.
+	 */
+	private void incrementCurrentValueInds() {
+		currentValueInds.set(0, currentValueInds.get(0) + 1);
+		int i = 0;
+		while (i < currentValueInds.size() - 1 && 
+				currentValueInds.get(i) > finalValueInds.get(i)) {
+			currentValueInds.set(i, 0);
+			currentValueInds.set(i + 1, currentValueInds.get(i + 1) + 1);
+			i++;
+		}		
+	}
+
+	public void remove() {
+		throw new UnsupportedOperationException();
+	}
 }

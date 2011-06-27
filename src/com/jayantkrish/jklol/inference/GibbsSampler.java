@@ -41,8 +41,8 @@ public class GibbsSampler implements InferenceEngine {
 	}
 
 	private void doSamplingRound() {
-		for (Integer varNum : factorGraph.getVarNums()) {
-			doSample(varNum);
+		for (int i = 0; i < factorGraph.getVariables().size(); i++) {
+			doSample(i);
 		}
 	}
 
@@ -77,12 +77,14 @@ public class GibbsSampler implements InferenceEngine {
 		
 		marginal = new TableFactor(new VariableNumMap(assignment.getVarNumsSorted(), marginalVars));
 		// Initialize sampler with an arbitrary assignment.
+		List<Integer> varNums = new ArrayList<Integer>();
 		List<Variable<?>> vars = factorGraph.getVariables();
-		List<Integer> valueNums = new ArrayList<Integer>();
+		List<Object> values = new ArrayList<Object>();
 		for (int i = 0; i < vars.size(); i++) {
-			valueNums.add(vars.get(i).getArbitraryValueIndex());
+			varNums.add(i);
+			values.add(vars.get(i).getArbitraryValue());
 		}
-		Assignment curAssignment = new Assignment(factorGraph.getVarNums(), valueNums);
+		Assignment curAssignment = new Assignment(varNums, values);
 
 		// Burn in the sampler
 		for (int i = 0; i < burnInSamples; i++) {

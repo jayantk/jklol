@@ -44,7 +44,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
 	 * The default implementation of this method is fairly inefficient -- overriding it 
 	 * with a more efficient implementation should significantly improve performance.
 	 */
-	public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Integer> varValues) {
+	public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Object> varValues) {
 		Set<Assignment> assignments = new HashSet<Assignment>();
 		Iterator<Assignment> iter = outcomeIterator();
 		while (iter.hasNext()) {

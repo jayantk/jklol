@@ -33,7 +33,7 @@ public class BNCountTrainer {
 			BayesNet bn = p.getLeft();
 			Assignment assignment = p.getRight();
 			double probability = 1.0;
-			for (CptFactor<?> cptFactor : bn.getCptFactors()) {
+			for (CptFactor cptFactor : bn.getCptFactors()) {
 				cptFactor.incrementOutcomeCount(assignment, probability);
 			}
 		}

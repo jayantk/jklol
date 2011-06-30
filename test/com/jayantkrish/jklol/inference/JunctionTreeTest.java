@@ -3,10 +3,10 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.factors.DiscreteFactor;
-import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.models.TableFactor;
 
 public class JunctionTreeTest extends TestCase {
 

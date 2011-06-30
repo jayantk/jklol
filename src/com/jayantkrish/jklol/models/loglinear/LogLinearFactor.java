@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.Set;
 
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
@@ -23,7 +22,7 @@ public class LogLinearFactor extends DiscreteFactor {
 	private Set<FeatureFunction> myFeatures;
 	private SparseOutcomeTable<Set<FeatureFunction>> sparseFeatures;
 
-	public LogLinearFactor(VariableNumMap<DiscreteVariable> vars, FeatureSet featureSet) {
+	public LogLinearFactor(VariableNumMap vars, FeatureSet featureSet) {
 		super(vars);
 		this.featureSet = featureSet;
 		myFeatures = new HashSet<FeatureFunction>();

@@ -20,7 +20,7 @@ public class BayesNetWrapperFactory implements BayesNetFactory<Assignment> {
 
 	public void addUniformSmoothing(double smoothingCounts) {
 		// Set all CPT statistics to the smoothing value
-		for (CptFactor<?> cptFactor : bn.getCptFactors()) {
+		for (CptFactor cptFactor : bn.getCptFactors()) {
 			cptFactor.clearCpt();
 			cptFactor.addUniformSmoothing(smoothingCounts);
 		}

@@ -62,8 +62,8 @@ public class StepwiseEMTrainer {
 		initializeCpts(bn);
 		inferenceEngine.setFactorGraph(bn);
 
-		List<CptFactor<?>> cptFactors = bn.getCptFactors();
-		Factor<?>[][] storedMarginals = new Factor<?>[cptFactors.size()][batchSize];
+		List<CptFactor> cptFactors = bn.getCptFactors();
+		Factor[][] storedMarginals = new Factor[cptFactors.size()][batchSize];
 		int numUpdates = 0;
 
 		for (int i = 0; i < numIterations; i++) {
@@ -81,8 +81,8 @@ public class StepwiseEMTrainer {
 
 				inferenceEngine.computeMarginals(trainingExample);
 				for (int k = 0; k < cptFactors.size(); k++) {
-					CptFactor<?> cptFactor = cptFactors.get(k);
-					Factor<?> marginal = inferenceEngine.getMarginal(cptFactor.getVars().getVariableNums());
+					CptFactor cptFactor = cptFactors.get(k);
+					Factor marginal = inferenceEngine.getMarginal(cptFactor.getVars().getVariableNums());
 
 					storedMarginals[k][exampleIterNum % batchSize] = marginal;
 
@@ -94,7 +94,7 @@ public class StepwiseEMTrainer {
 	}
 
 
-	public void performParameterUpdate(List<CptFactor<?>> factorsToUpdate, Factor<?>[][] marginals, 
+	public void performParameterUpdate(List<CptFactor> factorsToUpdate, Factor[][] marginals, 
 			int numValidEntries, int numUpdates) {
 
 		// Instead of multiplying the sufficient statistics (dense update)
@@ -104,7 +104,7 @@ public class StepwiseEMTrainer {
 
 		double batchMultiplier = batchDecayParam / totalDecay;
 		for (int i = 0; i < factorsToUpdate.size(); i++) {
-			CptFactor<?> factor = factorsToUpdate.get(i);
+			CptFactor factor = factorsToUpdate.get(i);
 			for (int j = 0; j < numValidEntries; j++) {
 				factor.incrementOutcomeCount(marginals[i][j], batchMultiplier);
 			}
@@ -114,7 +114,7 @@ public class StepwiseEMTrainer {
 
 	private void initializeCpts(BayesNet bn) {
 		// Set all CPT statistics to the smoothing value
-		for (CptFactor<?> cptFactor : bn.getCptFactors()) {
+		for (CptFactor cptFactor : bn.getCptFactors()) {
 			cptFactor.clearCpt();
 			cptFactor.addUniformSmoothing(smoothing);
 		}

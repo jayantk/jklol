@@ -19,7 +19,7 @@ public class DefaultLogFunction implements LogFunction {
 		System.out.println(iteration + "." + exampleNum + ": example: " + graph.assignmentToObject(example));
 	}
 
-	public void log(int iteration, int exampleNum, Factor<?> originalFactor, Factor<?> marginal, FactorGraph graph) {
+	public void log(int iteration, int exampleNum, Factor originalFactor, Factor marginal, FactorGraph graph) {
 		// Unsure what a reasonable replacement for this is...
 		/*
 		List<Assignment> mostLikely = marginal.mostLikelyAssignments(numAssignments);

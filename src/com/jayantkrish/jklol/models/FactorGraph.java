@@ -31,7 +31,7 @@ public class FactorGraph {
 	private HashMultimap<Integer, Integer> variableFactorMap;
 	private HashMultimap<Integer, Integer> factorVariableMap;
 
-	private IndexedList<Factor<?>> factors;
+	private IndexedList<Factor> factors;
 
 	/**
 	 * Create an empty factor graph.
@@ -41,7 +41,7 @@ public class FactorGraph {
 		variableNumMap = new HashMap<String, Integer>();
 		variableFactorMap = new HashMultimap<Integer, Integer>();
 		factorVariableMap = new HashMultimap<Integer, Integer>();
-		factors = new IndexedList<Factor<?>>();
+		factors = new IndexedList<Factor>();
 	}
 
 	/**
@@ -53,7 +53,7 @@ public class FactorGraph {
 		this.variableNumMap = new HashMap<String, Integer>(factorGraph.variableNumMap);
 		this.variableFactorMap = new HashMultimap<Integer, Integer>(factorGraph.variableFactorMap);
 		this.factorVariableMap = new HashMultimap<Integer, Integer>(factorGraph.factorVariableMap);
-		this.factors = new IndexedList<Factor<?>>(factorGraph.factors);
+		this.factors = new IndexedList<Factor>(factorGraph.factors);
 	}
 
 	/**
@@ -66,14 +66,14 @@ public class FactorGraph {
 	/**
 	 * Get a factor using its index number.
 	 */
-	public Factor<?> getFactorFromIndex(int factorNum) {
+	public Factor getFactorFromIndex(int factorNum) {
 		return factors.get(factorNum);
 	}
 
 	/**
 	 * Get all factors.
 	 */
-	public List<Factor<?>> getFactors() {
+	public List<Factor> getFactors() {
 		return factors.items();
 	}
 
@@ -102,7 +102,7 @@ public class FactorGraph {
 	 * Get the variable numbers and variables corresponding to the given set of variable names.
 	 * Note that the order of the names in factorVariables is irrelevant. 
 	 */
-	public VariableNumMap<Variable> lookupVariables(Collection<String> factorVariables) {
+	public VariableNumMap lookupVariables(Collection<String> factorVariables) {
 		List<Integer> varNums = new ArrayList<Integer>();
 		List<Variable> vars = new ArrayList<Variable>();
 		for (String variableName : factorVariables) {
@@ -112,7 +112,7 @@ public class FactorGraph {
 			varNums.add(variableNumMap.get(variableName));
 			vars.add(variables.get(variableNumMap.get(variableName)));
 		}
-		return new VariableNumMap<Variable>(varNums, vars);
+		return new VariableNumMap(varNums, vars);
 	}
 
 	/**
@@ -177,7 +177,7 @@ public class FactorGraph {
 	 * Add a new factor to the model, returning the unique number
 	 * assigned to it.
 	 */
-	public int addFactor(Factor<?> factor) {
+	public int addFactor(Factor factor) {
 		int factorNum = factors.size();
 		factors.add(factor);
 
@@ -192,8 +192,8 @@ public class FactorGraph {
 	 * Add a new table factor to the model.
 	 */
 	public TableFactor addTableFactor(List<String> variables) {
-		VariableNumMap<Variable> vars = lookupVariables(variables);
-		VariableNumMap<DiscreteVariable> discreteVars = VariableNumMap.emptyMap();
+		VariableNumMap vars = lookupVariables(variables);
+		VariableNumMap discreteVars = VariableNumMap.emptyMap();
 		for (Integer varNum : vars.getVariableNums()) {
 			Variable v = vars.getVariable(varNum);
 			if (v instanceof DiscreteVariable) {

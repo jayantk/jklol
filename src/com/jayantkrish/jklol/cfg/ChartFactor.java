@@ -1,10 +1,22 @@
 
 package com.jayantkrish.jklol.cfg;
 
-import com.jayantkrish.jklol.models.*;
-import com.jayantkrish.jklol.util.Assignment;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import java.util.*;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.util.Assignment;
 
 
 /**
@@ -25,7 +37,7 @@ public class ChartFactor extends DiscreteFactor {
 	public ChartFactor(ParseChart chart, DiscreteVariable parentVar, 
 			DiscreteVariable childVar, int parentVarNum, int childVarNum, 
 			Map<List<Production>, Double> childProbs) {
-		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
 				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		assert chart.getInsideCalculated() == true;
@@ -40,7 +52,7 @@ public class ChartFactor extends DiscreteFactor {
 		this.childProbs = childProbs;
 
 		// Using a helper table factor makes many methods trivial to implement.
-		TableFactor tempFactor = new TableFactor(new VariableNumMap<DiscreteVariable>(
+		TableFactor tempFactor = new TableFactor(new VariableNumMap(
 				Arrays.asList(new Integer[] {parentVarNum}), 
 				Arrays.asList(new DiscreteVariable[] {parentVar})));
 		Map<Production, Double> rootEntries = chart.getInsideEntries(0, chart.chartSize() - 1);
@@ -60,7 +72,7 @@ public class ChartFactor extends DiscreteFactor {
 	 */
 	public ChartFactor(ParseChart chart, DiscreteVariable parentVar, DiscreteVariable childVar,
 			int parentVarNum, int childVarNum, Map<List<Production>, Double> childProbs, DiscreteFactor parentFactor) {
-		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
 				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		assert chart.getInsideCalculated() == true;

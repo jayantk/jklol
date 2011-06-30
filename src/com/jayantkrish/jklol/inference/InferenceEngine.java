@@ -44,5 +44,5 @@ public interface InferenceEngine {
 	/**
 	 * Retrieve an already computed marginal distribution.     
 	 */
-	public Factor<?> getMarginal(List<Integer> varNums);
+	public Factor getMarginal(List<Integer> varNums);
 }

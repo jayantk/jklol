@@ -30,9 +30,9 @@ public class TableFactor extends DiscreteFactor {
 
 	/**
 	 * Construct a TableFactor involving the specified variable numbers (whose possible values are
-	 * in variables).
+	 * in variables). Note that vars can only contain DiscreteVariables.
 	 */
-	public TableFactor(VariableNumMap<DiscreteVariable> vars) {
+	public TableFactor(VariableNumMap vars) {
 		super(vars);
 
 		weights = new SparseOutcomeTable<Double>(vars.getVariableNums());
@@ -160,7 +160,7 @@ public class TableFactor extends DiscreteFactor {
 	}
 
 	public static TableFactor productFactor(List<DiscreteFactor> toMultiply) {
-		VariableNumMap<DiscreteVariable> allVars = VariableNumMap.emptyMap();
+		VariableNumMap allVars = VariableNumMap.emptyMap();
 		for (DiscreteFactor f : toMultiply) {
 			allVars = allVars.union(f.getVars());
 		}

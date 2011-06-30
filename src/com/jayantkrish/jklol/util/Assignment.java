@@ -109,7 +109,7 @@ public class Assignment {
 		return new Assignment(varNumList, retVal);
 	}
 
-	public Assignment subAssignment(VariableNumMap<?> vars) {
+	public Assignment subAssignment(VariableNumMap vars) {
 		return subAssignment(vars.getVariableNums());
 	}
 

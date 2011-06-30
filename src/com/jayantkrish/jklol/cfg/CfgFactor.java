@@ -25,7 +25,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * You can run exact inference in a Bayes Net containing a CfgFactor provided that the terminal
  * productions are conditioned on.
  */
-public class CfgFactor extends DiscreteFactor implements CptFactor<DiscreteVariable> {
+public class CfgFactor extends DiscreteFactor implements CptFactor {
 
 	private int parentVarNum;
 	private DiscreteVariable parentVar;
@@ -46,7 +46,7 @@ public class CfgFactor extends DiscreteFactor implements CptFactor<DiscreteVaria
 	public CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
 			int parentVarNum, int childVarNum, Grammar grammar, 
 			CptProductionDistribution productionDist) {
-		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
 				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		this.parentVarNum = parentVarNum;
@@ -66,7 +66,7 @@ public class CfgFactor extends DiscreteFactor implements CptFactor<DiscreteVaria
 	private CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
 			int parentVarNum, int childVarNum, CptProductionDistribution productionDist, 
 			CfgParser parser, DiscreteFactor multipliedWith) {
-		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
 				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		this.parentVarNum = parentVarNum;
@@ -123,7 +123,7 @@ public class CfgFactor extends DiscreteFactor implements CptFactor<DiscreteVaria
 		throw new UnsupportedOperationException("");
 	}
 
-	public void incrementOutcomeCount(Factor<?> marginal, double count) {
+	public void incrementOutcomeCount(Factor marginal, double count) {
 		if (marginal instanceof ChartFactor) {
 			ChartFactor cf = (ChartFactor) marginal;
 			ParseChart chart = cf.getChart();
@@ -219,7 +219,7 @@ public class CfgFactor extends DiscreteFactor implements CptFactor<DiscreteVaria
 	}
 
 	public DiscreteFactor conditional(Assignment a) {
-		VariableNumMap<DiscreteVariable> intersection = getVars().intersection(new HashSet<Integer>(a.getVarNumsSorted()));
+		VariableNumMap intersection = getVars().intersection(new HashSet<Integer>(a.getVarNumsSorted()));
 
 		if (intersection.size() == 0) {
 			return this;

@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -18,7 +17,7 @@ public class LogLinearModelBuilder {
 	private List<LogLinearFactor> logLinearFactors;
 	private FeatureSet features;
 
-	private VariableNumMap<DiscreteVariable> discreteVariables;
+	private VariableNumMap discreteVariables;
 
 	/**
 	 * Create an empty log-linear model builder
@@ -55,18 +54,11 @@ public class LogLinearModelBuilder {
 		factorGraph.addFactor(factor);
 	}
 
-	public VariableNumMap<DiscreteVariable> lookupDiscreteVariables(List<String> variableNames) {
-		VariableNumMap<Variable> allVars = factorGraph.lookupVariables(variableNames);
-		VariableNumMap<DiscreteVariable> enumVars = discreteVariables.intersection(allVars);
-		assert enumVars.size() == allVars.size();
-		return enumVars;
-	}
-
 	/**
 	 * Adds a new Factor with log-linear weights connecting the specified variables.
 	 */
 	public LogLinearFactor addLogLinearFactor(List<String> factorVariables) {
-		LogLinearFactor factor = new LogLinearFactor(lookupDiscreteVariables(factorVariables), features);
+		LogLinearFactor factor = new LogLinearFactor(factorGraph.lookupVariables(factorVariables), features);
 		addFactor(factor);
 		return factor;
 	}

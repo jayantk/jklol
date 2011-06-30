@@ -1,12 +1,22 @@
-import com.jayantkrish.jklol.models.*;
-import com.jayantkrish.jklol.models.factors.LogLinearFactor;
-import com.jayantkrish.jklol.inference.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import junit.framework.TestCase;
+
+import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
+import com.jayantkrish.jklol.models.loglinear.FeatureSet;
+import com.jayantkrish.jklol.models.loglinear.IndicatorFeatureFunction;
+import com.jayantkrish.jklol.models.loglinear.LogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.LogLinearModel;
+import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
-
-import java.util.*;
-
-import junit.framework.*;
 
 public class StochasticGradientTrainerTest extends TestCase {
 

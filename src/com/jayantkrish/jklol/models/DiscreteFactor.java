@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
@@ -8,15 +9,22 @@ import com.jayantkrish.jklol.util.PairComparator;
 import java.util.*;
 
 /**
- * DiscreteFactor provides a generic implementation of most methods of the Factor interface for
+ * DiscreteFactor provides a generic implementation of most methods of the {@link Factor} interface for
  * variables which take on discrete values.
  */
-public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
+public abstract class DiscreteFactor extends AbstractFactor {
 
 	private double partitionFunction;
 
-	public DiscreteFactor(VariableNumMap<DiscreteVariable> vars) {
+	/**
+	 * DiscreteFactor must be defined only over {@link DiscreteVariable}s. Throws an 
+	 * IllegalArgumentException if vars contains anything but DiscreteVariables.
+	 * @param vars
+	 */
+	public DiscreteFactor(VariableNumMap vars) {
 		super(vars);
+		Preconditions.checkArgument(vars.getDiscreteVariables().size() == vars.size());
+		
 		this.partitionFunction = -1.0;
 	}
 
@@ -39,6 +47,8 @@ public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
 	 * Compute the unnormalized probability of an outcome.
 	 */
 	public double getUnnormalizedProbability(List<? extends Object> outcome) {
+		Preconditions.checkNotNull(outcome);
+		
 		Assignment a = getVars().outcomeToAssignment(outcome);
 		return getUnnormalizedProbability(a);
 	}
@@ -112,7 +122,7 @@ public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
 
 		// If we get here, some variables in this factor are conditioned on, and others are not.
 		// Get the set of variables which are *not* conditioned on.
-		VariableNumMap<DiscreteVariable> remainingVars = getVars().removeAll(intersection);	
+		VariableNumMap remainingVars = getVars().removeAll(intersection);	
 
 		// Efficiency improvement: instead of iterating over all possible assignments to this factor
 		// and retaining only those with the desired assignment, first intersect all possible assignments
@@ -150,7 +160,7 @@ public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
 	protected DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
 		Set<Integer> varNumsToEliminateSet = new HashSet<Integer>(varNumsToEliminate);
 
-		VariableNumMap<DiscreteVariable> retainedVars = getVars().removeAll(varNumsToEliminateSet);
+		VariableNumMap retainedVars = getVars().removeAll(varNumsToEliminateSet);
 		TableFactor returnFactor = new TableFactor(retainedVars);
 
 		Iterator<Assignment> outcomeIterator = outcomeIterator();

@@ -1,11 +1,20 @@
-import com.jayantkrish.jklol.models.*;
-import com.jayantkrish.jklol.models.factors.CptFactor;
-import com.jayantkrish.jklol.models.factors.CptTableFactor;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import junit.framework.TestCase;
+
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.bayesnet.BayesNet;
+import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
+import com.jayantkrish.jklol.models.bayesnet.Cpt;
+import com.jayantkrish.jklol.models.bayesnet.CptFactor;
+import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.training.BNCountTrainer;
 import com.jayantkrish.jklol.util.Assignment;
-
-import java.util.*;
-import junit.framework.*;
 
 public class BNCountTrainerTest extends TestCase {
 
@@ -68,22 +77,22 @@ public class BNCountTrainerTest extends TestCase {
 	public void testTrain() {
 		t.train(bn, trainingData);
 
-		List<CptFactor<?>> cptFactors = bn.getCptFactors();
-		CptFactor<?> m0 = cptFactors.get(0);
+		List<CptFactor> cptFactors = bn.getCptFactors();
+		CptFactor m0 = cptFactors.get(0);
 		assertEquals(7.0 / 20.0,
 				m0.getUnnormalizedProbability(m0.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
 
 		assertEquals(13.0 / 20.0,
 				m0.getUnnormalizedProbability(m0.getVars().outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
 
-		CptFactor<?> m1 = cptFactors.get(1);
+		CptFactor m1 = cptFactors.get(1);
 		assertEquals(7.0 / 20.0,
 				m1.getUnnormalizedProbability(m1.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
 
 		assertEquals(13.0 / 20.0,
 				m1.getUnnormalizedProbability(m1.getVars().outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
 
-		CptFactor<?> m2 = cptFactors.get(2);
+		CptFactor m2 = cptFactors.get(2);
 
 		assertEquals(0.8,
 				m2.getUnnormalizedProbability(m2.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "F"}))));

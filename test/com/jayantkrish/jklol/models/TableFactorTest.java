@@ -5,12 +5,12 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.models.FeatureFunction;
-import com.jayantkrish.jklol.models.IndicatorFeatureFunction;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.factors.DiscreteFactor;
-import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
+import com.jayantkrish.jklol.models.loglinear.IndicatorFeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -35,10 +35,10 @@ public class TableFactorTest extends TestCase {
 		v2 = new DiscreteVariable("Two values",
 				Arrays.asList(new String[] {"foo", "bar"}));
 
-		h = new TableFactor(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {1, 0}),
+		h = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {1, 0}),
 				Arrays.asList(new DiscreteVariable[] {v2, v})));
 
-		f = new TableFactor(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 3, 2, 5}),
+		f = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 3, 2, 5}),
 				Arrays.asList(new DiscreteVariable[] {v, v, v, v})));
 
 		// NOTE: These insertions are to the variables in SORTED ORDER,
@@ -47,7 +47,7 @@ public class TableFactorTest extends TestCase {
 		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "T"}), 3.0);
 		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "U"}), 2.0);
 
-		g = new TableFactor(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 1, 3}),
+		g = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}),
 				Arrays.asList(new DiscreteVariable[] {v, v, v})));
 
 		g.setWeightList(Arrays.asList(new String[] {"T", "U", "F"}), 7.0);

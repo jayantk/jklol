@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
@@ -15,10 +14,10 @@ import com.jayantkrish.jklol.util.Assignment;
  * A CptTableFactor is the typical factor you'd expect in a Bayesian Network. 
  * Its unnormalized probabilities are simply child variable probabilities conditioned on a parent.
  */
-public class CptTableFactor extends DiscreteFactor implements CptFactor<DiscreteVariable> {
+public class CptTableFactor extends DiscreteFactor implements CptFactor {
 
-	private VariableNumMap<DiscreteVariable> parentVars;
-	private VariableNumMap<DiscreteVariable> childVars;
+	private VariableNumMap parentVars;
+	private VariableNumMap childVars;
 
 	private Cpt cpt;
 	private Map<Integer, Integer> cptVarNumMap;
@@ -31,7 +30,7 @@ public class CptTableFactor extends DiscreteFactor implements CptFactor<Discrete
 	 *
 	 * The factor's CPT comes uninitialized.
 	 */
-	public CptTableFactor(VariableNumMap<DiscreteVariable> parentVars, VariableNumMap<DiscreteVariable> childVars) {
+	public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars) {
 		super(parentVars.union(childVars));
 
 		this.parentVars = parentVars;
@@ -70,7 +69,7 @@ public class CptTableFactor extends DiscreteFactor implements CptFactor<Discrete
 		cpt.incrementOutcomeCount(a.mappedAssignment(cptVarNumMap), count);
 	}
 
-	public void incrementOutcomeCount(Factor<?> marginal, double count) {
+	public void incrementOutcomeCount(Factor marginal, double count) {
 		Iterator<Assignment> assignmentIter = outcomeIterator();
 		while (assignmentIter.hasNext()) {
 			Assignment a = assignmentIter.next();

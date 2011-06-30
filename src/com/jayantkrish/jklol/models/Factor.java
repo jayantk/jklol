@@ -11,13 +11,13 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  *
  */
-public interface Factor<T extends Variable> {
+public interface Factor {
 
 	/**
 	 * Get the set of variables which this factor is defined over.
 	 * @return
 	 */
-	public VariableNumMap<T> getVars();
+	public VariableNumMap getVars();
 
 	/**
 	 * Get the unnormalized probability of a particular assignment to the variables in this factor. 
@@ -41,27 +41,27 @@ public interface Factor<T extends Variable> {
 	 * The returned factor still contains the same variables as the original, but has appropriate
 	 * portions of the factor distribution zeroed out.
 	 */
-	public Factor<T> conditional(Assignment a);
+	public Factor conditional(Assignment a);
 
 	/**
 	 * Return a factor with the specified variables marginalized out by summing.
 	 */
-	public Factor<T> marginalize(Integer ... varNumsToEliminate);
+	public Factor marginalize(Integer ... varNumsToEliminate);
 
 	/**
 	 * Return a factor with the specified variables marginalized out by summing.
 	 */
-	public Factor<T> marginalize(Collection<Integer> varNumsToEliminate);
+	public Factor marginalize(Collection<Integer> varNumsToEliminate);
 
 	/**
 	 * Return a factor with the specified variables marginalized out by maximizing.
 	 */
-	public Factor<T> maxMarginalize(Integer ... varNumsToEliminate);
+	public Factor maxMarginalize(Integer ... varNumsToEliminate);
 
 	/**
 	 * Return a factor with the specified variables marginalized out by maximizing.
 	 */
-	public Factor<T> maxMarginalize(Collection<Integer> varNumsToEliminate);
+	public Factor maxMarginalize(Collection<Integer> varNumsToEliminate);
 	// TODO(jayant): Update the signature of maxMarginalize to this version in the future. This	
 	// version essentially performs a beam search for the max marginal. 
 	// public Factor<T> maxMarginalize(Collection<Integer> varNumsToEliminate, int beamSize);

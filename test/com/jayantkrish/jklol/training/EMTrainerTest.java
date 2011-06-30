@@ -8,12 +8,12 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.models.BayesNet;
-import com.jayantkrish.jklol.models.BayesNetBuilder;
-import com.jayantkrish.jklol.models.Cpt;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.factors.CptFactor;
-import com.jayantkrish.jklol.models.factors.CptTableFactor;
+import com.jayantkrish.jklol.models.bayesnet.BayesNet;
+import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
+import com.jayantkrish.jklol.models.bayesnet.Cpt;
+import com.jayantkrish.jklol.models.bayesnet.CptFactor;
+import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.training.IncrementalEMTrainer;
 import com.jayantkrish.jklol.training.StepwiseEMTrainer;
 import com.jayantkrish.jklol.util.Assignment;
@@ -97,7 +97,7 @@ public class EMTrainerTest extends TestCase {
 		//Assignment a = bn.outcomeToAssignment(allVarNames, 
 		//	Arrays.asList());
 
-		for (CptFactor<?> f : bn.getCptFactors()) {
+		for (CptFactor f : bn.getCptFactors()) {
 			System.out.println(f);
 		}
 	}
@@ -105,7 +105,7 @@ public class EMTrainerTest extends TestCase {
 	public void testStepwiseEM() {
 		s.train(bn, trainingData);
 
-		for (CptFactor<?> f : bn.getCptFactors()) {
+		for (CptFactor f : bn.getCptFactors()) {
 			System.out.println(f);
 		}
 	}

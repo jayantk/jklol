@@ -11,7 +11,7 @@ public interface LogFunction {
 
 	public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph);
 
-	public void log(int iteration, int exampleNum, Factor<?> originalFactor, Factor<?> marginal, FactorGraph graph);
+	public void log(int iteration, int exampleNum, Factor originalFactor, Factor marginal, FactorGraph graph);
 
 	public void notifyIterationStart(int iteration);
 

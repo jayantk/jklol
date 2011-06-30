@@ -3,7 +3,7 @@
   <property name="tst-dir" location="test" />
 
   <path id="classpath.base">
-  	<pathelement location="/lib/guava-r09.jar" />
+  	<pathelement location="lib/guava-r09.jar" />
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />
@@ -58,7 +58,6 @@
       <test name="JunctionTreePerformanceTest" />
     </junit>
   </target>
-
 
   <target name="jar" depends="compile">
     <jar destfile="jklol.jar" basedir="build" />

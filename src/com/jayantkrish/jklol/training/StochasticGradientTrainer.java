@@ -49,7 +49,7 @@ public class StochasticGradientTrainer {
 		// Compute the second term of the gradient, the expected feature counts
 		inferenceEngine.computeMarginals();
 		for (LogLinearFactor factor : factorGraph.getLogLinearFactors()) {
-			Factor<?> marginal = inferenceEngine.getMarginal(factor.getVars().getVariableNums());
+			Factor marginal = inferenceEngine.getMarginal(factor.getVars().getVariableNums());
 			for (FeatureFunction f : factor.getFeatures()) {
 				if (!gradient.containsKey(f)) {
 					gradient.put(f, 0.0);
@@ -62,7 +62,7 @@ public class StochasticGradientTrainer {
 		// Compute the first term of the gradient, the model expectations conditioned on the training example.
 		inferenceEngine.computeMarginals(trainingExample);
 		for (LogLinearFactor factor : factorGraph.getLogLinearFactors()) {
-			Factor<?> marginal = inferenceEngine.getMarginal(factor.getVars().getVariableNums());
+			Factor marginal = inferenceEngine.getMarginal(factor.getVars().getVariableNums());
 			for (FeatureFunction f : factor.getFeatures()) {
 				if (!gradient.containsKey(f)) {
 					gradient.put(f, 0.0);

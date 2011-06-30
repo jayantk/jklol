@@ -12,11 +12,11 @@ import com.jayantkrish.jklol.cfg.Grammar;
 import com.jayantkrish.jklol.cfg.Production;
 import com.jayantkrish.jklol.cfg.TerminalProduction;
 import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.models.BayesNet;
-import com.jayantkrish.jklol.models.BayesNetBuilder;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.factors.CptFactor;
-import com.jayantkrish.jklol.models.factors.CptTableFactor;
+import com.jayantkrish.jklol.models.bayesnet.BayesNet;
+import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
+import com.jayantkrish.jklol.models.bayesnet.CptFactor;
+import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.training.IncrementalEMTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 

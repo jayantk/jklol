@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -12,17 +13,23 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  */
 public class AllAssignmentIterator implements Iterator<Assignment> {
 
-	private VariableNumMap<DiscreteVariable> vars;
+	private VariableNumMap vars;
 	private List<Integer> currentValueInds;
 	private List<Integer> finalValueInds;
 	private List<Object> currentValues;
 
 	public AllAssignmentIterator(List<Integer> varNums, List<DiscreteVariable> varList) {
-		this.vars = new VariableNumMap<DiscreteVariable>(varNums, varList);
+		this.vars = new VariableNumMap(varNums, varList);
 		initializeValueState();
 	}
 
-	public AllAssignmentIterator(VariableNumMap<DiscreteVariable> varNumMap) {
+	/**
+	 * Create an iterator over the assignments of the variables in varNumMap. varNumMap must contain
+	 * only {@link DiscreteVariable}s, otherwise an exception is thrown. 
+	 * @param varNumMap
+	 */
+	public AllAssignmentIterator(VariableNumMap varNumMap) {
+		Preconditions.checkArgument(varNumMap.getDiscreteVariables().size() == varNumMap.size());
 		this.vars = varNumMap;
 		initializeValueState();
 	}
@@ -37,7 +44,7 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 		for (Integer varNum : vars.getVariableNums()) {
 			currentValueInds.add(0);
 			currentValues.add(null);
-			finalValueInds.add(vars.getVariable(varNum).numValues() - 1);
+			finalValueInds.add(((DiscreteVariable) vars.getVariable(varNum)).numValues() - 1);
 		}
 		// Set the last index to one higher than the actual number of values; when we increment
 		// currentValues to this point, we will be done.
@@ -60,7 +67,8 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 	private Assignment getCurrentAssignment() {
 		List<Integer> varNums = vars.getVariableNums();
 		for (int i = 0; i < currentValueInds.size(); i++) {
-			currentValues.set(i, vars.getVariable(varNums.get(i)).getValue(currentValueInds.get(i)));
+			currentValues.set(i, ((DiscreteVariable) vars.getVariable(varNums.get(i)))
+					.getValue(currentValueInds.get(i)));
 		}
 		return new Assignment(vars.getVariableNums(), currentValues);
 	}

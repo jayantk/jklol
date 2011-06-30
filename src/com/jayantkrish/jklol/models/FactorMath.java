@@ -18,9 +18,9 @@ public class FactorMath {
 	 * @param factors
 	 * @return
 	 */
-	public static Factor<?> product(List<Factor<?>> factors) {
+	public static Factor product(List<Factor> factors) {
 		List<DiscreteFactor> discreteFactors = new ArrayList<DiscreteFactor>();
-		for (Factor<?> f : factors) {
+		for (Factor f : factors) {
 			if (f instanceof DiscreteFactor) {
 				discreteFactors.add((DiscreteFactor) f);
 			} else {
@@ -30,7 +30,7 @@ public class FactorMath {
 		return TableFactor.productFactor(discreteFactors);
 	}
 
-	public static Factor<?> product(Factor<?> f1, Factor<?> f2) {
+	public static Factor product(Factor f1, Factor f2) {
 		if (f1 instanceof DiscreteFactor && f2 instanceof DiscreteFactor) {
 			return TableFactor.productFactor((DiscreteFactor) f1, (DiscreteFactor) f2);
 		}

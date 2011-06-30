@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cfg.CfgFactor;
 import com.jayantkrish.jklol.cfg.CptProductionDistribution;
 import com.jayantkrish.jklol.cfg.Grammar;
@@ -20,12 +21,12 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 public class BayesNetBuilder {
 
 	private FactorGraph bayesNet;
-	private List<CptFactor<?>> cptFactors;
-	private VariableNumMap<DiscreteVariable> discreteVars;
+	private List<CptFactor> cptFactors;
+	private VariableNumMap discreteVars;
 
 	public BayesNetBuilder() {
 		bayesNet = new FactorGraph();
-		cptFactors = new ArrayList<CptFactor<?>>();
+		cptFactors = new ArrayList<CptFactor>();
 		discreteVars = VariableNumMap.emptyMap();
 	}
 
@@ -46,18 +47,11 @@ public class BayesNetBuilder {
 		return varNum;
 	}
 
-	public VariableNumMap<DiscreteVariable> lookupDiscreteVariables(List<String> variableNames) {
-		VariableNumMap<Variable> allVars = bayesNet.lookupVariables(variableNames);
-		VariableNumMap<DiscreteVariable> enumVars = discreteVars.intersection(allVars);
-		assert enumVars.size() == allVars.size();
-		return enumVars;
-	}
-
 	/**
 	 * Add a factor to the Bayes net being constructed.
 	 * @param factor
 	 */
-	public void addFactor(CptFactor<?> factor) {
+	public void addFactor(CptFactor factor) {
 		cptFactors.add(factor);
 		bayesNet.addFactor(factor);
 	}
@@ -70,8 +64,8 @@ public class BayesNetBuilder {
 	 * by the caller.
 	 */
 	public CptTableFactor addCptFactor(List<String> parentVariables, List<String> childVariables) {
-		CptTableFactor factor = new CptTableFactor(lookupDiscreteVariables(parentVariables), 
-				lookupDiscreteVariables(childVariables));
+		CptTableFactor factor = new CptTableFactor(bayesNet.lookupVariables(parentVariables), 
+				bayesNet.lookupVariables(childVariables));
 		addFactor(factor);
 		return factor;
 	}
@@ -92,14 +86,17 @@ public class BayesNetBuilder {
 	public CptTableFactor addCptFactorWithNewCpt(List<String> parentVariableNames, 
 			List<String> childVariableNames, boolean isSparse) {
 		CptTableFactor factor = addCptFactor(parentVariableNames, childVariableNames);
-		VariableNumMap<DiscreteVariable> parentVars = lookupDiscreteVariables(parentVariableNames);
-		VariableNumMap<DiscreteVariable> childVars = lookupDiscreteVariables(childVariableNames);
+		VariableNumMap parentVars = bayesNet.lookupVariables(parentVariableNames);
+		VariableNumMap childVars = bayesNet.lookupVariables(childVariableNames);
 
+		Preconditions.checkArgument(parentVars.getDiscreteVariables().size() == parentVars.size());
+		Preconditions.checkArgument(childVars.getDiscreteVariables().size() == childVars.size());
+		
 		Cpt cpt = null;
 		if (isSparse) {
-			cpt = new SparseCpt(parentVars.getVariables(), childVars.getVariables());
+			cpt = new SparseCpt(parentVars.getDiscreteVariables(), childVars.getDiscreteVariables());
 		} else {
-			cpt = new Cpt(parentVars.getVariables(), childVars.getVariables());
+			cpt = new Cpt(parentVars.getDiscreteVariables(), childVars.getDiscreteVariables());
 		}
 
 		Map<Integer, Integer> nodeCptMap = new HashMap<Integer, Integer>();
@@ -120,11 +117,18 @@ public class BayesNetBuilder {
 	 */
 	public CfgFactor addCfgCptFactor(String parentVarName, String childVarName, 
 			Grammar grammar, CptProductionDistribution productionDist) {
-		VariableNumMap<DiscreteVariable> parentVars = lookupDiscreteVariables(Arrays.asList(new String[] {parentVarName}));
-		VariableNumMap<DiscreteVariable> childVars = lookupDiscreteVariables(Arrays.asList(new String[] {childVarName}));
+		VariableNumMap parentVars = bayesNet.lookupVariables(Arrays.asList(new String[] {parentVarName}));
+		VariableNumMap childVars = bayesNet.lookupVariables(Arrays.asList(new String[] {childVarName}));
 
-		CfgFactor factor = new CfgFactor(parentVars.getVariables().get(0), 
-				childVars.getVariables().get(0), parentVars.getVariableNums().get(0), 
+		Variable parent = parentVars.getVariables().get(0);
+		Variable child = parentVars.getVariables().get(0);
+		
+		// The passed-in strings must be identifiers of DiscreteVariables in the graphical model.
+		Preconditions.checkArgument(parent instanceof DiscreteVariable);
+		Preconditions.checkArgument(child instanceof DiscreteVariable);
+		
+		CfgFactor factor = new CfgFactor((DiscreteVariable) parent, 
+				(DiscreteVariable) child, parentVars.getVariableNums().get(0), 
 				childVars.getVariableNums().get(0), grammar, productionDist);
 
 		addFactor(factor);

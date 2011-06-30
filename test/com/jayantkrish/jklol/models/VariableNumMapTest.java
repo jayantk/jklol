@@ -14,7 +14,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  */
 public class VariableNumMapTest extends TestCase {
 
-	private VariableNumMap<DiscreteVariable> a,b,c;
+	private VariableNumMap a,b,c;
 	private DiscreteVariable v1,v2;
 
 	public void setUp() {
@@ -23,19 +23,20 @@ public class VariableNumMapTest extends TestCase {
 		v2 = new DiscreteVariable("Three values",
 				Arrays.asList(new String[] {"T", "F", "U"}));
 
-		a = new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 1, 3}), 
+		a = new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}), 
 				Arrays.asList(new DiscreteVariable[] {v1, v2, v1}));
-		b = new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {2, 1}), 
+		b = new VariableNumMap(Arrays.asList(new Integer[] {2, 1}), 
 				Arrays.asList(new DiscreteVariable[] {v1, v2}));
 		// Note that c has conflicting assignments for variable v1!!
-		c = new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {2, 1}), 
+		c = new VariableNumMap(Arrays.asList(new Integer[] {2, 1}), 
 				Arrays.asList(new DiscreteVariable[] {v1, v1}));
 	}
 
 	public void testImmutability() {
 		List<Integer> inds = new ArrayList<Integer>(Arrays.asList(new Integer[] {1, 2, 3}));
-		List<DiscreteVariable> vars= new ArrayList<DiscreteVariable>(Arrays.asList(new DiscreteVariable[] {v1,v2,v2}));
-		VariableNumMap<DiscreteVariable> c = new VariableNumMap<DiscreteVariable>(inds, vars);
+		List<DiscreteVariable> vars= new ArrayList<DiscreteVariable>(
+				Arrays.asList(new DiscreteVariable[] {v1,v2,v2}));
+		VariableNumMap c = new VariableNumMap(inds, vars);
 		inds.add(4);
 		vars.add(v1);
 		assertFalse(c.containsVariableNum(4));
@@ -60,7 +61,7 @@ public class VariableNumMapTest extends TestCase {
 	}
 
 	public void testIntersection() {
-		VariableNumMap<DiscreteVariable> intersection = a.intersection(b);
+		VariableNumMap intersection = a.intersection(b);
 
 		assertEquals(1, intersection.size());
 		assertTrue(intersection.containsVariableNum(1));
@@ -77,7 +78,7 @@ public class VariableNumMapTest extends TestCase {
 	}
 
 	public void testRemoveAll() {
-		VariableNumMap<DiscreteVariable> result = a.removeAll(b);
+		VariableNumMap result = a.removeAll(b);
 		assertEquals(Arrays.asList(new Integer[] {0,3}), result.getVariableNums());
 		assertEquals(Arrays.asList(new DiscreteVariable[] {v1,v1}), result.getVariables());		
 	}
@@ -92,7 +93,7 @@ public class VariableNumMapTest extends TestCase {
 	}
 
 	public void testUnion() {
-		VariableNumMap<DiscreteVariable> result = a.union(b);
+		VariableNumMap result = a.union(b);
 		assertEquals(Arrays.asList(new Integer[] {0,1,2,3}), result.getVariableNums());
 		assertEquals(Arrays.asList(new DiscreteVariable[] {v1,v2,v1,v1}), result.getVariables());
 	}

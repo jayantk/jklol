@@ -9,27 +9,27 @@ import java.util.Arrays;
  * @author jayant
  *
  */
-public abstract class AbstractFactor<T extends Variable> implements Factor<T> {
+public abstract class AbstractFactor implements Factor {
 
-	private VariableNumMap<T> vars;
+	private VariableNumMap vars;
 
-	public AbstractFactor(VariableNumMap<T> vars) {
+	public AbstractFactor(VariableNumMap vars) {
 		assert vars != null;
 		this.vars = vars;
 	}
 
 	@Override
-	public VariableNumMap<T> getVars() {
+	public VariableNumMap getVars() {
 		return vars;
 	}
 
 	@Override
-	public Factor<T> marginalize(Integer ... varNums) {
+	public Factor marginalize(Integer ... varNums) {
 		return marginalize(Arrays.asList(varNums));
 	}
 
 	@Override
-	public Factor<T> maxMarginalize(Integer ... varNums) {
+	public Factor maxMarginalize(Integer ... varNums) {
 		return maxMarginalize(Arrays.asList(varNums));
 	}
 

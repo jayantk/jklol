@@ -1,8 +1,13 @@
-import com.jayantkrish.jklol.models.*;
-import com.jayantkrish.jklol.models.factors.CptTableFactor;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
-import junit.framework.*;
-import java.util.*;
+import junit.framework.TestCase;
+
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.bayesnet.SparseCpt;
 
 /**
  * A test of SparseCpts and their interactions with CptTableFactors.
@@ -20,8 +25,8 @@ public class SparseCptTest extends TestCase {
 				Arrays.asList(new String[] {"T", "F"}));
 
 		f = new CptTableFactor(
-				new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new DiscreteVariable[] {v, v})),
-				new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {2, 3}), Arrays.asList(new DiscreteVariable[] {v, v})));
+				new VariableNumMap(Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new DiscreteVariable[] {v, v})),
+				new VariableNumMap(Arrays.asList(new Integer[] {2, 3}), Arrays.asList(new DiscreteVariable[] {v, v})));
 
 		sparse = new SparseCpt(Arrays.asList(new DiscreteVariable[] {v, v}), Arrays.asList(new DiscreteVariable[] {v, v}));
 

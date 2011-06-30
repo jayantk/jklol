@@ -14,9 +14,9 @@ public class LogLinearModelBuilder {
 	private FactorGraph factorGraph;	
 	private List<LogLinearFactor> logLinearFactors;
 	private FeatureSet features;
-	
+
 	private VariableNumMap<DiscreteVariable> discreteVariables;
-	
+
 	/**
 	 * Create an empty log-linear model builder
 	 */
@@ -28,7 +28,7 @@ public class LogLinearModelBuilder {
 		logLinearFactors = new ArrayList<LogLinearFactor>();
 		discreteVariables = VariableNumMap.emptyMap();
 	}
-	
+
 	/**
 	 * Get the factor graph being constructed with this builder.
 	 * @return
@@ -36,13 +36,13 @@ public class LogLinearModelBuilder {
 	public LogLinearModel build() {
 		return new LogLinearModel(factorGraph, logLinearFactors, features);
 	}
-	
+
 	public int addDiscreteVariable(String name, DiscreteVariable variable) {
 		int varNum = factorGraph.addVariable(name, variable);
 		discreteVariables = discreteVariables.addMapping(varNum, variable);
 		return varNum;
 	}
-	
+
 	/**
 	 * Add a factor to the Bayes net being constructed.
 	 * @param factor
@@ -51,7 +51,7 @@ public class LogLinearModelBuilder {
 		logLinearFactors.add(factor);
 		factorGraph.addFactor(factor);
 	}
-	
+
 	public VariableNumMap<DiscreteVariable> lookupDiscreteVariables(List<String> variableNames) {
 		VariableNumMap<Variable> allVars = factorGraph.lookupVariables(variableNames);
 		VariableNumMap<DiscreteVariable> enumVars = discreteVariables.intersection(allVars);

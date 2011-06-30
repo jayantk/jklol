@@ -45,7 +45,7 @@ public class FactorGraph {
 		factorVariableMap = new HashMultimap<Integer, Integer>();
 		factors = new IndexedList<Factor<?>>();
 	}
-	
+
 	/**
 	 * Copy constructor.
 	 * @param factorGraph
@@ -99,7 +99,7 @@ public class FactorGraph {
 	public List<Variable> getVariables() {
 		return Collections.unmodifiableList(variables);
 	}
-	
+
 	/**
 	 * Get the variable numbers and variables corresponding to the given set of variable names.
 	 * Note that the order of the names in factorVariables is irrelevant. 
@@ -162,7 +162,7 @@ public class FactorGraph {
 
 	// Factor Graph mutators 
 	// TODO(jayant): These mutators should be refactored out of this class so that FactorGraphs are immutable.
-	
+
 	/**
 	 * Add a new variable (vertex) to the Markov network. The variable starts out
 	 * unconnected to any factors. The method returns the numerical ID of the variable, which are assigned in sorted order.
@@ -189,7 +189,7 @@ public class FactorGraph {
 		}
 		return factorNum;
 	}
-	
+
 	/**
 	 * Add a new table factor to the model.
 	 */

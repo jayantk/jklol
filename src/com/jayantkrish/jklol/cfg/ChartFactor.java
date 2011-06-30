@@ -139,7 +139,7 @@ public class ChartFactor extends DiscreteFactor {
 
 	// TODO(jayant): These methods are going to horribly break junction tree due to
 	// refactoring the factor product methods out of individual factors.
-	
+
 	/**
 	 * Re-implementation of sum-product to be aware of the CFG parse chart.
 	 */

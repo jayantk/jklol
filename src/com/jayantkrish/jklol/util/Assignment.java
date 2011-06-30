@@ -69,7 +69,7 @@ public class Assignment {
 		assert varValueMap.containsKey(varNum);
 		varValueMap.put(varNum, value);
 	}
-	*/
+	 */
 
 	/**
 	 * If varNums is a subset of the variables in this assignment, this method returns the value

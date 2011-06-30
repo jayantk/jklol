@@ -47,7 +47,7 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 	public boolean hasNext() {
 		return !(currentValueInds.get(vars.size() - 1).equals(finalValueInds.get(vars.size() - 1)));
 	}
-	
+
 	public Assignment next() {
 		Assignment a = getCurrentAssignment();
 		incrementCurrentValueInds();
@@ -64,7 +64,7 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 		}
 		return new Assignment(vars.getVariableNums(), currentValues);
 	}
-	
+
 	/*
 	 * Advances the internal state of the iterator (currentValueInds) to the next value.
 	 */

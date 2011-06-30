@@ -21,9 +21,9 @@ import com.jayantkrish.jklol.util.Assignment;
  *
  */
 public class VariableNumMap<V extends Variable> {
-	
+
 	private SortedMap<Integer, V> varMap;
-	
+
 	public VariableNumMap(List<Integer> varNums, List<V> vars) {
 		assert varNums.size() == vars.size();
 		varMap = new TreeMap<Integer, V>();
@@ -31,11 +31,11 @@ public class VariableNumMap<V extends Variable> {
 			varMap.put(varNums.get(i), vars.get(i));				
 		}		
 	}
-	
+
 	public VariableNumMap(Map<Integer, V> varNumMap) {
 		varMap = new TreeMap<Integer, V>(varNumMap);
 	}
-	
+
 	/**
 	 * Get the number of variable mappings contained in the map. 
 	 * @return
@@ -43,7 +43,7 @@ public class VariableNumMap<V extends Variable> {
 	public int size() {
 		return varMap.size();
 	}
-	
+
 	/**
 	 * Returns true if variableNum is mapped to a variable in this map.
 	 * @param variableNum
@@ -52,7 +52,7 @@ public class VariableNumMap<V extends Variable> {
 	public boolean containsVariableNum(int variableNum) {
 		return varMap.containsKey(variableNum);
 	}
-	
+
 	/**
 	 * Get the numbers of the variables in this map, in ascending sorted order.
 	 * @return
@@ -60,7 +60,7 @@ public class VariableNumMap<V extends Variable> {
 	public List<Integer> getVariableNums() {
 		return new ArrayList<Integer>(varMap.keySet());
 	}
-	
+
 	/**
 	 * Get the variable types in this map, ordered by variable index. 
 	 * @return
@@ -68,7 +68,7 @@ public class VariableNumMap<V extends Variable> {
 	public List<V> getVariables() {
 		return new ArrayList<V>(varMap.values());
 	}
-	
+
 	/**
 	 * Get the variable referenced by a particular variable number. Throws a KeyError if
 	 * the variable number is not contained in this map.
@@ -78,7 +78,7 @@ public class VariableNumMap<V extends Variable> {
 	public V getVariable(int variableNum) {
 		return varMap.get(variableNum);
 	}
-	
+
 	/*
 	 * Ensures that all variable numbers which are shared between other and this are
 	 * mapped to the same variables.  
@@ -91,7 +91,7 @@ public class VariableNumMap<V extends Variable> {
 			} 
 		}
 	}
-	
+
 	/**
 	 * Return a VariableNumMap containing all variable numbers shared 
 	 * by both maps.
@@ -102,7 +102,7 @@ public class VariableNumMap<V extends Variable> {
 		checkCompatibility(other);
 		return intersection(new HashSet<Integer>(other.getVariableNums()));
 	}
-	
+
 	/**
 	 * Return a VariableNumMap containing all variable numbers shared by varNumsToKeep and
 	 * this.getVariableNums() 
@@ -118,7 +118,7 @@ public class VariableNumMap<V extends Variable> {
 		}
 		return new VariableNumMap<V>(newVarMap);		
 	}
-	
+
 	/**
 	 * Removes all variable mappings whose numbers are in other.
 	 * @param varNumsToRemove
@@ -143,7 +143,7 @@ public class VariableNumMap<V extends Variable> {
 		}
 		return new VariableNumMap<V>(newVarMap);
 	}
-	
+
 	/**
 	 * Returns a VariableNumMap containing the union of the number->variable mappings from 
 	 * this map and other. The maps may not contain conflicting mappings for any number.
@@ -154,11 +154,11 @@ public class VariableNumMap<V extends Variable> {
 		checkCompatibility(other);
 		SortedMap<Integer, V> newVarMap = new TreeMap<Integer, V>(varMap);
 		for (Integer key : other.getVariableNums()) { 
-	       	newVarMap.put(key, other.varMap.get(key));
+			newVarMap.put(key, other.varMap.get(key));
 		}
 		return new VariableNumMap<V>(newVarMap);
 	}
-	
+
 	/**
 	 * Adds or replaces a number -> variable mapping from the map.  
 	 * @param num
@@ -170,12 +170,12 @@ public class VariableNumMap<V extends Variable> {
 		newVarMap.put(num, var);
 		return new VariableNumMap<V>(newVarMap);
 	}
-		
-    /**
-     * Get the assignment corresponding to a particular setting of the variables in this set.
-     * The Objects in outcome are assumed to be ordered in ascending order by variable number.
-     * (i.e., the ith object is the value of the ith variable returned by getVariableNums()) 
-     */
+
+	/**
+	 * Get the assignment corresponding to a particular setting of the variables in this set.
+	 * The Objects in outcome are assumed to be ordered in ascending order by variable number.
+	 * (i.e., the ith object is the value of the ith variable returned by getVariableNums()) 
+	 */
 	public Assignment outcomeToAssignment(List<? extends Object> outcome) {
 		assert outcome.size() == varMap.size();
 
@@ -190,23 +190,23 @@ public class VariableNumMap<V extends Variable> {
 		return new Assignment(varValueMap);
 	}
 
-    /**
-     * Get the assignment corresponding to a particular setting of the variables in this factor.
-     */
-    public Assignment outcomeToAssignment(Object[] outcome) {
-    	return outcomeToAssignment(Arrays.asList(outcome));
-    }
-    
-    /**
-     * VariableNumMaps are equal if they contain exactly the same variable number -> variable mappings.  	
-     */
-    public boolean equals(Object o) {
-    	return o instanceof VariableNumMap<?> && varMap.equals(((VariableNumMap<?>) o).varMap);
-    }
-    
-    /**
-     * Get a VariableNumMap with no num -> variable mappings.
-     */
+	/**
+	 * Get the assignment corresponding to a particular setting of the variables in this factor.
+	 */
+	public Assignment outcomeToAssignment(Object[] outcome) {
+		return outcomeToAssignment(Arrays.asList(outcome));
+	}
+
+	/**
+	 * VariableNumMaps are equal if they contain exactly the same variable number -> variable mappings.  	
+	 */
+	public boolean equals(Object o) {
+		return o instanceof VariableNumMap<?> && varMap.equals(((VariableNumMap<?>) o).varMap);
+	}
+
+	/**
+	 * Get a VariableNumMap with no num -> variable mappings.
+	 */
 	public static <T extends Variable> VariableNumMap<T> emptyMap() {
 		List<T> empty = Collections.emptyList();
 		return new VariableNumMap<T>(Arrays.asList(new Integer[] {}), empty);

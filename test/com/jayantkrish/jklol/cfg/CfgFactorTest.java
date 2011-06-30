@@ -81,7 +81,7 @@ public class CfgFactorTest extends TestCase {
 		cfgFactor = builder.addCfgCptFactor("Var1", "Var0", g, new CptTableProductionDistribution(g));
 
 		bn = builder.build();
-		
+
 		List<String> observedVarNames = Arrays.asList(new String[] {"Var0", "Var2"});
 		trainingData = new ArrayList<Assignment>();
 		Assignment a1 = bn.outcomeToAssignment(observedVarNames,

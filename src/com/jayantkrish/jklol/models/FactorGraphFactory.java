@@ -11,9 +11,9 @@ import com.jayantkrish.jklol.util.Pair;
  */
 public interface FactorGraphFactory<T extends FactorGraph, E> {
 
-    /**
-     * Construct the factor graph and an assignment to its variables
-     * which corresponds to the given training example.
-     */
-    public Pair<T, Assignment> instantiateFactorGraph(E ex);
+	/**
+	 * Construct the factor graph and an assignment to its variables
+	 * which corresponds to the given training example.
+	 */
+	public Pair<T, Assignment> instantiateFactorGraph(E ex);
 }

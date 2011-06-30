@@ -21,11 +21,11 @@ public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
 		super(vars);
 		this.partitionFunction = -1.0;
 	}
-	
+
 	//////////////////////////////////////////////////////////////////////////
 	// Additional methods provided by DiscreteFactors which are not provided by Factor.
 	//////////////////////////////////////////////////////////////////////////
-	
+
 	/**
 	 * Get an iterator over all outcomes with nonzero probability. Each Assignment in the iterator
 	 * represents a single outcome.
@@ -63,7 +63,7 @@ public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
 		}
 		return assignments;
 	}
-	
+
 	/**
 	 * Get most likely assignments.
 	 */
@@ -72,7 +72,7 @@ public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
 		PriorityQueue<Pair<Double, Assignment>> pq = 
 			new PriorityQueue<Pair<Double, Assignment>>(
 					numAssignments, new PairComparator<Double, Assignment>());
-		
+
 		while (iter.hasNext()) {
 			Assignment a = iter.next();
 			pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), new Assignment(a)));
@@ -136,11 +136,11 @@ public abstract class DiscreteFactor extends AbstractFactor<DiscreteVariable> {
 		}
 		return returnFactor;
 	}
- 
+
 	public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
 		return marginalize(varNumsToEliminate, true);
 	}
- 
+
 	public DiscreteFactor maxMarginalize(Collection<Integer> varNumsToEliminate) {
 		return marginalize(varNumsToEliminate, false);
 	}

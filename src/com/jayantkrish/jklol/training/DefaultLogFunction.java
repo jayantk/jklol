@@ -27,7 +27,7 @@ public class DefaultLogFunction implements LogFunction {
 			double prob = marginal.getUnnormalizedProbability(a) / marginal.getPartitionFunction();
 			System.out.println(prob + " " + graph.assignmentToObject(a));
 		}
-		*/
+		 */
 	}
 
 	public void notifyIterationStart(int iteration) {

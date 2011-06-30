@@ -31,7 +31,7 @@ public class IndexedList<T> {
 			this.add(item);
 		}
 	}
-	
+
 	/**
 	 * Copy constructor.
 	 * @param other

@@ -34,7 +34,7 @@ public class BayesNetBuilder {
 	public BayesNet build() {
 		return new BayesNet(bayesNet, cptFactors);
 	}
-	
+
 	/**
 	 * Add a variable to the bayes net.
 	 */
@@ -43,7 +43,7 @@ public class BayesNetBuilder {
 		discreteVars = discreteVars.addMapping(varNum, variable);
 		return varNum;
 	}
-	
+
 	public VariableNumMap<DiscreteVariable> lookupDiscreteVariables(List<String> variableNames) {
 		VariableNumMap<Variable> allVars = bayesNet.lookupVariables(variableNames);
 		VariableNumMap<DiscreteVariable> enumVars = discreteVars.intersection(allVars);

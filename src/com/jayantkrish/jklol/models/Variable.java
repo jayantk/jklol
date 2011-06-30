@@ -16,7 +16,7 @@ public interface Variable {
 	 * initializing things that don't care about the particular value.
 	 */
 	public Object getArbitraryValue();
-	
+
 	/**
 	 * Returns true if value can be legitimately assigned to this variable.
 	 */

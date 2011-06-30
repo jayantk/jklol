@@ -19,7 +19,7 @@ public class FeatureSet {
 		featureWeights = new ArrayList<Double>();
 		allFeatures = new IndexedList<FeatureFunction>();
 	}
-	
+
 	/**
 	 * Copy constructor
 	 * @param fs

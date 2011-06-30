@@ -20,7 +20,7 @@ public class HashMultimap<K,V> {
 		items = new HashMap<K, Set<V>>();
 		defaultValue = Collections.emptySet();
 	}
-	
+
 	public HashMultimap(HashMultimap<K, V> other) {
 		items = new HashMap<K, Set<V>>();
 		for (K key : other.keySet()) {
@@ -122,11 +122,11 @@ public class HashMultimap<K,V> {
 	/**
 	 * Return the number of keys in the map.
 	 */ 
-	 public int size() {
+	public int size() {
 		return items.size();
-	 }
+	}
 
-	 public String toString() {
-		 return items.toString();
-	 }
+	public String toString() {
+		return items.toString();
+	}
 }

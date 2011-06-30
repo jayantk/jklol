@@ -8,7 +8,7 @@ import com.jayantkrish.jklol.util.Pair;
  */
 public interface BayesNetFactory<E> extends FactorGraphFactory<BayesNet, E> {
 
-    public Pair<BayesNet, Assignment> instantiateFactorGraph(E ex);
+	public Pair<BayesNet, Assignment> instantiateFactorGraph(E ex);
 
-    public void addUniformSmoothing(double smoothingCounts);
+	public void addUniformSmoothing(double smoothingCounts);
 }

@@ -10,21 +10,21 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public interface FeatureFunction {
 
-    /**
-     * The value of the feature for a particular assignment to
-     * variable values.
-     */
-    public double getValue(Assignment assignment);
+	/**
+	 * The value of the feature for a particular assignment to
+	 * variable values.
+	 */
+	public double getValue(Assignment assignment);
 
-    /**
-     * An iterator over all assignments for which the feature
-     * has a non-zero value.
-     */
-    public Iterator<Assignment> getNonzeroAssignments();
+	/**
+	 * An iterator over all assignments for which the feature
+	 * has a non-zero value.
+	 */
+	public Iterator<Assignment> getNonzeroAssignments();
 
-    /**
-     * The varnums which this feature operates on, returned
-     * in sorted order.
-     */
-    public List<Integer> getVarNums();
+	/**
+	 * The varnums which this feature operates on, returned
+	 * in sorted order.
+	 */
+	public List<Integer> getVarNums();
 }

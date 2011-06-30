@@ -6,14 +6,14 @@ package com.jayantkrish.jklol.cfg;
  */
 public interface ProductionDistribution {
 
-    /**
-     * Get the probability of a binary production rule
-     */ 
-    public double getRuleProbability(BinaryProduction rule);
+	/**
+	 * Get the probability of a binary production rule
+	 */ 
+	public double getRuleProbability(BinaryProduction rule);
 
-    /**
-     * Get the probability of a terminal production.
-     */
-    public double getTerminalProbability(TerminalProduction rule);
+	/**
+	 * Get the probability of a terminal production.
+	 */
+	public double getTerminalProbability(TerminalProduction rule);
 
 }

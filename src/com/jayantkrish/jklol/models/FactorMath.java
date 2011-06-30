@@ -32,15 +32,15 @@ public class FactorMath {
 		}
 		return TableFactor.productFactor(discreteFactors);
 	}
-	
+
 	public static Factor<?> product(Factor<?> f1, Factor<?> f2) {
 		if (f1 instanceof DiscreteFactor && f2 instanceof DiscreteFactor) {
 			return TableFactor.productFactor((DiscreteFactor) f1, (DiscreteFactor) f2);
 		}
-		
+
 		throw new UnsupportedOperationException("Cannot multiply: " + f1 + " with: " + f2);
 	}
-	
+
 	private FactorMath() {
 		// Prevent instantiation.
 	}

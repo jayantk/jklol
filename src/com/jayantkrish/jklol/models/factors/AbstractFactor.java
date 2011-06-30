@@ -14,7 +14,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 public abstract class AbstractFactor<T extends Variable> implements Factor<T> {
 
 	private VariableNumMap<T> vars;
-	
+
 	public AbstractFactor(VariableNumMap<T> vars) {
 		assert vars != null;
 		this.vars = vars;
@@ -24,12 +24,12 @@ public abstract class AbstractFactor<T extends Variable> implements Factor<T> {
 	public VariableNumMap<T> getVars() {
 		return vars;
 	}
-	
+
 	@Override
 	public Factor<T> marginalize(Integer ... varNums) {
 		return marginalize(Arrays.asList(varNums));
 	}
-	
+
 	@Override
 	public Factor<T> maxMarginalize(Integer ... varNums) {
 		return maxMarginalize(Arrays.asList(varNums));

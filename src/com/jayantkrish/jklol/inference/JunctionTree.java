@@ -142,7 +142,7 @@ public class JunctionTree implements InferenceEngine {
 			factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, startFactor));
 		}
 		factorsToCombine.add(cliqueTree.getFactor(startFactor));
-		
+
 		Factor<?> productFactor = FactorMath.product(factorsToCombine);
 		Factor<?> messageFactor = null;
 		if (useSumProduct) {
@@ -267,7 +267,7 @@ public class JunctionTree implements InferenceEngine {
 					// Arbitrarily select a factor to merge this factor in to.
 					Factor<?> superset = mergeableFactors.iterator().next();
 					int cliqueNum = factorCliqueMap.get(superset);
-					
+
 					cliqueFactors.set(cliqueNum, FactorMath.product(cliqueFactors.get(cliqueNum), f));
 					factorCliqueMap.put(f, cliqueNum);
 				} else {

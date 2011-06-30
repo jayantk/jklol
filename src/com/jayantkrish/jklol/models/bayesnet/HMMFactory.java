@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -6,10 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.jayantkrish.jklol.models.bayesnet.BayesNet;
-import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
-import com.jayantkrish.jklol.models.bayesnet.Cpt;
-import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.FactorGraphFactory;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 

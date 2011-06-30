@@ -1,8 +1,9 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.Iterator;
 import java.util.List;
 
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**

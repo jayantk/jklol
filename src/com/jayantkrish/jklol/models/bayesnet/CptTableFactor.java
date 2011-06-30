@@ -1,10 +1,11 @@
-package com.jayantkrish.jklol.models.factors;
+package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.Iterator;
 import java.util.Map;
 
-import com.jayantkrish.jklol.models.Cpt;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;

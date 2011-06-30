@@ -1,9 +1,7 @@
-package com.jayantkrish.jklol.models.factors;
+package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
 
-import com.jayantkrish.jklol.models.Variable;
-import com.jayantkrish.jklol.models.VariableNumMap;
 
 
 /**

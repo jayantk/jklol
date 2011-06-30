@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.ArrayList;
 import java.util.List;

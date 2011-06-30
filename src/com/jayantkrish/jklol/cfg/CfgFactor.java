@@ -9,12 +9,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.factors.CptFactor;
-import com.jayantkrish.jklol.models.factors.DiscreteFactor;
-import com.jayantkrish.jklol.models.factors.Factor;
-import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.models.bayesnet.CptFactor;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 

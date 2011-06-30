@@ -1,7 +1,8 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.*;
 
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.SparseOutcomeTable;

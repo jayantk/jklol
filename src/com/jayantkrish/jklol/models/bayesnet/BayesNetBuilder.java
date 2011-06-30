@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,8 +9,10 @@ import java.util.Map;
 import com.jayantkrish.jklol.cfg.CfgFactor;
 import com.jayantkrish.jklol.cfg.CptProductionDistribution;
 import com.jayantkrish.jklol.cfg.Grammar;
-import com.jayantkrish.jklol.models.factors.CptFactor;
-import com.jayantkrish.jklol.models.factors.CptTableFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
  * A BayesNetBuilder provides methods for constructing a BayesNet 

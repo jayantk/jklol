@@ -5,10 +5,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
-import com.jayantkrish.jklol.models.factors.DiscreteFactor;
-import com.jayantkrish.jklol.models.factors.TableFactor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**

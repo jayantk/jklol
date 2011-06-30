@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.jayantkrish.jklol.models.factors.Factor;
-import com.jayantkrish.jklol.models.factors.TableFactor;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.HashMultimap;
 import com.jayantkrish.jklol.util.IndexedList;

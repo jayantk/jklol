@@ -1,9 +1,12 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.jayantkrish.jklol.models.factors.LogLinearFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
  * A Markov Network with log-linear parameter weights, parameterized by an arbitrary set of

@@ -1,13 +1,12 @@
-package com.jayantkrish.jklol.models.factors;
+package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.FeatureFunction;
-import com.jayantkrish.jklol.models.FeatureSet;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;

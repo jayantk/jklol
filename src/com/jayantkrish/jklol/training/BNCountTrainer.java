@@ -2,10 +2,10 @@ package com.jayantkrish.jklol.training;
 
 import java.util.List;
 
-import com.jayantkrish.jklol.models.BayesNet;
-import com.jayantkrish.jklol.models.BayesNetFactory;
-import com.jayantkrish.jklol.models.BayesNetWrapperFactory;
-import com.jayantkrish.jklol.models.factors.CptFactor;
+import com.jayantkrish.jklol.models.bayesnet.BayesNet;
+import com.jayantkrish.jklol.models.bayesnet.BayesNetFactory;
+import com.jayantkrish.jklol.models.bayesnet.BayesNetWrapperFactory;
+import com.jayantkrish.jklol.models.bayesnet.CptFactor;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 

@@ -1,8 +1,6 @@
-package com.jayantkrish.jklol.models.factors;
+package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.FeatureFunction;
-import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;

@@ -1,5 +1,6 @@
-package com.jayantkrish.jklol.models.factors;
+package com.jayantkrish.jklol.models.bayesnet;
 
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.util.Assignment;
 

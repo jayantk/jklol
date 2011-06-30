@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.jayantkrish.jklol.inference.InferenceEngine;
-import com.jayantkrish.jklol.models.FeatureFunction;
-import com.jayantkrish.jklol.models.LogLinearModel;
-import com.jayantkrish.jklol.models.factors.Factor;
-import com.jayantkrish.jklol.models.factors.LogLinearFactor;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
+import com.jayantkrish.jklol.models.loglinear.LogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.LogLinearModel;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**

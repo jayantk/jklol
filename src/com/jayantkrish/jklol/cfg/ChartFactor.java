@@ -2,8 +2,6 @@
 package com.jayantkrish.jklol.cfg;
 
 import com.jayantkrish.jklol.models.*;
-import com.jayantkrish.jklol.models.factors.DiscreteFactor;
-import com.jayantkrish.jklol.models.factors.TableFactor;
 import com.jayantkrish.jklol.util.Assignment;
 
 import java.util.*;

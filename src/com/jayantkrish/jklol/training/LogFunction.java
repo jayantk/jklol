@@ -1,7 +1,7 @@
 package com.jayantkrish.jklol.training;
 
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.factors.Factor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**

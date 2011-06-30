@@ -3,9 +3,6 @@ package com.jayantkrish.jklol.models;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.jayantkrish.jklol.models.factors.DiscreteFactor;
-import com.jayantkrish.jklol.models.factors.Factor;
-import com.jayantkrish.jklol.models.factors.TableFactor;
 
 /**
  * Static utility methods for mathematical operations on factors.

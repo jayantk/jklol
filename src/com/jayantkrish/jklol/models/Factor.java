@@ -1,10 +1,8 @@
-package com.jayantkrish.jklol.models.factors;
+package com.jayantkrish.jklol.models;
 
 import java.util.Collection;
 
-import com.jayantkrish.jklol.models.FeatureFunction;
-import com.jayantkrish.jklol.models.Variable;
-import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**

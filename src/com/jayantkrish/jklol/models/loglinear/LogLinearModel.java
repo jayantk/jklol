@@ -1,10 +1,10 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.jayantkrish.jklol.models.factors.LogLinearFactor;
+import com.jayantkrish.jklol.models.FactorGraph;
 
 public class LogLinearModel extends FactorGraph {
 

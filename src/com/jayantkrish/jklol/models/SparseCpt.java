@@ -3,6 +3,8 @@ package com.jayantkrish.jklol.models;
 import java.util.Iterator;
 import java.util.List;
 
+import com.jayantkrish.jklol.util.Assignment;
+
 /**
  * A sparse conditional probability table (for a BN). Stores a conditional probability over a set of
  * children conditioned on a set of parents. The CPT is sparse because some outcomes are guaranteed to
@@ -12,7 +14,7 @@ import java.util.List;
  */ 
 public class SparseCpt extends Cpt {
 
-	public SparseCpt(List<Variable<?>> parents, List<Variable<?>> children) {
+	public SparseCpt(List<DiscreteVariable> parents, List<DiscreteVariable> children) {
 		super(parents, children);
 	}
 

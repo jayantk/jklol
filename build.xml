@@ -30,7 +30,7 @@
       <classpath refid="classpath.test" />
       <formatter type="brief" usefile="false" />
       <test name="IndexedListTest" />
-      <test name="VariableTest" />
+      <test name="DiscreteVariableTest" />
       <test name="VariableNumMapTest" />
       <test name="AssignmentTest" />
       <test name="TableFactorTest" />

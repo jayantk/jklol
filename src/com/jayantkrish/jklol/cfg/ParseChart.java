@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.lang.reflect.Array;
 
-
-
 /**
  * The "chart" of a CKY-style parser which enables efficient
  * computations of feature expectations of the parser.
@@ -47,6 +45,7 @@ public class ParseChart {
      * marginals). Otherwise, updates use the maximum probability, meaning ParseChart computes
      * max-marginals.
      */
+    @SuppressWarnings({"unchecked"})
     public ParseChart(int numTerminals, boolean sumProduct) {
 	insideChart = (DefaultHashMap<Production, Double>[][]) Array.newInstance(new DefaultHashMap<Production, Double>(0.0).getClass(), new int[] {numTerminals, numTerminals});
 	outsideChart = (DefaultHashMap<Production, Double>[][]) Array.newInstance(new DefaultHashMap<Production, Double>(0.0).getClass(), new int[] {numTerminals, numTerminals});
@@ -220,7 +219,7 @@ public class ParseChart {
      */
     public Map<Production, Double> getInsideEntries(int spanStart, int spanEnd) {
 	if (insideChart[spanStart][spanEnd] == null) {
-	    return Collections.EMPTY_MAP;
+	    return Collections.emptyMap();
 	}
 	return insideChart[spanStart][spanEnd].getBaseMap();
     }
@@ -230,7 +229,7 @@ public class ParseChart {
      */
     public Map<Production, Double> getOutsideEntries(int spanStart, int spanEnd) {
 	if (outsideChart[spanStart][spanEnd] == null) {
-	    return Collections.EMPTY_MAP;
+	    return Collections.emptyMap();
 	}
 	return outsideChart[spanStart][spanEnd].getBaseMap();
     }
@@ -240,7 +239,7 @@ public class ParseChart {
      */
     public Map<Production, Double> getMarginalEntries(int spanStart, int spanEnd) {
 	if (marginalChart[spanStart][spanEnd] == null) {
-	    return Collections.EMPTY_MAP;
+	    return Collections.emptyMap();
 	}
 
 	return marginalChart[spanStart][spanEnd].getBaseMap();
@@ -270,7 +269,7 @@ public class ParseChart {
 	assert numTrees <= beamWidth;
 
 	if (!backpointers[spanStart][spanEnd].containsKey(root)) {
-	    return Collections.EMPTY_LIST;
+	    return Collections.emptyList();
 	}
 
 	Backpointer[] bps = backpointers[spanStart][spanEnd].get(root).toArray(new Backpointer[] {});
@@ -298,7 +297,7 @@ public class ParseChart {
 	    }
 	}
 	while (bestTrees.size() > numTrees) {
-	    ParseTree t = bestTrees.poll();
+		bestTrees.poll();
 	}
 
 	List<ParseTree> bestTreeList = new ArrayList<ParseTree>(bestTrees);

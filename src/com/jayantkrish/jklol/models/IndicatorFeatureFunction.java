@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.models;
 
 import java.util.*;
 
+import com.jayantkrish.jklol.util.Assignment;
+
 /**
  * An IndicatorFeatureFunction is 1 if the outcome is in a certain set of values, 0 otherwise.
  */

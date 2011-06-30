@@ -4,10 +4,10 @@ import java.util.Collections;
 import java.util.List;
 
 import com.jayantkrish.jklol.inference.InferenceEngine;
-import com.jayantkrish.jklol.models.Assignment;
 import com.jayantkrish.jklol.models.BayesNet;
-import com.jayantkrish.jklol.models.CptFactor;
-import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.factors.CptFactor;
+import com.jayantkrish.jklol.models.factors.Factor;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Train the weights of a factor graph using incremental EM. 
@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 public class IncrementalEMTrainer {
 
 	private InferenceEngine inferenceEngine;
-	private DiscreteFactor[][] exampleCptMarginalMap;
+	private Factor<?>[][] exampleCptMarginalMap;
 	private int numIterations;
 	private double smoothing;
 	private LogFunction log;
@@ -43,8 +43,8 @@ public class IncrementalEMTrainer {
 		initializeCpts(bn);
 		inferenceEngine.setFactorGraph(bn);
 
-		List<CptFactor> cptFactors = bn.getCptFactors();
-		exampleCptMarginalMap = new DiscreteFactor[trainingData.size()][cptFactors.size()];
+		List<CptFactor<?>> cptFactors = bn.getCptFactors();
+		exampleCptMarginalMap = new Factor<?>[trainingData.size()][cptFactors.size()];
 
 		for (int i = 0; i < numIterations; i++) {
 			if (log != null) {log.notifyIterationStart(i);}
@@ -56,15 +56,15 @@ public class IncrementalEMTrainer {
 				if (i > 0) {
 					// Subtract out old statistics if they exist.
 					for (int k = 0; k < cptFactors.size(); k++) {
-						DiscreteFactor oldMarginal = exampleCptMarginalMap[j][k];
+						Factor<?> oldMarginal = exampleCptMarginalMap[j][k];
 						cptFactors.get(k).incrementOutcomeCount(oldMarginal, -1.0);
 					}
 				}
 				// Update new sufficient statistics
 				inferenceEngine.computeMarginals(trainingExample);
 				for (int k = 0; k < cptFactors.size(); k++) {
-					CptFactor cptFactor = cptFactors.get(k);
-					DiscreteFactor marginal = inferenceEngine.getMarginal(cptFactor.getVars().getVariableNums());
+					CptFactor<?> cptFactor = cptFactors.get(k);
+					Factor<?> marginal = inferenceEngine.getMarginal(cptFactor.getVars().getVariableNums());
 					exampleCptMarginalMap[j][k] = marginal;
 					cptFactor.incrementOutcomeCount(marginal, 1.0);
 
@@ -77,7 +77,7 @@ public class IncrementalEMTrainer {
 
 	private void initializeCpts(BayesNet bn) {
 		// Set all CPT statistics to the smoothing value
-		for (CptFactor cptFactor : bn.getCptFactors()) {
+		for (CptFactor<?> cptFactor : bn.getCptFactors()) {
 			cptFactor.clearCpt();
 			cptFactor.addUniformSmoothing(smoothing);
 		}

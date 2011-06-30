@@ -70,7 +70,7 @@ public class Grammar {
 		if (childProductionMap.containsKey(left)) {
 			return childProductionMap.get(left).get(right);
 		}
-		return Collections.EMPTY_SET;
+		return Collections.emptySet();
 	}
 
 	/**

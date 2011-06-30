@@ -2,6 +2,10 @@
 package com.jayantkrish.jklol.cfg;
 
 import com.jayantkrish.jklol.models.*;
+import com.jayantkrish.jklol.models.factors.DiscreteFactor;
+import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.util.Assignment;
+
 import java.util.*;
 
 
@@ -14,17 +18,17 @@ public class ChartFactor extends DiscreteFactor {
 	private ParseChart chart;
 	private int parentVarNum;
 	private int childVarNum;
-	private Variable<Production> parentVar;
-	private Variable<List<Production>> childVar;
+	private DiscreteVariable parentVar;
+	private DiscreteVariable childVar;
 
 	private DiscreteFactor parentFactor;
 	private Map<List<Production>, Double> childProbs;
 
-	public ChartFactor(ParseChart chart, Variable<Production> parentVar, 
-			Variable<List<Production>> childVar, int parentVarNum, int childVarNum, 
+	public ChartFactor(ParseChart chart, DiscreteVariable parentVar, 
+			DiscreteVariable childVar, int parentVarNum, int childVarNum, 
 			Map<List<Production>, Double> childProbs) {
-		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-				Arrays.asList(new Variable<?>[] {parentVar, childVar})));
+		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		assert chart.getInsideCalculated() == true;
 		assert chart.getOutsideCalculated() == false;
@@ -38,9 +42,9 @@ public class ChartFactor extends DiscreteFactor {
 		this.childProbs = childProbs;
 
 		// Using a helper table factor makes many methods trivial to implement.
-		TableFactor tempFactor = new TableFactor(new VariableNumMap(
+		TableFactor tempFactor = new TableFactor(new VariableNumMap<DiscreteVariable>(
 				Arrays.asList(new Integer[] {parentVarNum}), 
-				Arrays.asList(new Variable<?>[] {parentVar})));
+				Arrays.asList(new DiscreteVariable[] {parentVar})));
 		Map<Production, Double> rootEntries = chart.getInsideEntries(0, chart.chartSize() - 1);
 		List<Production> value = new ArrayList<Production>();
 		value.add(null);
@@ -56,10 +60,10 @@ public class ChartFactor extends DiscreteFactor {
 	 * If we ever incorporate other factors into this one, use this constructor so we keep track of
 	 * the other probability distributions.
 	 */
-	public ChartFactor(ParseChart chart, Variable<Production> parentVar, Variable<List<Production>> childVar,
+	public ChartFactor(ParseChart chart, DiscreteVariable parentVar, DiscreteVariable childVar,
 			int parentVarNum, int childVarNum, Map<List<Production>, Double> childProbs, DiscreteFactor parentFactor) {
-		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-				Arrays.asList(new Variable<?>[] {parentVar, childVar})));
+		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		assert chart.getInsideCalculated() == true;
 		assert chart.getOutsideCalculated() == false;
@@ -133,6 +137,9 @@ public class ChartFactor extends DiscreteFactor {
 	// Efficiency methods
 	//////////////////////////////////////////////////////////////
 
+	// TODO(jayant): These methods are going to horribly break junction tree due to
+	// refactoring the factor product methods out of individual factors.
+	
 	/**
 	 * Re-implementation of sum-product to be aware of the CFG parse chart.
 	 */
@@ -170,10 +177,11 @@ public class ChartFactor extends DiscreteFactor {
 		varsToRetain.addAll(getVars().getVariableNums());
 		varsToRetain.removeAll(varNumsToEliminate);
 
+		List<DiscreteFactor> emptyList = Collections.emptyList();
 		if (useSum) {
-			return sumProduct(Collections.EMPTY_LIST, varsToRetain);
+			return sumProduct(emptyList, varsToRetain);
 		} else {
-			return maxProduct(Collections.EMPTY_LIST, varsToRetain);
+			return maxProduct(emptyList, varsToRetain);
 		}
 	}
 

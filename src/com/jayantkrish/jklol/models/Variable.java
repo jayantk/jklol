@@ -1,75 +1,24 @@
 package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.util.*;
-
-import java.util.Collection;
-import java.util.NoSuchElementException;
-
-public class Variable<T> {
-
-	private String name;
-	private IndexedList<T> values;
-
-	public Variable(String name, Collection<T> values) {
-		this.name = name;
-		this.values = new IndexedList<T>(values);
-	}
+/**
+ * A Variable represents a random variable which can take on some set of Object values.
+ * Typing in Java doesn't handle dynamically-generated lists of types particularly well,
+ * so Variables always operate on Objects. However, it is good practice to check that 
+ * an Object is within the domain of a Variable by using the canTakeValue() method. 
+ * 
+ * @author jayant
+ *
+ */
+public interface Variable {
 
 	/**
-	 * Get an arbitrary value v which can be assigned to this variable. Useful for
+	 * Get an arbitrary value which can be assigned to this variable. Useful for
 	 * initializing things that don't care about the particular value.
 	 */
-	public Object getArbitraryValue() {
-		return 0;
-	}
-
-	/**
-	 * Get the number of possible values that this variable can take on.
-	 * @return
-	 */
-	public int numValues() {
-		return values.size();
-	}
+	public Object getArbitraryValue();
 	
 	/**
-	 * Returns true if value is a legitimate setting for this variable.
-	 * @param value
-	 * @return
+	 * Returns true if value can be legitimately assigned to this variable.
 	 */
-	public boolean canTakeValue(Object value) {	
-		return values.contains((T) value);
-	}
-
-	public T getValue(int index) {
-		return values.get(index);
-	}
-
-	public int getValueIndex(T typedValue) {
-		if (!values.contains(typedValue)) {
-			throw new NoSuchElementException("Tried accessing " + typedValue + " of a closed variable class");
-		}
-		return values.getIndex(typedValue);
-	}
-
-	/**
-	 * You must call this with appropriately typed objects (i.e., of type T).
-	 * This method exists so that other parts of the framework do not have to 
-	 * track the types of each variable.
-	 */
-	public int getValueIndexObject(Object value) {
-		T typedValue = (T) value;
-		return getValueIndex(typedValue);
-	}
-
-	public String toString() {
-		return values.toString();
-	}
-
-	public boolean equals(Object o) {
-		if (o instanceof Variable<?>) {
-			Variable<? >v = (Variable<?>) o;
-			return name.equals(v.name) && values.equals(v.values); 
-		}
-		return false;
-	}
+	public boolean canTakeValue(Object value);
 }

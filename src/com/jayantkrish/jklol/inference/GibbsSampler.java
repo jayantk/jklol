@@ -2,16 +2,14 @@ package com.jayantkrish.jklol.inference;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.jayantkrish.jklol.models.Assignment;
-import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
-import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.factors.DiscreteFactor;
+import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * An implementation of Gibbs sampling for computing approximate marginals.
@@ -25,7 +23,7 @@ public class GibbsSampler implements InferenceEngine {
 	private int samplesBetweenDraws;
 
 	private Assignment curAssignment;
-	private TableFactor marginal;
+	private List<Assignment> samples;
 
 	public GibbsSampler(int burnInSamples, int numDrawsInMarginal, int samplesBetweenDraws) {
 		this.burnInSamples = burnInSamples;
@@ -33,7 +31,7 @@ public class GibbsSampler implements InferenceEngine {
 		this.samplesBetweenDraws = samplesBetweenDraws;
 		this.curAssignment = null;
 		this.factorGraph = null;
-		this.marginal = null;
+		this.samples = null;
 	}
 
 	public void setFactorGraph(FactorGraph f) {
@@ -56,7 +54,7 @@ public class GibbsSampler implements InferenceEngine {
 		Set<Integer> factorNums = factorGraph.getFactorsWithVariable(varNum);
 		List<DiscreteFactor> factorsToCombine = new ArrayList<DiscreteFactor>();
 		for (Integer factorNum : factorNums) {
-			factorsToCombine.add(factorGraph.getFactorFromIndex(factorNum).conditional(otherVarAssignment));
+			factorsToCombine.add((DiscreteFactor) factorGraph.getFactorFromIndex(factorNum).conditional(otherVarAssignment));
 		}
 		DiscreteFactor toSampleFrom = TableFactor.productFactor(factorsToCombine);
 		
@@ -70,15 +68,15 @@ public class GibbsSampler implements InferenceEngine {
 	}
 
 	public void computeMarginals(Assignment assignment) {
-		List<Variable<?>> marginalVars = new ArrayList<Variable<?>>();
+		List<Variable> marginalVars = new ArrayList<Variable>();
 		for (int varNum : assignment.getVarNumsSorted()) {
 			marginalVars.add(factorGraph.getVariableFromIndex(varNum));
 		}
 		
-		marginal = new TableFactor(new VariableNumMap(assignment.getVarNumsSorted(), marginalVars));
+		samples = new ArrayList<Assignment>();
 		// Initialize sampler with an arbitrary assignment.
 		List<Integer> varNums = new ArrayList<Integer>();
-		List<Variable<?>> vars = factorGraph.getVariables();
+		List<Variable> vars = factorGraph.getVariables();
 		List<Object> values = new ArrayList<Object>();
 		for (int i = 0; i < vars.size(); i++) {
 			varNums.add(i);
@@ -96,16 +94,13 @@ public class GibbsSampler implements InferenceEngine {
 			for (int i = 0; i < samplesBetweenDraws; i++) {
 				doSamplingRound();
 			}
-			double curWeight = marginal.getUnnormalizedProbability(curAssignment);
-			marginal.setWeight(curAssignment, curWeight + 1.0);
+			samples.add(curAssignment);
 		}
 	}
 
 	public DiscreteFactor getMarginal(List<Integer> varNumsToRetain) {
-		assert marginal != null;
-		Set<Integer> varNumsToEliminate = new HashSet<Integer>(marginal.getVars().getVariableNums());
-		varNumsToEliminate.removeAll(varNumsToRetain);
-		return marginal.marginalize(varNumsToEliminate);
+		assert samples != null;
+		throw new UnsupportedOperationException("Not yet implemented");
 	}
 
 	/**

@@ -4,7 +4,7 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -14,28 +14,28 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  */
 public class VariableNumMapTest extends TestCase {
 
-	private VariableNumMap a,b,c;
-	private Variable v1,v2;
+	private VariableNumMap<DiscreteVariable> a,b,c;
+	private DiscreteVariable v1,v2;
 	
 	public void setUp() {
-		v1 = new Variable<String>("Two values",
+		v1 = new DiscreteVariable("Two values",
 				Arrays.asList(new String[] {"T", "F"}));
-		v2 = new Variable<String>("Three values",
+		v2 = new DiscreteVariable("Three values",
 				Arrays.asList(new String[] {"T", "F", "U"}));
 		
-		a = new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}), 
-				Arrays.asList(new Variable<?>[] {v1, v2, v1}));
-		b = new VariableNumMap(Arrays.asList(new Integer[] {2, 1}), 
-				Arrays.asList(new Variable<?>[] {v1, v2}));
+		a = new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 1, 3}), 
+				Arrays.asList(new DiscreteVariable[] {v1, v2, v1}));
+		b = new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {2, 1}), 
+				Arrays.asList(new DiscreteVariable[] {v1, v2}));
 		// Note that c has conflicting assignments for variable v1!!
-		c = new VariableNumMap(Arrays.asList(new Integer[] {2, 1}), 
-				Arrays.asList(new Variable<?>[] {v1, v1}));
+		c = new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {2, 1}), 
+				Arrays.asList(new DiscreteVariable[] {v1, v1}));
 	}
 	
 	public void testImmutability() {
 		List<Integer> inds = new ArrayList<Integer>(Arrays.asList(new Integer[] {1, 2, 3}));
-		List<Variable<?>> vars= new ArrayList<Variable<?>>(Arrays.asList(new Variable<?>[] {v1,v2,v2}));
-		VariableNumMap c = new VariableNumMap(inds, vars);
+		List<DiscreteVariable> vars= new ArrayList<DiscreteVariable>(Arrays.asList(new DiscreteVariable[] {v1,v2,v2}));
+		VariableNumMap<DiscreteVariable> c = new VariableNumMap<DiscreteVariable>(inds, vars);
 		inds.add(4);
 		vars.add(v1);
 		assertFalse(c.containsVariableNum(4));
@@ -52,15 +52,15 @@ public class VariableNumMapTest extends TestCase {
 	}
 	
 	public void testGetVariables() {
-		assertEquals(Arrays.asList(new Variable<?>[] {v1,v2,v1}),
+		assertEquals(Arrays.asList(new DiscreteVariable[] {v1,v2,v1}),
 				a.getVariables());
 		// Ensure that the returned values come in sorted order.
-		assertEquals(Arrays.asList(new Variable<?>[] {v2,v1}),
+		assertEquals(Arrays.asList(new DiscreteVariable[] {v2,v1}),
 				b.getVariables());	
 	}
 	
 	public void testIntersection() {
-		VariableNumMap intersection = a.intersection(b);
+		VariableNumMap<DiscreteVariable> intersection = a.intersection(b);
 
 		assertEquals(1, intersection.size());
 		assertTrue(intersection.containsVariableNum(1));
@@ -77,14 +77,14 @@ public class VariableNumMapTest extends TestCase {
 	}
 
 	public void testRemoveAll() {
-		VariableNumMap result = a.removeAll(b);
+		VariableNumMap<DiscreteVariable> result = a.removeAll(b);
 		assertEquals(Arrays.asList(new Integer[] {0,3}), result.getVariableNums());
-		assertEquals(Arrays.asList(new Variable<?>[] {v1,v1}), result.getVariables());		
+		assertEquals(Arrays.asList(new DiscreteVariable[] {v1,v1}), result.getVariables());		
 	}
 	
 	public void testRemoveAllError() {
 		try {
-			VariableNumMap result = a.removeAll(c);
+			a.removeAll(c);
 		} catch (IllegalArgumentException e) {
 			return;
 		}
@@ -92,14 +92,14 @@ public class VariableNumMapTest extends TestCase {
 	}
 	
 	public void testUnion() {
-		VariableNumMap result = a.union(b);
+		VariableNumMap<DiscreteVariable> result = a.union(b);
 		assertEquals(Arrays.asList(new Integer[] {0,1,2,3}), result.getVariableNums());
-		assertEquals(Arrays.asList(new Variable<?>[] {v1,v2,v1,v1}), result.getVariables());
+		assertEquals(Arrays.asList(new DiscreteVariable[] {v1,v2,v1,v1}), result.getVariables());
 	}
 	
 	public void testUnionError() {
 		try {
-			VariableNumMap result = a.union(c);
+			a.union(c);
 		} catch (IllegalArgumentException e) {
 			return;
 		}

@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.models;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -10,30 +11,29 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.jayantkrish.jklol.util.Assignment;
+
 /**
- * A VariableNumMap represents an set of variables in a graphical model. 
+ * A VariableNumMap represents a set of variables in a graphical model. 
  * VariableNumMaps are immutable.
  * 
  * @author jayant
  *
  */
-public class VariableNumMap {
-
-	public static final VariableNumMap EMPTY = 
-		new VariableNumMap(Arrays.asList(new Integer[] {}), Arrays.asList(new Variable<?>[] {}));
+public class VariableNumMap<V extends Variable> {
 	
-	private SortedMap<Integer, Variable<?>> varMap;
+	private SortedMap<Integer, V> varMap;
 	
-	public VariableNumMap(List<Integer> varNums, List<Variable<?>> vars) {
+	public VariableNumMap(List<Integer> varNums, List<V> vars) {
 		assert varNums.size() == vars.size();
-		varMap = new TreeMap<Integer, Variable<?>>();
+		varMap = new TreeMap<Integer, V>();
 		for (int i = 0; i < varNums.size(); i++) {
 			varMap.put(varNums.get(i), vars.get(i));				
 		}		
 	}
 	
-	public VariableNumMap(Map<Integer, Variable<?>> varNumMap) {
-		varMap = new TreeMap<Integer, Variable<?>>(varNumMap);
+	public VariableNumMap(Map<Integer, V> varNumMap) {
+		varMap = new TreeMap<Integer, V>(varNumMap);
 	}
 	
 	/**
@@ -65,8 +65,8 @@ public class VariableNumMap {
 	 * Get the variable types in this map, ordered by variable index. 
 	 * @return
 	 */
-	public List<Variable<?>> getVariables() {
-		return new ArrayList<Variable<?>>(varMap.values());
+	public List<V> getVariables() {
+		return new ArrayList<V>(varMap.values());
 	}
 	
 	/**
@@ -75,7 +75,7 @@ public class VariableNumMap {
 	 * @param variableNum
 	 * @return
 	 */
-	public Variable<?> getVariable(int variableNum) {
+	public V getVariable(int variableNum) {
 		return varMap.get(variableNum);
 	}
 	
@@ -83,7 +83,7 @@ public class VariableNumMap {
 	 * Ensures that all variable numbers which are shared between other and this are
 	 * mapped to the same variables.  
 	 */
-	private void checkCompatibility(VariableNumMap other) {
+	private void checkCompatibility(VariableNumMap<?> other) {
 		for (Integer key : other.getVariableNums()) {
 			if (varMap.containsKey(key) && varMap.get(key) != other.varMap.get(key)) {
 				throw new IllegalArgumentException("Conflicting number -> variable mapping! This object: " + 
@@ -98,7 +98,7 @@ public class VariableNumMap {
 	 * @param other
 	 * @return
 	 */
-	public VariableNumMap intersection(VariableNumMap other) {
+	public VariableNumMap<V> intersection(VariableNumMap<?> other) {
 		checkCompatibility(other);
 		return intersection(new HashSet<Integer>(other.getVariableNums()));
 	}
@@ -109,14 +109,14 @@ public class VariableNumMap {
 	 * @param varNumsToKeep
 	 * @return
 	 */
-	public VariableNumMap intersection(Set<Integer> varNumsToKeep) {
-		SortedMap<Integer, Variable<?>> newVarMap = new TreeMap<Integer, Variable<?>>(varMap);
+	public VariableNumMap<V> intersection(Set<Integer> varNumsToKeep) {
+		SortedMap<Integer, V> newVarMap = new TreeMap<Integer, V>(varMap);
 		for (Integer key : getVariableNums()) {
 			if (!varNumsToKeep.contains(key)) {
 				newVarMap.remove(key);
 			}
 		}
-		return new VariableNumMap(newVarMap);		
+		return new VariableNumMap<V>(newVarMap);		
 	}
 	
 	/**
@@ -124,7 +124,7 @@ public class VariableNumMap {
 	 * @param varNumsToRemove
 	 * @return
 	 */
-	public VariableNumMap removeAll(VariableNumMap other) {
+	public VariableNumMap<V> removeAll(VariableNumMap<?> other) {
 		checkCompatibility(other);
 		return removeAll(new HashSet<Integer>(other.getVariableNums()));
 	}
@@ -134,14 +134,14 @@ public class VariableNumMap {
 	 * @param varNumsToRemove
 	 * @return
 	 */
-	public VariableNumMap removeAll(Set<Integer> varNumsToRemove) {
-		SortedMap<Integer, Variable<?>> newVarMap = new TreeMap<Integer, Variable<?>>(varMap);
+	public VariableNumMap<V> removeAll(Set<Integer> varNumsToRemove) {
+		SortedMap<Integer, V> newVarMap = new TreeMap<Integer, V>(varMap);
 		for (Integer key : getVariableNums()) {
 			if (varNumsToRemove.contains(key)) {
 				newVarMap.remove(key);
 			}
 		}
-		return new VariableNumMap(newVarMap);
+		return new VariableNumMap<V>(newVarMap);
 	}
 	
 	/**
@@ -150,24 +150,38 @@ public class VariableNumMap {
 	 * @param other
 	 * @return
 	 */
-	public VariableNumMap union(VariableNumMap other) {
+	public VariableNumMap<V> union(VariableNumMap<? extends V> other) {
 		checkCompatibility(other);
-		SortedMap<Integer, Variable<?>> newVarMap = new TreeMap<Integer, Variable<?>>(varMap);
+		SortedMap<Integer, V> newVarMap = new TreeMap<Integer, V>(varMap);
 		for (Integer key : other.getVariableNums()) { 
 	       	newVarMap.put(key, other.varMap.get(key));
 		}
-		return new VariableNumMap(newVarMap);
+		return new VariableNumMap<V>(newVarMap);
 	}
 	
+	/**
+	 * Adds or replaces a number -> variable mapping from the map.  
+	 * @param num
+	 * @param var
+	 * @return
+	 */
+	public VariableNumMap<V> addMapping(int num, V var) {
+		SortedMap<Integer, V> newVarMap = new TreeMap<Integer, V>(varMap);
+		newVarMap.put(num, var);
+		return new VariableNumMap<V>(newVarMap);
+	}
+		
     /**
      * Get the assignment corresponding to a particular setting of the variables in this set.
+     * The Objects in outcome are assumed to be ordered in ascending order by variable number.
+     * (i.e., the ith object is the value of the ith variable returned by getVariableNums()) 
      */
 	public Assignment outcomeToAssignment(List<? extends Object> outcome) {
 		assert outcome.size() == varMap.size();
 
 		Map<Integer, Object> varValueMap = new HashMap<Integer, Object>();
 		int i = 0;
-		for (Map.Entry<Integer, Variable<?>> varIndex : varMap.entrySet()) {
+		for (Map.Entry<Integer, V> varIndex : varMap.entrySet()) {
 			assert varIndex.getValue().canTakeValue(outcome.get(i));
 			varValueMap.put(varIndex.getKey(), outcome.get(i));
 			i++;
@@ -187,6 +201,14 @@ public class VariableNumMap {
      * VariableNumMaps are equal if they contain exactly the same variable number -> variable mappings.  	
      */
     public boolean equals(Object o) {
-    	return o instanceof VariableNumMap && varMap.equals(((VariableNumMap) o).varMap);
+    	return o instanceof VariableNumMap<?> && varMap.equals(((VariableNumMap<?>) o).varMap);
     }
+    
+    /**
+     * Get a VariableNumMap with no num -> variable mappings.
+     */
+	public static <T extends Variable> VariableNumMap<T> emptyMap() {
+		List<T> empty = Collections.emptyList();
+		return new VariableNumMap<T>(Arrays.asList(new Integer[] {}), empty);
+	}
 }

@@ -9,13 +9,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.jayantkrish.jklol.models.AllAssignmentIterator;
-import com.jayantkrish.jklol.models.Assignment;
-import com.jayantkrish.jklol.models.CptFactor;
-import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.factors.CptFactor;
+import com.jayantkrish.jklol.models.factors.DiscreteFactor;
+import com.jayantkrish.jklol.models.factors.Factor;
+import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * A CfgFactor embeds a context-free grammar in a Bayes Net. The factor defines a distribution over
@@ -24,12 +25,12 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * You can run exact inference in a Bayes Net containing a CfgFactor provided that the terminal
  * productions are conditioned on.
  */
-public class CfgFactor extends CptFactor {
+public class CfgFactor extends DiscreteFactor implements CptFactor<DiscreteVariable> {
 
 	private int parentVarNum;
-	private Variable<Production> parentVar;
+	private DiscreteVariable parentVar;
 	private int childVarNum;
-	private Variable<List<Production>> childVar;
+	private DiscreteVariable childVar;
 
 	private CptProductionDistribution productionDist;
 	private CfgParser parser;
@@ -38,14 +39,15 @@ public class CfgFactor extends CptFactor {
 
 	/**
 	 * This factor should always be instantiated over exactly two variables: the parent variable is
-	 * a distribution over Productions, the child variable is a distribution over arrays of
-	 * Productions.
+	 * a distribution over Productions, the child variable is a distribution over Lists of
+	 * Productions. Sadly, the Java type system makes enforcing this requirement very difficult, 
+	 * so just know that if you violate this requirement, CfgFactor will break in terrible and unexpected ways. 
 	 */
-	public CfgFactor(Variable<Production> parentVar, Variable<List<Production>> childVar,
+	public CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
 			int parentVarNum, int childVarNum, Grammar grammar, 
 			CptProductionDistribution productionDist) {
-		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-				Arrays.asList(new Variable<?>[] {parentVar, childVar})));
+		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		this.parentVarNum = parentVarNum;
 		this.parentVar = parentVar;
@@ -61,11 +63,11 @@ public class CfgFactor extends CptFactor {
 	/*
 	 * For implementing products of factors.
 	 */
-	private CfgFactor(Variable<Production> parentVar, Variable<List<Production>> childVar,
+	private CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
 			int parentVarNum, int childVarNum, CptProductionDistribution productionDist, 
 			CfgParser parser, DiscreteFactor multipliedWith) {
-		super(new VariableNumMap(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
-				Arrays.asList(new Variable<?>[] {parentVar, childVar})));
+		super(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {parentVarNum, childVarNum}), 
+				Arrays.asList(new DiscreteVariable[] {parentVar, childVar})));
 
 		this.parentVarNum = parentVarNum;
 		this.parentVar = parentVar;
@@ -121,7 +123,7 @@ public class CfgFactor extends CptFactor {
 		throw new UnsupportedOperationException("");
 	}
 
-	public void incrementOutcomeCount(DiscreteFactor marginal, double count) {
+	public void incrementOutcomeCount(Factor<?> marginal, double count) {
 		if (marginal instanceof ChartFactor) {
 			ChartFactor cf = (ChartFactor) marginal;
 			ParseChart chart = cf.getChart();
@@ -217,7 +219,7 @@ public class CfgFactor extends CptFactor {
 	}
 
 	public DiscreteFactor conditional(Assignment a) {
-		VariableNumMap intersection = getVars().intersection(new HashSet<Integer>(a.getVarNumsSorted()));
+		VariableNumMap<DiscreteVariable> intersection = getVars().intersection(new HashSet<Integer>(a.getVarNumsSorted()));
 
 		if (intersection.size() == 0) {
 			return this;

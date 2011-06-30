@@ -1,10 +1,22 @@
-import com.jayantkrish.jklol.models.*;
-import com.jayantkrish.jklol.inference.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import junit.framework.TestCase;
+
+import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.models.BayesNet;
+import com.jayantkrish.jklol.models.BayesNetBuilder;
+import com.jayantkrish.jklol.models.Cpt;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.factors.CptFactor;
+import com.jayantkrish.jklol.models.factors.CptTableFactor;
 import com.jayantkrish.jklol.training.IncrementalEMTrainer;
 import com.jayantkrish.jklol.training.StepwiseEMTrainer;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
-import java.util.*;
-import junit.framework.*;
+import com.jayantkrish.jklol.util.Assignment;
 
 public class EMTrainerTest extends TestCase {
 
@@ -28,22 +40,22 @@ public class EMTrainerTest extends TestCase {
 	double TOLERANCE = 0.05;
 
 	public void setUp() {
-		bn = new BayesNet();
+		BayesNetBuilder builder = new BayesNetBuilder();
 
-		Variable<String> tfVar = new Variable<String>("TrueFalse",
+		DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
 				Arrays.asList(new String[] {"T", "F"}));
 
-		bn.addVariable("Var0", tfVar);
-		bn.addVariable("Var1", tfVar);
-		bn.addVariable("Var2", tfVar);
+		builder.addDiscreteVariable("Var0", tfVar);
+		builder.addDiscreteVariable("Var1", tfVar);
+		builder.addDiscreteVariable("Var2", tfVar);
 
-		CptTableFactor f0 = bn.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var0"}));
-		CptTableFactor f1 = bn.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var1"}));
-		CptTableFactor f2 = bn.addCptFactor(Arrays.asList(new String[] {"Var0", "Var1"}), 
+		CptTableFactor f0 = builder.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var0"}));
+		CptTableFactor f1 = builder.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var1"}));
+		CptTableFactor f2 = builder.addCptFactor(Arrays.asList(new String[] {"Var0", "Var1"}), 
 				Arrays.asList(new String[] {"Var2"}));
 
-		actualNoNodeCpt = new Cpt(Collections.EMPTY_LIST, Arrays.asList(new Variable<?>[] {tfVar}));
-		actualVCpt = new Cpt(Arrays.asList(new Variable<?>[] {tfVar, tfVar}), Arrays.asList(new Variable<?>[] {tfVar}));
+		actualNoNodeCpt = new Cpt(Collections.EMPTY_LIST, Arrays.asList(new DiscreteVariable[] {tfVar}));
+		actualVCpt = new Cpt(Arrays.asList(new DiscreteVariable[] {tfVar, tfVar}), Arrays.asList(new DiscreteVariable[] {tfVar}));
 
 		Map<Integer, Integer> nodeCptMap0 = new HashMap<Integer, Integer>();
 		nodeCptMap0.put(0, 0);
@@ -61,6 +73,7 @@ public class EMTrainerTest extends TestCase {
 		allVarNames = Arrays.asList(new String[] {"Var0", "Var1", "Var2"});
 		List<String> observedVarNames = Arrays.asList(new String[] {"Var0", "Var2"});
 
+		bn = builder.build();		
 		trainingData = new ArrayList<Assignment>();
 		a1 = bn.outcomeToAssignment(observedVarNames,
 				Arrays.asList(new String[] {"F", "T"}));
@@ -84,7 +97,7 @@ public class EMTrainerTest extends TestCase {
 		//Assignment a = bn.outcomeToAssignment(allVarNames, 
 		//	Arrays.asList());
 
-		for (CptFactor f : bn.getCptFactors()) {
+		for (CptFactor<?> f : bn.getCptFactors()) {
 			System.out.println(f);
 		}
 	}
@@ -92,7 +105,7 @@ public class EMTrainerTest extends TestCase {
 	public void testStepwiseEM() {
 		s.train(bn, trainingData);
 
-		for (CptFactor f : bn.getCptFactors()) {
+		for (CptFactor<?> f : bn.getCptFactors()) {
 			System.out.println(f);
 		}
 	}

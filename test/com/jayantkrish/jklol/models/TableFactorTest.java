@@ -5,13 +5,13 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.models.Assignment;
-import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FeatureFunction;
 import com.jayantkrish.jklol.models.IndicatorFeatureFunction;
-import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.factors.DiscreteFactor;
+import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * This also tests many of the methods in Factor and the
@@ -23,23 +23,23 @@ public class TableFactorTest extends TestCase {
 	private TableFactor g;
 	private TableFactor h;
 
-	private Variable<String> v;
-	private Variable<String> v2;
+	private DiscreteVariable v;
+	private DiscreteVariable v2;
 
 	private FeatureFunction feature;
 
 	public void setUp() {
-		v = new Variable<String>("Three values",
+		v = new DiscreteVariable("Three values",
 				Arrays.asList(new String[] {"T", "F", "U"}));
 
-		v2 = new Variable<String>("Two values",
+		v2 = new DiscreteVariable("Two values",
 				Arrays.asList(new String[] {"foo", "bar"}));
 
-		h = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {1, 0}),
-				Arrays.asList(new Variable<?>[] {v2, v})));
+		h = new TableFactor(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {1, 0}),
+				Arrays.asList(new DiscreteVariable[] {v2, v})));
 
-		f = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 3, 2, 5}),
-				Arrays.asList(new Variable<?>[] {v, v, v, v})));
+		f = new TableFactor(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 3, 2, 5}),
+				Arrays.asList(new DiscreteVariable[] {v, v, v, v})));
 
 		// NOTE: These insertions are to the variables in SORTED ORDER,
 		// even though the above variables are defined out-of-order.
@@ -47,8 +47,8 @@ public class TableFactorTest extends TestCase {
 		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "T"}), 3.0);
 		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "U"}), 2.0);
 
-		g = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}),
-				Arrays.asList(new Variable<?>[] {v, v, v})));
+		g = new TableFactor(new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 1, 3}),
+				Arrays.asList(new DiscreteVariable[] {v, v, v})));
 
 		g.setWeightList(Arrays.asList(new String[] {"T", "U", "F"}), 7.0);
 		g.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 11.0);
@@ -65,7 +65,7 @@ public class TableFactorTest extends TestCase {
 	public void testVariableOrder() {
 		assertEquals(Arrays.asList(new Integer[] {0, 1}),
 				h.getVars().getVariableNums());
-		assertEquals(Arrays.asList(new Variable[] {v, v2}),
+		assertEquals(Arrays.asList(new DiscreteVariable[] {v, v2}),
 				h.getVars().getVariables());
 	}
 

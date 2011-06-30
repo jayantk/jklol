@@ -1,4 +1,5 @@
 import com.jayantkrish.jklol.models.*;
+import com.jayantkrish.jklol.models.factors.CptTableFactor;
 
 import junit.framework.*;
 import java.util.*;
@@ -8,22 +9,21 @@ import java.util.*;
  */
 public class SparseCptTest extends TestCase {
 
-    private Cpt cpt;
     private SparseCpt sparse;
     private CptTableFactor f;
-    private Variable<String> v;
+    private DiscreteVariable v;
 
     private Object[][] assignments;
 
     public void setUp() {
-	v = new Variable<String>("Two values",
+	v = new DiscreteVariable("Two values",
 		Arrays.asList(new String[] {"T", "F"}));
 
 	f = new CptTableFactor(
-		new VariableNumMap(Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new Variable<?>[] {v, v})),
-		new VariableNumMap(Arrays.asList(new Integer[] {2, 3}), Arrays.asList(new Variable<?>[] {v, v})));
+		new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new DiscreteVariable[] {v, v})),
+		new VariableNumMap<DiscreteVariable>(Arrays.asList(new Integer[] {2, 3}), Arrays.asList(new DiscreteVariable[] {v, v})));
 	
-	sparse = new SparseCpt(Arrays.asList(new Variable<?>[] {v, v}), Arrays.asList(new Variable<?>[] {v, v}));
+	sparse = new SparseCpt(Arrays.asList(new DiscreteVariable[] {v, v}), Arrays.asList(new DiscreteVariable[] {v, v}));
 	
 	Map<Integer, Integer> cptVarNumMap = new HashMap<Integer, Integer>();
 	for (int i = 0; i < 4; i++) {

@@ -3,6 +3,8 @@ package com.jayantkrish.jklol.models;
 import java.util.Iterator;
 import java.util.List;
 
+import com.jayantkrish.jklol.util.Assignment;
+
 /**
  * A FeatureFunction is a feature in the model.
  */
@@ -19,7 +21,6 @@ public interface FeatureFunction {
      * has a non-zero value.
      */
     public Iterator<Assignment> getNonzeroAssignments();
-
 
     /**
      * The varnums which this feature operates on, returned

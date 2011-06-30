@@ -15,91 +15,100 @@ import java.util.NoSuchElementException;
  */ 
 public class IndexedList<T> {
 
-    private List<T> items;
-    private Map<T, Integer> itemIndex;
+	private List<T> items;
+	private Map<T, Integer> itemIndex;
 
-    public IndexedList() {
-	items = new ArrayList<T>();
-	itemIndex = new HashMap<T, Integer>();
-    }
-
-    public IndexedList(Collection<T> toInsert) {
-	items = new ArrayList<T>();
-	itemIndex = new HashMap<T, Integer>();
-
-	for (T item : toInsert) {
-	    this.add(item);
+	public IndexedList() {
+		items = new ArrayList<T>();
+		itemIndex = new HashMap<T, Integer>();
 	}
-    }
 
-    /**
-     * Add a new element to this set. Note that there can only be a single
-     * copy of any given item in the list.
-     */
-    public void add(T item) {
-	if (itemIndex.containsKey(item)) {
-	    // Items can only be added once
-	    return;
+	public IndexedList(Collection<? extends T> toInsert) {
+		items = new ArrayList<T>();
+		itemIndex = new HashMap<T, Integer>();
+
+		for (T item : toInsert) {
+			this.add(item);
+		}
 	}
-	itemIndex.put(item, items.size());
-	items.add(item);
-    }
-
-    /**
-     * Add each element of a set of elements to this list.
-     */ 
-    public void addAll(Collection<T> items) {
-	for (T item : items) {
-	    add(item);
+	
+	/**
+	 * Copy constructor.
+	 * @param other
+	 */
+	public IndexedList(IndexedList<T> other) {
+		this.items = new ArrayList<T>(other.items);
+		this.itemIndex = new HashMap<T, Integer>(other.itemIndex);
 	}
-    }
 
-    /**
-     * Get the number of elements in the list.
-     */
-    public int size() {
-	return items.size();
-    }
-
-    /**
-     * True if the list contains the specified item.
-     */ 
-    public boolean contains(T item) {
-	return itemIndex.containsKey(item);
-    }
-
-    /**
-     * Get the index in the list of the specified item.
-     */ 
-    public int getIndex(T item) {
-	if (!itemIndex.containsKey(item)) {
-	    throw new NoSuchElementException();
+	/**
+	 * Add a new element to this set. Note that there can only be a single
+	 * copy of any given item in the list.
+	 */
+	public void add(T item) {
+		if (itemIndex.containsKey(item)) {
+			// Items can only be added once
+			return;
+		}
+		itemIndex.put(item, items.size());
+		items.add(item);
 	}
-	return itemIndex.get(item);
-    }
 
-    /**
-     * Get the item with the specified index.
-     */ 
-    public T get(int index) {
-	if (index >= items.size() || index < 0) {
-	    throw new IndexOutOfBoundsException();
+	/**
+	 * Add each element of a set of elements to this list.
+	 */ 
+	public void addAll(Collection<T> items) {
+		for (T item : items) {
+			add(item);
+		}
 	}
-	return items.get(index);
-    }
 
-    /**
-     * Get all of the items in the list
-     */
-    public List<T> items() {
-	return Collections.unmodifiableList(items);
-    }
-    
-    public boolean equals(Object o) {
-    	return o instanceof IndexedList<?> && items.equals(((IndexedList<?>) o).items);   		
-    }
+	/**
+	 * Get the number of elements in the list.
+	 */
+	public int size() {
+		return items.size();
+	}
 
-    public String toString() {
-	return items.toString();
-    }
+	/**
+	 * True if the list contains the specified item.
+	 */ 
+	public boolean contains(Object item) {
+		return itemIndex.containsKey(item);
+	}
+
+	/**
+	 * Get the index in the list of the specified item.
+	 */ 
+	public int getIndex(Object item) {
+		if (!itemIndex.containsKey(item)) {
+			throw new NoSuchElementException();
+		}
+		return itemIndex.get(item);
+	}
+
+	/**
+	 * Get the item with the specified index.
+	 */ 
+	public T get(int index) {
+		if (index >= items.size() || index < 0) {
+			throw new IndexOutOfBoundsException();
+		}
+		return items.get(index);
+	}
+
+	/**
+	 * Get all of the items in the list
+	 */
+	public List<T> items() {
+		return Collections.unmodifiableList(items);
+	}
+
+	public boolean equals(Object o) {
+		return o instanceof IndexedList<?> && items.equals(((IndexedList<?>) o).items);   		
+	}
+
+	public String toString() {
+		return items.toString();
+	}
 }

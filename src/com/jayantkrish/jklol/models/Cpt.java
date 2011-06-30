@@ -2,6 +2,10 @@ package com.jayantkrish.jklol.models;
 
 import java.util.*;
 
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
+import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.SparseOutcomeTable;
+
 /**
  * A conditional probability table (for a BN). Stores a conditional probability over a set of children
  * conditioned on a set of parents. This CPT is stored sparsely.
@@ -11,24 +15,24 @@ import java.util.*;
 public class Cpt {
 
 	// Child / parent variables define possible outcomes.
-	private List<Variable<?>> childVars;
-	private List<Variable<?>> parentVars;
+	private List<DiscreteVariable> childVars;
+	private List<DiscreteVariable> parentVars;
 	private List<Integer> parentNums;
 	private List<Integer> childNums;
 
 	private List<Integer> allNums;
-	private List<Variable<?>> allVars;
+	private List<DiscreteVariable> allVars;
 
 	// TODO: Maybe these should be dense? It's unclear...
 	protected SparseOutcomeTable<Double> childStatistics;
 	protected SparseOutcomeTable<Double> parentStatistics;
 
-	public Cpt(List<Variable<?>> parents, List<Variable<?>> children) {
+	public Cpt(List<DiscreteVariable> parents, List<DiscreteVariable> children) {
 		childVars = children;
 		parentVars = parents;
 
 		allNums = new ArrayList<Integer>();
-		allVars = new ArrayList<Variable<?>>();
+		allVars = new ArrayList<DiscreteVariable>();
 		for (int i = 0; i < parentVars.size() + childVars.size(); i++) {
 			allNums.add(i);
 		}

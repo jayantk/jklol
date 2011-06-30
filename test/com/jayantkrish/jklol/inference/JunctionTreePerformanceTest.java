@@ -1,5 +1,9 @@
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.*;
+import com.jayantkrish.jklol.models.factors.DiscreteFactor;
+import com.jayantkrish.jklol.models.factors.TableFactor;
+import com.jayantkrish.jklol.util.Assignment;
+
 import junit.framework.*;
 
 import java.util.Arrays;
@@ -24,7 +28,7 @@ public class JunctionTreePerformanceTest extends TestCase {
 	    varValues.add(i);
 	}
 
-	Variable<Integer> var = new Variable<Integer>("int var", varValues);
+	DiscreteVariable var = new DiscreteVariable("int var", varValues);
 
 	f.addVariable("Var0", var);
 	f.addVariable("Var1", var);

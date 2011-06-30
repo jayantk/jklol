@@ -4,3 +4,7 @@
 # ignore jklol.jar and build files
 /jklol.jar
 /build
+
+# Misc stuff from eclipse (I think)
+.classpath
+.project

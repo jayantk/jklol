@@ -21,11 +21,13 @@ public class DiscreteVariable implements Variable {
 		this.values = new IndexedList<Object>(values);
 	}
 
-	@Override public Object getArbitraryValue() {
+	@Override
+	public Object getArbitraryValue() {
 		return values.get(0);
 	}
 
-	@Override public boolean canTakeValue(Object value) {	
+	@Override 
+	public boolean canTakeValue(Object value) {	
 		return values.contains(value);
 	}
 

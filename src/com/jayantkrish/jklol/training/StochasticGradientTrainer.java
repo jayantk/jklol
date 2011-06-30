@@ -8,7 +8,7 @@ import java.util.Map;
 import com.jayantkrish.jklol.inference.InferenceEngine;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.LogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModel;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -48,7 +48,7 @@ public class StochasticGradientTrainer {
 	private void computeGradient(LogLinearModel factorGraph, Assignment trainingExample) {
 		// Compute the second term of the gradient, the expected feature counts
 		inferenceEngine.computeMarginals();
-		for (LogLinearFactor factor : factorGraph.getLogLinearFactors()) {
+		for (DiscreteLogLinearFactor factor : factorGraph.getLogLinearFactors()) {
 			Factor marginal = inferenceEngine.getMarginal(factor.getVars().getVariableNums());
 			for (FeatureFunction f : factor.getFeatures()) {
 				if (!gradient.containsKey(f)) {
@@ -61,7 +61,7 @@ public class StochasticGradientTrainer {
 
 		// Compute the first term of the gradient, the model expectations conditioned on the training example.
 		inferenceEngine.computeMarginals(trainingExample);
-		for (LogLinearFactor factor : factorGraph.getLogLinearFactors()) {
+		for (DiscreteLogLinearFactor factor : factorGraph.getLogLinearFactors()) {
 			Factor marginal = inferenceEngine.getMarginal(factor.getVars().getVariableNums());
 			for (FeatureFunction f : factor.getFeatures()) {
 				if (!gradient.containsKey(f)) {

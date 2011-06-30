@@ -14,8 +14,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 public class LogLinearModelBuilder {
 
 	private FactorGraph factorGraph;	
-	private List<LogLinearFactor> logLinearFactors;
-	private FeatureSet features;
+	private List<DiscreteLogLinearFactor> logLinearFactors;
+	private LogLinearParameters features;
 
 	private VariableNumMap discreteVariables;
 
@@ -26,8 +26,8 @@ public class LogLinearModelBuilder {
 		super();
 		// Track model features / which factors can be trained.
 		factorGraph = new FactorGraph();
-		features = new FeatureSet();
-		logLinearFactors = new ArrayList<LogLinearFactor>();
+		features = new LogLinearParameters();
+		logLinearFactors = new ArrayList<DiscreteLogLinearFactor>();
 		discreteVariables = VariableNumMap.emptyMap();
 	}
 
@@ -49,7 +49,7 @@ public class LogLinearModelBuilder {
 	 * Add a factor to the Bayes net being constructed.
 	 * @param factor
 	 */
-	public void addFactor(LogLinearFactor factor) {
+	public void addFactor(DiscreteLogLinearFactor factor) {
 		logLinearFactors.add(factor);
 		factorGraph.addFactor(factor);
 	}
@@ -57,8 +57,8 @@ public class LogLinearModelBuilder {
 	/**
 	 * Adds a new Factor with log-linear weights connecting the specified variables.
 	 */
-	public LogLinearFactor addLogLinearFactor(List<String> factorVariables) {
-		LogLinearFactor factor = new LogLinearFactor(factorGraph.lookupVariables(factorVariables), features);
+	public DiscreteLogLinearFactor addLogLinearFactor(List<String> factorVariables) {
+		DiscreteLogLinearFactor factor = new DiscreteLogLinearFactor(factorGraph.lookupVariables(factorVariables), features);
 		addFactor(factor);
 		return factor;
 	}

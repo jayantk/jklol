@@ -7,15 +7,16 @@ import java.util.Map;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A FeatureSet stores all distinct features that exist within a particular FactorGraph, along with
- * their parameter values (log-linear weights).
+ * {@link LogLinearParameters} stores all of the parameters for a {@link LogLinearModel}. 
+ * This includes all distinct features that exist within a particular FactorGraph, along with
+ * their weights.
  */
-public class FeatureSet {
+public class LogLinearParameters {
 
 	private IndexedList<FeatureFunction> allFeatures;
 	private List<Double> featureWeights;
 
-	public FeatureSet() {
+	public LogLinearParameters() {
 		featureWeights = new ArrayList<Double>();
 		allFeatures = new IndexedList<FeatureFunction>();
 	}
@@ -24,7 +25,7 @@ public class FeatureSet {
 	 * Copy constructor
 	 * @param fs
 	 */
-	public FeatureSet(FeatureSet fs) {
+	public LogLinearParameters(LogLinearParameters fs) {
 		this.featureWeights = new ArrayList<Double>(fs.featureWeights);
 		this.allFeatures = new IndexedList<FeatureFunction>(fs.allFeatures);
 	}

@@ -8,21 +8,21 @@ import com.jayantkrish.jklol.models.FactorGraph;
 
 public class LogLinearModel extends FactorGraph {
 
-	private List<LogLinearFactor> logLinearFactors;
-	private FeatureSet features;
+	private List<DiscreteLogLinearFactor> logLinearFactors;
+	private LogLinearParameters features;
 
 	public LogLinearModel(FactorGraph factorGraph, 
-			List<LogLinearFactor> logLinearFactors, FeatureSet features) {
+			List<DiscreteLogLinearFactor> logLinearFactors, LogLinearParameters features) {
 		super(factorGraph);
-		this.logLinearFactors = new ArrayList<LogLinearFactor>(logLinearFactors);
+		this.logLinearFactors = new ArrayList<DiscreteLogLinearFactor>(logLinearFactors);
 		this.features = features;
 	}
 
-	public List<LogLinearFactor> getLogLinearFactors() {
+	public List<DiscreteLogLinearFactor> getLogLinearFactors() {
 		return Collections.unmodifiableList(logLinearFactors);
 	}
 
-	public FeatureSet getFeatureSet() {
+	public LogLinearParameters getFeatureSet() {
 		return features;
 	}
 }

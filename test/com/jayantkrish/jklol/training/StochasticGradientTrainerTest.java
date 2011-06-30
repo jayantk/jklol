@@ -10,9 +10,9 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.FeatureSet;
+import com.jayantkrish.jklol.models.loglinear.LogLinearParameters;
 import com.jayantkrish.jklol.models.loglinear.IndicatorFeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.LogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModel;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -39,10 +39,10 @@ public class StochasticGradientTrainerTest extends TestCase {
 		builder.addDiscreteVariable("Var3", tfVar);
 
 		clique1Names = Arrays.asList(new String[] {"Var0", "Var1", "Var2"});
-		LogLinearFactor l1 = builder.addLogLinearFactor(clique1Names);
+		DiscreteLogLinearFactor l1 = builder.addLogLinearFactor(clique1Names);
 
 		clique2Names = Arrays.asList(new String[] {"Var2", "Var3"});
-		LogLinearFactor l2 = builder.addLogLinearFactor(clique2Names);
+		DiscreteLogLinearFactor l2 = builder.addLogLinearFactor(clique2Names);
 
 		Iterator<Assignment> assignmentIter = l1.outcomeIterator();
 		while (assignmentIter.hasNext()) {
@@ -84,7 +84,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 				Arrays.asList(new String[] {"F", "T"})));
 
 		t.train(logLinearModel, trainingData);
-		FeatureSet fs = logLinearModel.getFeatureSet();
+		LogLinearParameters fs = logLinearModel.getFeatureSet();
 		for (FeatureFunction feat : fs.getFeatures()) {
 			// System.out.println(fs.getFeatureWeight(feat) + ": " + feat);
 			Assignment a = feat.getNonzeroAssignments().next();

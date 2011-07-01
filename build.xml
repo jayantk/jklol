@@ -3,7 +3,6 @@
   <property name="tst-dir" location="test" />
 
   <path id="classpath.base">
-  	<pathelement location="lib/guava-r09.jar" />
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />
@@ -31,8 +30,7 @@
       <classpath refid="classpath.test" />
       <formatter type="brief" usefile="false" />
       <test name="IndexedListTest" />
-      <test name="DiscreteVariableTest" />
-      <test name="VariableNumMapTest" />
+      <test name="VariableTest" />
       <test name="AssignmentTest" />
       <test name="TableFactorTest" />
       <test name="SparseCptTest" />
@@ -58,6 +56,7 @@
       <test name="JunctionTreePerformanceTest" />
     </junit>
   </target>
+
 
   <target name="jar" depends="compile">
     <jar destfile="jklol.jar" basedir="build" />

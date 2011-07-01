@@ -13,120 +13,112 @@ import java.util.Collection;
  */ 
 public class HashMultimap<K,V> {
 
-	private Map<K, Set<V>> items;
-	private Set<V> defaultValue;
+    private Map<K, Set<V>> items;
+    private Set<V> defaultValue;
 
-	public HashMultimap() {
-		items = new HashMap<K, Set<V>>();
-		defaultValue = Collections.emptySet();
-	}
+    public HashMultimap() {
+	items = new HashMap<K, Set<V>>();
+	defaultValue = Collections.EMPTY_SET;
+    }
+    
+    public void clear() {
+	items.clear();
+    }
 
-	public HashMultimap(HashMultimap<K, V> other) {
-		items = new HashMap<K, Set<V>>();
-		for (K key : other.keySet()) {
-			items.put(key, new HashSet<V>(other.get(key)));
-		}
-		defaultValue = new HashSet<V>(other.defaultValue);
-	}
+    public boolean containsKey(Object key) {
+	return items.containsKey(key);
+    }
 
-	public void clear() {
-		items.clear();
+    public boolean containsValue(Object value) {
+	for (Set<V> valueSet : items.values()) {
+	    if (valueSet.equals(value)) {
+		return true;
+	    }
 	}
+	return false;
+    }
 
-	public boolean containsKey(Object key) {
-		return items.containsKey(key);
-	}
+    public Set<Map.Entry<K,Set<V>>> entrySet() {
+	return items.entrySet();
+    }
 
-	public boolean containsValue(Object value) {
-		for (Set<V> valueSet : items.values()) {
-			if (valueSet.equals(value)) {
-				return true;
-			}
-		}
-		return false;
+    public boolean equals(Object o) {
+	if (o instanceof HashMultimap) {
+	    HashMultimap h = (HashMultimap) o;
+	    return this.items.equals(h.items) && (this.defaultValue == h.defaultValue || (this.defaultValue instanceof Object && this.defaultValue.equals(h.defaultValue)));
 	}
+	return false;
+    }
 
-	public Set<Map.Entry<K,Set<V>>> entrySet() {
-		return items.entrySet();
+    public Set<V> get(Object key) {
+	if (items.containsKey(key)) {
+	    return items.get(key);
 	}
+	return defaultValue;
+    }
 
-	public boolean equals(Object o) {
-		if (o instanceof HashMultimap<?,?>) {
-			HashMultimap<?,?> h = (HashMultimap<?,?>) o;
-			return this.items.equals(h.items) && (this.defaultValue == h.defaultValue || (this.defaultValue instanceof Object && this.defaultValue.equals(h.defaultValue)));
-		}
-		return false;
-	}
+    public int hashCode() {
+	return items.hashCode() * 7423125;
+    }
 
-	public Set<V> get(Object key) {
-		if (items.containsKey(key)) {
-			return items.get(key);
-		}
-		return defaultValue;
-	}
+    public boolean isEmpty() {
+	return items.isEmpty();
+    }
 
-	public int hashCode() {
-		return items.hashCode() * 7423125;
-	}
+    public Set<K> keySet() {
+	return items.keySet();
+    }
 
-	public boolean isEmpty() {
-		return items.isEmpty();
+    public Set<V> values() {
+	Set<V> values = new HashSet<V>();
+	for (K key : keySet()) {
+	    values.addAll(get(key));
 	}
+	return values;
+    }
 
-	public Set<K> keySet() {
-		return items.keySet();
+    public Set<V> put(K key, V value) {
+	if (!items.containsKey(key)) {
+	    items.put(key, new HashSet<V>());
 	}
+	items.get(key).add(value);
+	return Collections.unmodifiableSet(items.get(key));
+    }
 
-	public Set<V> values() {
-		Set<V> values = new HashSet<V>();
-		for (K key : keySet()) {
-			values.addAll(get(key));
-		}
-		return values;
+    public void putAll(K key, Collection<V> values) {
+	if (!items.containsKey(key)) {
+	    items.put(key, new HashSet<V>());
 	}
+	items.get(key).addAll(values);
+    }
 
-	public Set<V> put(K key, V value) {
-		if (!items.containsKey(key)) {
-			items.put(key, new HashSet<V>());
-		}
-		items.get(key).add(value);
-		return Collections.unmodifiableSet(items.get(key));
+    public void putAll(Map<? extends K,? extends V> m) {
+	for (K k : m.keySet()) {
+	    put(k, m.get(k));
 	}
+    }
 
-	public void putAll(K key, Collection<V> values) {
-		if (!items.containsKey(key)) {
-			items.put(key, new HashSet<V>());
-		}
-		items.get(key).addAll(values);
+    public void remove(Object key, V value) {
+	if (items.containsKey(key)) {
+	    items.get(key).remove(value);
 	}
+    }
 
-	public void putAll(Map<? extends K,? extends V> m) {
-		for (K k : m.keySet()) {
-			put(k, m.get(k));
-		}
+    public Set<V> removeAll(Object key) {
+	if (items.containsKey(key)) {
+	    return items.remove(key);
 	}
+	return null;
+    }
 
-	public void remove(Object key, V value) {
-		if (items.containsKey(key)) {
-			items.get(key).remove(value);
-		}
-	}
+    /**
+     * Return the number of keys in the map.
+     */ 
+    public int size() {
+	return items.size();
+    }
 
-	public Set<V> removeAll(Object key) {
-		if (items.containsKey(key)) {
-			return items.remove(key);
-		}
-		return null;
-	}
-
-	/**
-	 * Return the number of keys in the map.
-	 */ 
-	public int size() {
-		return items.size();
-	}
-
-	public String toString() {
-		return items.toString();
-	}
+    public String toString() {
+	return items.toString();
+    }
 }

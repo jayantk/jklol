@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.models;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -24,16 +26,32 @@ public class VariableNumMap {
 
 	private SortedMap<Integer, Variable> varMap;
 
+	/**
+	 * Instantiate a VariableNumMap with the specified variables. Each variable is
+	 * named by both a unique integer id and a (possibly not unique) String name.
+	 * All three passed in lists must be of the same size.
+	 * @param varNums - The unique integer id of each variable  
+	 * @param varNames - The String name of each variable
+	 * @param vars - The Variable type of each variable
+	 */
 	public VariableNumMap(List<Integer> varNums, List<? extends Variable> vars) {
-		assert varNums.size() == vars.size();
+		Preconditions.checkArgument(varNums.size() == vars.size());
 		varMap = new TreeMap<Integer, Variable>();
 		for (int i = 0; i < varNums.size(); i++) {
-			varMap.put(varNums.get(i), vars.get(i));				
+			varMap.put(varNums.get(i), vars.get(i));
 		}		
 	}
 
 	public VariableNumMap(Map<Integer, Variable> varNumMap) {
 		varMap = new TreeMap<Integer, Variable>(varNumMap);
+	}
+	
+	/**
+	 * Copy constructor.
+	 * @param varNumMap
+	 */
+	public VariableNumMap(VariableNumMap varNumMap) {
+		this.varMap = new TreeMap<Integer, Variable>(varNumMap.varMap);
 	}
 
 	/**
@@ -81,6 +99,19 @@ public class VariableNumMap {
 		}
 		return discreteVars;
 	}
+	
+	/**
+	 * Get the real variables in this map, ordered by variable index.
+	 */
+	public List<RealVariable> getRealVariables() {
+		List<RealVariable> discreteVars = new ArrayList<RealVariable>();
+		for (Integer varNum : getVariableNums()) {
+			if (getVariable(varNum) instanceof RealVariable) {
+				discreteVars.add((RealVariable) getVariable(varNum));
+			}
+		}
+		return discreteVars;
+	}
 
 	/**
 	 * Get the variable referenced by a particular variable number. Throws a KeyError if
@@ -122,12 +153,10 @@ public class VariableNumMap {
 	 * @param varNumsToKeep
 	 * @return
 	 */
-	public VariableNumMap intersection(Set<Integer> varNumsToKeep) {
-		SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(varMap);
-		for (Integer key : getVariableNums()) {
-			if (!varNumsToKeep.contains(key)) {
-				newVarMap.remove(key);
-			}
+	public VariableNumMap intersection(Collection<Integer> varNumsToKeep) {
+		SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+		for (Integer key : varNumsToKeep) {
+			newVarMap.put(key, varMap.get(key));
 		}
 		return new VariableNumMap(newVarMap);		
 	}

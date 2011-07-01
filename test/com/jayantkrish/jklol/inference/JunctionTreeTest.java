@@ -4,103 +4,32 @@ import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.TableFactor;
 
 public class JunctionTreeTest extends TestCase {
 
 	FactorGraph f;
 	FactorGraph f2;
+	
 	JunctionTree t;
 	JunctionTree t2;
 
-	TableFactor factor1;
-	TableFactor factor2;
-	TableFactor factor3;
-
 	public void setUp() {
-		f = new FactorGraph();
-
-		DiscreteVariable tfVar = new DiscreteVariable("Three values",
-				Arrays.asList(new String[] {"T", "F", "U"}));
-
-		DiscreteVariable otherVar = new DiscreteVariable("Two values",
-				Arrays.asList(new String[] {"foo", "bar"}));
-
-		f.addVariable("Var0", tfVar);
-		f.addVariable("Var1", otherVar);
-		f.addVariable("Var2", tfVar);
-		f.addVariable("Var3", tfVar);
-		f.addVariable("Var4", tfVar);
-
-		factor1 = f.addTableFactor(Arrays.asList(new String[] {"Var0", "Var2", "Var3"}));
-		factor1.setWeightList(Arrays.asList(new String[] {"T", "T", "T"}), 1.0);
-		factor1.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 1.0);
-		factor1.setWeightList(Arrays.asList(new String[] {"U", "F", "F"}), 2.0);
-
-		factor2 = f.addTableFactor(Arrays.asList(new String[] {"Var2", "Var1"}));
-		factor2.setWeightList(Arrays.asList(new String[] {"foo", "F"}), 2.0);
-		factor2.setWeightList(Arrays.asList(new String[] {"foo", "T"}), 3.0);
-		factor2.setWeightList(Arrays.asList(new String[] {"bar", "T"}), 2.0);
-		factor2.setWeightList(Arrays.asList(new String[] {"bar", "F"}), 1.0);
-
-		factor3 = f.addTableFactor(Arrays.asList(new String[] {"Var3", "Var4"}));
-		factor3.setWeightList(Arrays.asList(new String[] {"F", "U"}), 2.0);
-		factor3.setWeightList(Arrays.asList(new String[] {"T", "U"}), 2.0);
-		factor3.setWeightList(Arrays.asList(new String[] {"T", "F"}), 3.0);
+		f = InferenceTestCase.testFactorGraph1();
 		t = new JunctionTree();
 		t.setFactorGraph(f);
-
-		f2 = new FactorGraph();
-
-		f2.addVariable("Var0", tfVar);
-		f2.addVariable("Var1", tfVar);
-		f2.addVariable("Var2", tfVar);
-
-		TableFactor tf = f2.addTableFactor(Arrays.asList(new String[] {"Var0", "Var1"}));
-		tf.setWeightList(Arrays.asList(new String[] {"F", "U"}), 2.0);
-		tf.setWeightList(Arrays.asList(new String[] {"T", "U"}), 2.0);
-		tf.setWeightList(Arrays.asList(new String[] {"T", "F"}), 3.0);
-
-		tf = f2.addTableFactor(Arrays.asList(new String[] {"Var0", "Var2"}));
-		tf.setWeightList(Arrays.asList(new String[] {"F", "U"}), 2.0);
-		tf.setWeightList(Arrays.asList(new String[] {"T", "U"}), 2.0);
-		tf.setWeightList(Arrays.asList(new String[] {"T", "F"}), 3.0);
-
-		tf = f2.addTableFactor(Arrays.asList(new String[] {"Var0"}));
-		tf.setWeightList(Arrays.asList(new String[] {"F"}), 2.0);
-		tf.setWeightList(Arrays.asList(new String[] {"T"}), 1.0);
-		tf.setWeightList(Arrays.asList(new String[] {"U"}), 1.0);
-
+		
+		f2 = InferenceTestCase.testFactorGraph2();
 		t2 = new JunctionTree();
 		t2.setFactorGraph(f2);
 	}
 
 	public void testMarginals() {
-		t.computeMarginals();
-
-		DiscreteFactor m = (DiscreteFactor) t.getMarginal(Arrays.asList(new Integer[] {1}));
-
-		assertEquals(27.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"foo"})));
-
-		assertEquals(16.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"bar"})));
-
-		m = (DiscreteFactor) t.getMarginal(Arrays.asList(new Integer[] {0,2}));
-
-		assertEquals(25.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T"})));
-
-		assertEquals(6.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F"})));
-
-		assertEquals(12.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"U", "F"})));
-
-		assertEquals(0.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"U", "U"})));
+		MarginalTestCase test1 = InferenceTestCase.testFactorGraph1Marginals1();
+		test1.testMarginal(t, 0.0);
+		
+		MarginalTestCase test2 = InferenceTestCase.testFactorGraph1Marginals2();
+		test2.testMarginal(t, 0.0);
 	}
 
 	public void testConditionals() {
@@ -108,24 +37,17 @@ public class JunctionTreeTest extends TestCase {
 				Arrays.asList(new String[]{"F"})));
 
 		DiscreteFactor m = (DiscreteFactor) t.getMarginal(Arrays.asList(new Integer[] {1}));
-		assertEquals(12.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"foo"})));
-		assertEquals(6.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"bar"})));
+		assertEquals(12.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"foo"})));
+		assertEquals(6.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"bar"})));
 
 		m = (DiscreteFactor) t.getMarginal(Arrays.asList(new Integer[] {3, 4}));	
-		assertEquals(18.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"F", "U"})));
-		assertEquals(0.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F"})));
+		assertEquals(18.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"F", "U"})));
+		assertEquals(0.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F"})));
 
 		m = (DiscreteFactor) t.getMarginal(Arrays.asList(new Integer[] {0, 2, 3}));
-		assertEquals(0.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "T"})));
-		assertEquals(6.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F", "F"})));
-		assertEquals(12.0,
-				m.getUnnormalizedProbability(Arrays.asList(new String[] {"U", "F", "F"})));
+		assertEquals(0.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "T"})));
+		assertEquals(6.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F", "F"})));
+		assertEquals(12.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"U", "F", "F"})));
 	}
 
 	public void testMaxMarginals() {
@@ -152,13 +74,8 @@ public class JunctionTreeTest extends TestCase {
 	}
 
 	public void testNonTreeStructured() {
-		t2.computeMarginals();
-
-		DiscreteFactor m = (DiscreteFactor) t2.getMarginal(Arrays.asList(new Integer[] {0}));
-		assertEquals(8.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"F"})));
-		assertEquals(25.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"T"})));
-		assertEquals(0.0, m.getUnnormalizedProbability(Arrays.asList(new String[] {"U"})));
+		MarginalTestCase test = InferenceTestCase.testFactorGraph2Marginals2();
+		test.testMarginal(t2, 0.0);
 	}
-
 }
 

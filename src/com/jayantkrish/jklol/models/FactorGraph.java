@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.models;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +25,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class FactorGraph {
 
-	private List<Variable> variables;
+	private VariableNumMap variables;
 	private Map<String, Integer> variableNumMap;
 	private HashMultimap<Integer, Integer> variableFactorMap;
 	private HashMultimap<Integer, Integer> factorVariableMap;
@@ -37,7 +36,7 @@ public class FactorGraph {
 	 * Create an empty factor graph.
 	 */
 	public FactorGraph() {
-		variables = new ArrayList<Variable>();
+		variables = VariableNumMap.emptyMap();
 		variableNumMap = new HashMap<String, Integer>();
 		variableFactorMap = new HashMultimap<Integer, Integer>();
 		factorVariableMap = new HashMultimap<Integer, Integer>();
@@ -49,7 +48,7 @@ public class FactorGraph {
 	 * @param factorGraph
 	 */
 	public FactorGraph(FactorGraph factorGraph) {
-		this.variables = new ArrayList<Variable>(factorGraph.variables);
+		this.variables = new VariableNumMap(factorGraph.variables);
 		this.variableNumMap = new HashMap<String, Integer>(factorGraph.variableNumMap);
 		this.variableFactorMap = new HashMultimap<Integer, Integer>(factorGraph.variableFactorMap);
 		this.factorVariableMap = new HashMultimap<Integer, Integer>(factorGraph.factorVariableMap);
@@ -81,7 +80,7 @@ public class FactorGraph {
 	 * Get a variable using its index number.
 	 */
 	public Variable getVariableFromIndex(int varNum) {
-		return variables.get(varNum);
+		return variables.getVariable(varNum);
 	}
 
 	/**
@@ -95,7 +94,15 @@ public class FactorGraph {
 	 * Get the variables in the factor graph.
 	 */
 	public List<Variable> getVariables() {
-		return Collections.unmodifiableList(variables);
+		return variables.getVariables();
+	}
+	
+	/**
+	 * Get the variables that this factor graph is defined over. 
+	 * @return
+	 */
+	public VariableNumMap getVariableNumMap() {
+		return variables;
 	}
 
 	/**
@@ -110,7 +117,7 @@ public class FactorGraph {
 				throw new IllegalArgumentException("Must use an already specified variable name.");
 			}
 			varNums.add(variableNumMap.get(variableName));
-			vars.add(variables.get(variableNumMap.get(variableName)));
+			vars.add(variables.getVariable(variableNumMap.get(variableName)));
 		}
 		return new VariableNumMap(varNums, vars);
 	}
@@ -168,8 +175,7 @@ public class FactorGraph {
 	public int addVariable(String variableName, Variable variable) {
 		int varNum = variables.size();
 		variableNumMap.put(variableName, varNum);
-		variables.add(variable);
-
+		variables = variables.addMapping(varNum, variable);
 		return varNum;
 	}
 

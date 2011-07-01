@@ -13,8 +13,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public interface InferenceEngine {
 
 	/**
-	 * Give the inference engine a factor graph to perform
-	 * inference on.
+	 * Give the inference engine a factor graph to perform inference on.
 	 */
 	public void setFactorGraph(FactorGraph f);
 

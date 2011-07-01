@@ -8,62 +8,62 @@ package com.jayantkrish.jklol.cfg;
  */
 public class Backpointer implements Comparable<Backpointer> {
 
-    // These variables are valid if the backpointer represents the application of
-    // a binary production rule.
-    private int splitInd;
-    private BinaryProduction bp;
+	// These variables are valid if the backpointer represents the application of
+	// a binary production rule.
+	private int splitInd;
+	private BinaryProduction bp;
 
-    // Valid if the backpointer represents a terminal production
-    private TerminalProduction tp;
+	// Valid if the backpointer represents a terminal production
+	private TerminalProduction tp;
 
-    private double probability;
-    private double ruleProbability;
+	private double probability;
+	private double ruleProbability;
 
-    public Backpointer(int splitInd, BinaryProduction bp, 
-	    double probability, double ruleProbability) {
-	this.splitInd = splitInd;
-	this.bp = bp;
-	this.probability = probability;
-	this.ruleProbability = ruleProbability;
-	tp = null;
-    }
+	public Backpointer(int splitInd, BinaryProduction bp, 
+			double probability, double ruleProbability) {
+		this.splitInd = splitInd;
+		this.bp = bp;
+		this.probability = probability;
+		this.ruleProbability = ruleProbability;
+		tp = null;
+	}
 
-    public Backpointer(TerminalProduction tp, double probability, double ruleProbability) {
-	this.tp = tp;
-	this.probability = probability;
-	this.ruleProbability = ruleProbability;
-	splitInd = 0;
-	bp = null;
-    }
+	public Backpointer(TerminalProduction tp, double probability, double ruleProbability) {
+		this.tp = tp;
+		this.probability = probability;
+		this.ruleProbability = ruleProbability;
+		splitInd = 0;
+		bp = null;
+	}
 
-    public boolean isTerminal() {
-	return tp != null;
-    }
+	public boolean isTerminal() {
+		return tp != null;
+	}
 
-    public int getSplitInd() {
-	assert !isTerminal();
-	return splitInd;
-    }
+	public int getSplitInd() {
+		assert !isTerminal();
+		return splitInd;
+	}
 
-    public BinaryProduction getBinaryProduction() {
-	assert !isTerminal();
-	return bp;
-    }
+	public BinaryProduction getBinaryProduction() {
+		assert !isTerminal();
+		return bp;
+	}
 
-    public TerminalProduction getTerminalProduction() {
-	assert isTerminal();
-	return tp;
-    }
+	public TerminalProduction getTerminalProduction() {
+		assert isTerminal();
+		return tp;
+	}
 
-    public double getProbability() {
-	return probability;
-    }
+	public double getProbability() {
+		return probability;
+	}
 
-    public double getRuleProbability() {
-	return ruleProbability;
-    }
+	public double getRuleProbability() {
+		return ruleProbability;
+	}
 
-    public int compareTo(Backpointer other) {
-	return Double.compare(this.probability, other.probability);
-    }
+	public int compareTo(Backpointer other) {
+		return Double.compare(this.probability, other.probability);
+	}
 }

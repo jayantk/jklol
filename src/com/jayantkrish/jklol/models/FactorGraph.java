@@ -23,7 +23,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * while the graph structure of a FactorGraph is immutable, the probability distribution that it 
  * represents may change. 
  */
-public class FactorGraph {
+public class FactorGraph implements Serializable {
 
 	private VariableNumMap variables;
 	private Map<String, Integer> variableNumMap;

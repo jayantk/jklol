@@ -146,4 +146,3 @@ public class GibbsSampler implements InferenceEngine {
 		}
 		return factor;
 	}
-}

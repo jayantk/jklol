@@ -33,7 +33,6 @@ public class FactorGraphTest extends TestCase {
 	public void testGetFactorsWithVariable() {
 		assertEquals(2,
 				f.getFactorsWithVariable(f.getVariableIndex("Var2")).size());
-
 		assertEquals(1,
 				f.getFactorsWithVariable(f.getVariableIndex("Var3")).size());
 	}

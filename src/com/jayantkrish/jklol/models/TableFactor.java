@@ -100,7 +100,6 @@ public class TableFactor extends DiscreteFactor {
 		}
 	}
 
-
 	public String toString() {
 		return weights.toString();
 	}

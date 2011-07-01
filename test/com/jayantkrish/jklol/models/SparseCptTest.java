@@ -63,5 +63,20 @@ public class SparseCptTest extends TestCase {
 			return;
 		}
 		fail("Expected RuntimeException");
+
+    public void testIteration() {
+	Iterator<Assignment> iter = f.outcomeIterator();
+
+	Set<Assignment> shouldBeInIter = new HashSet<Assignment>();
+	for (int i = 0; i < assignments.length; i++) {
+	    shouldBeInIter.add(f.outcomeToAssignment(assignments[i]));
 	}
+	
+	while (iter.hasNext()) {
+	    Assignment a = iter.next();
+	    assertTrue(shouldBeInIter.contains(a));
+	    // If this outcome isn't possible, this method will throw a runtime exception
+	    f.getUnnormalizedProbability(a);
+	}
+    }
 }

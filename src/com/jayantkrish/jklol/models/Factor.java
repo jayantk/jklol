@@ -5,9 +5,6 @@ import java.util.Collection;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
-import java.util.*;
-import java.io.Serializable;
-
 /**
  * A Factor represents a probability distribution over a set of variables.
  *  

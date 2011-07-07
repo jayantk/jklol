@@ -253,4 +253,18 @@ public class VariableNumMap {
 		List<Variable> empty = Collections.emptyList();
 		return new VariableNumMap(Arrays.asList(new Integer[] {}), empty);
 	}
+	
+	/**
+	 * Returns the union of all of the passed-in maps, which may not contain
+	 * conflicting mappings for any variable number.    
+	 * @param varNumMaps
+	 * @return
+	 */
+	public static VariableNumMap unionAll(Collection<VariableNumMap> varNumMaps) {
+		VariableNumMap curMap = emptyMap();
+		for (VariableNumMap varNumMap : varNumMaps) {
+			curMap = curMap.union(varNumMap);
+		}
+		return curMap;
+	}
 }

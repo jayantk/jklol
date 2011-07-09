@@ -39,7 +39,7 @@ public class AssignmentTest extends TestCase {
 	public void testSubAssignment2() {
 		try {
 			a.subAssignment(Arrays.asList(new Integer[] {5, 1, 179839}));
-		} catch (AssertionError e) {
+		} catch (IllegalArgumentException e) {
 			return;
 		}
 		fail("Expected AssertionError.");

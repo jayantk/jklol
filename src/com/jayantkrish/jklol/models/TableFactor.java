@@ -122,6 +122,9 @@ public class TableFactor extends DiscreteFactor {
 		return p.maxMarginalize(vars);
 	}
 
+	/*
+	 * Multiples one factor with a set of factors, taking  
+	 */
 	private static TableFactor subsetProductFactor(DiscreteFactor whole, List<DiscreteFactor> subsets) {
 		Map<Integer, Set<Object>> varValueMap = getPossibleVariableValues(subsets);
 		Set<Assignment> possibleAssignments = null;

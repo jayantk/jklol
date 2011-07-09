@@ -156,7 +156,9 @@ public class VariableNumMap {
 	public VariableNumMap intersection(Collection<Integer> varNumsToKeep) {
 		SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
 		for (Integer key : varNumsToKeep) {
-			newVarMap.put(key, varMap.get(key));
+			if (containsVariableNum(key)) {
+				newVarMap.put(key, varMap.get(key));
+			}
 		}
 		return new VariableNumMap(newVarMap);		
 	}

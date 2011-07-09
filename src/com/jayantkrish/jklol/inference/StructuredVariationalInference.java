@@ -27,7 +27,6 @@ public class StructuredVariationalInference implements InferenceEngine {
 	@Override
 	public void computeMarginals() {
 		// TODO Auto-generated method stub
-
 	}
 
 	@Override

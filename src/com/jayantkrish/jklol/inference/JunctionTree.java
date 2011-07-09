@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.util.HashMultimap;
  * distributions. Currently assumes that the provided factor graph already
  * has a tree structure, and will probably explode if this is not true.
  */ 
-public class JunctionTree implements InferenceEngine {
+public class JunctionTree extends AbstractInferenceEngine {
 
 	// Cache of factors representing marginal distributions of the
 	// variables.
@@ -42,13 +42,6 @@ public class JunctionTree implements InferenceEngine {
 	}
 
 	/**
-	 * Computes and caches marginals without conditioning on anything.
-	 */ 
-	public void computeMarginals() {
-		computeMarginals(Assignment.EMPTY);
-	}
-
-	/**
 	 * Computes and caches marginals, conditioning on any variable assignments provided in the
 	 * argument.
 	 */
@@ -59,10 +52,6 @@ public class JunctionTree implements InferenceEngine {
 		cliqueTree.setEvidence(assignment);
 		useSumProduct = true;
 		runMessagePassing();
-	}
-
-	public void computeMaxMarginals() {
-		computeMaxMarginals(Assignment.EMPTY);
 	}
 
 	public void computeMaxMarginals(Assignment assignment) {

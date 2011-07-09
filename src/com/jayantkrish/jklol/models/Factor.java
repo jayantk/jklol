@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Collection;
+import java.util.List;
 
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
@@ -27,6 +28,12 @@ public interface Factor {
 	 * @return
 	 */
 	public double getUnnormalizedProbability(Assignment assignment);
+	
+	/**
+	 * Convenience method for getting the probability of an assignment. outcome contains the assignment
+	 * to the variables in this factor, sorted in numerical order by their variable number.
+	 */
+	public double getUnnormalizedProbability(List<? extends Object> outcome);
 
 	/**
 	 * Returns the normalizing factor for the unnormalized probabilities returned by this factor. 
@@ -36,13 +43,19 @@ public interface Factor {
 
 	/**
 	 * Get a new factor which conditions on the observed variables in the
-	 * assignment.
-	 *
-	 * The returned factor still contains the same variables as the original, but has appropriate
-	 * portions of the factor distribution zeroed out.
+	 * assignment. The returned factor contains the same variables as the original, but
+	 * with the appropriate sections zeroed out.
 	 */
 	public Factor conditional(Assignment a);
-
+	
+	/**
+	 * Get a new factor with a fixed probability distribution over the variables in f.
+	 * This is a generalization of conditioning on a particular assignment (which is accomplished
+	 * by setting f to a point distribution at the assignment.)
+	 * @param f must contain a subset of the variables in {@code this}.
+	 */
+	public Factor conditional(Factor f);
+	
 	/**
 	 * Return a factor with the specified variables marginalized out by summing.
 	 */

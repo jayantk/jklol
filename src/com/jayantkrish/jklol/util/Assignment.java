@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -105,10 +106,14 @@ public class Assignment {
 				retVal.add(varValueMap.get(varNum));
 			}
 		}
-		assert retVal.size() == varNums.size();
+		Preconditions.checkArgument(retVal.size() == varNums.size());
 		return new Assignment(varNumList, retVal);
 	}
 
+	/**
+	 * Returns the subset of assignment whose variables are also contained in vars. 
+	 * vars may not contain extra variables which are not part of this assignment.
+	 */
 	public Assignment subAssignment(VariableNumMap vars) {
 		return subAssignment(vars.getVariableNums());
 	}

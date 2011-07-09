@@ -1,12 +1,19 @@
 package com.jayantkrish.jklol.models;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Set;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
-
-import java.util.*;
 
 /**
  * DiscreteFactor provides a generic implementation of most methods of the {@link Factor} interface for
@@ -42,16 +49,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
 	 * Compute the unnormalized probability of an assignment.
 	 */ 
 	public abstract double getUnnormalizedProbability(Assignment assignment);
-
-	/**
-	 * Compute the unnormalized probability of an outcome.
-	 */
-	public double getUnnormalizedProbability(List<? extends Object> outcome) {
-		Preconditions.checkNotNull(outcome);
-		
-		Assignment a = getVars().outcomeToAssignment(outcome);
-		return getUnnormalizedProbability(a);
-	}
 
 	/**
 	 * Get all assignments to this variable with nonzero probability that contain the specified
@@ -100,50 +97,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
 	///////////////////////////////////////////////////////////////////////////////////
 	// Methods for performing inference = methods from Factor
 	///////////////////////////////////////////////////////////////////////////////////
-
-	public DiscreteFactor conditional(Assignment a) {
-
-		Set<Integer> intersection = new HashSet<Integer>(getVars().getVariableNums());
-		intersection.retainAll(a.getVarNumsSorted());
-
-		// If the assignment doesn't share any variables with this factor, then this factor is unaffected.
-		if (intersection.size() == 0) {
-			return this;
-		}
-
-		TableFactor returnFactor = new TableFactor(getVars());
-		Assignment subAssignment = a.subAssignment(new ArrayList<Integer>(intersection));
-		// Another easy case that's not handled by the later code.
-		if (intersection.size() == getVars().size()) {
-			returnFactor.setWeight(subAssignment, 
-					getUnnormalizedProbability(subAssignment));
-			return returnFactor;
-		}
-
-		// If we get here, some variables in this factor are conditioned on, and others are not.
-		// Get the set of variables which are *not* conditioned on.
-		VariableNumMap remainingVars = getVars().removeAll(intersection);	
-
-		// Efficiency improvement: instead of iterating over all possible assignments to this factor
-		// and retaining only those with the desired assignment, first intersect all possible assignments
-		// with the conditioned-on values.
-		Set<Assignment> possibleAssignments = null;
-		for (Integer varNum : intersection) {
-			if (possibleAssignments == null) {
-				possibleAssignments = getAssignmentsWithEntry(varNum, Collections.singleton(a.getVarValue(varNum)));
-			} else {
-				possibleAssignments.retainAll(getAssignmentsWithEntry(varNum, Collections.singleton(a.getVarValue(varNum))));
-			}
-		}
-
-		Iterator<Assignment> iter = possibleAssignments.iterator();
-		while (iter.hasNext()) {
-			Assignment partialAssignment = iter.next().subAssignment(remainingVars.getVariableNums());
-			Assignment full = partialAssignment.jointAssignment(subAssignment);
-			returnFactor.setWeight(full, getUnnormalizedProbability(full));
-		}
-		return returnFactor;
-	}
 
 	public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
 		return marginalize(varNumsToEliminate, true);

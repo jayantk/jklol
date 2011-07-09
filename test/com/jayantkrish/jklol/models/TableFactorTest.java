@@ -7,6 +7,7 @@ import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
@@ -157,7 +158,7 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testConditionalNone() {
-		DiscreteFactor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {6, 8}),
+		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {6, 8}),
 				Arrays.asList(new Object[] {"F", "F"})));
 		// Nothing should change.
 		assertEquals(1.0,
@@ -167,7 +168,7 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testConditionalAll() {
-		DiscreteFactor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2, 3, 5}),
+		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2, 3, 5}),
 				Arrays.asList(new String[] {"T", "T", "F", "T"})));
 
 		assertEquals(3.0,
@@ -181,7 +182,7 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testConditionalPartial() {
-		DiscreteFactor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 3}),
+		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 3}),
 				Arrays.asList(new String[] {"T", "F"})));
 
 		assertEquals(3.0,

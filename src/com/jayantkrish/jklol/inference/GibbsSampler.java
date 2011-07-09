@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.util.Assignment;
 /**
  * An implementation of Gibbs sampling for computing approximate marginals.
  */
-public class GibbsSampler implements InferenceEngine {
+public class GibbsSampler extends AbstractInferenceEngine {
 
 	private FactorGraph factorGraph;
 
@@ -44,11 +44,6 @@ public class GibbsSampler implements InferenceEngine {
 	}
 
 	@Override
-	public void computeMarginals() {
-		computeMarginals(Assignment.EMPTY);
-	}
-
-	@Override
 	public void computeMarginals(Assignment assignment) {
 		initializeAssignment();
 		samples = new ArrayList<Assignment>();
@@ -71,13 +66,6 @@ public class GibbsSampler implements InferenceEngine {
 		Preconditions.checkNotNull(varNumsToRetain);
 		Preconditions.checkNotNull(samples);
 		return samplesToFactor(samples, varNumsToRetain);
-	}
-
-	/**
-	 * GibbsSampler cannot compute max marginals. Throws a runtime exception if called.
-	 */
-	public void computeMaxMarginals() {
-		computeMaxMarginals(null);
 	}
 
 	/**

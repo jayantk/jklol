@@ -48,6 +48,8 @@ public class GibbsSampler extends AbstractInferenceEngine {
 		initializeAssignment();
 		samples = new ArrayList<Assignment>();
 
+		
+		
 		// Burn in the sampler
 		for (int i = 0; i < burnInSamples; i++) {
 			doSamplingRound();

@@ -18,30 +18,24 @@ public interface InferenceEngine {
 	public void setFactorGraph(FactorGraph f);
 
 	/**
-	 * Compute (unconditional) marginal distributions over the factors in the factor graph. Computed
-	 * marginals are stored for retrieval (by getMarginal()) until they are recomputed.
+	 * Compute (unconditional) marginal distributions over the factors in the factor graph.
 	 */
-	public void computeMarginals();
+	public MarginalSet computeMarginals();
 
 	/**
-	 * Compute marginals conditioned on the provided variable assignments.  Passing an empty
+	 * Compute marginals conditioned on the provided variable assignments. Passing an empty
 	 * assignment results in unconditional marginals.
 	 */
-	public void computeMarginals(Assignment assignment);
+	public MarginalSet computeMarginals(Assignment assignment);
 
 	/**
-	 * Compute unconditional max marginals. Again, these marginals can be retrieved by calling
-	 * getMarginal().
+	 * Compute unconditional max marginals.
 	 */
-	public void computeMaxMarginals();
+	public MarginalSet computeMaxMarginals();
 
 	/**
 	 * Compute max marginals conditioned on the provided assignment.
 	 */
-	public void computeMaxMarginals(Assignment assignment);
+	public MarginalSet computeMaxMarginals(Assignment assignment);
 
-	/**
-	 * Retrieve an already computed marginal distribution.     
-	 */
-	public Factor getMarginal(List<Integer> varNums);
 }

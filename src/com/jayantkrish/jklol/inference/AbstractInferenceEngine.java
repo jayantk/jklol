@@ -8,7 +8,7 @@ public abstract class AbstractInferenceEngine implements InferenceEngine {
 	public void computeMarginals() {
 		computeMarginals(Assignment.EMPTY);
 	}
-
+	
 	@Override
 	public void computeMaxMarginals() {
 		computeMaxMarginals(Assignment.EMPTY);

@@ -13,4 +13,3 @@ public interface PredictorTrainer<I, O> {
     public Predictor<I, O> train(Iterable<Pair<I, O>> trainingData);
 
 }
-

@@ -24,6 +24,7 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
 	@Override
 	public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, List<LossFunction<I, O>> lossFunctions) {
 		Predictor<I, O> predictor = predictorTrainer.train(trainingData);
+
 		for (Pair<I, O> testDatum : testData) {
 			for (LossFunction<I, O> lossFunction : lossFunctions) {
 				lossFunction.accumulateLoss(predictor, testDatum.getLeft(), testDatum.getRight());

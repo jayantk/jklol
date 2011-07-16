@@ -70,6 +70,10 @@ public class LossFunctions {
 		public double getAccuracy() {
 			return ((double) correct) / total;
 		}
+		
+		public int getCount() {
+			return total;
+		}
 	}
 
 	/**

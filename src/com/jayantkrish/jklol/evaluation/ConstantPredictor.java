@@ -7,6 +7,7 @@ import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * A predictor which makes the same prediction for every input.
@@ -25,10 +26,9 @@ public class ConstantPredictor<I, O> implements Predictor<I, O> {
 			totalProb += entry.getValue();
 		}
 		Preconditions.checkArgument(totalProb == 1.0);
-
-		ValueComparator<Double> valueComparator = new ValueComparator<Double>(null);
-		this.outputProbabilities = new TreeMap<O, Double>();
-		valueComparator.setBaseMap(this.outputProbabilities);
+		Map<O, Double> baseMap = Maps.newHashMap(outputProbabilities);
+		ValueComparator<Double> valueComparator = new ValueComparator<Double>(baseMap);
+		this.outputProbabilities = new TreeMap<O, Double>(valueComparator);
 		this.outputProbabilities.putAll(outputProbabilities);
 	}
 
@@ -53,15 +53,16 @@ public class ConstantPredictor<I, O> implements Predictor<I, O> {
 		return outputProbabilities.containsKey(output) ? 
 				outputProbabilities.get(output) : 0.0;
 	}
+	
+	@Override
+	public String toString() {
+		return "Constant Predictor: " + outputProbabilities;
+	}
 
 	private class ValueComparator<T extends Comparable<T>> implements Comparator<O> {
 		private Map<O, T> baseMap;
 
 		public ValueComparator(Map<O, T> baseMap) {
-			this.baseMap = baseMap;
-		}
-
-		public void setBaseMap(Map<O, T> baseMap) {
 			this.baseMap = baseMap;
 		}
 

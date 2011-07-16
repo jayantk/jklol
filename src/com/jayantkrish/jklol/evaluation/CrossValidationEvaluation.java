@@ -8,8 +8,12 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.Pair;
 
 /**
- * Runs cross validation to estimate the generalization error of a predictor.
+ * Runs cross validation to estimate the generalization error of a predictor. 
+ * The cross validation splits are re-used across multiple runs of this evaluation
+ * to better compare algorithms (i.e., this enables using a paired t-test).
  * 
+ * @param <I> input type of the predictor being evaluated.
+ * @param <O> output type of the predictor being evaluated. 
  */
 public class CrossValidationEvaluation<I, O> extends AbstractEvaluation<I, O> {
 
@@ -26,8 +30,8 @@ public class CrossValidationEvaluation<I, O> extends AbstractEvaluation<I, O> {
 			List<Iterable<Pair<I, O>>> trainingFolds = Lists.newArrayList(folds);
 			trainingFolds.remove(i);
 			Iterable<Pair<I, O>> testFold = folds.get(i);
-			TestSetEvaluation<I, O> evaluation = new TestSetEvaluation<I, O>(Iterables.concat(trainingFolds), testFold);
 
+			TestSetEvaluation<I, O> evaluation = new TestSetEvaluation<I, O>(Iterables.concat(trainingFolds), testFold);
 			evaluation.evaluateLoss(predictorTrainer, lossFunctions);
 		}
 	}

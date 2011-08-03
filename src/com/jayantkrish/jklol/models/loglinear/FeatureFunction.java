@@ -26,5 +26,5 @@ public interface FeatureFunction {
 	 * The varnums which this feature operates on, returned
 	 * in sorted order.
 	 */
-	public List<Integer> getVarNums();
+	public List<Integer>  getVarNums();
 }

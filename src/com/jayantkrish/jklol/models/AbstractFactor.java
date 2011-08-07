@@ -6,8 +6,6 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.util.Assignment;
 
-
-
 /**
  * AbstractFactor provides a partial implementation of Factor.
  * @author jayant

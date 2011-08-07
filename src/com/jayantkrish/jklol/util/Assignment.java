@@ -74,6 +74,10 @@ public class Assignment {
 		}
 		return true;
 	}
+
+	public int size() {
+		return varValueMap.size();
+	}
 	
 	/**
 	 * Gets the number of variables with values in the assignment.

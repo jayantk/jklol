@@ -8,7 +8,9 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.RealVariable;
 import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.models.loglinear.IndicatorFeatureFunction;
@@ -23,22 +25,25 @@ public class TableFactorTest extends TestCase {
 	private TableFactor f;
 	private TableFactor g;
 	private TableFactor h;
+	private TableFactor realFactor;
 
 	private DiscreteVariable v;
 	private DiscreteVariable v2;
 
+	private RealVariable r;
+	
 	private FeatureFunction feature;
 
 	public void setUp() {
 		v = new DiscreteVariable("Three values",
 				Arrays.asList(new String[] {"T", "F", "U"}));
-
 		v2 = new DiscreteVariable("Two values",
 				Arrays.asList(new String[] {"foo", "bar"}));
 
+		r = new RealVariable(2);
+		
 		h = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {1, 0}),
 				Arrays.asList(new DiscreteVariable[] {v2, v})));
-
 		f = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 3, 2, 5}),
 				Arrays.asList(new DiscreteVariable[] {v, v, v, v})));
 
@@ -55,12 +60,16 @@ public class TableFactorTest extends TestCase {
 		g.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 11.0);
 		g.setWeightList(Arrays.asList(new String[] {"F", "T", "T"}), 9.0);
 		g.setWeightList(Arrays.asList(new String[] {"T", "U", "T"}), 13.0);
+		
+		realFactor = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
+				Arrays.asList(new Variable[] {r, v})));
 
 		Set<Assignment> testAssignments = new HashSet<Assignment>();
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T", "T"})));
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "F", "F"})));
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "F", "U"})));
 		feature = new IndicatorFeatureFunction(testAssignments);
+
 	}
 
 	public void testVariableOrder() {

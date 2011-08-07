@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.util.Vector;
 
 /**
  * RealVariable represents a real-valued vector variable in a graphical model. Of course,
@@ -23,11 +24,12 @@ public class RealVariable implements Variable {
 
 	@Override
 	public Object getArbitraryValue() {
-		return 0.0;
+		Vector value = Vector.constantVector(numDimensions, 0.0);
+		return value;
 	}
 	
 	@Override
 	public boolean canTakeValue(Object o) {
-		return o instanceof Double;
+		return o instanceof Vector;
 	}
 }

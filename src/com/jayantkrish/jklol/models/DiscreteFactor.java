@@ -97,6 +97,15 @@ public abstract class DiscreteFactor extends AbstractFactor {
 	///////////////////////////////////////////////////////////////////////////////////
 	// Methods for performing inference = methods from Factor
 	///////////////////////////////////////////////////////////////////////////////////
+	
+	@Override
+	public Factor conditional(Assignment a) {
+		VariableNumMap factorVars = getVars().intersection(a.getVarNumsSorted());
+		Assignment subAssignment = a.subAssignment(factorVars);
+		TableFactor tableFactor = new TableFactor(factorVars);
+		tableFactor.setWeight(subAssignment, 1.0);
+		return this.product(tableFactor);
+	}
 
 	public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
 		return marginalize(varNumsToEliminate, true);
@@ -161,7 +170,13 @@ public abstract class DiscreteFactor extends AbstractFactor {
 		}
 		return partitionFunction;
 	}
-
+	
+	public Factor product(Factor other) {
+		DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
+		return TableFactor.productFactor(this, otherAsDiscrete);
+	}
+	
+	@Override
 	public Assignment sample() {
 		double draw = Math.random();
 		double partitionFunction = getPartitionFunction();
@@ -172,6 +187,16 @@ public abstract class DiscreteFactor extends AbstractFactor {
 			a = iter.next();
 			sumProb += getUnnormalizedProbability(a) / partitionFunction;
 		}
+		
+		if (a == null) {
+			// If we didn't draw a sample, fail early.
+			throw new IllegalStateException("Could not sample from DiscreteFactor." + this + " : " + sumProb);
+		}
 		return a;	
+	}
+
+	@Override
+	public DiscreteFactor coerceToDiscrete() {
+		return this;
 	}
 }

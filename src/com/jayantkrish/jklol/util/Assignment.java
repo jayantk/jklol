@@ -25,7 +25,9 @@ public class Assignment {
 	public Assignment(List<Integer> varNums, List<? extends Object> values) {
 		// TODO: Store actual variables (VariableNumMap) and ensure that 
 		// assigned values are compatible.
-		assert varNums.size() == values.size();
+		Preconditions.checkNotNull(varNums);
+		Preconditions.checkNotNull(values);
+		Preconditions.checkArgument(varNums.size() == values.size());
 		varValueMap = new TreeMap<Integer, Object>();
 		for (int i = 0; i < varNums.size(); i++) {
 			varValueMap.put(varNums.get(i), values.get(i));
@@ -63,14 +65,22 @@ public class Assignment {
 	public boolean containsVar(int varNum) {
 		return varValueMap.containsKey(varNum);
 	}
-
-	// TODO(jayantk): Delete the shit out of this method!!
-	/*
-	public void setVarValue(int varNum, Object value) {
-		assert varValueMap.containsKey(varNum);
-		varValueMap.put(varNum, value);
+	
+	public boolean containsVars(Collection<Integer> varNums) {
+		for (Integer varNum : varNums) {
+			if (!varValueMap.containsKey(varNum)) {
+				return false;
+			}
+		}
+		return true;
 	}
+	
+	/**
+	 * Gets the number of variables with values in the assignment.
 	 */
+	public int size() {
+		return varValueMap.size();
+	}
 
 	/**
 	 * If varNums is a subset of the variables in this assignment, this method returns the value
@@ -124,7 +134,7 @@ public class Assignment {
 	 * must contain disjoint sets of variables.
 	 */
 	public Assignment jointAssignment(Assignment other) {
-
+		Preconditions.checkNotNull(other);
 		// Merge varnums / values
 		List<Integer> otherNums = other.getVarNumsSorted();
 		List<Integer> myNums = getVarNumsSorted();

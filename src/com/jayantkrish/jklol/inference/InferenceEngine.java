@@ -1,8 +1,5 @@
 package com.jayantkrish.jklol.inference;
 
-import java.util.List;
-
-import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
 

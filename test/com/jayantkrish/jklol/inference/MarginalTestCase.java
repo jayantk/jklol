@@ -1,11 +1,16 @@
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+
+import junit.framework.Assert;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.inference.InferenceEngine;
+import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
-import junit.framework.Assert;
 
 /**
  * A MarginalTestCase tests several marginal probabilities. 
@@ -14,47 +19,71 @@ import junit.framework.Assert;
  */
 public class MarginalTestCase {
 
-	private List<Integer> variables;
+	private FactorGraph factorGraph;
 	private Assignment condition;
 	private boolean maxMarginal;
-	private List<Double> expectedProbs;
-	private List<String[]> expectedVars;
+	
+	private Map<Integer[], MarginalTest> variableMarginalTests;
 	
 	/**
 	 * Create a new test case for the marginal distribution over variables. 
 	 * The marginal is conditioned on the provided assignment, and maxMarginal determines
 	 * whether the marginals are max marginals. 
-	 * 
-	 * @param variables
-	 * @param condition
-	 * @param maxMarginal
 	 */
-	public MarginalTestCase(Integer[] variables, Assignment condition, boolean maxMarginal) {
-		this.variables = Arrays.asList(variables);
+	public MarginalTestCase(FactorGraph factorGraph, Assignment condition, boolean maxMarginal) {
+		this.factorGraph = factorGraph;
 		this.condition = condition;
 		this.maxMarginal = maxMarginal;
-		expectedProbs = Lists.newArrayList();
-		expectedVars = Lists.newArrayList();
+		
+		variableMarginalTests = Maps.newHashMap();
 	}
 
-	public void addTest(double expectedProb, String ... vars) {
-		expectedProbs.add(expectedProb);
-		expectedVars.add(vars);
+	public void addTest(double expectedProb, Integer[] variableNums, String ... varValues) {
+		if (!variableMarginalTests.containsKey(variableNums)) {
+			variableMarginalTests.put(variableNums, new MarginalTest());
+		}
+		variableMarginalTests.get(variableNums).addTest(expectedProb, varValues);
 	}
 	
-	public void testMarginal(InferenceEngine inference, double tolerance) {
+	public void runTest(InferenceEngine inference, double tolerance) {
+		inference.setFactorGraph(factorGraph);
+
+		MarginalSet marginals = null;
 		if (maxMarginal) {
-			inference.computeMaxMarginals(condition);
+			marginals = inference.computeMaxMarginals(condition);
 		} else {
-			inference.computeMarginals(condition);
+			marginals = inference.computeMarginals(condition);
 		}
-		DiscreteFactor f = (DiscreteFactor) inference.getMarginal(variables);
-		for (int i = 0; i < expectedProbs.size(); i++) {
-			double modelProbability = f.getUnnormalizedProbability(
-					Arrays.asList(expectedVars.get(i))) / f.getPartitionFunction();
-			Assert.assertTrue("Expected: <" + expectedProbs.get(i) + "> Actual: <" 
-					+ modelProbability + "> tolerance " + tolerance,
-					Math.abs(expectedProbs.get(i) - modelProbability) <= tolerance);  
+		
+		for (Map.Entry<Integer[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
+			DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(Arrays.asList(testCase.getKey()));
+			testCase.getValue().runTests(marginal, tolerance);
+		}
+
+	}
+		
+	private static class MarginalTest {
+		private List<Double> expectedProbs;
+		private List<String[]> expectedVars;
+
+		public MarginalTest() {
+			this.expectedProbs = Lists.newArrayList();
+			this.expectedVars = Lists.newArrayList();
+		}
+		
+		public void addTest(double expectedProb, String[] varValues) {
+			expectedProbs.add(expectedProb);
+			expectedVars.add(varValues);
+		}
+
+		public void runTests(DiscreteFactor marginal, double tolerance) {
+			for (int i = 0; i < expectedProbs.size(); i++) {
+				double modelProbability = marginal.getUnnormalizedProbability(
+						Arrays.asList(expectedVars.get(i))) / marginal.getPartitionFunction();
+				Assert.assertTrue("Expected: <" + expectedProbs.get(i) + "> Actual: <" 
+						+ modelProbability + "> tolerance " + tolerance,
+						Math.abs(expectedProbs.get(i) - modelProbability) <= tolerance);  
+			}
 		}
 	}
 }

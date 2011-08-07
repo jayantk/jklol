@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.jayantkrish.jklol.inference.InferenceEngine;
+import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.bayesnet.BayesNet;
 import com.jayantkrish.jklol.models.bayesnet.CptFactor;
@@ -79,10 +80,10 @@ public class StepwiseEMTrainer {
 				Assignment trainingExample = trainingData.get(j);
 				if (log != null) {log.log(i, j, trainingExample, bn);}
 
-				inferenceEngine.computeMarginals(trainingExample);
+				MarginalSet marginals = inferenceEngine.computeMarginals(trainingExample);
 				for (int k = 0; k < cptFactors.size(); k++) {
 					CptFactor cptFactor = cptFactors.get(k);
-					Factor marginal = inferenceEngine.getMarginal(cptFactor.getVars().getVariableNums());
+					Factor marginal = marginals.getMarginal(cptFactor.getVars().getVariableNums());
 
 					storedMarginals[k][exampleIterNum % batchSize] = marginal;
 

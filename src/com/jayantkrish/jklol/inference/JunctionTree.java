@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.FactorMath;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.HashMultimap;
@@ -45,22 +45,26 @@ public class JunctionTree extends AbstractInferenceEngine {
 	 * Computes and caches marginals, conditioning on any variable assignments provided in the
 	 * argument.
 	 */
-	public void computeMarginals(Assignment assignment) {
+	@Override
+	public MarginalSet computeMarginals(Assignment assignment) {
 		cliqueTree.clear();
 		cachedMarginals.clear();
 
 		cliqueTree.setEvidence(assignment);
 		useSumProduct = true;
 		runMessagePassing();
+		return cliqueTreeToMarginalSet(cliqueTree, useSumProduct);
 	}
 
-	public void computeMaxMarginals(Assignment assignment) {
+	@Override
+	public MarginalSet computeMaxMarginals(Assignment assignment) {
 		cliqueTree.clear();
 		cachedMarginals.clear();
 
 		cliqueTree.setEvidence(assignment);
 		useSumProduct = false;
 		runMessagePassing();
+		return cliqueTreeToMarginalSet(cliqueTree, useSumProduct);
 	}
 
 	private void runMessagePassing() {
@@ -130,9 +134,8 @@ public class JunctionTree extends AbstractInferenceEngine {
 
 			factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, startFactor));
 		}
-		factorsToCombine.add(cliqueTree.getFactor(startFactor));
 
-		Factor productFactor = FactorMath.product(factorsToCombine);
+		Factor productFactor = cliqueTree.getFactor(startFactor).product(factorsToCombine);
 		Factor messageFactor = null;
 		if (useSumProduct) {
 			messageFactor = productFactor.marginalize(sharedVars.removeAll(sharedVars).getVariableNums());
@@ -144,77 +147,17 @@ public class JunctionTree extends AbstractInferenceEngine {
 
 		cliqueTree.addMessage(startFactor, destFactor, messageFactor);
 	}
-
-
-	/**
-	 * Get a marginal distribution over a set of variables. You must select
-	 * variables which are in the same clique of the clique tree.
-	 */ 
-	public Factor getMarginal(List<Integer> varNums) {
-
-		// This is all just trying to find a factor in the clique tree which includes all of the given variables.
-		Set<Integer> relevantFactors = null;
-		Set<Integer> varNumsToRetain = new HashSet<Integer>();
-		for (Integer varNum : varNums) {
-			varNumsToRetain.add(varNum);
-			if (relevantFactors == null) {
-				relevantFactors = new HashSet<Integer>(cliqueTree.getFactorIndicesWithVariable(varNum));
-			} else {
-				relevantFactors.retainAll(cliqueTree.getFactorIndicesWithVariable(varNum));
+	
+	private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree, boolean useSumProduct) {
+		List<Factor> marginalFactors = Lists.newArrayList();
+		for (int i = 0; i < cliqueTree.numFactors(); i++) {
+			List<Factor> factorsToCombine = Lists.newArrayList();
+			for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(i)) {
+				factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, i));
 			}
+			marginalFactors.add(cliqueTree.getFactor(i).product(factorsToCombine));
 		}
-
-		if (relevantFactors.size() == 0) {
-			throw new RuntimeException("Graph does not contain a factor with all variables: " + varNums);
-		}
-
-		//System.out.println("retaining: " + varNumsToRetain);
-
-		// Pick a factor to use for the marginal
-		int chosenFactorNum = relevantFactors.iterator().next();
-
-		//System.out.println("choosing factor: " + chosenFactorNum);
-
-		Factor marginal = computeMarginal(chosenFactorNum);
-		// Marginalize out any remaining variables...
-		Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());
-		allVarNums.removeAll(varNumsToRetain);
-		if (useSumProduct) {
-			return marginal.marginalize(allVarNums);
-		} else {
-			return marginal.maxMarginalize(allVarNums);
-		}
-	}
-
-
-	/*
-	 * For the given factor, take all of the inbound messages and 
-	 * multiply them to get the final marginal distribution.
-	 */
-	private Factor computeMarginal(int startFactor) {
-		if (cachedMarginals.containsKey(startFactor)) {
-			return cachedMarginals.get(startFactor);
-		}
-
-		VariableNumMap vars = cliqueTree.getFactor(startFactor).getVars();
-		//System.out.println(vars);
-
-		List<Factor> factorsToCombine = new ArrayList<Factor>();
-		for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(startFactor)) {
-			factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, startFactor));
-		}
-		factorsToCombine.add(cliqueTree.getFactor(startFactor));
-		//System.out.println(factorsToCombine);
-
-		Factor productFactor = FactorMath.product(factorsToCombine);
-		Factor returnFactor = null;
-		if (useSumProduct) {			
-			returnFactor = productFactor.marginalize(productFactor.getVars().removeAll(vars).getVariableNums());
-		} else {
-			returnFactor = productFactor.maxMarginalize(productFactor.getVars().removeAll(vars).getVariableNums());
-		}
-		cachedMarginals.put(startFactor, returnFactor);
-		return returnFactor;
+		return new FactorMarginalSet(marginalFactors, useSumProduct);
 	}
 
 	private class CliqueTree {
@@ -257,7 +200,7 @@ public class JunctionTree extends AbstractInferenceEngine {
 					Factor superset = mergeableFactors.iterator().next();
 					int cliqueNum = factorCliqueMap.get(superset);
 
-					cliqueFactors.set(cliqueNum, FactorMath.product(cliqueFactors.get(cliqueNum), f));
+					cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(f));
 					factorCliqueMap.put(f, cliqueNum);
 				} else {
 					int chosenNum = cliqueFactors.size();

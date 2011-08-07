@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.HashMultimap;
@@ -51,10 +52,19 @@ public class TableFactor extends DiscreteFactor {
 	}
 
 	public double getUnnormalizedProbability(Assignment a) {
-		assert a.getVarNumsSorted().equals(weights.getVarNums());
+		Preconditions.checkArgument(a.containsVars(weights.getVarNums()));
 
-		if (weights.containsKey(a)) {
-			return weights.get(a);
+		// This is an optimization to avoid creating new Assignments
+		// in this extremely common optimization. 
+		Assignment toCheck = null;
+		if (a.size() == weights.getVarNums().size()) {
+			toCheck = a;
+		} else {
+			toCheck = a.subAssignment(weights.getVarNums());
+		}
+		
+		if (weights.containsKey(toCheck)) {
+			return weights.get(toCheck);
 		}
 		return 0.0;
 	}
@@ -85,12 +95,13 @@ public class TableFactor extends DiscreteFactor {
 	 * General purpose method for setting a factor weight.
 	 */ 
 	public void setWeightList(List<? extends Object> varValues, double weight) {
-		assert getVars().size() == varValues.size();
+		Preconditions.checkNotNull(varValues);
+		Preconditions.checkArgument(getVars().size() == varValues.size());
 		setWeight(getVars().outcomeToAssignment(varValues), weight);
 	}
 
 	public void setWeight(Assignment a, double weight) {
-		assert weight >= 0.0;
+		Preconditions.checkArgument(weight >= 0.0);
 		weights.put(a, weight);
 
 		Assignment copy = new Assignment(a);

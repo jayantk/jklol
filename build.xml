@@ -38,6 +38,7 @@
       <test name="SparseCptTest" />
       <test name="FactorGraphTest" />
       <test name="JunctionTreeTest" />
+      <test name="GibbsSamplerTest" />
       <test name="GrammarTest" />
       <test name="CfgParserTest" />
       <test name="StochasticGradientTrainerTest" />

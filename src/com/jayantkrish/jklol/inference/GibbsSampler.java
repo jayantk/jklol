@@ -5,18 +5,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.FactorMath;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
-import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * An implementation of Gibbs sampling for computing approximate marginals.
+ * 
+ * Does not work on FactorGraphs with 0 probability outcomes! 
  */
 public class GibbsSampler extends AbstractInferenceEngine {
 
@@ -44,12 +42,10 @@ public class GibbsSampler extends AbstractInferenceEngine {
 	}
 
 	@Override
-	public void computeMarginals(Assignment assignment) {
+	public MarginalSet computeMarginals(Assignment assignment) {
 		initializeAssignment();
 		samples = new ArrayList<Assignment>();
 
-		
-		
 		// Burn in the sampler
 		for (int i = 0; i < burnInSamples; i++) {
 			doSamplingRound();
@@ -62,18 +58,14 @@ public class GibbsSampler extends AbstractInferenceEngine {
 			}
 			samples.add(curAssignment);
 		}
-	}
-
-	public Factor getMarginal(List<Integer> varNumsToRetain) {
-		Preconditions.checkNotNull(varNumsToRetain);
-		Preconditions.checkNotNull(samples);
-		return samplesToFactor(samples, varNumsToRetain);
+		return new SampleMarginalSet(factorGraph.getVariableNumMap(), samples);
 	}
 
 	/**
 	 * GibbsSampler cannot compute max marginals. Throws a runtime exception if called.
 	 */
-	public void computeMaxMarginals(Assignment assignment) {
+	@Override
+	public MarginalSet computeMaxMarginals(Assignment assignment) {
 		throw new UnsupportedOperationException("Max marginals are not supported by Gibbs sampling");
 	}
 
@@ -118,22 +110,10 @@ public class GibbsSampler extends AbstractInferenceEngine {
 				.conditional(otherVarAssignment);
 			factorsToCombine.add(conditional.marginalize(otherVarAssignment.getVarNumsSorted()));
 		}
-		Factor toSampleFrom = FactorMath.product(factorsToCombine);
+		Factor toSampleFrom = factorsToCombine.get(0).product(factorsToCombine.subList(1, factorsToCombine.size()));
 		// Draw the sample and update the sampler's current assignment. 
 		Assignment subsetValues = toSampleFrom.sample();
+		
 		curAssignment = otherVarAssignment.jointAssignment(subsetValues);
-	}
-	
-	private Factor samplesToFactor(List<Assignment> sampledAssignments, List<Integer> varNumsToRetain) {
-		Preconditions.checkNotNull(sampledAssignments);
-		Preconditions.checkArgument(sampledAssignments.size() > 0);
-		VariableNumMap varsToRetain = factorGraph.getVariableNumMap().intersection(varNumsToRetain);
-		TableFactor factor = new TableFactor(varsToRetain);
-		for (Assignment sample : sampledAssignments) {
-			Assignment factorSample = sample.subAssignment(varNumsToRetain);
-			factor.setWeight(factorSample, 
-					factor.getUnnormalizedProbability(factorSample) + 1.0);
-		}
-		return factor;
 	}
 }

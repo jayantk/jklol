@@ -18,7 +18,7 @@ public abstract class AbstractFactor implements Factor {
 	private VariableNumMap vars;
 
 	public AbstractFactor(VariableNumMap vars) {
-		assert vars != null;
+		Preconditions.checkNotNull(vars);
 		this.vars = vars;
 	}
 
@@ -33,26 +33,12 @@ public abstract class AbstractFactor implements Factor {
 	@Override
 	public double getUnnormalizedProbability(List<? extends Object> outcome) {
 		Preconditions.checkNotNull(outcome);
+		Preconditions.checkArgument(outcome.size() == getVars().size());
 		
 		Assignment a = getVars().outcomeToAssignment(outcome);
 		return getUnnormalizedProbability(a);
 	}
-
 	
-	@Override
-	public Factor conditional(Assignment a) {
-		VariableNumMap factorVars = vars.intersection(a.getVarNumsSorted());
-		Assignment subAssignment = a.subAssignment(factorVars);
-		TableFactor tableFactor = new TableFactor(factorVars);
-		tableFactor.setWeight(subAssignment, 1.0);
-		return conditional(tableFactor);
-	}
-	
-	@Override
-	public Factor conditional(Factor f) {
-		return FactorMath.product(this, f);
-	}
-
 	@Override
 	public Factor marginalize(Integer ... varNums) {
 		return marginalize(Arrays.asList(varNums));
@@ -62,5 +48,13 @@ public abstract class AbstractFactor implements Factor {
 	public Factor maxMarginalize(Integer ... varNums) {
 		return maxMarginalize(Arrays.asList(varNums));
 	}
-
+	
+	@Override
+	public Factor product(List<Factor> others) {
+		Factor current = this;
+		for (Factor other : others) {
+			current = current.product(other);
+		}
+		return current;
+	}
 }

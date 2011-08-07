@@ -76,51 +76,57 @@ public class TableFactorTest extends TestCase {
 		assertEquals(0.0,
 				f.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F", "F", "F"})));
 	}
+	
+	public void testGetProbability() {
+		Assignment a = new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 5}),
+				Arrays.asList(new String[] {"T", "F", "T", "F", "T"}));
+		assertEquals(3.0, f.getUnnormalizedProbability(a));
+	}
 
 	public void testGetProbabilityError() {
 		try {
 			f.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "T"}));
-		} catch (AssertionError e) {
+		} catch (IllegalArgumentException e) {
 			return;
 		}
-		fail("Expected AssertionError");
+		fail("Expected IllegalArgumentException");
 	}
 
 
 	public void testGetProbabilityError2() {
 		try {
 			f.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "T", "T", "T", "T"}));
-		} catch (AssertionError e) {
+		} catch (IllegalArgumentException e) {
 			return;
 		}
-		fail("Expected AssertionError");
+		fail("Expected IllegalArgumentException");
 	}
 
 	public void testSetProbabilityError() {
 		try {
 			f.setWeightList(Arrays.asList(new String[] {"T", "T", "T"}), 3.0);
-		} catch (AssertionError e) {
+		} catch (IllegalArgumentException e) {
 			return;
 		}
-		fail("Expected AssertionError");
+		fail("Expected IllegalArgumentException");
 	}
 
 	public void testSetProbabilityError2() {
 		try {
 			f.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T", "T"}), 3.0);
-		} catch (AssertionError e) {
+		} catch (IllegalArgumentException e) {
 			return;
 		}
-		fail("Expected AssertionError");
+		fail("Expected IllegalArgumentException");
 	}
 
 	public void testSetProbabilityError3() {
 		try {
 			f.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T"}), -1.0);	
-		} catch (AssertionError e) {
+		} catch (IllegalArgumentException e) {
 			return;
 		}
-		fail("Expected AssertionError");
+		fail("Expected IllegalArgumentException");
 	}
 
 	public void testMarginalize() {

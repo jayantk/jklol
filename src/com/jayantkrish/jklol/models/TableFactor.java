@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.models;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -119,52 +118,34 @@ public class TableFactor extends DiscreteFactor {
 	// Static methods, mostly for computing sums / products of factors
 	///////////////////////////////////////////////////////////////////////////////////
 
-	public static DiscreteFactor sumProductTableFactor(List<DiscreteFactor> toSum, Collection<Integer> variablesToRetain) {
-		TableFactor p = TableFactor.productFactor(toSum);
-		List<Integer> vars = new ArrayList<Integer>(p.getVars().getVariableNums());
-		vars.removeAll(variablesToRetain);
-		return p.marginalize(vars);
-	}
-
-	public static DiscreteFactor maxProductTableFactor(List<DiscreteFactor> toSum, Collection<Integer> variablesToRetain) {
-		TableFactor p = TableFactor.productFactor(toSum);
-		List<Integer> vars = new ArrayList<Integer>(p.getVars().getVariableNums());
-		vars.removeAll(variablesToRetain);
-		return p.maxMarginalize(vars);
-	}
-
-	/*
-	 * Multiples one factor with a set of factors, taking  
+	/**
+	 * Alternate version of {@link #sumFactor(List)}.
 	 */
-	private static TableFactor subsetProductFactor(DiscreteFactor whole, List<DiscreteFactor> subsets) {
-		Map<Integer, Set<Object>> varValueMap = getPossibleVariableValues(subsets);
-		Set<Assignment> possibleAssignments = null;
-		for (Integer varNum : varValueMap.keySet()) {
-			if (possibleAssignments == null) {
-				possibleAssignments = whole.getAssignmentsWithEntry(varNum, varValueMap.get(varNum));
-			} else {
-				possibleAssignments.retainAll(whole.getAssignmentsWithEntry(varNum, varValueMap.get(varNum)));
+	public static TableFactor sumFactor(DiscreteFactor ... factors) {
+		return sumFactor(Arrays.asList(factors));
+	}
+	
+	public static TableFactor sumFactor(List<DiscreteFactor> toAdd) {
+		VariableNumMap allVars = VariableNumMap.emptyMap();
+		for (DiscreteFactor f : toAdd) {
+			allVars = allVars.union(f.getVars());
+		}
+
+		TableFactor returnFactor = new TableFactor(allVars);
+		Iterator<Assignment> assignmentIter = new AllAssignmentIterator(allVars);
+		while (assignmentIter.hasNext()) {
+			Assignment a = assignmentIter.next();
+			double weight = 0.0;
+			for (DiscreteFactor f : toAdd) {
+				weight += f.getUnnormalizedProbability(a.subAssignment(f.getVars()));
+			}
+			if (weight > 0.0) {
+				returnFactor.setWeight(a, weight);
 			}
 		}
 
-		Iterator<Assignment> iter = null;
-		if (possibleAssignments != null) {
-			iter = possibleAssignments.iterator(); 
-		} else {
-			iter = whole.outcomeIterator();
-		}
-		TableFactor returnFactor = new TableFactor(whole.getVars());
-		while (iter.hasNext()) {
-			Assignment a = iter.next();
-			double prob = whole.getUnnormalizedProbability(a);
-			for (DiscreteFactor subset : subsets) {
-				Assignment sub = a.subAssignment(subset.getVars().getVariableNums());
-				prob  *=  subset.getUnnormalizedProbability(sub);
-			}
-			if (prob > 0) {
-				returnFactor.setWeight(a, prob);
-			}
-		}
+		// TODO(jayantk): Consider using the recursive algorithm (like product) when
+		// the factors have lots of zero entries.
 		return returnFactor;
 	}
 
@@ -219,6 +200,40 @@ public class TableFactor extends DiscreteFactor {
 		return returnFactor;
 	}
 
+	/*
+	 * Multiples one factor with a set of factors, taking  
+	 */
+	private static TableFactor subsetProductFactor(DiscreteFactor whole, List<DiscreteFactor> subsets) {
+		Map<Integer, Set<Object>> varValueMap = getPossibleVariableValues(subsets);
+		Set<Assignment> possibleAssignments = null;
+		for (Integer varNum : varValueMap.keySet()) {
+			if (possibleAssignments == null) {
+				possibleAssignments = whole.getAssignmentsWithEntry(varNum, varValueMap.get(varNum));
+			} else {
+				possibleAssignments.retainAll(whole.getAssignmentsWithEntry(varNum, varValueMap.get(varNum)));
+			}
+		}
+
+		Iterator<Assignment> iter = null;
+		if (possibleAssignments != null) {
+			iter = possibleAssignments.iterator(); 
+		} else {
+			iter = whole.outcomeIterator();
+		}
+		TableFactor returnFactor = new TableFactor(whole.getVars());
+		while (iter.hasNext()) {
+			Assignment a = iter.next();
+			double prob = whole.getUnnormalizedProbability(a);
+			for (DiscreteFactor subset : subsets) {
+				Assignment sub = a.subAssignment(subset.getVars().getVariableNums());
+				prob  *=  subset.getUnnormalizedProbability(sub);
+			}
+			if (prob > 0) {
+				returnFactor.setWeight(a, prob);
+			}
+		}
+		return returnFactor;
+	}
 
 	/*
     private static void recursiveFactorInitialization(List<Integer> varNums, List<Variable> vars, int curInd, 

@@ -27,9 +27,6 @@ public abstract class AbstractFactor implements Factor {
 		return vars;
 	}
 	
-	/**
-	 * Compute the unnormalized probability of an outcome.
-	 */
 	@Override
 	public double getUnnormalizedProbability(List<? extends Object> outcome) {
 		Preconditions.checkNotNull(outcome);
@@ -40,6 +37,11 @@ public abstract class AbstractFactor implements Factor {
 	}
 	
 	@Override
+	public double getUnnormalizedProbability(Object ... outcome) {
+		return getUnnormalizedProbability(Arrays.asList(outcome));
+	}
+	
+	@Override
 	public Factor marginalize(Integer ... varNums) {
 		return marginalize(Arrays.asList(varNums));
 	}
@@ -47,6 +49,15 @@ public abstract class AbstractFactor implements Factor {
 	@Override
 	public Factor maxMarginalize(Integer ... varNums) {
 		return maxMarginalize(Arrays.asList(varNums));
+	}
+	
+	@Override
+	public Factor add(List<Factor> others) {
+		Factor current = this;
+		for (Factor other : others) {
+			current = current.add(other);
+		}
+		return current;
 	}
 	
 	@Override

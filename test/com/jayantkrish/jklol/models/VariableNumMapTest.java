@@ -39,7 +39,7 @@ public class VariableNumMapTest extends TestCase {
 		VariableNumMap c = new VariableNumMap(inds, vars);
 		inds.add(4);
 		vars.add(v1);
-		assertFalse(c.containsVariableNum(4));
+		assertFalse(c.contains(4));
 		assertEquals(3, c.getVariableNums().size());
 		assertEquals(3, c.getVariables().size());
 	}
@@ -64,7 +64,7 @@ public class VariableNumMapTest extends TestCase {
 		VariableNumMap intersection = a.intersection(b);
 
 		assertEquals(1, intersection.size());
-		assertTrue(intersection.containsVariableNum(1));
+		assertTrue(intersection.contains(1));
 		assertEquals(v2, intersection.getVariable(1));
 	}
 

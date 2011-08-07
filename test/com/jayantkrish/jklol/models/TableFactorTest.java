@@ -204,40 +204,6 @@ public class TableFactorTest extends TestCase {
 				c.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F", "F", "F"})));
 	}
 
-	public void testSumProduct() {
-		List<DiscreteFactor> factors = Arrays.asList(new DiscreteFactor[] {f,g});
-		DiscreteFactor t = TableFactor.sumProductTableFactor(factors, 
-				Arrays.asList(new Integer[] {0, 3}));
-
-		assertEquals(90.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F"})));
-		assertEquals(0.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"F", "T"})));
-
-		assertEquals(13.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T"})));
-
-		assertEquals(0.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"F", "F"})));
-	}
-
-	public void testMaxProduct() {
-		List<DiscreteFactor> factors = Arrays.asList(new DiscreteFactor[] {f,g});
-		DiscreteFactor t = TableFactor.maxProductTableFactor(factors, 
-				Arrays.asList(new Integer[] {0, 3}));
-
-		assertEquals(33.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "F"})));
-		assertEquals(0.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"F", "T"})));
-
-		assertEquals(13.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T"})));
-
-		assertEquals(0.0,
-				t.getUnnormalizedProbability(Arrays.asList(new String[] {"F", "F"})));
-	}
-
 	public void testProduct() {
 
 		TableFactor t = TableFactor.productFactor(Arrays.asList(new DiscreteFactor[] {f, g}));

@@ -33,11 +33,20 @@ public interface Factor {
 	public double getUnnormalizedProbability(Assignment assignment);
 
 	/**
-	 * Convenience method for getting the probability of an assignment. outcome
-	 * contains the assignment to the variables in this factor, sorted in
-	 * numerical order by their variable number.
+	 * Convenience method for getting the probability of an assignment. {@code
+	 * outcome} contains the assignment to the variables in this factor, sorted
+	 * in numerical order by their variable number. See
+	 * {@link #getUnnormalizedProbability(Assignment)}
 	 */
 	public double getUnnormalizedProbability(List<? extends Object> outcome);
+
+	/**
+	 * Convenience method for getting the probability of an assignment. {@code
+	 * outcome} contains the assignment to the variables in this factor, sorted
+	 * in numerical order by their variable number. See
+	 * {@link #getUnnormalizedProbability(Assignment)}.
+	 */
+	public double getUnnormalizedProbability(Object... outcome);
 
 	/**
 	 * Returns the normalizing factor for the unnormalized probabilities
@@ -83,12 +92,24 @@ public interface Factor {
 	// int beamSize);
 
 	/**
+	 * Adds {@code this} and {@code other} and returns the result. {@code other}
+	 * must contain a subset of the variables in this factor. Not all factors
+	 * support this operation.
+	 */
+	public Factor add(Factor other);
+
+	/**
+	 * Adds {@code this} and all of the factors {@code others}, returning the
+	 * result. {@code other} must contain a subset of the variables in this
+	 * factor. Equivalent to repeatedly invoking {@link #add(Factor)}, but may
+	 * be faster.
+	 */
+	public Factor add(List<Factor> others);
+
+	/**
 	 * Multiplies this factor by the passed-in factor. {@code other} must
 	 * contain a subset of the variables in this factor. Additionally, not all
 	 * subsets are necessarily supported.
-	 * 
-	 * @throws FactorProductException
-	 *             if {@code this} and {@code other} cannot be multiplied.
 	 */
 	public Factor product(Factor other);
 
@@ -115,14 +136,15 @@ public interface Factor {
 	 * variables as this factor)
 	 */
 	public double computeExpectation(FeatureFunction feature);
-	
+
 	// Coercion methods
-	
+
 	/**
 	 * Attempts to convert {@code this} into a {@link DiscreteFactor}.
 	 * 
-	 * @throws FactorCoercionError if {@code this} cannot be converted 
-	 * into a {@link DiscreteFactor}.
+	 * @throws FactorCoercionError
+	 *             if {@code this} cannot be converted into a
+	 *             {@link DiscreteFactor}.
 	 */
 	public DiscreteFactor coerceToDiscrete();
 }

@@ -13,7 +13,9 @@
 
   <target name="compile">
     <mkdir dir="build" />
-    <javac srcdir="src" destdir="build" debug="on"/>
+    <javac srcdir="src" destdir="build" debug="on">
+      <classpath refid="classpath.base"/>
+    </javac>
   </target>
 
   <target name="compile-test" depends="compile">
@@ -35,6 +37,7 @@
       <test name="VariableNumMapTest" />
       <test name="AssignmentTest" />
       <test name="TableFactorTest" />
+      <test name="MixtureFactorTest" />
       <test name="SparseCptTest" />
       <test name="FactorGraphTest" />
       <test name="JunctionTreeTest" />

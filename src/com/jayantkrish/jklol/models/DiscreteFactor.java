@@ -171,6 +171,12 @@ public abstract class DiscreteFactor extends AbstractFactor {
 		return partitionFunction;
 	}
 	
+	@Override
+	public Factor add(Factor other) {
+		DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
+		return TableFactor.sumFactor(this, otherAsDiscrete);
+	}
+	
 	public Factor product(Factor other) {
 		DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
 		return TableFactor.productFactor(this, otherAsDiscrete);

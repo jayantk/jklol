@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -156,11 +157,14 @@ public class ChartFactor extends DiscreteFactor {
 	public DiscreteFactor sumProduct(List<DiscreteFactor> inboundMessages, Collection<Integer> variablesToRetain) {
 		List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(inboundMessages);
 		allFactors.add(parentFactor);
+		Set<Integer> variablesToEliminate = Sets.newHashSet(getVars().getVariableNums());
+		variablesToEliminate.removeAll(variablesToRetain);
+		DiscreteFactor productFactor = TableFactor.productFactor(allFactors);
 		if (variablesToRetain.size() <= 1) {
-			return TableFactor.sumProductTableFactor(allFactors, variablesToRetain);
+			return productFactor.marginalize(variablesToEliminate);
 		} else {
 			return new ChartFactor(chart, parentVar, childVar, parentVarNum, childVarNum,
-					childProbs, TableFactor.sumProductTableFactor(allFactors, variablesToRetain));
+					childProbs, productFactor.marginalize(variablesToEliminate));
 		}
 	}
 
@@ -170,11 +174,14 @@ public class ChartFactor extends DiscreteFactor {
 	public DiscreteFactor maxProduct(List<DiscreteFactor> inboundMessages, Collection<Integer> variablesToRetain) {
 		List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(inboundMessages);
 		allFactors.add(parentFactor);
+		Set<Integer> variablesToEliminate = Sets.newHashSet(getVars().getVariableNums());
+		variablesToEliminate.removeAll(variablesToRetain);
+		DiscreteFactor productFactor = TableFactor.productFactor(allFactors);
 		if (variablesToRetain.size() <= 1) {
-			return TableFactor.maxProductTableFactor(allFactors, variablesToRetain);
+			return productFactor.maxMarginalize(variablesToEliminate);
 		} else {
 			return new ChartFactor(chart, parentVar, childVar, parentVarNum, childVarNum,
-					childProbs, TableFactor.maxProductTableFactor(allFactors, variablesToRetain));
+					childProbs, productFactor.maxMarginalize(variablesToEliminate));
 		}
 	}
 

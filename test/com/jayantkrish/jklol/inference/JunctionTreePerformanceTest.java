@@ -7,6 +7,7 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -68,8 +69,8 @@ public class JunctionTreePerformanceTest extends TestCase {
 		System.out.println("testFactorSumProductSubset");
 		long start = System.currentTimeMillis();
 
-		TableFactor.sumProductTableFactor(Arrays.asList(new DiscreteFactor[] {factor2, factor3}),
-				Arrays.asList(new Integer[] {1}));
+		Factor product = TableFactor.productFactor(Arrays.asList(new DiscreteFactor[] {factor2, factor3}));
+		product.marginalize(Arrays.asList(new Integer[] {0, 2}));
 
 		long elapsed = System.currentTimeMillis() - start;
 		System.out.println("Elapsed: " + elapsed + " ms");

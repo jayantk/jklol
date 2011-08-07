@@ -204,7 +204,7 @@ public class CfgFactor extends DiscreteFactor implements CptFactor {
 
 	public DiscreteFactor product(List<DiscreteFactor> factors) {
 		for (DiscreteFactor f : factors) {
-			assert f.getVars().size() == 1 && f.getVars().containsVariableNum(parentVarNum);
+			assert f.getVars().size() == 1 && f.getVars().contains(parentVarNum);
 		}
 
 		if (multipliedWith == null) {
@@ -234,7 +234,7 @@ public class CfgFactor extends DiscreteFactor implements CptFactor {
 		}
 
 		// Use the parser to get a conditional distribution.
-		if (intersection.containsVariableNum(parentVarNum)) {
+		if (intersection.contains(parentVarNum)) {
 			// Can't handle this case.
 			throw new RuntimeException("Cannot condition on parent");
 		}

@@ -33,7 +33,7 @@ public class StochasticGradientTrainer {
 	public void train(LogLinearModel factorGraph, List<Assignment> trainingData) {
 		inferenceEngine.setFactorGraph(factorGraph);
 
-		Collections.shuffle(trainingData);	
+		Collections.shuffle(trainingData);
 		for (int i = 0; i < numIterations; i++) {
 			for (Assignment trainingExample : trainingData) {
 				gradient.clear();

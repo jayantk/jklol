@@ -91,7 +91,7 @@ public class MixtureFactor extends AbstractFactor {
 
 		double probability = 0.0;
 		for (int i = 0; i < factors.size(); i++) {
-			if (factors.get(i).getVars().size() > 0) {
+			if (factors.get(i).getVars().size() > 0 || assignment.size() == 0) {
 				probability += weights.get(i)
 						* factors.get(i).getUnnormalizedProbability(assignment);
 			}
@@ -199,10 +199,12 @@ public class MixtureFactor extends AbstractFactor {
 	public DiscreteFactor coerceToDiscrete() {
 		VariableNumMap vars = null;
 		for (Factor factor : factors) {
-			if (vars == null) {
-				vars = factor.getVars();
-			} else if (factor.getVars().size() > 0 && !factor.getVars().equals(vars)) {
-				throw new FactorCoercionError("Cannot coerce " + this + " to DiscreteFactor.");
+			if (factor.getVars().size() > 0) {
+				if (vars == null) {
+					vars = factor.getVars();
+				} else if (!factor.getVars().equals(vars)) {
+					throw new FactorCoercionError("Cannot coerce " + this + " to DiscreteFactor.");
+				}
 			}
 		}
 		

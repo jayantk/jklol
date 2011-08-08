@@ -6,6 +6,7 @@ import junit.framework.TestCase;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.FactorCoercionError;
 import com.jayantkrish.jklol.models.MixtureFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -237,15 +238,28 @@ public class MixtureFactorTest extends TestCase {
 				conditional.getUnnormalizedProbability("T", "F", "T", "T", "T"));
 	}
 	
-	public void testCoerceToDiscrete() {
-		Factor discreteFactor = m.coerceToDiscrete();
-		assertEquals(3.0 + 2.0 * 4.0 + 3.0 * 2.0, discreteFactor.getUnnormalizedProbability(
-				Arrays.asList(new String[] {"T", "F", "T", "T", "T"})));
-		assertEquals(4.0 + 2.0 * 5.0 + 3.0 * 2.0, discreteFactor.getUnnormalizedProbability(
-				Arrays.asList(new String[] {"T", "T", "T", "F", "T"})));
-		assertEquals(3.0 + 0.0 + 3.0 * 3.0, discreteFactor.getUnnormalizedProbability(
-				Arrays.asList(new String[] {"T", "F", "F", "F", "F"})));
-		assertEquals(2.0 + 2.0 * 6.0 + 3.0 * 4.0, 
-				discreteFactor.getUnnormalizedProbability("F", "T", "T", "F", "T"));
+	public void testCoerceToDiscrete1() {
+		Factor marginal = m.marginalize(Arrays.asList(new Integer[] {0, 1, 3, 4})).coerceToDiscrete();
+		assertEquals(2.0 * 5.0,
+				marginal.getUnnormalizedProbability("F"));
+		assertEquals(2.0 * 15.0,
+				marginal.getUnnormalizedProbability("T"));
+	}
+	
+	public void testCoerceToDiscrete2() {
+		Factor marginal = m.marginalize(Arrays.asList(new Integer[] {1, 2, 3, 4})).coerceToDiscrete();
+		assertEquals(7.0 + 2.0 * 9.0 + 3.0 * 5.0,
+				marginal.getUnnormalizedProbability("T"));
+		assertEquals(3.0 + 2.0 * 11.0 + 3.0 * 10.0,
+				marginal.getUnnormalizedProbability("F"));
+	}
+	
+	public void testCoerceToDiscreteError() {
+		try {
+			m.coerceToDiscrete();
+		} catch (FactorCoercionError e) {
+			return;
+		}
+		fail("Expected FactorCoercionError.");
 	}
 }

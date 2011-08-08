@@ -17,13 +17,11 @@ import com.jayantkrish.jklol.util.Assignment;
 public class IncrementalEMTrainer {
 
 	private InferenceEngine inferenceEngine;
-	private Factor[][] exampleCptMarginalMap;
 	private int numIterations;
 	private double smoothing;
 	private LogFunction log;
 
 	public IncrementalEMTrainer(int numIterations, double smoothing, InferenceEngine inferenceEngine) {
-		this.exampleCptMarginalMap = null;
 		this.smoothing = smoothing;
 		this.numIterations = numIterations;
 		this.inferenceEngine = inferenceEngine;
@@ -32,7 +30,6 @@ public class IncrementalEMTrainer {
 
 	public IncrementalEMTrainer(int numIterations, double smoothing, 
 			InferenceEngine inferenceEngine, LogFunction log) {
-		this.exampleCptMarginalMap = null;
 		this.smoothing = smoothing;
 		this.numIterations = numIterations;
 		this.inferenceEngine = inferenceEngine;
@@ -45,7 +42,8 @@ public class IncrementalEMTrainer {
 		inferenceEngine.setFactorGraph(bn);
 
 		List<CptFactor> cptFactors = bn.getCptFactors();
-		exampleCptMarginalMap = new Factor[trainingData.size()][cptFactors.size()];
+		Factor[][] exampleCptMarginalMap = new Factor[trainingData.size()][cptFactors.size()];
+		double[] examplePartitionFunctionMap = new double[trainingData.size()];
 
 		for (int i = 0; i < numIterations; i++) {
 			if (log != null) {log.notifyIterationStart(i);}
@@ -58,16 +56,17 @@ public class IncrementalEMTrainer {
 					// Subtract out old statistics if they exist.
 					for (int k = 0; k < cptFactors.size(); k++) {
 						Factor oldMarginal = exampleCptMarginalMap[j][k];
-						cptFactors.get(k).incrementOutcomeCount(oldMarginal, -1.0);
+						cptFactors.get(k).incrementOutcomeCount(oldMarginal, -1.0, examplePartitionFunctionMap[j]);
 					}
 				}
 				// Update new sufficient statistics
 				MarginalSet marginals = inferenceEngine.computeMarginals(trainingExample);
+				examplePartitionFunctionMap[j] = marginals.getPartitionFunction();
 				for (int k = 0; k < cptFactors.size(); k++) {
 					CptFactor cptFactor = cptFactors.get(k);
 					Factor marginal = marginals.getMarginal(cptFactor.getVars().getVariableNums());
 					exampleCptMarginalMap[j][k] = marginal;
-					cptFactor.incrementOutcomeCount(marginal, 1.0);
+					cptFactor.incrementOutcomeCount(marginal, 1.0, marginals.getPartitionFunction());
 
 					if (log != null) {log.log(i, j, cptFactor, marginal, bn);}
 				}

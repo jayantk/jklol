@@ -10,6 +10,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
@@ -165,6 +166,22 @@ public abstract class DiscreteFactor extends AbstractFactor {
 	public Factor product(Factor other) {
 		DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
 		return TableFactor.productFactor(this, otherAsDiscrete);
+	}
+	
+	/*
+	 * (non-Javadoc) This is more efficient than the default
+	 * implementation in {@code AbstractFactor}.
+	 *    
+	 * @see com.jayantkrish.jklol.models.AbstractFactor#product(java.util.List)
+	 */
+	@Override
+	public Factor product(List<Factor> others) {
+		List<DiscreteFactor> discreteFactors = Lists.newArrayList();
+		discreteFactors.add(this);
+		for (Factor other : others) {
+			discreteFactors.add(other.coerceToDiscrete());
+		}
+		return TableFactor.productFactor(discreteFactors);
 	}
 	
 	@Override

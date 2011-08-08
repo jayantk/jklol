@@ -67,7 +67,7 @@ public class JunctionTree extends AbstractInferenceEngine {
 	private double runMessagePassing(boolean useSumProduct) {
 		// Upstream pass of Junction Tree message passing.
 		boolean keepGoing = true;
-		int lastFactorNum = -1;
+		int lastFactorNum = 0;
 		while (keepGoing) {
 			keepGoing = false;
 			for (int factorNum = 0; factorNum < cliqueTree.numFactors(); factorNum++) {

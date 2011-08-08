@@ -65,6 +65,7 @@ public class StepwiseEMTrainer {
 
 		List<CptFactor> cptFactors = bn.getCptFactors();
 		Factor[][] storedMarginals = new Factor[cptFactors.size()][batchSize];
+		double[] storedPartitionFunctions = new double[batchSize];
 		int numUpdates = 0;
 
 		for (int i = 0; i < numIterations; i++) {
@@ -73,7 +74,7 @@ public class StepwiseEMTrainer {
 			for (int j = 0; j < trainingData.size(); j++) {
 				int exampleIterNum = i * trainingData.size() + j;
 				if (exampleIterNum % batchSize == 0 && exampleIterNum != 0) {
-					performParameterUpdate(cptFactors, storedMarginals, batchSize, numUpdates);
+					performParameterUpdate(cptFactors, storedMarginals, storedPartitionFunctions, batchSize, numUpdates);
 					numUpdates++;
 				}
 
@@ -81,6 +82,7 @@ public class StepwiseEMTrainer {
 				if (log != null) {log.log(i, j, trainingExample, bn);}
 
 				MarginalSet marginals = inferenceEngine.computeMarginals(trainingExample);
+				storedPartitionFunctions[exampleIterNum % batchSize] = marginals.getPartitionFunction();
 				for (int k = 0; k < cptFactors.size(); k++) {
 					CptFactor cptFactor = cptFactors.get(k);
 					Factor marginal = marginals.getMarginal(cptFactor.getVars().getVariableNums());
@@ -96,7 +98,7 @@ public class StepwiseEMTrainer {
 
 
 	public void performParameterUpdate(List<CptFactor> factorsToUpdate, Factor[][] marginals, 
-			int numValidEntries, int numUpdates) {
+			double[] storedPartitionFunctions, int numValidEntries, int numUpdates) {
 
 		// Instead of multiplying the sufficient statistics (dense update)
 		// use a sparse update which simply increases the weight of the added marginal.
@@ -107,7 +109,7 @@ public class StepwiseEMTrainer {
 		for (int i = 0; i < factorsToUpdate.size(); i++) {
 			CptFactor factor = factorsToUpdate.get(i);
 			for (int j = 0; j < numValidEntries; j++) {
-				factor.incrementOutcomeCount(marginals[i][j], batchMultiplier);
+				factor.incrementOutcomeCount(marginals[i][j], batchMultiplier, storedPartitionFunctions[j]);
 			}
 		}
 	}

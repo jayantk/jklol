@@ -148,6 +148,26 @@ public class TableFactor extends DiscreteFactor {
 		// the factors have lots of zero entries.
 		return returnFactor;
 	}
+	
+	/**
+	 * Multiplies the unnormalized probabilities in {@code factor} by {@code constant}
+	 * and returns the result.
+	 *  
+	 * @param factor
+	 * @param constant
+	 * @return
+	 */
+	public static TableFactor productFactor(DiscreteFactor factor, double constant) {
+		Preconditions.checkNotNull(factor);
+		Preconditions.checkArgument(constant >= 0.0);
+		TableFactor returnFactor = new TableFactor(factor.getVars());
+		Iterator<Assignment> iter = factor.outcomeIterator();
+		while (iter.hasNext()) {
+			Assignment a = iter.next();
+			returnFactor.setWeight(a, factor.getUnnormalizedProbability(a) * constant);
+		}
+		return returnFactor;
+	}
 
 	public static TableFactor productFactor(DiscreteFactor ... factors) {
 		return productFactor(Arrays.asList(factors));

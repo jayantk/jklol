@@ -215,7 +215,11 @@ public class MixtureFactorTest extends TestCase {
 				Arrays.asList(new Integer[] {1, 3}), Arrays.asList(new String[] {"T", "F"})));
 
 		assertEquals(4.0 + 2.0 * 5.0 + 3.0 * 2.0, 
-				conditional.getUnnormalizedProbability("T", "T", "T"));
+				conditional.getUnnormalizedProbability("T", "T", "T", "F", "T"));
+		assertEquals(2.0 * 2.0 + 3.0 * 6.0, 
+				conditional.getUnnormalizedProbability("F", "F", "F", "F", "F"));
+		assertEquals(4.0 + 3.0 * 2.0, 
+				conditional.getUnnormalizedProbability("T", "T", "T", "T", "T"));
 	}
 	
 	public void testConditional2() {
@@ -223,7 +227,11 @@ public class MixtureFactorTest extends TestCase {
 				Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new String[] {"T", "T"})));
 
 		assertEquals(4.0 + 2.0 * 5.0 + 3.0 * 2.0, 
-				conditional.getUnnormalizedProbability("T", "F", "T"));
+				conditional.getUnnormalizedProbability("T", "T", "T", "F", "T"));
+		assertEquals(0.0, 
+				conditional.getUnnormalizedProbability("F", "F", "F", "F", "F"));
+		assertEquals(4.0 * 2.0 + 2.0 * 3.0, 
+				conditional.getUnnormalizedProbability("T", "F", "T", "T", "T"));
 	}
 	
 	public void testCoerceToDiscrete() {
@@ -235,6 +243,8 @@ public class MixtureFactorTest extends TestCase {
 		assertEquals(3.0 + 0.0 + 3.0 * 3.0, discreteFactor.getUnnormalizedProbability(
 				Arrays.asList(new String[] {"T", "F", "F", "F", "F"})));
 		assertEquals(2.0 + 2.0 * 6.0 + 3.0 * 4.0, 
-				discreteFactor.getUnnormalizedProbability("F", "T", "T", "F", "T"));		
+				discreteFactor.getUnnormalizedProbability("F", "T", "T", "F", "T"));
+		
+		assertEquals(EXPECTED_PARTITION_FUNCTION, discreteFactor.getPartitionFunction());
 	}
 }

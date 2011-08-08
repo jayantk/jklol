@@ -49,14 +49,6 @@ public interface Factor {
 	public double getUnnormalizedProbability(Object... outcome);
 
 	/**
-	 * Returns the normalizing factor for the unnormalized probabilities
-	 * returned by this factor.
-	 * 
-	 * @return
-	 */
-	public double getPartitionFunction();
-
-	/**
 	 * Get a new factor which conditions on the observed variables in the
 	 * assignment. The returned factor contains the same variables as the
 	 * original, but with the appropriate sections zeroed out.
@@ -120,11 +112,16 @@ public interface Factor {
 	 * 
 	 * @param others
 	 * @return
-	 * @throws FactorProductException
-	 *             if {@code this} and {@code other} cannot be multiplied.
 	 */
 	public Factor product(List<Factor> others);
 
+	/**
+	 * Multiplies this factor by a constant weight.
+	 * @param constant
+	 * @return
+	 */
+	public Factor product(double constant);
+	
 	/**
 	 * Sample a random assignment to the variables in this factor according to
 	 * this factor's probability distribution.

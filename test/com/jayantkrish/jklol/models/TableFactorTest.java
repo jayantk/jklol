@@ -8,9 +8,7 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.RealVariable;
 import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.models.loglinear.IndicatorFeatureFunction;
@@ -25,13 +23,10 @@ public class TableFactorTest extends TestCase {
 	private TableFactor f;
 	private TableFactor g;
 	private TableFactor h;
-	private TableFactor realFactor;
 
 	private DiscreteVariable v;
 	private DiscreteVariable v2;
 
-	private RealVariable r;
-	
 	private FeatureFunction feature;
 
 	public void setUp() {
@@ -40,13 +35,11 @@ public class TableFactorTest extends TestCase {
 		v2 = new DiscreteVariable("Two values",
 				Arrays.asList(new String[] {"foo", "bar"}));
 
-		r = new RealVariable(2);
-		
 		h = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {1, 0}),
 				Arrays.asList(new DiscreteVariable[] {v2, v})));
+		
 		f = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 3, 2, 5}),
 				Arrays.asList(new DiscreteVariable[] {v, v, v, v})));
-
 		// NOTE: These insertions are to the variables in SORTED ORDER,
 		// even though the above variables are defined out-of-order.
 		f.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T"}), 1.0);
@@ -55,21 +48,16 @@ public class TableFactorTest extends TestCase {
 
 		g = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}),
 				Arrays.asList(new DiscreteVariable[] {v, v, v})));
-
 		g.setWeightList(Arrays.asList(new String[] {"T", "U", "F"}), 7.0);
 		g.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 11.0);
 		g.setWeightList(Arrays.asList(new String[] {"F", "T", "T"}), 9.0);
 		g.setWeightList(Arrays.asList(new String[] {"T", "U", "T"}), 13.0);
-		
-		realFactor = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
-				Arrays.asList(new Variable[] {r, v})));
 
 		Set<Assignment> testAssignments = new HashSet<Assignment>();
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T", "T"})));
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "F", "F"})));
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "F", "U"})));
 		feature = new IndicatorFeatureFunction(testAssignments);
-
 	}
 
 	public void testVariableOrder() {
@@ -214,23 +202,43 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testProduct() {
-
 		TableFactor t = TableFactor.productFactor(Arrays.asList(new DiscreteFactor[] {f, g}));
-
 		assertEquals(14.0,
 				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "U", "T", "F", "U"})));
-
 		assertEquals(0.0,
 				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "U", "T", "F", "F"})));       
 	}
 
 	public void testProductEmptyFactor() {
 		DiscreteFactor m = f.marginalize(Arrays.asList(new Integer[] {0, 3, 2, 5}));
-
 		TableFactor t = TableFactor.productFactor(Arrays.asList(new DiscreteFactor[] {m, f}));
-
 		assertEquals(18.0,
 				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "F", "T"})));
+	}
+	
+	public void testSumFactor() {
+		DiscreteFactor s = TableFactor.sumFactor(f, g);
+		assertEquals(3.0 + 7.0,
+				s.getUnnormalizedProbability("T", "U", "T", "F", "T"));
+		assertEquals(3.0,
+				s.getUnnormalizedProbability("T", "T", "T", "F", "T"));
+		assertEquals(2.0 + 7.0,
+				s.getUnnormalizedProbability("T", "U", "T", "F", "U"));
+		
+		f = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 2, 3, 5}),
+				Arrays.asList(new DiscreteVariable[] {v, v, v, v})));
+		// NOTE: These insertions are to the variables in SORTED ORDER,
+		// even though the above variables are defined out-of-order.
+		f.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T"}), 1.0);
+		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "T"}), 3.0);
+		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "U"}), 2.0);
+
+		g = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}),
+				Arrays.asList(new DiscreteVariable[] {v, v, v})));
+		g.setWeightList(Arrays.asList(new String[] {"T", "U", "F"}), 7.0);
+		g.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 11.0);
+		g.setWeightList(Arrays.asList(new String[] {"F", "T", "T"}), 9.0);
+		g.setWeightList(Arrays.asList(new String[] {"T", "U", "T"}), 13.0);
 
 	}
 

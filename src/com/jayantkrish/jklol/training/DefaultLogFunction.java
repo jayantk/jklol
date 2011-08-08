@@ -9,7 +9,7 @@ import com.jayantkrish.jklol.util.Assignment;
  */ 
 public class DefaultLogFunction implements LogFunction {
 
-	private int numAssignments;
+	private final int numAssignments;
 
 	public DefaultLogFunction(int numAssignments) {
 		this.numAssignments = numAssignments;

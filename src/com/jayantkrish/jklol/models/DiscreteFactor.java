@@ -154,22 +154,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
 		}
 		return expectedValue / denom;
 	}
-
-	/**
-	 * Get the partition function = denominator = total sum probability of all assignments.
-	 */ 
-	public double getPartitionFunction() {
-		if (partitionFunction != -1.0) {
-			return partitionFunction;
-		}
-
-		partitionFunction = 0.0;
-		Iterator<Assignment> outcomeIterator = outcomeIterator();
-		while (outcomeIterator.hasNext()) {
-			partitionFunction += getUnnormalizedProbability(outcomeIterator.next());
-		}
-		return partitionFunction;
-	}
 	
 	@Override
 	public Factor add(Factor other) {
@@ -177,9 +161,15 @@ public abstract class DiscreteFactor extends AbstractFactor {
 		return TableFactor.sumFactor(this, otherAsDiscrete);
 	}
 	
+	@Override
 	public Factor product(Factor other) {
 		DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
 		return TableFactor.productFactor(this, otherAsDiscrete);
+	}
+	
+	@Override
+	public Factor product(double constant) {
+		return TableFactor.productFactor(this, constant);
 	}
 	
 	@Override
@@ -204,5 +194,21 @@ public abstract class DiscreteFactor extends AbstractFactor {
 	@Override
 	public DiscreteFactor coerceToDiscrete() {
 		return this;
+	}
+	
+	/**
+	 * Get the partition function = denominator = total sum probability of all assignments.
+	 */ 
+	private double getPartitionFunction() {
+		if (partitionFunction != -1.0) {
+			return partitionFunction;
+		}
+
+		partitionFunction = 0.0;
+		Iterator<Assignment> outcomeIterator = outcomeIterator();
+		while (outcomeIterator.hasNext()) {
+			partitionFunction += getUnnormalizedProbability(outcomeIterator.next());
+		}
+		return partitionFunction;
 	}
 }

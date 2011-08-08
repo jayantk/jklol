@@ -128,19 +128,23 @@ public class MixtureFactor extends AbstractFactor {
 		Set<Integer> eliminateSet = Sets.newHashSet(varNumsToEliminate);
 		boolean hasSharedVar = eliminateSet.containsAll(sharedVars
 				.getVariableNums());
-		eliminateSet.remove(sharedVars.getVariableNums());
-
-		List<Factor> maxMarginalizedFactors = Lists.newArrayList();
-		for (int i = 0; i < factors.size(); i++) {
-			maxMarginalizedFactors.add(factors.get(i).maxMarginalize(
-					eliminateSet));
-		}
+		eliminateSet.removeAll(sharedVars.getVariableNums());
 
 		if (hasSharedVar) {
-			Factor sumFactor = maxMarginalizedFactors.get(0).add(
-					maxMarginalizedFactors.subList(1, factors.size()));
+			List<Factor> weightedMaxMarginalizedFactors = Lists.newArrayList();
+			for (int i = 0; i < factors.size(); i++) {
+				weightedMaxMarginalizedFactors.add(factors.get(i).maxMarginalize(
+						eliminateSet).product(weights.get(i)));
+			}
+			Factor sumFactor = weightedMaxMarginalizedFactors.get(0).add(
+					weightedMaxMarginalizedFactors.subList(1, factors.size()));
 			return sumFactor.maxMarginalize(sharedVars.getVariableNums());
 		} else {
+			List<Factor> maxMarginalizedFactors = Lists.newArrayList();
+			for (int i = 0; i < factors.size(); i++) {
+				maxMarginalizedFactors.add(factors.get(i).maxMarginalize(
+						eliminateSet));
+			}
 			return MixtureFactor.create(maxMarginalizedFactors, weights);
 		}
 	}
@@ -168,6 +172,16 @@ public class MixtureFactor extends AbstractFactor {
 		}
 		return MixtureFactor.create(multipliedFactors, weights);
 	}
+	
+	@Override
+	public Factor product(double constant) {
+		Preconditions.checkArgument(constant >= 0.0);
+		List<Double> newWeights = Lists.newArrayList();
+		for (Double weight : weights) {
+			newWeights.add(weight * constant);
+		}
+		return MixtureFactor.create(factors, newWeights);
+	}
 
 	@Override
 	public Assignment sample() {
@@ -184,13 +198,34 @@ public class MixtureFactor extends AbstractFactor {
 		return MixtureFactor.create(conditionedFactors, weights);
 	}
 
+	/**
+	 * @{inheritDoc}
+	 * 
+	 * A {@code MixtureFactor}s can be coerced into {@code DiscreteFactor} if 
+	 * all of the mixed factors contain the same set of variables or contain no variables (i.e.,
+	 * only contribute to the partition function).
+	 */
 	@Override
 	public DiscreteFactor coerceToDiscrete() {
-		List<DiscreteFactor> subFactors = Lists.newArrayList();
-		for (int i = 0; i < factors.size(); i++) {
-			subFactors.add(factors.get(i).coerceToDiscrete());
+		VariableNumMap vars = null;
+		for (Factor factor : factors) {
+			if (vars == null) {
+				vars = factor.getVars();
+			} else if (factor.getVars().size() > 0 && !factor.getVars().equals(vars)) {
+				throw new FactorCoercionError("Cannot coerce " + this + " to DiscreteFactor.");
+			}
 		}
-		return TableFactor.sumFactor(subFactors);
+		
+		List<DiscreteFactor> subFactors = Lists.newArrayList();
+		double partitionFunctionIncrement = 0.0;
+		for (int i = 0; i < factors.size(); i++) {
+			if (factors.get(i).getVars().size() > 0) {
+				subFactors.add(factors.get(i).product(weights.get(i)).coerceToDiscrete());
+			} else {
+				partitionFunctionIncrement += factors.get(i).getPartitionFunction() * weights.get(i);
+			}
+		}
+		return TableFactor.sumFactor(subFactors).incrementPartitionFunction(partitionFunctionIncrement);
 	}
 
 	/**

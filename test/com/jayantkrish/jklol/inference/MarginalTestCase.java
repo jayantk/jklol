@@ -57,7 +57,7 @@ public class MarginalTestCase {
 		
 		for (Map.Entry<Integer[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
 			DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(Arrays.asList(testCase.getKey()));
-			testCase.getValue().runTests(marginal, tolerance);
+			testCase.getValue().runTests(marginal, marginals.getPartitionFunction(), tolerance);
 		}
 
 	}
@@ -76,10 +76,11 @@ public class MarginalTestCase {
 			expectedVars.add(varValues);
 		}
 
-		public void runTests(DiscreteFactor marginal, double tolerance) {
+		public void runTests(DiscreteFactor marginal, double partitionFunction, double tolerance) {
+			System.out.println(marginal + " / " + partitionFunction);
 			for (int i = 0; i < expectedProbs.size(); i++) {
 				double modelProbability = marginal.getUnnormalizedProbability(
-						Arrays.asList(expectedVars.get(i))) / marginal.getPartitionFunction();
+						Arrays.asList(expectedVars.get(i))) / partitionFunction;
 				Assert.assertTrue("Expected: <" + expectedProbs.get(i) + "> Actual: <" 
 						+ modelProbability + "> tolerance " + tolerance,
 						Math.abs(expectedProbs.get(i) - modelProbability) <= tolerance);  

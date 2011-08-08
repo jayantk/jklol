@@ -17,11 +17,13 @@ import com.jayantkrish.jklol.models.Factor;
  */
 public class FactorMarginalSet implements MarginalSet {
 
-	private Multimap<Integer, Factor> variableFactorMap;
-	private boolean useSumProduct;
+	private final Multimap<Integer, Factor> variableFactorMap;
+	private final boolean useSumProduct;
+	private final double partitionFunction;
 	
-	public FactorMarginalSet(List<Factor> factors, boolean useSumProduct) {
+	public FactorMarginalSet(List<Factor> factors, double partitionFunction, boolean useSumProduct) {
 		this.useSumProduct = useSumProduct;
+		this.partitionFunction = partitionFunction;
 		this.variableFactorMap = HashMultimap.create();
 		for (Factor factor : factors) {
 			for (Integer variableNum : factor.getVars().getVariableNums()) {
@@ -59,5 +61,10 @@ public class FactorMarginalSet implements MarginalSet {
 		} else {
 			return marginal.maxMarginalize(allVarNums);
 		}
+	}
+	
+	@Override
+	public double getPartitionFunction() {
+		return partitionFunction;
 	}
 }

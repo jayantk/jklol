@@ -40,4 +40,9 @@ public class SampleMarginalSet implements MarginalSet {
 		}
 		return factor;
 	}
+	
+	@Override
+	public double getPartitionFunction() {
+		return samples.size();
+	}
 }

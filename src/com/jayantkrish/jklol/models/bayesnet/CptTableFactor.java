@@ -57,23 +57,27 @@ public class CptTableFactor extends DiscreteFactor implements CptFactor {
 	// CPT Factor methods
 	/////////////////////////////////////////////////////////////////
 
+	@Override
 	public void clearCpt() {
 		this.cpt.clearOutcomeCounts();
 	}
 
+	@Override
 	public void addUniformSmoothing(double virtualCounts) {
 		cpt.addUniformSmoothing(virtualCounts);
 	}
 
+	@Override
 	public void incrementOutcomeCount(Assignment a, double count) {
 		cpt.incrementOutcomeCount(a.mappedAssignment(cptVarNumMap), count);
 	}
 
-	public void incrementOutcomeCount(Factor marginal, double count) {
+	@Override
+	public void incrementOutcomeCount(Factor marginal, double count, double partitionFunction) {
 		Iterator<Assignment> assignmentIter = outcomeIterator();
 		while (assignmentIter.hasNext()) {
 			Assignment a = assignmentIter.next();
-			incrementOutcomeCount(a, count * marginal.getUnnormalizedProbability(a) / marginal.getPartitionFunction());
+			incrementOutcomeCount(a, count * marginal.getUnnormalizedProbability(a) / partitionFunction);
 		}
 	}
 

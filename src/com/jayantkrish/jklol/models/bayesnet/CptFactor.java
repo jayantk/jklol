@@ -32,6 +32,6 @@ public interface CptFactor extends Factor {
 	 * Update the probability of an assignment by adding count * marginal
 	 * to each assignment represented in marginal.
 	 */ 
-	public abstract void incrementOutcomeCount(Factor marginal, double count);
+	public abstract void incrementOutcomeCount(Factor marginal, double count, double partitionFunction);
 }
 

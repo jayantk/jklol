@@ -84,16 +84,6 @@ public class MixtureFactor extends AbstractFactor {
 	}
 
 	@Override
-	public double getPartitionFunction() {
-		double partitionFunction = 0.0;
-		for (int i = 0; i < factors.size(); i++) {
-			partitionFunction += weights.get(i)
-					* factors.get(i).getPartitionFunction();
-		}
-		return partitionFunction;
-	}
-
-	@Override
 	public double getUnnormalizedProbability(Assignment assignment) {
 		Preconditions.checkNotNull(assignment);
 		Preconditions.checkArgument(assignment.containsVars(getVars()
@@ -217,15 +207,12 @@ public class MixtureFactor extends AbstractFactor {
 		}
 		
 		List<DiscreteFactor> subFactors = Lists.newArrayList();
-		double partitionFunctionIncrement = 0.0;
 		for (int i = 0; i < factors.size(); i++) {
 			if (factors.get(i).getVars().size() > 0) {
 				subFactors.add(factors.get(i).product(weights.get(i)).coerceToDiscrete());
-			} else {
-				partitionFunctionIncrement += factors.get(i).getPartitionFunction() * weights.get(i);
 			}
 		}
-		return TableFactor.sumFactor(subFactors).incrementPartitionFunction(partitionFunctionIncrement);
+		return TableFactor.sumFactor(subFactors);
 	}
 
 	/**

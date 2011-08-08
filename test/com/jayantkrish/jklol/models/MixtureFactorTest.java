@@ -105,7 +105,8 @@ public class MixtureFactorTest extends TestCase {
 	}
 	
 	public void testGetPartitionFunction() {
-		assertEquals(EXPECTED_PARTITION_FUNCTION, m.getPartitionFunction());
+		assertEquals(EXPECTED_PARTITION_FUNCTION, 
+				m.marginalize(m.getVars().getVariableNums()).getUnnormalizedProbability(Assignment.EMPTY));
 	}
 		
 	public void testMarginalizeInvalid1() {
@@ -133,7 +134,8 @@ public class MixtureFactorTest extends TestCase {
 		assertEquals(2.0 * 15.0,
 				marginal.getUnnormalizedProbability("T"));
 		
-		assertEquals(EXPECTED_PARTITION_FUNCTION, marginal.getPartitionFunction());
+		assertEquals(EXPECTED_PARTITION_FUNCTION, 
+				marginal.marginalize(marginal.getVars().getVariableNums()).getUnnormalizedProbability(Assignment.EMPTY));
 	}
 	
 	public void testMarginalize2() {
@@ -143,7 +145,8 @@ public class MixtureFactorTest extends TestCase {
 		assertEquals(3.0 + 2.0 * 11.0 + 3.0 * 10.0,
 				marginal.getUnnormalizedProbability("F"));
 		
-		assertEquals(EXPECTED_PARTITION_FUNCTION, marginal.getPartitionFunction());
+		assertEquals(EXPECTED_PARTITION_FUNCTION, 
+				marginal.marginalize(marginal.getVars().getVariableNums()).getUnnormalizedProbability(Assignment.EMPTY));
 	}
 	
 	public void testMaxMarginalize1() {
@@ -244,7 +247,5 @@ public class MixtureFactorTest extends TestCase {
 				Arrays.asList(new String[] {"T", "F", "F", "F", "F"})));
 		assertEquals(2.0 + 2.0 * 6.0 + 3.0 * 4.0, 
 				discreteFactor.getUnnormalizedProbability("F", "T", "T", "F", "T"));
-		
-		assertEquals(EXPECTED_PARTITION_FUNCTION, discreteFactor.getPartitionFunction());
 	}
 }

@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.models;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -217,29 +219,16 @@ public class TableFactorTest extends TestCase {
 	}
 	
 	public void testSumFactor() {
-		DiscreteFactor s = TableFactor.sumFactor(f, g);
-		assertEquals(3.0 + 7.0,
-				s.getUnnormalizedProbability("T", "U", "T", "F", "T"));
-		assertEquals(3.0,
-				s.getUnnormalizedProbability("T", "T", "T", "F", "T"));
-		assertEquals(2.0 + 7.0,
-				s.getUnnormalizedProbability("T", "U", "T", "F", "U"));
-		
-		f = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 2, 3, 5}),
-				Arrays.asList(new DiscreteVariable[] {v, v, v, v})));
-		// NOTE: These insertions are to the variables in SORTED ORDER,
-		// even though the above variables are defined out-of-order.
-		f.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T"}), 1.0);
-		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "T"}), 3.0);
-		f.setWeightList(Arrays.asList(new String[] {"T", "T", "F", "U"}), 2.0);
-
-		g = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}),
-				Arrays.asList(new DiscreteVariable[] {v, v, v})));
-		g.setWeightList(Arrays.asList(new String[] {"T", "U", "F"}), 7.0);
-		g.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 11.0);
-		g.setWeightList(Arrays.asList(new String[] {"F", "T", "T"}), 9.0);
-		g.setWeightList(Arrays.asList(new String[] {"T", "U", "T"}), 13.0);
-
+		DiscreteFactor s = TableFactor.sumFactor(f.marginalize(2, 5).coerceToDiscrete(), 
+		    g.marginalize(1).coerceToDiscrete());
+		assertEquals(1.0 + 13.0,
+				s.getUnnormalizedProbability("T", "T"));
+		assertEquals(5.0 + 18.0,
+            s.getUnnormalizedProbability("T", "F"));
+		assertEquals(0.0 + 9.0,
+            s.getUnnormalizedProbability("F", "T"));
+		assertEquals(0.0 + 0.0,
+            s.getUnnormalizedProbability("F", "F"));
 	}
 
 	public void testComputeExpectation() {

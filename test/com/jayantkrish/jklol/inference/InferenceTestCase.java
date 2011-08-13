@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.inference;
+
 import java.util.Arrays;
 
 import com.jayantkrish.jklol.models.DiscreteVariable;

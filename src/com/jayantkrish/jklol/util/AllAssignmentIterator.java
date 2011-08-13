@@ -48,7 +48,7 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 		}
 		// Set the last index to one higher than the actual number of values; when we increment
 		// currentValues to this point, we will be done.
-		finalValueInds.set(vars.size() - 1, finalValueInds.get(vars.size() - 1) + 1);    	
+		finalValueInds.set(vars.size() - 1, finalValueInds.get(vars.size() - 1) + 1);
 	}
 
 	public boolean hasNext() {

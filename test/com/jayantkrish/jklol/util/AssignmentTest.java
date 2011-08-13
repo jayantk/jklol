@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.util;
+
 import java.util.Arrays;
 
 import junit.framework.TestCase;

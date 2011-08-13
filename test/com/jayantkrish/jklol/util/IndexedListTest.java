@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.util;
+
 import com.jayantkrish.jklol.util.IndexedList;
 import junit.framework.*;
 

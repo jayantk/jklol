@@ -143,7 +143,6 @@ public class ParseChart {
 		}
 	}
 
-
 	/**
 	 * Update an entry of the outside chart with a new production. Depending on the type of the
 	 * chart, this performs either a sum or max over productions of the same type in the same entry.

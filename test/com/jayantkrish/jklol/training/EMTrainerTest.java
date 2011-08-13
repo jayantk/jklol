@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.training;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,8 +16,6 @@ import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
 import com.jayantkrish.jklol.models.bayesnet.Cpt;
 import com.jayantkrish.jklol.models.bayesnet.CptFactor;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
-import com.jayantkrish.jklol.training.IncrementalEMTrainer;
-import com.jayantkrish.jklol.training.StepwiseEMTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class EMTrainerTest extends TestCase {
@@ -49,12 +49,12 @@ public class EMTrainerTest extends TestCase {
 		builder.addDiscreteVariable("Var1", tfVar);
 		builder.addDiscreteVariable("Var2", tfVar);
 
-		CptTableFactor f0 = builder.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var0"}));
-		CptTableFactor f1 = builder.addCptFactor(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var1"}));
+		CptTableFactor f0 = builder.addCptFactor(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var0"}));
+		CptTableFactor f1 = builder.addCptFactor(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var1"}));
 		CptTableFactor f2 = builder.addCptFactor(Arrays.asList(new String[] {"Var0", "Var1"}), 
 				Arrays.asList(new String[] {"Var2"}));
 
-		actualNoNodeCpt = new Cpt(Collections.EMPTY_LIST, Arrays.asList(new DiscreteVariable[] {tfVar}));
+		actualNoNodeCpt = new Cpt(Collections.<DiscreteVariable>emptyList(), Arrays.asList(new DiscreteVariable[] {tfVar}));
 		actualVCpt = new Cpt(Arrays.asList(new DiscreteVariable[] {tfVar, tfVar}), Arrays.asList(new DiscreteVariable[] {tfVar}));
 
 		Map<Integer, Integer> nodeCptMap0 = new HashMap<Integer, Integer>();

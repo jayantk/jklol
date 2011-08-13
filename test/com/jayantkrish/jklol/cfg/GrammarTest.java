@@ -1,7 +1,9 @@
-import com.jayantkrish.jklol.cfg.*;
+package com.jayantkrish.jklol.cfg;
 
-import java.util.*;
-import junit.framework.*;
+import java.util.Arrays;
+import java.util.Set;
+
+import junit.framework.TestCase;
 
 public class GrammarTest extends TestCase {
 

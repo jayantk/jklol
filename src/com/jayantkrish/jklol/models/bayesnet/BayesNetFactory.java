@@ -5,7 +5,7 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 
 /**
- * A BayesNetFactory dynamically constructs Bayes Nets
+ * Dynamically constructs {@link BayesNet}s from training examples.
  */
 public interface BayesNetFactory<E> extends FactorGraphFactory<BayesNet, E> {
 

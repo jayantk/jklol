@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.util;
+
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -7,7 +9,11 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.SparseOutcomeTable;
 
-
+/**
+ * Performance tests for {@link SparseOutcomeTable}.
+ * 
+ * @author jayant
+ */
 public class SparseOutcomeTablePerformanceTest extends TestCase {
 
 	SparseOutcomeTable<Double> table;

@@ -1,8 +1,10 @@
-import com.jayantkrish.jklol.cfg.*;
+package com.jayantkrish.jklol.cfg;
 
-import junit.framework.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
-import java.util.*;
+import junit.framework.TestCase;
 
 public class CfgParserTest extends TestCase {
 

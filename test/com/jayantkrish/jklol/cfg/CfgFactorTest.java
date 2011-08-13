@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.cfg;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -5,12 +7,6 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.cfg.BinaryProduction;
-import com.jayantkrish.jklol.cfg.CfgFactor;
-import com.jayantkrish.jklol.cfg.CptTableProductionDistribution;
-import com.jayantkrish.jklol.cfg.Grammar;
-import com.jayantkrish.jklol.cfg.Production;
-import com.jayantkrish.jklol.cfg.TerminalProduction;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.bayesnet.BayesNet;
@@ -75,7 +71,7 @@ public class CfgFactorTest extends TestCase {
 		builder.addDiscreteVariable("Var1", prodVar);
 		builder.addDiscreteVariable("Var2", otherVar);
 
-		CptTableFactor f0 = builder.addCptFactorWithNewCpt(Collections.EMPTY_LIST, Arrays.asList(new String[] {"Var1"}));
+		CptTableFactor f0 = builder.addCptFactorWithNewCpt(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var1"}));
 		CptTableFactor f1 = builder.addCptFactorWithNewCpt(Arrays.asList(new String[] {"Var1"}), 
 				Arrays.asList(new String[] {"Var2"}));
 		cfgFactor = builder.addCfgCptFactor("Var1", "Var0", g, new CptTableProductionDistribution(g));

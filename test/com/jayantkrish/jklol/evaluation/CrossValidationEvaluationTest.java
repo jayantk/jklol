@@ -1,11 +1,10 @@
+package com.jayantkrish.jklol.evaluation;
+
 import java.util.List;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.evaluation.Baselines;
-import com.jayantkrish.jklol.evaluation.CrossValidationEvaluation;
-import com.jayantkrish.jklol.evaluation.LossFunctions;
 import com.jayantkrish.jklol.evaluation.LossFunctions.Accuracy;
 import com.jayantkrish.jklol.util.Pair;
 

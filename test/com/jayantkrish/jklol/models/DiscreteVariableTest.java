@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.models;
+
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 

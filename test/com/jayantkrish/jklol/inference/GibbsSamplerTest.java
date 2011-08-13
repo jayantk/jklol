@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.inference;
+
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.inference.GibbsSampler;

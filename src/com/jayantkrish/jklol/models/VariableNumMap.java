@@ -320,11 +320,22 @@ public class VariableNumMap {
 	public Assignment outcomeToAssignment(Object[] outcome) {
 		return outcomeToAssignment(Arrays.asList(outcome));
 	}
+	
+	@Override
+	public String toString() {
+	  return varMap.keySet().toString();
+	}
+	
+	@Override
+	public int hashCode() {
+	  return varMap.hashCode(); 
+	}
 
 	/**
 	 * VariableNumMaps are equal if they contain exactly the same variable
 	 * number -> variable mappings.
 	 */
+	@Override
 	public boolean equals(Object o) {
 		return o instanceof VariableNumMap
 				&& varMap.equals(((VariableNumMap) o).varMap);

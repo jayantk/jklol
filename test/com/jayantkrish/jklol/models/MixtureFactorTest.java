@@ -1,3 +1,5 @@
+package com.jayantkrish.jklol.models;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -152,14 +154,14 @@ public class MixtureFactorTest extends TestCase {
 	
 	public void testMaxMarginalize1() {
 		Factor marginal = m.maxMarginalize(Arrays.asList(new Integer[] {0, 2, 3, 4}));
-		assertEquals(32.0, marginal.getUnnormalizedProbability("T"));
-		assertEquals(31.0, marginal.getUnnormalizedProbability("F"));
+		assertEquals(4.0, marginal.getUnnormalizedProbability("T"));
+		assertEquals(3.0, marginal.getUnnormalizedProbability("F"));
 	}
 	
 	public void testMaxMarginalize2() {
 		Factor marginal = m.maxMarginalize(Arrays.asList(new Integer[] {1, 2, 3, 4}));
-		assertEquals(23.0, marginal.getUnnormalizedProbability("T"));
-		assertEquals(32.0, marginal.getUnnormalizedProbability("F"));
+		assertEquals(10.0, marginal.getUnnormalizedProbability("T"));
+		assertEquals(18.0, marginal.getUnnormalizedProbability("F"));
 	}
 	
 	public void testProduct1() {

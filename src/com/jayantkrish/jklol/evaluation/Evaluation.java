@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.evaluation;
 
-import java.util.List;
-
 /**
  * An Evaluation is a technique for computing the loss of a predictor.
  *
@@ -11,22 +9,9 @@ import java.util.List;
 public interface Evaluation<I, O> {
 
     /**
-     * Evaluate a particular learning algorithm on a set of loss functions.
-     * The losses are accumulated within the lossFunctions and can be retrieved
-     * by examining them.
+     * Evaluate a particular prediction on a set of loss metrics. The result is a list of average
+     * losses, in the same order as the loss functions.
      */
-    public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, 
-    		List<LossFunction<I, O>> lossFunctions);
-    
-    /**
-     * {@see evaluateLoss}
-     */
-    public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, 
-    		LossFunction<I, O> ... lossFunctions);
-    
-    /**
-     * {@see evaluateLoss}
-     */
-    public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, 
-    		LossFunction<I, O> lossFunction);
+    public List<Double> evaluateLoss(PredictorTrainer<I, O> predictorTrainer, List<LossFunction<O>> lossFunctions);
+
 }

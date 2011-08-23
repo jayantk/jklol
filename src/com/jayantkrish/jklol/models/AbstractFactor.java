@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
 
+
+
 /**
  * AbstractFactor provides a partial implementation of Factor.
  * @author jayant

@@ -1,5 +1,6 @@
 import java.util.Arrays;
 
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -57,16 +58,16 @@ public class InferenceTestCase {
 
 	public static MarginalTestCase testFactorGraph1Marginals1() {
 		MarginalTestCase test1 = new MarginalTestCase(new Integer[] {1}, Assignment.EMPTY, false);
-		test1.addTest(27.0 / 43.0, "foo");
-		test1.addTest(16.0 / 43.0, "bar");
+		test1.addTest(27.0, "foo");
+		test1.addTest(16.0, "bar");
 		return test1;
 	}
 
 	public static MarginalTestCase testFactorGraph1Marginals2() { 
 		MarginalTestCase test2 = new MarginalTestCase(new Integer[] {0,2}, Assignment.EMPTY, false);	
-		test2.addTest(25.0 / 43.0, "T", "T");
-		test2.addTest(6.0 / 43.0, "T", "F");
-		test2.addTest(12.0 / 43.0, "U", "F");
+		test2.addTest(25.0, "T", "T");
+		test2.addTest(6.0, "T", "F");
+		test2.addTest(12.0, "U", "F");
 		test2.addTest(0.0, "U", "U");
 		return test2;
 	}
@@ -104,8 +105,8 @@ public class InferenceTestCase {
 
 	public static MarginalTestCase testFactorGraph2Marginals2() {
 		MarginalTestCase test1 = new MarginalTestCase(new Integer[] {0}, Assignment.EMPTY, false);
-		test1.addTest(28.0 / 60.0, "T");
-		test1.addTest(32.0 / 60.0, "F");
+		test1.addTest(28.0, "T");
+		test1.addTest(32.0, "F");
 		return test1;
 	}
 }

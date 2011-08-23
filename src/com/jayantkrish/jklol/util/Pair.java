@@ -32,9 +32,5 @@ public class Pair<L, R> {
 		}
 		return false;
 	}
-	
-	public String toString() {
-		return "<" + getLeft() + ", " + getRight() + ">"; 
-	}
 }
 

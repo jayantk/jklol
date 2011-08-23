@@ -62,10 +62,6 @@ public class Assignment {
 	public boolean containsVar(int varNum) {
 		return varValueMap.containsKey(varNum);
 	}
-	
-	public int size() {
-		return varValueMap.size();
-	}
 
 	// TODO(jayantk): Delete the shit out of this method!!
 	/*

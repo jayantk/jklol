@@ -1,9 +1,6 @@
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -11,7 +8,6 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCpt;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * A test of SparseCpts and their interactions with CptTableFactors.
@@ -67,14 +63,13 @@ public class SparseCptTest extends TestCase {
 			return;
 		}
 		fail("Expected RuntimeException");
-	}
 
     public void testIteration() {
 	Iterator<Assignment> iter = f.outcomeIterator();
 
 	Set<Assignment> shouldBeInIter = new HashSet<Assignment>();
 	for (int i = 0; i < assignments.length; i++) {
-	    shouldBeInIter.add(f.getVars().outcomeToAssignment(assignments[i]));
+	    shouldBeInIter.add(f.outcomeToAssignment(assignments[i]));
 	}
 	
 	while (iter.hasNext()) {

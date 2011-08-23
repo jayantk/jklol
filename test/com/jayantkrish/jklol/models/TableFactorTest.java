@@ -237,7 +237,7 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testMostLikelyAssignments() {
-		List<Assignment> likely = g.mostLikelyAssignments(2);
+		List<Assignment> likely = g.getMostLikelyAssignments(2);
 
 		assertEquals(2, likely.size());
 		assertEquals(13.0, 

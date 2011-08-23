@@ -23,7 +23,7 @@ import com.jayantkrish.jklol.util.HashMultimap;
  * distributions. Currently assumes that the provided factor graph already has a
  * tree structure, and will explode if this is not true.
  */
-public class JunctionTree extends AbstractInferenceEngine {
+public class JunctionTree extends AbstractMarginalCalculator {
 
   // Cache of factors representing marginal distributions of the
   // variables.
@@ -51,21 +51,21 @@ public class JunctionTree extends AbstractInferenceEngine {
     cachedMarginals.clear();
 
     cliqueTree.setEvidence(assignment);
-    double partitionFunction = runMessagePassing(true);
-    return cliqueTreeToMarginalSet(cliqueTree, partitionFunction, true);
+    int rootFactorNum = runMessagePassing(true);
+    return cliqueTreeToMarginalSet(cliqueTree, rootFactorNum, true);
   }
 
   @Override
-  public MarginalSet computeMaxMarginals(Assignment assignment) {
+  public MaxMarginalSet computeMaxMarginals(Assignment assignment) {
     cliqueTree.clear();
     cachedMarginals.clear();
 
     cliqueTree.setEvidence(assignment);
-    double partitionFunction = runMessagePassing(false);
-    return cliqueTreeToMarginalSet(cliqueTree, partitionFunction, false);
+    int rootFactorNum = runMessagePassing(false);
+    return cliqueTreeToMaxMarginalSet(cliqueTree, rootFactorNum);
   }
 
-  private double runMessagePassing(boolean useSumProduct) {
+  private int runMessagePassing(boolean useSumProduct) {
     // This performs both passes of message passing.
     boolean keepGoing = true;
     int lastFactorNum = 0;
@@ -94,14 +94,7 @@ public class JunctionTree extends AbstractInferenceEngine {
         }
       }
     }
-
-    // Get the partition function from the last eliminated node.
-    // TODO(jayantk): More configurable options for choosing the root
-    // factor.
-    Factor rootFactor = computeMarginal(cliqueTree, lastFactorNum, useSumProduct);
-    double partitionFunction = rootFactor.marginalize(rootFactor.getVars().getVariableNums())
-        .getUnnormalizedProbability(Assignment.EMPTY);
-
+    
     return partitionFunction;
   }
 
@@ -156,12 +149,36 @@ public class JunctionTree extends AbstractInferenceEngine {
   }
 
   private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree,
-      double partitionFunction, boolean useSumProduct) {
+      int rootFactorNum, boolean useSumProduct) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
       marginalFactors.add(computeMarginal(cliqueTree, i, useSumProduct));
     }
+    
+    // Get the partition function from the last eliminated node.
+    // TODO(jayantk): More configurable options for choosing the root
+    // factor.
+    Factor rootFactor = computeMarginal(cliqueTree, rootFactorNum, useSumProduct);
+    double partitionFunction = rootFactor.marginalize(rootFactor.getVars().getVariableNums())
+        .getUnnormalizedProbability(Assignment.EMPTY);
+    
     return new FactorMarginalSet(marginalFactors, partitionFunction, useSumProduct);
+  }
+  
+  private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree,
+      int rootFactorNum) {
+    
+    Assignment bestAssignment = getBestAssignmentGiven(rootFactorNum, Assignment.EMPTY);
+  }
+  
+  private Assignment getBestAssignmentGiven(int factorNum, Assignment a) {
+    Factor curFactor = cliqueTree.getFactor(factorNum);
+    Assignment best = curFactor.conditional(a).getMostLikelyAssignments(1).get(0);
+
+    for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(factorNum)) {
+      best = best.jointAssignment(getBestAssignmentGiven(adjacentFactorNum, best));
+    }
+    return best;
   }
 
   private class CliqueTree {

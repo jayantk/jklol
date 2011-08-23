@@ -8,7 +8,7 @@ import junit.framework.Assert;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.inference.InferenceEngine;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -47,7 +47,7 @@ public class MarginalTestCase {
 		variableMarginalTests.get(variableNums).addTest(expectedProb, varValues);
 	}
 	
-	public void runTest(InferenceEngine inference, double tolerance) {
+	public void runTest(MarginalCalculator inference, double tolerance) {
 		inference.setFactorGraph(factorGraph);
 
 		MarginalSet marginals = null;

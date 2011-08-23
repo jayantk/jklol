@@ -3,7 +3,7 @@ package com.jayantkrish.jklol.training;
 import java.util.Collections;
 import java.util.List;
 
-import com.jayantkrish.jklol.inference.InferenceEngine;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.bayesnet.BayesNet;
@@ -16,12 +16,12 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class IncrementalEMTrainer {
 
-	private InferenceEngine inferenceEngine;
+	private MarginalCalculator inferenceEngine;
 	private int numIterations;
 	private double smoothing;
 	private LogFunction log;
 
-	public IncrementalEMTrainer(int numIterations, double smoothing, InferenceEngine inferenceEngine) {
+	public IncrementalEMTrainer(int numIterations, double smoothing, MarginalCalculator inferenceEngine) {
 		this.smoothing = smoothing;
 		this.numIterations = numIterations;
 		this.inferenceEngine = inferenceEngine;
@@ -29,7 +29,7 @@ public class IncrementalEMTrainer {
 	}
 
 	public IncrementalEMTrainer(int numIterations, double smoothing, 
-			InferenceEngine inferenceEngine, LogFunction log) {
+			MarginalCalculator inferenceEngine, LogFunction log) {
 		this.smoothing = smoothing;
 		this.numIterations = numIterations;
 		this.inferenceEngine = inferenceEngine;

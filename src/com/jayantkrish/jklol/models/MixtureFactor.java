@@ -222,6 +222,11 @@ public class MixtureFactor extends AbstractFactor {
   public Assignment sample() {
     throw new UnsupportedOperationException("Cannot sample from a MixtureFactor.");
   }
+  
+  @Override
+  public List<Assignment> getMostLikelyAssignments(int numAssignments) {
+    
+  }
 
   @Override
   public Factor conditional(Assignment a) {

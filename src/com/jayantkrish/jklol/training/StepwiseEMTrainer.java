@@ -3,7 +3,7 @@ package com.jayantkrish.jklol.training;
 import java.util.Collections;
 import java.util.List;
 
-import com.jayantkrish.jklol.inference.InferenceEngine;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.bayesnet.BayesNet;
@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class StepwiseEMTrainer {
 
-	private InferenceEngine inferenceEngine;
+	private MarginalCalculator inferenceEngine;
 	private int batchSize;
 	private int numIterations;
 	private double smoothing;
@@ -30,7 +30,7 @@ public class StepwiseEMTrainer {
 	 * decayRate <= 1. Smaller decayRates cause old statistics to be forgotten faster.
 	 */
 	public StepwiseEMTrainer(int numIterations, int batchSize, double smoothing, 
-			double decayRate, InferenceEngine inferenceEngine) {
+			double decayRate, MarginalCalculator inferenceEngine) {
 		assert 0.5 < decayRate;
 		assert decayRate <= 1.0;
 
@@ -45,7 +45,7 @@ public class StepwiseEMTrainer {
 	}
 
 	public StepwiseEMTrainer(int numIterations, int batchSize, double smoothing, 
-			double decayRate, InferenceEngine inferenceEngine, LogFunction log) {
+			double decayRate, MarginalCalculator inferenceEngine, LogFunction log) {
 		assert 0.5 < decayRate;
 		assert decayRate <= 1.0;
 

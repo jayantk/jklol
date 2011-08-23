@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.jayantkrish.jklol.inference.InferenceEngine;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
@@ -18,13 +18,13 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class StochasticGradientTrainer {
 
-	private InferenceEngine inferenceEngine;
+	private MarginalCalculator inferenceEngine;
 	private int numIterations;
 
 	// Cache gradient map so we don't continuously reallocate memory for it.
 	private Map<FeatureFunction, Double> gradient;
 
-	public StochasticGradientTrainer(InferenceEngine inferenceEngine, int numIterations) {
+	public StochasticGradientTrainer(MarginalCalculator inferenceEngine, int numIterations) {
 		this.inferenceEngine = inferenceEngine;
 		this.numIterations = numIterations;
 		gradient = new HashMap<FeatureFunction, Double>();

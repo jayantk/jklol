@@ -90,30 +90,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     return assignments;
   }
 
-  /**
-   * Get most likely assignments.
-   */
-  public List<Assignment> mostLikelyAssignments(int numAssignments) {
-    Iterator<Assignment> iter = outcomeIterator();
-    PriorityQueue<Pair<Double, Assignment>> pq = new PriorityQueue<Pair<Double, Assignment>>(
-        numAssignments, new PairComparator<Double, Assignment>());
-
-    while (iter.hasNext()) {
-      Assignment a = iter.next();
-      pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), new Assignment(a)));
-      if (pq.size() > numAssignments) {
-        pq.poll();
-      }
-    }
-
-    List<Assignment> mostLikely = new ArrayList<Assignment>();
-    while (pq.size() > 0) {
-      mostLikely.add(pq.poll().getRight());
-    }
-    Collections.reverse(mostLikely);
-    return mostLikely;
-  }
-
   // /////////////////////////////////////////////////////////////////////////////////
   // Methods for performing inference = methods from Factor
   // /////////////////////////////////////////////////////////////////////////////////
@@ -224,6 +200,28 @@ public abstract class DiscreteFactor extends AbstractFactor {
           + sumProb);
     }
     return a;
+  }
+  
+  @Override
+  public List<Assignment> getMostLikelyAssignments(int numAssignments) {
+    Iterator<Assignment> iter = outcomeIterator();
+    PriorityQueue<Pair<Double, Assignment>> pq = new PriorityQueue<Pair<Double, Assignment>>(
+        numAssignments, new PairComparator<Double, Assignment>());
+
+    while (iter.hasNext()) {
+      Assignment a = iter.next();
+      pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), new Assignment(a)));
+      if (pq.size() > numAssignments) {
+        pq.poll();
+      }
+    }
+
+    List<Assignment> mostLikely = new ArrayList<Assignment>();
+    while (pq.size() > 0) {
+      mostLikely.add(pq.poll().getRight());
+    }
+    Collections.reverse(mostLikely);
+    return mostLikely;
   }
   
   @Override

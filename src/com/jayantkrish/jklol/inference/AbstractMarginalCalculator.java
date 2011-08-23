@@ -2,7 +2,7 @@ package com.jayantkrish.jklol.inference;
 
 import com.jayantkrish.jklol.util.Assignment;
 
-public abstract class AbstractInferenceEngine implements InferenceEngine {
+public abstract class AbstractMarginalCalculator implements MarginalCalculator {
 
 	@Override
 	public MarginalSet computeMarginals() {
@@ -10,7 +10,7 @@ public abstract class AbstractInferenceEngine implements InferenceEngine {
 	}
 	
 	@Override
-	public MarginalSet computeMaxMarginals() {
+	public MaxMarginalSet computeMaxMarginals() {
 		return computeMaxMarginals(Assignment.EMPTY);
 	}
 }

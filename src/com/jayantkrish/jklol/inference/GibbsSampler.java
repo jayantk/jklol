@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * Does not work on FactorGraphs with 0 probability outcomes! 
  */
-public class GibbsSampler extends AbstractInferenceEngine {
+public class GibbsSampler extends AbstractMarginalCalculator {
 
 	private FactorGraph factorGraph;
 
@@ -65,7 +65,7 @@ public class GibbsSampler extends AbstractInferenceEngine {
 	 * GibbsSampler cannot compute max marginals. Throws a runtime exception if called.
 	 */
 	@Override
-	public MarginalSet computeMaxMarginals(Assignment assignment) {
+	public MaxMarginalSet computeMaxMarginals(Assignment assignment) {
 		throw new UnsupportedOperationException("Max marginals are not supported by Gibbs sampling");
 	}
 

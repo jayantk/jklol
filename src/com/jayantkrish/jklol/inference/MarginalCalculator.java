@@ -4,10 +4,10 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * An InferenceEngine is an algorithm for computing marginal distributions
+ * An MarginalCalculator is an algorithm for computing marginal distributions
  * of a factor graph.
  */
-public interface InferenceEngine {
+public interface MarginalCalculator {
 
 	/**
 	 * Give the inference engine a factor graph to perform inference on.
@@ -28,11 +28,11 @@ public interface InferenceEngine {
 	/**
 	 * Compute unconditional max marginals.
 	 */
-	public MarginalSet computeMaxMarginals();
+	public MaxMarginalSet computeMaxMarginals();
 
 	/**
 	 * Compute max marginals conditioned on the provided assignment.
 	 */
-	public MarginalSet computeMaxMarginals(Assignment assignment);
+	public MaxMarginalSet computeMaxMarginals(Assignment assignment);
 
 }

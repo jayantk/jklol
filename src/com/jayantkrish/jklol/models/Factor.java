@@ -16,7 +16,6 @@ import com.jayantkrish.jklol.util.Assignment;
  * as multiplication, marginalization and sampling. These operations do not
  * modify this factor. The main use of {@code Factor}s is as components of
  * {@link FactorGraph}s to represent graphical models.
- * 
  * <p>
  * For computational or mathematical tractability, the mathematical operations
  * on {@code Factor}s may only be partially supported. For example, the
@@ -27,7 +26,6 @@ import com.jayantkrish.jklol.util.Assignment;
  * clearly documented when they exist.
  * 
  * @author jayant
- * 
  */
 public interface Factor {
 
@@ -134,7 +132,7 @@ public interface Factor {
   // TODO(jayant): Update the signature of maxMarginalize to this version in
   // the future. This
   // version essentially performs a beam search for the max marginal.
-  // public Factor<T> maxMarginalize(Collection<Integer> varNumsToEliminate,
+  // public Factor maxMarginalize(Collection<Integer> varNumsToEliminate,
   // int beamSize);
 
   /**
@@ -142,7 +140,6 @@ public interface Factor {
    * an assignment in the returned {@code Factor} is the sum of the densities
    * assigned by the added factors. {@code other} must contain the same
    * variables as this factor.
-   * 
    * <p>
    * This operation is optional and extremely likely to be unsupported. Use
    * sparingly.
@@ -161,7 +158,6 @@ public interface Factor {
    * an assignment in the returned {@code Factor} is the maximum of the
    * densities assigned by {@code this} and {@code other}. {@code other} must
    * contain the same variables as this factor.
-   * 
    * <p>
    * This operation is optional and extremely likely to be unsupported. Use
    * sparingly.
@@ -182,7 +178,6 @@ public interface Factor {
    * probability of an assignment in the returned factor is equal to the
    * products of the probabilities of the assignment in {@code this} and {@code
    * other}.
-   * 
    * <p>
    * Not all subsets are necessarily supported.
    */
@@ -207,14 +202,26 @@ public interface Factor {
   public Factor product(double constant);
 
   /**
-   * Sample a random assignment to the variables in this factor according to
+   * Samples a random assignment to the variables in this factor according to
    * this factor's probability distribution.
    */
   public Assignment sample();
 
   /**
-   * Compute the expected value of a feature function (defined over the same set
-   * of variables as this factor).
+   * Gets the {@code numAssignments} most probable assignments for this {@code
+   * Factor}. Not all {@code Factor}s support retrieving more than one likely
+   * {@code Assignment}, but all factors support retrieving one assignment. For
+   * example, factors with continuous probability distributions only support
+   * retrieving a single maximum probability assignment.
+   * 
+   * @param numAssignments
+   * @return
+   */
+  public List<Assignment> getMostLikelyAssignments(int numAssignments);
+
+  /**
+   * Computes the expected value of a feature function (defined over the same
+   * set of variables as this factor).
    */
   public double computeExpectation(FeatureFunction feature);
 

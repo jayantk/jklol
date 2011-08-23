@@ -16,10 +16,10 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  *
  */
-public class StructuredVariationalInference implements InferenceEngine {
+public class StructuredVariationalInference implements MarginalCalculator {
 
 	private FactorGraph factorGraph;
-	private InferenceEngine baseEngine;
+	private MarginalCalculator baseEngine;
 	private Function<FactorGraph, List<StructuredComponent>> simpleModelConstructor;
 
 	private List<StructuredComponent> structuredComponents;

@@ -1,6 +1,6 @@
 package com.jayantkrish.jklol.evaluation;
 
-import com.jayantkrish.jklol.util.Pair;
+import java.util.List;
 
 /**
  * A predictor wraps a prediction algorithm that can be used to predict

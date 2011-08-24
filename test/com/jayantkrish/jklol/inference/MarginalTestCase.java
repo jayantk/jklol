@@ -16,14 +16,13 @@ import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * A MarginalTestCase tests several marginal probabilities. 
- * @author jayant
  *
+ * @author jayant
  */
 public class MarginalTestCase {
 
 	private FactorGraph factorGraph;
 	private Assignment condition;
-	private boolean maxMarginal;
 	
 	private Map<Integer[], MarginalTest> variableMarginalTests;
 	
@@ -32,11 +31,10 @@ public class MarginalTestCase {
 	 * The marginal is conditioned on the provided assignment, and maxMarginal determines
 	 * whether the marginals are max marginals. 
 	 */
-	public MarginalTestCase(FactorGraph factorGraph, Assignment condition, boolean maxMarginal) {
+	public MarginalTestCase(FactorGraph factorGraph, Assignment condition) {
 		this.factorGraph = factorGraph;
 		this.condition = condition;
-		this.maxMarginal = maxMarginal;
-		
+
 		variableMarginalTests = Maps.newHashMap();
 	}
 
@@ -49,19 +47,12 @@ public class MarginalTestCase {
 	
 	public void runTest(MarginalCalculator inference, double tolerance) {
 		inference.setFactorGraph(factorGraph);
-
-		MarginalSet marginals = null;
-		if (maxMarginal) {
-			marginals = inference.computeMaxMarginals(condition);
-		} else {
-			marginals = inference.computeMarginals(condition);
-		}
+		MarginalSet marginals = inference.computeMarginals(condition);
 		
 		for (Map.Entry<Integer[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
 			DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(Arrays.asList(testCase.getKey()));
 			testCase.getValue().runTests(marginal, marginals.getPartitionFunction(), tolerance);
 		}
-
 	}
 		
 	private static class MarginalTest {

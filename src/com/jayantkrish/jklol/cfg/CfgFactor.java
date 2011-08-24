@@ -12,6 +12,7 @@ import java.util.Map;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.FactorUtils;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptFactor;
@@ -202,16 +203,17 @@ public class CfgFactor extends DiscreteFactor implements CptFactor {
 		 */
 	}
 
-	public DiscreteFactor product(List<DiscreteFactor> factors) {
-		for (DiscreteFactor f : factors) {
+	public DiscreteFactor product(List<Factor> factors) {
+	  List<DiscreteFactor> discreteFactors = FactorUtils.coerceToDiscrete(factors);
+		for (DiscreteFactor f : discreteFactors) {
 			assert f.getVars().size() == 1 && f.getVars().contains(parentVarNum);
 		}
 
 		if (multipliedWith == null) {
 			return new CfgFactor(parentVar, childVar, parentVarNum, childVarNum, productionDist,
-					parser, TableFactor.productFactor(factors));
+					parser, TableFactor.productFactor(discreteFactors));
 		} else {
-			List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(factors);
+			List<DiscreteFactor> allFactors = new ArrayList<DiscreteFactor>(discreteFactors);
 			allFactors.add(multipliedWith);
 			return new CfgFactor(parentVar, childVar, parentVarNum, childVarNum, productionDist,
 					parser, TableFactor.productFactor(allFactors));
@@ -276,4 +278,11 @@ public class CfgFactor extends DiscreteFactor implements CptFactor {
 	public String toString() {
 		return parser.toString();
 	}
+
+  @Override
+  public void incrementOutcomeCount(Factor marginal, double count,
+      double partitionFunction) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
 }

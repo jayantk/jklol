@@ -23,6 +23,6 @@ public class GibbsSamplerTest extends TestCase {
 	*/
 	
 	public void testNonTreeStructuredMarginals() {
-		InferenceTestCase.testNonCliqueTreeUnconditional().runTest(new GibbsSampler(1000, 1000, 1), 0.05);
+		InferenceTestCases.testNonCliqueTreeUnconditional().runTest(new GibbsSampler(1000, 1000, 1), 0.05);
 	}
 }

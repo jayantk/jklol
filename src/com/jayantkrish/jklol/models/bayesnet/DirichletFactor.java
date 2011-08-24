@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -122,7 +123,18 @@ public class DirichletFactor extends AbstractFactor {
   public Factor add(Factor other) {
     throw new UnsupportedOperationException("Cannot add DirichletFactors.");
   }
-
+  
+  @Override
+  public List<Assignment> getMostLikelyAssignments(int numAssignments) {
+    Preconditions.checkArgument(numAssignments <= 1, 
+          "DirichletFactor does not support multiple maximum probability assignments.");
+    if (numAssignments == 0) {
+      return Collections.emptyList();
+    } else {
+      return Lists.newArrayList(new Assignment(realVarNum, modeVector()));
+    }
+  }
+  
   @Override
   public DirichletFactor coerceToDirichlet() {
     return this;
@@ -194,6 +206,23 @@ public class DirichletFactor extends AbstractFactor {
     }
     return new Vector(value);
   }
+  
+  /**
+   * Gets the partition function for this Dirichlet distribution, which is the
+   * integral of the distribution over all of the variables in the
+   * Dirichlet-distributed vector.
+   * 
+   * @return
+   */
+  private double getPartitionFunction() {
+    double denom = 1.0;
+    double total = 0.0;
+    for (int i = 0; i < parameters.numDimensions(); i++) {
+      denom *= GammaMath.gamma(parameters.get(i));
+      total += parameters.get(i);
+    }
+    return denom / GammaMath.gamma(total);
+  }
 
   /**
    * Multiplies together a list of Dirichlet factors. The factors must be
@@ -229,22 +258,4 @@ public class DirichletFactor extends AbstractFactor {
     }
     return new DirichletFactor(vars, newParameters);
   }
-
-  /**
-   * Gets the partition function for this Dirichlet distribution, which is the
-   * integral of the distribution over all of the variables in the
-   * Dirichlet-distributed vector.
-   * 
-   * @return
-   */
-  private double getPartitionFunction() {
-    double denom = 1.0;
-    double total = 0.0;
-    for (int i = 0; i < parameters.numDimensions(); i++) {
-      denom *= GammaMath.gamma(parameters.get(i));
-      total += parameters.get(i);
-    }
-    return denom / GammaMath.gamma(total);
-  }
-
 }

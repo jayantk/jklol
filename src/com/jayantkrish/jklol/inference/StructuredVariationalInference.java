@@ -13,8 +13,8 @@ import com.jayantkrish.jklol.util.Assignment;
 /**
  * StructuredVariationalInference performs variational inference with respect to a
  * structured graph (which subsumes mean field). 
- * @author jayant
  *
+ * @author jayant
  */
 public class StructuredVariationalInference implements MarginalCalculator {
 
@@ -77,7 +77,7 @@ public class StructuredVariationalInference implements MarginalCalculator {
 			this.factorVarsToCondition = Maps.newHashMap();
 			
 			for (int i = 0; i < factorGraph.numFactors(); i++) {
-				Factor factor = factorGraph.getFactorFromIndex(i);
+				Factor factor = factorGraph.getFactor(i);
 				factorVarsToCondition.put(i, factor.getVars().removeAll(varsInComponent));
 			}
 		}
@@ -85,7 +85,7 @@ public class StructuredVariationalInference implements MarginalCalculator {
 		public FactorGraph getFactorGraphFromConditionals(MarginalSet marginals) {
 			FactorGraph returnGraph = new FactorGraph(factorGraph);
 			for (int i = 0; i < factorGraph.numFactors(); i++) {
-				Factor factor = factorGraph.getFactorFromIndex(i);
+				Factor factor = factorGraph.getFactor(i);
 				Factor conditionedValues = marginals.getMarginal(factorVarsToCondition.get(i));
 				returnGraph.setFactor(i, factor.conditional(conditionedValues));
 			}

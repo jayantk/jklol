@@ -12,19 +12,19 @@ import com.jayantkrish.jklol.inference.JunctionTree;
 public class JunctionTreeTest extends TestCase {
 
 	public void testBasicMarginals() {
-		InferenceTestCase.testBasicUnconditional().runTest(new JunctionTree(), 0.0);
+		InferenceTestCases.testBasicUnconditional().runTest(new JunctionTree(), 0.0);
 	}
 	
 	public void testNonTreeStructuredMarginals() {
-		InferenceTestCase.testNonCliqueTreeUnconditional().runTest(new JunctionTree(), 0.0);
+		InferenceTestCases.testNonCliqueTreeUnconditional().runTest(new JunctionTree(), 0.0);
 	}
 
 	public void testConditionals() {
-		InferenceTestCase.testBasicConditional().runTest(new JunctionTree(), 0.0);
+		InferenceTestCases.testBasicConditional().runTest(new JunctionTree(), 0.0);
 	}
 
 	public void testMaxMarginals() {
-		InferenceTestCase.testBasicMaxMarginals().runTest(new JunctionTree(), 0.0);
+		InferenceTestCases.testBasicMaxMarginals().runTest(new JunctionTree());
 	}
 }
 

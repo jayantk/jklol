@@ -225,7 +225,7 @@ public class MixtureFactor extends AbstractFactor {
   
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
-    
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   @Override

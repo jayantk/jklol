@@ -106,7 +106,7 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 		Set<Integer> factorNums = factorGraph.getFactorsWithVariable(varNum);
 		List<Factor> factorsToCombine = new ArrayList<Factor>();
 		for (Integer factorNum : factorNums) {
-			Factor conditional = factorGraph.getFactorFromIndex(factorNum)
+			Factor conditional = factorGraph.getFactor(factorNum)
 				.conditional(otherVarAssignment);
 			factorsToCombine.add(conditional.marginalize(otherVarAssignment.getVarNumsSorted()));
 		}

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -44,6 +45,8 @@ public class JunctionTree extends AbstractMarginalCalculator {
 
   @Override
   public MarginalSet computeMarginals(Assignment assignment) {
+    Preconditions.checkState(cliqueTree != null, 
+        "You must invoke setFactorGraph() before computeMarginals()");
     cliqueTree.clear();
     cachedMarginals.clear();
 
@@ -113,13 +116,12 @@ public class JunctionTree extends AbstractMarginalCalculator {
     Factor productFactor = cliqueTree.getFactor(startFactor).product(factorsToCombine);
     Factor messageFactor = null;
     if (useSumProduct) {
-      messageFactor = productFactor.marginalize(sharedVars.removeAll(sharedVars).getVariableNums());
+      messageFactor = productFactor.marginalize(productFactor.getVars().removeAll(sharedVars).getVariableNums());
     } else {
-      messageFactor = productFactor.maxMarginalize(sharedVars.removeAll(sharedVars).getVariableNums());
+      messageFactor = productFactor.maxMarginalize(productFactor.getVars().removeAll(sharedVars).getVariableNums());
     }
-    // // System.out.println(factorsToCombine);
-    // // System.out.println(startFactor + " --> " + destFactor + " : " +
-    // messageFactor);
+    // System.out.println(factorsToCombine);
+    // System.out.println(startFactor + " --> " + destFactor + " : " + messageFactor);
 
     cliqueTree.addMessage(startFactor, destFactor, messageFactor);
   }
@@ -141,6 +143,7 @@ public class JunctionTree extends AbstractMarginalCalculator {
     for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(factorNum)) {
       factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, factorNum));
     }
+    
     return cliqueTree.getFactor(factorNum).product(factorsToCombine);
   }
 

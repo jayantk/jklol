@@ -11,7 +11,6 @@ import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.bayesnet.BayesNet;
 import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
-import com.jayantkrish.jklol.models.bayesnet.CptFactor;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.training.IncrementalEMTrainer;
 import com.jayantkrish.jklol.util.Assignment;
@@ -23,6 +22,8 @@ public class CfgFactorTest extends TestCase {
 
 	Grammar g;
 	CfgFactor cfgFactor;
+	CptTableFactor rootFactor;
+	CptTableFactor var1Factor;
 	BayesNet bn;
 
 	IncrementalEMTrainer trainer;
@@ -71,8 +72,8 @@ public class CfgFactorTest extends TestCase {
 		builder.addDiscreteVariable("Var1", prodVar);
 		builder.addDiscreteVariable("Var2", otherVar);
 
-		CptTableFactor f0 = builder.addCptFactorWithNewCpt(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var1"}));
-		CptTableFactor f1 = builder.addCptFactorWithNewCpt(Arrays.asList(new String[] {"Var1"}), 
+		rootFactor = builder.addCptFactorWithNewCpt(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var1"}));
+		var1Factor = builder.addCptFactorWithNewCpt(Arrays.asList(new String[] {"Var1"}), 
 				Arrays.asList(new String[] {"Var2"}));
 		cfgFactor = builder.addCfgCptFactor("Var1", "Var0", g, new CptTableProductionDistribution(g));
 
@@ -98,8 +99,25 @@ public class CfgFactorTest extends TestCase {
 	public void testTrain() {
 		trainer.train(bn, trainingData);
 
-		for (CptFactor f : bn.getCptFactors()) {
-			System.out.println(f);
-		}
+		// This is as nice debug message.
+		// for (CptFactor f : bn.getCptFactors()) {
+    // System.out.println(f);
+		// }
+		
+		Assignment rootA = bn.outcomeToAssignment(Arrays.asList("Var1"), Arrays.asList(prod("A")));
+		assertEquals(0.37, rootFactor.getUnnormalizedProbability(rootA), 0.05);
+		Assignment rootC = bn.outcomeToAssignment(Arrays.asList("Var1"), Arrays.asList(prod("C")));
+    assertEquals(0.63, rootFactor.getUnnormalizedProbability(rootC), 0.05);
+		
+		Assignment rootAvar2F = bn.outcomeToAssignment(Arrays.asList("Var1", "Var2"), 
+		    Arrays.asList(prod("A"), "F")); 
+		assertEquals(0.8, var1Factor.getUnnormalizedProbability(rootAvar2F), 0.05);
+		Assignment rootCvar2T = bn.outcomeToAssignment(Arrays.asList("Var1", "Var2"), 
+		    Arrays.asList(prod("C"), "T")); 
+    assertEquals(0.875, var1Factor.getUnnormalizedProbability(rootCvar2T), 0.05);
+
+    CptProductionDistribution prodDist = cfgFactor.getProductionDistribution();
+    assertEquals(4.0 / 7.0, prodDist.getRuleProbability(bp("C", "A", "C")), 0.05);
+    assertEquals(3.0 / 7.0, prodDist.getTerminalProbability(term("C", "c")), 0.05);
 	}
 }

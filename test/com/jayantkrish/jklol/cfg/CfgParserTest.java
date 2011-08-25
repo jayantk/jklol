@@ -165,7 +165,5 @@ public class CfgParserTest extends TestCase {
 		assertEquals(0.125, trees.get(1).getProbability());
 		assertEquals(prod("bar"), trees.get(1).getLeft().getRoot());
 		assertEquals(prod("bar"), trees.get(1).getRight().getRoot());
-		assertEquals(Arrays.asList(new Production[] {prod("bbb"), prod("baz")}),
-				trees.get(1).getTerminalProductions());
 	}
 }

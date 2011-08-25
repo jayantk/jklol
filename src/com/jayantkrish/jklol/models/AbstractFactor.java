@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.models.bayesnet.DirichletFactor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -92,17 +91,5 @@ public abstract class AbstractFactor implements Factor {
   @Override
   public DiscreteFactor coerceToDiscrete() {
     throw new FactorCoercionError("Cannot coerce this factor into a DiscreteFactor.");
-  }
-
-  /**
-   * {@inheritDoc}
-   * 
-   * This default implementation always throws {@code FactorCoercionError}.
-   * Subclasses which support this operation should override this
-   * implementation.
-   */
-  @Override
-  public DirichletFactor coerceToDirichlet() {
-    throw new FactorCoercionError("Cannot coerce this factor into a DirichletFactor.");
   }
 }

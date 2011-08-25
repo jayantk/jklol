@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.jayantkrish.jklol.models.bayesnet.DirichletFactor;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -234,12 +233,4 @@ public interface Factor {
    * {@link DiscreteFactor}.
    */
   public DiscreteFactor coerceToDiscrete();
-
-  /**
-   * Attempts to convert {@code this} into a {@link DirichletFactor}.
-   * 
-   * @throws FactorCoercionError if {@code this} cannot be converted into a
-   * {@link DirichletFactor}.
-   */
-  public DirichletFactor coerceToDirichlet();
 }

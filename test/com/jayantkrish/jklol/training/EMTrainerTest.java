@@ -9,12 +9,14 @@ import java.util.Map;
 
 import junit.framework.TestCase;
 
+import com.google.common.base.Supplier;
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.bayesnet.BayesNet;
 import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
 import com.jayantkrish.jklol.models.bayesnet.Cpt;
-import com.jayantkrish.jklol.models.bayesnet.CptFactor;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -27,17 +29,15 @@ public class EMTrainerTest extends TestCase {
 	Cpt actualVCpt;
 	Cpt expectedNoNodeCpt;
 	Cpt expectedVCpt;
+	
+	CptTableFactor f0;
+	CptTableFactor f1;
+	CptTableFactor f2;
 
-	Assignment a1,a2,a3;
+	Assignment a1,a2,a3,testAssignment1,testAssignment2;
 	List<String> allVarNames;
 
 	StepwiseEMTrainer s;
-
-	String[][] testAssignments = new String[][] {{"F", "F", "T"}, {"T", "F", "F"}, 
-			{"T", "T", "T"}};
-	double[] incrementalEmExpected = new double[] {(7.0 / 11.0) * (7.0 / 11.0)};
-	double[] stepwiseEmExpected = new double[] {};
-	double TOLERANCE = 0.05;
 
 	public void setUp() {
 		BayesNetBuilder builder = new BayesNetBuilder();
@@ -49,9 +49,9 @@ public class EMTrainerTest extends TestCase {
 		builder.addDiscreteVariable("Var1", tfVar);
 		builder.addDiscreteVariable("Var2", tfVar);
 
-		CptTableFactor f0 = builder.addCptFactor(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var0"}));
-		CptTableFactor f1 = builder.addCptFactor(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var1"}));
-		CptTableFactor f2 = builder.addCptFactor(Arrays.asList(new String[] {"Var0", "Var1"}), 
+		f0 = builder.addCptFactor(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var0"}));
+		f1 = builder.addCptFactor(Collections.<String>emptyList(), Arrays.asList(new String[] {"Var1"}));
+		f2 = builder.addCptFactor(Arrays.asList(new String[] {"Var0", "Var1"}), 
 				Arrays.asList(new String[] {"Var2"}));
 
 		actualNoNodeCpt = new Cpt(Collections.<DiscreteVariable>emptyList(), Arrays.asList(new DiscreteVariable[] {tfVar}));
@@ -87,26 +87,36 @@ public class EMTrainerTest extends TestCase {
 			trainingData.add(a3);
 		}
 
+		// Creates the marginal calculators which are used in stepwise EM training.
+		Supplier<MarginalCalculator> inferenceSupplier = new Supplier<MarginalCalculator>() {
+		  public MarginalCalculator get() {
+		    return new JunctionTree();
+		  }
+		};
+		
 		t = new IncrementalEMTrainer(10, 1.0, new JunctionTree());
-		s = new StepwiseEMTrainer(10, 3, 1.0, 0.9, new JunctionTree());
+		s = new StepwiseEMTrainer(10, 4, 1.0, 0.9, inferenceSupplier, 3, null);
+		
+		testAssignment1 = bn.outcomeToAssignment(allVarNames, Arrays.asList("T", "F", "F"));
+		testAssignment2 = bn.outcomeToAssignment(allVarNames, Arrays.asList("F", "F", "T"));
 	}
 
 	public void testIncrementalEM() {
 		t.train(bn, trainingData);
 
-		//Assignment a = bn.outcomeToAssignment(allVarNames, 
-		//	Arrays.asList());
-
-		for (CptFactor f : bn.getCptFactors()) {
-			System.out.println(f);
-		}
+		assertEquals(0.8, f2.getUnnormalizedProbability(testAssignment1), 0.1);
+		assertEquals(0.5, f2.getUnnormalizedProbability(testAssignment2), 0.05);
 	}
 
 	public void testStepwiseEM() {
 		s.train(bn, trainingData);
 
-		for (CptFactor f : bn.getCptFactors()) {
-			System.out.println(f);
+		for (Factor factor : bn.getFactors()) {
+		  System.out.println(factor);
 		}
+		
+		// Stepwise EM loses the smoothing factor, hence the different expected value for this test.
+		assertEquals(1.0, f2.getUnnormalizedProbability(testAssignment1), 0.05);
+		assertEquals(0.5, f2.getUnnormalizedProbability(testAssignment2), 0.05);
 	}
 }

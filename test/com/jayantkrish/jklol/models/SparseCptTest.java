@@ -2,18 +2,12 @@ package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCpt;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * A test of SparseCpts and their interactions with CptTableFactors.

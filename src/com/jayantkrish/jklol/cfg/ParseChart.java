@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.cfg;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.util.DefaultHashMap;
 import java.util.Map;
 import java.util.HashMap;
@@ -182,10 +184,13 @@ public class ParseChart {
 		this.terminalDist = terminalDist;
 	}
 
+	/**
+	 * Gets the distribution over terminals that was used to initialize this chart.
+	 * @return
+	 */
 	public Map<List<Production>, Double> getTerminalDist() {
 		return terminalDist;
 	}
-
 
 	/**
 	 * Set the bit on the chart stating that its inside probabilities are calculated.

@@ -70,7 +70,6 @@ public class MarginalTestCase {
 		}
 
 		public void runTests(DiscreteFactor marginal, double partitionFunction, double tolerance) {
-			System.out.println(marginal + " / " + partitionFunction);
 			for (int i = 0; i < expectedProbs.size(); i++) {
 				double modelProbability = marginal.getUnnormalizedProbability(
 						Arrays.asList(expectedVars.get(i))) / partitionFunction;

@@ -35,6 +35,8 @@ public class FactorGraph {
 
   private IndexedList<Factor> factors;
 
+  private InferenceHint inferenceHint;
+
   /**
    * Create an empty factor graph.
    */
@@ -44,6 +46,7 @@ public class FactorGraph {
     variableFactorMap = new HashMultimap<Integer, Integer>();
     factorVariableMap = new HashMultimap<Integer, Integer>();
     factors = new IndexedList<Factor>();
+    inferenceHint = null;
   }
 
   /**
@@ -57,6 +60,7 @@ public class FactorGraph {
     this.variableFactorMap = new HashMultimap<Integer, Integer>(factorGraph.variableFactorMap);
     this.factorVariableMap = new HashMultimap<Integer, Integer>(factorGraph.factorVariableMap);
     this.factors = new IndexedList<Factor>(factorGraph.factors);
+    this.inferenceHint = null;
   }
 
   /**
@@ -196,6 +200,24 @@ public class FactorGraph {
     Set<Integer> varNums = new HashSet<Integer>(factorVariableMap.get(factor1));
     varNums.retainAll(factorVariableMap.get(factor2));
     return varNums;
+  }
+
+  /**
+   * Gets a hint about how to efficiently perform inference with this
+   * model.  May return {@code null}, in which case the hint should be
+   * ignored.
+   */
+  public InferenceHint getInferenceHint() {
+      return inferenceHint;
+  }
+
+  /**
+   * Sets a hint about how to efficiently perform inference with this
+   * model. The hint can be set to {@code null}, in which case the hint
+   * is ignored.
+   */
+  public void setInferenceHint(InferenceHint inferenceHint) {
+      this.inferenceHint = inferenceHint;
   }
 
   // Factor Graph mutators

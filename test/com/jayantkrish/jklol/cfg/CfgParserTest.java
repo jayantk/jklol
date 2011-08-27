@@ -58,6 +58,7 @@ public class CfgParserTest extends TestCase {
 		g.addTerminal(term("A", "c"));
 
 		dist = new CptTableProductionDistribution(g);
+		dist.increment(1.0);
 		p = new CfgParser(g, dist);
 	}
 

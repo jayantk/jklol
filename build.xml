@@ -7,7 +7,7 @@
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />
-    <pathelement location="build" />
+    <pathelement location="build/" />
     <path refid="classpath.base" />
   </path>
 
@@ -26,29 +26,26 @@
   </target>
 
   <target name="test" depends="compile-test">
-    <junit fork="yes">
-      <assertions>
-         <enable/>
-      </assertions>
+    <junit fork="no">
       <classpath refid="classpath.test" />
       <formatter type="brief" usefile="false" />
-      <test name="IndexedListTest" />
-      <test name="DiscreteVariableTest" />
-      <test name="VariableNumMapTest" />
-      <test name="AssignmentTest" />
-      <test name="TableFactorTest" />
-      <test name="MixtureFactorTest" />
-      <test name="SparseCptTest" />
-      <test name="FactorGraphTest" />
-      <test name="JunctionTreeTest" />
-      <test name="GibbsSamplerTest" />
-      <test name="GrammarTest" />
-      <test name="CfgParserTest" />
-      <test name="StochasticGradientTrainerTest" />
-      <test name="BNCountTrainerTest" />
-      <test name="EMTrainerTest" />
-      <test name="CfgFactorTest" />
-      <test name="LossFunctionsTest" />
+      <test name="com.jayantkrish.jklol.cfg.CfgFactorTest" />
+      <test name="com.jayantkrish.jklol.cfg.CfgParserTest" />
+      <test name="com.jayantkrish.jklol.cfg.GrammarTest" />
+      <test name="com.jayantkrish.jklol.evaluation.LossFunctionsTest" />
+      <test name="com.jayantkrish.jklol.inference.GibbsSamplerTest" />
+      <test name="com.jayantkrish.jklol.inference.JunctionTreeTest" />
+      <test name="com.jayantkrish.jklol.models.CptTest" />
+      <test name="com.jayantkrish.jklol.models.DiscreteVariableTest" />
+      <test name="com.jayantkrish.jklol.models.FactorGraphTest" />
+      <test name="com.jayantkrish.jklol.models.MixtureFactorTest" />
+      <test name="com.jayantkrish.jklol.models.TableFactorTest" />
+      <test name="com.jayantkrish.jklol.models.VariableNumMapTest" />
+      <test name="com.jayantkrish.jklol.training.BNCountTrainerTest" />
+      <test name="com.jayantkrish.jklol.training.EMTrainerTest" />
+      <test name="com.jayantkrish.jklol.training.StochasticGradientTrainerTest" />
+      <test name="com.jayantkrish.jklol.util.AssignmentTest" />
+      <test name="com.jayantkrish.jklol.util.IndexedListTest" />
     </junit>
   </target>
 

@@ -81,6 +81,11 @@ public class CptTableProductionDistribution implements CptProductionDistribution
     }
   }
 
+    @Override
+    public CptTableProductionDistribution emptyCopy() {
+	return new CptTableProductionDistribution(grammar);
+    }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

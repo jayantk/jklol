@@ -14,17 +14,19 @@ import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
 public interface CptProductionDistribution extends ProductionDistribution, SufficientStatistics {
 
 	/**
-	 * Update sufficient statistics of the binary CPTs 
+	 * Updates sufficient statistics of the binary CPTs.
 	 */ 
 	public void incrementBinaryCpts(Map<BinaryProduction, Double> binaryRuleExpectations, double count);
 
 	/**
-	 * Update sufficient statistics of terminal CPTs
+	 * Updates sufficient statistics of terminal CPTs.
 	 */
 	public void incrementTerminalCpts(Map<TerminalProduction, Double> terminalRuleExpectations, double count);
 	
 	/**
-	 * 
+	 * Returns a copy of {@code this} distribution with an 
+	 * empty sufficient statistics vector. All event counts
+	 * in the returned vector are 0.
 	 */
-	public void CptProductionDistribution newCopy();
+	public CptProductionDistribution emptyCopy();
 }

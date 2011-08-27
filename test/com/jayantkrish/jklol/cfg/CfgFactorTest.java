@@ -92,11 +92,12 @@ public class CfgFactorTest extends TestCase {
 			trainingData.add(a2);
 			trainingData.add(a3);
 		}
-		trainer = new IncrementalEMTrainer(10, 1.0, new JunctionTree());
+		trainer = new IncrementalEMTrainer(10, new JunctionTree());
 	}
 
 
 	public void testTrain() {
+	    bn.getCurrentParameters().increment(1.0);
 		trainer.train(bn, trainingData);
 
 		// This is as nice debug message.

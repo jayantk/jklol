@@ -42,7 +42,7 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
   private final int childVarNum;
   private final DiscreteVariable childVar;
 
-  private final CptProductionDistribution productionDist;
+  private CptProductionDistribution productionDist;
   private final CfgParser parser;
 
   private final DiscreteFactor parentInboundMessage;
@@ -126,58 +126,38 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
   // ///////////////////////////////////////////////////////////
   
   @Override
-  public SufficientStatistics getNewSufficientStatistics() {
-    return new CptTableProductionDistribution
+  public CptProductionDistribution getNewSufficientStatistics() {
+      return productionDist.emptyCopy();
   }
 
   @Override
-  public SufficientStatistics getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
-    // TODO Auto-generated method stub
-    return null;
+  public CptProductionDistribution getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
+      throw new UnsupportedOperationException("Cannot compute statistics from an assignment.");
   }
 
   @Override
   public SufficientStatistics getSufficientStatisticsFromMarginal(Factor marginal, double count, double partitionFunction) {
-    // TODO Auto-generated method stub
-    return null;
+    Preconditions.checkArgument(marginal instanceof CfgFactor);
+    ParseChart chart = ((CfgFactor) marginal).getMarginalChart(true);
+    
+    // Update binary/terminal rule counts
+    CptProductionDistribution newProductionDist = getNewSufficientStatistics();
+    newProductionDist.incrementBinaryCpts(chart.getBinaryRuleExpectations(), count / partitionFunction);
+    newProductionDist.incrementTerminalCpts(chart.getTerminalRuleExpectations(), count / partitionFunction);
+
+    return newProductionDist;
   }
 
   @Override
-  public SufficientStatistics getCurrentParameters() {
-    // TODO Auto-generated method stub
-    return null;
+  public CptProductionDistribution getCurrentParameters() {
+      return productionDist;
   }
 
   @Override
   public void setCurrentParameters(SufficientStatistics statistics) {
-    // TODO Auto-generated method stub
-    
-  }
-
-  @Override
-  public void clearCpt() {
-    productionDist.clearCpts();
-  }
-
-  @Override
-  public void addUniformSmoothing(double virtualCounts) {
-    productionDist.addUniformSmoothing(virtualCounts);
-  }
-
-  @Override
-  public void incrementOutcomeCount(Assignment assignment, double count) {
-    throw new UnsupportedOperationException("");
-  }
-
-  @Override
-  public void incrementOutcomeCount(Factor marginal, double count, double partitionFunction) {
-    Preconditions.checkArgument(marginal instanceof CfgFactor);
-
-    ParseChart chart = ((CfgFactor) marginal).getMarginalChart(true);
-    
-    // Update binary/terminal rule counts
-    productionDist.incrementBinaryCpts(chart.getBinaryRuleExpectations(), count / partitionFunction);
-    productionDist.incrementTerminalCpts(chart.getTerminalRuleExpectations(), count / partitionFunction);
+      Preconditions.checkArgument(statistics instanceof CptProductionDistribution);
+      this.productionDist = (CptProductionDistribution) statistics;
+      this.parser.setDistribution(productionDist);
   }
   
   public CptProductionDistribution getProductionDistribution() {

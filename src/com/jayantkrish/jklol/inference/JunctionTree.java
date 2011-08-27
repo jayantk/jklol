@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.SeparatorSet;
@@ -29,47 +29,59 @@ public class JunctionTree extends AbstractMarginalCalculator {
 
   // Cache of factors representing marginal distributions of the
   // variables.
-  private Map<Integer, Factor> cachedMarginals;
-  private CliqueTree cliqueTree;
+  private int[] eliminationHint;
 
   public JunctionTree() {
-    this.cachedMarginals = new HashMap<Integer, Factor>();
-    this.cliqueTree = null;
+    this.eliminationHint = null;
   }
 
-  public void setFactorGraph(FactorGraph f) {
-    // TODO: this assumes the factor graph is already tree structured
-    cliqueTree = new CliqueTree(f);
-    cachedMarginals.clear();
+  /**
+   * 
+   * @param eliminationHint this junction tree will attempt to eliminate factors
+   * in order of factor index in this list. Note that the index is actually the
+   * index of the factor in the internal clique tree.
+   */
+  public JunctionTree(int[] eliminationHint) {
+    this.eliminationHint = eliminationHint;
+  }
+
+  /**
+   * Gets a supplier which always returns a new JunctionTree instance. Useful
+   * for running parallelized training algorithms such as
+   * {@link StepwiseEMTrainer}.
+   * 
+   * @return
+   */
+  public static Supplier<MarginalCalculator> getSupplier() {
+    return new Supplier<MarginalCalculator>() {
+      @Override
+      public MarginalCalculator get() {
+        return new JunctionTree();
+      }
+    };
   }
 
   @Override
-  public MarginalSet computeMarginals(Assignment assignment) {
-    Preconditions.checkState(cliqueTree != null, 
-        "You must invoke setFactorGraph() before computeMarginals()");
-    cliqueTree.clear();
-    cachedMarginals.clear();
-
+  public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {
+    CliqueTree cliqueTree = new CliqueTree(factorGraph);
     cliqueTree.setEvidence(assignment);
-    int rootFactorNum = runMessagePassing(true);
+    int rootFactorNum = runMessagePassing(cliqueTree, true);
     return cliqueTreeToMarginalSet(cliqueTree, rootFactorNum);
   }
 
   @Override
-  public MaxMarginalSet computeMaxMarginals(Assignment assignment) {
-    cliqueTree.clear();
-    cachedMarginals.clear();
-
+  public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment) {
+    CliqueTree cliqueTree = new CliqueTree(factorGraph);
     cliqueTree.setEvidence(assignment);
-    int rootFactorNum = runMessagePassing(false);
+    int rootFactorNum = runMessagePassing(cliqueTree, false);
     return cliqueTreeToMaxMarginalSet(cliqueTree, rootFactorNum);
   }
 
   /**
-   * Runs the junction tree message-passing algorithm on {@code this.cliqueTree}
-   * .
+   * Runs the junction tree message-passing algorithm on {@code cliqueTree}. If
+   * {@code useSumProduct == true}, then  .
    */
-  private int runMessagePassing(boolean useSumProduct) {
+  private int runMessagePassing(CliqueTree cliqueTree, boolean useSumProduct) {
     // This performs both passes of message passing.
     boolean keepGoing = true;
     int lastFactorNum = 0;
@@ -83,7 +95,8 @@ public class JunctionTree extends AbstractMarginalCalculator {
         Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
         for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
           if (!alreadyPassedMessages.contains(possibleOutboundMessage.getEndFactor())) {
-            passMessage(possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
+            // System.out.println(possibleOutboundMessage.getStartFactor() + " -> " + possibleOutboundMessage.getEndFactor());
+            passMessage(cliqueTree, possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
             keepGoing = true;
           }
         }
@@ -102,7 +115,7 @@ public class JunctionTree extends AbstractMarginalCalculator {
   /*
    * Compute the message that gets passed from startFactor to destFactor.
    */
-  private void passMessage(int startFactor, int destFactor, boolean useSumProduct) {
+  private void passMessage(CliqueTree cliqueTree, int startFactor, int destFactor, boolean useSumProduct) {
     VariableNumMap sharedVars = cliqueTree.getFactor(startFactor).getVars().intersection(cliqueTree.getFactor(destFactor).getVars());
 
     List<Factor> factorsToCombine = new ArrayList<Factor>();
@@ -121,7 +134,8 @@ public class JunctionTree extends AbstractMarginalCalculator {
       messageFactor = productFactor.maxMarginalize(productFactor.getVars().removeAll(sharedVars).getVariableNums());
     }
     // System.out.println(factorsToCombine);
-    // System.out.println(startFactor + " --> " + destFactor + " : " + messageFactor);
+    // System.out.println(startFactor + " --> " + destFactor + " : " +
+    // messageFactor);
 
     cliqueTree.addMessage(startFactor, destFactor, messageFactor);
   }
@@ -143,7 +157,7 @@ public class JunctionTree extends AbstractMarginalCalculator {
     for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(factorNum)) {
       factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, factorNum));
     }
-    
+
     return cliqueTree.getFactor(factorNum).product(factorsToCombine);
   }
 

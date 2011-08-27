@@ -15,6 +15,10 @@ public class DefaultLogFunction implements LogFunction {
 		this.numAssignments = numAssignments;
 	}
 
+	public void log(Assignment example, FactorGraph graph) {
+	  System.out.println("?.?: example: " + graph.assignmentToObject(example));
+	}
+	
 	public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {
 		System.out.println(iteration + "." + exampleNum + ": example: " + graph.assignmentToObject(example));
 	}

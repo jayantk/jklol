@@ -23,6 +23,7 @@ import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptFactor;
+import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
@@ -123,15 +124,47 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
   // ///////////////////////////////////////////////////////////
   // CPT Factor methods
   // ///////////////////////////////////////////////////////////
+  
+  @Override
+  public SufficientStatistics getNewSufficientStatistics() {
+    return new CptTableProductionDistribution
+  }
 
+  @Override
+  public SufficientStatistics getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SufficientStatistics getSufficientStatisticsFromMarginal(Factor marginal, double count, double partitionFunction) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public SufficientStatistics getCurrentParameters() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void setCurrentParameters(SufficientStatistics statistics) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
   public void clearCpt() {
     productionDist.clearCpts();
   }
 
+  @Override
   public void addUniformSmoothing(double virtualCounts) {
     productionDist.addUniformSmoothing(virtualCounts);
   }
 
+  @Override
   public void incrementOutcomeCount(Assignment assignment, double count) {
     throw new UnsupportedOperationException("");
   }
@@ -141,7 +174,6 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
     Preconditions.checkArgument(marginal instanceof CfgFactor);
 
     ParseChart chart = ((CfgFactor) marginal).getMarginalChart(true);
-    Preconditions.checkArgument(partitionFunction == chart.getPartitionFunction());
     
     // Update binary/terminal rule counts
     productionDist.incrementBinaryCpts(chart.getBinaryRuleExpectations(), count / partitionFunction);
@@ -376,7 +408,7 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
    * @param useSumProduct
    * @return
    */
-  private ParseChart getMarginalChart(boolean useSumProduct) {
+  public ParseChart getMarginalChart(boolean useSumProduct) {
     Preconditions.checkState(parentInboundMessage != null);
 
     getInsideChart(useSumProduct);

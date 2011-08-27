@@ -18,43 +18,30 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class GibbsSampler extends AbstractMarginalCalculator {
 
-	private FactorGraph factorGraph;
-
 	private int burnInSamples;
 	private int numDrawsInMarginal;
 	private int samplesBetweenDraws;
-
-	private Assignment curAssignment;
-	private List<Assignment> samples;
 
 	public GibbsSampler(int burnInSamples, int numDrawsInMarginal, int samplesBetweenDraws) {
 		this.burnInSamples = burnInSamples;
 		this.numDrawsInMarginal = numDrawsInMarginal;
 		this.samplesBetweenDraws = samplesBetweenDraws;
-		this.curAssignment = null;
-		this.factorGraph = null;
-		this.samples = null;
 	}
 
 	@Override
-	public void setFactorGraph(FactorGraph f) {
-		factorGraph = f;
-	}
-
-	@Override
-	public MarginalSet computeMarginals(Assignment assignment) {
-		initializeAssignment();
-		samples = new ArrayList<Assignment>();
+	public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {
+	  Assignment curAssignment = initializeAssignment(factorGraph);
 
 		// Burn in the sampler
 		for (int i = 0; i < burnInSamples; i++) {
-			doSamplingRound();
+			curAssignment = doSamplingRound(factorGraph, curAssignment);
 		}
 
 		// Draw the samples which will make up the approximate marginal.
+    List<Assignment> samples = new ArrayList<Assignment>();
 		for (int numDraws = 0; numDraws < numDrawsInMarginal; numDraws++) {
 			for (int i = 0; i < samplesBetweenDraws; i++) {
-				doSamplingRound();
+				curAssignment = doSamplingRound(factorGraph, curAssignment);
 			}
 			samples.add(curAssignment);
 		}
@@ -65,14 +52,14 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	 * GibbsSampler cannot compute max marginals. Throws a runtime exception if called.
 	 */
 	@Override
-	public MaxMarginalSet computeMaxMarginals(Assignment assignment) {
+	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment) {
 		throw new UnsupportedOperationException("Max marginals are not supported by Gibbs sampling");
 	}
 
 	/*
 	 * Set the assignment variable to an arbitrary initial value.
 	 */
-	private void initializeAssignment() {
+	private Assignment initializeAssignment(FactorGraph factorGraph) {
 		// Select the initial assignment.
 		List<Variable> variables = factorGraph.getVariables();
 		List<Integer> varNums = Lists.newArrayList();
@@ -81,22 +68,24 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 			varNums.add(i);
 			values.add(variables.get(i).getArbitraryValue());
 		}
-		curAssignment = new Assignment(varNums, values);
+		return new Assignment(varNums, values);
 	}
 
 	/*
 	 * Sample each variable in the factor graph once.
 	 */
-	private void doSamplingRound() {
+	private Assignment doSamplingRound(FactorGraph factorGraph, Assignment curAssignment) {
+	  Assignment assignment = curAssignment;
 		for (int i = 0; i < factorGraph.getVariables().size(); i++) {
-			doSample(i);
+			assignment = doSample(factorGraph, assignment, i);
 		}
+		return assignment;
 	}
 
 	/*
 	 * Resample the specified variable conditioned on all of the other variables.
 	 */
-	private void doSample(int varNum) {
+	private Assignment doSample(FactorGraph factorGraph, Assignment curAssignment, int varNum) {
 		// Retain the assignments to all other variables.
 		Assignment otherVarAssignment = curAssignment.removeAll(
 				Collections.singletonList(varNum));
@@ -114,6 +103,6 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 		// Draw the sample and update the sampler's current assignment. 
 		Assignment subsetValues = toSampleFrom.sample();
 		
-		curAssignment = otherVarAssignment.jointAssignment(subsetValues);
+		return otherVarAssignment.jointAssignment(subsetValues);
 	}
 }

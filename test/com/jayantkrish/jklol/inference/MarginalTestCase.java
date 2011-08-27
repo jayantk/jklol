@@ -46,8 +46,7 @@ public class MarginalTestCase {
 	}
 	
 	public void runTest(MarginalCalculator inference, double tolerance) {
-		inference.setFactorGraph(factorGraph);
-		MarginalSet marginals = inference.computeMarginals(condition);
+		MarginalSet marginals = inference.computeMarginals(factorGraph, condition);
 		
 		for (Map.Entry<Integer[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
 			DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(Arrays.asList(testCase.getKey()));

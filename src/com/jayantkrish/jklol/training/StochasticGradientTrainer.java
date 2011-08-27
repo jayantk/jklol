@@ -31,7 +31,6 @@ public class StochasticGradientTrainer {
 	}
 
 	public void train(LogLinearModel factorGraph, List<Assignment> trainingData) {
-		inferenceEngine.setFactorGraph(factorGraph);
 
 		Collections.shuffle(trainingData);
 		for (int i = 0; i < numIterations; i++) {
@@ -47,8 +46,8 @@ public class StochasticGradientTrainer {
 	 * Computes the gradient and stores it in the gradient accumulator.
 	 */
 	private void computeGradient(LogLinearModel factorGraph, Assignment trainingExample) {
-		// Compute the second term of the gradient, the expected feature counts
-		MarginalSet expectedFeatureMarginals = inferenceEngine.computeMarginals();
+		// Compute the second term of the gradient, the unconditional expected feature counts
+    MarginalSet expectedFeatureMarginals = inferenceEngine.computeMarginals(factorGraph);
 		for (DiscreteLogLinearFactor factor : factorGraph.getLogLinearFactors()) {
 			Factor marginal = expectedFeatureMarginals.getMarginal(factor.getVars().getVariableNums());
 			for (FeatureFunction f : factor.getFeatures()) {
@@ -60,10 +59,10 @@ public class StochasticGradientTrainer {
 			}
 		}
 
-		// Compute the first term of the gradient, the model expectations conditioned on the training example.
-		MarginalSet unconditionalMarginals = inferenceEngine.computeMarginals(trainingExample);
+	  // Compute the first term of the gradient, the model expectations conditioned on the training example.
+    MarginalSet conditionalMarginals = inferenceEngine.computeMarginals(factorGraph, trainingExample);
 		for (DiscreteLogLinearFactor factor : factorGraph.getLogLinearFactors()) {
-			Factor marginal = unconditionalMarginals.getMarginal(factor.getVars().getVariableNums());
+			Factor marginal = conditionalMarginals.getMarginal(factor.getVars().getVariableNums());
 			for (FeatureFunction f : factor.getFeatures()) {
 				if (!gradient.containsKey(f)) {
 					gradient.put(f, 0.0);

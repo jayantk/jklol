@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -141,9 +142,9 @@ public class FactorGraph {
     }
     return new VariableNumMap(varNums, vars);
   }
-
+  
   /**
-   * Get an assignment for the named set of variables.
+   * Gets an assignment for the named set of variables.
    */
   public Assignment outcomeToAssignment(List<String> factorVariables, List<? extends Object> outcome) {
     assert factorVariables.size() == outcome.size();
@@ -157,6 +158,18 @@ public class FactorGraph {
     }
     return new Assignment(varNums, outcomeValueInds);
   }
+  
+  /**
+   * Identical to {@link #outcomeToAssignment(List, List)}, but with arrays.
+   * 
+   * @param factorVariables
+   * @param outcome
+   * @return
+   */
+  public Assignment outcomeToAssignment(String[] factorVariables, Object[] outcome) {
+    return outcomeToAssignment(Arrays.asList(factorVariables), Arrays.asList(outcome));
+  }
+
 
   public Map<String, Object> assignmentToObject(Assignment a) {
     Map<String, Object> objectVals = new HashMap<String, Object>();

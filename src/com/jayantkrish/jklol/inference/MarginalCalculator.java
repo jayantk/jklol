@@ -10,29 +10,24 @@ import com.jayantkrish.jklol.util.Assignment;
 public interface MarginalCalculator {
 
 	/**
-	 * Give the inference engine a factor graph to perform inference on.
-	 */
-	public void setFactorGraph(FactorGraph f);
-
-	/**
 	 * Compute (unconditional) marginal distributions over the factors in the factor graph.
 	 */
-	public MarginalSet computeMarginals();
+	public MarginalSet computeMarginals(FactorGraph factorGraph);
 
 	/**
 	 * Compute marginals conditioned on the provided variable assignments. Passing an empty
 	 * assignment results in unconditional marginals.
 	 */
-	public MarginalSet computeMarginals(Assignment assignment);
+	public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment);
 
 	/**
 	 * Compute unconditional max marginals.
 	 */
-	public MaxMarginalSet computeMaxMarginals();
+	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph);
 
 	/**
 	 * Compute max marginals conditioned on the provided assignment.
 	 */
-	public MaxMarginalSet computeMaxMarginals(Assignment assignment);
+	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment);
 
 }

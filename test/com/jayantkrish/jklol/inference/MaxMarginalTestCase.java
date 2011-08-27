@@ -39,9 +39,7 @@ public class MaxMarginalTestCase {
    * @param marginalCalculator
    */
   public void runTest(MarginalCalculator marginalCalculator) {
-    marginalCalculator.setFactorGraph(factorGraph);
-
-    MaxMarginalSet maxMarginals = marginalCalculator.computeMaxMarginals(condition);
+    MaxMarginalSet maxMarginals = marginalCalculator.computeMaxMarginals(factorGraph, condition);
     Assert.assertEquals(1, maxMarginals.beamSize());
     Assert.assertEquals(bestAssignment, maxMarginals.getNthBestAssignment(0));
   }

@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <project name="jklol" default="jar">
   <property name="tst-dir" location="test" />
+  <property name="perf-dir" location="performance" />
 
   <path id="classpath.base">
   	<pathelement location="lib/guava-r09.jar" />
@@ -21,6 +22,9 @@
   <target name="compile-test" depends="compile">
     <mkdir dir="build" />
     <javac srcdir="${tst-dir}" destdir="build" debug="on">
+      <classpath refid="classpath.test"/>
+    </javac>
+    <javac srcdir="${perf-dir}" destdir="build" debug="on">
       <classpath refid="classpath.test"/>
     </javac>
   </target>
@@ -50,14 +54,11 @@
   </target>
 
   <target name="perf" depends="compile-test">
-    <junit fork="yes">
-      <assertions>
-         <enable/>
-      </assertions>
+    <junit fork="no">
       <classpath refid="classpath.test" />
       <formatter type="brief" usefile="false" />
-      <test name="SparseOutcomeTablePerformanceTest" />
-      <test name="JunctionTreePerformanceTest" />
+      <test name="com.jayantkrish.jklol.util.SparseOutcomeTablePerformanceTest" />
+      <test name="com.jayantkrish.jklol.inference.JunctionTreePerformanceTest" />
     </junit>
   </target>
 

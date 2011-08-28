@@ -60,7 +60,7 @@ public class DiscreteVariable implements Variable {
 	}
 
 	public String toString() {
-		return values.toString();
+		return name;
 	}
 
 	public boolean equals(Object o) {

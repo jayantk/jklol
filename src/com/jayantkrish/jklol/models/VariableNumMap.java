@@ -335,7 +335,7 @@ public class VariableNumMap {
 
   @Override
   public String toString() {
-    return varMap.keySet().toString();
+    return varMap.values().toString();
   }
 
   @Override

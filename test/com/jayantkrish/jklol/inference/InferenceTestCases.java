@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.InferenceHint;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.util.Assignment;
@@ -56,6 +57,8 @@ public class InferenceTestCases {
     factor3.setWeightList(Arrays.asList(new String[] { "T", "U" }), 2.0);
     factor3.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
 
+    factorGraph.setInferenceHint(new InferenceHint(new int[] {3, 1, 2}));
+    
     return factorGraph;
   }
 

@@ -6,17 +6,17 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.bayesnet.BayesNet;
+import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class JunctionTreePerformanceTest extends TestCase {
 
-	FactorGraph f;
+	BayesNet f;
 	JunctionTree t;
 
 	TableFactor factor1;
@@ -25,7 +25,8 @@ public class JunctionTreePerformanceTest extends TestCase {
 
 	public void setUp() {
 		int numValues = 10000;
-		f = new FactorGraph();
+		
+		BayesNetBuilder builder = new BayesNetBuilder();
 
 		List<Integer> varValues = new ArrayList<Integer>();
 		for (int i =0 ; i < numValues; i++) {
@@ -34,27 +35,27 @@ public class JunctionTreePerformanceTest extends TestCase {
 
 		DiscreteVariable var = new DiscreteVariable("int var", varValues);
 
-		f.addVariable("Var0", var);
-		f.addVariable("Var1", var);
-		f.addVariable("Var2", var);
+		builder.addDiscreteVariable("Var0", var);
+		builder.addDiscreteVariable("Var1", var);
+		builder.addDiscreteVariable("Var2", var);
 
-		factor1 = f.addTableFactor(Arrays.asList(new String[] {"Var0", "Var1"}));
+		factor1 = builder.addNewTableFactor(Arrays.asList(new String[] {"Var0", "Var1"}));
 		for (int i = 0; i < numValues; i++) {
 			factor1.setWeightList(Arrays.asList(new Integer[] {i, (numValues - 1) - i}), 1.0);
 		}
 
-		factor2 = f.addTableFactor(Arrays.asList(new String[] {"Var1", "Var2"}));
+		factor2 = builder.addNewTableFactor(Arrays.asList(new String[] {"Var1", "Var2"}));
 		for (int i = 0; i < numValues; i++) {
 			factor2.setWeightList(Arrays.asList(new Integer[] {i, i}), 1.0);
 		}
 
-		factor3 = f.addTableFactor(Arrays.asList(new String[] {"Var2"}));
+		factor3 = builder.addNewTableFactor(Arrays.asList(new String[] {"Var2"}));
 		for (int i = 0; i < 1000; i++) {
 			factor3.setWeightList(Arrays.asList(new Integer[] {i}), 1.0);
 		}
 
+		f = builder.build();		
 		t = new JunctionTree();
-		t.setFactorGraph(f);
 	}
 
 	public void testFactorProductSubset() {
@@ -82,7 +83,7 @@ public class JunctionTreePerformanceTest extends TestCase {
 		System.out.println("testMarginals");
 		long start = System.currentTimeMillis();
 
-		t.computeMarginals();
+		t.computeMarginals(f);
 
 		long elapsed = System.currentTimeMillis() - start;
 		System.out.println("Elapsed: " + elapsed + " ms");
@@ -92,8 +93,21 @@ public class JunctionTreePerformanceTest extends TestCase {
 		System.out.println("testConditionalMarginals");
 		long start = System.currentTimeMillis();
 
-		t.computeMarginals(new Assignment(Arrays.asList(new Integer[] {0, 2}),
+		t.computeMarginals(f, new Assignment(Arrays.asList(new Integer[] {0, 2}),
 				Arrays.asList(new Object[] {0,0})));
+
+		long elapsed = System.currentTimeMillis() - start;
+		System.out.println("Elapsed: " + elapsed + " ms");
+	}
+	
+	public void testSufficientStatistics() {
+	  
+	  MarginalSet marginals = t.computeMarginals(f);
+	  
+	  System.out.println("testSufficientStatistics");
+		long start = System.currentTimeMillis();
+
+		f.computeSufficientStatistics(marginals, 1.0);
 
 		long elapsed = System.currentTimeMillis() - start;
 		System.out.println("Elapsed: " + elapsed + " ms");

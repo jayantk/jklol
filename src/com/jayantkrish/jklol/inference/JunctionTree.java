@@ -8,15 +8,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.training.StepwiseEMTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.HashMultimap;
 
@@ -27,23 +30,7 @@ import com.jayantkrish.jklol.util.HashMultimap;
  */
 public class JunctionTree extends AbstractMarginalCalculator {
 
-  // Cache of factors representing marginal distributions of the
-  // variables.
-  private int[] eliminationHint;
-
-  public JunctionTree() {
-    this.eliminationHint = null;
-  }
-
-  /**
-   * 
-   * @param eliminationHint this junction tree will attempt to eliminate factors
-   * in order of factor index in this list. Note that the index is actually the
-   * index of the factor in the internal clique tree.
-   */
-  public JunctionTree(int[] eliminationHint) {
-    this.eliminationHint = eliminationHint;
-  }
+  public JunctionTree() {}
 
   /**
    * Gets a supplier which always returns a new JunctionTree instance. Useful
@@ -87,7 +74,8 @@ public class JunctionTree extends AbstractMarginalCalculator {
     int lastFactorNum = 0;
     while (keepGoing) {
       keepGoing = false;
-      for (int factorNum = 0; factorNum < cliqueTree.numFactors(); factorNum++) {
+      for (int i = 0; i < cliqueTree.numFactors(); i++) {
+        int factorNum = cliqueTree.getFactorEliminationOrder().get(i);
         Map<SeparatorSet, Factor> inboundMessages = cliqueTree.getInboundMessages(factorNum);
         Set<SeparatorSet> possibleOutboundMessages = cliqueTree.getFactor(factorNum).getComputableOutboundMessages(inboundMessages);
 
@@ -95,7 +83,6 @@ public class JunctionTree extends AbstractMarginalCalculator {
         Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
         for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
           if (!alreadyPassedMessages.contains(possibleOutboundMessage.getEndFactor())) {
-            // System.out.println(possibleOutboundMessage.getStartFactor() + " -> " + possibleOutboundMessage.getEndFactor());
             passMessage(cliqueTree, possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
             keepGoing = true;
           }
@@ -116,6 +103,9 @@ public class JunctionTree extends AbstractMarginalCalculator {
    * Compute the message that gets passed from startFactor to destFactor.
    */
   private void passMessage(CliqueTree cliqueTree, int startFactor, int destFactor, boolean useSumProduct) {
+    System.out.println(startFactor + ":" + cliqueTree.getFactor(startFactor).getVars() + " --> " 
+        + destFactor + ":" + cliqueTree.getFactor(destFactor).getVars());
+    
     VariableNumMap sharedVars = cliqueTree.getFactor(startFactor).getVars().intersection(cliqueTree.getFactor(destFactor).getVars());
 
     List<Factor> factorsToCombine = new ArrayList<Factor>();
@@ -123,7 +113,6 @@ public class JunctionTree extends AbstractMarginalCalculator {
       if (adjacentFactorNum == destFactor) {
         continue;
       }
-
       factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, startFactor));
     }
     Factor productFactor = cliqueTree.getFactor(startFactor).product(factorsToCombine);
@@ -133,9 +122,6 @@ public class JunctionTree extends AbstractMarginalCalculator {
     } else {
       messageFactor = productFactor.maxMarginalize(productFactor.getVars().removeAll(sharedVars).getVariableNums());
     }
-    // System.out.println(factorsToCombine);
-    // System.out.println(startFactor + " --> " + destFactor + " : " +
-    // messageFactor);
 
     cliqueTree.addMessage(startFactor, destFactor, messageFactor);
   }
@@ -202,6 +188,7 @@ public class JunctionTree extends AbstractMarginalCalculator {
     private List<Map<Integer, Factor>> messages;
 
     private HashMultimap<Integer, Integer> varCliqueFactorMap;
+    private List<Integer> cliqueEliminationOrder;
 
     public CliqueTree(FactorGraph factorGraph) {
       cliqueFactors = new ArrayList<Factor>();
@@ -210,11 +197,25 @@ public class JunctionTree extends AbstractMarginalCalculator {
       factorEdges = new HashMultimap<Integer, Integer>();
       separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
       messages = new ArrayList<Map<Integer, Factor>>();
-
-      // Store factors which contain each variable so that we can
-      // eliminate
-      // factors that are subsets of others.
+      
       List<Factor> factorGraphFactors = new ArrayList<Factor>(factorGraph.getFactors());
+      
+      // This code is going to change to make inference more efficient.
+      Map<Factor, Integer> initialEliminationOrder = Maps.newHashMap();
+      if (factorGraph.getInferenceHint() != null) {
+        for (int i = 0; i < factorGraphFactors.size(); i++) {
+          initialEliminationOrder.put(factorGraphFactors.get(i), 
+              factorGraph.getInferenceHint().getFactorEliminationOrder()[i]);
+        }
+      } else {
+        for (int i = 0; i < factorGraphFactors.size(); i++) {
+          initialEliminationOrder.put(factorGraphFactors.get(i), i);
+        }
+      }
+      
+      // Store factors which contain each variable so that we can
+      // eliminate factors that are subsets of others.
+
       Collections.sort(factorGraphFactors, new Comparator<Factor>() {
         public int compare(Factor f1, Factor f2) {
           return f2.getVars().getVariableNums().size() - f1.getVars().getVariableNums().size();
@@ -223,6 +224,7 @@ public class JunctionTree extends AbstractMarginalCalculator {
       Map<Factor, Integer> factorCliqueMap = new HashMap<Factor, Integer>();
       HashMultimap<Integer, Factor> varFactorMap = new HashMultimap<Integer, Factor>();
       varCliqueFactorMap = new HashMultimap<Integer, Integer>();
+      BiMap<Integer, Integer> cliquePriorityMap = HashBiMap.create();
       for (Factor f : factorGraphFactors) {
         Set<Factor> mergeableFactors = new HashSet<Factor>(factorGraph.getFactors());
         for (Integer varNum : f.getVars().getVariableNums()) {
@@ -236,11 +238,14 @@ public class JunctionTree extends AbstractMarginalCalculator {
           int cliqueNum = factorCliqueMap.get(superset);
 
           cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(f));
+          cliquePriorityMap.put(cliqueNum, 
+              Math.max(cliquePriorityMap.get(cliqueNum), initialEliminationOrder.get(f)));
           factorCliqueMap.put(f, cliqueNum);
         } else {
           int chosenNum = cliqueFactors.size();
           factorCliqueMap.put(f, chosenNum);
           cliqueFactors.add(f);
+          cliquePriorityMap.put(chosenNum, initialEliminationOrder.get(f));
           messages.add(new HashMap<Integer, Factor>());
 
           for (Integer varNum : f.getVars().getVariableNums()) {
@@ -262,6 +267,14 @@ public class JunctionTree extends AbstractMarginalCalculator {
         for (Integer adjacentFactor : factorEdges.get(i)) {
           separatorSets.get(i).put(adjacentFactor, new SeparatorSet(i, adjacentFactor, cliqueFactors.get(i).getVars().intersection(cliqueFactors.get(adjacentFactor).getVars())));
         }
+      }
+      
+      // Find the best elimination order.
+      SortedMap<Integer, Integer> bestEliminationOrder = Maps.newTreeMap();
+      bestEliminationOrder.putAll(cliquePriorityMap.inverse());
+      cliqueEliminationOrder = new ArrayList<Integer>();
+      for (Integer position : bestEliminationOrder.keySet()) {
+        cliqueEliminationOrder.add(bestEliminationOrder.get(position));
       }
     }
 
@@ -295,6 +308,10 @@ public class JunctionTree extends AbstractMarginalCalculator {
       for (int i = 0; i < cliqueFactors.size(); i++) {
         cliqueConditionalFactors.add(cliqueFactors.get(i).conditional(assignment));
       }
+    }
+    
+    public List<Integer> getFactorEliminationOrder() {
+      return cliqueEliminationOrder; 
     }
 
     public Set<Integer> getIncomingFactors(int factorNum) {

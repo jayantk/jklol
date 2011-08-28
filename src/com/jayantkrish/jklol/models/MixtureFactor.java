@@ -217,6 +217,20 @@ public class MixtureFactor extends AbstractFactor {
     }
     return MixtureFactor.create(factors, newWeights);
   }
+  
+  @Override
+  public Factor inverse() {
+    throw new UnsupportedOperationException("Cannot invert a MixtureFactor.");
+  }
+  
+  @Override
+  public double size() {
+    double size = 0.0;
+    for (Factor factor : factors) {
+      size += factor.size();
+    }
+    return size;
+  }
 
   @Override
   public Assignment sample() {

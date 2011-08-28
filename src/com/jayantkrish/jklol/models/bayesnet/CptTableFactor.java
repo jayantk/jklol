@@ -2,9 +2,12 @@ package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.BiMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -23,18 +26,20 @@ public class CptTableFactor extends DiscreteFactor implements CptFactor {
   private VariableNumMap childVars;
 
   private Cpt cpt;
-  private Map<Integer, Integer> cptVarNumMap;
+  private BiMap<Integer, Integer> cptVarNumMap;
 
   /**
    * childrenNums are the variable numbers of the "child" nodes. The CptFactor
    * defines a probability distribution P(children | parents) over *sets* of
    * child variables. (In the Bayes Net DAG, there is an edge from every parent
    * to every child, and internally the children are a directed clique.)
-   * 
-   * The factor's CPT comes uninitialized.
+   *
+   * {@code cptVarNumMap} is a mapping from the variables of {@code this} factor to
+   * the variables of the underlying cpt. This will be used in the future to allow
+   * factors to share CPTs.
    */
   public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars,
-      Map<Integer, Integer> cptVarNumMap) {
+      BiMap<Integer, Integer> cptVarNumMap) {
     super(parentVars.union(childVars));
 
     this.parentVars = parentVars;
@@ -51,16 +56,27 @@ public class CptTableFactor extends DiscreteFactor implements CptFactor {
   @Override
   public Iterator<Assignment> outcomeIterator() {
     // Need to reverse the mapping from the variables of this to the CPT.
-    Map<Integer, Integer> cptToFactorMap = Maps.newHashMap();
-    for (Map.Entry<Integer, Integer> mapEntry : cptVarNumMap.entrySet()) {
-      cptToFactorMap.put(mapEntry.getValue(), mapEntry.getKey());
-    }
-    return new MappingAssignmentIterator(cpt.assignmentIterator(), cptToFactorMap);
+    return new MappingAssignmentIterator(cpt.assignmentIterator(), cptVarNumMap.inverse());
   }
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
     return cpt.getProbability(assignment.mappedAssignment(cptVarNumMap));
+  }
+  
+  @Override
+  public double size() {
+    return cpt.size();
+  }
+  
+  @Override
+  public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Object> varValues) {
+    Set<Assignment> assignments = Sets.newHashSet();
+    Map<Integer, Integer> cptToFactorVars = cptVarNumMap.inverse(); 
+    for (Assignment cptAssignment : cpt.getAssignmentsWithEntry(cptVarNumMap.get(varNum), varValues)) {
+      assignments.add(cptAssignment.mappedAssignment(cptToFactorVars));
+    }
+    return assignments;
   }
 
   // ////////////////////////////////////////////////////////////////

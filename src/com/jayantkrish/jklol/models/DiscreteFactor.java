@@ -84,7 +84,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     while (iter.hasNext()) {
       Assignment a = iter.next();
       if (varValues.contains(a.getVarValue(varNum))) {
-        assignments.add(new Assignment(a));
+        assignments.add(a);
       }
     }
     return assignments;
@@ -97,6 +97,12 @@ public abstract class DiscreteFactor extends AbstractFactor {
   @Override
   public DiscreteFactor conditional(Assignment a) {
     VariableNumMap factorVars = getVars().intersection(a.getVarNumsSorted());
+
+    // Efficiency improvement: only create a new factor if necessary.
+    if (factorVars.size() == 0) {
+      return this;
+    }
+    
     Assignment subAssignment = a.subAssignment(factorVars);
     TableFactor tableFactor = new TableFactor(factorVars);
     tableFactor.setWeight(subAssignment, 1.0);
@@ -180,6 +186,17 @@ public abstract class DiscreteFactor extends AbstractFactor {
   @Override
   public DiscreteFactor product(double constant) {
     return TableFactor.productFactor(this, constant);
+  }
+  
+  @Override
+  public DiscreteFactor inverse() {
+    TableFactor inverse = new TableFactor(getVars());
+    Iterator<Assignment> iter = outcomeIterator();
+    while (iter.hasNext()) {
+      Assignment a = iter.next();
+      inverse.setWeight(a, 1.0 / getUnnormalizedProbability(a));      
+    }
+    return inverse;
   }
 
   @Override

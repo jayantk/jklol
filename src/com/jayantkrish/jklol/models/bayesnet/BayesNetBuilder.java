@@ -3,11 +3,11 @@ package com.jayantkrish.jklol.models.bayesnet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.cfg.CfgFactor;
 import com.jayantkrish.jklol.cfg.CptProductionDistribution;
 import com.jayantkrish.jklol.cfg.Grammar;
@@ -79,7 +79,7 @@ public class BayesNetBuilder {
     VariableNumMap childVars = bayesNet.lookupVariables(childVariableNames);
     VariableNumMap allVars = parentVars.union(childVars);
     
-    Map<Integer, Integer> cptVarNumMap = Maps.newHashMap();
+    BiMap<Integer, Integer> cptVarNumMap = HashBiMap.create();
     for (Integer varNum : allVars.getVariableNums()) {
       cptVarNumMap.put(varNum, varNum);
     }

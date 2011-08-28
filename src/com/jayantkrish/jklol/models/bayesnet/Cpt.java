@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.models.bayesnet;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -66,7 +67,7 @@ public class Cpt implements SufficientStatistics {
     }
     return childStatistics.get(a) / parentStatistics.get(subAssignment);
   }
-  
+
   /**
    * Add some number of occurrences to a particular outcome.
    */
@@ -85,15 +86,27 @@ public class Cpt implements SufficientStatistics {
     parentStatistics.put(subAssignment,
         parentStatistics.get(subAssignment) + count);
   }
-  
+
+  /**
+   * Gets all assignments with nonzero probability in which {@code varNum}'s
+   * value is an element of {@code values}.
+   * 
+   * @param varNum
+   * @param values
+   * @return
+   */
+  public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Object> values) {
+    return childStatistics.getKeysWithVariableValue(varNum, values);
+  }
+
   public VariableNumMap getParents() {
     return parents;
   }
-  
+
   public VariableNumMap getChildren() {
     return children;
   }
-  
+
   public VariableNumMap getVars() {
     return allVars;
   }
@@ -106,6 +119,15 @@ public class Cpt implements SufficientStatistics {
    */
   public Iterator<Assignment> assignmentIterator() {
     return childStatistics.assignmentIterator();
+  }
+
+  /**
+   * Gets the number of assignments with nonzero probability in {@code this}.
+   * 
+   * @return
+   */
+  public double size() {
+    return childStatistics.size();
   }
 
   /**

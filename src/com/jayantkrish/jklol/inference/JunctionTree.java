@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,6 +16,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.SeparatorSet;
@@ -50,16 +52,14 @@ public class JunctionTree extends AbstractMarginalCalculator {
 
   @Override
   public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {
-    CliqueTree cliqueTree = new CliqueTree(factorGraph);
-    cliqueTree.setEvidence(assignment);
+    CliqueTree cliqueTree = new CliqueTree(factorGraph, assignment);
     int rootFactorNum = runMessagePassing(cliqueTree, true);
     return cliqueTreeToMarginalSet(cliqueTree, rootFactorNum);
   }
 
   @Override
   public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment) {
-    CliqueTree cliqueTree = new CliqueTree(factorGraph);
-    cliqueTree.setEvidence(assignment);
+    CliqueTree cliqueTree = new CliqueTree(factorGraph, assignment);
     int rootFactorNum = runMessagePassing(cliqueTree, false);
     return cliqueTreeToMaxMarginalSet(cliqueTree, rootFactorNum);
   }
@@ -103,24 +103,46 @@ public class JunctionTree extends AbstractMarginalCalculator {
    * Compute the message that gets passed from startFactor to destFactor.
    */
   private void passMessage(CliqueTree cliqueTree, int startFactor, int destFactor, boolean useSumProduct) {
-    System.out.println(startFactor + ":" + cliqueTree.getFactor(startFactor).getVars() + " --> " 
-        + destFactor + ":" + cliqueTree.getFactor(destFactor).getVars());
+    // System.out.println(startFactor + ":" + cliqueTree.getFactor(startFactor).getVars() + " --> " 
+        // + destFactor + ":" + cliqueTree.getFactor(destFactor).getVars());
     
     VariableNumMap sharedVars = cliqueTree.getFactor(startFactor).getVars().intersection(cliqueTree.getFactor(destFactor).getVars());
 
+    // Find the factors which have yet to be merged into the marginal distribution of factor, but are
+    // necessary for computing the specified message.
+    Set<Integer> factorIndicesToCombine = Sets.newHashSet(cliqueTree.getNeighboringFactors(startFactor));
+    factorIndicesToCombine.removeAll(cliqueTree.getFactorsInMarginal(startFactor));
+    
+    // If this is the upstream round of message passing, we might not have received a 
+    // message from destFactor yet. However, if we have received the message, we 
+    // should include it in the product as it will increase sparsity and thereby   
+    // improve efficiency.
+    if (cliqueTree.getMessage(destFactor, startFactor) == null) {
+      factorIndicesToCombine.remove(destFactor);
+    }
+    
     List<Factor> factorsToCombine = new ArrayList<Factor>();
-    for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(startFactor)) {
-      if (adjacentFactorNum == destFactor) {
-        continue;
-      }
+    for (Integer adjacentFactorNum : factorIndicesToCombine) {
       factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, startFactor));
     }
-    Factor productFactor = cliqueTree.getFactor(startFactor).product(factorsToCombine);
+    
+    // Update the marginal distribution of startFactor in the clique tree.
+    Factor updatedMarginal = cliqueTree.getMarginal(startFactor).product(factorsToCombine);
+    cliqueTree.setMarginal(startFactor, updatedMarginal);
+    cliqueTree.addFactorsToMarginal(startFactor, factorIndicesToCombine);
+
+    // The message from startFactor to destFactor is the marginal of productFactor, divided by the message from
+    // destFactor to startFactor, if it exists.
     Factor messageFactor = null;
     if (useSumProduct) {
-      messageFactor = productFactor.marginalize(productFactor.getVars().removeAll(sharedVars).getVariableNums());
+      messageFactor = updatedMarginal.marginalize(updatedMarginal.getVars().removeAll(sharedVars).getVariableNums());
     } else {
-      messageFactor = productFactor.maxMarginalize(productFactor.getVars().removeAll(sharedVars).getVariableNums());
+      messageFactor = updatedMarginal.maxMarginalize(updatedMarginal.getVars().removeAll(sharedVars).getVariableNums());
+    }
+    
+    // Divide out the destFactor -> startFactor message if necessary.
+    if (cliqueTree.getFactorsInMarginal(startFactor).contains(destFactor)) {
+      messageFactor = messageFactor.product(cliqueTree.getMessage(destFactor, startFactor).inverse());
     }
 
     cliqueTree.addMessage(startFactor, destFactor, messageFactor);
@@ -139,12 +161,20 @@ public class JunctionTree extends AbstractMarginalCalculator {
    * @return
    */
   private static Factor computeMarginal(CliqueTree cliqueTree, int factorNum, boolean useSumProduct) {
+    
+    Set<Integer> factorNumsToCombine = Sets.newHashSet(cliqueTree.getNeighboringFactors(factorNum));
+    factorNumsToCombine.removeAll(cliqueTree.getFactorsInMarginal(factorNum));
+    
     List<Factor> factorsToCombine = Lists.newArrayList();
-    for (int adjacentFactorNum : cliqueTree.getNeighboringFactors(factorNum)) {
+    for (int adjacentFactorNum : factorNumsToCombine) {
       factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, factorNum));
     }
-
-    return cliqueTree.getFactor(factorNum).product(factorsToCombine);
+    
+    Factor newMarginal = cliqueTree.getMarginal(factorNum).product(factorsToCombine);
+    cliqueTree.setMarginal(factorNum, newMarginal);
+    cliqueTree.addFactorsToMarginal(factorNum, factorNumsToCombine);
+    
+    return newMarginal;
   }
 
   private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree, int rootFactorNum) {
@@ -180,25 +210,32 @@ public class JunctionTree extends AbstractMarginalCalculator {
   private class CliqueTree {
 
     private List<Factor> cliqueFactors;
-    private List<Factor> cliqueConditionalFactors;
-
+    
     // These data structures represent the actual junction tree.
     private HashMultimap<Integer, Integer> factorEdges;
     private List<Map<Integer, SeparatorSet>> separatorSets;
     private List<Map<Integer, Factor>> messages;
+    
+    // As message passing progresses, we will multiply together the factors necessary to compute marginals
+    // on each node. marginals contains the current factor that is approaching the marginal, and 
+    // factorsInMarginals tracks the factors whose messages have been combined into marginals.
+    private List<Factor> marginals;
+    private List<Set<Integer>> factorsInMarginals;
 
     private HashMultimap<Integer, Integer> varCliqueFactorMap;
     private List<Integer> cliqueEliminationOrder;
 
-    public CliqueTree(FactorGraph factorGraph) {
+    public CliqueTree(FactorGraph factorGraph, Assignment conditionedOn) {
       cliqueFactors = new ArrayList<Factor>();
-      cliqueConditionalFactors = new ArrayList<Factor>();
 
       factorEdges = new HashMultimap<Integer, Integer>();
       separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
       messages = new ArrayList<Map<Integer, Factor>>();
       
-      List<Factor> factorGraphFactors = new ArrayList<Factor>(factorGraph.getFactors());
+      List<Factor> factorGraphFactors = new ArrayList<Factor>();
+      for (Factor factor : factorGraph.getFactors()) {
+        factorGraphFactors.add(factor.conditional(conditionedOn));
+      }
       
       // This code is going to change to make inference more efficient.
       Map<Factor, Integer> initialEliminationOrder = Maps.newHashMap();
@@ -221,21 +258,31 @@ public class JunctionTree extends AbstractMarginalCalculator {
           return f2.getVars().getVariableNums().size() - f1.getVars().getVariableNums().size();
         }
       });
+      
       Map<Factor, Integer> factorCliqueMap = new HashMap<Factor, Integer>();
       HashMultimap<Integer, Factor> varFactorMap = new HashMultimap<Integer, Factor>();
       varCliqueFactorMap = new HashMultimap<Integer, Integer>();
       BiMap<Integer, Integer> cliquePriorityMap = HashBiMap.create();
       for (Factor f : factorGraphFactors) {
-        Set<Factor> mergeableFactors = new HashSet<Factor>(factorGraph.getFactors());
+        Set<Factor> mergeableFactors = new HashSet<Factor>(factorGraphFactors);
         for (Integer varNum : f.getVars().getVariableNums()) {
           mergeableFactors.retainAll(varFactorMap.get(varNum));
           varFactorMap.put(varNum, f);
         }
 
         if (mergeableFactors.size() > 0) {
-          // Arbitrarily select a factor to merge this factor in to.
-          Factor superset = mergeableFactors.iterator().next();
+          // Choose the sparsest factor to merge this factor into.
+          Iterator<Factor> mergeableIterator = mergeableFactors.iterator();
+          Factor superset = mergeableIterator.next();
+          while (mergeableIterator.hasNext()) {
+            Factor next = mergeableIterator.next();
+            if (next.size() < superset.size()) {
+              superset = next;
+            }
+          }
           int cliqueNum = factorCliqueMap.get(superset);
+          
+          // System.out.println("Merging " + f.getVars() + " into " + cliqueFactors.get(cliqueNum).getVars());
 
           cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(f));
           cliquePriorityMap.put(cliqueNum, 
@@ -276,6 +323,12 @@ public class JunctionTree extends AbstractMarginalCalculator {
       for (Integer position : bestEliminationOrder.keySet()) {
         cliqueEliminationOrder.add(bestEliminationOrder.get(position));
       }
+      
+      marginals = Lists.newArrayList(cliqueFactors);
+      factorsInMarginals = Lists.newArrayList();        
+      for (int i = 0; i < marginals.size(); i++) {
+        factorsInMarginals.add(Sets.<Integer>newHashSet());
+      }
     }
 
     public int numFactors() {
@@ -283,33 +336,13 @@ public class JunctionTree extends AbstractMarginalCalculator {
     }
 
     public Factor getFactor(int factorNum) {
-      return cliqueConditionalFactors.get(factorNum);
+      return cliqueFactors.get(factorNum);
     }
 
     public Set<Integer> getFactorIndicesWithVariable(int varNum) {
       return varCliqueFactorMap.get(varNum);
     }
 
-    /**
-     * Delete all passed messages and conditional evidence.
-     */
-    public void clear() {
-      for (int i = 0; i < messages.size(); i++) {
-        messages.get(i).clear();
-      }
-      cliqueConditionalFactors.clear();
-    }
-
-    /**
-     * Condition on the passed assignments to variables.
-     */
-    public void setEvidence(Assignment assignment) {
-      cliqueConditionalFactors.clear();
-      for (int i = 0; i < cliqueFactors.size(); i++) {
-        cliqueConditionalFactors.add(cliqueFactors.get(i).conditional(assignment));
-      }
-    }
-    
     public List<Integer> getFactorEliminationOrder() {
       return cliqueEliminationOrder; 
     }
@@ -351,6 +384,22 @@ public class JunctionTree extends AbstractMarginalCalculator {
 
     public void addMessage(int startFactor, int endFactor, Factor message) {
       messages.get(startFactor).put(endFactor, message);
+    }
+    
+    public Factor getMarginal(int factorNum) {
+      return marginals.get(factorNum);
+    }
+    
+    public void setMarginal(int factorNum, Factor marginal) {
+      marginals.set(factorNum, marginal);
+    }
+    
+    public Set<Integer> getFactorsInMarginal(int factorNum) {
+      return Collections.unmodifiableSet(factorsInMarginals.get(factorNum));
+    }
+    
+    public void addFactorsToMarginal(int factorNum, Set<Integer> factorsToAdd) {
+      factorsInMarginals.get(factorNum).addAll(factorsToAdd);
     }
   }
 }

@@ -132,7 +132,6 @@ public class SufficientStatisticsCalculator {
         if (logFn != null) {
           logFn.log(assignment, factorGraph);
         }
-
         MarginalSet marginals = marginalCalculator.computeMarginals(factorGraph, assignment);
         startingStatistics.increment(factorGraph.computeSufficientStatistics(marginals, 1.0), 1.0);
       }

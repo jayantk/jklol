@@ -100,6 +100,17 @@ public class JunctionTreePerformanceTest extends TestCase {
 		System.out.println("Elapsed: " + elapsed + " ms");
 	}
 	
+	public void testConditional() {
+	  System.out.println("testConditional");
+		long start = System.currentTimeMillis();
+
+		factor2.conditional(new Assignment(Arrays.asList(0), Arrays.asList(0)));
+
+		long elapsed = System.currentTimeMillis() - start;
+		System.out.println("Elapsed: " + elapsed + " ms");
+	  
+	}
+	
 	public void testSufficientStatistics() {
 	  
 	  MarginalSet marginals = t.computeMarginals(f);

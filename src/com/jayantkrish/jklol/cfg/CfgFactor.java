@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.cfg;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -25,7 +24,6 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptFactor;
 import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -204,6 +202,17 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
 
     return new CfgFactor(parentVar, childVar, parentVarNum, childVarNum, productionDist,
         parser, newParentMessage, newChildMessage);
+  }
+  
+  @Override
+  public double size() {
+    // This is an overestimate, but the exact number is not easy to calculate.
+    return parentVar.numValues() * childVar.numValues(); 
+  }
+  
+  @Override
+  public Factor inverse() {
+    throw new UnsupportedOperationException("Cannot invert CfgFactor");
   }
 
   @Override

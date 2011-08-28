@@ -218,6 +218,15 @@ public class TableFactorTest extends TestCase {
 				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "F", "T"})));
 	}
 	
+	public void testInverse() {
+	  DiscreteFactor inverse = f.inverse();
+	  
+	  assertEquals(1.0, inverse.getUnnormalizedProbability(Arrays.asList("T", "T", "T", "T")));
+	  assertEquals(1.0 / 3.0, inverse.getUnnormalizedProbability(Arrays.asList("T", "T", "F", "T")));
+	  assertEquals(1.0 / 2.0, inverse.getUnnormalizedProbability(Arrays.asList("T", "T", "F", "U")));
+	  assertEquals(0.0, inverse.getUnnormalizedProbability(Arrays.asList("U", "U", "U", "U")));
+	}
+	
 	public void testSumFactor() {
 		DiscreteFactor s = TableFactor.sumFactor(f.marginalize(2, 5).coerceToDiscrete(), 
 		    g.marginalize(1).coerceToDiscrete());

@@ -1,12 +1,12 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.bayesnet.Cpt;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
@@ -29,7 +29,7 @@ public class CptFactorTest extends TestCase {
     VariableNumMap children = new VariableNumMap(Arrays.asList(4, 5), 
         Arrays.asList(v, v));
             
-    Map<Integer, Integer> map = Maps.newHashMap();
+    BiMap<Integer, Integer> map = HashBiMap.create();
     for (int i = 0; i < 4; i++) {
       map.put(i + 2, i);
     }
@@ -107,6 +107,15 @@ public class CptFactorTest extends TestCase {
     f.setCurrentParameters(newCpt);
     assertEquals(1.0, f.getCurrentParameters().getProbability(cptVars.outcomeToAssignment(assignments[0])));
     assertEquals(0.0, f.getCurrentParameters().getProbability(cptVars.outcomeToAssignment(assignments[1])));
+  }
+  
+  public void testGetAssignmentsWithEntry() {
+    Set<Assignment> expected = Sets.newHashSet();
+    expected.add(f.getVars().outcomeToAssignment(assignments[0]));
+    expected.add(f.getVars().outcomeToAssignment(assignments[1]));
+    expected.add(f.getVars().outcomeToAssignment(assignments[2]));
+
+    assertEquals(expected, f.getAssignmentsWithEntry(2, Sets.<Object>newHashSet("T")));
   }
   
   public void testIteration() {

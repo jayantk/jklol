@@ -26,9 +26,6 @@ public class TableFactor extends DiscreteFactor {
   // more efficient.
   private SparseOutcomeTable<Double> weights;
 
-  // An index storing assignments containing particular variable values.
-  private List<HashMultimap<Object, Assignment>> varValueAssignmentIndex;
-
   /**
    * Construct a TableFactor involving the specified variable numbers (whose
    * possible values are in variables). Note that vars can only contain
@@ -38,21 +35,18 @@ public class TableFactor extends DiscreteFactor {
     super(vars);
 
     weights = new SparseOutcomeTable<Double>(vars.getVariableNums());
-    varValueAssignmentIndex = new ArrayList<HashMultimap<Object, Assignment>>(vars
-        .getVariableNums().size());
-    for (int i = 0; i < vars.getVariableNums().size(); i++) {
-      varValueAssignmentIndex.add(new HashMultimap<Object, Assignment>());
-    }
   }
 
   // //////////////////////////////////////////////////////////////////////////////
   // Factor overrides.
   // //////////////////////////////////////////////////////////////////////////////
 
+  @Override
   public Iterator<Assignment> outcomeIterator() {
     return weights.assignmentIterator();
   }
 
+  @Override
   public double getUnnormalizedProbability(Assignment a) {
     Preconditions.checkArgument(a.containsVars(weights.getVarNums()));
 
@@ -71,22 +65,14 @@ public class TableFactor extends DiscreteFactor {
     return 0.0;
   }
 
+  @Override
   public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Object> varValues) {
-    int varIndex = -1;
-    List<Integer> varNums = getVars().getVariableNums();
-    for (int i = 0; i < varNums.size(); i++) {
-      if (varNums.get(i) == varNum) {
-        varIndex = i;
-        break;
-      }
-    }
-    assert varIndex != -1;
-
-    Set<Assignment> possibleAssignments = new HashSet<Assignment>();
-    for (Object varValue : varValues) {
-      possibleAssignments.addAll(varValueAssignmentIndex.get(varIndex).get(varValue));
-    }
-    return possibleAssignments;
+    return weights.getKeysWithVariableValue(varNum, varValues);
+  }
+  
+  @Override
+  public double size() {
+    return weights.size();
   }
 
   // ///////////////////////////////////////////////////////////////////////////
@@ -105,12 +91,6 @@ public class TableFactor extends DiscreteFactor {
   public void setWeight(Assignment a, double weight) {
     Preconditions.checkArgument(weight >= 0.0);
     weights.put(a, weight);
-
-    Assignment copy = new Assignment(a);
-    List<Integer> varNums = getVars().getVariableNums();
-    for (int i = 0; i < varNums.size(); i++) {
-      varValueAssignmentIndex.get(i).put(copy.getVarValue(varNums.get(i)), copy);
-    }
   }
 
   public String toString() {
@@ -284,7 +264,7 @@ public class TableFactor extends DiscreteFactor {
    * Multiples one factor with a set of factors.
    */
   private static TableFactor subsetProductFactor(DiscreteFactor whole, List<DiscreteFactor> subsets) {
-    Map<Integer, Set<Object>> varValueMap = getPossibleVariableValues(subsets);
+    Map<Integer, Set<Object>> varValueMap = getPossibleVariableValues(subsets);        
     Set<Assignment> possibleAssignments = null;
     for (Integer varNum : varValueMap.keySet()) {
       if (possibleAssignments == null) {

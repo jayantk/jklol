@@ -48,17 +48,17 @@ public interface Factor {
   public double getUnnormalizedProbability(Assignment assignment);
 
   /**
-   * Convenience method for getting the probability of an assignment. {@code
-   * outcome} contains the assignment to the variables in this factor, sorted in
-   * numerical order by their variable number. See
+   * Convenience method for getting the probability of an assignment.
+   * {@code outcome} contains the assignment to the variables in this factor,
+   * sorted in numerical order by their variable number. See
    * {@link #getUnnormalizedProbability(Assignment)}
    */
   public double getUnnormalizedProbability(List<? extends Object> outcome);
 
   /**
-   * Convenience method for getting the probability of an assignment. {@code
-   * outcome} is the assignment to the variables in this factor, sorted in
-   * numerical order by their variable number. See
+   * Convenience method for getting the probability of an assignment.
+   * {@code outcome} is the assignment to the variables in this factor, sorted
+   * in numerical order by their variable number. See
    * {@link #getUnnormalizedProbability(Assignment)}.
    */
   public double getUnnormalizedProbability(Object... outcome);
@@ -84,8 +84,8 @@ public interface Factor {
   /**
    * Gets a new factor which conditions on the variables in {@code assignment}.
    * The returned factor is defined over the same variables as the original, but
-   * assigns zero probability to assignments which are not supersets of {@code
-   * assignment}. That is, the returned {@code Factor} returns the same
+   * assigns zero probability to assignments which are not supersets of
+   * {@code assignment}. That is, the returned {@code Factor} returns the same
    * probability as this factor for assignments which contain the same
    * variable/value assignments as {@code assignment}, and 0 for all other
    * assignments.
@@ -172,11 +172,11 @@ public interface Factor {
   public Factor maximum(List<Factor> factors);
 
   /**
-   * Multiplies this factor by {@code other} and returns the result. {@code
-   * other} must contain a subset of the variables in this factor. The
+   * Multiplies this factor by {@code other} and returns the result.
+   * {@code other} must contain a subset of the variables in this factor. The
    * probability of an assignment in the returned factor is equal to the
-   * products of the probabilities of the assignment in {@code this} and {@code
-   * other}.
+   * products of the probabilities of the assignment in {@code this} and
+   * {@code other}.
    * <p>
    * Not all subsets are necessarily supported.
    */
@@ -201,17 +201,40 @@ public interface Factor {
   public Factor product(double constant);
 
   /**
+   * Returns the inverse of this factor, that is a factor f such that
+   * {@code f.product(this)} is the identity factor. In the case of a discrete
+   * factor, the identity factor is a uniform distribution over outcomes. If
+   * {@code this} has outcomes with 0 probability, the returned factor also
+   * assigns 0 probability to those outcomes.
+   * 
+   * @return
+   */
+  public Factor inverse();
+
+  /**
+   * Gets the number of assignments with positive probability in this factor.
+   * This measure is really only meaningful for {@code DiscreteFactor}s, where
+   * it may be used to optimize multiplication operations. The returned value is
+   * an upper bound on the true number of assignments; the true number of
+   * possible assignments may be fewer than reported. Continuous factors should
+   * return {@code Double.POSITIVE_INFINITY}.
+   * 
+   * @return
+   */
+  public double size();
+
+  /**
    * Samples a random assignment to the variables in this factor according to
    * this factor's probability distribution.
    */
   public Assignment sample();
 
   /**
-   * Gets the {@code numAssignments} most probable assignments for this {@code
-   * Factor}. Not all {@code Factor}s support retrieving more than one likely
-   * {@code Assignment}, but all factors support retrieving one assignment. For
-   * example, factors with continuous probability distributions only support
-   * retrieving a single maximum probability assignment.
+   * Gets the {@code numAssignments} most probable assignments for this
+   * {@code Factor}. Not all {@code Factor}s support retrieving more than one
+   * likely {@code Assignment}, but all factors support retrieving one
+   * assignment. For example, factors with continuous probability distributions
+   * only support retrieving a single maximum probability assignment.
    * 
    * @param numAssignments
    * @return

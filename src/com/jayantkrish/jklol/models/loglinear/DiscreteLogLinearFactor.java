@@ -31,10 +31,12 @@ public class DiscreteLogLinearFactor extends DiscreteFactor implements LogLinear
 	// Required methods for DiscreteFactor 
 	/////////////////////////////////////////////////////////////
 
+	@Override
 	public Iterator<Assignment> outcomeIterator() {
 		return new AllAssignmentIterator(getVars());
 	}
 
+	@Override
 	public double getUnnormalizedProbability(Assignment assignment) {
 		double weight = 0.0;
 		if (sparseFeatures.containsKey(assignment)) {
@@ -43,6 +45,11 @@ public class DiscreteLogLinearFactor extends DiscreteFactor implements LogLinear
 			}
 		}
 		return Math.exp(weight);
+	}
+	
+	@Override
+	public double size() {
+	  return sparseFeatures.size();
 	}
 
 	//////////////////////////////////////////////////////////////

@@ -30,6 +30,7 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 
 	@Override
 	public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {
+	  // TODO(jayantk): Handle conditioning on the assignment.
 	  Assignment curAssignment = initializeAssignment(factorGraph);
 
 		// Burn in the sampler

@@ -43,8 +43,6 @@ public class SparseOutcomeTable<T> {
   }
 
   public void put(Assignment key, T outcome) {
-    assert key.getVarNumsSorted().equals(varNums);
-
     for (int i = 0; i < varNums.size(); i++) {
       varValueAssignmentIndex.get(i).put(key.getVarValue(varNums.get(i)), key);
     }

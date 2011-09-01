@@ -269,18 +269,18 @@ public class MixtureFactor extends AbstractFactor {
         if (vars == null) {
           vars = factor.getVars();
         } else if (!factor.getVars().equals(vars)) {
-          throw new FactorCoercionError("Cannot coerce " + this + " to DiscreteFactor.");
+          throw new CoercionError("Cannot coerce " + this + " to DiscreteFactor.");
         }
       }
     }
 
-    List<DiscreteFactor> subFactors = Lists.newArrayList();
+    List<Factor> subFactors = Lists.newArrayList();
     for (int i = 0; i < factors.size(); i++) {
       if (factors.get(i).getVars().size() > 0) {
-        subFactors.add(factors.get(i).product(weights.get(i)).coerceToDiscrete());
+        subFactors.add(factors.get(i).product(weights.get(i)));
       }
     }
-    return TableFactor.sumFactor(subFactors);
+    return FactorUtils.add(subFactors).coerceToDiscrete();
   }
 
   /**

@@ -1,16 +1,15 @@
 package com.jayantkrish.jklol.cfg;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.util.DefaultHashMap;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.PriorityQueue;
-import java.util.Collections;
-import java.util.Arrays;
-import java.util.List;
-import java.util.ArrayList;
 import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+
+import com.jayantkrish.jklol.util.DefaultHashMap;
 
 /**
  * The "chart" of a CKY-style parser which enables efficient

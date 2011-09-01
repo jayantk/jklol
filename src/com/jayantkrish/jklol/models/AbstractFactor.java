@@ -84,12 +84,12 @@ public abstract class AbstractFactor implements Factor {
   /**
    * {@inheritDoc}
    * 
-   * This default implementation always throws {@code FactorCoercionError}.
+   * This default implementation always throws {@code CoercionError}.
    * Subclasses which support this operation should override this
    * implementation.
    */
   @Override
   public DiscreteFactor coerceToDiscrete() {
-    throw new FactorCoercionError("Cannot coerce this factor into a DiscreteFactor.");
+    throw new CoercionError("Cannot coerce this factor into a DiscreteFactor.");
   }
 }

@@ -8,7 +8,7 @@ import junit.framework.TestCase;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.FactorCoercionError;
+import com.jayantkrish.jklol.models.CoercionError;
 import com.jayantkrish.jklol.models.MixtureFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -20,7 +20,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  */
 public class MixtureFactorTest extends TestCase {
-
+  private TableFactorBuilder builder;
+  
 	private TableFactor f;
 	private TableFactor g;
 	private TableFactor h;
@@ -39,29 +40,31 @@ public class MixtureFactorTest extends TestCase {
 		// F : 2 + 12 + 18 = 32
 		// T : 4 + 10 + 9 = 23 
 
-		f = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
+		builder = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
 				Arrays.asList(new DiscreteVariable[] {v, v})));
-		f.setWeightList(Arrays.asList(new String[] {"F", "F"}), 1.0);
-		f.setWeightList(Arrays.asList(new String[] {"F", "T"}), 2.0);
-		f.setWeightList(Arrays.asList(new String[] {"T", "F"}), 3.0);
-		f.setWeightList(Arrays.asList(new String[] {"T", "T"}), 4.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F", "F"}), 1.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F", "T"}), 2.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T", "F"}), 3.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T", "T"}), 4.0);
+		f = builder.build();
 		
-		g = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 2, 3}),
+		builder = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 2, 3}),
 				Arrays.asList(new DiscreteVariable[] {v, v, v})));
 		
-		g.setWeightList(Arrays.asList(new String[] {"F", "F", "F"}), 2.0);
-		g.setWeightList(Arrays.asList(new String[] {"F", "F", "T"}), 3.0);
-		g.setWeightList(Arrays.asList(new String[] {"F", "T", "F"}), 6.0);
-		g.setWeightList(Arrays.asList(new String[] {"T", "T", "T"}), 4.0);
-		g.setWeightList(Arrays.asList(new String[] {"T", "T", "F"}), 5.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F", "F", "F"}), 2.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F", "F", "T"}), 3.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F", "T", "F"}), 6.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T", "T", "T"}), 4.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T", "T", "F"}), 5.0);
+		g = builder.build();
 
-		h = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 4}),
-				Arrays.asList(new DiscreteVariable[] {v, v})));
-		
-		h.setWeightList(Arrays.asList(new String[] {"F", "F"}), 6.0);
-		h.setWeightList(Arrays.asList(new String[] {"F", "T"}), 4.0);
-		h.setWeightList(Arrays.asList(new String[] {"T", "F"}), 3.0);
-		h.setWeightList(Arrays.asList(new String[] {"T", "T"}), 2.0);
+		builder = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 4}),
+				Arrays.asList(new DiscreteVariable[] {v, v})));		
+		builder.setWeightList(Arrays.asList(new String[] {"F", "F"}), 6.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F", "T"}), 4.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T", "F"}), 3.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T", "T"}), 2.0);
+		h = builder.build();
 		
 		List<Factor> factors = Lists.newArrayList();
 		factors.addAll(Arrays.asList(new TableFactor[] {f, g, h}));
@@ -69,8 +72,8 @@ public class MixtureFactorTest extends TestCase {
 	}
 	
 	public void testCreateInvalidFactors() {
-		Factor factor = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 2, 4}),
-				Arrays.asList(new DiscreteVariable[] {v, v, v})));
+		Factor factor = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 2, 4}),
+				Arrays.asList(new DiscreteVariable[] {v, v, v}))).build();
 		List<Factor> factors = Lists.newArrayList();
 		factors.addAll(Arrays.asList(f, g, factor));
 		try {
@@ -165,10 +168,11 @@ public class MixtureFactorTest extends TestCase {
 	}
 	
 	public void testProduct1() {
-		TableFactor message = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0}),
+		builder = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0}),
 				Arrays.asList(new DiscreteVariable[] {v})));
-		message.setWeightList(Arrays.asList(new String[] {"F"}), 1.0);
-		message.setWeightList(Arrays.asList(new String[] {"T"}), 2.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F"}), 1.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T"}), 2.0);
+		Factor message = builder.build();
 		
 		Factor newMixture = m.product(message);
 		assertEquals(2.0 * (3.0 + 2.0 * 4.0 + 3.0 * 2.0), 
@@ -180,10 +184,11 @@ public class MixtureFactorTest extends TestCase {
 	}
 	
 	public void testProduct2() {
-		TableFactor message = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {3}),
+		builder = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {3}),
 				Arrays.asList(new DiscreteVariable[] {v})));
-		message.setWeightList(Arrays.asList(new String[] {"F"}), 2.0);
-		message.setWeightList(Arrays.asList(new String[] {"T"}), 3.0);
+		builder.setWeightList(Arrays.asList(new String[] {"F"}), 2.0);
+		builder.setWeightList(Arrays.asList(new String[] {"T"}), 3.0);
+		Factor message = builder.build();
 
 		Factor newMixture = m.product(message);
 		assertEquals(3.0 + 2.0 * 4.0 * 3.0 + 3.0 * 2.0, 
@@ -195,8 +200,8 @@ public class MixtureFactorTest extends TestCase {
 	}
 	
 	public void testProductInvalid1() {
-		Factor message = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
-				Arrays.asList(new DiscreteVariable[] {v, v})));
+		Factor message = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
+				Arrays.asList(new DiscreteVariable[] {v, v}))).build();
 		try {
 			m.product(message);
 		} catch (IllegalArgumentException e) {
@@ -206,8 +211,8 @@ public class MixtureFactorTest extends TestCase {
 	}
 	
 	public void testProductInvalid2() {
-		Factor message = new TableFactor(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
-				Arrays.asList(new DiscreteVariable[] {v, v})));
+		Factor message = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 1}),
+				Arrays.asList(new DiscreteVariable[] {v, v}))).build();
 		try {
 			m.product(message);
 		} catch (IllegalArgumentException e) {
@@ -259,9 +264,9 @@ public class MixtureFactorTest extends TestCase {
 	public void testCoerceToDiscreteError() {
 		try {
 			m.coerceToDiscrete();
-		} catch (FactorCoercionError e) {
+		} catch (CoercionError e) {
 			return;
 		}
-		fail("Expected FactorCoercionError.");
+		fail("Expected CoercionError.");
 	}
 }

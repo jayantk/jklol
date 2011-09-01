@@ -3,13 +3,17 @@ package com.jayantkrish.jklol.models.bayesnet;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.CoercionError;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.loglinear.FeatureSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.SparseOutcomeTable;
 
 /**
  * A conditional probability table (for a BN). Stores a conditional probability
@@ -25,17 +29,16 @@ public class Cpt implements SufficientStatistics {
   private final VariableNumMap children;
   private final VariableNumMap allVars;
 
-  // TODO: Maybe these should be dense? It's unclear...
-  protected final SparseOutcomeTable<Double> childStatistics;
-  protected final SparseOutcomeTable<Double> parentStatistics;
+  protected final TableFactorBuilder childStatistics;
+  protected final TableFactorBuilder parentStatistics;
 
   public Cpt(VariableNumMap parents, VariableNumMap children) {
     this.parents = parents;
     this.children = children;
     allVars = parents.union(children);
 
-    childStatistics = new SparseOutcomeTable<Double>(allVars.getVariableNums());
-    parentStatistics = new SparseOutcomeTable<Double>(parents.getVariableNums());
+    childStatistics = new TableFactorBuilder(allVars);
+    parentStatistics = new TableFactorBuilder(parents);
   }
 
   @Override
@@ -52,6 +55,35 @@ public class Cpt implements SufficientStatistics {
       incrementOutcomeCount(assignmentIter.next(), amount);
     }
   }
+  
+  @Override
+  public Cpt coerceToCpt() {
+    return this;
+  }
+  
+  @Override
+  public FeatureSufficientStatistics coerceToFeature() {
+    // N.B. This is possible, but is not currently implemented.
+    throw new CoercionError("Cannot coerce Cpt instance into a FeatureSufficientStatistics.");
+  }
+  
+  @Override
+  public ListSufficientStatistics coerceToList() {
+    throw new CoercionError("Cannot coerce Cpt instance into a ListSufficientStatistics.");
+  }
+
+  /**
+   * Gets a {@code DiscreteFactor} representing the conditional probabilities in
+   * {@code this}. The weight of an assignment {@code a} in the returned factor
+   * is equal to the conditional probability of the child variables given the
+   * parents. The returned factor is suitable for performing inference with in a
+   * {@code FactorGraph}.
+   * 
+   * @return
+   */
+  public DiscreteFactor convertToFactor() {
+    return childStatistics.build().product(parentStatistics.build().inverse());
+  }
 
   /**
    * Gets the probability of assignment {@code a}.
@@ -62,60 +94,24 @@ public class Cpt implements SufficientStatistics {
       throw new ArithmeticException("Cannot get conditional probability for unobserved parents: "
           + subAssignment);
     }
-    if (!childStatistics.containsKey(a)) {
-      return 0.0;
-    }
-    return childStatistics.get(a) / parentStatistics.get(subAssignment);
+    return childStatistics.getWeight(a)
+        / parentStatistics.getWeight(subAssignment);
   }
 
   /**
-   * Add some number of occurrences to a particular outcome.
+   * Adds {@code count} occurrences to outcome {@code a}.
    */
   public void incrementOutcomeCount(Assignment a, double count) {
-    double oldCount = 0.0;
-    if (childStatistics.containsKey(a)) {
-      oldCount = childStatistics.get(a);
-    }
-    childStatistics.put(a, count + oldCount);
+    double oldCount = childStatistics.getWeight(a);
+    childStatistics.setWeight(a, count + oldCount);
 
     Assignment subAssignment = a.subAssignment(parents.getVariableNums());
-    if (!parentStatistics.containsKey(subAssignment)) {
-      parentStatistics.put(subAssignment, 0.0);
-    }
-
-    parentStatistics.put(subAssignment,
-        parentStatistics.get(subAssignment) + count);
-  }
-
-  /**
-   * Gets all assignments with nonzero probability in which {@code varNum}'s
-   * value is an element of {@code values}.
-   * 
-   * @param varNum
-   * @param values
-   * @return
-   */
-  public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Object> values) {
-    return childStatistics.getKeysWithVariableValue(varNum, values);
-  }
-
-  public VariableNumMap getParents() {
-    return parents;
-  }
-
-  public VariableNumMap getChildren() {
-    return children;
-  }
-
-  public VariableNumMap getVars() {
-    return allVars;
+    parentStatistics.setWeight(subAssignment, parentStatistics.getWeight(subAssignment) + count);
   }
 
   /**
    * Gets an iterator over all assignments to the child variables of
    * {@code this} with non-zero probability.
-   * 
-   * @return
    */
   public Iterator<Assignment> assignmentIterator() {
     return childStatistics.assignmentIterator();
@@ -123,11 +119,30 @@ public class Cpt implements SufficientStatistics {
 
   /**
    * Gets the number of assignments with nonzero probability in {@code this}.
-   * 
-   * @return
    */
   public double size() {
     return childStatistics.size();
+  }
+
+  /**
+   * Gets the parent variables of this CPT.
+   */
+  public VariableNumMap getParents() {
+    return parents;
+  }
+
+  /**
+   * Gets the children variables of this CPT.
+   */
+  public VariableNumMap getChildren() {
+    return children;
+  }
+
+  /**
+   * Gets all of the variables this CPT is defined over.
+   */
+  public VariableNumMap getVars() {
+    return allVars;
   }
 
   /**
@@ -140,15 +155,15 @@ public class Cpt implements SufficientStatistics {
    * @param incrementAmount
    * @param incrementMultiplier
    */
-  private void incrementOutcomeCounts(SparseOutcomeTable<Double> toIncrement,
-      SparseOutcomeTable<Double> incrementAmount, double incrementMultiplier) {
+  private void incrementOutcomeCounts(TableFactorBuilder toIncrement,
+      TableFactorBuilder incrementAmount, double incrementMultiplier) {
     Iterator<Assignment> iter = incrementAmount.assignmentIterator();
     while (iter.hasNext()) {
       Assignment a = iter.next();
       if (toIncrement.containsKey(a)) {
-        toIncrement.put(a, toIncrement.get(a) + incrementAmount.get(a) * incrementMultiplier);
+        toIncrement.setWeight(a, toIncrement.getWeight(a) + incrementAmount.getWeight(a) * incrementMultiplier);
       } else {
-        toIncrement.put(a, incrementAmount.get(a) * incrementMultiplier);
+        toIncrement.setWeight(a, incrementAmount.getWeight(a) * incrementMultiplier);
       }
     }
   }

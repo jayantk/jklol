@@ -6,7 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -32,13 +32,13 @@ public class SampleMarginalSet implements MarginalSet {
 	public Factor getMarginal(Collection<Integer> varNums) {
 		Preconditions.checkNotNull(varNums);
 		VariableNumMap varsToRetain = factorGraphVariables.intersection(varNums);
-		TableFactor factor = new TableFactor(varsToRetain);
+		TableFactorBuilder builder = new TableFactorBuilder(varsToRetain);
 		for (Assignment sample : samples) {
 			Assignment factorSample = sample.subAssignment(varNums);
-			factor.setWeight(factorSample, factor
-					.getUnnormalizedProbability(factorSample) + 1.0);
+			builder.setWeight(factorSample, 
+			    builder.getWeight(factorSample) + 1.0);
 		}
-		return factor;
+		return builder.build();
 	}
 	
 	@Override

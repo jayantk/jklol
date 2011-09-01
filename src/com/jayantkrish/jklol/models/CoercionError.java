@@ -6,18 +6,18 @@ package com.jayantkrish.jklol.models;
  * 
  * @author jayant
  */
-public class FactorCoercionError extends RuntimeException {
+public class CoercionError extends RuntimeException {
 
 	/**
 	 * Automatically generated version id.
 	 */
 	private static final long serialVersionUID = -1444725226227728640L;
 
-	public FactorCoercionError(String message) {
+	public CoercionError(String message) {
 		super(message);
 	}
 
-	public FactorCoercionError(String message, Exception wrappedException) {
+	public CoercionError(String message, Exception wrappedException) {
 		super(message, wrappedException);
 	}
 }

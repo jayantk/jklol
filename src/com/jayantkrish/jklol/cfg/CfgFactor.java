@@ -20,9 +20,8 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorUtils;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.bayesnet.CptFactor;
-import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -33,20 +32,21 @@ import com.jayantkrish.jklol.util.Assignment;
  * You can run exact inference in a Bayes Net containing a CfgFactor provided
  * that the terminal productions are conditioned on.
  */
-public class CfgFactor extends AbstractFactor implements CptFactor {
+public class CfgFactor extends AbstractFactor {
 
   private final int parentVarNum;
   private final DiscreteVariable parentVar;
   private final int childVarNum;
   private final DiscreteVariable childVar;
 
-  private CptProductionDistribution productionDist;
+  private ProductionDistribution productionDist;
   private final CfgParser parser;
 
   private final DiscreteFactor parentInboundMessage;
   private final DiscreteFactor childInboundMessage;
   
-  // A cache of the current parse charts (for both types of marginals), for efficiency.
+  // A cache of the current parse charts (for normal and max-marginals), 
+  // for efficiency.
   private final Map<Boolean, ParseChart> cachedCharts;
   
   /**
@@ -58,7 +58,7 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
    */
   public CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
       int parentVarNum, int childVarNum, Grammar grammar,
-      CptProductionDistribution productionDist) {
+      ProductionDistribution productionDist) {
     super(new VariableNumMap(Arrays.asList(new Integer[] { parentVarNum, childVarNum }),
         Arrays.asList(new DiscreteVariable[] { parentVar, childVar })));
 
@@ -79,7 +79,7 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
    * For implementing products of factors.
    */
   private CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
-      int parentVarNum, int childVarNum, CptProductionDistribution productionDist,
+      int parentVarNum, int childVarNum, ProductionDistribution productionDist,
       CfgParser parser, DiscreteFactor parentInboundMessage, DiscreteFactor childInboundMessage) {
     super(new VariableNumMap(Arrays.asList(new Integer[] { parentVarNum, childVarNum }),
         Arrays.asList(new DiscreteVariable[] { parentVar, childVar })));
@@ -118,47 +118,8 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
     }
     return probability;
   }
-
-  // ///////////////////////////////////////////////////////////
-  // CPT Factor methods
-  // ///////////////////////////////////////////////////////////
   
-  @Override
-  public CptProductionDistribution getNewSufficientStatistics() {
-      return productionDist.emptyCopy();
-  }
-
-  @Override
-  public CptProductionDistribution getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
-      throw new UnsupportedOperationException("Cannot compute statistics from an assignment.");
-  }
-
-  @Override
-  public SufficientStatistics getSufficientStatisticsFromMarginal(Factor marginal, double count, double partitionFunction) {
-    Preconditions.checkArgument(marginal instanceof CfgFactor);
-    ParseChart chart = ((CfgFactor) marginal).getMarginalChart(true);
-    
-    // Update binary/terminal rule counts
-    CptProductionDistribution newProductionDist = getNewSufficientStatistics();
-    newProductionDist.incrementBinaryCpts(chart.getBinaryRuleExpectations(), count / partitionFunction);
-    newProductionDist.incrementTerminalCpts(chart.getTerminalRuleExpectations(), count / partitionFunction);
-
-    return newProductionDist;
-  }
-
-  @Override
-  public CptProductionDistribution getCurrentParameters() {
-      return productionDist;
-  }
-
-  @Override
-  public void setCurrentParameters(SufficientStatistics statistics) {
-      Preconditions.checkArgument(statistics instanceof CptProductionDistribution);
-      this.productionDist = (CptProductionDistribution) statistics;
-      this.parser.setDistribution(productionDist);
-  }
-  
-  public CptProductionDistribution getProductionDistribution() {
+  public ProductionDistribution getProductionDistribution() {
     return productionDist;
   }
 
@@ -168,12 +129,11 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
 
   @Override
   public Factor product(List<Factor> factors) {
-    List<DiscreteFactor> discreteFactors = FactorUtils.coerceToDiscrete(factors);
-    List<DiscreteFactor> childFactors = Lists.newArrayList();
-    List<DiscreteFactor> parentFactors = Lists.newArrayList();
+    List<Factor> childFactors = Lists.newArrayList();
+    List<Factor> parentFactors = Lists.newArrayList();
     // Partition the factors to multiply into factors over the parent and child
     // variables.
-    for (DiscreteFactor f : discreteFactors) {
+    for (Factor f : factors) {
       Preconditions.checkArgument(f.getVars().size() == 1 &&
           (f.getVars().contains(parentVarNum) || f.getVars().contains(childVarNum)));
       if (f.getVars().contains(parentVarNum)) {
@@ -194,10 +154,10 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
     DiscreteFactor newParentMessage = null;
     DiscreteFactor newChildMessage = null;
     if (parentFactors.size() > 0) {
-      newParentMessage = TableFactor.productFactor(parentFactors);
+      newParentMessage = FactorUtils.product(parentFactors).coerceToDiscrete();
     }
     if (childFactors.size() > 0) {
-      newChildMessage = TableFactor.productFactor(childFactors);
+      newChildMessage = FactorUtils.product(childFactors).coerceToDiscrete();
     }
 
     return new CfgFactor(parentVar, childVar, parentVarNum, childVarNum, productionDist,
@@ -222,17 +182,15 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
     List<Factor> factorsToMultiply = Lists.newArrayList();
     if (a.containsVar(parentVarNum)) {
       List<Integer> parentVarNumList = Arrays.asList(new Integer[] { parentVarNum });
-      TableFactor newParentFactor = new TableFactor(getVars().intersection(parentVarNumList));
-      Assignment parentSubAssignment = a.subAssignment(parentVarNumList);
-      newParentFactor.setWeight(parentSubAssignment, 1.0);
+      TableFactor newParentFactor = TableFactor.pointDistribution(
+          getVars().intersection(parentVarNumList), a.subAssignment(parentVarNumList));
       factorsToMultiply.add(newParentFactor);
     }
 
     if (a.containsVar(childVarNum)) {
       List<Integer> childVarNumList = Arrays.asList(new Integer[] { childVarNum });
-      TableFactor newChildFactor = new TableFactor(getVars().intersection(childVarNumList));
-      Assignment childSubAssignment = a.subAssignment(childVarNumList);
-      newChildFactor.setWeight(childSubAssignment, 1.0);
+      TableFactor newChildFactor = TableFactor.pointDistribution(
+          getVars().intersection(childVarNumList), a.subAssignment(childVarNumList));
       factorsToMultiply.add(newChildFactor);
     }
 
@@ -339,7 +297,7 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
       // Only retaining the parent variable, since the number of variables to
       // retain
       // is less than 2.
-      TableFactor tempFactor = new TableFactor(new VariableNumMap(
+      TableFactorBuilder builder = new TableFactorBuilder(new VariableNumMap(
           Arrays.asList(new Integer[] { parentVarNum }),
           Arrays.asList(new DiscreteVariable[] { parentVar })));
       Map<Production, Double> rootEntries = chart.getInsideEntries(0, chart.chartSize() - 1);
@@ -347,21 +305,21 @@ public class CfgFactor extends AbstractFactor implements CptFactor {
       value.add(null);
       for (Production p : rootEntries.keySet()) {
         value.set(0, p);
-        tempFactor.setWeightList(value, rootEntries.get(p));
+        builder.setWeightList(value, rootEntries.get(p));
       }
 
       if (parentInboundMessage != null) {
-        return parentInboundMessage.product(tempFactor);
+        return parentInboundMessage.product(builder.build());
       } else {
-        return tempFactor;
+        return builder.build();
       }
     }
 
     // Both variables eliminated, so simply return the partition function.
     ParseChart chart = getMarginalChart(useSumProduct);
-    TableFactor returnFactor = new TableFactor(VariableNumMap.emptyMap());
-    returnFactor.setWeight(Assignment.EMPTY, chart.getPartitionFunction());
-    return returnFactor;
+    TableFactorBuilder builder = new TableFactorBuilder(VariableNumMap.emptyMap());
+    builder.setWeight(Assignment.EMPTY, chart.getPartitionFunction());
+    return builder.build();
   }
 
   /**

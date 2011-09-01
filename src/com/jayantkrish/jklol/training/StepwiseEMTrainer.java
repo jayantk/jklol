@@ -7,12 +7,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
-import com.jayantkrish.jklol.models.bayesnet.BayesNet;
-import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
+import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Train the weights of a BayesNet using stepwise EM, an online variant of EM.
+ * Train the weights of a ParametricFactorGraph using stepwise EM, an online variant of EM.
  */
 public class StepwiseEMTrainer {
 
@@ -67,17 +68,18 @@ public class StepwiseEMTrainer {
    * trained values.
    * 
    * <p>
-   * The parameters of {@code bn} are the starting point for training. A
+   * {@code initialParameters} are used as the starting point for training. A
    * reasonable initialization for these parameters is the uniform distribution
-   * (add-one smoothing). To use this setting, run
-   * {@code bn.setCurrentParameters(bn.getNewSufficientStatistics()); 
-   * bn.getParameters().increment(1);}. Note that stepwise EM training will
-   * gradually forget the smoothing as the number of iterations increases.
+   * (add-one smoothing). These parameters can be retrieved using
+   * {@code bn.getNewSufficientStatistics().increment(1)}. Note that stepwise EM
+   * training will gradually forget the smoothing as the number of iterations
+   * increases. {@code initialParameters} may be modified by this method.
    * 
    * @param bn
    * @param trainingData
    */
-  public void train(BayesNet bn, List<Assignment> trainingData) {
+  public SufficientStatistics train(ParametricFactorGraph bn, SufficientStatistics initialParameters,
+      List<Assignment> trainingData) {
     // Initialize state variables, which are used in updateBatchStatistics() and
     // updateParameters()
     double totalDecay = 1.0;
@@ -96,9 +98,23 @@ public class StepwiseEMTrainer {
       for (int j = 0; j < numBatches; j++) {
         List<Assignment> batch = trainingDataList.subList(j * batchSize,
             Math.min((j + 1) * batchSize, trainingDataList.size()));
+        
+        // Calculate the sufficient statistics for batch.
+        FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
         SufficientStatistics batchStatistics = statisticsCalculator
-            .computeSufficientStatistics(bn, batch, log);
-        totalDecay = updateParameters(bn, batchStatistics, numUpdates, totalDecay);
+            .computeSufficientStatistics(factorGraph, bn, batch, log);
+        
+        // Update the the parameter vector.
+        // Instead of multiplying the sufficient statistics (dense update)
+        // use a sparse update which simply increases the weight of the added
+        // marginals.
+        double batchDecayParam = Math.pow((numUpdates + 2), -1.0 * decayRate);
+        double newTotalDecay = totalDecay * (1.0 - batchDecayParam);
+        double batchMultiplier = batchDecayParam / newTotalDecay;
+
+        initialParameters.increment(batchStatistics, batchMultiplier);
+
+        totalDecay = newTotalDecay;
         numUpdates++;
       }
 
@@ -106,19 +122,6 @@ public class StepwiseEMTrainer {
         log.notifyIterationEnd(i);
       }
     }
-  }
-
-  private double updateParameters(BayesNet bn, SufficientStatistics stats,
-      int numUpdates, double totalDecay) {
-    // Instead of multiplying the sufficient statistics (dense update)
-    // use a sparse update which simply increases the weight of the added
-    // marginal.
-    double batchDecayParam = Math.pow((numUpdates + 2), -1.0 * decayRate);
-    double newTotalDecay = totalDecay * (1.0 - batchDecayParam);
-    double batchMultiplier = batchDecayParam / newTotalDecay;
-
-    bn.getCurrentParameters().increment(stats, batchMultiplier);
-
-    return newTotalDecay;
+    return initialParameters;
   }
 }

@@ -9,9 +9,12 @@ import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.bayesnet.BayesNet;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.IncrementalEMTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -21,10 +24,10 @@ import com.jayantkrish.jklol.util.Assignment;
 public class CfgFactorTest extends TestCase {
 
 	Grammar g;
-	CfgFactor cfgFactor;
+	CptCfgFactor cfgFactor;
 	CptTableFactor rootFactor;
 	CptTableFactor var1Factor;
-	BayesNet bn;
+	ParametricFactorGraph bn;
 
 	IncrementalEMTrainer trainer;
 	List<Assignment> trainingData;
@@ -81,11 +84,11 @@ public class CfgFactorTest extends TestCase {
 
 		List<String> observedVarNames = Arrays.asList(new String[] {"Var0", "Var2"});
 		trainingData = new ArrayList<Assignment>();
-		Assignment a1 = bn.outcomeToAssignment(observedVarNames,
-				Arrays.asList(new Object[] {terminals.get(0), "T"}));
-		Assignment a2 = bn.outcomeToAssignment(observedVarNames,
+		Assignment a1 = bn.lookupVariables(observedVarNames).outcomeToAssignment(
+		    Arrays.asList(new Object[] {terminals.get(0), "T"}));
+		Assignment a2 = bn.lookupVariables(observedVarNames).outcomeToAssignment(
 				Arrays.asList(new Object[] {terminals.get(1), "F"}));
-		Assignment a3 = bn.outcomeToAssignment(observedVarNames,
+		Assignment a3 = bn.lookupVariables(observedVarNames).outcomeToAssignment(
 				Arrays.asList(new Object[] {terminals.get(2), "T"}));
 		for (int i = 0; i < 3; i++) {
 			trainingData.add(a1);
@@ -97,27 +100,33 @@ public class CfgFactorTest extends TestCase {
 
 
 	public void testTrain() {
-	    bn.getCurrentParameters().increment(1.0);
-		trainer.train(bn, trainingData);
+	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
+	  initialParameters.increment(1.0);
+		SufficientStatistics finalParameters = trainer.train(bn, initialParameters, trainingData);
 
-		// This is as nice debug message.
+		// This is a nice debug message.
 		// for (CptFactor f : bn.getCptFactors()) {
     // System.out.println(f);
 		// }
 		
-		Assignment rootA = bn.outcomeToAssignment(Arrays.asList("Var1"), Arrays.asList(prod("A")));
+		FactorGraph factorGraph = bn.getFactorGraphFromParameters(finalParameters);
+		Factor rootFactor = factorGraph.getFactor(0);
+		Factor var1Factor = factorGraph.getFactor(1);
+		CfgFactor cfgFactor = (CfgFactor) factorGraph.getFactor(2);
+		
+		Assignment rootA = bn.lookupVariables(Arrays.asList("Var1")).outcomeToAssignment(Arrays.asList(prod("A")));
 		assertEquals(0.37, rootFactor.getUnnormalizedProbability(rootA), 0.05);
-		Assignment rootC = bn.outcomeToAssignment(Arrays.asList("Var1"), Arrays.asList(prod("C")));
+		Assignment rootC = bn.lookupVariables(Arrays.asList("Var1")).outcomeToAssignment(Arrays.asList(prod("C")));
     assertEquals(0.63, rootFactor.getUnnormalizedProbability(rootC), 0.05);
 		
-		Assignment rootAvar2F = bn.outcomeToAssignment(Arrays.asList("Var1", "Var2"), 
+		Assignment rootAvar2F = bn.lookupVariables(Arrays.asList("Var1", "Var2")).outcomeToAssignment( 
 		    Arrays.asList(prod("A"), "F")); 
 		assertEquals(0.8, var1Factor.getUnnormalizedProbability(rootAvar2F), 0.05);
-		Assignment rootCvar2T = bn.outcomeToAssignment(Arrays.asList("Var1", "Var2"), 
+		Assignment rootCvar2T = bn.lookupVariables(Arrays.asList("Var1", "Var2")).outcomeToAssignment( 
 		    Arrays.asList(prod("C"), "T")); 
     assertEquals(0.875, var1Factor.getUnnormalizedProbability(rootCvar2T), 0.05);
 
-    CptProductionDistribution prodDist = cfgFactor.getProductionDistribution();
+    ProductionDistribution prodDist = cfgFactor.getProductionDistribution();
     assertEquals(4.0 / 7.0, prodDist.getRuleProbability(bp("C", "A", "C")), 0.05);
     assertEquals(3.0 / 7.0, prodDist.getTerminalProbability(term("C", "c")), 0.05);
 	}

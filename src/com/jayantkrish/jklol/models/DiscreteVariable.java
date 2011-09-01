@@ -54,13 +54,15 @@ public class DiscreteVariable implements Variable {
 	 */
 	public int getValueIndex(Object value) {
 		if (!values.contains(value)) {
-			throw new NoSuchElementException("Tried accessing " + value + " of an enumerated variable type");
+			throw new NoSuchElementException("Tried accessing nonexistent value \"" + value 
+			    + "\" of variable " + name);
 		}
 		return values.getIndex(value);
 	}
 
+	@Override
 	public String toString() {
-		return name;
+		return name + " (" + values.size() + " values)";
 	}
 
 	public boolean equals(Object o) {

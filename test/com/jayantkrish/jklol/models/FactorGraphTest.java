@@ -12,6 +12,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
 public class FactorGraphTest extends TestCase {
 
 	private FactorGraph f;
+	private TableFactorBuilder builder;
 
 	public void setUp() {
 		f = new FactorGraph();
@@ -22,14 +23,16 @@ public class FactorGraphTest extends TestCase {
 		DiscreteVariable otherVar = new DiscreteVariable("Two values",
 				Arrays.asList(new String[] {"foo", "bar"}));
 
-		f.addVariable("Var0", tfVar);
-		f.addVariable("Var1", otherVar);
-		f.addVariable("Var2", tfVar);
-		f.addVariable("Var3", tfVar);
+		f = f.addVariable("Var0", tfVar);
+		f = f.addVariable("Var1", otherVar);
+		f = f.addVariable("Var2", tfVar);
+		f = f.addVariable("Var3", tfVar);
 
-		f.addTableFactor(Arrays.asList(new String[] {"Var0", "Var2", "Var3"}));
+		builder = new TableFactorBuilder(f.lookupVariables(Arrays.asList(new String[] {"Var0", "Var2", "Var3"})));
+		f = f.addFactor(builder.build());
 
-		f.addTableFactor(Arrays.asList(new String[] {"Var2", "Var1"}));
+		builder = new TableFactorBuilder(f.lookupVariables(Arrays.asList(new String[] {"Var2", "Var1"})));
+		f = f.addFactor(builder.build());
 	}
 
 	public void testGetFactorsWithVariable() {

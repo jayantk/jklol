@@ -1,16 +1,13 @@
 package com.jayantkrish.jklol.training;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
-import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.LogLinearModel;
+import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -18,58 +15,49 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class StochasticGradientTrainer {
 
-	private MarginalCalculator inferenceEngine;
-	private int numIterations;
+  private MarginalCalculator marginalCalculator;
+  private int numIterations;
 
-	// Cache gradient map so we don't continuously reallocate memory for it.
-	private Map<FeatureFunction, Double> gradient;
+  public StochasticGradientTrainer(MarginalCalculator inferenceEngine, int numIterations) {
+    this.marginalCalculator = inferenceEngine;
+    this.numIterations = numIterations;
+  }
 
-	public StochasticGradientTrainer(MarginalCalculator inferenceEngine, int numIterations) {
-		this.inferenceEngine = inferenceEngine;
-		this.numIterations = numIterations;
-		gradient = new HashMap<FeatureFunction, Double>();
-	}
+  public SufficientStatistics train(ParametricFactorGraph logLinearModel, SufficientStatistics initialParameters, 
+      List<Assignment> trainingData) {
+    Collections.shuffle(trainingData);
+    for (int i = 0; i < numIterations; i++) {
+      for (Assignment trainingExample : trainingData) {
+        SufficientStatistics gradient = computeGradient(initialParameters, logLinearModel, trainingExample);
+        // TODO: decay the gradient increment amount as (say) sqrt(numIterations)
+        initialParameters.increment(gradient, 1.0);
+      }
+    }
+    return initialParameters;
+  }
 
-	public void train(LogLinearModel factorGraph, List<Assignment> trainingData) {
+  /*
+   * Computes the gradient and stores it in the gradient accumulator.
+   */
+  private SufficientStatistics computeGradient(SufficientStatistics parameters,
+      ParametricFactorGraph logLinearModel, Assignment trainingExample) {
+    FactorGraph factorGraph = logLinearModel.getFactorGraphFromParameters(parameters);
 
-		Collections.shuffle(trainingData);
-		for (int i = 0; i < numIterations; i++) {
-			for (Assignment trainingExample : trainingData) {
-				gradient.clear();
-				computeGradient(factorGraph, trainingExample);
-				factorGraph.getFeatureSet().incrementFeatureWeights(gradient);
-			}
-		}
-	}
+    // Compute the second term of the gradient, the unconditional expected
+    // feature counts
+    MarginalSet unconditionalMarginals = marginalCalculator.computeMarginals(factorGraph);
+    SufficientStatistics unconditionalExpectedCounts = logLinearModel
+        .computeSufficientStatistics(unconditionalMarginals, 1.0);
 
-	/*
-	 * Computes the gradient and stores it in the gradient accumulator.
-	 */
-	private void computeGradient(LogLinearModel factorGraph, Assignment trainingExample) {
-		// Compute the second term of the gradient, the unconditional expected feature counts
-    MarginalSet expectedFeatureMarginals = inferenceEngine.computeMarginals(factorGraph);
-		for (DiscreteLogLinearFactor factor : factorGraph.getLogLinearFactors()) {
-			Factor marginal = expectedFeatureMarginals.getMarginal(factor.getVars().getVariableNums());
-			for (FeatureFunction f : factor.getFeatures()) {
-				if (!gradient.containsKey(f)) {
-					gradient.put(f, 0.0);
-				}
-				gradient.put(f, 
-						gradient.get(f) - marginal.computeExpectation(f));
-			}
-		}
+    // Compute the first term of the gradient, the model expectations
+    // conditioned on the training example.
+    MarginalSet conditionalMarginals = marginalCalculator.computeMarginals(factorGraph, trainingExample);
+    SufficientStatistics conditionalExpectedCounts = logLinearModel
+        .computeSufficientStatistics(conditionalMarginals, 1.0);
 
-	  // Compute the first term of the gradient, the model expectations conditioned on the training example.
-    MarginalSet conditionalMarginals = inferenceEngine.computeMarginals(factorGraph, trainingExample);
-		for (DiscreteLogLinearFactor factor : factorGraph.getLogLinearFactors()) {
-			Factor marginal = conditionalMarginals.getMarginal(factor.getVars().getVariableNums());
-			for (FeatureFunction f : factor.getFeatures()) {
-				if (!gradient.containsKey(f)) {
-					gradient.put(f, 0.0);
-				}
-				gradient.put(f, 
-						gradient.get(f) + marginal.computeExpectation(f));
-			}
-		}
-	}
+    // The gradient is the conditional expected counts minus the unconditional
+    // expected counts
+    conditionalExpectedCounts.increment(unconditionalExpectedCounts, -1.0);
+    return conditionalExpectedCounts;
+  }
 }

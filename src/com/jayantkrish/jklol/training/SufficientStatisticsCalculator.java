@@ -12,8 +12,8 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.bayesnet.BayesNet;
-import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -62,12 +62,13 @@ public class SufficientStatisticsCalculator {
    * processing batches, use {@code List.subList}.
    * 
    * @param factorGraph
+   * @param bayesNet
    * @param assignments
    * @param log
    * @return
    */
-  public SufficientStatistics computeSufficientStatistics(BayesNet factorGraph,
-      List<Assignment> assignments, LogFunction log) {
+  public SufficientStatistics computeSufficientStatistics(FactorGraph factorGraph, 
+      ParametricFactorGraph bayesNet, List<Assignment> assignments, LogFunction log) {
 
     List<BatchCalculator> batches = Lists.newArrayList();
     int batchSize = (int) Math.ceil(((double) assignments.size()) / numConcurrent);
@@ -83,11 +84,11 @@ public class SufficientStatisticsCalculator {
       List<Assignment> assignmentBatch = assignments.subList(Math.min(i * batchSize, assignments.size()),
           Math.min((i + 1) * batchSize, assignments.size()));
 
-      batches.add(new BatchCalculator(factorGraph, marginalCalculatorSupplier.get(),
+      batches.add(new BatchCalculator(factorGraph, bayesNet, marginalCalculatorSupplier.get(),
           assignmentBatch, logFn));
     }
 
-    SufficientStatistics statistics = factorGraph.getNewSufficientStatistics(); 
+    SufficientStatistics statistics = bayesNet.getNewSufficientStatistics(); 
     try {
       List<Future<SufficientStatistics>> results = executor.invokeAll(batches);
       for (Future<SufficientStatistics> result : results) {
@@ -112,31 +113,35 @@ public class SufficientStatisticsCalculator {
    */
   private class BatchCalculator implements Callable<SufficientStatistics> {
 
+    private final FactorGraph factorGraph;
+    private final ParametricFactorGraph bayesNet;
+    
     private final MarginalCalculator marginalCalculator;
-    private final BayesNet factorGraph;
     private final List<Assignment> trainingData;
     private final LogFunction logFn;
 
-    public BatchCalculator(BayesNet factorGraph, MarginalCalculator marginalCalculator,
-        List<Assignment> trainingData, LogFunction logFn) {
-      this.marginalCalculator = marginalCalculator;
+    public BatchCalculator(FactorGraph factorGraph, ParametricFactorGraph bayesNet, 
+        MarginalCalculator marginalCalculator, List<Assignment> trainingData,
+        LogFunction logFn) {
       this.factorGraph = factorGraph;
+      this.bayesNet = bayesNet;
+      this.marginalCalculator = marginalCalculator;
       this.trainingData = trainingData;
       this.logFn = logFn;
     }
 
     public SufficientStatistics call() {
-      SufficientStatistics startingStatistics = factorGraph.getNewSufficientStatistics();
+      SufficientStatistics statistics = bayesNet.getNewSufficientStatistics();
 
       for (Assignment assignment : trainingData) {
         if (logFn != null) {
           logFn.log(assignment, factorGraph);
         }
         MarginalSet marginals = marginalCalculator.computeMarginals(factorGraph, assignment);
-        startingStatistics.increment(factorGraph.computeSufficientStatistics(marginals, 1.0), 1.0);
+        statistics.increment(bayesNet.computeSufficientStatistics(marginals, 1.0), 1.0);
       }
 
-      return startingStatistics;
+      return statistics;
     }
   }
 }

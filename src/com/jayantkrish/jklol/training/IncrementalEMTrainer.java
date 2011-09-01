@@ -6,8 +6,9 @@ import java.util.List;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.bayesnet.BayesNet;
-import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
+import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -26,7 +27,7 @@ public class IncrementalEMTrainer {
     this.log = null;
   }
 
-  public IncrementalEMTrainer(int numIterations, MarginalCalculator inferenceEngine, 
+  public IncrementalEMTrainer(int numIterations, MarginalCalculator inferenceEngine,
       LogFunction log) {
     this.numIterations = numIterations;
     this.inferenceEngine = inferenceEngine;
@@ -34,21 +35,25 @@ public class IncrementalEMTrainer {
   }
 
   /**
-   * Trains {@code bn} using {@code trainingData}. After this method returns,
-   * the parameters of {@code bn} will be updated to the trained values.
+   * Trains {@code bn} using {@code trainingData}, returning the resulting
+   * parameters. These parameters maximize the marginal likelihood of the
+   * observed data, assuming that training is run for a sufficient number of
+   * iterations, etc.
    * 
    * <p>
-   * The current parameters of {@code bn} are used as the starting point for
-   * training. A reasonable starting point is the uniform distribution (add-one
-   * smoothing). To use this setting, run
-   * {@code bn.setCurrentParameters(bn.getNewSufficientStatistics()); 
-   * bn.getParameters().increment(1);}. Note that incremental EM will not forget
-   * the smoothing.
+   * {@code initialParameters} are used as the starting point for training. A
+   * reasonable starting point is the uniform distribution (add-one smoothing).
+   * These parameters can be retrieved using
+   * {@code bn.getNewSufficientStatistics().increment(1)}. Incremental EM will
+   * retain the smoothing throughout the training process. This method may
+   * modify {@code initialParameters}.
    * 
    * @param bn
+   * @param initialParameters
    * @param trainingData
    */
-  public void train(BayesNet bn, List<Assignment> trainingData) {
+  public SufficientStatistics train(ParametricFactorGraph bn,
+      SufficientStatistics initialParameters, List<Assignment> trainingData) {
     SufficientStatistics[] previousIterationStatistics = new SufficientStatistics[trainingData.size()];
 
     Collections.shuffle(trainingData);
@@ -57,24 +62,28 @@ public class IncrementalEMTrainer {
         log.notifyIterationStart(i);
       }
       for (int j = 0; j < trainingData.size(); j++) {
-        Assignment trainingExample = trainingData.get(j);
-        if (log != null) {
-          log.log(i, j, trainingExample, bn);
-        }
-
         if (i > 0) {
           // Subtract out old statistics if they exist.
-          bn.getCurrentParameters().increment(previousIterationStatistics[j], -1.0);
+          initialParameters.increment(previousIterationStatistics[j], -1.0);
         }
+
+        // Get the current training data point and the most recent factor graph
+        // based on the current iteration.
+        Assignment trainingExample = trainingData.get(j);
+        FactorGraph currentFactorGraph = bn.getFactorGraphFromParameters(initialParameters);
+        if (log != null) {
+          log.log(i, j, trainingExample, currentFactorGraph);
+        }
+
         // Update new sufficient statistics
-        MarginalSet marginals = inferenceEngine.computeMarginals(bn, trainingExample);
+        MarginalSet marginals = inferenceEngine.computeMarginals(currentFactorGraph, trainingExample);
         SufficientStatistics exampleStatistics = bn.computeSufficientStatistics(marginals, 1.0);
         previousIterationStatistics[j] = exampleStatistics;
-        bn.getCurrentParameters().increment(exampleStatistics, 1.0);
+        initialParameters.increment(exampleStatistics, 1.0);
 
         if (log != null) {
-          for (Factor factor : bn.getCptFactors()) {
-            log.log(i, j, factor, marginals.getMarginal(factor.getVars().getVariableNums()), bn);
+          for (Factor factor : currentFactorGraph.getFactors()) {
+            log.log(i, j, factor, marginals.getMarginal(factor.getVars().getVariableNums()), currentFactorGraph);
           }
         }
       }
@@ -82,5 +91,7 @@ public class IncrementalEMTrainer {
         log.notifyIterationEnd(i);
       }
     }
+    
+    return initialParameters;
   }
 }

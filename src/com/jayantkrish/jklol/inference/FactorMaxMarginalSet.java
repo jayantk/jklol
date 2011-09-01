@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.inference;
 
-import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -16,14 +15,11 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class FactorMaxMarginalSet implements MaxMarginalSet {
   
-  private FactorGraph factorGraph;
+  private final FactorGraph factorGraph;
 
-  public FactorMaxMarginalSet(List<Factor> factors) {
-    Preconditions.checkNotNull(factors);
-    factorGraph = new FactorGraph();
-    for (Factor factor : factors) {
-      factorGraph.addFactor(factor);
-    }
+  public FactorMaxMarginalSet(FactorGraph factorGraph) {
+    Preconditions.checkNotNull(factorGraph);
+    this.factorGraph = factorGraph;
   }
 
   @Override

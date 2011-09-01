@@ -4,7 +4,11 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
+import com.jayantkrish.jklol.models.CoercionError;
+import com.jayantkrish.jklol.models.bayesnet.Cpt;
+import com.jayantkrish.jklol.models.loglinear.FeatureSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.DefaultHashMap;
 
 /**
@@ -81,10 +85,10 @@ public class CptTableProductionDistribution implements CptProductionDistribution
     }
   }
 
-    @Override
-    public CptTableProductionDistribution emptyCopy() {
-	return new CptTableProductionDistribution(grammar);
-    }
+  @Override
+  public CptTableProductionDistribution emptyCopy() {
+    return new CptTableProductionDistribution(grammar);
+  }
 
   @Override
   public String toString() {
@@ -126,4 +130,19 @@ public class CptTableProductionDistribution implements CptProductionDistribution
       }
     }
   }
+
+  @Override
+  public Cpt coerceToCpt() {
+    throw new CoercionError("Cannot coerce CptTableProductionDistribution into a CPT.");
+  }
+
+  @Override
+  public ListSufficientStatistics coerceToList() {
+    throw new CoercionError("Cannot coerce CptTableProductionDistribution into a ListSufficientStatistics.");
+  }
+
+  @Override
+  public FeatureSufficientStatistics coerceToFeature() {
+    throw new CoercionError("Cannot coerce CptTableProductionDistribution into a ListSufficientStatistics."); 
+  }  
 }

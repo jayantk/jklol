@@ -5,7 +5,7 @@ import java.util.Arrays;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.InferenceHint;
-import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -30,36 +30,41 @@ public class InferenceTestCases {
    * @return
    */
   public static FactorGraph basicFactorGraph() {
-    FactorGraph factorGraph = new FactorGraph();
+    FactorGraph fg = new FactorGraph();
 
     DiscreteVariable otherVar = new DiscreteVariable("Two values",
         Arrays.asList(new String[] { "foo", "bar" }));
 
-    factorGraph.addVariable("Var0", threeValueVar);
-    factorGraph.addVariable("Var1", otherVar);
-    factorGraph.addVariable("Var2", threeValueVar);
-    factorGraph.addVariable("Var3", threeValueVar);
-    factorGraph.addVariable("Var4", threeValueVar);
-
-    TableFactor factor1 = factorGraph.addTableFactor(Arrays.asList(new String[] { "Var0", "Var2", "Var3" }));
+    fg = fg.addVariable("Var0", threeValueVar);
+    fg = fg.addVariable("Var1", otherVar);
+    fg = fg.addVariable("Var2", threeValueVar);
+    fg = fg.addVariable("Var3", threeValueVar);
+    fg = fg.addVariable("Var4", threeValueVar);
+    
+    TableFactorBuilder factor1 = new TableFactorBuilder(fg
+        .lookupVariables(Arrays.asList(new String[] { "Var0", "Var2", "Var3" })));
     factor1.setWeightList(Arrays.asList(new String[] { "T", "T", "T" }), 1.0);
     factor1.setWeightList(Arrays.asList(new String[] { "T", "F", "F" }), 1.0);
     factor1.setWeightList(Arrays.asList(new String[] { "U", "F", "F" }), 2.0);
+    fg = fg.addFactor(factor1.build());
 
-    TableFactor factor2 = factorGraph.addTableFactor(Arrays.asList(new String[] { "Var2", "Var1" }));
+    TableFactorBuilder factor2 = new TableFactorBuilder(fg
+        .lookupVariables(Arrays.asList(new String[] { "Var2", "Var1" })));
     factor2.setWeightList(Arrays.asList(new String[] { "foo", "F" }), 2.0);
     factor2.setWeightList(Arrays.asList(new String[] { "foo", "T" }), 3.0);
     factor2.setWeightList(Arrays.asList(new String[] { "bar", "T" }), 2.0);
     factor2.setWeightList(Arrays.asList(new String[] { "bar", "F" }), 1.0);
+    fg = fg.addFactor(factor2.build());
 
-    TableFactor factor3 = factorGraph.addTableFactor(Arrays.asList(new String[] { "Var3", "Var4" }));
+    TableFactorBuilder factor3 = new TableFactorBuilder(fg
+        .lookupVariables(Arrays.asList(new String[] { "Var3", "Var4" })));
     factor3.setWeightList(Arrays.asList(new String[] { "F", "U" }), 2.0);
     factor3.setWeightList(Arrays.asList(new String[] { "T", "U" }), 2.0);
     factor3.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
+    fg = fg.addFactor(factor3.build());
 
-    factorGraph.setInferenceHint(new InferenceHint(new int[] {3, 1, 2}));
-    
-    return factorGraph;
+    fg = fg.addInferenceHint(new InferenceHint(new int[] {3, 1, 2}));
+    return fg;
   }
 
   public static MarginalTestCase testBasicUnconditional() {
@@ -121,29 +126,35 @@ public class InferenceTestCases {
    * @return
    */
   public static FactorGraph nonCliqueTreeFactorGraph() {
-    FactorGraph factorGraph = new FactorGraph();
+    FactorGraph fg = new FactorGraph();
 
-    factorGraph.addVariable("Var0", trueFalseVar);
-    factorGraph.addVariable("Var1", trueFalseVar);
-    factorGraph.addVariable("Var2", trueFalseVar);
+    fg = fg.addVariable("Var0", trueFalseVar);
+    fg = fg.addVariable("Var1", trueFalseVar);
+    fg = fg.addVariable("Var2", trueFalseVar);
 
-    TableFactor tf = factorGraph.addTableFactor(Arrays.asList(new String[] { "Var0", "Var1" }));
+    TableFactorBuilder tf = new TableFactorBuilder(fg
+        .lookupVariables(Arrays.asList(new String[] { "Var0", "Var1" })));
     tf.setWeightList(Arrays.asList(new String[] { "F", "F" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "T" }), 4.0);
+    fg = fg.addFactor(tf.build());
 
-    tf = factorGraph.addTableFactor(Arrays.asList(new String[] { "Var0", "Var2" }));
+    tf = new TableFactorBuilder(fg
+        .lookupVariables(Arrays.asList(new String[] { "Var0", "Var2" })));
     tf.setWeightList(Arrays.asList(new String[] { "F", "F" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "T" }), 1.0);
+    fg = fg.addFactor(tf.build());
 
-    tf = factorGraph.addTableFactor(Arrays.asList(new String[] { "Var0" }));
+    tf = new TableFactorBuilder(fg
+        .lookupVariables(Arrays.asList(new String[] { "Var0" })));
     tf.setWeightList(Arrays.asList(new String[] { "F" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T" }), 1.0);
+    fg = fg.addFactor(tf.build());
 
-    return factorGraph;
+    return fg;
   }
 
   public static MarginalTestCase testNonCliqueTreeUnconditional() {

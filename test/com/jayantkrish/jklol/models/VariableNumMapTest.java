@@ -6,8 +6,7 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Tests for VariableNumMap.
@@ -107,5 +106,18 @@ public class VariableNumMapTest extends TestCase {
 			return;
 		}
 		fail("Expected IllegalArgumentException");
+	}
+	
+	public void testAssignmentToIntArray() {
+	  int[] actual = a.assignmentToIntArray(new Assignment(Arrays.asList(0, 1, 3), 
+	      Arrays.<Object>asList("T", "U", "F")));
+	  assertTrue(Arrays.equals(actual, new int[] {0, 2, 1}));
+	}
+	
+	public void testIntArrayToAssignment() {
+	  Assignment expected = new Assignment(Arrays.asList(0, 1, 3), 
+	      Arrays.<Object>asList("T", "U", "F"));
+	  Assignment actual = a.intArrayToAssignment(new int[] {0, 2, 1});
+	  assertEquals(expected, actual);
 	}
 }

@@ -10,12 +10,14 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.bayesnet.Cpt;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class CptFactorTest extends TestCase {
 
   CptTableFactor f;  
-  VariableNumMap cptVars;
+  SufficientStatistics parameters;
+  VariableNumMap cptParents, cptChildren, cptVars;
   
   private Object[][] assignments;
   Set<Assignment> factorAssignments;
@@ -34,6 +36,8 @@ public class CptFactorTest extends TestCase {
       map.put(i + 2, i);
     }
     
+    cptParents = new VariableNumMap(Arrays.asList(0, 1), Arrays.asList(v, v));
+    cptChildren = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList(v, v));
     cptVars = new VariableNumMap(Arrays.asList(0, 1, 2, 3),
         Arrays.asList(v, v, v, v)); 
     
@@ -46,24 +50,21 @@ public class CptFactorTest extends TestCase {
         { "F", "F", "F", "F" },
         { "F", "F", "T", "T" }};
     factorAssignments = Sets.newHashSet();
+    parameters = f.getNewSufficientStatistics();
     for (int i = 0; i < assignments.length; i++) {
-      f.getCurrentParameters().incrementOutcomeCount(cptVars.outcomeToAssignment(assignments[i]), 1.0);
-      factorAssignments.add(f.getVars().outcomeToAssignment(assignments[i]));
+      Assignment assignment = f.getVars().outcomeToAssignment(assignments[i]);
+      parameters.increment(f.getSufficientStatisticsFromAssignment(
+          assignment, 1.0), 1.0);
+      factorAssignments.add(assignment);
     }
-  }
-  
-  public void testGetUnnormalizedProbability() {
-    assertEquals(0.5, f.getUnnormalizedProbability(f.getVars().outcomeToAssignment(assignments[0])));
-    assertEquals(0.0, f.getUnnormalizedProbability(f.getVars().outcomeToAssignment(
-        new Object[] { "T", "T", "F", "F" })));
-    assertEquals(1.0, f.getUnnormalizedProbability(f.getVars().outcomeToAssignment(assignments[2])));
   }
   
   public void testGetNewSufficientStatistics() {
     Cpt newStats = f.getNewSufficientStatistics();
-    assertEquals(f.getCurrentParameters().getParents(), newStats.getParents());
-    assertEquals(f.getCurrentParameters().getChildren(), newStats.getChildren());
-    assertEquals(f.getCurrentParameters().getVars(), newStats.getVars());
+    
+    assertEquals(cptParents, newStats.getParents());
+    assertEquals(cptChildren, newStats.getChildren());
+    assertEquals(cptVars, newStats.getVars());
     
     // All assignments should have a count of 0.
     assertFalse(newStats.assignmentIterator().hasNext());
@@ -73,52 +74,36 @@ public class CptFactorTest extends TestCase {
     Cpt newStats = f.getSufficientStatisticsFromAssignment(
         f.getVars().outcomeToAssignment(assignments[1]), 2.0);
     newStats.increment(1.0);
-    
-    assertEquals(f.getCurrentParameters().getParents(), newStats.getParents());
-    assertEquals(f.getCurrentParameters().getChildren(), newStats.getChildren());
-    assertEquals(f.getCurrentParameters().getVars(), newStats.getVars());
-        
+
+    assertEquals(cptParents, newStats.getParents());
+    assertEquals(cptChildren, newStats.getChildren());
+    assertEquals(cptVars, newStats.getVars());
+
     assertEquals(3.0 / 6.0, newStats.getProbability(cptVars.outcomeToAssignment(assignments[1])));
   }
   
   public void testGetSufficientStatisticsFromMarginal() {
-    Cpt newStats = f.getSufficientStatisticsFromMarginal(f, 6.0, 3.0);
-    
-    assertEquals(f.getCurrentParameters().getParents(), newStats.getParents());
-    assertEquals(f.getCurrentParameters().getChildren(), newStats.getChildren());
-    assertEquals(f.getCurrentParameters().getVars(), newStats.getVars());
-    
-    assertEquals(factorAssignments, Sets.newHashSet(f.outcomeIterator()));
+    Cpt newStats = f.getSufficientStatisticsFromMarginal(f.getFactorFromParameters(parameters), 6.0, 3.0);
+
+    assertEquals(cptParents, newStats.getParents());
+    assertEquals(cptChildren, newStats.getChildren());
+    assertEquals(cptVars, newStats.getVars());
     
     newStats.increment(1.0);
     
     assertEquals(2.0 / 6.0, newStats.getProbability(cptVars.outcomeToAssignment(assignments[1])));
     assertEquals(3.0 / 6.0, newStats.getProbability(cptVars.outcomeToAssignment(assignments[2])));
   }
-  
-  public void testGetParameters() {
-    assertEquals(cptVars, f.getCurrentParameters().getVars());    
-    assertEquals(0.5, f.getCurrentParameters().getProbability(cptVars.outcomeToAssignment(assignments[0])));
-  }
-  
-  public void testSetParameters() {
-    Cpt newCpt = f.getSufficientStatisticsFromAssignment(
-        f.getVars().outcomeToAssignment(assignments[0]), 1.0);
-    f.setCurrentParameters(newCpt);
-    assertEquals(1.0, f.getCurrentParameters().getProbability(cptVars.outcomeToAssignment(assignments[0])));
-    assertEquals(0.0, f.getCurrentParameters().getProbability(cptVars.outcomeToAssignment(assignments[1])));
-  }
-  
-  public void testGetAssignmentsWithEntry() {
-    Set<Assignment> expected = Sets.newHashSet();
-    expected.add(f.getVars().outcomeToAssignment(assignments[0]));
-    expected.add(f.getVars().outcomeToAssignment(assignments[1]));
-    expected.add(f.getVars().outcomeToAssignment(assignments[2]));
-
-    assertEquals(expected, f.getAssignmentsWithEntry(2, Sets.<Object>newHashSet("T")));
-  }
-  
-  public void testIteration() {
-    assertEquals(factorAssignments, Sets.newHashSet(f.outcomeIterator()));
+    
+  public void testGetFactorFromParameters() {
+    TableFactor factor = f.getFactorFromParameters(parameters);
+    assertEquals(factorAssignments, Sets.newHashSet(factor.outcomeIterator()));
+    
+    assertEquals(0.5, factor.getUnnormalizedProbability(
+        f.getVars().outcomeToAssignment(assignments[0])));
+    assertEquals(0.0, factor.getUnnormalizedProbability(
+        f.getVars().outcomeToAssignment(new Object[] { "T", "T", "F", "F" })));
+    assertEquals(1.0, factor.getUnnormalizedProbability(
+        f.getVars().outcomeToAssignment(assignments[2])));
   }
 }

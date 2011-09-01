@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.models;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -11,11 +10,15 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.collect.SortedSetMultimap;
+import com.google.common.collect.TreeMultimap;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
+import com.jayantkrish.jklol.util.SparseTensor;
 
 /**
  * DiscreteFactor provides a generic implementation of most methods of the
@@ -45,10 +48,24 @@ public abstract class DiscreteFactor extends AbstractFactor {
   // ////////////////////////////////////////////////////////////////////////
 
   /**
-   * Get an iterator over all outcomes with nonzero probability. Each Assignment
-   * in the iterator represents a single outcome.
+   * Gets an iterator over all outcomes with nonzero probability. Each
+   * {@code Assignment} in the returned iterator is a single possible outcome.
    */
   public abstract Iterator<Assignment> outcomeIterator();
+
+  /**
+   * Gets the table of weights over the discrete variables in {@code this}
+   * factor. This method is used to perform efficient mathematical operations on
+   * {@code DiscreteFactors}, and should only be used by {@code DiscreteFactor}
+   * and subclasses.
+   * 
+   * @return
+   */
+  public abstract SparseTensor getWeights();
+
+  // /////////////////////////////////////////////////////////////////////////////////
+  // Overrides of Factor methods.
+  // /////////////////////////////////////////////////////////////////////////////////
 
   @Override
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {
@@ -57,7 +74,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     Set<SeparatorSet> possibleOutbound = Sets.newHashSet();
     for (Map.Entry<SeparatorSet, Factor> inboundMessage : inboundMessages.entrySet()) {
       if (inboundMessage.getValue() == null) {
-        possibleOutbound.add(inboundMessage.getKey());        
+        possibleOutbound.add(inboundMessage.getKey());
       }
     }
 
@@ -70,30 +87,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
   }
 
-  /**
-   * Get all assignments to this variable with nonzero probability that contain
-   * the specified variable number -> (any value in varValues) mapping.
-   * 
-   * The default implementation of this method is fairly inefficient --
-   * overriding it with a more efficient implementation should significantly
-   * improve performance.
-   */
-  public Set<Assignment> getAssignmentsWithEntry(int varNum, Set<Object> varValues) {
-    Set<Assignment> assignments = new HashSet<Assignment>();
-    Iterator<Assignment> iter = outcomeIterator();
-    while (iter.hasNext()) {
-      Assignment a = iter.next();
-      if (varValues.contains(a.getVarValue(varNum))) {
-        assignments.add(a);
-      }
-    }
-    return assignments;
-  }
-
-  // /////////////////////////////////////////////////////////////////////////////////
-  // Methods for performing inference = methods from Factor
-  // /////////////////////////////////////////////////////////////////////////////////
-
   @Override
   public DiscreteFactor conditional(Assignment a) {
     VariableNumMap factorVars = getVars().intersection(a.getVarNumsSorted());
@@ -102,101 +95,76 @@ public abstract class DiscreteFactor extends AbstractFactor {
     if (factorVars.size() == 0) {
       return this;
     }
-    
+
     Assignment subAssignment = a.subAssignment(factorVars);
-    TableFactor tableFactor = new TableFactor(factorVars);
-    tableFactor.setWeight(subAssignment, 1.0);
-    return this.product(tableFactor);
+    TableFactorBuilder tableFactorBuilder = new TableFactorBuilder(factorVars);
+    tableFactorBuilder.setWeight(subAssignment, 1.0);
+    return this.product(tableFactorBuilder.build());
   }
 
   @Override
   public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
-    return marginalize(varNumsToEliminate, true);
+    return new TableFactor(getVars().removeAll(varNumsToEliminate), 
+        getWeights().sumOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }
 
   @Override
   public DiscreteFactor maxMarginalize(Collection<Integer> varNumsToEliminate) {
-    return marginalize(varNumsToEliminate, false);
+    return new TableFactor(getVars().removeAll(varNumsToEliminate), 
+        getWeights().maxOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }
 
-  /**
-   * Sums or maximizes out a particular set of variables. If useSum is true,
-   * probabilities are summed.
-   */
-  protected DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate, boolean useSum) {
-    Set<Integer> varNumsToEliminateSet = new HashSet<Integer>(varNumsToEliminate);
-
-    VariableNumMap retainedVars = getVars().removeAll(varNumsToEliminateSet);
-    TableFactor returnFactor = new TableFactor(retainedVars);
-
-    Iterator<Assignment> outcomeIterator = outcomeIterator();
-    while (outcomeIterator.hasNext()) {
-      Assignment assignment = outcomeIterator.next();
-      Assignment subAssignment = assignment.subAssignment(retainedVars.getVariableNums());
-
-      double val = 0.0;
-      if (useSum) {
-        val = returnFactor.getUnnormalizedProbability(subAssignment)
-            + getUnnormalizedProbability(assignment);
-      } else {
-        val = Math.max(returnFactor.getUnnormalizedProbability(subAssignment),
-            getUnnormalizedProbability(assignment));
-      }
-      returnFactor.setWeight(subAssignment, val);
-    }
-    return returnFactor;
-  }
-  
   @Override
   public DiscreteFactor add(Factor other) {
-    return TableFactor.sumFactor(this, other.coerceToDiscrete());
+    Preconditions.checkArgument(other.getVars().equals(getVars()));
+    return new TableFactor(getVars(), getWeights()
+        .elementwiseAddition(other.coerceToDiscrete().getWeights()));
   }
-  
+
   @Override
-  public DiscreteFactor add(List<Factor> factors) {
-    List<DiscreteFactor> discreteFactors = FactorUtils.coerceToDiscrete(factors);
-    discreteFactors.add(this);
-    return TableFactor.sumFactor(discreteFactors);
-  }
-  
-  @Override
-  public DiscreteFactor maximum(Factor factor) {
-    return TableFactor.maxFactor(this, factor.coerceToDiscrete());
-  }
-  
-  @Override
-  public DiscreteFactor maximum(List<Factor> factors) {
-    List<DiscreteFactor> discreteFactors = FactorUtils.coerceToDiscrete(factors);
-    discreteFactors.add(this);
-    return TableFactor.maxFactor(discreteFactors);
+  public DiscreteFactor maximum(Factor other) {
+    Preconditions.checkArgument(other.getVars().equals(getVars()));
+    return new TableFactor(getVars(), getWeights()
+        .elementwiseMaximum(other.coerceToDiscrete().getWeights()));
   }
 
   @Override
   public DiscreteFactor product(Factor other) {
-    return TableFactor.productFactor(this, other.coerceToDiscrete());
+    Preconditions.checkArgument(getVars().containsAll(other.getVars()));
+    return new TableFactor(getVars(), getWeights()
+        .elementwiseProduct(other.coerceToDiscrete().getWeights()));
   }
 
   @Override
   public DiscreteFactor product(List<Factor> factors) {
     List<DiscreteFactor> discreteFactors = FactorUtils.coerceToDiscrete(factors);
-    discreteFactors.add(this);
-    return TableFactor.productFactor(discreteFactors);
+    
+    // Multiply the factors in order from smallest to largest to keep
+    // the intermediate results as sparse as possible. 
+    SortedSetMultimap<Double, DiscreteFactor> factorsBySize = 
+        TreeMultimap.create(Ordering.natural(), Ordering.arbitrary());
+    for (DiscreteFactor factor : discreteFactors) {
+      factorsBySize.put(factor.size(), factor);
+    }
+    
+    SparseTensor result = getWeights();
+    for (Double size : factorsBySize.keySet()) {
+      for (DiscreteFactor factor : factorsBySize.get(size)) {
+        result = result.elementwiseProduct(factor.getWeights());
+      }
+    }
+    return new TableFactor(getVars(), result);
   }
 
   @Override
   public DiscreteFactor product(double constant) {
-    return TableFactor.productFactor(this, constant);
+    return new TableFactor(getVars(), getWeights()
+        .elementwiseProduct(SparseTensor.getScalarConstant(constant)));
   }
-  
+
   @Override
   public DiscreteFactor inverse() {
-    TableFactor inverse = new TableFactor(getVars());
-    Iterator<Assignment> iter = outcomeIterator();
-    while (iter.hasNext()) {
-      Assignment a = iter.next();
-      inverse.setWeight(a, 1.0 / getUnnormalizedProbability(a));      
-    }
-    return inverse;
+    return new TableFactor(getVars(), getWeights().elementwiseInverse());
   }
 
   @Override
@@ -218,7 +186,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
     return a;
   }
-  
+
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     Iterator<Assignment> iter = outcomeIterator();
@@ -240,19 +208,17 @@ public abstract class DiscreteFactor extends AbstractFactor {
     Collections.reverse(mostLikely);
     return mostLikely;
   }
-  
+
   @Override
   public double computeExpectation(FeatureFunction f) {
     double expectedValue = 0.0;
-    double denom = 0.0;
 
     Iterator<Assignment> outcomeIterator = outcomeIterator();
     while (outcomeIterator.hasNext()) {
       Assignment assignment = outcomeIterator.next();
       expectedValue += getUnnormalizedProbability(assignment) * f.getValue(assignment);
-      denom += getUnnormalizedProbability(assignment);
     }
-    return expectedValue / denom;
+    return expectedValue;
   }
 
   @Override

@@ -2,7 +2,7 @@ package com.jayantkrish.jklol.cfg;
 
 import java.util.Map;
 
-import com.jayantkrish.jklol.models.bayesnet.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 /**
  * CptProductionDistribution is the standard generative model

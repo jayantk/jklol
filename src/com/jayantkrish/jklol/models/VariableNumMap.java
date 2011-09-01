@@ -13,6 +13,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -247,11 +249,12 @@ public class VariableNumMap {
    * @param varNumsToRemove
    * @return
    */
-  public VariableNumMap removeAll(Set<Integer> varNumsToRemove) {
+  public VariableNumMap removeAll(Collection<Integer> varNumsToRemove) {
     SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(
         varMap);
+    Set<Integer> varNumsToRemoveSet = Sets.newHashSet(varNumsToRemove);
     for (Integer key : getVariableNums()) {
-      if (varNumsToRemove.contains(key)) {
+      if (varNumsToRemoveSet.contains(key)) {
         newVarMap.remove(key);
       }
     }
@@ -331,6 +334,53 @@ public class VariableNumMap {
    */
   public Assignment outcomeToAssignment(Object[] outcome) {
     return outcomeToAssignment(Arrays.asList(outcome));
+  }
+
+  /**
+   * Converts an assignment over a set of {@code DiscreteVariable}s into an
+   * equivalent {@code int[]} representation. This method is used to efficiently
+   * store the possible assignments to discrete variables. The returned array
+   * has length equal to {@code this.size()}, and can be converted back into an
+   * assignment using {@link #intArrayToAssignment(int[])}.
+   * 
+   * <p>
+   * If {@code assignment} contains values which are not in the domain of the
+   * corresponding discrete variables, this method throws an exception.
+   * 
+   * @param assignment
+   * @return
+   */
+  public int[] assignmentToIntArray(Assignment assignment) {
+    int[] value = new int[size()];
+    int index = 0;
+    for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
+      if (entry.getValue() instanceof DiscreteVariable) {
+        value[index] = ((DiscreteVariable) entry.getValue()).getValueIndex(assignment.getVarValue(entry.getKey()));
+      }
+      index++;
+    }
+    return value;
+  }
+
+  /**
+   * Converts the passed {@code int[]} of variable value indices into an
+   * {@code Assignment} by mapping it through the {@code DiscreteVariable}s
+   * contained in {@code this}. This operation is the inverse of
+   * {@link #assignmentToIntArray(Assignment)}
+   * 
+   * @param values
+   * @return
+   */
+  public Assignment intArrayToAssignment(int[] values) {
+    List<Object> objectValues = Lists.newArrayList();
+    int i = 0;
+    for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
+      if (entry.getValue() instanceof DiscreteVariable) {
+        objectValues.add(((DiscreteVariable) entry.getValue()).getValue(values[i]));
+      }
+      i++;
+    }
+    return new Assignment(getVariableNums(), objectValues);
   }
 
   @Override

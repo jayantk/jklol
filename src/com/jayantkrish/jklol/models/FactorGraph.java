@@ -9,27 +9,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.HashMultimap;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A FactorGraph represents a graphical model in the form of a set of variables
- * with factors defined over them. FactorGraphs use generics in order to support
- * different types of graphical models and training procedures (e.g., Bayes Nets
- * and counting).
+ * A {@code FactorGraph} represents a graphical model as a set of variables and
+ * a set of factors defined over variable cliques.
  * 
- * Theoretically, FactorGraphs are immutable. However, there are still some
- * mutators in this class which will be phased out. Also, keep in mind that some
- * factors are mutable (for efficiency), so while the graph structure of a
- * FactorGraph is immutable, the probability distribution that it represents may
- * change.
+ * {@code FactorGraph}s and the {@link Factor}s they contain are immutable.
+ * Therefore, each {@code FactorGraph} instance defines a particular probability
+ * distribution which cannot be changed.
+ * 
+ * {@code FactorGraph}s can be constructed incrementally using methods such as
+ * {@link #addVariable(String, Variable)}. These construction methods return new
+ * instances of this class with certain fields modified.
  */
 public class FactorGraph {
 
   private VariableNumMap variables;
-  private Map<String, Integer> variableNumMap;
+  private Map<String, Integer> variableNames;
   private HashMultimap<Integer, Integer> variableFactorMap;
   private HashMultimap<Integer, Integer> factorVariableMap;
 
@@ -38,11 +40,13 @@ public class FactorGraph {
   private InferenceHint inferenceHint;
 
   /**
-   * Create an empty factor graph.
+   * Create an empty factor graph, which does not contain any {@code Variable}s
+   * or {@code Factor}s. The factor graph can be incrementally constructed from
+   * this point using methods like {@link #addVariable(String, Variable)}.
    */
   public FactorGraph() {
     variables = VariableNumMap.emptyMap();
-    variableNumMap = new HashMap<String, Integer>();
+    variableNames = new HashMap<String, Integer>();
     variableFactorMap = new HashMultimap<Integer, Integer>();
     factorVariableMap = new HashMultimap<Integer, Integer>();
     factors = new IndexedList<Factor>();
@@ -54,13 +58,47 @@ public class FactorGraph {
    * 
    * @param factorGraph
    */
-  public FactorGraph(FactorGraph factorGraph) {
+  private FactorGraph(FactorGraph factorGraph) {
     this.variables = new VariableNumMap(factorGraph.variables);
-    this.variableNumMap = new HashMap<String, Integer>(factorGraph.variableNumMap);
+    this.variableNames = new HashMap<String, Integer>(factorGraph.variableNames);
     this.variableFactorMap = new HashMultimap<Integer, Integer>(factorGraph.variableFactorMap);
     this.factorVariableMap = new HashMultimap<Integer, Integer>(factorGraph.factorVariableMap);
     this.factors = new IndexedList<Factor>(factorGraph.factors);
     this.inferenceHint = null;
+  }
+  
+  /**
+   * Constructs a {@code FactorGraph} directly from a list of factors. The
+   * variables and variable numbers in the graph are determined by the factors,
+   * and their names are unspecified.
+   *
+   * @param factors
+   */
+  public static FactorGraph createFromFactors(List<Factor> factors) {
+    VariableNumMap allVars = VariableNumMap.emptyMap();
+    HashMultimap<Integer, Integer> variableFactorMap = new HashMultimap<Integer, Integer>();
+    HashMultimap<Integer, Integer> factorVariableMap = new HashMultimap<Integer, Integer>();
+    for (int i = 0; i < factors.size(); i++) {
+      VariableNumMap factorVars = factors.get(i).getVars();
+      allVars = allVars.union(factorVars);
+      for (Integer j : factorVars.getVariableNums()) {
+        variableFactorMap.put(j, i);
+        factorVariableMap.put(i, j);
+      }
+    }
+    
+    Map<String, Integer> variableNames = Maps.newHashMap();
+    for (Integer variableNum : allVars.getVariableNums()) {
+      variableNames.put("Var" + variableNum, variableNum);
+    }
+    // This is super ghetto.
+    FactorGraph factorGraph = new FactorGraph();
+    factorGraph.variables = allVars;
+    factorGraph.variableNames = variableNames;
+    factorGraph.variableFactorMap = variableFactorMap;
+    factorGraph.factorVariableMap = factorVariableMap;
+    factorGraph.factors = new IndexedList<Factor>(factors);
+    return factorGraph;
   }
 
   /**
@@ -110,7 +148,7 @@ public class FactorGraph {
    * Get the index of a variable from its name.
    */
   public int getVariableIndex(String variableName) {
-    return variableNumMap.get(variableName);
+    return variableNames.get(variableName);
   }
 
   /**
@@ -138,15 +176,15 @@ public class FactorGraph {
     List<Integer> varNums = new ArrayList<Integer>();
     List<Variable> vars = new ArrayList<Variable>();
     for (String variableName : factorVariables) {
-      if (!variableNumMap.containsKey(variableName)) {
+      if (!variableNames.containsKey(variableName)) {
         throw new IllegalArgumentException("Must use an already specified variable name.");
       }
-      varNums.add(variableNumMap.get(variableName));
-      vars.add(variables.getVariable(variableNumMap.get(variableName)));
+      varNums.add(variableNames.get(variableName));
+      vars.add(variables.getVariable(variableNames.get(variableName)));
     }
     return new VariableNumMap(varNums, vars);
   }
-  
+
   /**
    * Gets an assignment for the named set of variables.
    */
@@ -162,7 +200,7 @@ public class FactorGraph {
     }
     return new Assignment(varNums, outcomeValueInds);
   }
-  
+
   /**
    * Identical to {@link #outcomeToAssignment(List, List)}, but with arrays.
    * 
@@ -174,11 +212,10 @@ public class FactorGraph {
     return outcomeToAssignment(Arrays.asList(factorVariables), Arrays.asList(outcome));
   }
 
-
   public Map<String, Object> assignmentToObject(Assignment a) {
     Map<String, Object> objectVals = new HashMap<String, Object>();
-    for (String varName : variableNumMap.keySet()) {
-      int varNum = variableNumMap.get(varName);
+    for (String varName : variableNames.keySet()) {
+      int varNum = variableNames.get(varName);
       if (a.containsVar(varNum)) {
         objectVals.put(varName, a.getVarValue(varNum));
       }
@@ -203,69 +240,59 @@ public class FactorGraph {
   }
 
   /**
-   * Gets a hint about how to efficiently perform inference with this
-   * model.  May return {@code null}, in which case the hint should be
-   * ignored.
+   * Gets a hint about how to efficiently perform inference with this model. May
+   * return {@code null}, in which case the hint should be ignored.
    */
   public InferenceHint getInferenceHint() {
-      return inferenceHint;
+    return inferenceHint;
+  }
+
+  // /////////////////////////////////////////////////////////////////
+  // Methods for incrementally building FactorGraphs
+  // /////////////////////////////////////////////////////////////////
+
+  /**
+   * Gets a new {@code FactorGraph} identical to this one, except with an
+   * additional variable. The new variable is named {@code variableName} and has
+   * type {@code variable}.
+   */
+  public FactorGraph addVariable(String variableName, Variable variable) {
+    FactorGraph factorGraph = new FactorGraph(this);
+    int varNum = factorGraph.variables.size();
+    factorGraph.variableNames.put(variableName, varNum);
+    factorGraph.variables = factorGraph.variables.addMapping(varNum, variable);
+    return factorGraph;
   }
 
   /**
-   * Sets a hint about how to efficiently perform inference with this
-   * model. The hint can be set to {@code null}, in which case the hint
-   * is ignored.
+   * Gets a new {@code FactorGraph} identical to this one, except with an
+   * additional factor. {@code factor} must be defined over variables which are
+   * already in {@code this} graph; see {@link #lookupVariables(Collection)} for
+   * an easy way to construct {@code factor} over a particular set of variables.
    */
-  public void setInferenceHint(InferenceHint inferenceHint) {
-      this.inferenceHint = inferenceHint;
-  }
+  public FactorGraph addFactor(Factor factor) {
+    Preconditions.checkArgument(getVariableNumMap().containsAll(factor.getVars()));
 
-  // Factor Graph mutators
-  // TODO(jayant): These mutators should be refactored out of this class so that
-  // FactorGraphs are immutable.
-
-  /**
-   * Add a new variable (vertex) to the Markov network. The variable starts out
-   * unconnected to any factors. The method returns the numerical ID of the
-   * variable, which are assigned in sorted order.
-   */
-  public int addVariable(String variableName, Variable variable) {
-    int varNum = variables.size();
-    variableNumMap.put(variableName, varNum);
-    variables = variables.addMapping(varNum, variable);
-    return varNum;
-  }
-
-  /**
-   * Add a new factor to the model, returning the unique number assigned to it.
-   */
-  public int addFactor(Factor factor) {
-    int factorNum = factors.size();
-    factors.add(factor);
+    FactorGraph factorGraph = new FactorGraph(this);
+    int factorNum = factorGraph.factors.size();
+    factorGraph.factors.add(factor);
 
     for (Integer i : factor.getVars().getVariableNums()) {
-      variableFactorMap.put(i, factorNum);
-      factorVariableMap.put(factorNum, i);
+      factorGraph.variableFactorMap.put(i, factorNum);
+      factorGraph.factorVariableMap.put(factorNum, i);
     }
-    return factorNum;
+    return factorGraph;
   }
 
   /**
-   * Add a new table factor to the model.
+   * Gets a new {@code FactorGraph} identical to this one, with an added
+   * inference hint. {@code inferenceHint} is a suggestion for performing
+   * efficient inference with {@code this}. {@code inferenceHint} can be
+   * {@code null}, in which case the hint is ignored during inference.
    */
-  public TableFactor addTableFactor(List<String> variables) {
-    VariableNumMap vars = lookupVariables(variables);
-    VariableNumMap discreteVars = VariableNumMap.emptyMap();
-    for (Integer varNum : vars.getVariableNums()) {
-      Variable v = vars.getVariable(varNum);
-      if (v instanceof DiscreteVariable) {
-        discreteVars = discreteVars.addMapping(varNum, (DiscreteVariable) v);
-      } else {
-        throw new IllegalArgumentException();
-      }
-    }
-    TableFactor factor = new TableFactor(discreteVars);
-    addFactor(factor);
-    return factor;
+  public FactorGraph addInferenceHint(InferenceHint inferenceHint) {
+    FactorGraph factorGraph = new FactorGraph(this);
+    factorGraph.inferenceHint = inferenceHint;
+    return factorGraph;
   }
 }

@@ -8,14 +8,16 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.bayesnet.BayesNet;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
-import com.jayantkrish.jklol.models.bayesnet.CptFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class BNCountTrainerTest extends TestCase {
 
-	BayesNet bn;
+	ParametricFactorGraph bn;
 	BNCountTrainer t;
 	List<Assignment> trainingData;
 
@@ -35,16 +37,12 @@ public class BNCountTrainerTest extends TestCase {
 		builder.addCptFactorWithNewCpt(Arrays.asList(new String[] {"Var0", "Var1"}), 
 				Arrays.asList(new String[] {"Var2"}));
 
-		List<String> allVarNames = Arrays.asList(new String[] {"Var0", "Var1", "Var2"});
 		bn = builder.build();
 
 		trainingData = new ArrayList<Assignment>();
-		Assignment a1 = bn.outcomeToAssignment(allVarNames,
-				Arrays.asList(new String[] {"F", "T", "T"}));
-		Assignment a2 = bn.outcomeToAssignment(allVarNames,
-				Arrays.asList(new String[] {"T", "T", "F"}));
-		Assignment a3 = bn.outcomeToAssignment(allVarNames,
-				Arrays.asList(new String[] {"F", "F", "F"}));
+		Assignment a1 = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T", "T"));
+		Assignment a2 = bn.getVariables().outcomeToAssignment(Arrays.asList("T", "T", "F"));
+		Assignment a3 = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F", "F"));
 		for (int i = 0; i < 3; i++) {
 			trainingData.add(a1);
 			trainingData.add(a2);
@@ -54,26 +52,27 @@ public class BNCountTrainerTest extends TestCase {
 	}
 
 	public void testTrain() {
-		t.train(bn, trainingData);
-		bn.getCurrentParameters().increment(1.0);
-
-		List<CptFactor> cptFactors = bn.getCptFactors();
-		CptFactor m0 = cptFactors.get(0);
+		SufficientStatistics parameters = t.train(bn, trainingData);
+		parameters.increment(1.0);
+		
+		FactorGraph factorGraph = bn.getFactorGraphFromParameters(parameters);
+		
+		// TODO(jayantk): This test depends on the bayes net preserving the order
+		// of the factors when constructing the factor graph.
+		List<Factor> factors = factorGraph.getFactors();
+		Factor m0 = factors.get(0);
 		assertEquals(4.0 / 11.0,
 				m0.getUnnormalizedProbability(m0.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
-
 		assertEquals(7.0 / 11.0,
 				m0.getUnnormalizedProbability(m0.getVars().outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
 
-		CptFactor m1 = cptFactors.get(1);
+		Factor m1 = factors.get(1);
 		assertEquals(7.0 / 11.0,
 				m1.getUnnormalizedProbability(m1.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T"}))));
-
 		assertEquals(4.0 / 11.0,
 				m1.getUnnormalizedProbability(m1.getVars().outcomeToAssignment(Arrays.asList(new String[] {"F"}))));
 
-		CptFactor m2 = cptFactors.get(2);
-
+		Factor m2 = factors.get(2);
 		assertEquals(0.8,
 				m2.getUnnormalizedProbability(m2.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "F"}))));
 		assertEquals(0.2,

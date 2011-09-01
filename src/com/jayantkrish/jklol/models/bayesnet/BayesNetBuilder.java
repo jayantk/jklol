@@ -2,36 +2,44 @@ package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.cfg.CfgFactor;
+import com.jayantkrish.jklol.cfg.CptCfgFactor;
 import com.jayantkrish.jklol.cfg.CptProductionDistribution;
 import com.jayantkrish.jklol.cfg.Grammar;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.parametric.ParametricFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 /**
- * A BayesNetBuilder provides methods for constructing a BayesNet
+ * A {@code BayesNetBuilder} provides methods for constructing a Bayesian
+ * Network, which is represented as a {@link ParametricFactorGraph}.
+ * 
+ * Bayesian networks are directed graphical models parameterized by conditional
+ * probability tables (CPTs). This class represents a set of Bayesian networks
+ * with the same graph structure, but different CPTs. The direction of the edges
+ * of in the graph structure is implicitly represented in the {@link CptFactor}s
+ * contained in the {@code ParametricFactorGraph}. {@code ParametricFactorGraph}
+ * actually allows a combination of directed and undirected factors; however,
+ * the undirected factors must be constant (i.e., not parameterized).
+ * 
  */
 public class BayesNetBuilder {
 
   private FactorGraph bayesNet;
-  private List<CptFactor> cptFactors;
-  private List<Factor> otherFactors;
+  private List<ParametricFactor<SufficientStatistics>> cptFactors;
   private VariableNumMap discreteVars;
 
   public BayesNetBuilder() {
     bayesNet = new FactorGraph();
-    cptFactors = new ArrayList<CptFactor>();
-    otherFactors = Lists.newArrayList();
+    cptFactors = new ArrayList<ParametricFactor<SufficientStatistics>>();
     discreteVars = VariableNumMap.emptyMap();
   }
 
@@ -40,17 +48,28 @@ public class BayesNetBuilder {
    * 
    * @return
    */
-  public BayesNet build() {
-    return new BayesNet(bayesNet, cptFactors);
+  public ParametricFactorGraph build() {
+    return new ParametricFactorGraph(bayesNet, cptFactors);
   }
 
   /**
    * Add a variable to the bayes net.
    */
   public int addDiscreteVariable(String name, DiscreteVariable variable) {
-    int varNum = bayesNet.addVariable(name, variable);
+    bayesNet = bayesNet.addVariable(name, variable);
+    int varNum = bayesNet.getVariableIndex(name);
     discreteVars = discreteVars.addMapping(varNum, variable);
     return varNum;
+  }
+
+  /**
+   * Gets the variables with the specified names.
+   * 
+   * @param names
+   * @return
+   */
+  public VariableNumMap lookupVariables(Collection<String> names) {
+    return bayesNet.lookupVariables(names);
   }
 
   /**
@@ -58,16 +77,12 @@ public class BayesNetBuilder {
    * 
    * @param factor
    */
-  public void addFactor(CptFactor factor) {
+  public void addFactor(ParametricFactor<SufficientStatistics> factor) {
     cptFactors.add(factor);
-    bayesNet.addFactor(factor);
   }
 
-  public TableFactor addNewTableFactor(List<String> variableNames) {
-    TableFactor tf = new TableFactor(bayesNet.lookupVariables(variableNames));
-    otherFactors.add(tf);
-    bayesNet.addFactor(tf);
-    return tf;
+  public void addTableFactor(Factor tf) {
+    bayesNet = bayesNet.addFactor(tf);
   }
 
   /**
@@ -78,7 +93,7 @@ public class BayesNetBuilder {
     VariableNumMap parentVars = bayesNet.lookupVariables(parentVariableNames);
     VariableNumMap childVars = bayesNet.lookupVariables(childVariableNames);
     VariableNumMap allVars = parentVars.union(childVars);
-    
+
     BiMap<Integer, Integer> cptVarNumMap = HashBiMap.create();
     for (Integer varNum : allVars.getVariableNums()) {
       cptVarNumMap.put(varNum, varNum);
@@ -93,24 +108,34 @@ public class BayesNetBuilder {
   /**
    * Add a new conditional probability factor embedding a context-free grammar.
    */
-  public CfgFactor addCfgCptFactor(String parentVarName, String childVarName,
+  public CptCfgFactor addCfgCptFactor(String parentVarName, String childVarName,
       Grammar grammar, CptProductionDistribution productionDist) {
     VariableNumMap parentVars = bayesNet.lookupVariables(Arrays.asList(new String[] { parentVarName }));
     VariableNumMap childVars = bayesNet.lookupVariables(Arrays.asList(new String[] { childVarName }));
 
-    Variable parent = parentVars.getVariables().get(0);
-    Variable child = parentVars.getVariables().get(0);
-
-    // The passed-in strings must be identifiers of DiscreteVariables in the
-    // graphical model.
-    Preconditions.checkArgument(parent instanceof DiscreteVariable);
-    Preconditions.checkArgument(child instanceof DiscreteVariable);
-
-    CfgFactor factor = new CfgFactor((DiscreteVariable) parent,
-        (DiscreteVariable) child, parentVars.getVariableNums().get(0),
-        childVars.getVariableNums().get(0), grammar, productionDist);
-
+    CptCfgFactor factor = new CptCfgFactor(parentVars, childVars,
+        grammar, productionDist);
     addFactor(factor);
     return factor;
+  }
+
+  /**
+   * Gets the basic factor graph which the bayes net under construction will use
+   * for its variables, etc. Mostly used to expose methods of
+   * {@code FactorGraph} which are useful during building.
+   * 
+   * @return
+   */
+  public FactorGraph getBaseFactorGraph() {
+    return bayesNet;
+  }
+
+  /**
+   * Be careful with this method.
+   * 
+   * @param factorGraph
+   */
+  public void setBaseFactorGraph(FactorGraph factorGraph) {
+    bayesNet = factorGraph;
   }
 }

@@ -242,8 +242,10 @@ public interface Factor {
   public List<Assignment> getMostLikelyAssignments(int numAssignments);
 
   /**
-   * Computes the expected value of a feature function (defined over the same
-   * set of variables as this factor).
+   * Computes the unnormalized expected value of a feature function (defined
+   * over the same set of variables as this factor). The unnormalized
+   * expectation is the integral of the value of {@code feature} multiplied by
+   * the unnormalized probability.
    */
   public double computeExpectation(FeatureFunction feature);
 
@@ -252,7 +254,7 @@ public interface Factor {
   /**
    * Attempts to convert {@code this} into a {@link DiscreteFactor}.
    * 
-   * @throws FactorCoercionError if {@code this} cannot be converted into a
+   * @throws CoercionError if {@code this} cannot be converted into a
    * {@link DiscreteFactor}.
    */
   public DiscreteFactor coerceToDiscrete();

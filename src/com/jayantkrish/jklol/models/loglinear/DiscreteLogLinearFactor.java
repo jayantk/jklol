@@ -1,82 +1,86 @@
 package com.jayantkrish.jklol.models.loglinear;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 
-import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
+import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.SparseOutcomeTable;
 
 /**
  * A {@link LogLinearFactor} over {@link DiscreteVariable}s.
  */ 
-public class DiscreteLogLinearFactor extends DiscreteFactor implements LogLinearFactor {
+public class DiscreteLogLinearFactor extends AbstractParametricFactor<SufficientStatistics> {
 
-	private LogLinearParameters featureSet;
-	private Set<FeatureFunction> myFeatures;
-	private SparseOutcomeTable<Set<FeatureFunction>> sparseFeatures;
+	private final ImmutableList<FeatureFunction> myFeatures;
 
-	public DiscreteLogLinearFactor(VariableNumMap vars, LogLinearParameters featureSet) {
+	public DiscreteLogLinearFactor(VariableNumMap vars, List<FeatureFunction> features) {
 		super(vars);
-		this.featureSet = featureSet;
-		myFeatures = new HashSet<FeatureFunction>();
-		this.sparseFeatures = new SparseOutcomeTable<Set<FeatureFunction>>(vars.getVariableNums());
+		myFeatures = ImmutableList.copyOf(new HashSet<FeatureFunction>());
 	}
 
 	/////////////////////////////////////////////////////////////
-	// Required methods for DiscreteFactor 
+	// Required methods for ParametricFactor
 	/////////////////////////////////////////////////////////////
 
 	@Override
-	public Iterator<Assignment> outcomeIterator() {
-		return new AllAssignmentIterator(getVars());
+	public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
+	  FeatureSufficientStatistics featureParameters = parameters.coerceToFeature();
+	  Preconditions.checkArgument(featureParameters.getFeatures().size() == myFeatures.size());
+
+	  // TODO(jayantk): This is probably not the most efficient way to build this factor.
+	  double[] featureWeights = featureParameters.getWeights();
+	  TableFactorBuilder builder = new TableFactorBuilder(getVars());
+	  for (int i = 0; i < myFeatures.size(); i++) {
+	    FeatureFunction feature = myFeatures.get(i);
+	    Iterator<Assignment> iter = feature.getNonzeroAssignments();
+	    while (iter.hasNext()) {
+	      Assignment assignment = iter.next();
+	      builder.multiplyWeight(assignment, Math.exp(featureWeights[i] * feature.getValue(assignment)));
+	    }
+	  }
+	  return builder.build();
 	}
 
 	@Override
-	public double getUnnormalizedProbability(Assignment assignment) {
-		double weight = 0.0;
-		if (sparseFeatures.containsKey(assignment)) {
-			for (FeatureFunction f : sparseFeatures.get(assignment)) {
-				weight += featureSet.getFeatureWeight(f) * f.getValue(assignment);
-			}
-		}
-		return Math.exp(weight);
+	public SufficientStatistics getNewSufficientStatistics() {
+	  return new FeatureSufficientStatistics(myFeatures);
 	}
 	
 	@Override
-	public double size() {
-	  return sparseFeatures.size();
+	public SufficientStatistics getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
+	  double[] weights = new double[myFeatures.size()];
+	  for (int i = 0; i < myFeatures.size(); i++) {	  
+	    weights[i] = count * myFeatures.get(i).getValue(assignment); 
+	  }
+	  return new FeatureSufficientStatistics(myFeatures, weights);
 	}
-
-	//////////////////////////////////////////////////////////////
-	// Feature manipulation / update methods
-	//////////////////////////////////////////////////////////////
-
-	/* (non-Javadoc)
-	 * @see com.jayantkrish.jklol.models.loglinear.LogLinearFactor#addFeature(com.jayantkrish.jklol.models.loglinear.FeatureFunction)
-	 */
-	public void addFeature(FeatureFunction feature) {
-		featureSet.addFeature(feature);
-		myFeatures.add(feature);
-
-		Iterator<Assignment> assignmentIter = feature.getNonzeroAssignments();
-		while (assignmentIter.hasNext()) {
-			Assignment a = assignmentIter.next();
-			if (!sparseFeatures.containsKey(a)) {
-				sparseFeatures.put(a, new HashSet<FeatureFunction>());
-			}
-			sparseFeatures.get(a).add(feature);
-		}
+	
+	@Override
+	public SufficientStatistics getSufficientStatisticsFromMarginal(Factor marginal, double count, double partitionFunction) {
+	  double[] weights = new double[myFeatures.size()];
+	  for (int i = 0; i < myFeatures.size(); i++) {	  
+	    weights[i] = count * marginal.computeExpectation(myFeatures.get(i)) / partitionFunction; 
+	  }
+	  return new FeatureSufficientStatistics(myFeatures, weights);
 	}
+	
+	//////////////////////////////////////////////////////////////
+	// Other methods 
+	//////////////////////////////////////////////////////////////
 
-	/* (non-Javadoc)
-	 * @see com.jayantkrish.jklol.models.loglinear.LogLinearFactor#getFeatures()
+	/**
+	 * Gets the features which are the parameterization of this factor.
 	 */
-	public Set<FeatureFunction> getFeatures() {
-		return Collections.unmodifiableSet(myFeatures);
+	public List<FeatureFunction> getFeatures() {
+		return myFeatures;
 	}
 }

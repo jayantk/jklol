@@ -16,6 +16,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.Converter;
 
 /**
  * A VariableNumMap represents a set of variables in a graphical model.
@@ -309,6 +310,23 @@ public class VariableNumMap {
   }
 
   /**
+   * Gets the values of the variables in {@code Assignment} and returns them as
+   * a {@code List}. This operation is the inverse of
+   * {@link #outcomeToAssignment(List)}. The size of the returned list is equal
+   * to {@code this.size()}.
+   * 
+   * @param assignment
+   * @return
+   */
+  public List<Object> assignmentToOutcome(Assignment assignment) {
+    List<Object> returnValue = Lists.newArrayList();
+    for (Integer varNum : varMap.keySet()) {
+      returnValue.add(assignment.getVarValue(varNum));
+    }
+    return returnValue;
+  }
+
+  /**
    * Get the assignment corresponding to a particular setting of the variables
    * in this set. The Objects in outcome are assumed to be ordered in ascending
    * order by variable number. (i.e., the ith object is the value of the ith
@@ -334,6 +352,19 @@ public class VariableNumMap {
    */
   public Assignment outcomeToAssignment(Object[] outcome) {
     return outcomeToAssignment(Arrays.asList(outcome));
+  }
+
+  /**
+   * Gets a converter for transforming outcomes (settings of variables in
+   * {@code this}) into their corresponding assignments, and vice versa. The
+   * returned converter performs the functions of
+   * {@link #outcomeToAssignment(List)} and
+   * {@link #assignmentToOutcome(Assignment)}.
+   * 
+   * @return
+   */
+  public Converter<List<Object>, Assignment> getOutcomeToAssignmentConverter() {
+    return new AssignmentConverter(this);
   }
 
   /**
@@ -383,6 +414,24 @@ public class VariableNumMap {
     return new Assignment(getVariableNums(), objectValues);
   }
 
+  /**
+   * Returns {@code true} if the values in {@code assignment} are possible
+   * values for the variables in {@code this}. {@code assignment} must 
+   * contain a subset of the variables in {@code this}.
+   * 
+   * @param assignment
+   * @return
+   */
+  public boolean isValidAssignment(Assignment assignment) {
+    Preconditions.checkArgument(containsAll(assignment.getVarNumsSorted()));
+    for (Integer varNum : assignment.getVarNumsSorted()) {
+      if (!varMap.get(varNum).canTakeValue(assignment.getVarValue(varNum))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public String toString() {
     return varMap.values().toString();
@@ -424,5 +473,31 @@ public class VariableNumMap {
       curMap = curMap.union(varNumMap);
     }
     return curMap;
+  }
+
+  /**
+   * Converter from assignments to outcomes (list of objects) and vice-versa.
+   * 
+   * @author jayantk
+   */
+  private class AssignmentConverter extends Converter<List<Object>, Assignment> {
+
+    private final VariableNumMap variables;
+
+    public AssignmentConverter(VariableNumMap variables) {
+      this.variables = variables;
+    }
+
+    @Override
+    public Assignment apply(List<Object> item) {
+      Preconditions.checkArgument(item.size() == variables.size());
+      return variables.outcomeToAssignment(item);
+    }
+
+    @Override
+    public List<Object> invert(Assignment item) {
+      Preconditions.checkArgument(item.size() == variables.size());
+      return variables.assignmentToOutcome(item);
+    }
   }
 }

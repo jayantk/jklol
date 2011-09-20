@@ -61,4 +61,8 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
 
     return newProductionDist;
   }
+  
+  public CptProductionDistribution getParameterTemplate() {
+    return parameterTemplate;
+  }
 }

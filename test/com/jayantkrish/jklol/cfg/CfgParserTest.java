@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.collect.Maps;
+
 import junit.framework.TestCase;
 
 public class CfgParserTest extends TestCase {
@@ -147,13 +149,36 @@ public class CfgParserTest extends TestCase {
 
 	public void testParseMaxMarginalTree() {
 		ParseChart c = p.parseInsideMarginal(Arrays.asList(new Production[] 
-		                                                                  {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), false);
+		    {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), false);
 		ParseTree t = c.getBestParseTrees(prod("S"), 1).get(0);
 		assertEquals(prod("S"), t.getRoot());
 		assertEquals(prod("N"), t.getLeft().getRoot());
 		assertEquals(prod("VP"), t.getRight().getRoot());
 		assertEquals(prod("V"), t.getRight().getLeft().getRoot());
 	}
+	
+	public void testParseMaxMarginalTreeDist() {
+		ParseChart c = p.parseInsideMarginal(Arrays.asList(new Production[] 
+		    {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), false);
+		
+		Map<Production, Double> rootProbabilities = Maps.newHashMap();
+		rootProbabilities.put(prod("S"), 0.5);
+		rootProbabilities.put(prod("S2"), 1.0);
+		
+		List<ParseTree> trees = c.getBestParseTrees(rootProbabilities, 2);
+		ParseTree best = trees.get(0);
+		assertEquals(prod("S2"), best.getRoot());
+		assertEquals(prod("N"), best.getLeft().getRoot());
+		assertEquals(prod("VP"), best.getRight().getRoot());
+		assertEquals(prod("V"), best.getRight().getLeft().getRoot());
+		
+		ParseTree second = trees.get(1);
+		assertEquals(prod("S"), second.getRoot());
+		assertEquals(prod("N"), second.getLeft().getRoot());
+		assertEquals(prod("VP"), second.getRight().getRoot());
+		assertEquals(prod("V"), second.getRight().getLeft().getRoot());
+	}
+
 
 	public void testMostLikelyProductions() {
 		ParseChart c = p.mostLikelyProductions(prod("barP"), 2, 2);

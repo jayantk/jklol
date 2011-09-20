@@ -7,8 +7,6 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.evaluation.Predictor;
-import com.jayantkrish.jklol.evaluation.LossFunction;
 import com.jayantkrish.jklol.evaluation.LossFunctions.Accuracy;
 import com.jayantkrish.jklol.evaluation.LossFunctions.Loglikelihood;
 import com.jayantkrish.jklol.evaluation.LossFunctions.PrecisionRecall;
@@ -16,7 +14,7 @@ import com.jayantkrish.jklol.evaluation.LossFunctions.PrecisionRecall;
 public class LossFunctionsTest extends TestCase {
 
 	private Map<String, Boolean> examples;
-	private Predictor<String, Boolean> testPredictor;
+	private Predictor<String, Boolean> testPredictor, testPredictorWithZeros;
 
 	private Accuracy<String, Boolean> accuracy;
 	private PrecisionRecall<String> precisionRecall;
@@ -40,6 +38,7 @@ public class LossFunctionsTest extends TestCase {
 		examples.put("boo2", false);
 
 		testPredictor = new TestPredictor<String>(predictions, 0.9);
+		testPredictorWithZeros = new TestPredictor<String>(predictions, 1.0);
 
 		accuracy = new Accuracy<String, Boolean>();
 		precisionRecall = new PrecisionRecall<String>();
@@ -60,10 +59,29 @@ public class LossFunctionsTest extends TestCase {
 
 	public void testLoglikelihood() {
 		accumulateLoss(loglikelihood, testPredictor);
-		assertEquals((2 * Math.log(0.9) + 4 * Math.log(0.1)) / 6.0, 
-				loglikelihood.getAverageLoglikelihood(), .0000001);
-		assertEquals(Math.exp(-1.0 * (2 * Math.log(0.9) + 4 * Math.log(0.1)) / 6.0), 
+		double avgLoglikelihood = (2 * Math.log(0.9) + 4 * Math.log(0.1)) / 6.0;
+		double loglikelihoodVariance = (2 * Math.pow(Math.log(0.9) - avgLoglikelihood, 2) +
+		    4 * Math.pow(Math.log(0.1) - avgLoglikelihood, 2)) / 36.0;
+		assertEquals(avgLoglikelihood, loglikelihood.getAverageLoglikelihood(), .0000001);
+		assertEquals(avgLoglikelihood, loglikelihood.getAverageLoglikelihoodIgnoreZeros(), .0000001);
+		assertEquals(loglikelihoodVariance, loglikelihood.getLoglikelihoodVariance(), .0000001);
+		assertEquals(loglikelihoodVariance, loglikelihood.getLoglikelihoodVarianceIgnoreZeros(), .000001);
+		assertEquals(Math.exp(-1.0 * avgLoglikelihood), 
 				loglikelihood.getPerplexity(), .0000001);
+		assertEquals(Math.exp(-1.0 * avgLoglikelihood), 
+		    loglikelihood.getPerplexityIgnoreZeros(), .0000001);
+		assertEquals(0, loglikelihood.getNumZeroProbabilityExamples());
+	}
+	
+	public void testLoglikelihoodWithZeros() {
+		accumulateLoss(loglikelihood, testPredictorWithZeros);
+		assertEquals(0.0, loglikelihood.getAverageLoglikelihoodIgnoreZeros(), .0000001);
+		assertEquals(0.0, loglikelihood.getLoglikelihoodVarianceIgnoreZeros(), .0000001);
+		assertEquals(Double.NEGATIVE_INFINITY, loglikelihood.getAverageLoglikelihood(), .0000001);
+		assertEquals(Double.POSITIVE_INFINITY, loglikelihood.getLoglikelihoodVariance());
+		assertEquals(1.0, loglikelihood.getPerplexityIgnoreZeros(), .0000001);
+		assertEquals(Double.POSITIVE_INFINITY, loglikelihood.getPerplexity(), .0000001);
+		assertEquals(4, loglikelihood.getNumZeroProbabilityExamples());
 	}
 
 	private void accumulateLoss(LossFunction<String, Boolean> loss, 

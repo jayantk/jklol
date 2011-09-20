@@ -103,8 +103,8 @@ public class JunctionTree extends AbstractMarginalCalculator {
    * Compute the message that gets passed from startFactor to destFactor.
    */
   private void passMessage(CliqueTree cliqueTree, int startFactor, int destFactor, boolean useSumProduct) {
-    System.out.println(startFactor + ":" + cliqueTree.getFactor(startFactor).getVars() + " (" + cliqueTree.getFactor(startFactor).size() + ") --> " 
-          + destFactor + ":" + cliqueTree.getFactor(destFactor).getVars() + " (" + cliqueTree.getFactor(destFactor).size() + ")");
+    // System.out.println(startFactor + ":" + cliqueTree.getFactor(startFactor).getVars() + " (" + cliqueTree.getFactor(startFactor).size() + ") --> " 
+        // + destFactor + ":" + cliqueTree.getFactor(destFactor).getVars() + " (" + cliqueTree.getFactor(destFactor).size() + ")");
     
     VariableNumMap sharedVars = cliqueTree.getFactor(startFactor).getVars().intersection(cliqueTree.getFactor(destFactor).getVars());
 
@@ -124,8 +124,8 @@ public class JunctionTree extends AbstractMarginalCalculator {
     List<Factor> factorsToCombine = new ArrayList<Factor>();
     for (Integer adjacentFactorNum : factorIndicesToCombine) {
       factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, startFactor));
-      System.out.println("  combining: " + adjacentFactorNum + ": " + cliqueTree.getMessage(adjacentFactorNum, startFactor).getVars()
-          + " (" + cliqueTree.getMessage(adjacentFactorNum, startFactor).size() + ")"); 
+      // System.out.println("  combining: " + adjacentFactorNum + ": " + cliqueTree.getMessage(adjacentFactorNum, startFactor).getVars()
+          // + " (" + cliqueTree.getMessage(adjacentFactorNum, startFactor).size() + ")"); 
     }
     
     // Update the marginal distribution of startFactor in the clique tree.
@@ -241,18 +241,18 @@ public class JunctionTree extends AbstractMarginalCalculator {
       
       // This code is going to change to make inference more efficient.
       Map<Factor, Integer> initialEliminationOrder = Maps.newHashMap();
-      System.out.println("Initial elimination order: ");
+      // System.out.println("Initial elimination order: ");
       if (factorGraph.getInferenceHint() != null) {
         for (int i = 0; i < factorGraphFactors.size(); i++) {
           initialEliminationOrder.put(factorGraphFactors.get(i), 
               factorGraph.getInferenceHint().getFactorEliminationOrder()[i]);
-          System.out.println("  " + factorGraph.getInferenceHint().getFactorEliminationOrder()[i]
-              + ": " + factorGraphFactors.get(i).getVars());
+          // System.out.println("  " + factorGraph.getInferenceHint().getFactorEliminationOrder()[i]
+          // + ": " + factorGraphFactors.get(i).getVars());
         }
       } else {
         for (int i = 0; i < factorGraphFactors.size(); i++) {
           initialEliminationOrder.put(factorGraphFactors.get(i), i);
-          System.out.println("  " + i + ": " + factorGraphFactors.get(i).getVars());
+          // System.out.println("  " + i + ": " + factorGraphFactors.get(i).getVars());
         }
       }
       
@@ -288,7 +288,7 @@ public class JunctionTree extends AbstractMarginalCalculator {
           }
           int cliqueNum = factorCliqueMap.get(superset);
           
-          System.out.println("Merging " + f.getVars() + " into " + cliqueFactors.get(cliqueNum).getVars());
+          // System.out.println("Merging " + f.getVars() + " into " + cliqueFactors.get(cliqueNum).getVars());
 
           cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(f));
           cliquePriorityMap.put(cliqueNum, 
@@ -326,10 +326,10 @@ public class JunctionTree extends AbstractMarginalCalculator {
       SortedMap<Integer, Integer> bestEliminationOrder = Maps.newTreeMap();
       bestEliminationOrder.putAll(cliquePriorityMap.inverse());
       cliqueEliminationOrder = new ArrayList<Integer>();
-      System.out.println("Elimination Order:");
+      // System.out.println("Elimination Order:");
       for (Integer position : bestEliminationOrder.keySet()) {
         cliqueEliminationOrder.add(bestEliminationOrder.get(position));
-        System.out.println("  " + cliqueEliminationOrder.size() + " " + cliqueFactors.get(bestEliminationOrder.get(position)).getVars());
+        // System.out.println("  " + cliqueEliminationOrder.size() + " " + cliqueFactors.get(bestEliminationOrder.get(position)).getVars());
       }
             
       marginals = Lists.newArrayList(cliqueFactors);

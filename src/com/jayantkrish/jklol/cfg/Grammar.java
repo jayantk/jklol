@@ -1,7 +1,13 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.*;
-import com.jayantkrish.jklol.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.jayantkrish.jklol.util.HashMultimap;
 
 /**
  * Represents a set of production rules for a CFG.
@@ -28,6 +34,24 @@ public class Grammar {
 
 		terminalProductions = new HashMultimap<Production, TerminalProduction>();
 		terminalParents = new HashMultimap<List<Production>, TerminalProduction>();
+	}
+	
+	/**
+	 * Copy constructor.
+	 * 
+	 * @param other
+	 */
+	public Grammar(Grammar other) {
+	  parentProductionMap = new HashMultimap<Production, BinaryProduction>(other.parentProductionMap);
+	  childProductionMap = new HashMap<Production, HashMultimap<Production, BinaryProduction>>();
+	  for (Production root : other.childProductionMap.keySet()) {
+		  childProductionMap.put(root, new HashMultimap<Production, BinaryProduction>(
+		      other.childProductionMap.get(root)));
+		}
+	  allBinaryProductions = new HashSet<BinaryProduction>(other.allBinaryProductions);
+	  
+	  terminalProductions = new HashMultimap<Production, TerminalProduction>(other.terminalProductions);
+	  terminalParents = new HashMultimap<List<Production>, TerminalProduction>(other.terminalParents);
 	}
 
 	/**

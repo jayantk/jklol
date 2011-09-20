@@ -64,14 +64,14 @@ public class FactorGraph {
     this.variableFactorMap = new HashMultimap<Integer, Integer>(factorGraph.variableFactorMap);
     this.factorVariableMap = new HashMultimap<Integer, Integer>(factorGraph.factorVariableMap);
     this.factors = new IndexedList<Factor>(factorGraph.factors);
-    this.inferenceHint = null;
+    this.inferenceHint = factorGraph.inferenceHint;
   }
-  
+
   /**
    * Constructs a {@code FactorGraph} directly from a list of factors. The
    * variables and variable numbers in the graph are determined by the factors,
    * and their names are unspecified.
-   *
+   * 
    * @param factors
    */
   public static FactorGraph createFromFactors(List<Factor> factors) {
@@ -86,7 +86,7 @@ public class FactorGraph {
         factorVariableMap.put(i, j);
       }
     }
-    
+
     Map<String, Integer> variableNames = Maps.newHashMap();
     for (Integer variableNum : allVars.getVariableNums()) {
       variableNames.put("Var" + variableNum, variableNum);

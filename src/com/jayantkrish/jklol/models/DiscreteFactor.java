@@ -104,13 +104,13 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
-    return new TableFactor(getVars().removeAll(varNumsToEliminate), 
+    return new TableFactor(getVars().removeAll(varNumsToEliminate),
         getWeights().sumOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }
 
   @Override
   public DiscreteFactor maxMarginalize(Collection<Integer> varNumsToEliminate) {
-    return new TableFactor(getVars().removeAll(varNumsToEliminate), 
+    return new TableFactor(getVars().removeAll(varNumsToEliminate),
         getWeights().maxOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }
 
@@ -138,15 +138,15 @@ public abstract class DiscreteFactor extends AbstractFactor {
   @Override
   public DiscreteFactor product(List<Factor> factors) {
     List<DiscreteFactor> discreteFactors = FactorUtils.coerceToDiscrete(factors);
-    
+
     // Multiply the factors in order from smallest to largest to keep
-    // the intermediate results as sparse as possible. 
-    SortedSetMultimap<Double, DiscreteFactor> factorsBySize = 
+    // the intermediate results as sparse as possible.
+    SortedSetMultimap<Double, DiscreteFactor> factorsBySize =
         TreeMultimap.create(Ordering.natural(), Ordering.arbitrary());
     for (DiscreteFactor factor : discreteFactors) {
       factorsBySize.put(factor.size(), factor);
     }
-    
+
     SparseTensor result = getWeights();
     for (Double size : factorsBySize.keySet()) {
       for (DiscreteFactor factor : factorsBySize.get(size)) {

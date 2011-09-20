@@ -56,13 +56,13 @@ public class CptTableProductionDistribution implements CptProductionDistribution
     for (Production nonterm : grammar.getAllNonTerminals()) {
       Set<BinaryProduction> bps = grammar.getBinaryProductions(nonterm);
       Set<TerminalProduction> tps = grammar.getTerminalProductions(nonterm);
-      denominators.put(nonterm, (bps.size() + tps.size()) * amount);
+      denominators.put(nonterm, denominators.get(nonterm) + ((bps.size() + tps.size()) * amount));
 
       for (BinaryProduction bp : bps) {
-        binaryRuleCounts.put(bp, amount);
+        binaryRuleCounts.put(bp, binaryRuleCounts.get(bp) + amount);
       }
       for (TerminalProduction tp : tps) {
-        terminalRuleCounts.put(tp, amount);
+        terminalRuleCounts.put(tp, terminalRuleCounts.get(tp) + amount);
       }
     }
   }

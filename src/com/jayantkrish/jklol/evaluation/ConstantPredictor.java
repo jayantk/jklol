@@ -14,6 +14,7 @@ import com.google.common.collect.Maps;
  */
 public class ConstantPredictor<I, O> implements Predictor<I, O> {
 
+  private Map<O, Double> baseMap;
 	private TreeMap<O, Double> outputProbabilities;
 
 	/**
@@ -25,8 +26,9 @@ public class ConstantPredictor<I, O> implements Predictor<I, O> {
 		for (Map.Entry<O, Double> entry : outputProbabilities.entrySet()) {
 			totalProb += entry.getValue();
 		}
-		Preconditions.checkArgument(totalProb == 1.0);
-		Map<O, Double> baseMap = Maps.newHashMap(outputProbabilities);
+		// Run the check but ignore possible numerical precision errors.
+		Preconditions.checkArgument(totalProb > 0.999 && totalProb < 1.001);
+		baseMap = Maps.newHashMap(outputProbabilities);
 		ValueComparator<Double> valueComparator = new ValueComparator<Double>(baseMap);
 		this.outputProbabilities = new TreeMap<O, Double>(valueComparator);
 		this.outputProbabilities.putAll(outputProbabilities);
@@ -50,7 +52,7 @@ public class ConstantPredictor<I, O> implements Predictor<I, O> {
 
 	@Override
 	public double getProbability(I input, O output) {
-		return outputProbabilities.containsKey(output) ? 
+		return baseMap.containsKey(output) ? 
 				outputProbabilities.get(output) : 0.0;
 	}
 	

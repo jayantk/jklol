@@ -47,7 +47,7 @@ public class SufficientStatisticsCalculator {
       int numConcurrent) {
     this.marginalCalculatorSupplier = marginalCalculatorSupplier;
     this.numConcurrent = numConcurrent;
-    this.executor = Executors.newFixedThreadPool(numConcurrent);  
+    this.executor = Executors.newFixedThreadPool(numConcurrent);
   }
 
   /**
@@ -57,9 +57,8 @@ public class SufficientStatisticsCalculator {
    * {@code factorGraph}.
    * 
    * <p>
-   * {@code assignments} should be safe for concurrent access, but does not need
-   * to support concurrent modification. An {@code ArrayList} works. For
-   * processing batches, use {@code List.subList}.
+   * {@code assignments} does not need to be safe for concurrent access as its
+   * contents is internally copied to a thread-safe data structure.
    * 
    * @param factorGraph
    * @param bayesNet
@@ -67,7 +66,7 @@ public class SufficientStatisticsCalculator {
    * @param log
    * @return
    */
-  public SufficientStatistics computeSufficientStatistics(FactorGraph factorGraph, 
+  public SufficientStatistics computeSufficientStatistics(FactorGraph factorGraph,
       ParametricFactorGraph bayesNet, List<Assignment> assignments, LogFunction log) {
 
     List<BatchCalculator> batches = Lists.newArrayList();
@@ -81,14 +80,15 @@ public class SufficientStatisticsCalculator {
       // assignments.size(). For example, the start index is larger if
       // the number of concurrent processors is greater than the number of
       // examples in the batch.
-      List<Assignment> assignmentBatch = assignments.subList(Math.min(i * batchSize, assignments.size()),
-          Math.min((i + 1) * batchSize, assignments.size()));
+      List<Assignment> assignmentBatch = Lists.newArrayList(assignments
+          .subList(Math.min(i * batchSize, assignments.size()),
+          Math.min((i + 1) * batchSize, assignments.size())));
 
       batches.add(new BatchCalculator(factorGraph, bayesNet, marginalCalculatorSupplier.get(),
           assignmentBatch, logFn));
     }
 
-    SufficientStatistics statistics = bayesNet.getNewSufficientStatistics(); 
+    SufficientStatistics statistics = bayesNet.getNewSufficientStatistics();
     try {
       List<Future<SufficientStatistics>> results = executor.invokeAll(batches);
       for (Future<SufficientStatistics> result : results) {
@@ -115,12 +115,12 @@ public class SufficientStatisticsCalculator {
 
     private final FactorGraph factorGraph;
     private final ParametricFactorGraph bayesNet;
-    
+
     private final MarginalCalculator marginalCalculator;
     private final List<Assignment> trainingData;
     private final LogFunction logFn;
 
-    public BatchCalculator(FactorGraph factorGraph, ParametricFactorGraph bayesNet, 
+    public BatchCalculator(FactorGraph factorGraph, ParametricFactorGraph bayesNet,
         MarginalCalculator marginalCalculator, List<Assignment> trainingData,
         LogFunction logFn) {
       this.factorGraph = factorGraph;
@@ -138,7 +138,9 @@ public class SufficientStatisticsCalculator {
           logFn.log(assignment, factorGraph);
         }
         MarginalSet marginals = marginalCalculator.computeMarginals(factorGraph, assignment);
+        if (logFn != null) { System.out.println("Marginals done."); }
         statistics.increment(bayesNet.computeSufficientStatistics(marginals, 1.0), 1.0);
+        if (logFn != null) { System.out.println("Statistics done."); }
       }
 
       return statistics;

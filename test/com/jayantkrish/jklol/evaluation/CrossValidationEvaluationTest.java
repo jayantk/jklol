@@ -1,12 +1,12 @@
 package com.jayantkrish.jklol.evaluation;
 
+import java.util.Collection;
 import java.util.List;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.LossFunctions.Accuracy;
-import com.jayantkrish.jklol.util.Pair;
 
 /**
  * Unit tests for {@link CrossValidationEvaluation}
@@ -34,7 +34,7 @@ public class CrossValidationEvaluationTest extends TestCase {
 	@Override
 	public void setUp() {
 		accuracy = LossFunctions.newAccuracy();
-		List<Iterable<Pair<String, String>>> folds = Lists.newArrayList();
+		List<Collection<Example<String, String>>> folds = Lists.newArrayList();
 		folds.add(arrayToList(fold1));
 		folds.add(arrayToList(fold2));
 		folds.add(arrayToList(fold3));
@@ -43,15 +43,15 @@ public class CrossValidationEvaluationTest extends TestCase {
 	}
 	
 	public void testEvaluateLoss() {
-		evaluation.evaluateLoss(new Baselines.MostFrequentLabel<String, String>(), accuracy);
+		evaluation.evaluateLoss(Baselines.<String, String>mostFrequentLabel(), accuracy);
 		assertEquals(15, accuracy.getCount());
 		assertEquals(4.0 / 15.0, accuracy.getAccuracy());
 	}
 	
-	private List<Pair<String, String>> arrayToList(String[][] data) {
-		List<Pair<String, String>> pairs = Lists.newArrayList();
+	private List<Example<String, String>> arrayToList(String[][] data) {
+		List<Example<String, String>> pairs = Lists.newArrayList();
 		for (int i = 0; i < data.length; i++) {
-			pairs.add(new Pair<String, String>(data[i][0], data[i][1]));
+			pairs.add(new Example<String, String>(data[i][0], data[i][1]));
 		}
 		return pairs;
 	}

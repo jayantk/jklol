@@ -23,6 +23,10 @@ public class FactorGraphPredictorTest extends TestCase {
   private Predictor<Assignment, Assignment> predictor;
   private Predictor<String, String> wrappedPredictor;
   
+  private VariableNumMap densityVars; 
+  private Predictor<Assignment, Assignment> densityPredictor;
+  
+  
   public void setUp() {
     factorGraph = InferenceTestCases.basicFactorGraph();
     outputVars = factorGraph.lookupVariables(Arrays.asList("Var4"));
@@ -33,6 +37,9 @@ public class FactorGraphPredictorTest extends TestCase {
         predictor, 
         Converters.wrapWithCast(Converters.wrapSingletonList(inputVars.getOutcomeToAssignmentConverter()), String.class),
         Converters.wrapWithCast(Converters.wrapSingletonList(outputVars.getOutcomeToAssignmentConverter()), String.class));
+    
+    densityVars = factorGraph.lookupVariables(Arrays.asList("Var0", "Var2"));
+    densityPredictor = new FactorGraphPredictor(factorGraph, densityVars, new JunctionTree());
   }
   
   public void testGetBestPrediction() {
@@ -62,6 +69,11 @@ public class FactorGraphPredictorTest extends TestCase {
     assertEquals(0.0 / 43.0, predictor.getProbability(
         inputVars.outcomeToAssignment(Arrays.asList("F")),
         outputVars.outcomeToAssignment(Arrays.asList("T"))));
+    
+    assertEquals(25.0 / 43.0, densityPredictor.getProbability(
+        Assignment.EMPTY, densityVars.outcomeToAssignment(Arrays.asList("T", "T"))));
+    assertEquals(6.0 / 43.0, densityPredictor.getProbability(
+        Assignment.EMPTY, densityVars.outcomeToAssignment(Arrays.asList("T", "F"))));    
   }
   
   public void testGetBestPredictionWrapped() {

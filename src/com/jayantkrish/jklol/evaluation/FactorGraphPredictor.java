@@ -30,6 +30,9 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
   private final FactorGraph factorGraph;
   private final VariableNumMap outputVariables;
   private final MarginalCalculator marginalCalculator;
+  
+  // The unconditional partition function of {@code factorGraph}
+  private double partitionFunction;
 
   /**
    * Creates a {@code FactorGraphPredictor} which makes predictions about 
@@ -45,6 +48,8 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
     this.factorGraph = factorGraph;
     this.outputVariables = outputVariables;
     this.marginalCalculator = marginalCalculator;
+    
+    partitionFunction = -1.0;
   }
 
   @Override
@@ -89,9 +94,20 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
       return 0.0;
     }
 
-    MarginalSet inputMarginals = marginalCalculator.computeMarginals(factorGraph, input);
+    double inputPartitionFunction = 0.0;
+    if (input.size() == 0) {
+      if (partitionFunction < 0) {
+        MarginalSet inputMarginals = marginalCalculator.computeMarginals(factorGraph, input);
+        partitionFunction = inputMarginals.getPartitionFunction();
+      }
+      inputPartitionFunction = partitionFunction;        
+    } else {
+      MarginalSet inputMarginals = marginalCalculator.computeMarginals(factorGraph, input);
+      inputPartitionFunction = inputMarginals.getPartitionFunction();
+    }
+    
     MarginalSet inputOutputMarginals = marginalCalculator.computeMarginals(
         factorGraph, input.jointAssignment(output));
-    return inputOutputMarginals.getPartitionFunction() / inputMarginals.getPartitionFunction();
+    return inputOutputMarginals.getPartitionFunction() / inputPartitionFunction;
   }
 }

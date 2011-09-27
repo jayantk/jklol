@@ -1,9 +1,11 @@
 package com.jayantkrish.jklol.util;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
@@ -24,6 +26,15 @@ public class PairCountAccumulator<A, B> {
     counts = Maps.newHashMap();
     conditionalCounts = new DefaultHashMap<A, Double>(0.0);
     totalCount = 0.0;
+  }
+
+  /**
+   * Creates an accumulator with a count of 0 for every (A, B) pair.
+   * 
+   * @return
+   */
+  public static <A, B> PairCountAccumulator<A, B> create() {
+    return new PairCountAccumulator<A, B>();
   }
 
   /**
@@ -67,6 +78,41 @@ public class PairCountAccumulator<A, B> {
   }
 
   /**
+   * Gets the outcome B with the highest conditional probability given
+   * {@code first}. Returns {@code null} if {@code first} has never been
+   * observed.
+   * 
+   * @param first
+   * @return
+   */
+  public B getMostProbableOutcome(A first) {
+    B best = null;
+    double probability = -1.0;
+    for (B second : getValues(first)) {
+      if (getProbability(first, second) > probability) {
+        probability = getProbability(first, second);
+        best = second;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Gets a list of the possible outcomes given {@code first}, sorted in order
+   * from most to least probable.
+   * 
+   * @param first
+   * @return
+   */
+  public List<B> getOutcomesByProbability(A first) {
+    if (counts.containsKey(first)) {
+      Map<B, Double> sortedMap = MapUtils.reverse(MapUtils.sortByValue(counts.get(first)));
+      return Lists.newArrayList(sortedMap.keySet());
+    }
+    return Collections.emptyList();
+  }
+
+  /**
    * Gets the conditional probability of observing {@code second} given
    * {@code first}. Returns NaN if {@code first} has never been observed.
    * 
@@ -91,6 +137,10 @@ public class PairCountAccumulator<A, B> {
     return Collections.emptySet();
   }
 
+  /**
+   * Gets all A values which have been observed.
+   * @return
+   */
   public Set<A> keySet() {
     return counts.keySet();
   }

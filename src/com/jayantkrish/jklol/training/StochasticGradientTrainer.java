@@ -23,13 +23,14 @@ public class StochasticGradientTrainer {
     this.numIterations = numIterations;
   }
 
-  public SufficientStatistics train(ParametricFactorGraph logLinearModel, SufficientStatistics initialParameters, 
+  public SufficientStatistics train(ParametricFactorGraph logLinearModel, SufficientStatistics initialParameters,
       List<Assignment> trainingData) {
     Collections.shuffle(trainingData);
     for (int i = 0; i < numIterations; i++) {
       for (Assignment trainingExample : trainingData) {
         SufficientStatistics gradient = computeGradient(initialParameters, logLinearModel, trainingExample);
-        // TODO: decay the gradient increment amount as (say) sqrt(numIterations)
+        // TODO: decay the gradient increment amount as (say)
+        // sqrt(numIterations)
         initialParameters.increment(gradient, 1.0);
       }
     }
@@ -37,7 +38,8 @@ public class StochasticGradientTrainer {
   }
 
   /*
-   * Computes the gradient and stores it in the gradient accumulator.
+   * Computes and returns an estimate of the gradient at {@code parameters}
+   * based on {@code trainingExample}.
    */
   private SufficientStatistics computeGradient(SufficientStatistics parameters,
       ParametricFactorGraph logLinearModel, Assignment trainingExample) {

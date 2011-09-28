@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
-import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -24,11 +23,10 @@ public class IncrementalEMTrainer {
   public IncrementalEMTrainer(int numIterations, MarginalCalculator inferenceEngine) {
     this.numIterations = numIterations;
     this.inferenceEngine = inferenceEngine;
-    this.log = null;
+    this.log = new NullLogFunction();
   }
 
-  public IncrementalEMTrainer(int numIterations, MarginalCalculator inferenceEngine,
-      LogFunction log) {
+  public IncrementalEMTrainer(int numIterations, MarginalCalculator inferenceEngine, LogFunction log) {
     this.numIterations = numIterations;
     this.inferenceEngine = inferenceEngine;
     this.log = log;
@@ -58,9 +56,7 @@ public class IncrementalEMTrainer {
 
     Collections.shuffle(trainingData);
     for (int i = 0; i < numIterations; i++) {
-      if (log != null) {
-        log.notifyIterationStart(i);
-      }
+      log.notifyIterationStart(i);
       for (int j = 0; j < trainingData.size(); j++) {
         if (i > 0) {
           // Subtract out old statistics if they exist.
@@ -71,25 +67,15 @@ public class IncrementalEMTrainer {
         // based on the current iteration.
         Assignment trainingExample = trainingData.get(j);
         FactorGraph currentFactorGraph = bn.getFactorGraphFromParameters(initialParameters);
-        if (log != null) {
-          log.log(i, j, trainingExample, currentFactorGraph);
-        }
+        log.log(i, j, trainingExample, currentFactorGraph);
 
         // Update new sufficient statistics
         MarginalSet marginals = inferenceEngine.computeMarginals(currentFactorGraph, trainingExample);
         SufficientStatistics exampleStatistics = bn.computeSufficientStatistics(marginals, 1.0);
         previousIterationStatistics[j] = exampleStatistics;
         initialParameters.increment(exampleStatistics, 1.0);
-
-        if (log != null) {
-          for (Factor factor : currentFactorGraph.getFactors()) {
-            log.log(i, j, factor, marginals.getMarginal(factor.getVars().getVariableNums()), currentFactorGraph);
-          }
-        }
       }
-      if (log != null) {
-        log.notifyIterationEnd(i);
-      }
+      log.notifyIterationEnd(i);
     }
     
     return initialParameters;

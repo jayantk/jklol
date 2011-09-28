@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.training;
 
-import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -9,35 +8,26 @@ import com.jayantkrish.jklol.util.Assignment;
  */ 
 public class DefaultLogFunction implements LogFunction {
 
-	private final int numAssignments;
-
-	public DefaultLogFunction(int numAssignments) {
-		this.numAssignments = numAssignments;
-	}
-
+	@Override
 	public void log(Assignment example, FactorGraph graph) {
 	  System.out.println("?.?: example: " + graph.assignmentToObject(example));
 	}
-	
+
+	@Override
 	public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {
 		System.out.println(iteration + "." + exampleNum + ": example: " + graph.assignmentToObject(example));
 	}
 
-	public void log(int iteration, int exampleNum, Factor originalFactor, Factor marginal, FactorGraph graph) {
-		// Unsure what a reasonable replacement for this is...
-		/*
-		List<Assignment> mostLikely = marginal.mostLikelyAssignments(numAssignments);
-		for (Assignment a : mostLikely) {
-			double prob = marginal.getUnnormalizedProbability(a) / marginal.getPartitionFunction();
-			System.out.println(prob + " " + graph.assignmentToObject(a));
-		}
-		 */
-	}
-
+	@Override
 	public void notifyIterationStart(int iteration) {
 		System.out.println("*** ITERATION " + iteration + " ***");
 	}
 
+	@Override
 	public void notifyIterationEnd(int iteration) {}
-}
 
+  @Override
+  public void logStatistic(int iteration, String statisticName, String value) {
+    System.out.println(iteration + ": " + statisticName + "=" + value);
+  }
+}

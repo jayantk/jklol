@@ -66,7 +66,7 @@ public class SufficientStatisticsCalculator {
    * @param log
    * @return
    */
-  public SufficientStatistics computeSufficientStatistics(FactorGraph factorGraph,
+  public BatchStatistics computeSufficientStatistics(FactorGraph factorGraph,
       ParametricFactorGraph bayesNet, List<Assignment> assignments, LogFunction log) {
 
     List<BatchCalculator> batches = Lists.newArrayList();
@@ -74,7 +74,7 @@ public class SufficientStatisticsCalculator {
     for (int i = 0; i < numConcurrent; i++) {
       // The logger might not be safe for concurrent access, so only
       // pass it to one of the update processes.
-      LogFunction logFn = (i == 0) ? log : null;
+      LogFunction logFn = (i == 0) ? log : new NullLogFunction();
 
       // Note that both the start and end index can be larger than
       // assignments.size(). For example, the start index is larger if
@@ -82,17 +82,17 @@ public class SufficientStatisticsCalculator {
       // examples in the batch.
       List<Assignment> assignmentBatch = Lists.newArrayList(assignments
           .subList(Math.min(i * batchSize, assignments.size()),
-          Math.min((i + 1) * batchSize, assignments.size())));
+              Math.min((i + 1) * batchSize, assignments.size())));
 
       batches.add(new BatchCalculator(factorGraph, bayesNet, marginalCalculatorSupplier.get(),
           assignmentBatch, logFn));
     }
 
-    SufficientStatistics statistics = bayesNet.getNewSufficientStatistics();
+    BatchStatistics statistics = new BatchStatistics(bayesNet.getNewSufficientStatistics(), 0.0, 0);
     try {
-      List<Future<SufficientStatistics>> results = executor.invokeAll(batches);
-      for (Future<SufficientStatistics> result : results) {
-        statistics.increment(result.get(), 1.0);
+      List<Future<BatchStatistics>> results = executor.invokeAll(batches);
+      for (Future<BatchStatistics> result : results) {
+        statistics.increment(result.get());
       }
     } catch (InterruptedException e) {
       e.printStackTrace();
@@ -111,7 +111,7 @@ public class SufficientStatisticsCalculator {
    * 
    * @author jayantk
    */
-  private class BatchCalculator implements Callable<SufficientStatistics> {
+  private static class BatchCalculator implements Callable<BatchStatistics> {
 
     private final FactorGraph factorGraph;
     private final ParametricFactorGraph bayesNet;
@@ -130,20 +130,67 @@ public class SufficientStatisticsCalculator {
       this.logFn = logFn;
     }
 
-    public SufficientStatistics call() {
+    public BatchStatistics call() {
+      double sumLoglikelihood = 0.0;
       SufficientStatistics statistics = bayesNet.getNewSufficientStatistics();
-
       for (Assignment assignment : trainingData) {
-        if (logFn != null) {
-          logFn.log(assignment, factorGraph);
-        }
+        logFn.log(assignment, factorGraph);
         MarginalSet marginals = marginalCalculator.computeMarginals(factorGraph, assignment);
-        if (logFn != null) { System.out.println("Marginals done."); }
         statistics.increment(bayesNet.computeSufficientStatistics(marginals, 1.0), 1.0);
-        if (logFn != null) { System.out.println("Statistics done."); }
+
+        sumLoglikelihood += Math.log(marginals.getPartitionFunction());
       }
 
+      return new BatchStatistics(statistics, sumLoglikelihood, trainingData.size());
+    }
+  }
+
+  /**
+   * Simple data structure for holding the result of a batch computation.
+   * 
+   * @author jayantk
+   */
+  public static class BatchStatistics {
+    private SufficientStatistics statistics;
+    private double loglikelihood;
+    private int numExamples;
+
+    public BatchStatistics(SufficientStatistics statistics, double loglikelihood, int numExamples) {
+      this.statistics = statistics;
+      this.loglikelihood = loglikelihood;
+      this.numExamples = numExamples;
+    }
+
+    public SufficientStatistics getStatistics() {
       return statistics;
+    }
+
+    /**
+     * Gets the sum of the unnormalized loglikelihood of each training example
+     * in the batch. The actual loglikelihood of the training data is equal to
+     * {@code this.getLoglikelihood() - this.getNumExamples() * logPartitionFunction}
+     * , where {@code logPartitionFunction} is the log partition function of the
+     * factor graph the statistics were computed on.
+     * 
+     * @return
+     */
+    public double getLoglikelihood() {
+      return loglikelihood;
+    }
+
+    public int getNumExamples() {
+      return numExamples;
+    }
+
+    /**
+     * Adds the statistics in {@code other} to {@code this}.
+     * 
+     * @param other
+     */
+    public void increment(BatchStatistics other) {
+      statistics.increment(other.statistics, 1.0);
+      loglikelihood += other.loglikelihood;
+      numExamples += other.numExamples;
     }
   }
 }

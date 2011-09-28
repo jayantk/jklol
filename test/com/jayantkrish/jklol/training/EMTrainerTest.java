@@ -30,6 +30,7 @@ public class EMTrainerTest extends TestCase {
 	List<String> allVarNames;
 
 	StepwiseEMTrainer s;
+	EMTrainer e;
 
 	public void setUp() {
 		BayesNetBuilder builder = new BayesNetBuilder();
@@ -63,6 +64,7 @@ public class EMTrainerTest extends TestCase {
 		
 		t = new IncrementalEMTrainer(10, new JunctionTree());
 		s = new StepwiseEMTrainer(10, 4, 0.9, JunctionTree.getSupplier(), 3, null);
+		e = new EMTrainer(20, new SufficientStatisticsCalculator(JunctionTree.getSupplier(), 3), null);
 		
 		testAssignment1 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
 		testAssignment2 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));
@@ -93,12 +95,31 @@ public class EMTrainerTest extends TestCase {
 		assertEquals(9.0 / 10.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
 	}
 	
+	public void testEM() {
+	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
+	  initialParameters.increment(1.0);
+		SufficientStatistics trainedParameters = e.train(bn, initialParameters, trainingData);
+		
+		FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
+		Factor rootFactor = factorGraph.getFactors().get(0);
+		assertEquals(1.0 / 3.0, rootFactor.getUnnormalizedProbability(testAssignment1), .05);
+		assertEquals(2.0 / 3.0, rootFactor.getUnnormalizedProbability(testAssignment2), .05);
+		
+		Factor factor = factorGraph.getFactors().get(1);
+		// Numbers calculated from 1 iteration of EM, assuming smoothing disappears. The T->T number is fudged a bit.
+		// EM loses the smoothing factor.
+		assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment1), 0.05);
+		assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
+	}
+	
 	public void testRetainSparsityIncrementalEM() {
 	  // If parameters are initialized sparsely, the sparsity should be retained throughout both algorithms.
 	  Assignment zeroProbAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T"));
+	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
 	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
 	  initialParameters.increment(1.0);
 	  initialParameters.increment(bn.computeSufficientStatistics(zeroProbAssignment, 1.0), -1.0);
+	  initialParameters.increment(bn.computeSufficientStatistics(probAssignment, 1.0), 1.0);
 
 	  SufficientStatistics trainedParameters = t.train(bn, initialParameters, trainingData);
 	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
@@ -111,11 +132,30 @@ public class EMTrainerTest extends TestCase {
 	public void testRetainSparsityStepwiseEM() {
 	  // If parameters are initialized sparsely, the sparsity should be retained throughout both algorithms.
 	  Assignment zeroProbAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T"));
+	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
 	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
 	  initialParameters.increment(1.0);
 	  initialParameters.increment(bn.computeSufficientStatistics(zeroProbAssignment, 1.0), -1.0);
+	  initialParameters.increment(bn.computeSufficientStatistics(probAssignment, 1.0), 1.0);
 
 	  SufficientStatistics trainedParameters = s.train(bn, initialParameters, trainingData);
+	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
+		Factor factor = factorGraph.getFactors().get(1);
+		
+		assertEquals(0.0, factor.getUnnormalizedProbability(zeroProbAssignment), 0.01);
+	  assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
+	}
+	
+	public void testRetainSparsityEM() {
+	  // If parameters are initialized sparsely, the sparsity should be retained throughout.
+	  Assignment zeroProbAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T"));
+	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
+	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
+	  initialParameters.increment(1.0);
+	  initialParameters.increment(bn.computeSufficientStatistics(zeroProbAssignment, 1.0), -1.0);
+	  initialParameters.increment(bn.computeSufficientStatistics(probAssignment, 1.0), 1.0);
+
+	  SufficientStatistics trainedParameters = e.train(bn, initialParameters, trainingData);
 	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
 		Factor factor = factorGraph.getFactors().get(1);
 		

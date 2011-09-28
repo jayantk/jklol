@@ -56,7 +56,7 @@ public class StepwiseEMTrainer {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.decayRate = decayRate;
-    this.log = log;
+    this.log = log != null ? log : new NullLogFunction();
 
     this.statisticsCalculator = new SufficientStatisticsCalculator(
         inferenceEngineSupplier, numConcurrent);
@@ -90,9 +90,7 @@ public class StepwiseEMTrainer {
     Collections.shuffle(trainingDataList);
 
     for (int i = 0; i < numIterations; i++) {
-      if (log != null) {
-        log.notifyIterationStart(i);
-      }
+      log.notifyIterationStart(i);
 
       int numBatches = (int) Math.ceil(((double) trainingDataList.size()) / batchSize);
       for (int j = 0; j < numBatches; j++) {
@@ -102,7 +100,7 @@ public class StepwiseEMTrainer {
         // Calculate the sufficient statistics for batch.
         FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
         SufficientStatistics batchStatistics = statisticsCalculator
-            .computeSufficientStatistics(factorGraph, bn, batch, log);
+            .computeSufficientStatistics(factorGraph, bn, batch, log).getStatistics();
         
         // Update the the parameter vector.
         // Instead of multiplying the sufficient statistics (dense update)
@@ -118,9 +116,7 @@ public class StepwiseEMTrainer {
         numUpdates++;
       }
 
-      if (log != null) {
-        log.notifyIterationEnd(i);
-      }
+      log.notifyIterationEnd(i);
     }
     return initialParameters;
   }

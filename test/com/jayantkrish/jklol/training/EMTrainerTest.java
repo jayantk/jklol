@@ -100,16 +100,10 @@ public class EMTrainerTest extends TestCase {
 	  initialParameters.increment(1.0);
 		SufficientStatistics trainedParameters = e.train(bn, initialParameters, trainingData);
 		
-		FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
-		Factor rootFactor = factorGraph.getFactors().get(0);
-		assertEquals(1.0 / 3.0, rootFactor.getUnnormalizedProbability(testAssignment1), .05);
-		assertEquals(2.0 / 3.0, rootFactor.getUnnormalizedProbability(testAssignment2), .05);
-		
+		FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);		
 		Factor factor = factorGraph.getFactors().get(1);
-		// Numbers calculated from 1 iteration of EM, assuming smoothing disappears. The T->T number is fudged a bit.
-		// EM loses the smoothing factor.
-		assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment1), 0.05);
-		assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
+		assertEquals(8.0 / 14.0, factor.getUnnormalizedProbability(testAssignment1), 0.05);
+		assertEquals(12.0 / 16.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
 	}
 	
 	public void testRetainSparsityIncrementalEM() {

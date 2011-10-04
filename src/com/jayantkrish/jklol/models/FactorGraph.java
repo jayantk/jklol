@@ -247,6 +247,51 @@ public class FactorGraph {
     return inferenceHint;
   }
 
+  /**
+   * Gets the unnormalized probability of {@code assignment}. This method only
+   * supports assignments which do not require inference, so {@code assignment}
+   * must contain a value for every variable in {@code this}.
+   * 
+   * To calculate marginal probabilities or max-marginals, see
+   * {@link InferenceEngine}.
+   * 
+   * @param assignment
+   * @return
+   */
+  public double getUnnormalizedProbability(Assignment assignment) {
+    Preconditions.checkArgument(assignment.containsVars(variables.getVariableNums()));
+    double probability = 1.0;
+    for (Factor factor : factors) {
+      probability *= factor.getUnnormalizedProbability(assignment);
+    }
+    return probability;
+  }
+
+  /**
+   * Gets the unnormalized log probability of {@code assignment}. This method
+   * only supports assignments which do not require inference, so
+   * {@code assignment} must contain a value for every variable in {@code this}.
+   * 
+   * To calculate marginal probabilities or max-marginals, see
+   * {@link InferenceEngine}.
+   * 
+   * @param assignment
+   * @return
+   */
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    Preconditions.checkArgument(assignment.containsVars(variables.getVariableNums()));
+    double logProbability = 0.0;
+    for (Factor factor : factors) {
+      logProbability += Math.log(factor.getUnnormalizedProbability(assignment));
+    }
+    return logProbability;
+  }
+
+  @Override
+  public String toString() {
+    return "FactorGraph: (" + factors.size() + " factors) " + factors.toString();
+  }
+  
   // /////////////////////////////////////////////////////////////////
   // Methods for incrementally building FactorGraphs
   // /////////////////////////////////////////////////////////////////

@@ -11,7 +11,7 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.SparseTensorBuilder;
 
 /**
- * Helper class for constructing {@linkTableFactor}s. This class takes
+ * Helper class for constructing {@link TableFactor}s. This class takes
  * insertions in terms of {@code Assignments}, automatically constructing the
  * table of weights which underlies the {@code TableFactor}. Using this class is
  * less efficient than directly using the {@code TableFactor} constructor. This

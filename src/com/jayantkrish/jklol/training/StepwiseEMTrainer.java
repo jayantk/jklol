@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.training.SufficientStatisticsCalculator.BatchStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -99,8 +100,11 @@ public class StepwiseEMTrainer {
         
         // Calculate the sufficient statistics for batch.
         FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
-        SufficientStatistics batchStatistics = statisticsCalculator
-            .computeSufficientStatistics(factorGraph, bn, batch, log).getStatistics();
+        BatchStatistics result = statisticsCalculator
+            .computeSufficientStatistics(factorGraph, bn, batch, log);
+        SufficientStatistics batchStatistics = result.getStatistics();
+        log.logStatistic(i, "average loglikelihood", 
+            Double.toString(result.getLoglikelihood() / result.getNumExamples()));
         
         // Update the the parameter vector.
         // Instead of multiplying the sufficient statistics (dense update)

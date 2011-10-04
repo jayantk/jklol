@@ -77,7 +77,6 @@ public class TableFactor extends DiscreteFactor {
 
   @Override
   public String toString() {
-    return weights.toString();
+    return "TableFactor(" + getVars() + ")(" + weights.size() + " weights)";
   }
-
 }

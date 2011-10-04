@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -65,6 +66,16 @@ public class LogLinearModelBuilder {
    */
   public VariableNumMap lookupVariables(Collection<String> names) {
     return factorGraph.lookupVariables(names);
+  }
+  
+  /**
+   * Gets the variables in {@code this} with the given names.
+   * 
+   * @param names
+   * @return
+   */
+  public VariableNumMap lookupVariables(String... names) {
+    return factorGraph.lookupVariables(Arrays.asList(names));
   }
 
   /**

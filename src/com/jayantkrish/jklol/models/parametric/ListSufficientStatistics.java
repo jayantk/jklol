@@ -62,6 +62,22 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
+  public void multiply(double amount) {
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).multiply(amount);
+    }
+  }
+  
+  @Override
+  public double getL2Norm() {
+    double norm = 0.0;
+    for (int i = 0; i < statistics.size(); i++) {
+      norm += Math.pow(statistics.get(i).getL2Norm(), 2);
+    }
+    return Math.sqrt(norm);
+  }
+  
+  @Override
   public Cpt coerceToCpt() {
     throw new CoercionError("Cannot coerce ListSufficientStatistics to Cpt.");
   }

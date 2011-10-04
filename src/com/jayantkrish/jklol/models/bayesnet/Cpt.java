@@ -57,6 +57,19 @@ public class Cpt implements SufficientStatistics {
   }
   
   @Override
+  public void multiply(double amount) {
+    // It's highly unlikely that anyone should call this operation on a Cpt.
+    throw new UnsupportedOperationException("Not supported");
+  }
+  
+  @Override
+  public double getL2Norm() {
+    // It's highly unlikely that anyone should call this operation on a Cpt.
+    throw new UnsupportedOperationException("Not supported");
+  }
+  
+  
+  @Override
   public Cpt coerceToCpt() {
     return this;
   }

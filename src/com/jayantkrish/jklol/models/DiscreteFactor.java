@@ -15,6 +15,7 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
@@ -198,6 +199,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
       pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), new Assignment(a)));
       if (pq.size() > numAssignments) {
         pq.poll();
+      }
+    }
+    
+    // There may not be enough assignments with positive probability. Fill up
+    // pq with zero probability assignments.
+    if (pq.size() < numAssignments) {
+      Iterator<Assignment> allAssignmentIter = new AllAssignmentIterator(getVars());
+      while(allAssignmentIter.hasNext() && pq.size() < numAssignments) {
+        Assignment a = allAssignmentIter.next();
+        if (getUnnormalizedProbability(a) == 0.0) {
+          pq.offer(new Pair<Double, Assignment>(0.0, a));
+        }
       }
     }
 

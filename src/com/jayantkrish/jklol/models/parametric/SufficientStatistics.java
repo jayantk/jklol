@@ -31,15 +31,34 @@ public interface SufficientStatistics {
   public void increment(double amount);
 
   /**
+   * Multiplies each event count in {@code this} by {@code amount}.
+   * 
+   * @param amount
+   */
+  public void multiply(double amount);
+
+  /**
+   * Gets the L2 norm of {@code this}, treating {@code this} as a vector. In
+   * other words, this method returns the square root of the sum of the squares
+   * of each entry.
+   * 
+   * @param exponent
+   * @return
+   */
+  public double getL2Norm();
+
+  /**
    * Attempts to convert {@code this} into a {@link Cpt}. Throws
    * {@code CoercionError} if conversion is not possible.
    * 
    * @return
    */
   public Cpt coerceToCpt();
-  
+
   /**
-   * Attempts to convert {@code this} into a {@link FeatureSufficientStatistics}.
+   * Attempts to convert {@code this} into a {@link FeatureSufficientStatistics}
+   * .
+   * 
    * @return
    */
   public FeatureSufficientStatistics coerceToFeature();

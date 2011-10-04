@@ -3,23 +3,18 @@ package com.jayantkrish.jklol.training;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.IndicatorFeatureFunction;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class StochasticGradientTrainerTest extends TestCase {
@@ -43,22 +38,12 @@ public class StochasticGradientTrainerTest extends TestCase {
 		builder.addDiscreteVariable("Var3", tfVar);
 
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
-		VariableNumMap clique1Vars = builder.lookupVariables(clique1Names); 
-		List<FeatureFunction> clique1Features = Lists.newArrayList();
-		Iterator<Assignment> iter = new AllAssignmentIterator(clique1Vars);
-		while (iter.hasNext()) {
-		  clique1Features.add(new IndicatorFeatureFunction(iter.next()));
-		}
-		builder.addFactor(new DiscreteLogLinearFactor(clique1Vars, clique1Features));
+		builder.addFactor(DiscreteLogLinearFactor
+		    .createIndicatorFactor(builder.lookupVariables(clique1Names)));
 		
 		clique2Names = Arrays.asList("Var2", "Var3");
-		VariableNumMap clique2Vars = builder.lookupVariables(clique2Names); 
-		List<FeatureFunction> clique2Features = Lists.newArrayList();
-		iter = new AllAssignmentIterator(clique2Vars);
-		while (iter.hasNext()) {
-		  clique2Features.add(new IndicatorFeatureFunction(iter.next()));
-		}
-		builder.addFactor(new DiscreteLogLinearFactor(clique2Vars, clique2Features));
+		builder.addFactor(DiscreteLogLinearFactor
+		    .createIndicatorFactor(builder.lookupVariables(clique2Names)));
 
 		logLinearModel = builder.build();
 		trainingData = new ArrayList<Assignment>();

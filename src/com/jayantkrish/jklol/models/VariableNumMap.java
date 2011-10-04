@@ -355,6 +355,17 @@ public class VariableNumMap {
   }
 
   /**
+   * Same as {@link #outcomeToAssignment(Object[])}, but using a varargs
+   * parameter.
+   * 
+   * @param outcome
+   * @return
+   */
+  public Assignment outcomeArrayToAssignment(Object... outcome) {
+    return outcomeToAssignment(outcome);
+  }
+
+  /**
    * Gets a converter for transforming outcomes (settings of variables in
    * {@code this}) into their corresponding assignments, and vice versa. The
    * returned converter performs the functions of
@@ -416,8 +427,8 @@ public class VariableNumMap {
 
   /**
    * Returns {@code true} if the values in {@code assignment} are possible
-   * values for the variables in {@code this}. {@code assignment} must 
-   * contain a subset of the variables in {@code this}.
+   * values for the variables in {@code this}. {@code assignment} must contain a
+   * subset of the variables in {@code this}.
    * 
    * @param assignment
    * @return

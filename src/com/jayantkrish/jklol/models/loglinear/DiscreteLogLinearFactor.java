@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -13,74 +14,103 @@ import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * A {@link LogLinearFactor} over {@link DiscreteVariable}s.
- */ 
+ */
 public class DiscreteLogLinearFactor extends AbstractParametricFactor<SufficientStatistics> {
 
-	private final ImmutableList<FeatureFunction> myFeatures;
+  private final ImmutableList<FeatureFunction> myFeatures;
 
-	public DiscreteLogLinearFactor(VariableNumMap vars, List<FeatureFunction> features) {
-		super(vars);
-		myFeatures = ImmutableList.copyOf(new HashSet<FeatureFunction>());
-	}
+  public DiscreteLogLinearFactor(VariableNumMap vars, List<FeatureFunction> features) {
+    super(vars);
+    myFeatures = ImmutableList.copyOf(features);
+  }
 
-	/////////////////////////////////////////////////////////////
-	// Required methods for ParametricFactor
-	/////////////////////////////////////////////////////////////
+  // ///////////////////////////////////////////////////////////
+  // Required methods for ParametricFactor
+  // ///////////////////////////////////////////////////////////
 
-	@Override
-	public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
-	  FeatureSufficientStatistics featureParameters = parameters.coerceToFeature();
-	  Preconditions.checkArgument(featureParameters.getFeatures().size() == myFeatures.size());
+  @Override
+  public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
+    FeatureSufficientStatistics featureParameters = parameters.coerceToFeature();
+    Preconditions.checkArgument(featureParameters.getFeatures().size() == myFeatures.size());
 
-	  // TODO(jayantk): This is probably not the most efficient way to build this factor.
-	  double[] featureWeights = featureParameters.getWeights();
-	  TableFactorBuilder builder = new TableFactorBuilder(getVars());
-	  for (int i = 0; i < myFeatures.size(); i++) {
-	    FeatureFunction feature = myFeatures.get(i);
-	    Iterator<Assignment> iter = feature.getNonzeroAssignments();
-	    while (iter.hasNext()) {
-	      Assignment assignment = iter.next();
-	      builder.multiplyWeight(assignment, Math.exp(featureWeights[i] * feature.getValue(assignment)));
-	    }
-	  }
-	  return builder.build();
-	}
+    // TODO(jayantk): This is probably not the most efficient way to build this
+    // factor.
+    TableFactorBuilder builder = new TableFactorBuilder(getVars());
+    Iterator<Assignment> allAssignmentIter = new AllAssignmentIterator(getVars());
+    while (allAssignmentIter.hasNext()) {
+      builder.setWeight(allAssignmentIter.next(), 1.0);
+    }
+    
+    double[] featureWeights = featureParameters.getWeights();
+    for (int i = 0; i < myFeatures.size(); i++) {
+      FeatureFunction feature = myFeatures.get(i);
+      Iterator<Assignment> iter = feature.getNonzeroAssignments();
+      while (iter.hasNext()) {
+        Assignment assignment = iter.next();
+        builder.multiplyWeight(assignment, Math.exp(featureWeights[i] * feature.getValue(assignment)));
+      }
+    }
+    return builder.build();
+  }
 
-	@Override
-	public SufficientStatistics getNewSufficientStatistics() {
-	  return new FeatureSufficientStatistics(myFeatures);
-	}
-	
-	@Override
-	public SufficientStatistics getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
-	  double[] weights = new double[myFeatures.size()];
-	  for (int i = 0; i < myFeatures.size(); i++) {	  
-	    weights[i] = count * myFeatures.get(i).getValue(assignment); 
-	  }
-	  return new FeatureSufficientStatistics(myFeatures, weights);
-	}
-	
-	@Override
-	public SufficientStatistics getSufficientStatisticsFromMarginal(Factor marginal, double count, double partitionFunction) {
-	  double[] weights = new double[myFeatures.size()];
-	  for (int i = 0; i < myFeatures.size(); i++) {	  
-	    weights[i] = count * marginal.computeExpectation(myFeatures.get(i)) / partitionFunction; 
-	  }
-	  return new FeatureSufficientStatistics(myFeatures, weights);
-	}
-	
-	//////////////////////////////////////////////////////////////
-	// Other methods 
-	//////////////////////////////////////////////////////////////
+  @Override
+  public FeatureSufficientStatistics getNewSufficientStatistics() {
+    return new FeatureSufficientStatistics(myFeatures);
+  }
 
-	/**
-	 * Gets the features which are the parameterization of this factor.
-	 */
-	public List<FeatureFunction> getFeatures() {
-		return myFeatures;
-	}
+  @Override
+  public FeatureSufficientStatistics getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
+    Preconditions.checkArgument(assignment.containsVars(getVars().getVariableNums()));
+    Assignment subAssignment = assignment.subAssignment(getVars().getVariableNums());
+    double[] weights = new double[myFeatures.size()];
+    for (int i = 0; i < myFeatures.size(); i++) {
+      weights[i] = count * myFeatures.get(i).getValue(subAssignment);
+    }
+    return new FeatureSufficientStatistics(myFeatures, weights);
+  }
+
+  @Override
+  public FeatureSufficientStatistics getSufficientStatisticsFromMarginal(Factor marginal, double count, double partitionFunction) {
+    double[] weights = new double[myFeatures.size()];
+    for (int i = 0; i < myFeatures.size(); i++) {
+      weights[i] = count * marginal.computeExpectation(myFeatures.get(i)) / partitionFunction;
+    }
+    return new FeatureSufficientStatistics(myFeatures, weights);
+  }
+
+  // ////////////////////////////////////////////////////////////
+  // Other methods
+  // ////////////////////////////////////////////////////////////
+
+  /**
+   * Gets the features which are the parameterization of this factor.
+   */
+  public List<FeatureFunction> getFeatures() {
+    return myFeatures;
+  }
+
+  /**
+   * Creates and returns a {@code DiscreteLogLinearFactor} over {@code vars}
+   * which is parameterized by indicator functions. The returned factor has one
+   * indicator feature for every possible assignment to {@code vars}.
+   *
+   * {@code vars} must contain only {@link DiscreteVariable}s.
+   * 
+   * @param vars
+   * @return
+   */
+  public static DiscreteLogLinearFactor createIndicatorFactor(VariableNumMap vars) {
+    Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
+    List<FeatureFunction> features = Lists.newArrayList();
+    Iterator<Assignment> iter = new AllAssignmentIterator(vars);
+		while (iter.hasNext()) {
+		  features.add(new IndicatorFeatureFunction(iter.next()));
+		}
+		return new DiscreteLogLinearFactor(vars, features);
+  }
 }

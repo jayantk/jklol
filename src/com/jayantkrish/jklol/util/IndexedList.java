@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.util;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -13,7 +14,7 @@ import java.util.NoSuchElementException;
  * where each element has a unique numerical index and element lookups
  * can be performed in expected constant time.
  */ 
-public class IndexedList<T> {
+public class IndexedList<T> implements Iterable<T> {
 
 	private List<T> items;
 	private Map<T, Integer> itemIndex;
@@ -111,4 +112,9 @@ public class IndexedList<T> {
 	public String toString() {
 		return items.toString();
 	}
+
+  @Override
+  public Iterator<T> iterator() {
+    return items.iterator();
+  }
 }

@@ -28,4 +28,14 @@ public class Example<I, O> {
   public O getOutput() {
     return output;
   }
+  
+  /**
+   * Constructs an example from the given {@code input} and {@code output}.
+   *  
+   * @param input
+   * @param output
+   */
+  public static <I, O> Example<I, O> create(I input, O output) {
+    return new Example<I, O>(input, output);
+  }
 }

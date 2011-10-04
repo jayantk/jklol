@@ -66,6 +66,17 @@ public class CptTableProductionDistribution implements CptProductionDistribution
       }
     }
   }
+  
+  
+  @Override
+  public void multiply(double amount) {
+    throw new UnsupportedOperationException("Not supported");
+  }
+
+  @Override
+  public double getL2Norm() {
+    throw new UnsupportedOperationException("Not supported");
+  }
 
   @Override
   public void incrementBinaryCpts(Map<BinaryProduction, Double> binaryRuleExpectations, double count) {
@@ -144,5 +155,5 @@ public class CptTableProductionDistribution implements CptProductionDistribution
   @Override
   public FeatureSufficientStatistics coerceToFeature() {
     throw new CoercionError("Cannot coerce CptTableProductionDistribution into a ListSufficientStatistics."); 
-  }  
+  }
 }

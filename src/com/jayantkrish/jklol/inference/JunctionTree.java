@@ -13,6 +13,7 @@ import java.util.SortedMap;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -21,7 +22,6 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.HashMultimap;
 
 /**
  * Implements the junction tree algorithm for computing exact marginal
@@ -222,7 +222,7 @@ public class JunctionTree extends AbstractMarginalCalculator {
     public CliqueTree(FactorGraph factorGraph, Assignment conditionedOn) {
       cliqueFactors = new ArrayList<Factor>();
 
-      factorEdges = new HashMultimap<Integer, Integer>();
+      factorEdges = HashMultimap.create();
       separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
       messages = new ArrayList<Map<Integer, Factor>>();
 
@@ -260,8 +260,8 @@ public class JunctionTree extends AbstractMarginalCalculator {
       });
 
       Map<Factor, Integer> factorCliqueMap = new HashMap<Factor, Integer>();
-      HashMultimap<Integer, Factor> varFactorMap = new HashMultimap<Integer, Factor>();
-      varCliqueFactorMap = new HashMultimap<Integer, Integer>();
+      HashMultimap<Integer, Factor> varFactorMap = HashMultimap.create();
+      varCliqueFactorMap = HashMultimap.create();
       BiMap<Integer, Integer> cliquePriorityMap = HashBiMap.create();
       for (Factor f : factorGraphFactors) {
         Set<Factor> mergeableFactors = new HashSet<Factor>(factorGraphFactors);

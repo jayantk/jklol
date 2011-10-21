@@ -1,9 +1,9 @@
 package com.jayantkrish.jklol.util;
 
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * DefaultHashMap is a HashMap with a default value for

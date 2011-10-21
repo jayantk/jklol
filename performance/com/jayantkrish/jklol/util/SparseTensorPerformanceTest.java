@@ -54,6 +54,17 @@ public class SparseTensorPerformanceTest extends TestCase {
     System.out.println("Elapsed: " + elapsed + " ms");
   }
   
+  public void testProductLeftAlignedBig() {
+    System.out.println("testProductLeftAlignedBig");
+    long start = System.currentTimeMillis();
+
+    table012.elementwiseProduct(table012);
+
+    long elapsed = System.currentTimeMillis() - start;
+    System.out.println("Elapsed: " + elapsed + " ms");
+  }
+
+  
   public void testProductRightAligned() {
     System.out.println("testProductRightAligned");
     long start = System.currentTimeMillis();
@@ -81,6 +92,33 @@ public class SparseTensorPerformanceTest extends TestCase {
     Iterator<int[]> iter = table012.keyIterator();
     while (iter.hasNext()) {
       iter.next();
+    }
+
+    long elapsed = System.currentTimeMillis() - start;
+    System.out.println("Elapsed: " + elapsed + " ms");
+  }
+  
+  public void testBuild() {
+    System.out.println("testBuild");
+    long start = System.currentTimeMillis();
+
+    SparseTensorBuilder builder = new SparseTensorBuilder(varNums);
+    for (int i = 0; i < 100000; i++) {
+      builder.put(new int[] {(i / 1000), (i / 100) % 10, i % 10}, 1.0);
+    }
+    builder.build();
+    
+    long elapsed = System.currentTimeMillis() - start;
+    System.out.println("Elapsed: " + elapsed + " ms");
+  }
+  
+  public void testDefaultHashMap() {
+    System.out.println("testDefaultHashMap");
+    long start = System.currentTimeMillis();
+
+    DefaultHashMap map = new DefaultHashMap<Integer, Double>(0.0);
+    for (int i = 0; i < 100000; i++) {
+      map.put(i, 1.0);
     }
 
     long elapsed = System.currentTimeMillis() - start;

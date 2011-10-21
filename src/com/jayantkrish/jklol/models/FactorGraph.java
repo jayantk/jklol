@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.HashMultimap;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -47,8 +47,8 @@ public class FactorGraph {
   public FactorGraph() {
     variables = VariableNumMap.emptyMap();
     variableNames = new HashMap<String, Integer>();
-    variableFactorMap = new HashMultimap<Integer, Integer>();
-    factorVariableMap = new HashMultimap<Integer, Integer>();
+    variableFactorMap = HashMultimap.create();
+    factorVariableMap = HashMultimap.create();
     factors = new IndexedList<Factor>();
     inferenceHint = null;
   }
@@ -61,8 +61,8 @@ public class FactorGraph {
   private FactorGraph(FactorGraph factorGraph) {
     this.variables = new VariableNumMap(factorGraph.variables);
     this.variableNames = new HashMap<String, Integer>(factorGraph.variableNames);
-    this.variableFactorMap = new HashMultimap<Integer, Integer>(factorGraph.variableFactorMap);
-    this.factorVariableMap = new HashMultimap<Integer, Integer>(factorGraph.factorVariableMap);
+    this.variableFactorMap = HashMultimap.create(factorGraph.variableFactorMap);
+    this.factorVariableMap = HashMultimap.create(factorGraph.factorVariableMap);
     this.factors = new IndexedList<Factor>(factorGraph.factors);
     this.inferenceHint = factorGraph.inferenceHint;
   }
@@ -76,8 +76,8 @@ public class FactorGraph {
    */
   public static FactorGraph createFromFactors(List<Factor> factors) {
     VariableNumMap allVars = VariableNumMap.emptyMap();
-    HashMultimap<Integer, Integer> variableFactorMap = new HashMultimap<Integer, Integer>();
-    HashMultimap<Integer, Integer> factorVariableMap = new HashMultimap<Integer, Integer>();
+    HashMultimap<Integer, Integer> variableFactorMap = HashMultimap.create();
+    HashMultimap<Integer, Integer> factorVariableMap = HashMultimap.create();
     for (int i = 0; i < factors.size(); i++) {
       VariableNumMap factorVars = factors.get(i).getVars();
       allVars = allVars.union(factorVars);

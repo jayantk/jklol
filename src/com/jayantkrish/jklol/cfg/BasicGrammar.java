@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.jayantkrish.jklol.util.HashMultimap;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Sets;
 
 /**
  * A set of binary and terminal production rules for a CFG. {@code BasicGrammar}
@@ -30,12 +31,12 @@ public class BasicGrammar implements Grammar {
    * Create an empty grammar with no production rules.
    */
   public BasicGrammar() {
-    parentProductionMap = new HashMultimap<Production, BinaryProduction>();
+    parentProductionMap = HashMultimap.create();
     childProductionMap = new HashMap<Production, HashMultimap<Production, BinaryProduction>>();
     allBinaryProductions = new HashSet<BinaryProduction>();
 
-    terminalProductions = new HashMultimap<Production, TerminalProduction>();
-    terminalParents = new HashMultimap<List<Production>, TerminalProduction>();
+    terminalProductions = HashMultimap.create();
+    terminalParents = HashMultimap.create();    
   }
 
   /**
@@ -44,16 +45,16 @@ public class BasicGrammar implements Grammar {
    * @param other
    */
   public BasicGrammar(BasicGrammar other) {
-    parentProductionMap = new HashMultimap<Production, BinaryProduction>(other.parentProductionMap);
+    parentProductionMap = HashMultimap.create();
     childProductionMap = new HashMap<Production, HashMultimap<Production, BinaryProduction>>();
     for (Production root : other.childProductionMap.keySet()) {
-      childProductionMap.put(root, new HashMultimap<Production, BinaryProduction>(
+      childProductionMap.put(root, HashMultimap.<Production, BinaryProduction>create(
           other.childProductionMap.get(root)));
     }
     allBinaryProductions = new HashSet<BinaryProduction>(other.allBinaryProductions);
 
-    terminalProductions = new HashMultimap<Production, TerminalProduction>(other.terminalProductions);
-    terminalParents = new HashMultimap<List<Production>, TerminalProduction>(other.terminalParents);
+    terminalProductions = HashMultimap.create();
+    terminalParents = HashMultimap.create();
   }
   
   @Override
@@ -69,7 +70,7 @@ public class BasicGrammar implements Grammar {
 
   @Override
   public Set<TerminalProduction> getAllTerminalProductions() {
-    return terminalProductions.values();
+    return Sets.newHashSet(terminalProductions.values());
   }
 
   /**
@@ -88,7 +89,7 @@ public class BasicGrammar implements Grammar {
     parentProductionMap.put(rule.getParent(), rule);
 
     if (!childProductionMap.containsKey(rule.getLeft())) {
-      childProductionMap.put(rule.getLeft(), new HashMultimap<Production, BinaryProduction>());
+      childProductionMap.put(rule.getLeft(), HashMultimap.<Production, BinaryProduction>create());
     }
     childProductionMap.get(rule.getLeft()).put(rule.getRight(), rule);
   }

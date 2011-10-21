@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 
 /**
  * Helper class for counting the number of times pairs of objects occur.
@@ -149,6 +151,22 @@ public class PairCountAccumulator<A, B> {
   }
 
   /**
+   * Returns a {@code Multimap} containing all key value pairs with nonzero
+   * count in this accumulator.
+   * 
+   * @return
+   */
+  public Multimap<A, B> getKeyValueMultimap() {
+    Multimap<A, B> map = HashMultimap.create();
+    for (A key : keySet()) {
+      for (B value : getValues(key)) {
+        map.put(key, value);
+      }
+    }
+    return map;
+  }
+
+  /**
    * Gets all A values which have been observed.
    * 
    * @return
@@ -156,9 +174,9 @@ public class PairCountAccumulator<A, B> {
   public Set<A> keySet() {
     return counts.keySet();
   }
-  
+
   @Override
   public String toString() {
-    return counts.toString(); 
+    return counts.toString();
   }
 }

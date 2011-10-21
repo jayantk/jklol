@@ -5,6 +5,8 @@ import java.util.Collections;
 
 import junit.framework.TestCase;
 
+import com.google.common.collect.Multimap;
+
 /**
  * Unit tests for {@link PairCountAccumulator}.
  * 
@@ -66,5 +68,16 @@ public class PairCountAccumulatorTest extends TestCase {
     assertEquals(Arrays.asList("a", "b", "c"), accumulator.getOutcomesByProbability("a"));
     assertEquals(Arrays.asList("d", "a"), accumulator.getOutcomesByProbability("b"));
     assertEquals(Collections.<String>emptyList(), accumulator.getOutcomesByProbability("d"));
+  }
+  
+  public void testGetKeyValueMultimap() {
+    Multimap<String, String> map = accumulator.getKeyValueMultimap();
+    
+    assertEquals(5, map.size());
+    assertTrue(map.containsEntry("a", "a"));
+    assertTrue(map.containsEntry("a", "b"));
+    assertFalse(map.containsEntry("a", "d"));
+    assertTrue(map.containsEntry("b", "d"));
+    assertFalse(map.containsEntry("d", "b"));
   }
 }

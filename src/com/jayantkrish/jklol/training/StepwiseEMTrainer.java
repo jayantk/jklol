@@ -99,7 +99,7 @@ public class StepwiseEMTrainer {
         // Calculate the sufficient statistics for batch.
         FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
         SufficientStatisticsBatch result = executor.mapReduce(batch,
-          new SufficientStatisticsMapper(factorGraph, bn, marginalCalculator, log),
+          new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
           new SufficientStatisticsReducer(bn));
         SufficientStatistics batchStatistics = result.getStatistics();
         log.logStatistic(i, "average loglikelihood",

@@ -90,8 +90,8 @@ public class SubgradientSvmTrainer {
         Assignment prediction = predicted.getNthBestAssignment(0);
         Assignment actual = example.getOutput().jointAssignment(example.getInput());
         if (!prediction.equals(actual)) {
-          subgradient.increment(modelFamily.computeSufficientStatistics(actual, 1.0), 1.0);
-          subgradient.increment(modelFamily.computeSufficientStatistics(prediction, 1.0), -1.0);
+          modelFamily.incrementSufficientStatistics(subgradient, actual, 1.0);
+          modelFamily.incrementSufficientStatistics(subgradient, prediction, -1.0);
           numIncorrect++;
           approximateObjectiveValue += (costAugmentedModel.getUnnormalizedLogProbability(prediction)
               - costAugmentedModel.getUnnormalizedLogProbability(actual)) / batchSize; 

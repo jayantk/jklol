@@ -1,7 +1,8 @@
 package com.jayantkrish.jklol.training;
 
+import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
-import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
+import com.jayantkrish.jklol.parallel.Reducer;
 
 /**
  * Second half of a map-reduce pipeline for computing the sufficient statistics
@@ -10,7 +11,7 @@ import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
  * 
  * @author jayantk
  */
-public class SufficientStatisticsReducer extends SimpleReducer<SufficientStatisticsBatch> {
+public class SufficientStatisticsReducer implements Reducer<MarginalSet, SufficientStatisticsBatch> {
 
   private final ParametricFactorGraph parametricFactorGraph;
 
@@ -24,7 +25,14 @@ public class SufficientStatisticsReducer extends SimpleReducer<SufficientStatist
   }
 
   @Override
-  public SufficientStatisticsBatch reduce(SufficientStatisticsBatch item, SufficientStatisticsBatch accumulated) {
+  public SufficientStatisticsBatch reduce(MarginalSet item, SufficientStatisticsBatch accumulator) {
+    parametricFactorGraph.incrementSufficientStatistics(accumulator.getStatistics(), item, 1.0);
+    accumulator.incrementLogLikelihood(Math.log(item.getPartitionFunction()));
+    accumulator.incrementNumExamples(1);
+    return accumulator;
+  }
+  
+  public SufficientStatisticsBatch combine(SufficientStatisticsBatch item, SufficientStatisticsBatch accumulated) {
     accumulated.increment(item);
     return accumulated;
   }

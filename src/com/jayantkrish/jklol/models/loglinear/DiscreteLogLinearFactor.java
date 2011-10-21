@@ -63,23 +63,27 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
   }
 
   @Override
-  public FeatureSufficientStatistics getSufficientStatisticsFromAssignment(Assignment assignment, double count) {
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsVars(getVars().getVariableNums()));
     Assignment subAssignment = assignment.subAssignment(getVars().getVariableNums());
-    double[] weights = new double[myFeatures.size()];
+    FeatureSufficientStatistics featureStats = statistics.coerceToFeature();
+    double[] weights = featureStats.getWeights();
+    Preconditions.checkArgument(weights.length == myFeatures.size());
     for (int i = 0; i < myFeatures.size(); i++) {
-      weights[i] = count * myFeatures.get(i).getValue(subAssignment);
+      weights[i] += count * myFeatures.get(i).getValue(subAssignment);
     }
-    return new FeatureSufficientStatistics(myFeatures, weights);
   }
 
   @Override
-  public FeatureSufficientStatistics getSufficientStatisticsFromMarginal(Factor marginal, double count, double partitionFunction) {
-    double[] weights = new double[myFeatures.size()];
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
+      Factor marginal, double count, double partitionFunction) {
+    FeatureSufficientStatistics featureStats = statistics.coerceToFeature();
+    double[] weights = featureStats.getWeights();
+    Preconditions.checkArgument(weights.length == myFeatures.size());
+   
     for (int i = 0; i < myFeatures.size(); i++) {
-      weights[i] = count * marginal.computeExpectation(myFeatures.get(i)) / partitionFunction;
+      weights[i] += count * marginal.computeExpectation(myFeatures.get(i)) / partitionFunction;
     }
-    return new FeatureSufficientStatistics(myFeatures, weights);
   }
 
   // ////////////////////////////////////////////////////////////

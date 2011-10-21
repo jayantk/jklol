@@ -59,7 +59,7 @@ public class EMTrainer {
       // current set of parameters.
       FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
       SufficientStatisticsBatch batchStatistics = executor.mapReduce(trainingDataList,
-          new SufficientStatisticsMapper(factorGraph, bn, marginalCalculator, log),
+          new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
           new SufficientStatisticsReducer(bn));
       SufficientStatistics statistics = batchStatistics.getStatistics();
       log.logStatistic(i, "average loglikelihood",

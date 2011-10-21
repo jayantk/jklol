@@ -41,25 +41,23 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
   }
 
   @Override
-  public SufficientStatistics getSufficientStatisticsFromAssignment(
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
       Assignment assignment, double count) {
     throw new UnsupportedOperationException("Cannot compute statistics from an assignment.");
   }
 
   @Override
-  public SufficientStatistics getSufficientStatisticsFromMarginal(
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       Factor marginal, double count, double partitionFunction) {
     Preconditions.checkArgument(marginal instanceof CfgFactor);
     ParseChart chart = ((CfgFactor) marginal).getMarginalChart(true);
     
     // Update binary/terminal rule counts
-    CptProductionDistribution newProductionDist = getNewSufficientStatistics();
-    newProductionDist.incrementBinaryCpts(
+    CptProductionDistribution productionDist = (CptProductionDistribution) statistics;
+    productionDist.incrementBinaryCpts(
         chart.getBinaryRuleExpectations(), count / partitionFunction);
-    newProductionDist.incrementTerminalCpts(
+    productionDist.incrementTerminalCpts(
         chart.getTerminalRuleExpectations(), count / partitionFunction);
-
-    return newProductionDist;
   }
   
   public CptProductionDistribution getParameterTemplate() {

@@ -65,14 +65,14 @@ public class FeatureSufficientStatistics implements SufficientStatistics {
       weights[i] += amount;
     }
   }
-  
+
   @Override
   public void multiply(double amount) {
     for (int i = 0; i < weights.length; i++) {
       weights[i] *= amount;
     }
   }
-  
+
   @Override
   public double getL2Norm() {
     double norm = 0.0;
@@ -96,7 +96,7 @@ public class FeatureSufficientStatistics implements SufficientStatistics {
   public ListSufficientStatistics coerceToList() {
     throw new CoercionError("Cannot coerce FeatureSufficientStatistics to List");
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -127,8 +127,8 @@ public class FeatureSufficientStatistics implements SufficientStatistics {
    * {@code i}th weight corresponds to the {@code i}th feature in
    * {@link #getFeatures()}.
    * 
-   * The returned weights are not defensively copied and should not be modified
-   * by the caller.
+   * The returned weights are not defensively copied, and hence modifications
+   * directly affect the stored values in {@code this}.
    * 
    * @return
    */

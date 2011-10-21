@@ -113,8 +113,8 @@ public class EMTrainerTest extends TestCase {
 	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
 	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
 	  initialParameters.increment(1.0);
-	  initialParameters.increment(bn.computeSufficientStatistics(zeroProbAssignment, 1.0), -1.0);
-	  initialParameters.increment(bn.computeSufficientStatistics(probAssignment, 1.0), 1.0);
+	  bn.incrementSufficientStatistics(initialParameters, zeroProbAssignment, -1.0);
+	  bn.incrementSufficientStatistics(initialParameters, probAssignment, 1.0);
 
 	  SufficientStatistics trainedParameters = t.train(bn, initialParameters, trainingData);
 	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
@@ -130,8 +130,8 @@ public class EMTrainerTest extends TestCase {
 	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
 	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
 	  initialParameters.increment(1.0);
-	  initialParameters.increment(bn.computeSufficientStatistics(zeroProbAssignment, 1.0), -1.0);
-	  initialParameters.increment(bn.computeSufficientStatistics(probAssignment, 1.0), 1.0);
+	  bn.incrementSufficientStatistics(initialParameters, zeroProbAssignment, -1.0);
+	  bn.incrementSufficientStatistics(initialParameters, probAssignment, 1.0);
 
 	  SufficientStatistics trainedParameters = s.train(bn, initialParameters, trainingData);
 	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
@@ -147,8 +147,8 @@ public class EMTrainerTest extends TestCase {
 	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
 	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
 	  initialParameters.increment(1.0);
-	  initialParameters.increment(bn.computeSufficientStatistics(zeroProbAssignment, 1.0), -1.0);
-	  initialParameters.increment(bn.computeSufficientStatistics(probAssignment, 1.0), 1.0);
+	  bn.incrementSufficientStatistics(initialParameters, zeroProbAssignment, -1.0);
+	  bn.incrementSufficientStatistics(initialParameters, probAssignment, 1.0);
 
 	  SufficientStatistics trainedParameters = e.train(bn, initialParameters, trainingData);
 	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);

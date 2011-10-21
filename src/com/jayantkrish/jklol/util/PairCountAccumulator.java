@@ -8,7 +8,7 @@ import java.util.Set;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
 
 /**
  * Helper class for counting the number of times pairs of objects occur.
@@ -156,8 +156,8 @@ public class PairCountAccumulator<A, B> {
    * 
    * @return
    */
-  public Multimap<A, B> getKeyValueMultimap() {
-    Multimap<A, B> map = HashMultimap.create();
+  public SetMultimap<A, B> getKeyValueMultimap() {
+    SetMultimap<A, B> map = HashMultimap.create();
     for (A key : keySet()) {
       for (B value : getValues(key)) {
         map.put(key, value);

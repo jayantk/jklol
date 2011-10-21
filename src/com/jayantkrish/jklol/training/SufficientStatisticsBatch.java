@@ -53,4 +53,12 @@ public class SufficientStatisticsBatch {
     loglikelihood += other.loglikelihood;
     numExamples += other.numExamples;
   }
+  
+  public void incrementLogLikelihood(double increment) {
+    loglikelihood += increment;
+  }
+  
+  public void incrementNumExamples(double increment) {
+    numExamples += increment;
+  }
 }

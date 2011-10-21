@@ -53,10 +53,10 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
       }
     } catch (InterruptedException e) {
       e.printStackTrace();
-      throw new RuntimeException(e);
+      throw new RuntimeException(e.getCause());
     } catch (ExecutionException e) {
       e.printStackTrace();
-      throw new RuntimeException(e);
+      throw new RuntimeException(e.getCause());
     }
     return accumulator;
   }

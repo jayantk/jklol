@@ -30,8 +30,7 @@ public class BNCountTrainer {
     // For each training example, increment sufficient statistics appropriately.
     SufficientStatistics accumulatedStats = bn.getNewSufficientStatistics();
     for (Assignment assignment : trainingData) {
-      SufficientStatistics assignmentStats = bn.computeSufficientStatistics(assignment, 1.0);
-      accumulatedStats.increment(assignmentStats, 1.0);
+      bn.incrementSufficientStatistics(accumulatedStats, assignment, 1.0);
     }
     return accumulatedStats;
   }

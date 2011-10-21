@@ -58,29 +58,30 @@ public interface ParametricFactor<T> {
 
   /**
    * Computes sufficient statistics for {@code this} factor based on an assumed
-   * point distribution at {@code assignment}. {@count} is the number of times
-   * that {@code assignment} has been observed. The returned sufficient
-   * statistics are {@code count} for each outcome that occurs in
-   * {@code assignment}, and 0 for all other outcomes.
+   * point distribution at {@code assignment}, and increments
+   * {@code sufficientStatistics} with the statistics. {@count} is the number of
+   * times that {@code assignment} has been observed.
    * 
+   * @param statistics
    * @param assignment
    * @param count
    * @return
    */
-  public abstract T getSufficientStatisticsFromAssignment(Assignment assignment, double count);
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
+      Assignment assignment, double count);
 
   /**
    * Computes sufficient statistics for {@code this} factor from the marginal
-   * distribution {@code marginal}. The returned sufficient statistics summarize
-   * the probabilities of the outcomes of interest in {@code marginal}.
-   * {@code marginal} is a distribution over the same variables as
-   * {@code this.getVars()}.
+   * distribution {@code marginal} and accumulates them in {@code statistics}.
+   * The computed sufficient statistics summarize the probabilities of the
+   * events of interest in {@code marginal}. {@code marginal} is a distribution
+   * over the same variables as {@code this.getVars()}.
    * 
    * @param marginal
    * @param count
    * @param partitionFunction
    * @return
    */
-  public T getSufficientStatisticsFromMarginal(Factor marginal,
-      double count, double partitionFunction);
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
+      Factor marginal, double count, double partitionFunction);
 }

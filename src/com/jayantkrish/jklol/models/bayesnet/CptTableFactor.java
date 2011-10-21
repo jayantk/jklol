@@ -62,24 +62,23 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
   }
 
   @Override
-  public Cpt getSufficientStatisticsFromAssignment(Assignment a, double count) {
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
+      Assignment a, double count) {
     Preconditions.checkArgument(a.containsVars(getVars().getVariableNums()));
-    Cpt newCpt = getNewSufficientStatistics();
-    newCpt.incrementOutcomeCount(a.mappedAssignment(cptVarNumMap), count);
-    return newCpt;
+    Cpt cptStatistics = statistics.coerceToCpt();
+    cptStatistics.incrementOutcomeCount(a.mappedAssignment(cptVarNumMap), count);
   }
 
   @Override
-  public Cpt getSufficientStatisticsFromMarginal(Factor marginal,
-      double count, double partitionFunction) {
-    Cpt newCpt = getNewSufficientStatistics();
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
+      Factor marginal, double count, double partitionFunction) {
+    Cpt cptStatistics = statistics.coerceToCpt();
     Iterator<Assignment> assignmentIter = marginal.coerceToDiscrete().outcomeIterator();
     while (assignmentIter.hasNext()) {
       Assignment a = assignmentIter.next();
-      newCpt.incrementOutcomeCount(a.mappedAssignment(cptVarNumMap),
+      cptStatistics.incrementOutcomeCount(a.mappedAssignment(cptVarNumMap),
           count * marginal.getUnnormalizedProbability(a) / partitionFunction);
     }
-    return newCpt;
   }
 
   // ///////////////////////////////////////////////////////////////////

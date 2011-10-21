@@ -66,24 +66,25 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
   }
 
   @Override
-  public SufficientStatistics computeSufficientStatistics(Assignment assignment, double count) {
-    List<SufficientStatistics> sufficientStatistics = Lists.newArrayList();
-    for (ParametricFactor<SufficientStatistics> factor : getParametricFactors()) {
-      sufficientStatistics.add(
-          factor.getSufficientStatisticsFromAssignment(assignment, count));
+  public void incrementSufficientStatistics(SufficientStatistics statistics, Assignment assignment, double count) {
+    List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
+    Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
+    
+    for (int i = 0; i < statisticsList.size(); i++) {
+      parametricFactors.get(i).incrementSufficientStatisticsFromAssignment(statisticsList.get(i), assignment, count);
     }
-    return new ListSufficientStatistics(sufficientStatistics);
   }
 
   @Override
-  public SufficientStatistics computeSufficientStatistics(MarginalSet marginals, double count) {
-    List<SufficientStatistics> sufficientStatistics = Lists.newArrayList();
-    for (ParametricFactor<SufficientStatistics> factor : getParametricFactors()) {
-      Factor marginal = marginals.getMarginal(factor.getVars().getVariableNums());
-      sufficientStatistics.add(factor.getSufficientStatisticsFromMarginal(
-          marginal, count, marginals.getPartitionFunction()));
+  public void incrementSufficientStatistics(SufficientStatistics statistics, MarginalSet marginals, double count) {
+    List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
+    Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
+    
+    for (int i = 0; i < statisticsList.size(); i++) {
+      Factor marginal = marginals.getMarginal(parametricFactors.get(i).getVars().getVariableNums());
+      parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i), 
+          marginal, count, marginals.getPartitionFunction());
     }
-    return new ListSufficientStatistics(sufficientStatistics);
   }
   
   /**

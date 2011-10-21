@@ -31,12 +31,12 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     f = DiscreteLogLinearFactor.createIndicatorFactor(vars);
     
     parameters = f.getNewSufficientStatistics();
-    parameters.increment(f.getSufficientStatisticsFromAssignment(vars.outcomeArrayToAssignment("T", "F"),
-        1.0), 1.0);
-    parameters.increment(f.getSufficientStatisticsFromAssignment(vars.outcomeArrayToAssignment("T", "T"),
-        1.0), 0.5);
-    parameters.increment(f.getSufficientStatisticsFromAssignment(vars.outcomeArrayToAssignment("T", "T"),
-        1.0), 0.5);
+    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "F"),
+        1.0);
+    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "T"),
+        0.5);
+    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "T"),
+        0.5);
   }
   
   public void testGetFeatures() {
@@ -58,7 +58,8 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   
   public void testGetSufficientStatisticsFromAssignment() {
     Assignment tf = vars.outcomeArrayToAssignment("T", "F"); 
-    FeatureSufficientStatistics s = f.getSufficientStatisticsFromAssignment(tf, 1.0);
+    FeatureSufficientStatistics s = f.getNewSufficientStatistics();
+    f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
     List<FeatureFunction> features = s.getFeatures();
     double[] weights = s.getWeights();
@@ -73,7 +74,8 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     VariableNumMap moreVars = vars.addMapping(7, new DiscreteVariable("Foo",
         Arrays.asList("foo", "bar")));
     Assignment tf = moreVars.outcomeArrayToAssignment("T", "F", "bar"); 
-    FeatureSufficientStatistics s = f.getSufficientStatisticsFromAssignment(tf, 1.0);
+    FeatureSufficientStatistics s = f.getNewSufficientStatistics();
+    f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
     List<FeatureFunction> features = s.getFeatures();
     double[] weights = s.getWeights();
@@ -87,7 +89,8 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   public void testGetSufficientStatisticsFromMarginal() {
     TableFactor factor = f.getFactorFromParameters(parameters);
     double partitionFunction = 2 * (1.0 + Math.E);
-    FeatureSufficientStatistics s = f.getSufficientStatisticsFromMarginal(factor, 1.0, partitionFunction);
+    FeatureSufficientStatistics s = f.getNewSufficientStatistics();
+    f.incrementSufficientStatisticsFromMarginal(s, factor, 1.0, partitionFunction);
     
     List<FeatureFunction> features = s.getFeatures();
     double[] weights = s.getWeights();

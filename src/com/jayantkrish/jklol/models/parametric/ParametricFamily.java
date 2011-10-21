@@ -60,28 +60,30 @@ public interface ParametricFamily<T> {
   public T getNewSufficientStatistics();
 
   /**
-   * Gets sufficient statistics for estimating a model from {@code this} family
-   * based on a point distribution at {@code assignment}. {@code count} is the
-   * number of times that {@code assignment} has been observed in the training
-   * data, and acts as a multiplier for the returned statistics.
-   * {@code assignment} must contain a value for all of the variables in
-   * {@code this.getVariables()}.
+   * Accumulates sufficient statistics (in {@code statistics}) for estimating a
+   * model from {@code this} family based on a point distribution at
+   * {@code assignment}. {@code count} is the number of times that
+   * {@code assignment} has been observed in the training data, and acts as a
+   * multiplier for the computed statistics {@code assignment} must contain a
+   * value for all of the variables in {@code this.getVariables()}.
    * 
+   * @param statistics
    * @param assignment
    * @param count
-   * @return
    */
-  public T computeSufficientStatistics(Assignment assignment, double count);
+  public void incrementSufficientStatistics(SufficientStatistics statistics,
+      Assignment assignment, double count);
 
   /**
    * Computes a vector of sufficient statistics for {@code this} based on a
-   * marginal distribution {@code marginals} over an factor graph in this
-   * family. {@code count} is the number of times {@code marginals} has been
-   * observed in the training data.
+   * marginal distribution {@code marginals} over an factor graph in this family
+   * and accumulates them in {@code statistics}. {@code count} is the number of
+   * times {@code marginals} has been observed in the training data.
    * 
+   * @param statistics
    * @param marginals
    * @param count
-   * @return
    */
-  public T computeSufficientStatistics(MarginalSet marginals, double count);
+  public void incrementSufficientStatistics(SufficientStatistics statistics,
+      MarginalSet marginals, double count);
 }

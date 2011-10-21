@@ -53,8 +53,7 @@ public class CptFactorTest extends TestCase {
     parameters = f.getNewSufficientStatistics();
     for (int i = 0; i < assignments.length; i++) {
       Assignment assignment = f.getVars().outcomeToAssignment(assignments[i]);
-      parameters.increment(f.getSufficientStatisticsFromAssignment(
-          assignment, 1.0), 1.0);
+      f.incrementSufficientStatisticsFromAssignment(parameters, assignment, 1.0);
       factorAssignments.add(assignment);
     }
   }
@@ -71,7 +70,8 @@ public class CptFactorTest extends TestCase {
   }
   
   public void testGetSufficientStatisticsFromAssignment() {
-    Cpt newStats = f.getSufficientStatisticsFromAssignment(
+    Cpt newStats = f.getNewSufficientStatistics();
+    f.incrementSufficientStatisticsFromAssignment(newStats,
         f.getVars().outcomeToAssignment(assignments[1]), 2.0);
     newStats.increment(1.0);
 
@@ -83,7 +83,9 @@ public class CptFactorTest extends TestCase {
   }
   
   public void testGetSufficientStatisticsFromMarginal() {
-    Cpt newStats = f.getSufficientStatisticsFromMarginal(f.getFactorFromParameters(parameters), 6.0, 3.0);
+    Cpt newStats = f.getNewSufficientStatistics();
+    f.incrementSufficientStatisticsFromMarginal(newStats, 
+        f.getFactorFromParameters(parameters), 6.0, 3.0);
 
     assertEquals(cptParents, newStats.getParents());
     assertEquals(cptChildren, newStats.getChildren());

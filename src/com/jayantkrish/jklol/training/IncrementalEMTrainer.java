@@ -71,7 +71,8 @@ public class IncrementalEMTrainer {
 
         // Update new sufficient statistics
         MarginalSet marginals = inferenceEngine.computeMarginals(currentFactorGraph, trainingExample);
-        SufficientStatistics exampleStatistics = bn.computeSufficientStatistics(marginals, 1.0);
+        SufficientStatistics exampleStatistics = bn.getNewSufficientStatistics(); 
+        bn.incrementSufficientStatistics(exampleStatistics, marginals, 1.0);
         previousIterationStatistics[j] = exampleStatistics;
         initialParameters.increment(exampleStatistics, 1.0);
       }

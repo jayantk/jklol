@@ -112,11 +112,48 @@ public class SparseTensorPerformanceTest extends TestCase {
     System.out.println("Elapsed: " + elapsed + " ms");
   }
   
+  public void testCount() {
+    System.out.println("testCount");
+    long start = System.currentTimeMillis();
+
+    CountAccumulator<Integer> counter = CountAccumulator.create();
+    for (int i = 0; i < 100000; i++) {
+      counter.increment(i, 1.0);
+    }
+    
+    CountAccumulator<Integer> counter2 = CountAccumulator.create();
+    for (int i = 0; i < 100; i++) {
+      counter2.increment(i, 1.0);
+    }
+
+    counter.increment(counter2);
+
+    long elapsed = System.currentTimeMillis() - start;
+    System.out.println("Elapsed: " + elapsed + " ms");
+  }
+  
+  public void testIncrementCount() {
+    System.out.println("testIncrementCount");
+    long start = System.currentTimeMillis();
+    
+    CountAccumulator<Integer> counter = CountAccumulator.create();
+    for (int i = 0; i < 100000; i++) {
+      counter.increment(i, 1.0);
+    }
+
+    for (int i = 0; i < 100; i++) {
+      counter.increment(i, 1.0);
+    }
+
+    long elapsed = System.currentTimeMillis() - start;
+    System.out.println("Elapsed: " + elapsed + " ms");
+  }
+  
   public void testDefaultHashMap() {
     System.out.println("testDefaultHashMap");
     long start = System.currentTimeMillis();
 
-    DefaultHashMap map = new DefaultHashMap<Integer, Double>(0.0);
+    DefaultHashMap<Integer, Double> map = new DefaultHashMap<Integer, Double>(0.0);
     for (int i = 0; i < 100000; i++) {
       map.put(i, 1.0);
     }
@@ -124,7 +161,7 @@ public class SparseTensorPerformanceTest extends TestCase {
     long elapsed = System.currentTimeMillis() - start;
     System.out.println("Elapsed: " + elapsed + " ms");
   }
-
+  
   public void testAssignmentCreation() {
     System.out.println("testAssignmentCreation");
     long start = System.currentTimeMillis();

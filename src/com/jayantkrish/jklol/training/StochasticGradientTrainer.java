@@ -45,21 +45,21 @@ public class StochasticGradientTrainer {
       ParametricFactorGraph logLinearModel, Assignment trainingExample) {
     FactorGraph factorGraph = logLinearModel.getFactorGraphFromParameters(parameters);
 
+    // The gradient is the conditional expected counts minus the unconditional
+    // expected counts
+    SufficientStatistics gradient = logLinearModel.getNewSufficientStatistics(); 
+
     // Compute the second term of the gradient, the unconditional expected
     // feature counts
     MarginalSet unconditionalMarginals = marginalCalculator.computeMarginals(factorGraph);
-    SufficientStatistics unconditionalExpectedCounts = logLinearModel
-        .computeSufficientStatistics(unconditionalMarginals, 1.0);
+    logLinearModel.incrementSufficientStatistics(
+        gradient, unconditionalMarginals, -1.0);
 
     // Compute the first term of the gradient, the model expectations
     // conditioned on the training example.
     MarginalSet conditionalMarginals = marginalCalculator.computeMarginals(factorGraph, trainingExample);
-    SufficientStatistics conditionalExpectedCounts = logLinearModel
-        .computeSufficientStatistics(conditionalMarginals, 1.0);
-
-    // The gradient is the conditional expected counts minus the unconditional
-    // expected counts
-    conditionalExpectedCounts.increment(unconditionalExpectedCounts, -1.0);
-    return conditionalExpectedCounts;
+    logLinearModel.incrementSufficientStatistics(gradient, conditionalMarginals, 1.0);
+    
+    return gradient;
   }
 }

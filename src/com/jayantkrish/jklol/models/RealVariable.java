@@ -1,11 +1,11 @@
 package com.jayantkrish.jklol.models;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.util.Vector;
+import com.jayantkrish.jklol.util.SparseTensor;
 
 /**
- * RealVariable represents a real-valued vector variable in a graphical model. Of course,
- * since the real numbers can't be represented on a computer, the class actually uses doubles.
+ * RealVariable represents a real-valued vector variable in a graphical model. 
+ * 
  * @author jayant
  *
  */
@@ -24,12 +24,13 @@ public class RealVariable implements Variable {
 
 	@Override
 	public Object getArbitraryValue() {
-		Vector value = Vector.constantVector(numDimensions, 0.0);
+		SparseTensor value = SparseTensor.empty(new int[]{0});
 		return value;
 	}
 	
 	@Override
 	public boolean canTakeValue(Object o) {
-		return o instanceof Vector;
+		return o instanceof SparseTensor && 
+		((SparseTensor) o).getDimensionNumbers().length == 1;
 	}
 }

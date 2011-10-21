@@ -20,7 +20,7 @@ public class CrossValidationEvaluation<I, O> extends AbstractEvaluation<I, O> {
 
 	private List<Collection<Example<I, O>>> folds;
 
-	public CrossValidationEvaluation(List<Collection<Example<I, O>>> folds) {
+	public CrossValidationEvaluation(List<Collection<Example<I, O>>> folds) { 
 		this.folds = folds;
 	}
 

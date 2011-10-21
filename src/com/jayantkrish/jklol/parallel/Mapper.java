@@ -29,4 +29,17 @@ public abstract class Mapper<A, B> implements Function<A, B> {
    * @return
    */
   public abstract B map(A item);
+
+  /**
+   * Gets the identity mapper.
+   * @return
+   */
+  public static <A> Mapper<A, A> identity() {
+    return new Mapper<A, A>() {
+      @Override
+      public A map(A item) {
+        return item;
+      }
+    };
+  }
 }

@@ -15,7 +15,6 @@ import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class EMTrainerTest extends TestCase {
@@ -64,8 +63,8 @@ public class EMTrainerTest extends TestCase {
 		trainingData.add(a3);
 		
 		t = new IncrementalEMTrainer(10, new JunctionTree());
-		s = new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), new LocalMapReduceExecutor(3, 2), null);
-		e = new EMTrainer(20, new LocalMapReduceExecutor(3, 2), new JunctionTree(), null);
+		s = new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), null);
+		e = new EMTrainer(20, new JunctionTree(), null);
 		
 		testAssignment1 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
 		testAssignment2 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));

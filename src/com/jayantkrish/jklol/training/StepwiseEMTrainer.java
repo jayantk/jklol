@@ -9,7 +9,7 @@ import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -23,9 +23,8 @@ public class StepwiseEMTrainer {
   private final double decayRate;
   private final LogFunction log;
 
-  // Sufficient statistics are computed in parallel on executor, using
-  // marginalCalculator to perform inference.
-  private final MapReduceExecutor executor;
+  // Sufficient statistics are computed in parallel with the global mapreduce
+  // executor, using marginalCalculator to perform inference.
   private final MarginalCalculator marginalCalculator;
 
   /**
@@ -45,20 +44,17 @@ public class StepwiseEMTrainer {
    * satisfy {@code 0.5 < decayRate <= 1}.
    * @param marginalCalculator the inference procedure which computes marginals
    * during training.
-   * @param executor map reduce executor to use for parallelism. 
    * @param log monitors training progress. If {@code null}, no logging is
    * performed.
    */
   public StepwiseEMTrainer(int numIterations, int batchSize, double decayRate,
-      MarginalCalculator marginalCalculator, MapReduceExecutor executor,
-      LogFunction log) {
+      MarginalCalculator marginalCalculator, LogFunction log) {
     Preconditions.checkArgument(0.5 < decayRate && decayRate <= 1.0);
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.decayRate = decayRate;
     this.log = log != null ? log : new NullLogFunction();
     this.marginalCalculator = marginalCalculator;
-    this.executor = executor;
   }
 
   /**
@@ -81,7 +77,7 @@ public class StepwiseEMTrainer {
       List<Assignment> trainingData) {
     // Initialize state variables, which are used in updateBatchStatistics() and
     // updateParameters()
-    double totalDecay = 1.0; 
+    double totalDecay = 1.0;
     // Make sure that the training data list is safe for concurrent access.
     List<Assignment> trainingDataList = Lists.newArrayList(trainingData);
     int numUpdates = 0;
@@ -98,9 +94,10 @@ public class StepwiseEMTrainer {
 
         // Calculate the sufficient statistics for batch.
         FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
-        SufficientStatisticsBatch result = executor.mapReduce(batch,
-          new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
-          new SufficientStatisticsReducer(bn));
+        SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()
+            .mapReduce(batch,
+            new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
+            new SufficientStatisticsReducer(bn));
         SufficientStatistics batchStatistics = result.getStatistics();
         log.logStatistic(i, "average loglikelihood",
             Double.toString(result.getLoglikelihood() / result.getNumExamples()));

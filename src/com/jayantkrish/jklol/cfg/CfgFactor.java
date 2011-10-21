@@ -39,26 +39,23 @@ public class CfgFactor extends AbstractFactor {
   private final int childVarNum;
   private final DiscreteVariable childVar;
 
-  private ProductionDistribution productionDist;
   private final CfgParser parser;
 
   private final DiscreteFactor parentInboundMessage;
   private final DiscreteFactor childInboundMessage;
-  
-  // A cache of the current parse charts (for normal and max-marginals), 
+
+  // A cache of the current parse charts (for normal and max-marginals),
   // for efficiency.
   private final Map<Boolean, ParseChart> cachedCharts;
-  
+
   /**
    * This factor should always be instantiated over exactly two variables: the
    * parent variable is a distribution over Productions, the child variable is a
    * distribution over Lists of Productions. Sadly, the Java type system makes
-   * enforcing this requirement very difficult, so just know that if you violate
-   * this requirement, CfgFactor will break in terrible and unexpected ways.
+   * enforcing this requirement difficult.
    */
   public CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
-      int parentVarNum, int childVarNum, Grammar grammar,
-      ProductionDistribution productionDist) {
+      int parentVarNum, int childVarNum, CfgParser parser) {
     super(new VariableNumMap(Arrays.asList(new Integer[] { parentVarNum, childVarNum }),
         Arrays.asList(new DiscreteVariable[] { parentVar, childVar })));
 
@@ -67,8 +64,7 @@ public class CfgFactor extends AbstractFactor {
     this.childVarNum = childVarNum;
     this.childVar = childVar;
 
-    this.productionDist = productionDist;
-    this.parser = new CfgParser(grammar, productionDist);
+    this.parser = parser;
 
     this.parentInboundMessage = null;
     this.childInboundMessage = null;
@@ -79,8 +75,8 @@ public class CfgFactor extends AbstractFactor {
    * For implementing products of factors.
    */
   private CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
-      int parentVarNum, int childVarNum, ProductionDistribution productionDist,
-      CfgParser parser, DiscreteFactor parentInboundMessage, DiscreteFactor childInboundMessage) {
+      int parentVarNum, int childVarNum, CfgParser parser, 
+      DiscreteFactor parentInboundMessage, DiscreteFactor childInboundMessage) {
     super(new VariableNumMap(Arrays.asList(new Integer[] { parentVarNum, childVarNum }),
         Arrays.asList(new DiscreteVariable[] { parentVar, childVar })));
 
@@ -89,7 +85,6 @@ public class CfgFactor extends AbstractFactor {
     this.childVarNum = childVarNum;
     this.childVar = childVar;
 
-    this.productionDist = productionDist;
     this.parser = parser;
 
     this.parentInboundMessage = parentInboundMessage;
@@ -118,9 +113,9 @@ public class CfgFactor extends AbstractFactor {
     }
     return probability;
   }
-  
+
   public ProductionDistribution getProductionDistribution() {
-    return productionDist;
+    return parser.getDistribution();
   }
 
   // ///////////////////////////////////////////////////////////
@@ -160,16 +155,16 @@ public class CfgFactor extends AbstractFactor {
       newChildMessage = FactorUtils.product(childFactors).coerceToDiscrete();
     }
 
-    return new CfgFactor(parentVar, childVar, parentVarNum, childVarNum, productionDist,
+    return new CfgFactor(parentVar, childVar, parentVarNum, childVarNum,
         parser, newParentMessage, newChildMessage);
   }
-  
+
   @Override
   public double size() {
     // This is an overestimate, but the exact number is not easy to calculate.
-    return parentVar.numValues() * childVar.numValues(); 
+    return parentVar.numValues() * childVar.numValues();
   }
-  
+
   @Override
   public Factor inverse() {
     throw new UnsupportedOperationException("Cannot invert CfgFactor");
@@ -276,6 +271,7 @@ public class CfgFactor extends AbstractFactor {
 
   /**
    * Computes a marginal. Abstracts over sum/max product.
+   * 
    * @param varNumsToEliminate
    * @param useSumProduct
    * @return
@@ -342,7 +338,7 @@ public class CfgFactor extends AbstractFactor {
       List<Production> val = (List<Production>) a.getVarValuesInKeyOrder().get(0);
       childDist.put(val, childInboundMessage.getUnnormalizedProbability(a));
     }
-    
+
     cachedCharts.put(useSumProduct, parser.parseInsideMarginal(childDist, useSumProduct));
     return cachedCharts.get(useSumProduct);
   }
@@ -362,7 +358,7 @@ public class CfgFactor extends AbstractFactor {
     if (cachedCharts.get(useSumProduct).getOutsideCalculated()) {
       return cachedCharts.get(useSumProduct);
     }
-    
+
     // Convert from factors to a distribution that the CFG parser understands.
     Map<Production, Double> parentDist = Maps.newHashMap();
     Iterator<Assignment> parentIter = parentInboundMessage.outcomeIterator();

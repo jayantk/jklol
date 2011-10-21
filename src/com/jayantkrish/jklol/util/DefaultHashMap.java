@@ -89,4 +89,9 @@ public class DefaultHashMap<K, V> {
 	public int hashCode() {
 		return map.hashCode() * 739821 + defaultValue.hashCode() * 723;
 	}
+	
+	@Override
+	public String toString() {
+	  return map.toString();
+	}
 }

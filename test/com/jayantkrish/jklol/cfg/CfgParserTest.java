@@ -10,7 +10,7 @@ import junit.framework.TestCase;
 
 public class CfgParserTest extends TestCase {
 
-	Grammar g;
+	BasicGrammar g;
 	TerminalProduction multi;
 	CfgParser p;
 	CptProductionDistribution dist;
@@ -29,7 +29,7 @@ public class CfgParserTest extends TestCase {
 
 	public void setUp() {
 
-		g = new Grammar();
+		g = new BasicGrammar();
 
 		g.addTerminal(term("N", "gretzky"));
 		g.addTerminal(term("V", "plays"));

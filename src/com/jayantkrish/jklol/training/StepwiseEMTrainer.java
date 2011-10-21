@@ -4,17 +4,17 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.training.SufficientStatisticsCalculator.BatchStatistics;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Train the weights of a ParametricFactorGraph using stepwise EM, an online variant of EM.
+ * Train the weights of a ParametricFactorGraph using stepwise EM, an online
+ * variant of EM.
  */
 public class StepwiseEMTrainer {
 
@@ -23,10 +23,10 @@ public class StepwiseEMTrainer {
   private final double decayRate;
   private final LogFunction log;
 
-  // These parameters control the amount of parallel execution.
-  // The sufficient statistics of each batch are run as numConcurrent
-  // parallel tasks, which are evaluated using executor.
-  private final SufficientStatisticsCalculator statisticsCalculator;
+  // Sufficient statistics are computed in parallel on executor, using
+  // marginalCalculator to perform inference.
+  private final MapReduceExecutor executor;
+  private final MarginalCalculator marginalCalculator;
 
   /**
    * Creates a trainer which performs {@code numIterations} of stepwise EM
@@ -35,32 +35,30 @@ public class StepwiseEMTrainer {
    * {@code batchSize} controls the number of training examples in each batch.
    * 
    * <p>
-   * This class supports parallel training. Each batch is split into
-   * {@code numConcurrent} mini-batches which are processed concurrently.
+   * This class supports parallel training using {@code executor} to parallelize
+   * the computation of sufficient statistics.
    * 
    * @param numIterations number of iterations to train for.
    * @param batchSize number of examples to process between parameter updates.
    * @param decayRate controls how fast old statistics are removed from the
    * model. Smaller decayRates cause old statistics to be forgotten faster. Must
    * satisfy {@code 0.5 < decayRate <= 1}.
-   * @param inferenceEngineSupplier gets the inference procedure which computes
-   * marginals for training.
-   * @param numConcurrent number of mini-batches
+   * @param marginalCalculator the inference procedure which computes marginals
+   * during training.
+   * @param executor map reduce executor to use for parallelism. 
    * @param log monitors training progress. If {@code null}, no logging is
    * performed.
    */
   public StepwiseEMTrainer(int numIterations, int batchSize, double decayRate,
-      Supplier<MarginalCalculator> inferenceEngineSupplier, int numConcurrent,
+      MarginalCalculator marginalCalculator, MapReduceExecutor executor,
       LogFunction log) {
     Preconditions.checkArgument(0.5 < decayRate && decayRate <= 1.0);
-
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.decayRate = decayRate;
     this.log = log != null ? log : new NullLogFunction();
-
-    this.statisticsCalculator = new SufficientStatisticsCalculator(
-        inferenceEngineSupplier, numConcurrent);
+    this.marginalCalculator = marginalCalculator;
+    this.executor = executor;
   }
 
   /**
@@ -83,7 +81,7 @@ public class StepwiseEMTrainer {
       List<Assignment> trainingData) {
     // Initialize state variables, which are used in updateBatchStatistics() and
     // updateParameters()
-    double totalDecay = 1.0;
+    double totalDecay = 1.0; 
     // Make sure that the training data list is safe for concurrent access.
     List<Assignment> trainingDataList = Lists.newArrayList(trainingData);
     int numUpdates = 0;
@@ -97,15 +95,16 @@ public class StepwiseEMTrainer {
       for (int j = 0; j < numBatches; j++) {
         List<Assignment> batch = trainingDataList.subList(j * batchSize,
             Math.min((j + 1) * batchSize, trainingDataList.size()));
-        
+
         // Calculate the sufficient statistics for batch.
         FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
-        BatchStatistics result = statisticsCalculator
-            .computeSufficientStatistics(factorGraph, bn, batch, log);
+        SufficientStatisticsBatch result = executor.mapReduce(batch,
+          new SufficientStatisticsMapper(factorGraph, bn, marginalCalculator, log),
+          new SufficientStatisticsReducer(bn));
         SufficientStatistics batchStatistics = result.getStatistics();
-        log.logStatistic(i, "average loglikelihood", 
+        log.logStatistic(i, "average loglikelihood",
             Double.toString(result.getLoglikelihood() / result.getNumExamples()));
-        
+
         // Update the the parameter vector.
         // Instead of multiplying the sufficient statistics (dense update)
         // use a sparse update which simply increases the weight of the added

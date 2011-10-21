@@ -63,6 +63,17 @@ public class PairCountAccumulator<A, B> {
   }
 
   /**
+   * Gets the total number of times {@code first} has been observed with any
+   * other value.
+   * 
+   * @param first
+   * @return
+   */
+  public double getTotalCount(A first) {
+    return conditionalCounts.get(first);
+  }
+
+  /**
    * Gets the total number of observed outcomes.
    */
   public double getTotalCount() {
@@ -139,9 +150,15 @@ public class PairCountAccumulator<A, B> {
 
   /**
    * Gets all A values which have been observed.
+   * 
    * @return
    */
   public Set<A> keySet() {
     return counts.keySet();
+  }
+  
+  @Override
+  public String toString() {
+    return counts.toString(); 
   }
 }

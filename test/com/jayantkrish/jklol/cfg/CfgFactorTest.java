@@ -23,7 +23,7 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class CfgFactorTest extends TestCase {
 
-	Grammar g;
+	BasicGrammar g;
 	CptCfgFactor cfgFactor;
 	CptTableFactor rootFactor;
 	CptTableFactor var1Factor;
@@ -46,7 +46,7 @@ public class CfgFactorTest extends TestCase {
 
 	public void setUp() {
 
-		g = new Grammar();
+		g = new BasicGrammar();
 
 		g.addProductionRule(bp("A", "A", "A"));
 		g.addProductionRule(bp("C", "A", "C"));

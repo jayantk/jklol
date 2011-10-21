@@ -63,7 +63,7 @@ public class SubgradientSvmTrainerTest extends TestCase {
 		trainingData.add(Example.create(inputVars.outcomeArrayToAssignment("T", "T"),
 		    outputVars.outcomeArrayToAssignment("F")));
 		
-		t = new SubgradientSvmTrainer(10, 4, 1.0, JunctionTree.getSupplier(), 
+		t = new SubgradientSvmTrainer(10, 4, 1.0, new JunctionTree(), 
 		    new SubgradientSvmTrainer.HammingCost(), null);
 	}
 	

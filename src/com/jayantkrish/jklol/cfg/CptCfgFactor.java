@@ -11,11 +11,11 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
 
   private final VariableNumMap parentVar;
   private final VariableNumMap childVar;
-  private final Grammar grammar;
+  private final BasicGrammar grammar;
   private final CptProductionDistribution parameterTemplate;
   
   public CptCfgFactor(VariableNumMap parentVar, VariableNumMap childVar,
-      Grammar grammar, CptProductionDistribution grammarTemplate) {
+      BasicGrammar grammar, CptProductionDistribution grammarTemplate) {
     super(parentVar.union(childVar));
     this.parentVar = Preconditions.checkNotNull(parentVar);
     this.childVar = Preconditions.checkNotNull(childVar);
@@ -32,7 +32,7 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
     CptProductionDistribution productionDistribution = (CptProductionDistribution) parameters;
     return new CfgFactor(parentVar.getDiscreteVariables().get(0), childVar.getDiscreteVariables().get(0),
         parentVar.getVariableNums().get(0), childVar.getVariableNums().get(0), 
-        grammar, productionDistribution);
+        new CfgParser(grammar, productionDistribution));
   }
 
   @Override

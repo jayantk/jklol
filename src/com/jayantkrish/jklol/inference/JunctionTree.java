@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
@@ -21,7 +20,6 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.training.StepwiseEMTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.HashMultimap;
 
@@ -31,25 +29,6 @@ import com.jayantkrish.jklol.util.HashMultimap;
  * tree structure, and will explode if this is not true.
  */
 public class JunctionTree extends AbstractMarginalCalculator {
-
-  public JunctionTree() {
-  }
-
-  /**
-   * Gets a supplier which always returns a new JunctionTree instance. Useful
-   * for running parallelized training algorithms such as
-   * {@link StepwiseEMTrainer}.
-   * 
-   * @return
-   */
-  public static Supplier<MarginalCalculator> getSupplier() {
-    return new Supplier<MarginalCalculator>() {
-      @Override
-      public MarginalCalculator get() {
-        return new JunctionTree();
-      }
-    };
-  }
 
   @Override
   public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {

@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -33,17 +32,17 @@ public class SubgradientSvmTrainer {
   private final int numIterations;
   private final int batchSize;
   private final double regularization;
-  private final Supplier<MarginalCalculator> marginalCalculatorSupplier;
+  private final MarginalCalculator marginalCalculator;
   private final CostFunction costFunction;
   private final LogFunction log;
 
   public SubgradientSvmTrainer(int numIterations, int batchSize,
-      double regularizationConstant, Supplier<MarginalCalculator> marginalCalculatorSupplier,
+      double regularizationConstant, MarginalCalculator marginalCalculator,
       CostFunction costFunction, LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.regularization = regularizationConstant;
-    this.marginalCalculatorSupplier = marginalCalculatorSupplier;
+    this.marginalCalculator = marginalCalculator;
     this.costFunction = costFunction;
     this.log = (log != null) ? log : new NullLogFunction();
   }
@@ -62,7 +61,6 @@ public class SubgradientSvmTrainer {
    */
   public SufficientStatistics train(ParametricFactorGraph modelFamily,
       Iterable<Example<Assignment, Assignment>> trainingData) {
-    MarginalCalculator marginalCalculator = marginalCalculatorSupplier.get();
     SufficientStatistics parameters = modelFamily.getNewSufficientStatistics();
 
     // cycledTrainingData loops indefinitely over the elements of trainingData.

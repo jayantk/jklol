@@ -5,9 +5,9 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-public class GrammarTest extends TestCase {
+public class BasicGrammarTest extends TestCase {
 
-	Grammar g;
+	BasicGrammar g;
 	TerminalProduction multi;
 
 	private Production prod(String s) {
@@ -23,7 +23,7 @@ public class GrammarTest extends TestCase {
 	}
 
 	public void setUp() {
-		g = new Grammar();
+		g = new BasicGrammar();
 
 		g.addTerminal(term("N", "gretzky"));
 		g.addTerminal(term("V", "plays"));
@@ -45,21 +45,21 @@ public class GrammarTest extends TestCase {
 
 	public void testGetTerminalSpanParents() {
 
-		Set<TerminalProduction> terms = g.getTerminalSpanParents(
+		Set<TerminalProduction> terms = g.getTerminalSpanProductions(
 				Arrays.asList(new Production[] {prod("hockey")}), 0,0);
 		assertEquals(0, terms.size());
 
-		terms = g.getTerminalSpanParents(
+		terms = g.getTerminalSpanProductions(
 				Arrays.asList(new Production[] {prod("gretzky")}), 0,0);
 		assertEquals(1, terms.size());
 		assertTrue(terms.contains(term("N", "gretzky")));
 
-		terms = g.getTerminalSpanParents(
+		terms = g.getTerminalSpanProductions(
 				Arrays.asList(new Production[] {prod("ice"), prod("hockey")}), 0, 1);
 		assertEquals(1, terms.size());
 		assertTrue(terms.contains(multi));
 
-		terms = g.getTerminalSpanParents(
+		terms = g.getTerminalSpanProductions(
 				Arrays.asList(new Production[] {prod("ice"), prod("hockey")}), 0, 0);
 		assertEquals(0, terms.size());
 	}

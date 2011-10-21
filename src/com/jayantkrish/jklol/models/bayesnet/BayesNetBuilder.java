@@ -9,7 +9,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.jayantkrish.jklol.cfg.CptCfgFactor;
 import com.jayantkrish.jklol.cfg.CptProductionDistribution;
-import com.jayantkrish.jklol.cfg.Grammar;
+import com.jayantkrish.jklol.cfg.BasicGrammar;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -109,7 +109,7 @@ public class BayesNetBuilder {
    * Add a new conditional probability factor embedding a context-free grammar.
    */
   public CptCfgFactor addCfgCptFactor(String parentVarName, String childVarName,
-      Grammar grammar, CptProductionDistribution productionDist) {
+      BasicGrammar grammar, CptProductionDistribution productionDist) {
     VariableNumMap parentVars = bayesNet.lookupVariables(Arrays.asList(new String[] { parentVarName }));
     VariableNumMap childVars = bayesNet.lookupVariables(Arrays.asList(new String[] { childVarName }));
 

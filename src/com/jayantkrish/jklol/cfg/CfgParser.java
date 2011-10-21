@@ -27,13 +27,6 @@ public class CfgParser {
     return probs;
   }
 
-  /**
-   * Set a probability distribution over the productions in the CFG's grammar.
-   */
-  public void setDistribution(ProductionDistribution probs) {
-    this.probs = probs;
-  }
-
   // //////////////////////////////////////////////////////////////////////
   // The following methods are the important ones for running the parser in
   // isolation.
@@ -200,7 +193,7 @@ public class CfgParser {
 
       // for (Production leftP : left.keySet()) {
       // for (Production rightP : right.keySet()) {
-      for (BinaryProduction rule : grammar.getBinaryProductions()) {
+      for (BinaryProduction rule : grammar.getBinaryProductionsForEntry(spanStart, spanEnd, k)) {
         if (left.containsKey(rule.getLeft()) && right.containsKey(rule.getRight())) {
           chart.updateInsideEntry(spanStart, spanEnd, k, rule, rule.getParent(), left.get(rule
               .getLeft())
@@ -258,7 +251,7 @@ public class CfgParser {
 
       // for (Production leftP : left.keySet()) {
       // for (Production rightP : right.keySet()) {
-      for (BinaryProduction rule : grammar.getBinaryProductions()) {
+      for (BinaryProduction rule : grammar.getBinaryProductionsForEntry(spanStart, spanEnd, k)) {
         if (left.containsKey(rule.getLeft()) && right.containsKey(rule.getRight())
             && parent.containsKey(rule.getParent())) {
           chart.updateOutsideEntry(spanStart, spanStart + k, rule.getLeft(), right.get(rule
@@ -291,7 +284,7 @@ public class CfgParser {
       double prob = terminalMap.get(terminals);
       for (int i = 0; i < terminals.size(); i++) {
         for (int j = i; j < terminals.size(); j++) {
-          Set<TerminalProduction> terminalParents = grammar.getTerminalSpanParents(terminals, i, j);
+          Set<TerminalProduction> terminalParents = grammar.getTerminalSpanProductions(terminals, i, j);
 
           for (TerminalProduction terminal : terminalParents) {
             // System.out.println(terminal + ":" +
@@ -310,7 +303,7 @@ public class CfgParser {
   private void initializeChartAllTerminals(ParseChart chart) {
     chart.setTerminalDist(null);
 
-    for (TerminalProduction tp : grammar.getAllTerminalProductionRules()) {
+    for (TerminalProduction tp : grammar.getAllTerminalProductions()) {
       List<Production> children = tp.getTerminals();
       int spanSize = children.size() - 1;
       for (int i = 0; i < chart.chartSize() - spanSize; i++) {
@@ -327,7 +320,7 @@ public class CfgParser {
         double prob = terminalMap.get(terminals);
         for (int i = 0; i < terminals.size(); i++) {
           for (int j = i; j < terminals.size(); j++) {
-            Set<TerminalProduction> terminalParents = grammar.getTerminalSpanParents(terminals, i, j);
+            Set<TerminalProduction> terminalParents = grammar.getTerminalSpanProductions(terminals, i, j);
             Map<Production, Double> nontermDist = chart.getOutsideEntries(i, j);
 
             for (TerminalProduction terminal : terminalParents) {

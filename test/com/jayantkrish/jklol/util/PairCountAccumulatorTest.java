@@ -35,6 +35,9 @@ public class PairCountAccumulatorTest extends TestCase {
     assertEquals(0.0, accumulator.getCount("d", "d"));
     
     assertEquals(12.0, accumulator.getTotalCount());
+    assertEquals(7.0, accumulator.getTotalCount("a"));
+    assertEquals(5.0, accumulator.getTotalCount("b"));
+    assertEquals(0.0, accumulator.getTotalCount("d"));
   }
   
   public void testGetProbability() {

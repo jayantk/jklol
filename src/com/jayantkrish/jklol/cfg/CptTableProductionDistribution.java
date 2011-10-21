@@ -17,7 +17,7 @@ import com.jayantkrish.jklol.util.DefaultHashMap;
  */
 public class CptTableProductionDistribution implements CptProductionDistribution {
 
-  private Grammar grammar;
+  private BasicGrammar grammar;
   private DefaultHashMap<Production, Double> denominators;
   private DefaultHashMap<BinaryProduction, Double> binaryRuleCounts;
   private DefaultHashMap<TerminalProduction, Double> terminalRuleCounts;
@@ -25,7 +25,7 @@ public class CptTableProductionDistribution implements CptProductionDistribution
   /**
    * Initialize a probability distribution over the rules in {@code grammar}. 
    */
-  public CptTableProductionDistribution(Grammar grammar) {
+  public CptTableProductionDistribution(BasicGrammar grammar) {
     this.grammar = grammar;
     binaryRuleCounts = new DefaultHashMap<BinaryProduction, Double>(0.0);
     terminalRuleCounts = new DefaultHashMap<TerminalProduction, Double>(0.0);
@@ -36,10 +36,18 @@ public class CptTableProductionDistribution implements CptProductionDistribution
   public double getRuleProbability(BinaryProduction rule) {
     return binaryRuleCounts.get(rule) / denominators.get(rule.getParent());
   }
+  
+  public double getRuleCount(BinaryProduction rule) {
+    return binaryRuleCounts.get(rule);
+  }
 
   @Override
   public double getTerminalProbability(TerminalProduction rule) {
     return terminalRuleCounts.get(rule) / denominators.get(rule.getParent());
+  }
+  
+  public double getTerminalCount(TerminalProduction rule) {
+    return terminalRuleCounts.get(rule);
   }
 
   @Override

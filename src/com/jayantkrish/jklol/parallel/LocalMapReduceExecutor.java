@@ -30,26 +30,26 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
   }
 
   @Override
-  public <A, B> B mapReduce(Collection<A> items,
-      Mapper<A, B> mapper, Reducer<B> reducer) {
+  public <A, B, C> C mapReduce(Collection<A> items,
+      Mapper<A, B> mapper, Reducer<B, C> reducer) {
 
     // Set up the item batches for the executor service. 
     ImmutableList<A> itemsAsList = ImmutableList.copyOf(items);
-    List<MapReduceBatch<A, B>> batches = Lists.newArrayList();
+    List<MapReduceBatch<A, B, C>> batches = Lists.newArrayList();
     int batchSize = (int) Math.ceil(((double) items.size()) / (numThreads * batchesPerThread));
     for (int i = 0; i < numThreads * batchesPerThread; i++) {
       ImmutableList<A> batchItems = itemsAsList.subList(
           Math.min(i * batchSize, items.size()), Math.min((i + 1) * batchSize, items.size()));
-      batches.add(new MapReduceBatch<A, B>(batchItems, mapper, reducer));
+      batches.add(new MapReduceBatch<A, B, C>(batchItems, mapper, reducer));
     }
     
     // Run the tasks in parallel, aggregating (reducing) their results as 
     // they become available.
-    B accumulator = reducer.getInitialValue();
+    C accumulator = reducer.getInitialValue();
     try {
-      List<Future<B>> results = executor.invokeAll(batches);
-      for (Future<B> result : results) {
-        accumulator = reducer.reduce(result.get(), accumulator);
+      List<Future<C>> results = executor.invokeAll(batches);
+      for (Future<C> result : results) {
+        accumulator = reducer.combine(result.get(), accumulator);
       }
     } catch (InterruptedException e) {
       e.printStackTrace();
@@ -68,21 +68,21 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
    * @param <A>
    * @param <B>
    */
-  private static class MapReduceBatch<A, B> implements Callable<B> {
+  private static class MapReduceBatch<A, B, C> implements Callable<C> {
 
     private final ImmutableList<A> items;
     private final Mapper<A, B> mapper;
-    private final Reducer<B> reducer;
+    private final Reducer<B, C> reducer;
 
-    public MapReduceBatch(ImmutableList<A> items, Mapper<A, B> mapper, Reducer<B> reducer) {
+    public MapReduceBatch(ImmutableList<A> items, Mapper<A, B> mapper, Reducer<B, C> reducer) {
       this.items = items;
       this.mapper = mapper;
       this.reducer = reducer;
     }
 
     @Override
-    public B call() {
-      B accumulator = reducer.getInitialValue();
+    public C call() {
+      C accumulator = reducer.getInitialValue();
       for (A item : items) {
         B mappedItem = mapper.map(item);
         accumulator = reducer.reduce(mappedItem, accumulator);

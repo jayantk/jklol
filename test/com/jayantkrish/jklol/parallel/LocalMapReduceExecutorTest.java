@@ -5,6 +5,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.google.common.primitives.Doubles;
+import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
 
 public class LocalMapReduceExecutorTest extends TestCase {
 
@@ -36,15 +37,15 @@ public class LocalMapReduceExecutorTest extends TestCase {
       return (int) Math.round(item);
     }
   }
-
-  private static class SumReducer implements Reducer<Integer> {
+ 
+  private static class SumReducer extends SimpleReducer<Integer> {
     @Override
     public Integer getInitialValue() {
       return 0;
     }
 
     @Override
-    public Integer reduce(Integer item, Integer accumulated) {
+    public Integer reduce(Integer item, Integer accumulated) { 
       return item + accumulated;
     }
   }

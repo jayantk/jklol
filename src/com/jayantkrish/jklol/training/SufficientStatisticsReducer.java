@@ -1,7 +1,7 @@
 package com.jayantkrish.jklol.training;
 
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
-import com.jayantkrish.jklol.parallel.Reducer;
+import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
 
 /**
  * Second half of a map-reduce pipeline for computing the sufficient statistics
@@ -10,7 +10,7 @@ import com.jayantkrish.jklol.parallel.Reducer;
  * 
  * @author jayantk
  */
-public class SufficientStatisticsReducer implements Reducer<SufficientStatisticsBatch> {
+public class SufficientStatisticsReducer extends SimpleReducer<SufficientStatisticsBatch> {
 
   private final ParametricFactorGraph parametricFactorGraph;
 

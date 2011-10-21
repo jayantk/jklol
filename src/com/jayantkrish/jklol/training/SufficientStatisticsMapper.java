@@ -35,6 +35,7 @@ public class SufficientStatisticsMapper extends Mapper<Assignment, SufficientSta
   public SufficientStatisticsBatch map(Assignment item) {
     logFn.log(item, factorGraph);
     MarginalSet marginals = marginalCalculator.computeMarginals(factorGraph, item);
+
     return new SufficientStatisticsBatch(
         parametricFactorGraph.computeSufficientStatistics(marginals, 1.0),
         Math.log(marginals.getPartitionFunction()), 1);

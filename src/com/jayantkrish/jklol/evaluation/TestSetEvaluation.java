@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.evaluation;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 
 import com.google.common.collect.Lists;
 
@@ -43,14 +44,14 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
       }
     }
   }
-  
+
   /**
    * Same as {@link #evaluateLoss(Predictor, List)}, using varargs.
    * 
    * @param predictor
    * @param lossFunctions
    */
-  public void evaluateLoss(Predictor<I, O> predictor, LossFunction<I, O> ... lossFunctions) {
+  public void evaluateLoss(Predictor<I, O> predictor, LossFunction<I, O>... lossFunctions) {
     evaluateLoss(predictor, Arrays.asList(lossFunctions));
   }
 
@@ -109,6 +110,10 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
    * places 10% of the data in the test set and the remaining 90% in the
    * training set.
    * 
+   * The partitioning into training / validation / test data is pseudorandom,
+   * but deterministic. Multiple calls to this method with the same {@code data}
+   * argument will produce the same training / validation / test split.
+   * 
    * @param dataPoints
    * @param percentHeldOut
    * @return
@@ -118,8 +123,11 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
     List<Example<I, O>> trainingData = Lists.newArrayList();
     List<Example<I, O>> validationData = Lists.newArrayList();
     List<Example<I, O>> testData = Lists.newArrayList();
+    // Use a seeded random number generator to ensure that the partition is
+    // deterministic.
+    Random random = new Random(0);
     for (Example<I, O> datum : data) {
-      double draw = Math.random();
+      double draw = random.nextDouble();
       if (draw < testFraction) {
         testData.add(datum);
       } else if (draw < testFraction + validationFraction) {

@@ -39,6 +39,20 @@ public class TestSetEvaluationTest extends TestCase {
 		assertEquals(3.0 / 5.0, accuracy.getAccuracy());
 	}
 	
+	public void testCreateHoldOutEvaluationDeterministic() {
+	  List<Example<String, String>> data = arrayToList(training);
+	  data.addAll(arrayToList(test));
+	  
+	  TestSetEvaluation<String, String> firstEvaluation = 
+	      TestSetEvaluation.createHoldOutEvaluation(data, 0.2, 0.2);
+	  TestSetEvaluation<String, String> secondEvaluation = 
+	      TestSetEvaluation.createHoldOutEvaluation(data, 0.2, 0.2);
+
+	  assertEquals(firstEvaluation.getTrainingData(), secondEvaluation.getTrainingData());
+	  assertEquals(firstEvaluation.getValidationData(), secondEvaluation.getValidationData());
+	  assertEquals(firstEvaluation.getTestData(), secondEvaluation.getTestData());
+	}
+	
 	private List<Example<String, String>> arrayToList(String[][] data) {
 		List<Example<String, String>> pairs = Lists.newArrayList();
 		for (int i = 0; i < data.length; i++) {

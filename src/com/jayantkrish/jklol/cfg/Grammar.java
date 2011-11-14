@@ -7,11 +7,11 @@ import java.util.Set;
  * {@code Grammar} is the interface to {@link CfgParser} that determines which
  * rules can be instantiated in particular cells of a parse chart. In the most
  * simple case, all possible rules can be used in each cell (see
- * {@link BasicGrammar}).
- * 
- * However, it may be desirable to restrict the set of possible rules (to, say,
- * highly probable rules) in order to reduce the complexity of parsing. In these
- * cases, the parses returned by {@code CfgParser} may be approximate.
+ * {@link BasicGrammar}). However, it may be desirable to restrict the set of
+ * possible rules (to, say, highly probable rules) in order to reduce the
+ * complexity of parsing. The getter methods of {@code Grammar} provide
+ * additional arguments to allow this sort of heuristic pruning. If heuristic
+ * pruning is used, the parses returned by {@code CfgParser} may be approximate.
  * 
  * @author jayantk
  */
@@ -33,7 +33,7 @@ public interface Grammar {
 
   /**
    * Gets all terminal production rules which generate
-   * {@code terminals.sublist(spanStart, spanEnd + 1)}. {@code spanStart} and
+   * {@code terminals.subList(spanStart, spanEnd + 1)}. {@code spanStart} and
    * {@code spanEnd} are inclusive indices.
    * 
    * @param terminals

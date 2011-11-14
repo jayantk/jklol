@@ -82,6 +82,14 @@ public class BasicGrammar implements Grammar {
   }
 
   /**
+   * Removes a terminal rule from the grammar.
+   */
+  public void removeTerminal(TerminalProduction term) {
+    terminalProductions.remove(term.getParent(), term);
+    terminalParents.remove(term.getTerminals(), term);
+  }
+
+  /**
    * Add a (nonterminal) binary production rule to the grammar.
    */
   public void addProductionRule(BinaryProduction rule) {

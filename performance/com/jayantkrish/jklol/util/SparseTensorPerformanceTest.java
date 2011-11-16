@@ -84,6 +84,16 @@ public class SparseTensorPerformanceTest extends TestCase {
     long elapsed = System.currentTimeMillis() - start;
     System.out.println("Elapsed: " + elapsed + " ms");
   }
+  
+  public void testRelabelDimsNoChange() {
+    System.out.println("testRelabelDimsNoChange");
+    long start = System.currentTimeMillis();
+
+    table012.relabelDimensions(new int[] {1, 2, 3});
+
+    long elapsed = System.currentTimeMillis() - start;
+    System.out.println("Elapsed: " + elapsed + " ms");
+  }
 
   public void testIteration() {
     System.out.println("testIteration");

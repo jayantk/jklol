@@ -12,6 +12,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
 /**
@@ -101,6 +102,9 @@ public class SparseTensor {
    * @return
    */
   public SparseTensor elementwiseProduct(SparseTensor other) {
+    Set<Integer> myDims = Sets.newHashSet(Ints.asList(dimensionNums));
+    Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.dimensionNums)));
+    
     // Permute the dimensions of this so that the dimension of other are
     // left-aligned,
     // multiply, then reverse the permutation.

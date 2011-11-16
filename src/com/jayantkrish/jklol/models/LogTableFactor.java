@@ -65,24 +65,23 @@ public class LogTableFactor extends DiscreteFactor {
     // This is conceptually possible, but extremely expensive.
     throw new UnsupportedOperationException("Not implemented");
   }
-  
+
   public SparseTensor getLogWeights() {
-    return logWeights; 
+    return logWeights;
   }
-  
-  ////////////////////////////////////////////////////////////////////
+
+  // //////////////////////////////////////////////////////////////////
   // DiscreteFactor overrides, for efficiency.
-  ////////////////////////////////////////////////////////////////////
-  
+  // //////////////////////////////////////////////////////////////////
+
   @Override
   public DiscreteFactor product(Factor other) {
     if (!(other instanceof LogTableFactor)) {
       return super.product(other);
     }
     Preconditions.checkArgument(getVars().containsAll(other.getVars()));
-    LogTableFactor logFactor = (LogTableFactor) other;
-    
-    return new LogTableFactor(getVars(), getWeights()
+
+    return new TableFactor(getVars(), getWeights()
         .elementwiseProduct(other.coerceToDiscrete().getWeights()));
   }
 

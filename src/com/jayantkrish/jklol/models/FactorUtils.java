@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Utility methods for manipulating collections of {@link Factor}s.
@@ -39,13 +40,27 @@ public final class FactorUtils {
   public static Factor product(List<Factor> factors) {
     Preconditions.checkNotNull(factors);
     Preconditions.checkArgument(!factors.isEmpty());
-    return factors.get(0).product(factors.subList(1, factors.size()));
+    // The specification of .product requires that the variables in the input factors are
+    // a subset of the variables in the outer factor. Hence, we must identify the factor
+    // containing the most variables.
+    Factor biggestFactor = multiplicativeIdentity();
+    int biggestFactorIndex = -1;
+    for (int i = 0; i < factors.size(); i++) {
+      Factor factor = factors.get(i);
+      if (factor.getVars().size() >= biggestFactor.getVars().size()) {
+        biggestFactor = factor;
+        biggestFactorIndex = i;
+      }
+    }
+    List<Factor> otherFactors = Lists.newArrayList(factors.subList(0, biggestFactorIndex));
+    otherFactors.addAll(factors.subList(biggestFactorIndex + 1, factors.size()));
+    
+    return biggestFactor.product(otherFactors);
   }
-  
+
   /**
-   * Adds together {@code factors} and returns the result. This is a
-   * convenience wrapper around {@link Factor#add(Factor)}. {@code factors}
-   * cannot be empty.
+   * Adds together {@code factors} and returns the result. This is a convenience
+   * wrapper around {@link Factor#add(Factor)}. {@code factors} cannot be empty.
    * 
    * @param factors
    * @return
@@ -54,5 +69,19 @@ public final class FactorUtils {
     Preconditions.checkNotNull(factors);
     Preconditions.checkArgument(!factors.isEmpty());
     return factors.get(0).add(factors.subList(1, factors.size()));
+  }
+
+  /**
+   * Returns a factor {@code x} which behaves like the multiplicative identity.
+   * That is, {@code x.product(factor) == factor}.
+   * 
+   * The returned factor is defined over an empty set of variables.
+   * 
+   * @return
+   */
+  public static Factor multiplicativeIdentity() {
+    TableFactorBuilder tfBuilder = new TableFactorBuilder(VariableNumMap.emptyMap());
+    tfBuilder.setWeight(Assignment.EMPTY, 1.0);
+    return tfBuilder.build();
   }
 }

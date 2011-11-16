@@ -11,8 +11,10 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -159,6 +161,15 @@ public class FactorGraph {
   }
 
   /**
+   * Gets the names of all variables in {@code this}.
+   * 
+   * @return
+   */
+  public Set<String> getVariableNames() {
+    return Sets.newHashSet(variableNames.keySet());
+  }
+
+  /**
    * Get the variables that this factor graph is defined over.
    * 
    * @return
@@ -291,7 +302,7 @@ public class FactorGraph {
   public String toString() {
     return "FactorGraph: (" + factors.size() + " factors) " + factors.toString();
   }
-  
+
   // /////////////////////////////////////////////////////////////////
   // Methods for incrementally building FactorGraphs
   // /////////////////////////////////////////////////////////////////
@@ -299,14 +310,21 @@ public class FactorGraph {
   /**
    * Gets a new {@code FactorGraph} identical to this one, except with an
    * additional variable. The new variable is named {@code variableName} and has
-   * type {@code variable}.
+   * type {@code variable}. Each variable in a factor graph must have a unique
+   * name; hence {@code this} must not already contain a variable named
+   * {@code variableName}.
    */
   public FactorGraph addVariable(String variableName, Variable variable) {
+    Preconditions.checkArgument(!this.variableNames.containsKey(variableName));
+    int varNum = variables.size();
+    return addVariableWithIndex(variableName, variable, varNum);
+  }
+  
+  private FactorGraph addVariableWithIndex(String variableName, Variable variable, int varNum) {
     FactorGraph factorGraph = new FactorGraph(this);
-    int varNum = factorGraph.variables.size();
     factorGraph.variableNames.put(variableName, varNum);
     factorGraph.variables = factorGraph.variables.addMapping(varNum, variable);
-    return factorGraph;
+    return factorGraph;    
   }
 
   /**
@@ -327,6 +345,66 @@ public class FactorGraph {
       factorGraph.factorVariableMap.put(factorNum, i);
     }
     return factorGraph;
+  }
+
+  /**
+   * Gets a new {@code FactorGraph} identical to this one, except with every
+   * variable in {@code varNumsToEliminate} marginalized out. The returned
+   * {@code FactorGraph} is defined on the variables in {@code this}, minus any
+   * of the passed-in variables.
+   * 
+   * This procedure performs variable elimination on each variable in the order
+   * returned by the iterator over {@code varNumsToEliminate}. Choosing a good
+   * order (i.e., one with low tree-width) can dramatically improve the
+   * performance of this method.
+   * 
+   * This method is preferred if you wish to actively manipulate the returned
+   * factor graph. If you simply want marginals, see {@link MarginalCalculator}.
+   * 
+   * @param factor
+   * @return
+   */
+  public FactorGraph marginalize(Collection<Integer> varNumsToEliminate) {
+    FactorGraph currentFactorGraph = this;
+    for (Integer eliminatedVariableIndex : varNumsToEliminate) {
+      // Each iteration marginalizes out a single variable from
+      // currentFactorGraph,
+      // aggregating intermediate results in nextFactorGraph.
+      FactorGraph nextFactorGraph = new FactorGraph();
+
+      // Copy the variables in currentFactorGraph to nextFactorGraph
+      for (String variableName : currentFactorGraph.getVariableNames()) {
+        int varIndex = currentFactorGraph.getVariableIndex(variableName);
+        if (varIndex != eliminatedVariableIndex) {
+          nextFactorGraph = nextFactorGraph.addVariableWithIndex(variableName,
+              currentFactorGraph.getVariableFromIndex(varIndex), varIndex);
+        }
+      }
+
+      // Identify the factors which contain the variable, which must be
+      // multiplied together. All other factors can be immediately copied into
+      // the next factor graph.
+      List<Factor> factorsToMultiply = Lists.newArrayList();
+      for (Factor factor : currentFactorGraph.getFactors()) {
+        if (factor.getVars().contains(eliminatedVariableIndex)) {
+          factorsToMultiply.add(factor);
+        } else {
+          // No variable in factor is being eliminated, so we don't have to
+          // modify it.
+          nextFactorGraph = nextFactorGraph.addFactor(factor);
+        }
+      }
+      
+      if (factorsToMultiply.size() > 0) {
+        // If the variable is present, eliminate it!
+        Factor productFactor = FactorUtils.product(factorsToMultiply);
+        nextFactorGraph = nextFactorGraph.addFactor(
+            productFactor.marginalize(eliminatedVariableIndex));
+      }
+      
+      currentFactorGraph = nextFactorGraph;
+    }
+    return currentFactorGraph;
   }
 
   /**

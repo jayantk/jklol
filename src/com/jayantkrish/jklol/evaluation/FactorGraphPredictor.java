@@ -1,7 +1,9 @@
 package com.jayantkrish.jklol.evaluation;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
@@ -30,26 +32,45 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
   private final FactorGraph factorGraph;
   private final VariableNumMap outputVariables;
   private final MarginalCalculator marginalCalculator;
-  
-  // The unconditional partition function of {@code factorGraph}
-  private double partitionFunction;
+
+  // A cache for the partition function of the {@code factorGraph}.
+  private final Map<Assignment, Double> partitionFunctionCache;
+  // The number of entries to store in the cache. Storing entries is fairly
+  // cheap relative to computing partition functions, hence it makes sense to
+  // use a fairly large value.
+  private static final int LRU_CACHE_SIZE = 1000;
 
   /**
-   * Creates a {@code FactorGraphPredictor} which makes predictions about 
+   * Creates a {@code FactorGraphPredictor} which makes predictions about
    * assignments to {@code factorGraph} using {@code marginalCalculator} to
    * perform any necessary inference operations. The predicted assignments are
-   * over {@code outputVariables}. 
+   * over {@code outputVariables}.
    * 
    * @param factorGraph
    * @param marginalCalculator
    */
+  @SuppressWarnings("serial")
   public FactorGraphPredictor(FactorGraph factorGraph, VariableNumMap outputVariables,
       MarginalCalculator marginalCalculator) {
     this.factorGraph = factorGraph;
     this.outputVariables = outputVariables;
     this.marginalCalculator = marginalCalculator;
     
-    partitionFunction = -1.0;
+    partitionFunctionCache = Collections.synchronizedMap(
+        new LinkedHashMap<Assignment, Double>(LRU_CACHE_SIZE, 0.75f, true) {
+          protected boolean removeEldestEntry(Map.Entry<Assignment, Double> entry ) {
+            return size() > LRU_CACHE_SIZE;
+          }
+        });
+  }
+
+  /**
+   * Gets the {@code FactorGraph} used by {@code this} to make predictions.
+   * 
+   * @return
+   */
+  public FactorGraph getFactorGraph() {
+    return factorGraph;
   }
 
   @Override
@@ -95,17 +116,14 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
     }
 
     double inputPartitionFunction = 0.0;
-    if (input.size() == 0) {
-      if (partitionFunction < 0) {
-        MarginalSet inputMarginals = marginalCalculator.computeMarginals(factorGraph, input);
-        partitionFunction = inputMarginals.getPartitionFunction();
-      }
-      inputPartitionFunction = partitionFunction;        
+    if (partitionFunctionCache.containsKey(input)) {
+      inputPartitionFunction = partitionFunctionCache.get(input);
     } else {
       MarginalSet inputMarginals = marginalCalculator.computeMarginals(factorGraph, input);
       inputPartitionFunction = inputMarginals.getPartitionFunction();
+      partitionFunctionCache.put(input, inputPartitionFunction);
     }
-    
+
     MarginalSet inputOutputMarginals = marginalCalculator.computeMarginals(
         factorGraph, input.jointAssignment(output));
     return inputOutputMarginals.getPartitionFunction() / inputPartitionFunction;

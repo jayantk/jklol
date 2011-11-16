@@ -15,19 +15,7 @@ public interface MarginalCalculator {
 	public MarginalSet computeMarginals(FactorGraph factorGraph);
 
 	/**
-	 * Compute marginals conditioned on the provided variable assignments. Passing an empty
-	 * assignment results in unconditional marginals.
-	 */
-	public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment);
-
-	/**
 	 * Compute unconditional max marginals.
 	 */
 	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph);
-
-	/**
-	 * Compute max marginals conditioned on the provided assignment.
-	 */
-	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment);
-
 }

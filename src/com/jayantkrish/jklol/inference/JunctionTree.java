@@ -28,18 +28,17 @@ import com.jayantkrish.jklol.util.Assignment;
  * distributions. Currently assumes that the provided factor graph already has a
  * tree structure, and will explode if this is not true.
  */
-public class JunctionTree extends AbstractMarginalCalculator {
+public class JunctionTree implements MarginalCalculator {
 
-  @Override
-  public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {
-    CliqueTree cliqueTree = new CliqueTree(factorGraph, assignment);
+  public MarginalSet computeMarginals(FactorGraph factorGraph) {
+    CliqueTree cliqueTree = new CliqueTree(factorGraph);
     int rootFactorNum = runMessagePassing(cliqueTree, true);
     return cliqueTreeToMarginalSet(cliqueTree, rootFactorNum);
   }
 
   @Override
-  public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment) {
-    CliqueTree cliqueTree = new CliqueTree(factorGraph, assignment);
+  public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph) {
+    CliqueTree cliqueTree = new CliqueTree(factorGraph);
     int rootFactorNum = runMessagePassing(cliqueTree, false);
     return cliqueTreeToMaxMarginalSet(cliqueTree, rootFactorNum);
   }

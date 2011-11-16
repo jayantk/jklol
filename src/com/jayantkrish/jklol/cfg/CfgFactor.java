@@ -189,7 +189,8 @@ public class CfgFactor extends AbstractFactor {
       factorsToMultiply.add(newChildFactor);
     }
 
-    return this.product(factorsToMultiply);
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVarNumsSorted());
+    return this.product(factorsToMultiply).marginalize(varsToEliminate.getVariableNums());
   }
 
   @Override

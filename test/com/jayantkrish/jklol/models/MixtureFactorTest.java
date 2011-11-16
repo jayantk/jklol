@@ -226,11 +226,9 @@ public class MixtureFactorTest extends TestCase {
 				Arrays.asList(new Integer[] {1, 3}), Arrays.asList(new String[] {"T", "F"})));
 
 		assertEquals(4.0 + 2.0 * 5.0 + 3.0 * 2.0, 
-				conditional.getUnnormalizedProbability("T", "T", "T", "F", "T"));
+				conditional.getUnnormalizedProbability("T", "T", "T"));
 		assertEquals(2.0 * 2.0 + 3.0 * 6.0, 
-				conditional.getUnnormalizedProbability("F", "F", "F", "F", "F"));
-		assertEquals(4.0 + 3.0 * 2.0, 
-				conditional.getUnnormalizedProbability("T", "T", "T", "T", "T"));
+				conditional.getUnnormalizedProbability("F", "F", "F"));
 	}
 	
 	public void testConditional2() {
@@ -238,11 +236,7 @@ public class MixtureFactorTest extends TestCase {
 				Arrays.asList(new Integer[] {0, 1}), Arrays.asList(new String[] {"T", "T"})));
 
 		assertEquals(4.0 + 2.0 * 5.0 + 3.0 * 2.0, 
-				conditional.getUnnormalizedProbability("T", "T", "T", "F", "T"));
-		assertEquals(0.0, 
-				conditional.getUnnormalizedProbability("F", "F", "F", "F", "F"));
-		assertEquals(4.0 * 2.0 + 2.0 * 3.0, 
-				conditional.getUnnormalizedProbability("T", "F", "T", "T", "T"));
+				conditional.getUnnormalizedProbability("T", "F", "T"));
 	}
 	
 	public void testCoerceToDiscrete1() {

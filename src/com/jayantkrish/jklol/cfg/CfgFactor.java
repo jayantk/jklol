@@ -172,7 +172,7 @@ public class CfgFactor extends AbstractFactor {
 
   @Override
   public Factor conditional(Assignment a) {
-    // Get the conditional probabilty by multiplying the parent/child
+    // Get the conditional probability by multiplying the parent/child
     // variables by a point distribution.
     List<Factor> factorsToMultiply = Lists.newArrayList();
     if (a.containsVar(parentVarNum)) {

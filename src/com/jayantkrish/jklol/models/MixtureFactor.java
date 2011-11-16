@@ -244,7 +244,7 @@ public class MixtureFactor extends AbstractFactor {
 
   @Override
   public Factor conditional(Assignment a) {
-    List<Factor> conditionedFactors = Lists.newArrayList();
+    List<Factor> conditionedFactors = Lists.newArrayList(); 
     for (int i = 0; i < factors.size(); i++) {
       conditionedFactors.add(factors.get(i).conditional(a));
     }

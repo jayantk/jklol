@@ -90,17 +90,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor conditional(Assignment a) {
-    VariableNumMap factorVars = getVars().intersection(a.getVarNumsSorted());
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVarNumsSorted());
 
     // Efficiency improvement: only create a new factor if necessary.
-    if (factorVars.size() == 0) {
+    if (varsToEliminate.size() == 0) {
       return this;
     }
 
-    Assignment subAssignment = a.subAssignment(factorVars);
-    TableFactorBuilder tableFactorBuilder = new TableFactorBuilder(factorVars);
+    Assignment subAssignment = a.subAssignment(varsToEliminate);
+    TableFactorBuilder tableFactorBuilder = new TableFactorBuilder(varsToEliminate);
     tableFactorBuilder.setWeight(subAssignment, 1.0);
-    return this.product(tableFactorBuilder.build());
+    return this.product(tableFactorBuilder.build())
+        .marginalize(varsToEliminate.getVariableNums()); 
   }
 
   @Override

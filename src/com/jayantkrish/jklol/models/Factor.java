@@ -83,12 +83,10 @@ public interface Factor {
 
   /**
    * Gets a new factor which conditions on the variables in {@code assignment}.
-   * The returned factor is defined over the same variables as the original, but
-   * assigns zero probability to assignments which are not supersets of
-   * {@code assignment}. That is, the returned {@code Factor} returns the same
-   * probability as this factor for assignments which contain the same
-   * variable/value assignments as {@code assignment}, and 0 for all other
-   * assignments.
+   * The returned factor is defined over the difference between
+   * {@code this.getVars()} and {@code varNumsToEliminate}. The probability of
+   * assignment {@code a} in the returned factor is equal to the 
+   * {@code this.getUnnormalizedProbability(a.jointAssignment(assignment))}.
    */
   public Factor conditional(Assignment assignment);
 
@@ -102,7 +100,7 @@ public interface Factor {
 
   /**
    * Returns a factor with the specified variables marginalized out by
-   * summing/integrating. The returned {@code Factor} is defined over the the
+   * summing/integrating. The returned {@code Factor} is defined over the
    * difference between {@code this.getVars()} and {@code varNumsToEliminate}.
    * The probability that it returns for an assignment is the sum/integral over
    * all supersets of the assignment (that is, it sums/integrates over the

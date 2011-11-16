@@ -7,8 +7,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.util.Assignment;
 
 public class FactorGraphTest extends TestCase {
 
@@ -75,5 +74,30 @@ public class FactorGraphTest extends TestCase {
 	  assertEquals(1, factor.getVars().size());
 	  assertEquals(1.0, factor.getUnnormalizedProbability("foo"));
 	  assertEquals(0.0, factor.getUnnormalizedProbability("bar"));
+	}
+	
+	public void testConditional1() {
+	  Assignment a = f.outcomeToAssignment(Arrays.asList("Var0", "Var1"), 
+	      Arrays.asList("T", "foo"));
+	  FactorGraph c = f.conditional(a);
+	  assertEquals(2, c.getVariables().size());
+	  assertTrue(c.getVariableNames().contains("Var2")); 
+	  assertFalse(c.getVariableNames().contains("Var1"));
+	  
+	  Assignment a2 = f.outcomeToAssignment(Arrays.asList("Var2", "Var3"), Arrays.asList("T", "T")); 
+	  assertEquals(1.0, c.getUnnormalizedProbability(a2));
+	  a2 = f.outcomeToAssignment(Arrays.asList("Var2", "Var3"), Arrays.asList("F", "T")); 
+	  assertEquals(0.0, c.getUnnormalizedProbability(a2));
+	}
+	
+	public void testConditional2() {
+	  Assignment a = f.outcomeToAssignment(Arrays.asList("Var0", "Var1"), 
+	      Arrays.asList("T", "bar"));
+	  FactorGraph c = f.conditional(a);
+
+	  Assignment a2 = f.outcomeToAssignment(Arrays.asList("Var2", "Var3"), Arrays.asList("T", "T")); 
+	  assertEquals(0.0, c.getUnnormalizedProbability(a2));
+	  a2 = f.outcomeToAssignment(Arrays.asList("Var2", "Var3"), Arrays.asList("F", "T")); 
+	  assertEquals(0.0, c.getUnnormalizedProbability(a2));
 	}
 }

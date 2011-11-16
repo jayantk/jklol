@@ -319,12 +319,12 @@ public class FactorGraph {
     int varNum = variables.size();
     return addVariableWithIndex(variableName, variable, varNum);
   }
-  
+
   private FactorGraph addVariableWithIndex(String variableName, Variable variable, int varNum) {
     FactorGraph factorGraph = new FactorGraph(this);
     factorGraph.variableNames.put(variableName, varNum);
     factorGraph.variables = factorGraph.variables.addMapping(varNum, variable);
-    return factorGraph;    
+    return factorGraph;
   }
 
   /**
@@ -394,17 +394,49 @@ public class FactorGraph {
           nextFactorGraph = nextFactorGraph.addFactor(factor);
         }
       }
-      
+
       if (factorsToMultiply.size() > 0) {
         // If the variable is present, eliminate it!
         Factor productFactor = FactorUtils.product(factorsToMultiply);
         nextFactorGraph = nextFactorGraph.addFactor(
             productFactor.marginalize(eliminatedVariableIndex));
       }
-      
+
       currentFactorGraph = nextFactorGraph;
     }
     return currentFactorGraph;
+  }
+
+  /**
+   * Convert this factor graph into a conditional probability distribution given
+   * {@code assignment}. {@code assignment} may contain variables which this
+   * graph is not defined over; these extra variables are ignored by this
+   * method. The returned factor graph is defined over the variables in this
+   * minus any variables with values in {@code assignment}. The names and
+   * indices of these variables are preserved by this method.
+   * 
+   * @param assignment
+   * @return
+   */
+  public FactorGraph conditional(Assignment assignment) {
+    // TODO: Handle dynamic factor graphs (i.e., with templated factors).
+
+    FactorGraph newFactorGraph = new FactorGraph();
+    // Copy the uneliminated variables in currentFactorGraph to nextFactorGraph
+    for (String variableName : getVariableNames()) {
+      int varIndex = getVariableIndex(variableName);
+      if (!assignment.containsVar(varIndex)) {
+        newFactorGraph = newFactorGraph.addVariableWithIndex(variableName,
+            getVariableFromIndex(varIndex), varIndex);
+      }
+    }
+
+    // Condition each factor on the passed in assignment. 
+    for (Factor factor : getFactors()) {
+      newFactorGraph = newFactorGraph.addFactor(factor.conditional(assignment));
+    }
+    
+    return newFactorGraph;
   }
 
   /**

@@ -93,9 +93,9 @@ public class InferenceTestCases {
     testCase.addTest(1.0, new Integer[] { 3, 4 }, "F", "U");
     testCase.addTest(0.0, new Integer[] { 3, 4 }, "T", "F");
 
-    testCase.addTest(0.0, new Integer[] { 0, 2, 3 }, "T", "T", "T");
-    testCase.addTest(6.0 / 18.0, new Integer[] { 0, 2, 3 }, "T", "F", "F");
-    testCase.addTest(12.0 / 18.0, new Integer[] { 0, 2, 3 }, "U", "F", "F");
+    testCase.addTest(0.0, new Integer[] { 0, 3 }, "T", "T");
+    testCase.addTest(6.0 / 18.0, new Integer[] { 0, 3 }, "T", "F");
+    testCase.addTest(12.0 / 18.0, new Integer[] { 0, 3 }, "U", "F");
 
     return testCase;
   }

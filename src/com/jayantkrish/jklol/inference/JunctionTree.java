@@ -14,6 +14,7 @@ import java.util.SortedMap;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -32,15 +33,15 @@ public class JunctionTree implements MarginalCalculator {
 
   public MarginalSet computeMarginals(FactorGraph factorGraph) {
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
-    int rootFactorNum = runMessagePassing(cliqueTree, true);
-    return cliqueTreeToMarginalSet(cliqueTree, rootFactorNum);
+    Set<Integer> rootFactorNums = runMessagePassing(cliqueTree, true);
+    return cliqueTreeToMarginalSet(cliqueTree, rootFactorNums);
   }
 
   @Override
   public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph) {
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
-    int rootFactorNum = runMessagePassing(cliqueTree, false);
-    return cliqueTreeToMaxMarginalSet(cliqueTree, rootFactorNum);
+    runMessagePassing(cliqueTree, false);
+    return cliqueTreeToMaxMarginalSet(cliqueTree);
   }
 
   /**
@@ -48,10 +49,10 @@ public class JunctionTree implements MarginalCalculator {
    * {@code useSumProduct == true}, then uses sum-product. Otherwise uses
    * max-product.
    */
-  private int runMessagePassing(CliqueTree cliqueTree, boolean useSumProduct) {
+  private Set<Integer> runMessagePassing(CliqueTree cliqueTree, boolean useSumProduct) {
     // This performs both passes of message passing.
     boolean keepGoing = true;
-    int lastFactorNum = 0;
+    Set<Integer> rootFactors = Sets.newHashSet();
     while (keepGoing) {
       keepGoing = false;
       for (int i = 0; i < cliqueTree.numFactors(); i++) {
@@ -68,15 +69,23 @@ public class JunctionTree implements MarginalCalculator {
           }
         }
 
-        // Find the last factor to send any outbound messages; this is the root
-        // node of the junction tree, which will be used to compute the
-        // partition function of the graphical model.
-        if (alreadyPassedMessages.size() == 0) {
-          lastFactorNum = factorNum;
+        // Find any root nodes of the junction tree (which is really a junction
+        // forest) by finding factors which have received all of their inbound
+        // messages before passing any outbound messages. These root nodes are
+        // used to compute the partition function of the graphical model.
+        int numInboundFactors = 0;
+        for (Factor inboundFactor : inboundMessages.values()) {
+          if (inboundFactor != null) {
+            numInboundFactors++;
+          }
+        }
+        if (alreadyPassedMessages.size() == 0 &&
+            numInboundFactors == cliqueTree.getNeighboringFactors(factorNum).size()) {
+          rootFactors.add(factorNum);
         }
       }
     }
-    return lastFactorNum;
+    return rootFactors;
   }
 
   /*
@@ -167,17 +176,31 @@ public class JunctionTree implements MarginalCalculator {
     return newMarginal;
   }
 
-  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree, int rootFactorNum) {
+  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree, Set<Integer> rootFactorNums) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
       marginalFactors.add(computeMarginal(cliqueTree, i, true));
     }
 
-    // Get the partition function from the last eliminated node.
-    // TODO(jayantk): More configurable options for choosing the root
-    // factor.
-    Factor rootFactor = computeMarginal(cliqueTree, rootFactorNum, true);
-    double partitionFunction = rootFactor.marginalize(rootFactor.getVars().getVariableNums()).getUnnormalizedProbability(Assignment.EMPTY);
+    // Get the partition function from the root nodes of the junction forest.
+    double partitionFunction = 1.0;
+    for (int rootFactorNum : rootFactorNums) {
+      Factor rootFactor = marginalFactors.get(rootFactorNum);
+      partitionFunction *= rootFactor.marginalize(rootFactor.getVars().getVariableNums())
+          .getUnnormalizedProbability(Assignment.EMPTY);
+    }
+
+    if (rootFactorNums.size() > 1) {
+      // The junction forest contains multiple disjoint components. In this
+      // case, we have to multiply each marginal by a constant to get the
+      // normalization to work out correctly.
+      for (int i = 0; i < marginalFactors.size(); i++) {
+        Factor factor = marginalFactors.get(i);
+        double factorPartitionFunction = factor.marginalize(factor.getVars().getVariableNums())
+          .getUnnormalizedProbability(Assignment.EMPTY);
+        marginalFactors.set(i, factor.product(partitionFunction / factorPartitionFunction));
+      }
+    }
 
     return new FactorMarginalSet(marginalFactors, partitionFunction);
   }
@@ -189,7 +212,7 @@ public class JunctionTree implements MarginalCalculator {
    * @param rootFactorNum
    * @return
    */
-  private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree, int rootFactorNum) {
+  private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
       marginalFactors.add(computeMarginal(cliqueTree, i, false));
@@ -218,40 +241,30 @@ public class JunctionTree implements MarginalCalculator {
     private HashMultimap<Integer, Integer> varCliqueFactorMap;
     private List<Integer> cliqueEliminationOrder;
 
-    public CliqueTree(FactorGraph factorGraph, Assignment conditionedOn) {
+    public CliqueTree(FactorGraph factorGraph) {
       cliqueFactors = new ArrayList<Factor>();
 
       factorEdges = HashMultimap.create();
       separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
       messages = new ArrayList<Map<Integer, Factor>>();
 
-      List<Factor> factorGraphFactors = new ArrayList<Factor>();
-      for (Factor factor : factorGraph.getFactors()) {
-        factorGraphFactors.add(factor.conditional(conditionedOn));
-      }
+      List<Factor> factorGraphFactors = new ArrayList<Factor>(factorGraph.getFactors());
 
-      // This code is going to change to make inference more efficient.
       Map<Factor, Integer> initialEliminationOrder = Maps.newHashMap();
-      // System.out.println("Initial elimination order: ");
       if (factorGraph.getInferenceHint() != null) {
         for (int i = 0; i < factorGraphFactors.size(); i++) {
           initialEliminationOrder.put(factorGraphFactors.get(i),
               factorGraph.getInferenceHint().getFactorEliminationOrder()[i]);
-          // System.out.println("  " +
-          // factorGraph.getInferenceHint().getFactorEliminationOrder()[i]
-          // + ": " + factorGraphFactors.get(i).getVars());
         }
       } else {
         for (int i = 0; i < factorGraphFactors.size(); i++) {
+          // TODO: Use a heuristic to select a good order.
           initialEliminationOrder.put(factorGraphFactors.get(i), i);
-          // System.out.println("  " + i + ": " +
-          // factorGraphFactors.get(i).getVars());
         }
       }
 
-      // Store factors which contain e)ach variable so that we can
+      // Store factors which contain each variable so that we can
       // eliminate factors that are subsets of others.
-
       Collections.sort(factorGraphFactors, new Comparator<Factor>() {
         public int compare(Factor f1, Factor f2) {
           return f2.getVars().getVariableNums().size() - f1.getVars().getVariableNums().size();
@@ -312,7 +325,8 @@ public class JunctionTree implements MarginalCalculator {
       for (int i = 0; i < cliqueFactors.size(); i++) {
         separatorSets.add(Maps.<Integer, SeparatorSet> newHashMap());
         for (Integer adjacentFactor : factorEdges.get(i)) {
-          separatorSets.get(i).put(adjacentFactor, new SeparatorSet(i, adjacentFactor, cliqueFactors.get(i).getVars().intersection(cliqueFactors.get(adjacentFactor).getVars())));
+          separatorSets.get(i).put(adjacentFactor, new SeparatorSet(i, adjacentFactor,
+              cliqueFactors.get(i).getVars().intersection(cliqueFactors.get(adjacentFactor).getVars())));
         }
       }
 
@@ -342,22 +356,8 @@ public class JunctionTree implements MarginalCalculator {
       return cliqueFactors.get(factorNum);
     }
 
-    public Set<Integer> getFactorIndicesWithVariable(int varNum) {
-      return varCliqueFactorMap.get(varNum);
-    }
-
     public List<Integer> getFactorEliminationOrder() {
       return cliqueEliminationOrder;
-    }
-
-    public Set<Integer> getIncomingFactors(int factorNum) {
-      Set<Integer> factorsWithMessages = new HashSet<Integer>();
-      for (int neighbor : getNeighboringFactors(factorNum)) {
-        if (messages.get(neighbor).containsKey(factorNum)) {
-          factorsWithMessages.add(neighbor);
-        }
-      }
-      return factorsWithMessages;
     }
 
     public Map<SeparatorSet, Factor> getInboundMessages(int factorNum) {
@@ -378,7 +378,7 @@ public class JunctionTree implements MarginalCalculator {
     }
 
     public Set<Integer> getOutboundFactors(int factorNum) {
-      return messages.get(factorNum).keySet();
+      return Sets.newHashSet(messages.get(factorNum).keySet());
     }
 
     public Factor getMessage(int startFactor, int endFactor) {

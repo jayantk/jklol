@@ -113,18 +113,19 @@ public class Assignment {
    * If varNums is a subset of the variables in this assignment, this method
    * returns the value assigned to each variable in varNums.
    * 
-   * varNums may not contain indices which are not represented in this
-   * assignment.
+   * varNums may contain indices which are not represented in this assignment.
+   * These indices are ignored; in this case, the returned assignment will
+   * contain fewer variable/value mappings than {@code varNums.size()}.
    */
   public Assignment subAssignment(Collection<Integer> varNums) {
-    List<Integer> varNumList = new ArrayList<Integer>(varNums);
+    List<Integer> varNumList = new ArrayList<Integer>();
     List<Object> retVal = new ArrayList<Object>();
-    for (Integer varNum : varNumList) {
+    for (Integer varNum : varNums) {
       if (varValueMap.containsKey(varNum)) {
+        varNumList.add(varNum);
         retVal.add(varValueMap.get(varNum));
       }
     }
-    Preconditions.checkArgument(retVal.size() == varNums.size());
     return new Assignment(varNumList, retVal);
   }
 

@@ -39,12 +39,12 @@ public class AssignmentTest extends TestCase {
 	}
 
 	public void testSubAssignment2() {
-		try {
-			a.subAssignment(Arrays.asList(new Integer[] {5, 1, 179839}));
-		} catch (IllegalArgumentException e) {
-			return;
-		}
-		fail("Expected AssertionError.");
+	  Assignment s = a.subAssignment(Arrays.asList(new Integer[] {5, 1, 179839}));
+	  assertEquals(Arrays.asList(new Integer[] {1, 5}),
+	      s.getVarNumsSorted());
+	  
+	  assertEquals(Arrays.asList(new Integer[] {2, 6}),
+				s.getVarValuesInKeyOrder());
 	}
 
 	public void testJointAssignment() {

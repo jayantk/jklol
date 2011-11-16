@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.inference;
 
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * An MarginalCalculator is an algorithm for computing marginal distributions

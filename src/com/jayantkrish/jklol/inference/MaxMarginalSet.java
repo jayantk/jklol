@@ -12,7 +12,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public interface MaxMarginalSet {
 
   /**
-   * Gets the number of maximal probability assignments contained in {@code
+   * Gets the number of maximum probability assignments contained in {@code
    * this}.
    * 
    * @return

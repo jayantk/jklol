@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * Does not work on FactorGraphs with 0 probability outcomes! 
  */
-public class GibbsSampler extends AbstractMarginalCalculator {
+public class GibbsSampler implements MarginalCalculator {
 
 	private int burnInSamples;
 	private int numDrawsInMarginal;
@@ -29,8 +29,7 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	}
 
 	@Override
-	public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {
-	  // TODO(jayantk): Handle conditioning on an assignment
+	public MarginalSet computeMarginals(FactorGraph factorGraph) {
 	  Assignment curAssignment = initializeAssignment(factorGraph);
 
 		// Burn in the sampler
@@ -53,7 +52,7 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	 * GibbsSampler cannot compute max marginals. Throws a runtime exception if called.
 	 */
 	@Override
-	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment) {
+	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph) {
 		throw new UnsupportedOperationException("Max marginals are not supported by Gibbs sampling");
 	}
 
@@ -61,7 +60,8 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	 * Set the assignment variable to an arbitrary initial value.
 	 */
 	private Assignment initializeAssignment(FactorGraph factorGraph) {
-		// Select the initial assignment.
+		// Select the initial assignment. 
+	  // TODO: Perform a search to find an outcome with nonzero probability.
 		List<Variable> variables = factorGraph.getVariables();
 		List<Integer> varNums = Lists.newArrayList();
 		List<Object> values = Lists.newArrayList();

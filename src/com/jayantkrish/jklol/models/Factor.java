@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -238,14 +237,6 @@ public interface Factor {
    * @return
    */
   public List<Assignment> getMostLikelyAssignments(int numAssignments);
-
-  /**
-   * Computes the unnormalized expected value of a feature function (defined
-   * over the same set of variables as this factor). The unnormalized
-   * expectation is the integral of the value of {@code feature} multiplied by
-   * the unnormalized probability.
-   */
-  public double computeExpectation(FeatureFunction feature);
 
   // Coercion methods
 

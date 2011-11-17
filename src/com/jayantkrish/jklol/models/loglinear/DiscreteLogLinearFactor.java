@@ -76,13 +76,14 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
-      Factor marginal, double count, double partitionFunction) {
+      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     FeatureSufficientStatistics featureStats = statistics.coerceToFeature();
     double[] weights = featureStats.getWeights();
     Preconditions.checkArgument(weights.length == myFeatures.size());
    
     for (int i = 0; i < myFeatures.size(); i++) {
-      weights[i] += count * marginal.computeExpectation(myFeatures.get(i)) / partitionFunction;
+      weights[i] += myFeatures.get(i).computeExpectation(marginal, conditionalAssignment) * 
+          count / partitionFunction;
     }
   }
 

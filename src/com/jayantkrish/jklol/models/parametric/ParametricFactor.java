@@ -73,9 +73,13 @@ public interface ParametricFactor<T> {
   /**
    * Computes sufficient statistics for {@code this} factor from the marginal
    * distribution {@code marginal} and accumulates them in {@code statistics}.
-   * The computed sufficient statistics summarize the probabilities of the
-   * events of interest in {@code marginal}. {@code marginal} is a distribution
-   * over the same variables as {@code this.getVars()}.
+   * {@code marginal} is a conditional distribution given
+   * {@code conditionalAssignment}. The computed sufficient statistics summarize
+   * the probabilities of the events of interest in {@code marginal}.
+   * 
+   * This method requires {@code marginal} to be a distribution over a subset of
+   * {@code this.getVars()}. {@code marginal} and {@code conditionalAssignment}
+   * must be define a disjoint partition of {@code this.getVars()}.
    * 
    * @param marginal
    * @param count
@@ -83,5 +87,5 @@ public interface ParametricFactor<T> {
    * @return
    */
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, double count, double partitionFunction);
+      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction);
 }

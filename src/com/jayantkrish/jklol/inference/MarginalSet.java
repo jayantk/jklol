@@ -1,24 +1,39 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.Collection;
-import java.util.Set;
 
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A set of (possibly approximate) marginal distributions over a set of
- * variables.
+ * A set of (possibly approximate) conditional marginal distributions over a set
+ * of variables. The distribution is conditioned the assignment
+ * given by {@link #getConditionedValues()}.
+ * 
+ * {@code MarginalSet} is immutable.
  * 
  * @author jayant
  */
 public interface MarginalSet {
   
   /**
-   * Gets the variables which this marginal distribution is defined over.
-   *
+   * Gets the assignments to the variables which this set of marginals
+   * conditions on.
+   * 
    * @return
    */
-  public Set<Integer> getVarNums();
+  public Assignment getConditionedValues();
+
+  /**
+   * Gets a new {@code MarginalSet} identical to this one that conditions on
+   * additional variables. The returned {@code MarginalSet} conditions on
+   * the assignment {@code values}.
+   * 
+   * @param vars
+   * @param values
+   * @return
+   */
+  public MarginalSet addConditionalVariables(Assignment values);
 
   /**
    * Gets the unnormalized marginal distribution associated with the given

@@ -90,7 +90,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     TableFactor factor = f.getFactorFromParameters(parameters);
     double partitionFunction = 2 * (1.0 + Math.E);
     FeatureSufficientStatistics s = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromMarginal(s, factor, 1.0, partitionFunction);
+    f.incrementSufficientStatisticsFromMarginal(s, factor, Assignment.EMPTY, 1.0, partitionFunction);
     
     List<FeatureFunction> features = s.getFeatures();
     double[] weights = s.getWeights();

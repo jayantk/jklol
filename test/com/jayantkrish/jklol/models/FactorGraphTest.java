@@ -100,4 +100,14 @@ public class FactorGraphTest extends TestCase {
 	  a2 = f.outcomeToAssignment(Arrays.asList("Var2", "Var3"), Arrays.asList("F", "T")); 
 	  assertEquals(0.0, c.getUnnormalizedProbability(a2));
 	}
+	
+	public void testConditional3() {
+	  Assignment a = f.outcomeToAssignment(
+	      Arrays.asList("Var0", "Var1", "Var2", "Var3"),
+	      Arrays.asList("T", "foo", "T", "T"));
+	  FactorGraph c = f.conditional(a);
+
+	  assertEquals(0, c.getVariableNumMap().size());
+	  assertEquals(1.0, c.getUnnormalizedProbability(Assignment.EMPTY));
+	}
 }

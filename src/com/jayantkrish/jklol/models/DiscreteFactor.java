@@ -14,7 +14,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
@@ -221,18 +220,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
     Collections.reverse(mostLikely);
     return mostLikely;
-  }
-
-  @Override
-  public double computeExpectation(FeatureFunction f) {
-    double expectedValue = 0.0;
-
-    Iterator<Assignment> outcomeIterator = outcomeIterator();
-    while (outcomeIterator.hasNext()) {
-      Assignment assignment = outcomeIterator.next();
-      expectedValue += getUnnormalizedProbability(assignment) * f.getValue(assignment);
-    }
-    return expectedValue;
   }
 
   @Override

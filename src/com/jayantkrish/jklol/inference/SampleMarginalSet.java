@@ -18,14 +18,22 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  * 
  */
-public class SampleMarginalSet implements MarginalSet {
+public class SampleMarginalSet extends AbstractMarginalSet {
 
 	private final VariableNumMap factorGraphVariables;
 	private final ImmutableList<Assignment> samples;
 
-	public SampleMarginalSet(VariableNumMap factorGraphVariables, List<Assignment> samples) {
+	public SampleMarginalSet(VariableNumMap factorGraphVariables, List<Assignment> samples,
+	    Assignment conditionedValues) {
+	  super(conditionedValues);
 		this.factorGraphVariables = factorGraphVariables;
 		this.samples = ImmutableList.copyOf(samples);
+	}
+	
+	@Override
+	public MarginalSet addConditionalVariables(Assignment values) {
+	  Assignment newValues = getConditionedValues().jointAssignment(values);
+	  return new SampleMarginalSet(factorGraphVariables, samples, newValues);
 	}
 
 	@Override

@@ -85,7 +85,7 @@ public class CptFactorTest extends TestCase {
   public void testGetSufficientStatisticsFromMarginal() {
     Cpt newStats = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromMarginal(newStats, 
-        f.getFactorFromParameters(parameters), 6.0, 3.0);
+        f.getFactorFromParameters(parameters), Assignment.EMPTY, 6.0, 3.0);
 
     assertEquals(cptParents, newStats.getParents());
     assertEquals(cptChildren, newStats.getChildren());

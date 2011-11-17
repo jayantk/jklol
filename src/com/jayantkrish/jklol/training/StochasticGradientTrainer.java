@@ -57,7 +57,9 @@ public class StochasticGradientTrainer {
 
     // Compute the first term of the gradient, the model expectations
     // conditioned on the training example.
-    MarginalSet conditionalMarginals = marginalCalculator.computeMarginals(factorGraph, trainingExample);
+    FactorGraph conditionalFactorGraph = factorGraph.conditional(trainingExample);
+    MarginalSet conditionalMarginals = marginalCalculator.computeMarginals(
+        conditionalFactorGraph).addConditionalVariables(trainingExample);
     logLinearModel.incrementSufficientStatistics(gradient, conditionalMarginals, 1.0);
     
     return gradient;

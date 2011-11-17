@@ -14,7 +14,6 @@ import java.util.SortedMap;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -197,12 +196,12 @@ public class JunctionTree implements MarginalCalculator {
       for (int i = 0; i < marginalFactors.size(); i++) {
         Factor factor = marginalFactors.get(i);
         double factorPartitionFunction = factor.marginalize(factor.getVars().getVariableNums())
-          .getUnnormalizedProbability(Assignment.EMPTY);
+            .getUnnormalizedProbability(Assignment.EMPTY);
         marginalFactors.set(i, factor.product(partitionFunction / factorPartitionFunction));
       }
     }
 
-    return new FactorMarginalSet(marginalFactors, partitionFunction);
+    return new FactorMarginalSet(marginalFactors, partitionFunction, Assignment.EMPTY);
   }
 
   /**
@@ -217,7 +216,7 @@ public class JunctionTree implements MarginalCalculator {
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
       marginalFactors.add(computeMarginal(cliqueTree, i, false));
     }
-    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors));
+    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors), Assignment.EMPTY);
   }
 
   private class CliqueTree {
@@ -281,6 +280,9 @@ public class JunctionTree implements MarginalCalculator {
           mergeableFactors.retainAll(varFactorMap.get(varNum));
           varFactorMap.put(varNum, f);
         }
+        // We can only merge this factor with factors that have already been
+        // processed.
+        mergeableFactors.retainAll(factorCliqueMap.keySet());
 
         if (mergeableFactors.size() > 0) {
           // Choose the sparsest factor to merge this factor into.

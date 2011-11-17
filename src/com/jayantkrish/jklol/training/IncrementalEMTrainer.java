@@ -69,8 +69,13 @@ public class IncrementalEMTrainer {
         FactorGraph currentFactorGraph = bn.getFactorGraphFromParameters(initialParameters);
         log.log(i, j, trainingExample, currentFactorGraph);
 
-        // Update new sufficient statistics
-        MarginalSet marginals = inferenceEngine.computeMarginals(currentFactorGraph, trainingExample);
+        // Compute the marginal distribution of currentFactorGraph conditioned on
+        // the current training example.
+        FactorGraph conditionalFactorGraph = currentFactorGraph.conditional(trainingExample);
+        MarginalSet marginals = inferenceEngine.computeMarginals(conditionalFactorGraph)
+            .addConditionalVariables(trainingExample);
+            
+            // Update new sufficient statistics
         SufficientStatistics exampleStatistics = bn.getNewSufficientStatistics(); 
         bn.incrementSufficientStatistics(exampleStatistics, marginals, 1.0);
         previousIterationStatistics[j] = exampleStatistics;

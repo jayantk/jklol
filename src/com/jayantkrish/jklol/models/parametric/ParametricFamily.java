@@ -75,10 +75,10 @@ public interface ParametricFamily<T> {
       Assignment assignment, double count);
 
   /**
-   * Computes a vector of sufficient statistics for {@code this} based on a
-   * marginal distribution {@code marginals} over an factor graph in this family
-   * and accumulates them in {@code statistics}. {@code count} is the number of
-   * times {@code marginals} has been observed in the training data.
+   * Computes a vector of sufficient statistics for {@code this} and accumulates
+   * them in {@code statistics}. The statistics are computed from the
+   * (conditional) marginal distribution {@code marginals}. {@code count} is the
+   * number of times {@code marginals} has been observed in the training data.
    * 
    * @param statistics
    * @param marginals

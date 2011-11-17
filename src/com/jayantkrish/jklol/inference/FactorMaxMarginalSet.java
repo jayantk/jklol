@@ -16,12 +16,18 @@ import com.jayantkrish.jklol.util.Assignment;
 public class FactorMaxMarginalSet implements MaxMarginalSet {
   
   private final FactorGraph factorGraph;
+  private final Assignment conditionedValues;
 
-  public FactorMaxMarginalSet(FactorGraph factorGraph) {
-    Preconditions.checkNotNull(factorGraph);
-    this.factorGraph = factorGraph;
+  public FactorMaxMarginalSet(FactorGraph factorGraph, Assignment conditionedValues) {
+    this.factorGraph = Preconditions.checkNotNull(factorGraph);
+    this.conditionedValues = Preconditions.checkNotNull(conditionedValues);
   }
 
+  @Override
+  public MaxMarginalSet addConditionalVariables(Assignment values) {
+    return new FactorMaxMarginalSet(factorGraph, conditionedValues.jointAssignment(values));
+  }
+  
   @Override
   public int beamSize() {
     return 1;
@@ -31,7 +37,8 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
   public Assignment getNthBestAssignment(int n) {
     // At the moment, only the best assignment is supported.
     Preconditions.checkArgument(n == 0);
-    return getBestAssignmentGiven(factorGraph, 0, Sets.<Integer>newHashSet(), Assignment.EMPTY);
+    return getBestAssignmentGiven(factorGraph, 0, Sets.<Integer>newHashSet(), Assignment.EMPTY)
+        .jointAssignment(conditionedValues);
   }
   
   

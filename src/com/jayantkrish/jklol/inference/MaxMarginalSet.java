@@ -7,13 +7,26 @@ import com.jayantkrish.jklol.util.Assignment;
  * This class supports retrieving the top-{@code #beamSize()} maximal
  * probability assignments, in order of probability.
  * 
+ * {@code MaxMarginalSet} is immutable.
+ * 
  * @author jayant
  */
 public interface MaxMarginalSet {
 
   /**
-   * Gets the number of maximum probability assignments contained in {@code
-   * this}.
+   * Returns a {@code MaxMarginalSet} identical to this one where {@code values}
+   * is automatically unioned with each returned assignment. The variables in
+   * {@code values} must be disjoint with the variables in each assignment of
+   * {@code this}.
+   * 
+   * @param values
+   * @return
+   */
+  MaxMarginalSet addConditionalVariables(Assignment values);
+
+  /**
+   * Gets the number of maximum probability assignments contained in
+   * {@code this}.
    * 
    * @return
    */

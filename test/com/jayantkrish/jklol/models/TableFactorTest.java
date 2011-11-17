@@ -7,13 +7,6 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.IndicatorFeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -30,8 +23,6 @@ public class TableFactorTest extends TestCase {
 
 	private DiscreteVariable v;
 	private DiscreteVariable v2;
-
-	private FeatureFunction feature;
 
 	public void setUp() {
 		v = new DiscreteVariable("Three values",
@@ -64,7 +55,6 @@ public class TableFactorTest extends TestCase {
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T", "T"})));
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "F", "F", "F"})));
 		testAssignments.add(f.getVars().outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "F", "U"})));
-		feature = new IndicatorFeatureFunction(testAssignments);
 	}
 
 	public void testVariableOrder() {
@@ -243,11 +233,6 @@ public class TableFactorTest extends TestCase {
             s.getUnnormalizedProbability("F", "T"));
 		assertEquals(0.0 + 0.0,
             s.getUnnormalizedProbability("F", "F"));
-	}
-
-	public void testComputeExpectation() {
-		assertEquals(3.0,
-				f.computeExpectation(feature));
 	}
 
 	public void testMostLikelyAssignments() {

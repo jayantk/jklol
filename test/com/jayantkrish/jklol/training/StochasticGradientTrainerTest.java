@@ -74,6 +74,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
 		SufficientStatistics parameters = t.train(logLinearModel, logLinearModel.getNewSufficientStatistics(), trainingData);
+		System.out.println(parameters);
 
 		List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 		for (SufficientStatistics stats : parameterList) {

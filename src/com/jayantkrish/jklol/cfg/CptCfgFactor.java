@@ -48,7 +48,7 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, double count, double partitionFunction) {
+      Factor marginal, Assignment assignment, double count, double partitionFunction) {
     Preconditions.checkArgument(marginal instanceof CfgFactor);
     ParseChart chart = ((CfgFactor) marginal).getMarginalChart(true);
     

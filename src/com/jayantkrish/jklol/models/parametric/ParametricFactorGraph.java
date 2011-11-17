@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.util.Assignment;
@@ -76,14 +77,20 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
   }
 
   @Override
-  public void incrementSufficientStatistics(SufficientStatistics statistics, MarginalSet marginals, double count) {
+  public void incrementSufficientStatistics(SufficientStatistics statistics, 
+      MarginalSet marginals, double count) {
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
     
     for (int i = 0; i < statisticsList.size(); i++) {
-      Factor marginal = marginals.getMarginal(parametricFactors.get(i).getVars().getVariableNums());
+      VariableNumMap fixedVars = parametricFactors.get(i).getVars().intersection(marginals.getConditionedValues().getVarNumsSorted());
+      VariableNumMap marginalVars = parametricFactors.get(i).getVars().removeAll(marginals.getConditionedValues().getVarNumsSorted());
+      
+      Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
+      Assignment factorAssignment = marginals.getConditionedValues().subAssignment(fixedVars);
+      
       parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i), 
-          marginal, count, marginals.getPartitionFunction());
+          factorMarginal, factorAssignment, count, marginals.getPartitionFunction());
     }
   }
   

@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.*;
 
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -24,6 +25,7 @@ public class IndicatorFeatureFunction implements FeatureFunction {
 		this.assignments = new HashSet<Assignment>(assignments);
 	}
 
+	@Override
 	public double getValue(Assignment other) {
 		if (assignments.contains(other)) {
 			return 1.0;
@@ -31,14 +33,26 @@ public class IndicatorFeatureFunction implements FeatureFunction {
 		return 0.0;
 	}
 
+	@Override
 	public Iterator<Assignment> getNonzeroAssignments() {
 		return assignments.iterator();
 	}
 
+	@Override
 	public List<Integer> getVarNums() {
 		return assignments.iterator().next().getVarNumsSorted();
 	}
 
+	@Override
+	public double computeExpectation(Factor factor, Assignment assignment) {
+	  double expectedValue = 0.0;
+	  for (Assignment a : assignments) {
+	    expectedValue += getValue(a) * factor.getUnnormalizedProbability(a);
+	  }
+	  return expectedValue;
+	}
+
+	@Override
 	public String toString() {
 		return "Ind(" + assignments.toString() + ")";
 	}

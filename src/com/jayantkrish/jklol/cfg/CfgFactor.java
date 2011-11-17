@@ -22,7 +22,6 @@ import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -254,11 +253,6 @@ public class CfgFactor extends AbstractFactor {
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     throw new UnsupportedOperationException("Cannot get likely assignments of CfgFactors");
-  }
-
-  @Override
-  public double computeExpectation(FeatureFunction feature) {
-    throw new UnsupportedOperationException("Cannot compute expectations of CfgFactors");
   }
 
   // ////////////////////////////////////////

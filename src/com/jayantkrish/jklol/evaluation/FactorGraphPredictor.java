@@ -75,7 +75,8 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
 
   @Override
   public Assignment getBestPrediction(Assignment input) {
-    MaxMarginalSet maxMarginals = marginalCalculator.computeMaxMarginals(factorGraph, input);
+    FactorGraph conditionalFactorGraph = factorGraph.conditional(input);
+    MaxMarginalSet maxMarginals = marginalCalculator.computeMaxMarginals(conditionalFactorGraph);
     return maxMarginals.getNthBestAssignment(0).subAssignment(outputVariables);
   }
 
@@ -94,7 +95,8 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
       return Collections.emptyList();
     }
 
-    MarginalSet marginals = marginalCalculator.computeMarginals(factorGraph, input);
+    FactorGraph conditionalFactorGraph = factorGraph.conditional(input);
+    MarginalSet marginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
     Factor outputVarsMarginal = marginals.getMarginal(outputVariables.getVariableNums());
     return outputVarsMarginal.getMostLikelyAssignments(numBest);
   }
@@ -119,13 +121,14 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
     if (partitionFunctionCache.containsKey(input)) {
       inputPartitionFunction = partitionFunctionCache.get(input);
     } else {
-      MarginalSet inputMarginals = marginalCalculator.computeMarginals(factorGraph, input);
+      FactorGraph conditionalFactorGraph = factorGraph.conditional(input);
+      MarginalSet inputMarginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
       inputPartitionFunction = inputMarginals.getPartitionFunction();
       partitionFunctionCache.put(input, inputPartitionFunction);
     }
 
-    MarginalSet inputOutputMarginals = marginalCalculator.computeMarginals(
-        factorGraph, input.jointAssignment(output));
+    FactorGraph conditionalFactorGraph = factorGraph.conditional(input.jointAssignment(output));
+    MarginalSet inputOutputMarginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
     return inputOutputMarginals.getPartitionFunction() / inputPartitionFunction;
   }
 }

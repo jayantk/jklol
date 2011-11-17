@@ -11,7 +11,7 @@ public class MappingAssignmentIterator implements Iterator<Assignment> {
   /**
    * Creates an iterator which gets each element of {@code baseIterator}, and
    * returns the result of calling
-   * {@link Assignment#mappedAssignment(varNumMap)} on it.
+   * {@link Assignment#mapVariables(varNumMap)} on it.
    * 
    * @param baseIterator
    * @param varNumMap
@@ -29,7 +29,7 @@ public class MappingAssignmentIterator implements Iterator<Assignment> {
 
   @Override
   public Assignment next() {
-    return baseIterator.next().mappedAssignment(varNumMap);
+    return baseIterator.next().mapVariables(varNumMap);
   }
 
   @Override

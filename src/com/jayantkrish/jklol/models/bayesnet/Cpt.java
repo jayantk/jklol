@@ -102,7 +102,7 @@ public class Cpt implements SufficientStatistics {
    * Gets the probability of assignment {@code a}.
    */
   public double getProbability(Assignment a) {
-    Assignment subAssignment = a.subAssignment(parents.getVariableNums());
+    Assignment subAssignment = a.intersection(parents.getVariableNums());
     if (!parentStatistics.containsKey(subAssignment)) {
       throw new ArithmeticException("Cannot get conditional probability for unobserved parents: "
           + subAssignment);
@@ -118,7 +118,7 @@ public class Cpt implements SufficientStatistics {
     double oldCount = childStatistics.getWeight(a);
     childStatistics.setWeight(a, count + oldCount);
 
-    Assignment subAssignment = a.subAssignment(parents.getVariableNums());
+    Assignment subAssignment = a.intersection(parents.getVariableNums());
     parentStatistics.setWeight(subAssignment, parentStatistics.getWeight(subAssignment) + count);
   }
 
@@ -207,10 +207,10 @@ public class Cpt implements SufficientStatistics {
       parentValues.clear();
       childValues.clear();
       for (int i = 0; i < parents.size(); i++) {
-        parentValues.add(a.getVarValue(parents.getVariableNums().get(i)));
+        parentValues.add(a.getValue(parents.getVariableNums().get(i)));
       }
       for (int i = 0; i < children.size(); i++) {
-        childValues.add(a.getVarValue(children.getVariableNums().get(i)));
+        childValues.add(a.getValue(children.getVariableNums().get(i)));
       }
 
       sb.append(parentValues);

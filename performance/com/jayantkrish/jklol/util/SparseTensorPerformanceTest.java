@@ -189,7 +189,7 @@ public class SparseTensorPerformanceTest extends TestCase {
     long start = System.currentTimeMillis();
     Assignment a = new Assignment(Ints.asList(varNums), Arrays.asList(new Integer[] {0,0,0}));
     for (int i = 0; i < 10000; i++) {
-      a.subAssignment(Arrays.asList(new Integer[] {0, 2}));
+      a.intersection(Arrays.asList(new Integer[] {0, 2}));
     }
 
     long elapsed = System.currentTimeMillis() - start;

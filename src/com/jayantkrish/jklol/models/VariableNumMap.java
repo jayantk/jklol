@@ -69,6 +69,61 @@ public class VariableNumMap {
   }
 
   /**
+   * Get the numbers of the variables in this map, in ascending sorted order.
+   * 
+   * @return
+   */
+  public List<Integer> getVariableNums() {
+    return new ArrayList<Integer>(varMap.keySet());
+  }
+
+  /**
+   * Get the variable types in this map, ordered by variable index.
+   * 
+   * @return
+   */
+  public List<Variable> getVariables() {
+    return new ArrayList<Variable>(varMap.values());
+  }
+
+  /**
+   * Get the discrete variables in this map, ordered by variable index.
+   */
+  public List<DiscreteVariable> getDiscreteVariables() {
+    List<DiscreteVariable> discreteVars = new ArrayList<DiscreteVariable>();
+    for (Integer varNum : getVariableNums()) {
+      if (getVariable(varNum) instanceof DiscreteVariable) {
+        discreteVars.add((DiscreteVariable) getVariable(varNum));
+      }
+    }
+    return discreteVars;
+  }
+
+  /**
+   * Get the real variables in this map, ordered by variable index.
+   */
+  public List<RealVariable> getRealVariables() {
+    List<RealVariable> discreteVars = new ArrayList<RealVariable>();
+    for (Integer varNum : getVariableNums()) {
+      if (getVariable(varNum) instanceof RealVariable) {
+        discreteVars.add((RealVariable) getVariable(varNum));
+      }
+    }
+    return discreteVars;
+  }
+
+  /**
+   * Get the variable referenced by a particular variable number. Throws a
+   * KeyError if the variable number is not contained in this map.
+   * 
+   * @param variableNum
+   * @return
+   */
+  public Variable getVariable(int variableNum) {
+    return varMap.get(variableNum);
+  }
+
+  /**
    * Returns true if variableNum is mapped to a variable in this map.
    * 
    * @param variableNum
@@ -132,61 +187,6 @@ public class VariableNumMap {
    */
   public boolean containsAny(VariableNumMap other) {
     return containsAny(other.getVariableNums());
-  }
-
-  /**
-   * Get the numbers of the variables in this map, in ascending sorted order.
-   * 
-   * @return
-   */
-  public List<Integer> getVariableNums() {
-    return new ArrayList<Integer>(varMap.keySet());
-  }
-
-  /**
-   * Get the variable types in this map, ordered by variable index.
-   * 
-   * @return
-   */
-  public List<Variable> getVariables() {
-    return new ArrayList<Variable>(varMap.values());
-  }
-
-  /**
-   * Get the discrete variables in this map, ordered by variable index.
-   */
-  public List<DiscreteVariable> getDiscreteVariables() {
-    List<DiscreteVariable> discreteVars = new ArrayList<DiscreteVariable>();
-    for (Integer varNum : getVariableNums()) {
-      if (getVariable(varNum) instanceof DiscreteVariable) {
-        discreteVars.add((DiscreteVariable) getVariable(varNum));
-      }
-    }
-    return discreteVars;
-  }
-
-  /**
-   * Get the real variables in this map, ordered by variable index.
-   */
-  public List<RealVariable> getRealVariables() {
-    List<RealVariable> discreteVars = new ArrayList<RealVariable>();
-    for (Integer varNum : getVariableNums()) {
-      if (getVariable(varNum) instanceof RealVariable) {
-        discreteVars.add((RealVariable) getVariable(varNum));
-      }
-    }
-    return discreteVars;
-  }
-
-  /**
-   * Get the variable referenced by a particular variable number. Throws a
-   * KeyError if the variable number is not contained in this map.
-   * 
-   * @param variableNum
-   * @return
-   */
-  public Variable getVariable(int variableNum) {
-    return varMap.get(variableNum);
   }
 
   /*
@@ -296,12 +296,14 @@ public class VariableNumMap {
 
   /**
    * Returns a map with each variable number in {@code this} replaced with its
-   * value in {@code numMapping}.
+   * value in {@code numMapping}. {@code numMapping} must contain each variable
+   * number in this as a key.
    * 
    * @param numMapping
    * @return
    */
   public VariableNumMap mapVariables(Map<Integer, Integer> numMapping) {
+    Preconditions.checkArgument(numMapping.keySet().containsAll(varMap.keySet()));
     SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
     for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
       newVarMap.put(numMapping.get(entry.getKey()), entry.getValue());
@@ -321,7 +323,7 @@ public class VariableNumMap {
   public List<Object> assignmentToOutcome(Assignment assignment) {
     List<Object> returnValue = Lists.newArrayList();
     for (Integer varNum : varMap.keySet()) {
-      returnValue.add(assignment.getVarValue(varNum));
+      returnValue.add(assignment.getValue(varNum));
     }
     return returnValue;
   }
@@ -397,7 +399,7 @@ public class VariableNumMap {
     int index = 0;
     for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
       if (entry.getValue() instanceof DiscreteVariable) {
-        value[index] = ((DiscreteVariable) entry.getValue()).getValueIndex(assignment.getVarValue(entry.getKey()));
+        value[index] = ((DiscreteVariable) entry.getValue()).getValueIndex(assignment.getValue(entry.getKey()));
       }
       index++;
     }
@@ -434,9 +436,9 @@ public class VariableNumMap {
    * @return
    */
   public boolean isValidAssignment(Assignment assignment) {
-    Preconditions.checkArgument(containsAll(assignment.getVarNumsSorted()));
-    for (Integer varNum : assignment.getVarNumsSorted()) {
-      if (!varMap.get(varNum).canTakeValue(assignment.getVarValue(varNum))) {
+    Preconditions.checkArgument(containsAll(assignment.getVariableNums()));
+    for (Integer varNum : assignment.getVariableNums()) {
+      if (!varMap.get(varNum).canTakeValue(assignment.getValue(varNum))) {
         return false;
       }
     }

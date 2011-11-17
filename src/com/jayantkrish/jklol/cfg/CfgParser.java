@@ -1,6 +1,19 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * A CKY-style parser for probabilistic context free grammars in Chomsky normal
@@ -8,23 +21,52 @@ import java.util.*;
  */
 public class CfgParser {
 
-  private Grammar grammar;
-  private ProductionDistribution probs;
+  private final VariableNumMap parentVar;
+  private final VariableNumMap leftVar;
+  private final VariableNumMap rightVar;
+  private final VariableNumMap terminalVar;
+  
+  private final Map<Integer, Integer> leftToParent;
+  private final Map<Integer, Integer> rightToParent;
+  private final Map<Integer, Integer> parentToLeft;
+  private final Map<Integer, Integer> parentToRight;
+  
+  private final Factor binaryDistribution;
+  private final Factor terminalDistribution;
 
-  /**
-   * Create a CFG parser that parses using the specified grammar.
-   */
-  public CfgParser(Grammar grammar, ProductionDistribution probs) {
-    this.grammar = grammar;
-    this.probs = probs;
+  public CfgParser(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar, 
+      VariableNumMap terminalVar, Factor binaryDistribution, Factor terminalDistribution) {
+    Preconditions.checkArgument(parentVar.size() == 1 && leftVar.size() == 1 
+        && rightVar.size() == 1 && terminalVar.size() == 1);
+    this.parentVar = parentVar;
+    this.leftVar = leftVar;
+    this.rightVar = rightVar;
+    this.terminalVar = terminalVar;
+    this.binaryDistribution = binaryDistribution;
+    this.terminalDistribution = terminalDistribution;
+    
+    // Construct some variable->variable renamings which are useful during parsing. 
+    this.leftToParent = Maps.newHashMap();
+    leftToParent.put(Iterables.getOnlyElement(leftVar.getVariableNums()), 
+        Iterables.getOnlyElement(parentVar.getVariableNums()));
+    this.rightToParent = Maps.newHashMap();
+    rightToParent.put(Iterables.getOnlyElement(rightVar.getVariableNums()), 
+        Iterables.getOnlyElement(parentVar.getVariableNums()));
+    
+    this.parentToLeft = Maps.newHashMap();
+    parentToLeft.put(Iterables.getOnlyElement(parentVar.getVariableNums()), 
+        Iterables.getOnlyElement(leftVar.getVariableNums()));
+    this.parentToRight = Maps.newHashMap();
+    parentToRight.put(Iterables.getOnlyElement(parentVar.getVariableNums()), 
+        Iterables.getOnlyElement(rightVar.getVariableNums()));
   }
 
-  public Grammar getGrammar() {
-    return grammar;
+  public Factor getBinaryDistribution() {
+    return binaryDistribution;
   }
 
-  public ProductionDistribution getDistribution() {
-    return probs;
+  public Factor getTerminalDistribution() {
+    return terminalDistribution;
   }
 
   // //////////////////////////////////////////////////////////////////////
@@ -33,68 +75,52 @@ public class CfgParser {
   // //////////////////////////////////////////////////////////////////////
 
   /**
+   * Helper method for initializing parse charts with the correct variable arguments.
+   * 
+   * @param terminals
+   * @param useSumProduct
+   * @return
+   */
+  private ParseChart createParseChart(List<?> terminals, boolean useSumProduct) {
+    return new ParseChart(terminals, parentVar, leftVar, rightVar, terminalVar, useSumProduct);
+  }
+
+  /**
    * Compute the marginal distribution over all grammar entries conditioned on
    * the given sequence of terminals.
    */
-  public ParseChart parseMarginal(List<Production> terminals, Production root) {
-    ParseChart chart = new ParseChart(terminals.size(), true);
-    Map<List<Production>, Double> terminalMap = new HashMap<List<Production>, Double>();
-    terminalMap.put(terminals, 1.0);
-    Map<Production, Double> productionMap = new HashMap<Production, Double>();
-    productionMap.put(root, 1.0);
-    return marginal(chart, terminalMap, productionMap);
-
+  public ParseChart parseMarginal(List<?> terminals, Object root, boolean useSumProduct) {
+    ParseChart chart = createParseChart(terminals, useSumProduct);
+    Factor rootFactor = TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment(root));
+    return marginal(chart, terminals, rootFactor);
   }
 
   /**
    * Compute the distribution over CFG entries, the parse root, and the
-   * children, accounting for the provided distributions over the root and
-   * terminals.
-   * 
-   * Assumes all terminals in terminalDist have the same number of productions.
+   * children, conditioned on the provided terminals and assuming the provided
+   * distributions over the root node.
    */
-  public ParseChart parseMarginal(Map<List<Production>, Double> terminalDist,
-      Map<Production, Double> rootDist) {
-    List<Production> term = terminalDist.keySet().iterator().next();
-    return marginal(new ParseChart(term.size(), true), terminalDist, rootDist);
-  }
-
-  /**
-   * Compute the max-marginal distribution over grammar entries at the root of
-   * the parse tree. This method can be used to compute the most likely parse.
-   */
-  public ParseChart parseMaxMarginal(List<Production> terminals, Production root) {
-    ParseChart chart = new ParseChart(terminals.size(), false);
-    Map<List<Production>, Double> terminalMap = new HashMap<List<Production>, Double>();
-    terminalMap.put(terminals, 1.0);
-    Map<Production, Double> productionMap = new HashMap<Production, Double>();
-    productionMap.put(root, 1.0);
-    return marginal(chart, terminalMap, productionMap);
-  }
-
-  /**
-   * Compute the distribution over CFG entries, the parse root, and the
-   * children, accounting for the provided distributions over the root and
-   * terminals.
-   * 
-   * Assumes all terminals in terminalDist have the same number of productions.
-   */
-  public ParseChart parseMaxMarginal(Map<List<Production>, Double> terminalDist,
-      Map<Production, Double> rootDist) {
-    List<Production> term = terminalDist.keySet().iterator().next();
-    return marginal(new ParseChart(term.size(), false), terminalDist, rootDist);
+  public ParseChart parseMarginal(List<?> terminals, Factor rootDist, boolean useSumProduct) {
+    return marginal(createParseChart(terminals, useSumProduct), terminals, rootDist);
   }
 
   /**
    * Compute the most likely sequence of productions (of a given length)
    * conditioned on the root symbol.
    */
-  public ParseChart mostLikelyProductions(Production root, int length, int beamWidth) {
-    ParseChart chart = new ParseChart(length, false);
+  public ParseChart mostLikelyProductions(Object root, int length, int beamWidth) {
+    // Create a fake list of terminals for the chart.
+    List<?> terminals = Lists.newArrayList();
+    for (int i = 0; i < length; i++) {
+      terminals.add(null);
+    }
+    
+    ParseChart chart = createParseChart(terminals, false);
     chart.setBeamWidth(beamWidth);
     initializeChartAllTerminals(chart);
     upwardChartPass(chart);
-    chart.updateOutsideEntry(0, chart.chartSize() - 1, root, 1.0);
+    chart.updateOutsideEntry(0, chart.chartSize() - 1, 
+        TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment(root)));
     downwardChartPass(chart);
     return chart;
   }
@@ -109,32 +135,18 @@ public class CfgParser {
    * Calculate the inside probabilities (i.e., run the upward pass of variable
    * elimination).
    */
-  public ParseChart parseInsideMarginal(List<Production> terminals, boolean useSumProduct) {
-    Map<List<Production>, Double> termDist = new HashMap<List<Production>, Double>();
-    termDist.put(terminals, 1.0);
-    return parseInsideMarginal(termDist, useSumProduct);
-  }
-
-  /**
-   * Calculate the inside probabilities (i.e., run the upward pass of variable
-   * elimination).
-   */
-  public ParseChart parseInsideMarginal(Map<List<Production>, Double> terminalDist,
-      boolean useSumProduct) {
-    List<Production> term = terminalDist.keySet().iterator().next();
-    ParseChart chart = new ParseChart(term.size(), useSumProduct);
-    initializeChart(chart, terminalDist);
+  public ParseChart parseInsideMarginal(List<?> terminals, boolean useSumProduct) {
+    ParseChart chart = createParseChart(terminals, useSumProduct);
+    initializeChart(chart, terminals);
     upwardChartPass(chart);
     return chart;
   }
 
-  public ParseChart parseOutsideMarginal(ParseChart chart, Map<Production, Double> rootDist) {
+  public ParseChart parseOutsideMarginal(ParseChart chart, Factor rootDist) {
     assert chart.getInsideCalculated();
     assert !chart.getOutsideCalculated();
-    // Set the initial outside probabilities
-    for (Production root : rootDist.keySet()) {
-      chart.updateOutsideEntry(0, chart.chartSize() - 1, root, rootDist.get(root));
-    }
+    
+    chart.updateOutsideEntry(0, chart.chartSize() - 1, rootDist);    
     downwardChartPass(chart);
     return chart;
   }
@@ -144,24 +156,20 @@ public class CfgParser {
   // //////////////////////////////////////////////////////////////////////////////////
 
   public String toString() {
-    return probs.toString();
+    return binaryDistribution.toString() + "\n" + terminalDistribution.toString();
   }
 
   /*
    * Helper method for computing marginals / max-marginals with an arbitrary
    * distribution on terminals.
    */
-  private ParseChart marginal(ParseChart chart, Map<List<Production>, Double> terminalDist,
-      Map<Production, Double> rootDist) {
+  private ParseChart marginal(ParseChart chart, List<?> terminals,
+      Factor rootDist) {
 
-    initializeChart(chart, terminalDist);
+    initializeChart(chart, terminals);
     upwardChartPass(chart);
-
-    // Set the initial outside probability
-    for (Production root : rootDist.keySet()) {
-      chart.updateOutsideEntry(0, chart.chartSize() - 1, root, rootDist.get(root));
-    }
-
+    // Set the initial outside probabilities
+    chart.updateOutsideEntry(0, chart.chartSize() - 1, rootDist);
     downwardChartPass(chart);
     return chart;
   }
@@ -170,7 +178,7 @@ public class CfgParser {
    * This method calculates all of the inside probabilities by iteratively
    * parsing larger and larger spans of the sentence.
    */
-  private void upwardChartPass(ParseChart chart) {
+  private void upwardChartPass(ParseChart chart) { 
     // spanSize is the number of words *in addition* to the word under
     // spanStart.
     for (int spanSize = 1; spanSize < chart.chartSize(); spanSize++) {
@@ -186,23 +194,12 @@ public class CfgParser {
    * Calculate a single inside probability entry.
    */
   private void calculateInside(int spanStart, int spanEnd, ParseChart chart) {
-    for (int k = 0; k < spanEnd - spanStart; k++) {
+     for (int k = 0; k < spanEnd - spanStart; k++) {
+      Factor left = chart.getInsideEntries(spanStart, spanStart + k).relabelVariables(parentToLeft);
+      Factor right = chart.getInsideEntries(spanStart + k + 1, spanEnd).relabelVariables(parentToRight);
 
-      Map<Production, Double> left = chart.getInsideEntries(spanStart, spanStart + k);
-      Map<Production, Double> right = chart.getInsideEntries(spanStart + k + 1, spanEnd);
-
-      // for (Production leftP : left.keySet()) {
-      // for (Production rightP : right.keySet()) {
-      for (BinaryProduction rule : grammar.getBinaryProductionsForEntry(spanStart, spanEnd, k)) {
-        if (left.containsKey(rule.getLeft()) && right.containsKey(rule.getRight())) {
-          chart.updateInsideEntry(spanStart, spanEnd, k, rule, rule.getParent(), left.get(rule
-              .getLeft())
-              * right.get(rule.getRight()) * probs.getRuleProbability(rule), probs
-              .getRuleProbability(rule));
-        }
-      }
-      // }
-      // }
+      Factor binaryRuleDistribution = binaryDistribution.product(left).product(right);
+      chart.updateInsideEntry(spanStart, spanEnd, k, binaryRuleDistribution);
     }
   }
 
@@ -215,16 +212,11 @@ public class CfgParser {
     // Calculate root marginal, which is not included in the rest of the pass.
     // Also compute the partition function.
     double partitionFunction = 0.0;
-    Map<Production, Double> rootOutside = chart.getOutsideEntries(0, chart.chartSize() - 1);
-    Map<Production, Double> rootInside = chart.getInsideEntries(0, chart.chartSize() - 1);
-    for (Production p : rootOutside.keySet()) {
-      if (rootInside.containsKey(p)) {
-        chart.updateMarginalEntry(0, chart.chartSize() - 1, p, rootOutside.get(p)
-            * rootInside.get(p));
-        partitionFunction += rootOutside.get(p) * rootInside.get(p);
-      }
-    }
-    chart.setPartitionFunction(partitionFunction);
+    Factor rootOutside = chart.getOutsideEntries(0, chart.chartSize() - 1);
+    Factor rootInside = chart.getInsideEntries(0, chart.chartSize() - 1);
+    Factor rootMarginal = rootOutside.product(rootInside);
+    chart.updateMarginalEntry(0, chart.chartSize() - 1, rootMarginal);
+    chart.setPartitionFunction(rootMarginal.marginalize(parentVar).getUnnormalizedProbability(Assignment.EMPTY)); 
 
     for (int spanSize = chart.chartSize() - 1; spanSize >= 1; spanSize--) {
       for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
@@ -232,7 +224,6 @@ public class CfgParser {
         calculateOutside(spanStart, spanEnd, chart);
       }
     }
-
     updateTerminalRuleCounts(chart);
 
     // Outside probabilities / partition function are now calculated.
@@ -244,56 +235,49 @@ public class CfgParser {
    * marginal).
    */
   private void calculateOutside(int spanStart, int spanEnd, ParseChart chart) {
-    Map<Production, Double> parent = chart.getOutsideEntries(spanStart, spanEnd);
+    Factor parentOutside = chart.getOutsideEntries(spanStart, spanEnd);
     for (int k = 0; k < spanEnd - spanStart; k++) {
-      Map<Production, Double> left = chart.getInsideEntries(spanStart, spanStart + k);
-      Map<Production, Double> right = chart.getInsideEntries(spanStart + k + 1, spanEnd);
+      Factor leftInside = chart.getInsideEntries(spanStart, spanStart + k).relabelVariables(parentToLeft);
+      Factor rightInside = chart.getInsideEntries(spanStart + k + 1, spanEnd).relabelVariables(parentToRight);
 
-      // for (Production leftP : left.keySet()) {
-      // for (Production rightP : right.keySet()) {
-      for (BinaryProduction rule : grammar.getBinaryProductionsForEntry(spanStart, spanEnd, k)) {
-        if (left.containsKey(rule.getLeft()) && right.containsKey(rule.getRight())
-            && parent.containsKey(rule.getParent())) {
-          chart.updateOutsideEntry(spanStart, spanStart + k, rule.getLeft(), right.get(rule
-              .getRight())
-              * parent.get(rule.getParent()) * probs.getRuleProbability(rule));
-          chart.updateOutsideEntry(spanStart + k + 1, spanEnd, rule.getRight(), left.get(rule
-              .getLeft())
-              * parent.get(rule.getParent()) * probs.getRuleProbability(rule));
+      Factor binaryRuleMarginal = binaryDistribution.product(Arrays.asList(rightInside, parentOutside, leftInside));
+      chart.updateBinaryRuleExpectations(binaryRuleMarginal);  
 
-          double cliqueMarginal = left.get(rule.getLeft()) * right.get(rule.getRight())
-              * parent.get(rule.getParent()) * probs.getRuleProbability(rule);
-          chart.updateMarginalEntry(spanStart, spanStart + k, rule.getLeft(), cliqueMarginal);
-          chart.updateMarginalEntry(spanStart + k + 1, spanEnd, rule.getRight(), cliqueMarginal);
-
-          chart.updateBinaryRuleExpectation(rule, cliqueMarginal);
-        }
+      Factor leftOutside = binaryDistribution.product(Arrays.asList(rightInside, parentOutside));
+      Factor rightOutside = binaryDistribution.product(Arrays.asList(leftInside, parentOutside));
+      Factor leftMarginal, rightMarginal;
+      if (chart.getSumProduct()) {
+        leftMarginal = binaryRuleMarginal.marginalize(rightVar.union(parentVar)).relabelVariables(leftToParent);
+        rightMarginal = binaryRuleMarginal.marginalize(leftVar.union(parentVar)).relabelVariables(rightToParent);
+        leftOutside = leftOutside.marginalize(rightVar.union(parentVar)).relabelVariables(leftToParent);
+        rightOutside = rightOutside.marginalize(leftVar.union(parentVar)).relabelVariables(rightToParent);
+      } else {
+        leftMarginal = binaryRuleMarginal.maxMarginalize(rightVar.union(parentVar)).relabelVariables(leftToParent);
+        rightMarginal = binaryRuleMarginal.maxMarginalize(leftVar.union(parentVar)).relabelVariables(rightToParent);
+        leftOutside = leftOutside.maxMarginalize(rightVar.union(parentVar)).relabelVariables(leftToParent);
+        rightOutside = rightOutside.maxMarginalize(leftVar.union(parentVar)).relabelVariables(rightToParent);
       }
-      // }
-      // }
+      chart.updateOutsideEntry(spanStart, spanStart + k, leftOutside);
+      chart.updateOutsideEntry(spanStart + k + 1, spanEnd, rightOutside);
+
+      chart.updateMarginalEntry(spanStart, spanStart +k, leftMarginal);
+      chart.updateMarginalEntry(spanStart + k + 1, spanEnd, rightMarginal);
     }
   }
 
   /*
    * Fill in the initial chart entries implied by the given set of terminals.
    */
-  private void initializeChart(ParseChart chart, Map<List<Production>, Double> terminalMap) {
-    chart.setTerminalDist(terminalMap);
-
-    for (List<Production> terminals : terminalMap.keySet()) {
-      double prob = terminalMap.get(terminals);
-      for (int i = 0; i < terminals.size(); i++) {
-        for (int j = i; j < terminals.size(); j++) {
-          Set<TerminalProduction> terminalParents = grammar.getTerminalSpanProductions(terminals, i, j);
-
-          for (TerminalProduction terminal : terminalParents) {
-            // System.out.println(terminal + ":" +
-            // probs.getTerminalProbability(terminal));
-            chart.updateInsideEntryTerminal(i, j, terminal, terminal.getParent(), prob
-                * probs.getTerminalProbability(terminal), probs.getTerminalProbability(terminal));
-          }
+  private void initializeChart(ParseChart chart, List<?> terminals) {
+    Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
+    
+    for (int i = 0; i < terminals.size(); i++) {
+      for (int j = i; j < terminals.size(); j++) {
+        if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
+          Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1)); 
+          chart.updateInsideEntryTerminal(i, j, terminalDistribution.conditional(assignment));
         }
-      }
+      } 
     }
   }
 
@@ -301,37 +285,32 @@ public class CfgParser {
    * Fill in the chart using all terminals.
    */
   private void initializeChartAllTerminals(ParseChart chart) {
-    chart.setTerminalDist(null);
-
-    for (TerminalProduction tp : grammar.getAllTerminalProductions()) {
-      List<Production> children = tp.getTerminals();
-      int spanSize = children.size() - 1;
-      for (int i = 0; i < chart.chartSize() - spanSize; i++) {
-        chart.updateInsideEntryTerminal(i, i + spanSize, tp, tp.getParent(), probs
-            .getTerminalProbability(tp), probs.getTerminalProbability(tp));
+    DiscreteVariable terminalListValue = (DiscreteVariable) Iterables.getOnlyElement(terminalVar.getVariables());
+    
+    for (int i = 0; i < terminalListValue.numValues(); i++) {
+      List<?> value = (List<?>) terminalListValue.getValue(i);
+      int spanSize = value.size() - 1;
+      Factor conditional = terminalDistribution.conditional(terminalVar.outcomeArrayToAssignment(value));
+      for (int j = 0; j < chart.chartSize() - spanSize; j++) {
+        chart.updateInsideEntryTerminal(j, j + spanSize, conditional);
       }
     }
   }
 
   private void updateTerminalRuleCounts(ParseChart chart) {
-    Map<List<Production>, Double> terminalMap = chart.getTerminalDist();
-    if (terminalMap != null) {
-      for (List<Production> terminals : terminalMap.keySet()) {
-        double prob = terminalMap.get(terminals);
-        for (int i = 0; i < terminals.size(); i++) {
-          for (int j = i; j < terminals.size(); j++) {
-            Set<TerminalProduction> terminalParents = grammar.getTerminalSpanProductions(terminals, i, j);
-            Map<Production, Double> nontermDist = chart.getOutsideEntries(i, j);
-
-            for (TerminalProduction terminal : terminalParents) {
-              Production parent = terminal.getParent();
-              if (nontermDist.containsKey(parent)) {
-                // System.out.println(terminal + ":" +
-                // probs.getTerminalProbability(terminal));
-                chart.updateTerminalRuleExpectation(terminal, nontermDist.get(parent)
-                    * probs.getTerminalProbability(terminal) * prob);
-              }
-            }
+    Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
+    List<?> terminals = chart.getTerminals();
+    if (terminals != null) {
+      for (int i = 0; i < terminals.size(); i++) {
+        for (int j = i; j < terminals.size(); j++) {
+          if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
+            Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
+            
+            Factor terminalRuleMarginal = terminalDistribution.product(
+                TableFactor.pointDistribution(terminalVar, assignment));
+            terminalRuleMarginal = terminalRuleMarginal.product(chart.getOutsideEntries(i, j));
+            
+            chart.updateTerminalRuleExpectations(terminalRuleMarginal);
           }
         }
       }

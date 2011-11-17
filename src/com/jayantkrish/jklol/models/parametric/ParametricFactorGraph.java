@@ -50,7 +50,7 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     FactorGraph result = getBaseFactorGraph();
     for (int i = 0; i < parameterList.size(); i++) {
-      // Pass each CptFactor its corresponding set of parameters.
+      // Pass each ParametricFactor its corresponding set of parameters.
       result = result.addFactor(parametricFactors.get(i)
           .getFactorFromParameters(parameterList.get(i)));
     }
@@ -83,11 +83,11 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
     
     for (int i = 0; i < statisticsList.size(); i++) {
-      VariableNumMap fixedVars = parametricFactors.get(i).getVars().intersection(marginals.getConditionedValues().getVarNumsSorted());
-      VariableNumMap marginalVars = parametricFactors.get(i).getVars().removeAll(marginals.getConditionedValues().getVarNumsSorted());
+      VariableNumMap fixedVars = parametricFactors.get(i).getVars().intersection(marginals.getConditionedValues().getVariableNums());
+      VariableNumMap marginalVars = parametricFactors.get(i).getVars().removeAll(marginals.getConditionedValues().getVariableNums());
       
       Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
-      Assignment factorAssignment = marginals.getConditionedValues().subAssignment(fixedVars);
+      Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
       
       parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i), 
           factorMarginal, factorAssignment, count, marginals.getPartitionFunction());
@@ -106,7 +106,7 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     sb.append(getBaseFactorGraph().getFactors().size() + " constant factors.\n");
 
     sb.append("Discrete Variables:\n");
-    List<DiscreteVariable> variables = getBaseFactorGraph().getVariableNumMap().getDiscreteVariables();
+    List<DiscreteVariable> variables = getBaseFactorGraph().getVariables().getDiscreteVariables();
     for (int i = 0; i < variables.size(); i++) {
       sb.append("  " + i + ": " + variables.get(i).toString() + "\n");
     }

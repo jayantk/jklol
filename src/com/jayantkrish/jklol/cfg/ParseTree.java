@@ -8,34 +8,31 @@ import java.util.ArrayList;
  */
 public class ParseTree implements Comparable<ParseTree> {
 
+  private Object root;
+  private List<Object> terminal;
+  
   private ParseTree left;
   private ParseTree right;
-
-  private Production production;
-
-  private TerminalProduction tp;
-  private BinaryProduction bp;
 
   private double prob;
 
   /**
    * Create a new parse tree by composing two subtrees with production rule bp.
    */
-  public ParseTree(ParseTree left, ParseTree right, BinaryProduction bp, double prob) {
-    production = bp.getParent();
-    this.bp = bp;
+  public ParseTree(Object root, ParseTree left, ParseTree right, double prob) {
+    this.root = root;
     this.left = left;
     this.right = right;
-    this.tp = null;
+    this.terminal = null;
     this.prob = prob;
   }
 
   /**
    * Create a new terminal parse tree with a terminal production rule.
    */
-  public ParseTree(TerminalProduction tp, double prob) {
-    production = tp.getParent();
-    this.tp = tp;
+  public ParseTree(Object root, List<Object> terminal, double prob) {
+    this.root = root;
+    this.terminal = terminal;
     this.prob = prob;
   }
 
@@ -52,18 +49,14 @@ public class ParseTree implements Comparable<ParseTree> {
    * leaf).
    */
   public boolean isTerminal() {
-    return tp != null;
+    return terminal != null;
   }
 
   /**
    * Get the node at the root of the parse tree.
    */
-  public Production getRoot() {
-    if (isTerminal()) {
-      return tp.getParent();
-    } else {
-      return bp.getParent();
-    }
+  public Object getRoot() {
+    return root;
   }
 
   /**
@@ -91,21 +84,21 @@ public class ParseTree implements Comparable<ParseTree> {
    */
   public ParseTree multiplyProbability(double amount) {
     if (isTerminal()) {
-      return new ParseTree(tp, getProbability() * amount);
+      return new ParseTree(root, terminal, getProbability() * amount);
     } else {
-      return new ParseTree(left, right, bp, getProbability() * amount);
+      return new ParseTree(root, left, right, getProbability() * amount);
     }
   }
 
-  public List<Production> getTerminalProductions() {
-    List<Production> prods = new ArrayList<Production>();
+  public List<Object> getTerminalProductions() {
+    List<Object> prods = new ArrayList<Object>();
     getTerminalProductions(prods);
     return prods;
   }
 
-  public void getTerminalProductions(List<Production> toAppend) {
-    if (tp != null) {
-      toAppend.addAll(tp.getTerminals());
+  public void getTerminalProductions(List<Object> toAppend) {
+    if (isTerminal()) {
+      toAppend.addAll(terminal);
     } else {
       left.getTerminalProductions(toAppend);
       right.getTerminalProductions(toAppend);
@@ -113,9 +106,9 @@ public class ParseTree implements Comparable<ParseTree> {
   }
 
   public String toString() {
-    if (tp == null) {
-      return "(" + production + " --> " + left.toString() + " " + right.toString() + ")";
+    if (!isTerminal()) {
+      return "(" + root + " --> " + left.toString() + " " + right.toString() + ")";
     }
-    return "(" + production + "-->" + tp.getTerminals() + ")";
+    return "(" + root + "-->" + terminal + ")";
   }
 }

@@ -77,7 +77,7 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
   public Assignment getBestPrediction(Assignment input) {
     FactorGraph conditionalFactorGraph = factorGraph.conditional(input);
     MaxMarginalSet maxMarginals = marginalCalculator.computeMaxMarginals(conditionalFactorGraph);
-    return maxMarginals.getNthBestAssignment(0).subAssignment(outputVariables);
+    return maxMarginals.getNthBestAssignment(0).intersection(outputVariables);
   }
 
   /**
@@ -91,7 +91,7 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
    */
   @Override
   public List<Assignment> getBestPredictions(Assignment input, int numBest) {
-    if (!factorGraph.getVariableNumMap().isValidAssignment(input)) {
+    if (!factorGraph.getVariables().isValidAssignment(input)) {
       return Collections.emptyList();
     }
 
@@ -113,7 +113,7 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
    */
   @Override
   public double getProbability(Assignment input, Assignment output) {
-    if (!(outputVariables.isValidAssignment(output) && factorGraph.getVariableNumMap().isValidAssignment(input))) {
+    if (!(outputVariables.isValidAssignment(output) && factorGraph.getVariables().isValidAssignment(input))) {
       return 0.0;
     }
 
@@ -127,7 +127,7 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
       partitionFunctionCache.put(input, inputPartitionFunction);
     }
 
-    FactorGraph conditionalFactorGraph = factorGraph.conditional(input.jointAssignment(output));
+    FactorGraph conditionalFactorGraph = factorGraph.conditional(input.union(output));
     MarginalSet inputOutputMarginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
     return inputOutputMarginals.getPartitionFunction() / inputPartitionFunction;
   }

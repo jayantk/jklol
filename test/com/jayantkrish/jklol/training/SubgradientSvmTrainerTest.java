@@ -73,7 +73,7 @@ public class SubgradientSvmTrainerTest extends TestCase {
 	  
 	  FactorGraph factorGraph = model.getFactorGraphFromParameters(parameters);
 	  for (Example<Assignment, Assignment> example : trainingData) {
-	    Assignment a = example.getInput().jointAssignment(example.getOutput());
+	    Assignment a = example.getInput().union(example.getOutput());
 	    assertEquals(0.5, factorGraph.getUnnormalizedLogProbability(a), .01);
 	  }
 	  

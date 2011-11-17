@@ -3,10 +3,12 @@ package com.jayantkrish.jklol.models;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import junit.framework.TestCase;
 
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -247,5 +249,19 @@ public class TableFactorTest extends TestCase {
 		likely = g.getMostLikelyAssignments(5);
 		assertEquals(5, likely.size());
 		assertEquals(0.0, g.getUnnormalizedProbability(likely.get(4)));
+	}
+	
+	public void testRelabelVariables() {
+	  Map<Integer, Integer> relabeling = Maps.newHashMap();
+	  relabeling.put(0, 2);
+	  relabeling.put(3, 1);
+	  relabeling.put(1, 0);
+	  
+	  TableFactor r = g.relabelVariables(relabeling);
+	  assertEquals(3, r.getVars().size());
+	  assertTrue(r.getVars().containsAll(Arrays.asList(0, 1, 2)));
+	  assertEquals(7.0, r.getUnnormalizedProbability(r.getVars().outcomeArrayToAssignment("U", "F", "T")));
+	  assertEquals(0.0, r.getUnnormalizedProbability(r.getVars().outcomeArrayToAssignment("T", "U", "F")));
+	  assertEquals(4.0, r.size());
 	}
 }

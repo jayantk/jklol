@@ -67,7 +67,7 @@ public class TableFactorBuilder {
    */
   public void setWeight(Assignment a, double weight) {
     Preconditions.checkArgument(weight >= 0.0, "Weight must be positive, tried using: " + weight);
-    Preconditions.checkArgument(a.containsVars(vars.getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(vars.getVariableNums()));
     weightBuilder.put(vars.assignmentToIntArray(a), weight);
   }
 

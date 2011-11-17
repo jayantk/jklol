@@ -25,7 +25,7 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
 
   @Override
   public MaxMarginalSet addConditionalVariables(Assignment values) {
-    return new FactorMaxMarginalSet(factorGraph, conditionedValues.jointAssignment(values));
+    return new FactorMaxMarginalSet(factorGraph, conditionedValues.union(values));
   }
   
   @Override
@@ -38,7 +38,7 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
     // At the moment, only the best assignment is supported.
     Preconditions.checkArgument(n == 0);
     return getBestAssignmentGiven(factorGraph, 0, Sets.<Integer>newHashSet(), Assignment.EMPTY)
-        .jointAssignment(conditionedValues);
+        .union(conditionedValues);
   }
   
   
@@ -64,8 +64,8 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
     for (int adjacentFactorNum : factorGraph.getAdjacentFactors(factorNum)) {
       if (!visitedFactors.contains(adjacentFactorNum)) {
         Assignment bestChild = getBestAssignmentGiven(factorGraph, adjacentFactorNum, 
-            visitedFactors, best).removeAll(best.getVarNumsSorted());
-        best = best.jointAssignment(bestChild);
+            visitedFactors, best).removeAll(best.getVariableNums());
+        best = best.union(bestChild);
       }
     }
     return best;

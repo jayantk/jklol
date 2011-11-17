@@ -44,10 +44,20 @@ public abstract class AbstractFactor implements Factor {
   public Factor marginalize(Integer... varNums) {
     return marginalize(Arrays.asList(varNums));
   }
+  
+  @Override
+  public Factor marginalize(VariableNumMap vars) {
+    return marginalize(vars.getVariableNums());
+  }
 
   @Override
   public Factor maxMarginalize(Integer... varNums) {
     return maxMarginalize(Arrays.asList(varNums));
+  }
+  
+  @Override
+  public Factor maxMarginalize(VariableNumMap vars) {
+    return marginalize(vars.getVariableNums());
   }
 
   @Override

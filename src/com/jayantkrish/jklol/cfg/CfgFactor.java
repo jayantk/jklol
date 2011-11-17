@@ -101,8 +101,8 @@ public class CfgFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    List<Production> childVarValue = (List<Production>) a.getVarValue(childVarNum);
-    ParseChart c = parser.parseMarginal(childVarValue, (Production) a.getVarValue(parentVarNum));
+    List<Production> childVarValue = (List<Production>) a.getValue(childVarNum);
+    ParseChart c = parser.parseMarginal(childVarValue, (Production) a.getValue(parentVarNum));
     double probability = c.getPartitionFunction();
     if (parentInboundMessage != null) {
       probability *= parentInboundMessage.getUnnormalizedProbability(a);
@@ -174,21 +174,21 @@ public class CfgFactor extends AbstractFactor {
     // Get the conditional probability by multiplying the parent/child
     // variables by a point distribution.
     List<Factor> factorsToMultiply = Lists.newArrayList();
-    if (a.containsVar(parentVarNum)) {
+    if (a.contains(parentVarNum)) {
       List<Integer> parentVarNumList = Arrays.asList(new Integer[] { parentVarNum });
       TableFactor newParentFactor = TableFactor.pointDistribution(
-          getVars().intersection(parentVarNumList), a.subAssignment(parentVarNumList));
+          getVars().intersection(parentVarNumList), a.intersection(parentVarNumList));
       factorsToMultiply.add(newParentFactor);
     }
 
-    if (a.containsVar(childVarNum)) {
+    if (a.contains(childVarNum)) {
       List<Integer> childVarNumList = Arrays.asList(new Integer[] { childVarNum });
       TableFactor newChildFactor = TableFactor.pointDistribution(
-          getVars().intersection(childVarNumList), a.subAssignment(childVarNumList));
+          getVars().intersection(childVarNumList), a.intersection(childVarNumList));
       factorsToMultiply.add(newChildFactor);
     }
 
-    VariableNumMap varsToEliminate = getVars().intersection(a.getVarNumsSorted());
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNums());
     return this.product(factorsToMultiply).marginalize(varsToEliminate.getVariableNums());
   }
 
@@ -330,7 +330,7 @@ public class CfgFactor extends AbstractFactor {
     Iterator<Assignment> childIter = childInboundMessage.outcomeIterator();
     while (childIter.hasNext()) {
       Assignment a = childIter.next();
-      List<Production> val = (List<Production>) a.getVarValuesInKeyOrder().get(0);
+      List<Production> val = (List<Production>) a.getValues().get(0);
       childDist.put(val, childInboundMessage.getUnnormalizedProbability(a));
     }
 
@@ -359,7 +359,7 @@ public class CfgFactor extends AbstractFactor {
     Iterator<Assignment> parentIter = parentInboundMessage.outcomeIterator();
     while (parentIter.hasNext()) {
       Assignment a = parentIter.next();
-      Production val = (Production) a.getVarValuesInKeyOrder().get(0);
+      Production val = (Production) a.getValues().get(0);
       parentDist.put(val, parentInboundMessage.getUnnormalizedProbability(a));
     }
     parser.parseOutsideMarginal(cachedCharts.get(useSumProduct), parentDist);

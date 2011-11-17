@@ -89,14 +89,14 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor conditional(Assignment a) {
-    VariableNumMap varsToEliminate = getVars().intersection(a.getVarNumsSorted());
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNums());
 
     // Efficiency improvement: only create a new factor if necessary.
     if (varsToEliminate.size() == 0) {
       return this;
     }
 
-    Assignment subAssignment = a.subAssignment(varsToEliminate);
+    Assignment subAssignment = a.intersection(varsToEliminate);
     TableFactorBuilder tableFactorBuilder = new TableFactorBuilder(varsToEliminate);
     tableFactorBuilder.setWeight(subAssignment, 1.0);
     return this.product(tableFactorBuilder.build())

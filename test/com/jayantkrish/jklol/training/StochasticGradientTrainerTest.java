@@ -83,7 +83,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		  for (int i = 0; i < features.size(); i++) {
 		    FeatureFunction feat = features.get(i);
 		    Assignment a = feat.getNonzeroAssignments().next();
-		    if (a.getVarNumsSorted().size() == 3) {
+		    if (a.getVariableNums().size() == 3) {
 		      assertTrue(clique1PositiveAssignments.contains(a) ||
 		          weights[i] < 0.0);
 		    } else {

@@ -40,14 +40,18 @@ public class IndicatorFeatureFunction implements FeatureFunction {
 
 	@Override
 	public List<Integer> getVarNums() {
-		return assignments.iterator().next().getVarNumsSorted();
+		return assignments.iterator().next().getVariableNums();
 	}
 
 	@Override
 	public double computeExpectation(Factor factor, Assignment assignment) {
 	  double expectedValue = 0.0;
+	  
+	  Collection<Integer> inputAssignmentVars = assignment.getVariableNums();
 	  for (Assignment a : assignments) {
-	    expectedValue += getValue(a) * factor.getUnnormalizedProbability(a);
+	    if (a.intersection(inputAssignmentVars).equals(assignment)) {
+	      expectedValue += getValue(a) * factor.getUnnormalizedProbability(a.removeAll(inputAssignmentVars));
+	    }
 	  }
 	  return expectedValue;
 	}

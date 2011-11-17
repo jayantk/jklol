@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Iterator;
+import java.util.Map;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -45,6 +46,18 @@ public class TableFactor extends DiscreteFactor {
     return builder.build();
   }
 
+  /**
+   * Gets a {@code TableFactor} over {@code vars} which assigns 0 weight to all
+   * assignments.
+   * 
+   * @param vars
+   * @return
+   */
+  public static TableFactor zero(VariableNumMap vars) {
+    TableFactorBuilder builder = new TableFactorBuilder(vars);
+    return builder.build();
+  }
+
   // //////////////////////////////////////////////////////////////////////////////
   // Factor overrides.
   // //////////////////////////////////////////////////////////////////////////////
@@ -61,7 +74,7 @@ public class TableFactor extends DiscreteFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    Preconditions.checkArgument(a.containsVars(getVars().getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
     return weights.get(getVars().assignmentToIntArray(a));
   }
 
@@ -73,6 +86,12 @@ public class TableFactor extends DiscreteFactor {
   @Override
   public double size() {
     return weights.size();
+  }
+      
+  @Override
+  public TableFactor relabelVariables(Map<Integer, Integer> relabeling) {
+    Preconditions.checkArgument(relabeling.keySet().containsAll(getVars().getVariableNums()));
+    return new TableFactor(getVars().mapVariables(relabeling), weights.relabelDimensions(relabeling));
   }
 
   @Override

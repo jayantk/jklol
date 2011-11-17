@@ -48,7 +48,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
 
   @Override
   public MarginalSet addConditionalVariables(Assignment values) {
-    Assignment newValues = getConditionedValues().jointAssignment(values);
+    Assignment newValues = getConditionedValues().union(values);
     return new FactorMarginalSet(allFactors, partitionFunction, newValues);
   }
 

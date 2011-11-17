@@ -64,8 +64,8 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, Assignment assignment, double count) {
-    Preconditions.checkArgument(assignment.containsVars(getVars().getVariableNums()));
-    Assignment subAssignment = assignment.subAssignment(getVars().getVariableNums());
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
     FeatureSufficientStatistics featureStats = statistics.coerceToFeature();
     double[] weights = featureStats.getWeights();
     Preconditions.checkArgument(weights.length == myFeatures.size());

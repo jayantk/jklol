@@ -81,10 +81,23 @@ public interface Factor {
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages);
 
   /**
+   * Returns a new {@code Factor} with relabeled variable indices.
+   * {@code newVariableNums.get(i)} is substituted for each variable index
+   * {@code i} in {@code this}. The type of each variable is preserved.
+   * 
+   * Each variable index spanned by this must be contained in
+   * {@code newVariableNums}.
+   * 
+   * @param newVariableNums
+   * @return
+   */
+  public Factor relabelVariables(Map<Integer, Integer> newVariableNums);
+
+  /**
    * Gets a new factor which conditions on the variables in {@code assignment}.
    * The returned factor is defined over the difference between
    * {@code this.getVars()} and {@code varNumsToEliminate}. The probability of
-   * assignment {@code a} in the returned factor is equal to the 
+   * assignment {@code a} in the returned factor is equal to the
    * {@code this.getUnnormalizedProbability(a.jointAssignment(assignment))}.
    */
   public Factor conditional(Assignment assignment);
@@ -108,6 +121,14 @@ public interface Factor {
   public Factor marginalize(Collection<Integer> varNumsToEliminate);
 
   /**
+   * Same as {@link #marginalize(Collection)} using the variable indices of
+   * {@code variables}.
+   * 
+   * @param variablesToEliminate
+   */
+  public Factor marginalize(VariableNumMap variablesToEliminate);
+
+  /**
    * Same as {@link #maxMarginalize(Collection)}.
    * 
    * @param varNumsToEliminate
@@ -124,6 +145,14 @@ public interface Factor {
    * {@code varNumsToEliminate}).
    */
   public Factor maxMarginalize(Collection<Integer> varNumsToEliminate);
+
+  /**
+   * Same as {@link #maxMarginalize(Collection)} using the variable indices of
+   * {@code variables}.
+   * 
+   * @param variablesToEliminate
+   */
+  public Factor maxMarginalize(VariableNumMap variablesToEliminate);
 
   // TODO(jayant): Update the signature of maxMarginalize to this version in
   // the future. This

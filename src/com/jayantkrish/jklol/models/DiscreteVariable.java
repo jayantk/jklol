@@ -65,6 +65,7 @@ public class DiscreteVariable implements Variable {
 		return name + " (" + values.size() + " values)";
 	}
 
+	@Override
 	public boolean equals(Object o) {
 		if (o instanceof DiscreteVariable) {
 			DiscreteVariable v = (DiscreteVariable) o;

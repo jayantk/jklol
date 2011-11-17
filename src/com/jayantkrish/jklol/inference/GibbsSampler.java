@@ -45,7 +45,7 @@ public class GibbsSampler implements MarginalCalculator {
 			}
 			samples.add(curAssignment);
 		}
-		return new SampleMarginalSet(factorGraph.getVariableNumMap(), samples, Assignment.EMPTY);
+		return new SampleMarginalSet(factorGraph.getVariables(), samples, Assignment.EMPTY);
 	}
 
 	/**
@@ -62,7 +62,7 @@ public class GibbsSampler implements MarginalCalculator {
 	private Assignment initializeAssignment(FactorGraph factorGraph) {
 		// Select the initial assignment. 
 	  // TODO: Perform a search to find an outcome with nonzero probability.
-		List<Variable> variables = factorGraph.getVariables();
+		List<Variable> variables = factorGraph.getVariables().getVariables();
 		List<Integer> varNums = Lists.newArrayList();
 		List<Object> values = Lists.newArrayList();
 		for (int i = 0; i < variables.size(); i++) {
@@ -98,12 +98,12 @@ public class GibbsSampler implements MarginalCalculator {
 		for (Integer factorNum : factorNums) {
 			Factor conditional = factorGraph.getFactor(factorNum)
 				.conditional(otherVarAssignment);
-			factorsToCombine.add(conditional.marginalize(otherVarAssignment.getVarNumsSorted()));
+			factorsToCombine.add(conditional.marginalize(otherVarAssignment.getVariableNums()));
 		}
 		Factor toSampleFrom = factorsToCombine.get(0).product(factorsToCombine.subList(1, factorsToCombine.size()));
 		// Draw the sample and update the sampler's current assignment. 
 		Assignment subsetValues = toSampleFrom.sample();
 		
-		return otherVarAssignment.jointAssignment(subsetValues);
+		return otherVarAssignment.union(subsetValues);
 	}
 }

@@ -107,7 +107,7 @@ public class FactorGraphTest extends TestCase {
 	      Arrays.asList("T", "foo", "T", "T"));
 	  FactorGraph c = f.conditional(a);
 
-	  assertEquals(0, c.getVariableNumMap().size());
+	  assertEquals(0, c.getVariables().size());
 	  assertEquals(1.0, c.getUnnormalizedProbability(Assignment.EMPTY));
 	}
 }

@@ -50,19 +50,52 @@ public class Assignment {
     varValueMap = new TreeMap<Integer, Object>(a.varValueMap);
   }
 
-  public List<Integer> getVarNumsSorted() {
+  /**
+   * Gets the number of variables with values in the assignment.
+   */
+  public int size() {
+    return varValueMap.size();
+  }
+
+  /**
+   * Gets the indices of the variables in {@code this}, sorted in ascending
+   * order.
+   * 
+   * @return
+   */
+  public List<Integer> getVariableNums() {
     return new ArrayList<Integer>(varValueMap.keySet());
   }
 
-  public List<Object> getVarValuesInKeyOrder() {
+  /**
+   * Gets the values assigned to the variables in {@code this}, in key order.
+   * The ith element of the returned list is the value of the ith element of
+   * {@code this.getVariableNums()}.
+   * 
+   * @return
+   */
+  public List<Object> getValues() {
     return new ArrayList<Object>(varValueMap.values());
   }
 
-  public Object getVarValue(int varNum) {
+  /**
+   * Gets the value assigned to variable {@code varNum}. Returns {@code null} if
+   * {@code varNum} does not have a value.
+   * 
+   * @param varNum
+   * @return
+   */
+  public Object getValue(int varNum) {
     return varValueMap.get(varNum);
   }
 
-  public boolean containsVar(int varNum) {
+  /**
+   * Returns {@code true} if {@code this} contains a value for {@code varNum}.
+   * 
+   * @param varNum
+   * @return
+   */
+  public boolean contains(int varNum) {
     return varValueMap.containsKey(varNum);
   }
 
@@ -73,7 +106,7 @@ public class Assignment {
    * @param varNums
    * @return
    */
-  public boolean containsVars(Collection<Integer> varNums) {
+  public boolean containsAll(Collection<Integer> varNums) {
     for (Integer varNum : varNums) {
       if (!varValueMap.containsKey(varNum)) {
         return false;
@@ -83,20 +116,13 @@ public class Assignment {
   }
 
   /**
-   * Gets the number of variables with values in the assignment.
-   */
-  public int size() {
-    return varValueMap.size();
-  }
-
-  /**
    * If varNums is a subset of the variables in this assignment, this method
    * returns the value assigned to each variable in varNums.
    * 
    * Puts the return value into "returnValue" if it is non-null, otherwise
    * allocates and returns a new list.
    */
-  public List<Object> subAssignment(List<Integer> varNums,
+  public List<Object> intersection(List<Integer> varNums,
       List<Object> returnValue) {
     List<Object> retVal = returnValue;
     if (retVal == null) {
@@ -117,7 +143,7 @@ public class Assignment {
    * These indices are ignored; in this case, the returned assignment will
    * contain fewer variable/value mappings than {@code varNums.size()}.
    */
-  public Assignment subAssignment(Collection<Integer> varNums) {
+  public Assignment intersection(Collection<Integer> varNums) {
     List<Integer> varNumList = new ArrayList<Integer>();
     List<Object> retVal = new ArrayList<Object>();
     for (Integer varNum : varNums) {
@@ -134,8 +160,8 @@ public class Assignment {
    * vars. vars may not contain extra variables which are not part of this
    * assignment.
    */
-  public Assignment subAssignment(VariableNumMap vars) {
-    return subAssignment(vars.getVariableNums());
+  public Assignment intersection(VariableNumMap vars) {
+    return intersection(vars.getVariableNums());
   }
 
   /**
@@ -143,13 +169,13 @@ public class Assignment {
    * variables in each assignment. The two assignments must contain disjoint
    * sets of variables.
    */
-  public Assignment jointAssignment(Assignment other) {
+  public Assignment union(Assignment other) {
     Preconditions.checkNotNull(other);
     // Merge varnums / values
-    List<Integer> otherNums = other.getVarNumsSorted();
-    List<Integer> myNums = getVarNumsSorted();
-    List<Object> otherVals = other.getVarValuesInKeyOrder();
-    List<Object> myVals = getVarValuesInKeyOrder();
+    List<Integer> otherNums = other.getVariableNums();
+    List<Integer> myNums = getVariableNums();
+    List<Object> otherVals = other.getValues();
+    List<Object> myVals = getValues();
 
     List<Integer> mergedNums = new ArrayList<Integer>();
     List<Object> mergedVals = new ArrayList<Object>();
@@ -205,7 +231,7 @@ public class Assignment {
    * Return a new assignment where each var num has been replaced by its value
    * in varMap.
    */
-  public Assignment mappedAssignment(Map<Integer, Integer> varMap) {
+  public Assignment mapVariables(Map<Integer, Integer> varMap) {
     List<Integer> newVarNums = new ArrayList<Integer>();
     List<Object> newVarVals = new ArrayList<Object>();
     for (Integer k : varValueMap.keySet()) {

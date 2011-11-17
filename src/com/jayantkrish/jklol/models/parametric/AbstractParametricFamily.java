@@ -23,7 +23,7 @@ public abstract class AbstractParametricFamily<T>
   
   @Override
   public VariableNumMap getVariables() {
-    return baseFactorGraph.getVariableNumMap();
+    return baseFactorGraph.getVariables();
   }
   
   @Override

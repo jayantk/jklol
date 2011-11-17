@@ -20,7 +20,9 @@ import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A {@code FactorGraph} represents a graphical model as a set of variables and
- * a set of factors defined over variable cliques.
+ * a set of factors defined over variable cliques. The graphical model may represent
+ * a conditional distribution, which must have some fixed values before it becomes a 
+ * probability distribution.  
  * 
  * {@code FactorGraph}s and the {@link Factor}s they contain are immutable.
  * Therefore, each {@code FactorGraph} instance defines a particular probability
@@ -33,11 +35,21 @@ import com.jayantkrish.jklol.util.IndexedList;
 public class FactorGraph {
 
   private VariableNumMap variables;
+
+    
   private Map<String, Integer> variableNames;
+
   private HashMultimap<Integer, Integer> variableFactorMap;
   private HashMultimap<Integer, Integer> factorVariableMap;
-
   private IndexedList<Factor> factors;
+
+  // Store any conditioning information that lead to this particular
+  // distribution.
+  private Assignment conditionedValues;
+  // A subset of variables containing variables that must be assigned before this
+  // represents a probability distribution. (i.e., this is a conditional distribution over
+  // variables.removeAll(conditionalVariables), given conditionalVariables).
+  private VariableNumMap conditionalVariables;
 
   private InferenceHint inferenceHint;
 
@@ -48,10 +60,12 @@ public class FactorGraph {
    */
   public FactorGraph() {
     variables = VariableNumMap.emptyMap();
+    conditionalVariables = VariableNumMap.emptyMap();
     variableNames = new HashMap<String, Integer>();
     variableFactorMap = HashMultimap.create();
     factorVariableMap = HashMultimap.create();
     factors = new IndexedList<Factor>();
+    conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
 
@@ -61,11 +75,13 @@ public class FactorGraph {
    * @param factorGraph
    */
   private FactorGraph(FactorGraph factorGraph) {
-    this.variables = new VariableNumMap(factorGraph.variables);
+    this.variables = factorGraph.variables;
+    this.conditionalVariables = factorGraph.conditionalVariables;
     this.variableNames = new HashMap<String, Integer>(factorGraph.variableNames);
     this.variableFactorMap = HashMultimap.create(factorGraph.variableFactorMap);
     this.factorVariableMap = HashMultimap.create(factorGraph.factorVariableMap);
     this.factors = new IndexedList<Factor>(factorGraph.factors);
+    this.conditionedValues = factorGraph.conditionedValues;
     this.inferenceHint = factorGraph.inferenceHint;
   }
 
@@ -99,6 +115,7 @@ public class FactorGraph {
     factorGraph.variableNames = variableNames;
     factorGraph.variableFactorMap = variableFactorMap;
     factorGraph.factorVariableMap = factorVariableMap;
+    factorGraph.conditionedValues = Assignment.EMPTY;
     factorGraph.factors = new IndexedList<Factor>(factors);
     return factorGraph;
   }
@@ -140,27 +157,6 @@ public class FactorGraph {
   }
 
   /**
-   * Get a variable using its index number.
-   */
-  public Variable getVariableFromIndex(int varNum) {
-    return variables.getVariable(varNum);
-  }
-
-  /**
-   * Get the index of a variable from its name.
-   */
-  public int getVariableIndex(String variableName) {
-    return variableNames.get(variableName);
-  }
-
-  /**
-   * Get the variables in the factor graph.
-   */
-  public List<Variable> getVariables() {
-    return variables.getVariables();
-  }
-
-  /**
    * Gets the names of all variables in {@code this}.
    * 
    * @return
@@ -174,8 +170,15 @@ public class FactorGraph {
    * 
    * @return
    */
-  public VariableNumMap getVariableNumMap() {
+  public VariableNumMap getVariables() {
     return variables;
+  }
+
+  /**
+   * Get the index of a variable from its name.
+   */
+  public int getVariableIndex(String variableName) {
+    return variableNames.get(variableName);
   }
 
   /**
@@ -227,8 +230,8 @@ public class FactorGraph {
     Map<String, Object> objectVals = new HashMap<String, Object>();
     for (String varName : variableNames.keySet()) {
       int varNum = variableNames.get(varName);
-      if (a.containsVar(varNum)) {
-        objectVals.put(varName, a.getVarValue(varNum));
+      if (a.contains(varNum)) {
+        objectVals.put(varName, a.getValue(varNum));
       }
     }
     return objectVals;
@@ -270,7 +273,7 @@ public class FactorGraph {
    * @return
    */
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsVars(variables.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()));
     double probability = 1.0;
     for (Factor factor : factors) {
       probability *= factor.getUnnormalizedProbability(assignment);
@@ -290,7 +293,7 @@ public class FactorGraph {
    * @return
    */
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsVars(variables.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()));
     double logProbability = 0.0;
     for (Factor factor : factors) {
       logProbability += Math.log(factor.getUnnormalizedProbability(assignment));
@@ -334,7 +337,7 @@ public class FactorGraph {
    * an easy way to construct {@code factor} over a particular set of variables.
    */
   public FactorGraph addFactor(Factor factor) {
-    Preconditions.checkArgument(getVariableNumMap().containsAll(factor.getVars()));
+    Preconditions.checkArgument(getVariables().containsAll(factor.getVars()));
 
     FactorGraph factorGraph = new FactorGraph(this);
     int factorNum = factorGraph.factors.size();
@@ -377,7 +380,7 @@ public class FactorGraph {
         int varIndex = currentFactorGraph.getVariableIndex(variableName);
         if (varIndex != eliminatedVariableIndex) {
           nextFactorGraph = nextFactorGraph.addVariableWithIndex(variableName,
-              currentFactorGraph.getVariableFromIndex(varIndex), varIndex);
+              currentFactorGraph.variables.getVariable(varIndex), varIndex);
         }
       }
 
@@ -411,7 +414,7 @@ public class FactorGraph {
    * Convert this factor graph into a conditional probability distribution given
    * {@code assignment}. {@code assignment} may contain variables which this
    * graph is not defined over; these extra variables are ignored by this
-   * method. The returned factor graph is defined over the variables in this
+   * method. The returned factor graph contains at least the variables in this,
    * minus any variables with values in {@code assignment}. The names and
    * indices of these variables are preserved by this method.
    * 
@@ -419,23 +422,25 @@ public class FactorGraph {
    * @return
    */
   public FactorGraph conditional(Assignment assignment) {
+    Preconditions.checkArgument(variables.containsAll(assignment.getVariableNums()));
     // TODO: Handle dynamic factor graphs (i.e., with templated factors).
 
     FactorGraph newFactorGraph = new FactorGraph();
+    newFactorGraph.conditionedValues = this.conditionedValues.union(assignment);
     // Copy the uneliminated variables in currentFactorGraph to nextFactorGraph
     for (String variableName : getVariableNames()) {
       int varIndex = getVariableIndex(variableName);
-      if (!assignment.containsVar(varIndex)) {
+      if (!assignment.contains(varIndex)) {
         newFactorGraph = newFactorGraph.addVariableWithIndex(variableName,
-            getVariableFromIndex(varIndex), varIndex);
+            variables.getVariable(varIndex), varIndex);
       }
     }
 
-    // Condition each factor on the passed in assignment. 
+    // Condition each factor on the passed in assignment.
     for (Factor factor : getFactors()) {
       newFactorGraph = newFactorGraph.addFactor(factor.conditional(assignment));
     }
-    
+
     return newFactorGraph;
   }
 

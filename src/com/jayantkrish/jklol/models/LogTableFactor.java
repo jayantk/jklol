@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.models;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
@@ -44,13 +45,19 @@ public class LogTableFactor extends DiscreteFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    Preconditions.checkArgument(a.containsVars(getVars().getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
     return Math.exp(logWeights.get(getVars().assignmentToIntArray(a)));
   }
 
   @Override
   public double size() {
     return logWeights.size();
+  }
+  
+  @Override
+  public LogTableFactor relabelVariables(Map<Integer, Integer> relabeling) {
+    Preconditions.checkArgument(relabeling.keySet().containsAll(getVars().getVariableNums()));
+    return new LogTableFactor(getVars().mapVariables(relabeling), logWeights.relabelDimensions(relabeling));
   }
 
   @Override

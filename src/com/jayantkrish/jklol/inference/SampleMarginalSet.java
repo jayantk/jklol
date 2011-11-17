@@ -32,7 +32,7 @@ public class SampleMarginalSet extends AbstractMarginalSet {
 	
 	@Override
 	public MarginalSet addConditionalVariables(Assignment values) {
-	  Assignment newValues = getConditionedValues().jointAssignment(values);
+	  Assignment newValues = getConditionedValues().union(values);
 	  return new SampleMarginalSet(factorGraphVariables, samples, newValues);
 	}
 
@@ -42,7 +42,7 @@ public class SampleMarginalSet extends AbstractMarginalSet {
 		VariableNumMap varsToRetain = factorGraphVariables.intersection(varNums);
 		TableFactorBuilder builder = new TableFactorBuilder(varsToRetain);
 		for (Assignment sample : samples) {
-			Assignment factorSample = sample.subAssignment(varNums);
+			Assignment factorSample = sample.intersection(varNums);
 			builder.setWeight(factorSample, 
 			    builder.getWeight(factorSample) + 1.0);
 		}

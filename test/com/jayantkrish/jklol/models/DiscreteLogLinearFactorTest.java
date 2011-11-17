@@ -82,7 +82,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     assertEquals(4, features.size());
     assertEquals(4, weights.length);
     for (int i = 0; i < features.size(); i++) {
-      assertEquals(weights[i], features.get(i).getValue(tf.subAssignment(vars)));      
+      assertEquals(weights[i], features.get(i).getValue(tf.intersection(vars)));      
     }
   }
   

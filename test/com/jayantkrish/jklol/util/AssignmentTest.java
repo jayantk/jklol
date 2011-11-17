@@ -23,42 +23,42 @@ public class AssignmentTest extends TestCase {
 
 	public void testVarNumsSorted() {
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 3, 5}),
-				a.getVarNumsSorted());
+				a.getVariableNums());
 
 		assertEquals(Arrays.asList(new Integer[] {1, 2, 4, 6}),
-				a.getVarValuesInKeyOrder());
+				a.getValues());
 	}
 
 	public void testSubAssignment() {
-		Assignment s = a.subAssignment(Arrays.asList(new Integer[] {5, 1}));
+		Assignment s = a.intersection(Arrays.asList(new Integer[] {5, 1}));
 		assertEquals(Arrays.asList(new Integer[] {1, 5}),
-				s.getVarNumsSorted());
+				s.getVariableNums());
 
 		assertEquals(Arrays.asList(new Integer[] {2, 6}),
-				s.getVarValuesInKeyOrder());
+				s.getValues());
 	}
 
 	public void testSubAssignment2() {
-	  Assignment s = a.subAssignment(Arrays.asList(new Integer[] {5, 1, 179839}));
+	  Assignment s = a.intersection(Arrays.asList(new Integer[] {5, 1, 179839}));
 	  assertEquals(Arrays.asList(new Integer[] {1, 5}),
-	      s.getVarNumsSorted());
+	      s.getVariableNums());
 	  
 	  assertEquals(Arrays.asList(new Integer[] {2, 6}),
-				s.getVarValuesInKeyOrder());
+				s.getValues());
 	}
 
 	public void testJointAssignment() {
-		Assignment j = a.jointAssignment(c);
+		Assignment j = a.union(c);
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 2, 3, 4, 5, 6}),
-				j.getVarNumsSorted());
+				j.getVariableNums());
 
 		assertEquals(Arrays.asList(new Integer[] {1, 2, 3, 4, 5, 6, 7}),
-				j.getVarValuesInKeyOrder());
+				j.getValues());
 	}
 
 	public void testJointAssignmentError() {
 		try {
-			a.jointAssignment(b);
+			a.union(b);
 		} catch (RuntimeException e) {
 			return;
 		}
@@ -66,24 +66,24 @@ public class AssignmentTest extends TestCase {
 	}
 
 	public void testJointAssignmentEmpty() {
-		Assignment j = a.jointAssignment(Assignment.EMPTY);
+		Assignment j = a.union(Assignment.EMPTY);
 
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 3, 5}),
-				j.getVarNumsSorted());
+				j.getVariableNums());
 
 		assertEquals(Arrays.asList(new Integer[] {1, 2, 4, 6}),
-				j.getVarValuesInKeyOrder());
+				j.getValues());
 
 	}
 
 	public void testRemoveAll() {
 		Assignment result = a.removeAll(Arrays.asList(new Integer[] {1,3,4}));
 		assertEquals(Arrays.asList(new Integer[] {0,5}),
-				result.getVarNumsSorted());
+				result.getVariableNums());
 
 		result = a.removeAll(Arrays.asList(new Integer[] {}));
 		assertEquals(Arrays.asList(new Integer[] {0,1,3,5}),
-				result.getVarNumsSorted());
+				result.getVariableNums());
 	}
 
 }

@@ -84,14 +84,14 @@ public class SubgradientSvmTrainer {
       for (Example<Assignment, Assignment> example : batchData) {
         // Get the cost-augmented best prediction for the current example
         FactorGraph costAugmentedModel = costFunction.augmentWithCosts(currentModel,
-            currentModel.getVariableNumMap().intersection(example.getOutput().getVarNumsSorted()),
+            currentModel.getVariables().intersection(example.getOutput().getVariableNums()),
             example.getOutput());
         FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(example.getInput());
         MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel)
             .addConditionalVariables(example.getInput());
         
         Assignment prediction = predicted.getNthBestAssignment(0);
-        Assignment actual = example.getOutput().jointAssignment(example.getInput());
+        Assignment actual = example.getOutput().union(example.getInput());
         if (!prediction.equals(actual)) {
           modelFamily.incrementSufficientStatistics(subgradient, actual, 1.0);
           modelFamily.incrementSufficientStatistics(subgradient, prediction, -1.0);
@@ -167,7 +167,7 @@ public class SubgradientSvmTrainer {
         while (varAssignments.hasNext()) {
           builder.incrementWeight(varAssignments.next(), Math.E);
         }
-        builder.multiplyWeight(trueLabel.subAssignment(varNumList), Math.exp(-1.0));
+        builder.multiplyWeight(trueLabel.intersection(varNumList), Math.exp(-1.0));
 
         augmentedGraph = augmentedGraph.addFactor(builder.build());
       }

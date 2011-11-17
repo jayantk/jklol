@@ -194,8 +194,9 @@ public class JunctionTreePerformanceTest extends TestCase {
 		System.out.println("testConditionalMarginals");
 		long start = System.currentTimeMillis();
 
-		t.computeMarginals(f, new Assignment(Arrays.asList(new Integer[] {0, 2}),
+		FactorGraph c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2}),
 				Arrays.asList(new Object[] {0,0})));
+		t.computeMarginals(c);
 
 		long elapsed = System.currentTimeMillis() - start;
 		System.out.println("Elapsed: " + elapsed + " ms");

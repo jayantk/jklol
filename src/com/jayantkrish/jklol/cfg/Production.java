@@ -7,11 +7,13 @@ import java.util.*;
  */
 public class Production {
 
-	private static Map<String, Production> cache = new HashMap<String, Production>();
+  private static Map<String, Production> cache = 
+      Collections.synchronizedMap(new HashMap<String, Production>());
+  private static int productionCounter = 0;
 
 	private String displayStr;
 	private int productionNumber;
-	private static int productionCounter = 0;
+
 
 	public Production(int i, String displayStr) {
 		productionNumber = i;
@@ -34,7 +36,7 @@ public class Production {
 		return false;
 	}
 
-	public static Production getProduction(String displayStr) {
+	public static synchronized Production getProduction(String displayStr) {
 		if (cache.containsKey(displayStr)) {
 			return cache.get(displayStr);
 		}

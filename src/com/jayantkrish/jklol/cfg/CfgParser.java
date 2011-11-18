@@ -211,7 +211,6 @@ public class CfgParser {
 
     // Calculate root marginal, which is not included in the rest of the pass.
     // Also compute the partition function.
-    double partitionFunction = 0.0;
     Factor rootOutside = chart.getOutsideEntries(0, chart.chartSize() - 1);
     Factor rootInside = chart.getInsideEntries(0, chart.chartSize() - 1);
     Factor rootMarginal = rootOutside.product(rootInside);

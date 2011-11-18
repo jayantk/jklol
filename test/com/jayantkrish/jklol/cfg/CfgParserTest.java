@@ -2,15 +2,14 @@ package com.jayantkrish.jklol.cfg;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -176,38 +175,35 @@ public class CfgParserTest extends TestCase {
 	}
 	
 	public void testParseMaxMarginalTreeDist() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList(new Production[] 
-		    {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), false);
+	  ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false);
 		
-		Factor rootProbabilities = Maps.newHashMap();
-		rootProbabilities.put(prod("S"), 0.5);
-		rootProbabilities.put(prod("S2"), 1.0);
+		Factor rootProbabilities = TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S")).product(0.5)
+		    .add(TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S2")));
 		
 		List<ParseTree> trees = c.getBestParseTrees(rootProbabilities, 2);
 		ParseTree best = trees.get(0);
-		assertEquals(prod("S2"), best.getRoot());
-		assertEquals(prod("N"), best.getLeft().getRoot());
-		assertEquals(prod("VP"), best.getRight().getRoot());
-		assertEquals(prod("V"), best.getRight().getLeft().getRoot());
+		assertEquals("S2", best.getRoot());
+		assertEquals("N", best.getLeft().getRoot());
+		assertEquals("VP", best.getRight().getRoot());
+		assertEquals("V", best.getRight().getLeft().getRoot());
 		
 		ParseTree second = trees.get(1);
-		assertEquals(prod("S"), second.getRoot());
-		assertEquals(prod("N"), second.getLeft().getRoot());
-		assertEquals(prod("VP"), second.getRight().getRoot());
-		assertEquals(prod("V"), second.getRight().getLeft().getRoot());
+		assertEquals("S", second.getRoot());
+		assertEquals("N", second.getLeft().getRoot());
+		assertEquals("VP", second.getRight().getRoot());
+		assertEquals("V", second.getRight().getLeft().getRoot());
 	}
 
-
 	public void testMostLikelyProductions() {
-		ParseChart c = p.mostLikelyProductions(prod("barP"), 2, 2);
+		ParseChart c = p.mostLikelyProductions("barP", 2, 2);
 
-		List<ParseTree> trees = c.getBestParseTrees(prod("barP"), 2);
+		List<ParseTree> trees = c.getBestParseTrees("barP", 2);
 		assertEquals(0.5, trees.get(0).getProbability());
 		assertTrue(trees.get(0).isTerminal());
-		assertEquals(Arrays.asList(new Production[] {prod("baz"), prod("bbb")}),
+		assertEquals(Arrays.asList("baz", "bbb"),
 				trees.get(0).getTerminalProductions());
 		assertEquals(0.125, trees.get(1).getProbability());
-		assertEquals(prod("bar"), trees.get(1).getLeft().getRoot());
-		assertEquals(prod("bar"), trees.get(1).getRight().getRoot());
+		assertEquals("bar", trees.get(1).getLeft().getRoot());
+		assertEquals("bar", trees.get(1).getRight().getRoot());
 	}
 }

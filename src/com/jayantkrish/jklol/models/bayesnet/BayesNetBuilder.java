@@ -2,18 +2,14 @@ package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.jayantkrish.jklol.cfg.CptCfgFactor;
-import com.jayantkrish.jklol.cfg.CptProductionDistribution;
-import com.jayantkrish.jklol.cfg.BasicGrammar;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -58,18 +54,18 @@ public class BayesNetBuilder {
   public int addDiscreteVariable(String name, DiscreteVariable variable) {
     bayesNet = bayesNet.addVariable(name, variable);
     int varNum = bayesNet.getVariableIndex(name);
-    discreteVars = discreteVars.addMapping(varNum, variable);
+    discreteVars = discreteVars.addMapping(varNum, name, variable);
     return varNum;
   }
 
   /**
-   * Gets the variables with the specified names.
+   * Gets the variables that factor graphs in this family are defined over.
    * 
    * @param names
    * @return
    */
-  public VariableNumMap lookupVariables(Collection<String> names) {
-    return bayesNet.lookupVariables(names);
+  public VariableNumMap getVariables() {
+    return bayesNet.getVariables();
   }
 
   /**
@@ -90,16 +86,12 @@ public class BayesNetBuilder {
    */
   public CptTableFactor addCptFactorWithNewCpt(List<String> parentVariableNames,
       List<String> childVariableNames) {
-    VariableNumMap parentVars = bayesNet.lookupVariables(parentVariableNames);
-    VariableNumMap childVars = bayesNet.lookupVariables(childVariableNames);
+    VariableNumMap parentVars = bayesNet.getVariables().getVariablesByName(parentVariableNames);
+    VariableNumMap childVars = bayesNet.getVariables().getVariablesByName(childVariableNames);
     VariableNumMap allVars = parentVars.union(childVars);
 
-    BiMap<Integer, Integer> cptVarNumMap = HashBiMap.create();
-    for (Integer varNum : allVars.getVariableNums()) {
-      cptVarNumMap.put(varNum, varNum);
-    }
-
-    CptTableFactor factor = new CptTableFactor(parentVars, childVars, cptVarNumMap);
+    CptTableFactor factor = new CptTableFactor(parentVars,
+        childVars, VariableRelabeling.identity(allVars));
     addFactor(factor);
 
     return factor;
@@ -110,8 +102,10 @@ public class BayesNetBuilder {
    */
   public CptCfgFactor addCfgCptFactor(String parentVarName, String childVarName,
       BasicGrammar grammar, CptProductionDistribution productionDist) {
-    VariableNumMap parentVars = bayesNet.lookupVariables(Arrays.asList(new String[] { parentVarName }));
-    VariableNumMap childVars = bayesNet.lookupVariables(Arrays.asList(new String[] { childVarName }));
+    VariableNumMap parentVars = bayesNet.getVariables().getVariablesByName(
+        Arrays.asList(new String[] { parentVarName }));
+    VariableNumMap childVars = bayesNet.getVariables().getVariablesByName(
+        Arrays.asList(new String[] { childVarName }));
 
     CptCfgFactor factor = new CptCfgFactor(parentVars, childVars,
         grammar, productionDist);

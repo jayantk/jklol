@@ -49,11 +49,11 @@ public class EMTrainerTest extends TestCase {
 
 		bn = builder.build();		
 		trainingData = new ArrayList<Assignment>();
-		a1 = bn.lookupVariables(observedVarNames).outcomeToAssignment(
+		a1 = bn.getVariables().getVariablesByName(observedVarNames).outcomeToAssignment(
 				Arrays.asList(new String[] {"F"}));
-		a2 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
-		a3 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));
-		a4 = bn.lookupVariables(Arrays.asList("Var1")).outcomeToAssignment(Arrays.asList("T"));
+		a2 = bn.getVariables().getVariablesByName(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
+		a3 = bn.getVariables().getVariablesByName(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));
+		a4 = bn.getVariables().getVariablesByName(Arrays.asList("Var1")).outcomeToAssignment(Arrays.asList("T"));
 
 		for (int i = 0; i < 3; i++) {
 			trainingData.add(a1);
@@ -66,8 +66,8 @@ public class EMTrainerTest extends TestCase {
 		s = new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), null);
 		e = new EMTrainer(20, new JunctionTree(), null);
 		
-		testAssignment1 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
-		testAssignment2 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));
+		testAssignment1 = bn.getVariables().getVariablesByName(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
+		testAssignment2 = bn.getVariables().getVariablesByName(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));
 	}
 
 	public void testIncrementalEM() {

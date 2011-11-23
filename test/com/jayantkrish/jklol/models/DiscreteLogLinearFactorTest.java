@@ -26,7 +26,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     DiscreteVariable v = new DiscreteVariable("Two values",
         Arrays.asList("T", "F" ));
     
-    vars = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList(v, v));
+    vars = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList("v2", "v3"), Arrays.asList(v, v));
     
     f = DiscreteLogLinearFactor.createIndicatorFactor(vars);
     
@@ -71,7 +71,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   }
   
   public void testGetSufficientStatisticsFromBigAssignment() {
-    VariableNumMap moreVars = vars.addMapping(7, new DiscreteVariable("Foo",
+    VariableNumMap moreVars = vars.addMapping(7, "foo", new DiscreteVariable("Foo",
         Arrays.asList("foo", "bar")));
     Assignment tf = moreVars.outcomeArrayToAssignment("T", "F", "bar"); 
     FeatureSufficientStatistics s = f.getNewSufficientStatistics();

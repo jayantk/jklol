@@ -45,13 +45,13 @@ public class SubgradientSvmTrainerTest extends TestCase {
 		builder.addDiscreteVariable("Y", tfVar);
 
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.lookupVariables("X0", "Y")));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName("X0", "Y")));
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.lookupVariables("X1", "Y")));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName("X1", "Y")));
 		model = builder.build();
 		
-		inputVars = builder.lookupVariables("X0", "X1");
-		outputVars = builder.lookupVariables("Y");
+		inputVars = builder.getVariables().getVariablesByName("X0", "X1");
+		outputVars = builder.getVariables().getVariablesByName("Y");
 		
 		trainingData = Lists.newArrayList();
 		trainingData.add(Example.create(inputVars.outcomeArrayToAssignment("F", "F"),

@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.models;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -15,14 +16,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.models.dynamic.Plate;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A {@code FactorGraph} represents a graphical model as a set of variables and
- * a set of factors defined over variable cliques. The graphical model may represent
- * a conditional distribution, which must have some fixed values before it becomes a 
- * probability distribution.  
+ * a set of factors defined over variable cliques. The graphical model may
+ * represent a conditional distribution, which must have some fixed values
+ * before it becomes a probability distribution.
  * 
  * {@code FactorGraph}s and the {@link Factor}s they contain are immutable.
  * Therefore, each {@code FactorGraph} instance defines a particular probability
@@ -35,21 +37,20 @@ import com.jayantkrish.jklol.util.IndexedList;
 public class FactorGraph {
 
   private VariableNumMap variables;
-
-    
   private Map<String, Integer> variableNames;
 
   private HashMultimap<Integer, Integer> variableFactorMap;
   private HashMultimap<Integer, Integer> factorVariableMap;
   private IndexedList<Factor> factors;
 
+  // Plates represent graphical model structure which is replicated in a
+  // data-dependent fashion.
+  private List<Plate> plates;
+  // private IndexedList<PlateFactor> plateFactors;
+
   // Store any conditioning information that lead to this particular
   // distribution.
   private Assignment conditionedValues;
-  // A subset of variables containing variables that must be assigned before this
-  // represents a probability distribution. (i.e., this is a conditional distribution over
-  // variables.removeAll(conditionalVariables), given conditionalVariables).
-  private VariableNumMap conditionalVariables;
 
   private InferenceHint inferenceHint;
 
@@ -60,27 +61,28 @@ public class FactorGraph {
    */
   public FactorGraph() {
     variables = VariableNumMap.emptyMap();
-    conditionalVariables = VariableNumMap.emptyMap();
     variableNames = new HashMap<String, Integer>();
     variableFactorMap = HashMultimap.create();
     factorVariableMap = HashMultimap.create();
     factors = new IndexedList<Factor>();
+    plates = Lists.newArrayList();
     conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
 
   /**
-   * Copy constructor.
+   * Copy constructor. This method is private because {@code FactorGraph}s are
+   * immutable.
    * 
    * @param factorGraph
    */
   private FactorGraph(FactorGraph factorGraph) {
     this.variables = factorGraph.variables;
-    this.conditionalVariables = factorGraph.conditionalVariables;
     this.variableNames = new HashMap<String, Integer>(factorGraph.variableNames);
     this.variableFactorMap = HashMultimap.create(factorGraph.variableFactorMap);
     this.factorVariableMap = HashMultimap.create(factorGraph.factorVariableMap);
     this.factors = new IndexedList<Factor>(factorGraph.factors);
+    this.plates = Lists.newArrayList(factorGraph.plates);
     this.conditionedValues = factorGraph.conditionedValues;
     this.inferenceHint = factorGraph.inferenceHint;
   }
@@ -175,28 +177,19 @@ public class FactorGraph {
   }
 
   /**
+   * Gets the assignment to variables whose values have been conditioned on.
+   * 
+   * @return
+   */
+  public Assignment getConditionedValues() {
+    return conditionedValues;
+  }
+
+  /**
    * Get the index of a variable from its name.
    */
   public int getVariableIndex(String variableName) {
     return variableNames.get(variableName);
-  }
-
-  /**
-   * Get the variable numbers and variables corresponding to the given set of
-   * variable names. Note that the order of the names in factorVariables is
-   * irrelevant.
-   */
-  public VariableNumMap lookupVariables(Collection<String> factorVariables) {
-    List<Integer> varNums = new ArrayList<Integer>();
-    List<Variable> vars = new ArrayList<Variable>();
-    for (String variableName : factorVariables) {
-      if (!variableNames.containsKey(variableName)) {
-        throw new IllegalArgumentException("Must use an already specified variable name.");
-      }
-      varNums.add(variableNames.get(variableName));
-      vars.add(variables.getVariable(variableNames.get(variableName)));
-    }
-    return new VariableNumMap(varNums, vars);
   }
 
   /**
@@ -319,22 +312,21 @@ public class FactorGraph {
    */
   public FactorGraph addVariable(String variableName, Variable variable) {
     Preconditions.checkArgument(!this.variableNames.containsKey(variableName));
-    int varNum = variables.size();
+    int varNum = variables.size() > 0 ? Collections.max(variables.getVariableNums()) + 1 : 0;
     return addVariableWithIndex(variableName, variable, varNum);
   }
 
   private FactorGraph addVariableWithIndex(String variableName, Variable variable, int varNum) {
     FactorGraph factorGraph = new FactorGraph(this);
     factorGraph.variableNames.put(variableName, varNum);
-    factorGraph.variables = factorGraph.variables.addMapping(varNum, variable);
+    factorGraph.variables = factorGraph.variables.addMapping(varNum, variableName, variable);
     return factorGraph;
   }
 
   /**
    * Gets a new {@code FactorGraph} identical to this one, except with an
    * additional factor. {@code factor} must be defined over variables which are
-   * already in {@code this} graph; see {@link #lookupVariables(Collection)} for
-   * an easy way to construct {@code factor} over a particular set of variables.
+   * already in {@code this} graph.
    */
   public FactorGraph addFactor(Factor factor) {
     Preconditions.checkArgument(getVariables().containsAll(factor.getVars()));
@@ -350,6 +342,14 @@ public class FactorGraph {
     return factorGraph;
   }
 
+  public FactorGraph addPlate(Plate plate) {
+    Preconditions.checkArgument(getVariables().containsAll(plate.getReplicationVariables()));
+
+    FactorGraph factorGraph = new FactorGraph(this);
+    factorGraph.plates.add(plate);
+    return factorGraph;
+  }
+
   /**
    * Gets a new {@code FactorGraph} identical to this one, except with every
    * variable in {@code varNumsToEliminate} marginalized out. The returned
@@ -358,7 +358,7 @@ public class FactorGraph {
    * 
    * This procedure performs variable elimination on each variable in the order
    * returned by the iterator over {@code varNumsToEliminate}. Choosing a good
-   * order (i.e., one with low tree-width) can dramatically improve the
+   * order (i.e., one with low treewidth) can dramatically improve the
    * performance of this method.
    * 
    * This method is preferred if you wish to actively manipulate the returned
@@ -423,10 +423,10 @@ public class FactorGraph {
    */
   public FactorGraph conditional(Assignment assignment) {
     Preconditions.checkArgument(variables.containsAll(assignment.getVariableNums()));
-    // TODO: Handle dynamic factor graphs (i.e., with templated factors).
 
     FactorGraph newFactorGraph = new FactorGraph();
     newFactorGraph.conditionedValues = this.conditionedValues.union(assignment);
+
     // Copy the uneliminated variables in currentFactorGraph to nextFactorGraph
     for (String variableName : getVariableNames()) {
       int varIndex = getVariableIndex(variableName);
@@ -436,7 +436,33 @@ public class FactorGraph {
       }
     }
 
-    // Condition each factor on the passed in assignment.
+    // Dynamic variable instantiation for dynamic factor graphs.
+    for (Plate plate : plates) {
+      if (newFactorGraph.conditionedValues.containsAll(
+          plate.getReplicationVariables().getVariableNums())) {
+        // Instantiate the variables in this plate.
+        Map<String, Variable> newVariables = plate.instantiateVariables(newFactorGraph.conditionedValues);
+        for (Map.Entry<String, Variable> newVariable : newVariables.entrySet()) {
+          newFactorGraph = newFactorGraph.addVariable(newVariable.getKey(), newVariable.getValue());
+        }
+      } else {
+        newFactorGraph = newFactorGraph.addPlate(plate);
+      }
+    }
+
+    // Dynamic factor construction for dynamic factor graphs.
+    // TODO: this isn't implemented just yet.
+    /*
+     * for (PlateFactor plateFactor : plateFactors) { if
+     * (plateFactor.canInstantiate(newFactorGraph.conditionedValues)) {
+     * List<Factor> newFactors =
+     * plateFactor.instantiateFactors(newFactorGraph.conditionedValues,
+     * newFactorGraph.getVariables()); for (Factor factor : newFactors) {
+     * newFactorGraph = newFactorGraph.addFactor(factor); } } else {
+     * newFactorGraph = newFactorGraph.addPlateFactor(plateFactor); } }
+     */
+
+    // Condition each factor on assignment.
     for (Factor factor : getFactors()) {
       newFactorGraph = newFactorGraph.addFactor(factor.conditional(assignment));
     }

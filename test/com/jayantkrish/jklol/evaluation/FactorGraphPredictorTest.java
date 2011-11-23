@@ -29,8 +29,8 @@ public class FactorGraphPredictorTest extends TestCase {
   
   public void setUp() {
     factorGraph = InferenceTestCases.basicFactorGraph();
-    outputVars = factorGraph.lookupVariables(Arrays.asList("Var4"));
-    inputVars = factorGraph.lookupVariables(Arrays.asList("Var2"));
+    outputVars = factorGraph.getVariables().getVariablesByName(Arrays.asList("Var4"));
+    inputVars = factorGraph.getVariables().getVariablesByName(Arrays.asList("Var2"));
     predictor = new FactorGraphPredictor(factorGraph, outputVars, new JunctionTree()); 
   
     wrappedPredictor = new ForwardingPredictor<String, String, Assignment, Assignment>(
@@ -38,7 +38,7 @@ public class FactorGraphPredictorTest extends TestCase {
         Converters.wrapWithCast(Converters.wrapSingletonList(inputVars.getOutcomeToAssignmentConverter()), String.class),
         Converters.wrapWithCast(Converters.wrapSingletonList(outputVars.getOutcomeToAssignmentConverter()), String.class));
     
-    densityVars = factorGraph.lookupVariables(Arrays.asList("Var0", "Var2"));
+    densityVars = factorGraph.getVariables().getVariablesByName(Arrays.asList("Var0", "Var2"));
     densityPredictor = new FactorGraphPredictor(factorGraph, densityVars, new JunctionTree());
   }
   

@@ -28,10 +28,10 @@ public class CfgParserTest extends TestCase {
 	      "gretzky", "plays", "ice", "hockey", "ice hockey", "baz", "bbb", 
 	      "baz bbb", "a", "b", "c")));
 	  
-	  parentVar = new VariableNumMap(Ints.asList(0), Arrays.asList(nonterm));
-	  leftVar = new VariableNumMap(Ints.asList(1), Arrays.asList(nonterm));
-	  rightVar = new VariableNumMap(Ints.asList(2), Arrays.asList(nonterm));
-	  termVar = new VariableNumMap(Ints.asList(3), Arrays.asList(terms));
+	  parentVar = new VariableNumMap(Ints.asList(0), Arrays.asList("v0"), Arrays.asList(nonterm));
+	  leftVar = new VariableNumMap(Ints.asList(1), Arrays.asList("v1"), Arrays.asList(nonterm));
+	  rightVar = new VariableNumMap(Ints.asList(2), Arrays.asList("v2"), Arrays.asList(nonterm));
+	  termVar = new VariableNumMap(Ints.asList(3), Arrays.asList("v3"), Arrays.asList(terms));
 	  
 	  VariableNumMap binaryFactorVars = parentVar.union(leftVar).union(rightVar);
 	  TableFactorBuilder binaryBuilder = new TableFactorBuilder(binaryFactorVars);

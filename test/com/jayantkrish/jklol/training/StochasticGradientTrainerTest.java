@@ -39,11 +39,11 @@ public class StochasticGradientTrainerTest extends TestCase {
 
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.lookupVariables(clique1Names)));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)));
 		
 		clique2Names = Arrays.asList("Var2", "Var3");
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.lookupVariables(clique2Names)));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)));
 
 		logLinearModel = builder.build();
 		trainingData = new ArrayList<Assignment>();
@@ -64,17 +64,16 @@ public class StochasticGradientTrainerTest extends TestCase {
 	public void testTrain() {
 		// These assignments should have positive weight for clique 1
 		Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
-		clique1PositiveAssignments.add(logLinearModel.lookupVariables(clique1Names)
+		clique1PositiveAssignments.add(logLinearModel.getVariables().getVariablesByName(clique1Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T"})));
-		clique1PositiveAssignments.add(logLinearModel.lookupVariables(clique1Names)
+		clique1PositiveAssignments.add(logLinearModel.getVariables().getVariablesByName(clique1Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "F", "F"})));
 
 		Set<Assignment> clique2NegativeAssignments = new HashSet<Assignment>();
-		clique2NegativeAssignments.add(logLinearModel.lookupVariables(clique2Names)
+		clique2NegativeAssignments.add(logLinearModel.getVariables().getVariablesByName(clique2Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
 		SufficientStatistics parameters = t.train(logLinearModel, logLinearModel.getNewSufficientStatistics(), trainingData);
-		System.out.println(parameters);
 
 		List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 		for (SufficientStatistics stats : parameterList) {

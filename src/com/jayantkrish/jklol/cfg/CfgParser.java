@@ -2,17 +2,16 @@ package com.jayantkrish.jklol.cfg;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -26,10 +25,13 @@ public class CfgParser {
   private final VariableNumMap rightVar;
   private final VariableNumMap terminalVar;
   
-  private final Map<Integer, Integer> leftToParent;
-  private final Map<Integer, Integer> rightToParent;
-  private final Map<Integer, Integer> parentToLeft;
-  private final Map<Integer, Integer> parentToRight;
+  // Each entry in the parse chart contains a factor defined over parentVar. These
+  // relabelings are necessary to apply binaryDistribution and terminalDistribution
+  // during parsing.
+  private final VariableRelabeling leftToParent;
+  private final VariableRelabeling rightToParent;
+  private final VariableRelabeling parentToLeft;
+  private final VariableRelabeling parentToRight;
   
   private final Factor binaryDistribution;
   private final Factor terminalDistribution;
@@ -46,19 +48,10 @@ public class CfgParser {
     this.terminalDistribution = terminalDistribution;
     
     // Construct some variable->variable renamings which are useful during parsing. 
-    this.leftToParent = Maps.newHashMap();
-    leftToParent.put(Iterables.getOnlyElement(leftVar.getVariableNums()), 
-        Iterables.getOnlyElement(parentVar.getVariableNums()));
-    this.rightToParent = Maps.newHashMap();
-    rightToParent.put(Iterables.getOnlyElement(rightVar.getVariableNums()), 
-        Iterables.getOnlyElement(parentVar.getVariableNums()));
-    
-    this.parentToLeft = Maps.newHashMap();
-    parentToLeft.put(Iterables.getOnlyElement(parentVar.getVariableNums()), 
-        Iterables.getOnlyElement(leftVar.getVariableNums()));
-    this.parentToRight = Maps.newHashMap();
-    parentToRight.put(Iterables.getOnlyElement(parentVar.getVariableNums()), 
-        Iterables.getOnlyElement(rightVar.getVariableNums()));
+    this.leftToParent = VariableRelabeling.createFromVariables(leftVar, parentVar);
+    this.rightToParent = VariableRelabeling.createFromVariables(rightVar, parentVar);
+    this.parentToLeft = VariableRelabeling.createFromVariables(parentVar, leftVar);
+    this.parentToRight = VariableRelabeling.createFromVariables(parentVar, rightVar);
   }
 
   public Factor getBinaryDistribution() {

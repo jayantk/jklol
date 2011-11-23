@@ -1,11 +1,11 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Iterator;
-import java.util.Map;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.SparseTensor;
 
@@ -89,9 +89,9 @@ public class TableFactor extends DiscreteFactor {
   }
       
   @Override
-  public TableFactor relabelVariables(Map<Integer, Integer> relabeling) {
-    Preconditions.checkArgument(relabeling.keySet().containsAll(getVars().getVariableNums()));
-    return new TableFactor(getVars().mapVariables(relabeling), weights.relabelDimensions(relabeling));
+  public TableFactor relabelVariables(VariableRelabeling relabeling) {
+    return new TableFactor(relabeling.apply(getVars()), 
+        weights.relabelDimensions(relabeling.getVariableIndexReplacementMap()));
   }
 
   @Override

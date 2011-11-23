@@ -7,11 +7,13 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.dynamic.Plate;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class FactorGraphTest extends TestCase {
 
-	private FactorGraph f;
+	private FactorGraph f, dynamic;
 	private TableFactorBuilder builder;
 	private DiscreteVariable tfVar;
 
@@ -29,14 +31,23 @@ public class FactorGraphTest extends TestCase {
 		f = f.addVariable("Var2", tfVar);
 		f = f.addVariable("Var3", tfVar);
 
-		builder = new TableFactorBuilder(f.lookupVariables(Arrays.asList(new String[] {"Var0", "Var2", "Var3"})));
+		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var0", "Var2", "Var3")));
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0, 0}), 1.0);
 		f = f.addFactor(builder.build());
 
-		builder = new TableFactorBuilder(f.lookupVariables(Arrays.asList(new String[] {"Var2", "Var1"})));
+		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var2", "Var1")));
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0}), 1.0);
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {1, 1}), 1.0);
 		f = f.addFactor(builder.build());
+		
+		// Construct a dynamic factor graph.
+		IntegerVariable intVar = new IntegerVariable();
+		dynamic = f.addVariable("PlateReplications", intVar);
+		VariablePattern pattern = new VariablePattern(Arrays.asList("x", "y"), 
+		    Arrays.<Variable>asList(tfVar, otherVar), VariableNumMap.emptyMap());
+		Plate plate = new Plate(dynamic.getVariables().getVariablesByName("PlateReplications"), pattern);
+		
+		dynamic = dynamic.addPlate(plate); 
 	}
 
 	public void testGetFactorsWithVariable() {
@@ -77,12 +88,16 @@ public class FactorGraphTest extends TestCase {
 	}
 	
 	public void testConditional1() {
-	  Assignment a = f.outcomeToAssignment(Arrays.asList("Var0", "Var1"), 
-	      Arrays.asList("T", "foo"));
-	  FactorGraph c = f.conditional(a);
+	  Assignment a = f.outcomeToAssignment(Arrays.asList("Var0"), 
+	      Arrays.asList("T"));
+	  Assignment b = f.outcomeToAssignment(Arrays.asList("Var1"), 
+	      Arrays.asList("foo"));
+
+	  FactorGraph c = f.conditional(a).conditional(b);
 	  assertEquals(2, c.getVariables().size());
 	  assertTrue(c.getVariableNames().contains("Var2")); 
 	  assertFalse(c.getVariableNames().contains("Var1"));
+	  assertEquals(a.union(b), c.getConditionedValues());
 	  
 	  Assignment a2 = f.outcomeToAssignment(Arrays.asList("Var2", "Var3"), Arrays.asList("T", "T")); 
 	  assertEquals(1.0, c.getUnnormalizedProbability(a2));
@@ -109,5 +124,13 @@ public class FactorGraphTest extends TestCase {
 
 	  assertEquals(0, c.getVariables().size());
 	  assertEquals(1.0, c.getUnnormalizedProbability(Assignment.EMPTY));
+	}
+	
+	public void testConditionalDynamic() {
+	  Assignment a = dynamic.outcomeToAssignment(
+	      Arrays.asList("Var0", "PlateReplications"), Arrays.<Object>asList("T", 5));
+	  
+	  FactorGraph c = dynamic.conditional(a);
+	  assertEquals(13, c.getVariables().size());
 	}
 }

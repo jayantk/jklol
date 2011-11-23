@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.training;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -10,7 +9,6 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -160,10 +158,9 @@ public class SubgradientSvmTrainer {
       FactorGraph augmentedGraph = factorGraph;
       for (Integer varNum : outputVariables.getVariableNums()) {
         List<Integer> varNumList = Ints.asList(varNum);
-        DiscreteVariable var = (DiscreteVariable) outputVariables.getVariable(varNum);
         TableFactorBuilder builder = new TableFactorBuilder(outputVariables.intersection(varNumList));
 
-        Iterator<Assignment> varAssignments = new AllAssignmentIterator(varNumList, Arrays.asList(var));
+        Iterator<Assignment> varAssignments = new AllAssignmentIterator(outputVariables.intersection(varNumList));
         while (varAssignments.hasNext()) {
           builder.incrementWeight(varAssignments.next(), Math.E);
         }

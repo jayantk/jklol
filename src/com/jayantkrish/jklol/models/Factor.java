@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -81,17 +82,17 @@ public interface Factor {
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages);
 
   /**
-   * Returns a new {@code Factor} with relabeled variable indices.
-   * {@code newVariableNums.get(i)} is substituted for each variable index
-   * {@code i} in {@code this}. The type of each variable is preserved.
+   * Returns a new {@code Factor} with relabeled variable names and indices.
+   * {@code relabeling} is applied to each variable index and name in this to
+   * determine replacement name and index of each variable. The type of each
+   * variable is preserved.
    * 
-   * Each variable index spanned by this must be contained in
-   * {@code newVariableNums}.
+   * Requires {@code relabeling.isInDomain(this.getVars()) == true}. 
    * 
    * @param newVariableNums
    * @return
    */
-  public Factor relabelVariables(Map<Integer, Integer> newVariableNums);
+  public Factor relabelVariables(VariableRelabeling relabeling);
 
   /**
    * Gets a new factor which conditions on the variables in {@code assignment}.

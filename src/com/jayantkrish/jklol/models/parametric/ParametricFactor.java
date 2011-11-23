@@ -1,8 +1,9 @@
 package com.jayantkrish.jklol.models.parametric;
 
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.dynamic.PlateFactor;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -28,23 +29,30 @@ public interface ParametricFactor<T> {
 
   /**
    * Gets the variables over which this {@code ParametricFactor} is defined. The
-   * returned variables are the same as the variables for the factor returned by
-   * {@link #getFactorFromParameters(Object)}.
+   * returned value is a {@code VariablePattern} because a single
+   * {@code ParametricFactor} may instantiate multiple factors (with tied
+   * parameters) in the final {@code FactorGraph}.
+   * 
+   * The returned variables are the same as the variables for the factor
+   * returned by {@link #getFactorFromParameters(Object)}.
    * 
    * @return
    */
-  public VariableNumMap getVars();
+  public VariablePattern getVars();
 
   /**
-   * Gets a {@code Factor} from a set of {@code parameters}. This method selects
-   * an element of this set of {@code Factor}s. Note that multiple values of
-   * {@code parameters} may return the same {@code Factor}, that is, there is no
-   * guarantee of uniqueness.
+   * Gets a {@code PlateFactor} from a set of {@code parameters}. The result is
+   * a {@code PlateFactor} in order to handle replicated factors with tied
+   * parameters. This method returns an element from this family of parametric
+   * {@code PlateFactor}s.
+   * 
+   * Note that multiple values of {@code parameters} may return the same
+   * {@code PlateFactor}, that is, there is no guarantee of uniqueness.
    * 
    * @param parameters
    * @return
    */
-  public Factor getFactorFromParameters(T parameters);
+  public PlateFactor getFactorFromParameters(T parameters);
 
   /**
    * Gets a new vector of parameters for {@code this} with a reasonable default

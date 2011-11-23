@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import java.util.Collection;
-
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -26,11 +24,6 @@ public abstract class AbstractParametricFamily<T>
     return baseFactorGraph.getVariables();
   }
   
-  @Override
-  public VariableNumMap lookupVariables(Collection<String> names) {
-    return baseFactorGraph.lookupVariables(names);
-  }
-    
   protected FactorGraph getBaseFactorGraph() {
     return baseFactorGraph;
   }

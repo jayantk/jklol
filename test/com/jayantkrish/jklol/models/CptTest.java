@@ -28,13 +28,16 @@ public class CptTest extends TestCase {
     v = new DiscreteVariable("Two values",
         Arrays.asList(new String[] { "T", "F" }));
 
-    VariableNumMap parents = new VariableNumMap(Arrays.asList(new Integer[] { 0, 1 }), 
+    VariableNumMap parents = new VariableNumMap(Arrays.asList(new Integer[] { 0, 1 }),
+        Arrays.asList("v0", "v1"),
         Arrays.asList(new DiscreteVariable[] { v, v }));
-    VariableNumMap children = new VariableNumMap(Arrays.asList(new Integer[] { 2, 3 }), 
+    VariableNumMap children = new VariableNumMap(Arrays.asList(new Integer[] { 2, 3 }),
+        Arrays.asList("v2", "v3"),
         Arrays.asList(new DiscreteVariable[] { v, v }));
     VariableNumMap allVars = parents.union(children);
     
-    VariableNumMap differentParents = new VariableNumMap(Arrays.asList(new Integer[] { 5 }), 
+    VariableNumMap differentParents = new VariableNumMap(Arrays.asList(new Integer[] { 5 }),
+        Arrays.asList("v5"),
         Arrays.asList(new DiscreteVariable[] { v }));
     
     first = new Cpt(parents, children);

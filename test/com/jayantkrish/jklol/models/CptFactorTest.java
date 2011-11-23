@@ -8,6 +8,7 @@ import junit.framework.TestCase;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.bayesnet.Cpt;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -26,22 +27,26 @@ public class CptFactorTest extends TestCase {
     DiscreteVariable v = new DiscreteVariable("Two values",
         Arrays.asList("T", "F" ));
     
-    VariableNumMap parents = new VariableNumMap(Arrays.asList(2, 3), 
+    VariableNumMap parents = new VariableNumMap(Arrays.asList(2, 3),
+        Arrays.asList("v2", "v3"),
         Arrays.asList(v, v ));
-    VariableNumMap children = new VariableNumMap(Arrays.asList(4, 5), 
+    VariableNumMap children = new VariableNumMap(Arrays.asList(4, 5),
+        Arrays.asList("v4", "v5"),
         Arrays.asList(v, v));
             
     BiMap<Integer, Integer> map = HashBiMap.create();
+    BiMap<String, String> nameMap = HashBiMap.create();
     for (int i = 0; i < 4; i++) {
       map.put(i + 2, i);
+      nameMap.put("v" + (i + 2), "v" + i); 
     }
     
-    cptParents = new VariableNumMap(Arrays.asList(0, 1), Arrays.asList(v, v));
-    cptChildren = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList(v, v));
+    cptParents = new VariableNumMap(Arrays.asList(0, 1), Arrays.asList("v0", "v1"), Arrays.asList(v, v));
+    cptChildren = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList("v2", "v3"), Arrays.asList(v, v));
     cptVars = new VariableNumMap(Arrays.asList(0, 1, 2, 3),
-        Arrays.asList(v, v, v, v)); 
+        Arrays.asList("v0", "v1", "v2", "v3"), Arrays.asList(v, v, v, v)); 
     
-    f = new CptTableFactor(parents, children, map);
+    f = new CptTableFactor(parents, children, new VariableRelabeling(map, nameMap));
     
     // Note: Parent F, T was unassigned!
     assignments = new Object[][] {{ "T", "T", "T", "T" },

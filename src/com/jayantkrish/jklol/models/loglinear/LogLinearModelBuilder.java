@@ -1,8 +1,6 @@
 package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -54,30 +52,19 @@ public class LogLinearModelBuilder {
   public int addDiscreteVariable(String name, DiscreteVariable variable) {
     factorGraph = factorGraph.addVariable(name, variable);
     int varNum = factorGraph.getVariableIndex(name);
-    discreteVariables = discreteVariables.addMapping(varNum, variable);
+    discreteVariables = discreteVariables.addMapping(varNum, name, variable);
     return varNum;
   }
   
   /**
-   * Gets the variables in {@code this} with the given names.
+   * Gets the variables that {@code this} is defined over.
    * 
-   * @param names
    * @return
    */
-  public VariableNumMap lookupVariables(Collection<String> names) {
-    return factorGraph.lookupVariables(names);
+  public VariableNumMap getVariables() {
+    return factorGraph.getVariables();
   }
   
-  /**
-   * Gets the variables in {@code this} with the given names.
-   * 
-   * @param names
-   * @return
-   */
-  public VariableNumMap lookupVariables(String... names) {
-    return factorGraph.lookupVariables(Arrays.asList(names));
-  }
-
   /**
    * Adds an unparameterized factor to the model under construction.
    * 

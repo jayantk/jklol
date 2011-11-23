@@ -12,6 +12,8 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -50,8 +52,7 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     FactorGraph result = getBaseFactorGraph();
     for (int i = 0; i < parameterList.size(); i++) {
-      // Pass each ParametricFactor its corresponding set of parameters.
-      result = result.addFactor(parametricFactors.get(i)
+      result = result.addPlateFactor(parametricFactors.get(i)
           .getFactorFromParameters(parameterList.get(i)));
     }
     return result;
@@ -83,14 +84,21 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
     
     for (int i = 0; i < statisticsList.size(); i++) {
-      VariableNumMap fixedVars = parametricFactors.get(i).getVars().intersection(marginals.getConditionedValues().getVariableNums());
-      VariableNumMap marginalVars = parametricFactors.get(i).getVars().removeAll(marginals.getConditionedValues().getVariableNums());
-      
-      Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
-      Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
-      
-      parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i), 
-          factorMarginal, factorAssignment, count, marginals.getPartitionFunction());
+      VariablePattern pattern = parametricFactors.get(i).getVars();
+      List<VariableMatch> matches = pattern.matchVariables(marginals.getVariables());
+
+      for (VariableMatch match : matches) {
+        VariableNumMap fixedVars = match.getMatchedVariables().intersection(marginals.getConditionedValues().getVariableNums());
+        VariableNumMap marginalVars = match.getMatchedVariables().removeAll(marginals.getConditionedValues().getVariableNums());
+       
+        Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
+        Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
+
+        parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i), 
+            factorMarginal.relabelVariables(match.getMappingToTemplate()), 
+            factorAssignment.mapVariables(match.getMappingToTemplate().getVariableIndexReplacementMap()),
+            count, marginals.getPartitionFunction());
+      }
     }
   }
   

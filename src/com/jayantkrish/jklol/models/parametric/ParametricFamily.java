@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import java.util.Collection;
-
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -32,14 +30,6 @@ public interface ParametricFamily<T> {
    * @return
    */
   public VariableNumMap getVariables();
-
-  /**
-   * Gets the variables in {@code this} with the given {@code names}.
-   * 
-   * @param names
-   * @return
-   */
-  public VariableNumMap lookupVariables(Collection<String> names);
 
   /**
    * Gets a {@code FactorGraph} which is the member of this family indexed by

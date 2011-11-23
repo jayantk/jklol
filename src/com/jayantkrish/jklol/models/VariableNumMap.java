@@ -13,21 +13,26 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
 
 /**
- * A VariableNumMap represents a set of variables in a graphical model.
- * VariableNumMaps are immutable.
+ * A {@code VariableNumMap} represents a set of variables in a graphical model.
+ * Each variable has a unique numerical index, a unique name, and a
+ * {@code Variable} representing the type of its values. {@code VariableNumMap}s
+ * are immutable.
  * 
  * @author jayant
  * 
  */
 public class VariableNumMap {
 
-  private SortedMap<Integer, Variable> varMap;
+  private final SortedMap<Integer, Variable> varMap;
+  private final BiMap<Integer, String> names;
 
   /**
    * Instantiate a VariableNumMap with the specified variables. Each variable is
@@ -38,25 +43,28 @@ public class VariableNumMap {
    * @param varNames - The String name of each variable
    * @param vars - The Variable type of each variable
    */
-  public VariableNumMap(List<Integer> varNums, List<? extends Variable> vars) {
+  public VariableNumMap(List<Integer> varNums, List<String> varNames, List<? extends Variable> vars) {
     Preconditions.checkArgument(varNums.size() == vars.size());
+    Preconditions.checkArgument(varNums.size() == varNames.size());
     varMap = new TreeMap<Integer, Variable>();
+    names = HashBiMap.create();
     for (int i = 0; i < varNums.size(); i++) {
       varMap.put(varNums.get(i), vars.get(i));
+      names.put(varNums.get(i), varNames.get(i));
     }
   }
 
-  public VariableNumMap(Map<Integer, Variable> varNumMap) {
-    varMap = new TreeMap<Integer, Variable>(varNumMap);
-  }
-
   /**
-   * Copy constructor.
+   * Constructor used internally for building the results of operations that
+   * return new {@code VariableNumMap}s, such as {@link #union(VariableNumMap)}.
    * 
    * @param varNumMap
+   * @param varNames
    */
-  public VariableNumMap(VariableNumMap varNumMap) {
-    this.varMap = new TreeMap<Integer, Variable>(varNumMap.varMap);
+  private VariableNumMap(SortedMap<Integer, Variable> varNumMap,
+      BiMap<Integer, String> varNames) {
+    varMap = varNumMap;
+    names = varNames;
   }
 
   /**
@@ -87,6 +95,30 @@ public class VariableNumMap {
   }
 
   /**
+   * Gets the names of all of the variables in {@code this}, ordered by their
+   * variable index.
+   * 
+   * @return
+   */
+  public List<String> getVariableNames() {
+    List<String> orderedNames = Lists.newArrayList();
+    for (Integer variableNum : varMap.keySet()) {
+      orderedNames.add(names.get(variableNum));
+    }
+    return orderedNames;
+  }
+
+  /**
+   * Gets the name of the variable whose numerical index is {@code index}.
+   * Throws a {@code KeyError} if no such variable exists.
+   * 
+   * @return
+   */
+  public String getVariableNameFromIndex(int index) {
+    return names.get(index);
+  }
+
+  /**
    * Get the discrete variables in this map, ordered by variable index.
    */
   public List<DiscreteVariable> getDiscreteVariables() {
@@ -103,13 +135,28 @@ public class VariableNumMap {
    * Get the real variables in this map, ordered by variable index.
    */
   public List<RealVariable> getRealVariables() {
-    List<RealVariable> discreteVars = new ArrayList<RealVariable>();
+    List<RealVariable> realVars = new ArrayList<RealVariable>();
     for (Integer varNum : getVariableNums()) {
       if (getVariable(varNum) instanceof RealVariable) {
-        discreteVars.add((RealVariable) getVariable(varNum));
+        realVars.add((RealVariable) getVariable(varNum));
       }
     }
-    return discreteVars;
+    return realVars;
+  }
+
+  /**
+   * Gets any integer-valued variables in {@code this}.
+   * 
+   * @return
+   */
+  public List<IntegerVariable> getIntegerVariables() {
+    List<IntegerVariable> integerVars = new ArrayList<IntegerVariable>();
+    for (Integer varNum : getVariableNums()) {
+      if (getVariable(varNum) instanceof IntegerVariable) {
+        integerVars.add((IntegerVariable) getVariable(varNum));
+      }
+    }
+    return integerVars;
   }
 
   /**
@@ -124,6 +171,50 @@ public class VariableNumMap {
   }
 
   /**
+   * Gets the index of the variable named {@code variableName}. Throws a
+   * {@code KeyError} if no such variable exists.
+   * 
+   * @param variableName
+   * @return
+   */
+  public int getVariableByName(String variableName) {
+    return names.inverse().get(variableName);
+  }
+
+  /**
+   * Gets the subset of {@code this} containing variables with a name in
+   * {@code variableNames}. Names in {@code variableNames} which are not in
+   * {@code this} are ignored.
+   * 
+   * @param variableNames
+   * @return
+   */
+  public VariableNumMap getVariablesByName(Collection<String> variableNames) {
+    BiMap<String, Integer> nameIndex = names.inverse();
+    BiMap<Integer, String> newNames = HashBiMap.create();
+    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+    for (String name : variableNames) {
+      if (nameIndex.containsKey(name)) {
+        int currentNameIndex = nameIndex.get(name);
+        newNames.put(currentNameIndex, name);
+        newVarMap.put(currentNameIndex, varMap.get(currentNameIndex));
+      }
+    }
+    return new VariableNumMap(newVarMap, newNames);
+  }
+
+  /**
+   * Identical to {@link #getVariablesByName(Collection)}, but with an array of
+   * names instead of a {@code Collection}.
+   * 
+   * @param variableNames
+   * @return
+   */
+  public VariableNumMap getVariablesByName(String... variableNames) {
+    return getVariablesByName(Arrays.asList(variableNames));
+  }
+
+  /**
    * Returns true if variableNum is mapped to a variable in this map.
    * 
    * @param variableNum
@@ -131,6 +222,17 @@ public class VariableNumMap {
    */
   public boolean contains(int variableNum) {
     return varMap.containsKey(variableNum);
+  }
+
+  /**
+   * Returns {@code true} if {@code this} contains a variable named
+   * {@code variableName}.
+   * 
+   * @param variableName
+   * @return
+   */
+  public boolean contains(String variableName) {
+    return names.inverse().containsKey(variableName);
   }
 
   /**
@@ -196,9 +298,9 @@ public class VariableNumMap {
   private void checkCompatibility(VariableNumMap other) {
     for (Integer key : other.getVariableNums()) {
       if (varMap.containsKey(key)
-          && varMap.get(key) != other.varMap.get(key)) {
+          && (varMap.get(key) != other.varMap.get(key) || !names.get(key).equals(other.names.get(key)))) {
         throw new IllegalArgumentException(
-            "Conflicting number -> variable mapping! This object: "
+            "Conflicting number -> (name, variable) mapping! This object: "
                 + this + " other object: " + other);
       }
     }
@@ -225,12 +327,14 @@ public class VariableNumMap {
    */
   public VariableNumMap intersection(Collection<Integer> varNumsToKeep) {
     SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+    BiMap<Integer, String> newNames = HashBiMap.create();
     for (Integer key : varNumsToKeep) {
       if (contains(key)) {
         newVarMap.put(key, varMap.get(key));
+        newNames.put(key, names.get(key));
       }
     }
-    return new VariableNumMap(newVarMap);
+    return new VariableNumMap(newVarMap, newNames);
   }
 
   /**
@@ -253,13 +357,15 @@ public class VariableNumMap {
   public VariableNumMap removeAll(Collection<Integer> varNumsToRemove) {
     SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(
         varMap);
+    BiMap<Integer, String> newNames = HashBiMap.create(names);
     Set<Integer> varNumsToRemoveSet = Sets.newHashSet(varNumsToRemove);
     for (Integer key : getVariableNums()) {
       if (varNumsToRemoveSet.contains(key)) {
         newVarMap.remove(key);
+        newNames.remove(key);
       }
     }
-    return new VariableNumMap(newVarMap);
+    return new VariableNumMap(newVarMap, newNames);
   }
 
   /**
@@ -274,10 +380,12 @@ public class VariableNumMap {
     checkCompatibility(other);
     SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(
         varMap);
+    BiMap<Integer, String> newNames = HashBiMap.create(names);
     for (Integer key : other.getVariableNums()) {
       newVarMap.put(key, other.varMap.get(key));
+      newNames.put(key, other.names.get(key));
     }
-    return new VariableNumMap(newVarMap);
+    return new VariableNumMap(newVarMap, newNames);
   }
 
   /**
@@ -287,28 +395,13 @@ public class VariableNumMap {
    * @param var
    * @return
    */
-  public VariableNumMap addMapping(int num, Variable var) {
+  public VariableNumMap addMapping(int num, String name, Variable var) {
     SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(
         varMap);
     newVarMap.put(num, var);
-    return new VariableNumMap(newVarMap);
-  }
-
-  /**
-   * Returns a map with each variable number in {@code this} replaced with its
-   * value in {@code numMapping}. {@code numMapping} must contain each variable
-   * number in this as a key.
-   * 
-   * @param numMapping
-   * @return
-   */
-  public VariableNumMap mapVariables(Map<Integer, Integer> numMapping) {
-    Preconditions.checkArgument(numMapping.keySet().containsAll(varMap.keySet()));
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
-    for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
-      newVarMap.put(numMapping.get(entry.getKey()), entry.getValue());
-    }
-    return new VariableNumMap(newVarMap);
+    BiMap<Integer, String> newNames = HashBiMap.create(names);
+    newNames.put(num, name);
+    return new VariableNumMap(newVarMap, newNames);
   }
 
   /**
@@ -461,8 +554,11 @@ public class VariableNumMap {
    */
   @Override
   public boolean equals(Object o) {
-    return o instanceof VariableNumMap
-        && varMap.equals(((VariableNumMap) o).varMap);
+    if (o instanceof VariableNumMap) {
+      VariableNumMap other = (VariableNumMap) o;
+      return varMap.equals(other.varMap) && names.equals(other.names);
+    }
+    return false;
   }
 
   /**
@@ -470,7 +566,8 @@ public class VariableNumMap {
    */
   public static VariableNumMap emptyMap() {
     List<Variable> empty = Collections.emptyList();
-    return new VariableNumMap(Arrays.asList(new Integer[] {}), empty);
+    return new VariableNumMap(Arrays.<Integer> asList(),
+        Arrays.<String> asList(), empty);
   }
 
   /**
@@ -493,7 +590,7 @@ public class VariableNumMap {
    * 
    * @author jayantk
    */
-  private class AssignmentConverter extends Converter<List<Object>, Assignment> {
+  private static class AssignmentConverter extends Converter<List<Object>, Assignment> {
 
     private final VariableNumMap variables;
 
@@ -511,6 +608,128 @@ public class VariableNumMap {
     public List<Object> invert(Assignment item) {
       Preconditions.checkArgument(item.size() == variables.size());
       return variables.assignmentToOutcome(item);
+    }
+  }
+
+  /**
+   * A one-to-one conversion function between two sets of variable indices and
+   * names. A {@code VariableRelabeling} can be applied to
+   * {@code VariableNumMap}s from either set to get the corresponding map using
+   * the other set of indices and names.
+   * 
+   * @author jayantk
+   */
+  public static class VariableRelabeling extends Converter<VariableNumMap, VariableNumMap> {
+
+    private final BiMap<Integer, Integer> variableIndexMap;
+    private final BiMap<String, String> variableNameMap;
+
+    public VariableRelabeling(BiMap<Integer, Integer> variableIndexMap,
+        BiMap<String, String> variableNameMap) {
+      this.variableIndexMap = variableIndexMap;
+      this.variableNameMap = variableNameMap;
+    }
+
+    public String getReplacementName(String name) {
+      return variableNameMap.get(name);
+    }
+
+    public Integer getReplacementIndex(Integer index) {
+      return variableIndexMap.get(index);
+    }
+
+    public boolean isInDomain(VariableNumMap variableNumMap) {
+      return variableIndexMap.keySet().containsAll(variableNumMap.getVariableNums()) &&
+          variableNameMap.keySet().containsAll(variableNumMap.getVariableNames());
+    }
+
+    public boolean isInRange(VariableNumMap variableNumMap) {
+      return variableIndexMap.values().containsAll(variableNumMap.getVariableNums()) &&
+          variableNameMap.values().containsAll(variableNumMap.getVariableNames());
+    }
+
+    public BiMap<Integer, Integer> getVariableIndexReplacementMap() {
+      return variableIndexMap;
+    }
+
+    @Override
+    public VariableNumMap apply(VariableNumMap input) {
+      Preconditions.checkArgument(isInDomain(input));
+      return mapIndicesAndNames(input, variableIndexMap, variableNameMap);
+    }
+
+    @Override
+    public VariableNumMap invert(VariableNumMap input) {
+      Preconditions.checkArgument(isInRange(input));
+      return mapIndicesAndNames(input, variableIndexMap.inverse(), variableNameMap.inverse());
+    }
+
+    /*
+     * Override the default implementation so that the non-Converter methods
+     * work as expected on the inverse operation.
+     */
+    @Override
+    public VariableRelabeling inverse() {
+      return new VariableRelabeling(variableIndexMap.inverse(), variableNameMap.inverse());
+    }
+
+    /**
+     * Constructs a relabeling from {@code domain} to {@code range} by mapping
+     * the {@code i}th variable name/index in {@code domain} to the {@code i}th
+     * name/index in {@code range}.
+     * 
+     * Requires {@code domain.size() == range.size()}.
+     * 
+     * @param domain
+     * @param range
+     */
+    public static VariableRelabeling createFromVariables(VariableNumMap domain, VariableNumMap range) {
+      Preconditions.checkArgument(domain.size() == range.size());
+      BiMap<Integer, Integer> indexMap = HashBiMap.create();
+      BiMap<String, String> nameMap = HashBiMap.create();
+      for (int i = 0; i < domain.size(); i++) {
+        indexMap.put(domain.getVariableNums().get(i), range.getVariableNums().get(i));
+        nameMap.put(domain.getVariableNames().get(i), range.getVariableNames().get(i));
+      }
+      return new VariableRelabeling(indexMap, nameMap);
+    }
+    
+    /**
+     * Constructs the identity relabeling between variables in {@code map}.
+     *  
+     * @param map
+     * @return
+     */
+    public static VariableRelabeling identity(VariableNumMap map) {
+      BiMap<Integer, Integer> indexMap = HashBiMap.create();
+      BiMap<String, String> nameMap = HashBiMap.create();
+      for (int i = 0; i < map.size(); i++) {
+        indexMap.put(map.getVariableNums().get(i), map.getVariableNums().get(i));
+        nameMap.put(map.getVariableNames().get(i), map.getVariableNames().get(i));
+      }
+      return new VariableRelabeling(indexMap, nameMap);      
+    }
+
+    /**
+     * Replaces each index in {@code input} with its corresponding value in
+     * {@code indexReplacements}, and similarly replaces each name in
+     * {@code input} with its value in {@code nameReplacements}.
+     * 
+     * @param input
+     * @param indexReplacements
+     * @param nameReplacements
+     * @return
+     */
+    private static VariableNumMap mapIndicesAndNames(VariableNumMap input,
+        Map<Integer, Integer> indexReplacements, Map<String, String> nameReplacements) {
+      SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+      BiMap<Integer, String> newNames = HashBiMap.create();
+      for (Map.Entry<Integer, Variable> entry : input.varMap.entrySet()) {
+        newVarMap.put(indexReplacements.get(entry.getKey()), entry.getValue());
+        String oldVariableName = input.getVariableNameFromIndex(entry.getKey());
+        newNames.put(indexReplacements.get(entry.getKey()), nameReplacements.get(oldVariableName));
+      }
+      return new VariableNumMap(newVarMap, newNames);
     }
   }
 }

@@ -2,12 +2,12 @@ package com.jayantkrish.jklol.models;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.SparseTensor;
@@ -55,9 +55,9 @@ public class LogTableFactor extends DiscreteFactor {
   }
   
   @Override
-  public LogTableFactor relabelVariables(Map<Integer, Integer> relabeling) {
-    Preconditions.checkArgument(relabeling.keySet().containsAll(getVars().getVariableNums()));
-    return new LogTableFactor(getVars().mapVariables(relabeling), logWeights.relabelDimensions(relabeling));
+  public LogTableFactor relabelVariables(VariableRelabeling relabeling) {
+    return new LogTableFactor(relabeling.apply(getVars()), 
+        logWeights.relabelDimensions(relabeling.getVariableIndexReplacementMap()));
   }
 
   @Override

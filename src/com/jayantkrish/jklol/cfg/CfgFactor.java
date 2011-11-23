@@ -101,8 +101,8 @@ public class CfgFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    List<Production> childVarValue = (List<Production>) a.getValue(childVarNum);
-    ParseChart c = parser.parseMarginal(childVarValue, (Production) a.getValue(parentVarNum));
+    List<?> childVarValue = (List<?>) a.getValue(childVarNum);
+    ParseChart c = parser.parseMarginal(childVarValue, a.getValue(parentVarNum), true);
     double probability = c.getPartitionFunction();
     if (parentInboundMessage != null) {
       probability *= parentInboundMessage.getUnnormalizedProbability(a);
@@ -111,10 +111,6 @@ public class CfgFactor extends AbstractFactor {
       probability *= childInboundMessage.getUnnormalizedProbability(a);
     }
     return probability;
-  }
-
-  public ProductionDistribution getProductionDistribution() {
-    return parser.getDistribution();
   }
 
   // ///////////////////////////////////////////////////////////

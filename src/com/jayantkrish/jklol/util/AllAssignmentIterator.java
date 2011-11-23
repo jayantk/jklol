@@ -18,10 +18,12 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 	private List<Integer> finalValueInds;
 	private List<Object> currentValues;
 
+	/*
 	public AllAssignmentIterator(List<Integer> varNums, List<DiscreteVariable> varList) {
 		this.vars = new VariableNumMap(varNums, varList);
 		initializeValueState();
 	}
+	*/
 
 	/**
 	 * Create an iterator over the assignments of the variables in varNumMap. varNumMap must contain

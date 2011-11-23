@@ -3,10 +3,10 @@ package com.jayantkrish.jklol.models.bayesnet;
 import java.util.Iterator;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.BiMap;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
@@ -19,10 +19,10 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class CptTableFactor extends AbstractParametricFactor<SufficientStatistics> {
 
-  private VariableNumMap parentVars;
-  private VariableNumMap childVars;
+  private final VariableNumMap parentVars;
+  private final VariableNumMap childVars;
 
-  private BiMap<Integer, Integer> cptVarNumMap;
+  private final VariableRelabeling cptVarNumMap;
 
   /**
    * childrenNums are the variable numbers of the "child" nodes. The CptFactor
@@ -35,7 +35,7 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
    * allow factors to share CPTs.
    */
   public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars,
-      BiMap<Integer, Integer> cptVarNumMap) {
+      VariableRelabeling cptVarNumMap) {
     super(parentVars.union(childVars));
     this.parentVars = parentVars;
     this.childVars = childVars;
@@ -49,16 +49,15 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
   @Override
   public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
     Cpt cpt = parameters.coerceToCpt();
-    Preconditions.checkArgument(cpt.getVars().containsAll(cptVarNumMap.values()));
-    Preconditions.checkArgument(cptVarNumMap.values().containsAll(cpt.getVars().getVariableNums()));
+    Preconditions.checkArgument(cptVarNumMap.isInRange(cpt.getVars()));
 
     return new TableFactor(getVars(), cpt.convertToFactor()
-        .getWeights().relabelDimensions(cptVarNumMap.inverse()));
+        .getWeights().relabelDimensions(cptVarNumMap.getVariableIndexReplacementMap().inverse()));
   }
 
   @Override
   public Cpt getNewSufficientStatistics() {
-    return new Cpt(parentVars.mapVariables(cptVarNumMap), childVars.mapVariables(cptVarNumMap));
+    return new Cpt(cptVarNumMap.apply(parentVars), cptVarNumMap.apply(childVars));
   }
 
   @Override
@@ -66,7 +65,8 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
       Assignment a, double count) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
     Cpt cptStatistics = statistics.coerceToCpt();
-    cptStatistics.incrementOutcomeCount(a.mapVariables(cptVarNumMap), count);
+    cptStatistics.incrementOutcomeCount(
+        a.mapVariables(cptVarNumMap.getVariableIndexReplacementMap()), count);
   }
 
   @Override
@@ -78,7 +78,7 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
     Iterator<Assignment> assignmentIter = marginal.coerceToDiscrete().outcomeIterator();
     while (assignmentIter.hasNext()) {
       Assignment a = assignmentIter.next().union(conditionalSubAssignment);
-      cptStatistics.incrementOutcomeCount(a.mapVariables(cptVarNumMap),
+      cptStatistics.incrementOutcomeCount(a.mapVariables(cptVarNumMap.getVariableIndexReplacementMap()),
           count * marginal.getUnnormalizedProbability(a) / partitionFunction);
     }
   }

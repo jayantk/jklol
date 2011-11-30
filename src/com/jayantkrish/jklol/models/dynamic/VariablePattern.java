@@ -1,9 +1,11 @@
 package com.jayantkrish.jklol.models.dynamic;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -66,19 +68,56 @@ public class VariablePattern {
     return new VariablePattern(Collections.<VariableNameMatcher>emptyList(), 
         VariableNumMap.emptyMap(), variables);
   }
+  
+  /**
+   * Gets a {@code VariablePattern} which uses the names in {@code templateVars}
+   * as the name templates for matching variables. The names are specified in a
+   * rudimentary pattern language: if a name contains a "+", the portion after
+   * the "+" is parsed as an integer offset. Otherwise, the name is given an 
+   * offset of 0.
+   * 
+   * @param variables
+   * @return
+   */
+  public static VariablePattern fromTemplateVariables(VariableNumMap templateVariables,
+      VariableNumMap fixedVariables) {
+    List<VariableNameMatcher> matchers = Lists.newArrayList();
+    for (String variableName : templateVariables.getVariableNames()) {
+      int plusIndex = variableName.indexOf("+");
+      int offset = 0;
+      String variableNamePrefix = variableName;
+      if (plusIndex != -1) {
+        variableNamePrefix = variableName.substring(0, plusIndex);
+        offset = Integer.parseInt(variableName.substring(plusIndex + 1, variableName.length()));
+      }
+      matchers.add(new VariableNameMatcher(variableNamePrefix, offset));
+    }
+    return new VariablePattern(matchers, templateVariables, fixedVariables);
+  }
 
   /**
    * Identifies all of the variables which match this pattern, and returns them
-   * along with the role served by each variable in the match.
+   * along with the role served by each variable in the match. Matches are
+   * returned in order of the matched replication index. 
    * 
    * @param allVariables
    * @return
    */
   public List<VariableMatch> matchVariables(VariableNumMap inputVariables) {
+    // All of the fixed variables must be matched in order to return anything.
+    if (!inputVariables.containsAll(fixedVariables)) {
+      return Collections.emptyList();
+    }
+    // Special case: if there aren't any templates, then only the fixed
+    // variables should be returned.
+    if (templateVariableMatchers.size() == 0) {
+      return Arrays.asList(new VariableMatch(0, fixedVariables));
+    }
+    
     // Find all variables which begin with a prefix in variableNamePrefixes,
     // identify their replication index, and aggregate the matches by
     // replication index.
-    Map<Integer, VariableMatch> variableMatches = Maps.newHashMap();
+    SortedMap<Integer, VariableMatch> variableMatches = Maps.newTreeMap();
     for (int i = 0; i < templateVariableMatchers.size(); i++) {
       int templateVariableIndex = templateVariables.getVariableNums().get(i);
 
@@ -100,7 +139,7 @@ public class VariablePattern {
     List<VariableMatch> validMatches = Lists.newArrayList();
     VariableNumMap allMatchVariables = templateVariables.union(fixedVariables);
     for (VariableMatch match : variableMatches.values()) {
-      if (match.getMatchedVariables().equals(allMatchVariables)) {
+      if (match.getMatchedVariables().size() == allMatchVariables.size()) {
         validMatches.add(match);
       }
     }
@@ -110,7 +149,8 @@ public class VariablePattern {
   public Map<String, Variable> instantiateWithArgument(int replicationIndex) {
     Map<String, Variable> instantiatedVariables = Maps.newHashMap();
     for (int i = 0; i < templateVariableMatchers.size(); i++) {
-      instantiatedVariables.put(templateVariableMatchers.get(i).getPrefix() + replicationIndex,
+      int instantiatedIndex = templateVariableMatchers.get(i).getOffset() + replicationIndex;
+      instantiatedVariables.put(templateVariableMatchers.get(i).getPrefix() + SEPARATOR + instantiatedIndex,
           templateVariables.getVariables().get(i));
     }
     return instantiatedVariables;
@@ -187,6 +227,12 @@ public class VariablePattern {
           templateVariable.getVariableNames().get(0));
       allVariables = allVariables.union(matchedVariable);
     }
+    
+    @Override
+    public String toString() {
+      return allVariables.toString() + " " + variableIndexMap.toString() 
+          + " " + variableNameMap.toString(); 
+    }
   }
 
   public static class VariableNameMatcher {
@@ -225,6 +271,15 @@ public class VariablePattern {
      */
     public String getPrefix() {
       return variableNamePrefix;
+    }
+    
+    /**
+     * Gets the replication index associated with this matcher.
+     *  
+     * @return
+     */
+    public Integer getOffset() {
+      return indexOffset;
     }
   }
 }

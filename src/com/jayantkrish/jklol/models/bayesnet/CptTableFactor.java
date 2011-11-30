@@ -3,43 +3,35 @@ package com.jayantkrish.jklol.models.bayesnet;
 import java.util.Iterator;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A CptTableFactor is the typical factor you'd expect in a Bayesian Network.
+ * A CptTableFactor is the typical factor you expect in a Bayesian Network.
  * Its unnormalized probabilities are simply child variable probabilities
  * conditioned on a parent.
  */
 public class CptTableFactor extends AbstractParametricFactor<SufficientStatistics> {
 
+  // These are the parent and child variables in the CPT.
   private final VariableNumMap parentVars;
   private final VariableNumMap childVars;
-
-  private final VariableRelabeling cptVarNumMap;
 
   /**
    * childrenNums are the variable numbers of the "child" nodes. The CptFactor
    * defines a probability distribution P(children | parents) over *sets* of
    * child variables. (In the Bayes Net DAG, there is an edge from every parent
    * to every child, and internally the children are a directed clique.)
-   * 
-   * {@code cptVarNumMap} is a mapping from the variables of {@code this} factor
-   * to the variables of the underlying cpt. This will be used in the future to
-   * allow factors to share CPTs.
    */
-  public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars,
-      VariableRelabeling cptVarNumMap) {
+  public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars) {
     super(parentVars.union(childVars));
     this.parentVars = parentVars;
     this.childVars = childVars;
-    this.cptVarNumMap = cptVarNumMap;
   }
   
   // ////////////////////////////////////////////////////////////////
@@ -47,17 +39,16 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
   // ///////////////////////////////////////////////////////////////
   
   @Override
-  public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
+  public DiscreteFactor getFactorFromParameters(SufficientStatistics parameters) {
     Cpt cpt = parameters.coerceToCpt();
-    Preconditions.checkArgument(cptVarNumMap.isInRange(cpt.getVars()));
+    Preconditions.checkArgument(cpt.getVars().equals(getVars()));
 
-    return new TableFactor(getVars(), cpt.convertToFactor()
-        .getWeights().relabelDimensions(cptVarNumMap.getVariableIndexReplacementMap().inverse()));
+    return cpt.convertToFactor();
   }
 
   @Override
   public Cpt getNewSufficientStatistics() {
-    return new Cpt(cptVarNumMap.apply(parentVars), cptVarNumMap.apply(childVars));
+    return new Cpt(parentVars, childVars);
   }
 
   @Override
@@ -65,8 +56,7 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
       Assignment a, double count) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
     Cpt cptStatistics = statistics.coerceToCpt();
-    cptStatistics.incrementOutcomeCount(
-        a.mapVariables(cptVarNumMap.getVariableIndexReplacementMap()), count);
+    cptStatistics.incrementOutcomeCount(a, count);
   }
 
   @Override
@@ -78,7 +68,7 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
     Iterator<Assignment> assignmentIter = marginal.coerceToDiscrete().outcomeIterator();
     while (assignmentIter.hasNext()) {
       Assignment a = assignmentIter.next().union(conditionalSubAssignment);
-      cptStatistics.incrementOutcomeCount(a.mapVariables(cptVarNumMap.getVariableIndexReplacementMap()),
+      cptStatistics.incrementOutcomeCount(a, 
           count * marginal.getUnnormalizedProbability(a) / partitionFunction);
     }
   }

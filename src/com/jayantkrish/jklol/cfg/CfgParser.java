@@ -61,6 +61,10 @@ public class CfgParser {
   public Factor getTerminalDistribution() {
     return terminalDistribution;
   }
+  
+  public VariableNumMap getParentVariable() {
+    return parentVar;
+  }
 
   // //////////////////////////////////////////////////////////////////////
   // The following methods are the important ones for running the parser in

@@ -7,7 +7,9 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
+import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -91,8 +93,16 @@ public class SubgradientSvmTrainer {
         Assignment prediction = predicted.getNthBestAssignment(0);
         Assignment actual = example.getOutput().union(example.getInput());
         if (!prediction.equals(actual)) {
-          modelFamily.incrementSufficientStatistics(subgradient, actual, 1.0);
-          modelFamily.incrementSufficientStatistics(subgradient, prediction, -1.0);
+          // Convert the assignments into marginal (point) distributions in order to update 
+          // the parameter vector.
+          VariableNumMap conditionedVariables = conditionalCostAugmentedModel.getVariables().union(
+              conditionalCostAugmentedModel.getConditionedVariables());
+          MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionedVariables, actual);
+          MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionedVariables, prediction);
+          // Update the parameter vector
+          modelFamily.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
+          modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
+          // Update iteration statistics
           numIncorrect++;
           approximateObjectiveValue += (costAugmentedModel.getUnnormalizedLogProbability(prediction)
               - costAugmentedModel.getUnnormalizedLogProbability(actual)) / batchSize; 

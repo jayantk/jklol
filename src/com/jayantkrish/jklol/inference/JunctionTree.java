@@ -30,10 +30,11 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class JunctionTree implements MarginalCalculator {
 
+  @Override
   public MarginalSet computeMarginals(FactorGraph factorGraph) {
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
     Set<Integer> rootFactorNums = runMessagePassing(cliqueTree, true);
-    return cliqueTreeToMarginalSet(cliqueTree, rootFactorNums);
+    return cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
   }
 
   @Override
@@ -175,7 +176,8 @@ public class JunctionTree implements MarginalCalculator {
     return newMarginal;
   }
 
-  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree, Set<Integer> rootFactorNums) {
+  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree, 
+      Set<Integer> rootFactorNums, FactorGraph originalFactorGraph) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
       marginalFactors.add(computeMarginal(cliqueTree, i, true));
@@ -201,7 +203,8 @@ public class JunctionTree implements MarginalCalculator {
       }
     }
 
-    return new FactorMarginalSet(marginalFactors, partitionFunction, Assignment.EMPTY);
+    return new FactorMarginalSet(marginalFactors, partitionFunction, 
+        originalFactorGraph.getConditionedVariables(), originalFactorGraph.getConditionedValues());
   }
 
   /**

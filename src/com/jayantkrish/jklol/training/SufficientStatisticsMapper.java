@@ -31,7 +31,6 @@ public class SufficientStatisticsMapper extends Mapper<Assignment, MarginalSet> 
   public MarginalSet map(Assignment item) {
     logFn.log(item, factorGraph);
     FactorGraph conditionalFactorGraph = factorGraph.conditional(item);
-    return marginalCalculator.computeMarginals(conditionalFactorGraph)
-        .addConditionalVariables(item);
+    return marginalCalculator.computeMarginals(conditionalFactorGraph);
   }
 }

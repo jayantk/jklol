@@ -10,6 +10,7 @@ import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
@@ -39,11 +40,13 @@ public class StochasticGradientTrainerTest extends TestCase {
 
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)),
+		    VariablePattern.fromVariableNumMap(builder.getVariables().getVariablesByName(clique1Names)));
 		
 		clique2Names = Arrays.asList("Var2", "Var3");
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)),
+		    VariablePattern.fromVariableNumMap(builder.getVariables().getVariablesByName(clique2Names)));
 
 		logLinearModel = builder.build();
 		trainingData = new ArrayList<Assignment>();

@@ -62,7 +62,7 @@ public interface ParametricFamily<T> {
    * @param count
    */
   public void incrementSufficientStatistics(SufficientStatistics statistics,
-      Assignment assignment, double count);
+      VariableNumMap variables, Assignment assignment, double count);
 
   /**
    * Computes a vector of sufficient statistics for {@code this} and accumulates

@@ -2,11 +2,17 @@ package com.jayantkrish.jklol.inference;
 
 import java.util.Arrays;
 
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.InferenceHint;
+import com.jayantkrish.jklol.models.IntegerVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.Plate;
+import com.jayantkrish.jklol.models.dynamic.PlateFactor;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -163,5 +169,46 @@ public class InferenceTestCases {
     testCase.addTest(32.0 / 60.0, new Integer[] { 0 }, "F");
 
     return testCase;
+  }
+  
+  public static FactorGraph sequenceModel() {
+    FactorGraph fg = new FactorGraph();
+    
+    fg = fg.addVariable("replication_count", new IntegerVariable());
+
+    VariableNumMap replicatedVariables = new VariableNumMap(Ints.asList(0, 1), 
+        Arrays.asList("x", "y"), Arrays.asList(threeValueVar, trueFalseVar));
+    VariablePattern replicationPattern = VariablePattern
+        .fromTemplateVariables(replicatedVariables, VariableNumMap.emptyMap());
+    Plate replicatedPlate = new Plate(fg.getVariables().getVariablesByName("replication_count"),
+        replicationPattern);
+    
+    VariableNumMap adjacentVariables = new VariableNumMap(Ints.asList(0, 1), 
+        Arrays.asList("y+0", "y+1"), Arrays.asList(trueFalseVar, trueFalseVar));
+    VariablePattern adjacentPattern = VariablePattern
+        .fromTemplateVariables(adjacentVariables, VariableNumMap.emptyMap());
+
+    fg = fg.addPlate(replicatedPlate);
+    
+    // Add the factors
+    TableFactorBuilder outputFactorBuilder = new TableFactorBuilder(replicatedVariables);
+    outputFactorBuilder.setWeight(1.0, "U", "T");
+    outputFactorBuilder.setWeight(2.0, "T", "T");
+    outputFactorBuilder.setWeight(3.0, "F", "T");
+    outputFactorBuilder.setWeight(3.0, "U", "F");
+    outputFactorBuilder.setWeight(2.0, "T", "F");
+    outputFactorBuilder.setWeight(1.0, "F", "F");
+    fg = fg.addPlateFactor(new PlateFactor(outputFactorBuilder.build(), 
+        replicationPattern, Arrays.asList(replicatedPlate)));
+    
+    TableFactorBuilder sequenceFactorBuilder = new TableFactorBuilder(adjacentVariables);
+    sequenceFactorBuilder.setWeight(2.0, "T", "T");
+    sequenceFactorBuilder.setWeight(1.0, "F", "T");
+    sequenceFactorBuilder.setWeight(1.0, "T", "F");
+    sequenceFactorBuilder.setWeight(2.0, "F", "F");
+    fg = fg.addPlateFactor(new PlateFactor(sequenceFactorBuilder.build(), 
+        adjacentPattern, Arrays.asList(replicatedPlate)));
+    
+    return fg;
   }
 }

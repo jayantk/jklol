@@ -1,12 +1,13 @@
 package com.jayantkrish.jklol.models.loglinear;
 
-import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -19,6 +20,7 @@ public class LogLinearModelBuilder {
 
   private FactorGraph factorGraph;
   private List<ParametricFactor<SufficientStatistics>> logLinearFactors;
+  private List<VariablePattern> factorPatterns;
 
   private VariableNumMap discreteVariables;
 
@@ -29,7 +31,8 @@ public class LogLinearModelBuilder {
     super();
     // Track model features / which factors can be trained.
     factorGraph = new FactorGraph();
-    logLinearFactors = new ArrayList<ParametricFactor<SufficientStatistics>>();
+    logLinearFactors = Lists.newArrayList();
+    factorPatterns = Lists.newArrayList();
     discreteVariables = VariableNumMap.emptyMap();
   }
   
@@ -39,7 +42,7 @@ public class LogLinearModelBuilder {
    * @return
    */
   public ParametricFactorGraph build() {
-    return new ParametricFactorGraph(factorGraph, logLinearFactors);
+    return new ParametricFactorGraph(factorGraph, logLinearFactors, factorPatterns);
   }
 
   /**
@@ -79,7 +82,8 @@ public class LogLinearModelBuilder {
    * 
    * @param factor
    */
-  public void addFactor(ParametricFactor<SufficientStatistics> factor) {
+  public void addFactor(ParametricFactor<SufficientStatistics> factor, VariablePattern factorPattern) {
     logLinearFactors.add(factor);
+    factorPatterns.add(factorPattern);
   }
 }

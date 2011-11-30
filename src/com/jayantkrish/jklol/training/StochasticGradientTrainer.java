@@ -59,7 +59,7 @@ public class StochasticGradientTrainer {
     // conditioned on the training example.
     FactorGraph conditionalFactorGraph = factorGraph.conditional(trainingExample);
     MarginalSet conditionalMarginals = marginalCalculator.computeMarginals(
-        conditionalFactorGraph).addConditionalVariables(trainingExample);
+        conditionalFactorGraph);
     logLinearModel.incrementSufficientStatistics(gradient, conditionalMarginals, 1.0);
     
     return gradient;

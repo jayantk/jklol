@@ -17,6 +17,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.dynamic.Plate;
+import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -24,15 +25,13 @@ import com.jayantkrish.jklol.util.IndexedList;
  * A {@code FactorGraph} represents a graphical model as a set of variables and
  * a set of factors defined over variable cliques. The graphical model may
  * represent a conditional distribution, which must have some fixed values
- * before it becomes a probability distribution.
- * 
- * {@code FactorGraph}s and the {@link Factor}s they contain are immutable.
- * Therefore, each {@code FactorGraph} instance defines a particular probability
- * distribution which cannot be changed.
- * 
- * {@code FactorGraph}s can be constructed incrementally using methods such as
- * {@link #addVariable(String, Variable)}. These construction methods return new
- * instances of this class with certain fields modified.
+ * before it becomes a probability distribution. {@code FactorGraph}s and the
+ * {@link Factor}s they contain are immutable. Therefore, each
+ * {@code FactorGraph} instance defines a particular probability distribution
+ * which cannot be changed. {@code FactorGraph}s can be constructed
+ * incrementally using methods such as {@link #addVariable(String, Variable)}.
+ * These construction methods return new instances of this class with certain
+ * fields modified.
  */
 public class FactorGraph {
 
@@ -46,10 +45,11 @@ public class FactorGraph {
   // Plates represent graphical model structure which is replicated in a
   // data-dependent fashion.
   private List<Plate> plates;
-  // private IndexedList<PlateFactor> plateFactors;
+  private IndexedList<PlateFactor> plateFactors;
 
   // Store any conditioning information that lead to this particular
   // distribution.
+  private VariableNumMap conditionedVariables;
   private Assignment conditionedValues;
 
   private InferenceHint inferenceHint;
@@ -66,6 +66,8 @@ public class FactorGraph {
     factorVariableMap = HashMultimap.create();
     factors = new IndexedList<Factor>();
     plates = Lists.newArrayList();
+    plateFactors = new IndexedList<PlateFactor>();
+    conditionedVariables = VariableNumMap.emptyMap();
     conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
@@ -83,6 +85,8 @@ public class FactorGraph {
     this.factorVariableMap = HashMultimap.create(factorGraph.factorVariableMap);
     this.factors = new IndexedList<Factor>(factorGraph.factors);
     this.plates = Lists.newArrayList(factorGraph.plates);
+    this.plateFactors = new IndexedList<PlateFactor>(factorGraph.plateFactors);
+    this.conditionedVariables = factorGraph.conditionedVariables;
     this.conditionedValues = factorGraph.conditionedValues;
     this.inferenceHint = factorGraph.inferenceHint;
   }
@@ -175,6 +179,17 @@ public class FactorGraph {
   public VariableNumMap getVariables() {
     return variables;
   }
+  
+  /**
+   * Gets any variables whose values have been conditioned on. The returned set
+   * of variables matches the variables that {@code this.getConditionedValues()}
+   * is defined over.
+   * 
+   * @return
+   */
+  public VariableNumMap getConditionedVariables() {
+    return conditionedVariables;
+  }
 
   /**
    * Gets the assignment to variables whose values have been conditioned on.
@@ -257,10 +272,8 @@ public class FactorGraph {
   /**
    * Gets the unnormalized probability of {@code assignment}. This method only
    * supports assignments which do not require inference, so {@code assignment}
-   * must contain a value for every variable in {@code this}.
-   * 
-   * To calculate marginal probabilities or max-marginals, see
-   * {@link InferenceEngine}.
+   * must contain a value for every variable in {@code this}. To calculate
+   * marginal probabilities or max-marginals, see {@link InferenceEngine}.
    * 
    * @param assignment
    * @return
@@ -278,7 +291,6 @@ public class FactorGraph {
    * Gets the unnormalized log probability of {@code assignment}. This method
    * only supports assignments which do not require inference, so
    * {@code assignment} must contain a value for every variable in {@code this}.
-   * 
    * To calculate marginal probabilities or max-marginals, see
    * {@link InferenceEngine}.
    * 
@@ -324,6 +336,22 @@ public class FactorGraph {
   }
 
   /**
+   * Gets a new {@code FactorGraph} identical to this with an added
+   * {@code Plate}. The {@code Plate} represents a set of replicated variables
+   * which is dynamically instantiated by conditioning on an assignment.
+   * 
+   * @param plate
+   * @return
+   */
+  public FactorGraph addPlate(Plate plate) {
+    Preconditions.checkArgument(getVariables().containsAll(plate.getReplicationVariables()));
+
+    FactorGraph factorGraph = new FactorGraph(this);
+    factorGraph.plates.add(plate);
+    return factorGraph;
+  }
+
+  /**
    * Gets a new {@code FactorGraph} identical to this one, except with an
    * additional factor. {@code factor} must be defined over variables which are
    * already in {@code this} graph.
@@ -341,28 +369,30 @@ public class FactorGraph {
     }
     return factorGraph;
   }
-
-  public FactorGraph addPlate(Plate plate) {
-    Preconditions.checkArgument(getVariables().containsAll(plate.getReplicationVariables()));
-
+  
+  public FactorGraph addPlateFactor(PlateFactor plateFactor) {
     FactorGraph factorGraph = new FactorGraph(this);
-    factorGraph.plates.add(plate);
-    return factorGraph;
+    if (plateFactor.canInstantiate(getConditionedValues())) {
+      // Greedily expand plate factors if possible.
+      for (Factor factor : plateFactor.instantiateFactors(getVariables().union(getConditionedVariables()))) {
+        factorGraph = factorGraph.addFactor(factor.conditional(getConditionedValues()));
+      }
+    } else {
+      factorGraph.plateFactors.add(plateFactor);
+    }
+    return factorGraph;    
   }
 
   /**
    * Gets a new {@code FactorGraph} identical to this one, except with every
    * variable in {@code varNumsToEliminate} marginalized out. The returned
    * {@code FactorGraph} is defined on the variables in {@code this}, minus any
-   * of the passed-in variables.
-   * 
-   * This procedure performs variable elimination on each variable in the order
-   * returned by the iterator over {@code varNumsToEliminate}. Choosing a good
-   * order (i.e., one with low treewidth) can dramatically improve the
-   * performance of this method.
-   * 
-   * This method is preferred if you wish to actively manipulate the returned
-   * factor graph. If you simply want marginals, see {@link MarginalCalculator}.
+   * of the passed-in variables. This procedure performs variable elimination on
+   * each variable in the order returned by the iterator over
+   * {@code varNumsToEliminate}. Choosing a good order (i.e., one with low
+   * treewidth) can dramatically improve the performance of this method. This
+   * method is preferred if you wish to actively manipulate the returned factor
+   * graph. If you simply want marginals, see {@link MarginalCalculator}.
    * 
    * @param factor
    * @return
@@ -426,6 +456,8 @@ public class FactorGraph {
 
     FactorGraph newFactorGraph = new FactorGraph();
     newFactorGraph.conditionedValues = this.conditionedValues.union(assignment);
+    newFactorGraph.conditionedVariables = this.conditionedVariables.union(
+        this.getVariables().intersection(assignment.getVariableNums()));
 
     // Copy the uneliminated variables in currentFactorGraph to nextFactorGraph
     for (String variableName : getVariableNames()) {
@@ -441,7 +473,8 @@ public class FactorGraph {
       if (newFactorGraph.conditionedValues.containsAll(
           plate.getReplicationVariables().getVariableNums())) {
         // Instantiate the variables in this plate.
-        Map<String, Variable> newVariables = plate.instantiateVariables(newFactorGraph.conditionedValues);
+        Map<String, Variable> newVariables = plate
+            .instantiateVariables(newFactorGraph.conditionedValues);
         for (Map.Entry<String, Variable> newVariable : newVariables.entrySet()) {
           newFactorGraph = newFactorGraph.addVariable(newVariable.getKey(), newVariable.getValue());
         }
@@ -450,17 +483,19 @@ public class FactorGraph {
       }
     }
 
-    // Dynamic factor construction for dynamic factor graphs.
-    // TODO: this isn't implemented just yet.
-    /*
-     * for (PlateFactor plateFactor : plateFactors) { if
-     * (plateFactor.canInstantiate(newFactorGraph.conditionedValues)) {
-     * List<Factor> newFactors =
-     * plateFactor.instantiateFactors(newFactorGraph.conditionedValues,
-     * newFactorGraph.getVariables()); for (Factor factor : newFactors) {
-     * newFactorGraph = newFactorGraph.addFactor(factor); } } else {
-     * newFactorGraph = newFactorGraph.addPlateFactor(plateFactor); } }
-     */
+    // Dynamic factor construction for dynamic factor graphs.    
+    for (PlateFactor plateFactor : plateFactors) {
+      if (plateFactor.canInstantiate(newFactorGraph.conditionedValues)) {
+        List<Factor> newFactors = plateFactor.instantiateFactors(
+            newFactorGraph.getConditionedVariables().union(newFactorGraph.getVariables()));
+
+        for (Factor factor : newFactors) {
+          newFactorGraph = newFactorGraph.addFactor(factor.conditional(newFactorGraph.conditionedValues));
+        }
+      } else {
+        newFactorGraph = newFactorGraph.addPlateFactor(plateFactor);
+      }
+    }
 
     // Condition each factor on assignment.
     for (Factor factor : getFactors()) {

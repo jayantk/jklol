@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cfg.CptCfgFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -31,11 +33,13 @@ public class BayesNetBuilder {
 
   private FactorGraph bayesNet;
   private List<ParametricFactor<SufficientStatistics>> cptFactors;
+  private List<VariablePattern> factorPatterns;
   private VariableNumMap discreteVars;
 
   public BayesNetBuilder() {
     bayesNet = new FactorGraph();
-    cptFactors = new ArrayList<ParametricFactor<SufficientStatistics>>();
+    cptFactors = Lists.newArrayList();
+    factorPatterns = Lists.newArrayList();
     discreteVars = VariableNumMap.emptyMap();
   }
 
@@ -45,7 +49,7 @@ public class BayesNetBuilder {
    * @return
    */
   public ParametricFactorGraph build() {
-    return new ParametricFactorGraph(bayesNet, cptFactors);
+    return new ParametricFactorGraph(bayesNet, cptFactors, factorPatterns);
   }
 
   /**
@@ -73,8 +77,9 @@ public class BayesNetBuilder {
    * 
    * @param factor
    */
-  public void addFactor(ParametricFactor<SufficientStatistics> factor) {
+  public void addFactor(ParametricFactor<SufficientStatistics> factor, VariablePattern factorPattern) {
     cptFactors.add(factor);
+    factorPatterns.add(factorPattern);
   }
 
   public void addTableFactor(Factor tf) {
@@ -88,12 +93,9 @@ public class BayesNetBuilder {
       List<String> childVariableNames) {
     VariableNumMap parentVars = bayesNet.getVariables().getVariablesByName(parentVariableNames);
     VariableNumMap childVars = bayesNet.getVariables().getVariablesByName(childVariableNames);
-    VariableNumMap allVars = parentVars.union(childVars);
 
-    CptTableFactor factor = new CptTableFactor(parentVars,
-        childVars, VariableRelabeling.identity(allVars));
-    addFactor(factor);
-
+    CptTableFactor factor = new CptTableFactor(parentVars, childVars);
+    addFactor(factor, VariablePattern.fromVariableNumMap(parentVars.union(childVars)));
     return factor;
   }
 

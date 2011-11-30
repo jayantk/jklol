@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -57,6 +58,10 @@ public class TableFactorBuilder {
     Preconditions.checkNotNull(varValues);
     Preconditions.checkArgument(getVars().size() == varValues.size());
     setWeight(vars.outcomeToAssignment(varValues), weight);
+  }
+
+  public void setWeight(double weight, Object ... varValues) {
+    setWeightList(Arrays.asList(varValues), weight);
   }
 
   /**

@@ -15,5 +15,5 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface PerformanceTest {
   // Number of times to run the test and average results over. 
-  int value() default 10;
+  int value() default 1;
 }

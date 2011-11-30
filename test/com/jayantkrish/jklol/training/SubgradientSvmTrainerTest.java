@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -45,9 +46,11 @@ public class SubgradientSvmTrainerTest extends TestCase {
 		builder.addDiscreteVariable("Y", tfVar);
 
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.getVariables().getVariablesByName("X0", "Y")));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName("X0", "Y")),
+		    VariablePattern.fromVariableNumMap(builder.getVariables().getVariablesByName("X0", "Y")));
 		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.getVariables().getVariablesByName("X1", "Y")));
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName("X1", "Y")),
+		    VariablePattern.fromVariableNumMap(builder.getVariables().getVariablesByName("X1", "Y")));
 		model = builder.build();
 		
 		inputVars = builder.getVariables().getVariablesByName("X0", "X1");

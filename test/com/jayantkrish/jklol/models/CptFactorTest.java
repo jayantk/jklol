@@ -5,10 +5,7 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.bayesnet.Cpt;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -18,7 +15,7 @@ public class CptFactorTest extends TestCase {
 
   CptTableFactor f;  
   SufficientStatistics parameters;
-  VariableNumMap cptParents, cptChildren, cptVars;
+  VariableNumMap parents, children, allVars;
   
   private Object[][] assignments;
   Set<Assignment> factorAssignments;
@@ -27,26 +24,15 @@ public class CptFactorTest extends TestCase {
     DiscreteVariable v = new DiscreteVariable("Two values",
         Arrays.asList("T", "F" ));
     
-    VariableNumMap parents = new VariableNumMap(Arrays.asList(2, 3),
+    parents = new VariableNumMap(Arrays.asList(2, 3),
         Arrays.asList("v2", "v3"),
         Arrays.asList(v, v ));
-    VariableNumMap children = new VariableNumMap(Arrays.asList(4, 5),
+    children = new VariableNumMap(Arrays.asList(4, 5),
         Arrays.asList("v4", "v5"),
         Arrays.asList(v, v));
-            
-    BiMap<Integer, Integer> map = HashBiMap.create();
-    BiMap<String, String> nameMap = HashBiMap.create();
-    for (int i = 0; i < 4; i++) {
-      map.put(i + 2, i);
-      nameMap.put("v" + (i + 2), "v" + i); 
-    }
+    allVars = parents.union(children);
     
-    cptParents = new VariableNumMap(Arrays.asList(0, 1), Arrays.asList("v0", "v1"), Arrays.asList(v, v));
-    cptChildren = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList("v2", "v3"), Arrays.asList(v, v));
-    cptVars = new VariableNumMap(Arrays.asList(0, 1, 2, 3),
-        Arrays.asList("v0", "v1", "v2", "v3"), Arrays.asList(v, v, v, v)); 
-    
-    f = new CptTableFactor(parents, children, new VariableRelabeling(map, nameMap));
+    f = new CptTableFactor(parents, children);
     
     // Note: Parent F, T was unassigned!
     assignments = new Object[][] {{ "T", "T", "T", "T" },
@@ -66,9 +52,9 @@ public class CptFactorTest extends TestCase {
   public void testGetNewSufficientStatistics() {
     Cpt newStats = f.getNewSufficientStatistics();
     
-    assertEquals(cptParents, newStats.getParents());
-    assertEquals(cptChildren, newStats.getChildren());
-    assertEquals(cptVars, newStats.getVars());
+    assertEquals(parents, newStats.getParents());
+    assertEquals(children, newStats.getChildren());
+    assertEquals(allVars, newStats.getVars());
     
     // All assignments should have a count of 0.
     assertFalse(newStats.assignmentIterator().hasNext());
@@ -80,11 +66,11 @@ public class CptFactorTest extends TestCase {
         f.getVars().outcomeToAssignment(assignments[1]), 2.0);
     newStats.increment(1.0);
 
-    assertEquals(cptParents, newStats.getParents());
-    assertEquals(cptChildren, newStats.getChildren());
-    assertEquals(cptVars, newStats.getVars());
+    assertEquals(parents, newStats.getParents());
+    assertEquals(children, newStats.getChildren());
+    assertEquals(allVars, newStats.getVars());
 
-    assertEquals(3.0 / 6.0, newStats.getProbability(cptVars.outcomeToAssignment(assignments[1])));
+    assertEquals(3.0 / 6.0, newStats.getProbability(allVars.outcomeToAssignment(assignments[1])));
   }
   
   public void testGetSufficientStatisticsFromMarginal() {
@@ -92,18 +78,18 @@ public class CptFactorTest extends TestCase {
     f.incrementSufficientStatisticsFromMarginal(newStats, 
         f.getFactorFromParameters(parameters), Assignment.EMPTY, 6.0, 3.0);
 
-    assertEquals(cptParents, newStats.getParents());
-    assertEquals(cptChildren, newStats.getChildren());
-    assertEquals(cptVars, newStats.getVars());
+    assertEquals(parents, newStats.getParents());
+    assertEquals(children, newStats.getChildren());
+    assertEquals(allVars, newStats.getVars());
     
     newStats.increment(1.0);
     
-    assertEquals(2.0 / 6.0, newStats.getProbability(cptVars.outcomeToAssignment(assignments[1])));
-    assertEquals(3.0 / 6.0, newStats.getProbability(cptVars.outcomeToAssignment(assignments[2])));
+    assertEquals(2.0 / 6.0, newStats.getProbability(allVars.outcomeToAssignment(assignments[1])));
+    assertEquals(3.0 / 6.0, newStats.getProbability(allVars.outcomeToAssignment(assignments[2])));
   }
     
   public void testGetFactorFromParameters() {
-    TableFactor factor = f.getFactorFromParameters(parameters);
+    DiscreteFactor factor = f.getFactorFromParameters(parameters);
     assertEquals(factorAssignments, Sets.newHashSet(factor.outcomeIterator()));
     
     assertEquals(0.5, factor.getUnnormalizedProbability(

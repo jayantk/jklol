@@ -4,7 +4,8 @@
   <property name="perf-dir" location="performance" />
 
   <path id="classpath.base">
-  	<pathelement location="lib/guava-r09.jar" />
+    <pathelement location="lib/guava-r09.jar" />
+    <pathelement location="lib/protobuf-java-2.4.1.jar" />
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />

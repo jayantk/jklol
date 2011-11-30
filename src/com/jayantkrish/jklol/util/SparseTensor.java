@@ -20,7 +20,7 @@ import com.google.common.primitives.Ints;
  * represents a sparse tensor, where all values are presumed to be 0 unless
  * otherwise specified.
  * 
- * SparseOutcomeTables are immutable.
+ * SparseTensors are immutable.
  */
 public class SparseTensor {
 

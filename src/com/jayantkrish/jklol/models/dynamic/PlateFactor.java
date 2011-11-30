@@ -50,7 +50,7 @@ public class PlateFactor {
    */
   public static PlateFactor fromFactor(Factor factor) {
     return new PlateFactor(factor, VariablePattern.fromVariableNumMap(factor.getVars()),
-        Collections.emptyList());
+        Collections.<Plate>emptyList());
   }
 
   /**

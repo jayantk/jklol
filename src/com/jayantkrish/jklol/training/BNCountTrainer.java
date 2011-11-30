@@ -2,17 +2,21 @@ package com.jayantkrish.jklol.training;
 
 import java.util.List;
 
+import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.inference.FactorMarginalSet;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalSet;
+import com.jayantkrish.jklol.inference.MaxMarginalSet;
+import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Trains a {@link #ParametricFactorGraph} using empirical outcome counts from a data set.
  */
 public class BNCountTrainer {
-
-  public BNCountTrainer() {
-  }
 
   /**
    * Selects a model from the set of {@code bn} by counting the outcome
@@ -27,11 +31,39 @@ public class BNCountTrainer {
    * @param trainingData
    */
   public SufficientStatistics train(ParametricFactorGraph bn, List<Assignment> trainingData) {
-    // For each training example, increment sufficient statistics appropriately.
-    SufficientStatistics accumulatedStats = bn.getNewSufficientStatistics();
-    for (Assignment assignment : trainingData) {
-      bn.incrementSufficientStatistics(accumulatedStats, assignment, 1.0);
+    // Instantiate a factor graph using an arbitrary set of parameters.
+    // We must instantiate a graph in order to handle dynamic factor graphs,
+    // as dynamic factor graphs have assignments of variable size. 
+    SufficientStatistics parameters = bn.getNewSufficientStatistics();
+    FactorGraph factorGraph = bn.getFactorGraphFromParameters(parameters);
+
+    // Compute sufficient statistics for all examples in parallel.
+    SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()
+        .mapReduce(trainingData,
+            new SufficientStatisticsMapper(factorGraph, new AssignmentMarginalCalculator(), new NullLogFunction()),
+            new SufficientStatisticsReducer(bn));
+    return result.getStatistics();
+  }
+  
+  /**
+   * {@link MarginalCalculator} which simply verifies that all variables in the
+   * passed-in factor graph have been conditioned on, then returns marginals based
+   * on the conditioned values.
+   * 
+   * @author jayant
+   */
+  private static class AssignmentMarginalCalculator implements MarginalCalculator {
+    
+    @Override
+    public MarginalSet computeMarginals(FactorGraph factorGraph) {
+      Preconditions.checkArgument(factorGraph.getVariables().size() == 0);
+      return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(), 
+          factorGraph.getConditionedValues());
     }
-    return accumulatedStats;
+    
+    @Override
+    public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph) {
+      throw new UnsupportedOperationException();
+    }
   }
 }

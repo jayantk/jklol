@@ -43,8 +43,9 @@ public class FactorGraphTest extends TestCase {
 		// Construct a dynamic factor graph.
 		IntegerVariable intVar = new IntegerVariable();
 		dynamic = f.addVariable("PlateReplications", intVar);
-		VariablePattern pattern = new VariablePattern(Arrays.asList("x", "y"), 
-		    Arrays.<Variable>asList(tfVar, otherVar), VariableNumMap.emptyMap());
+		VariableNumMap templateVariables = new VariableNumMap(Ints.asList(0, 1),
+		    Arrays.asList("x", "y"), Arrays.<Variable>asList(tfVar, otherVar));
+		VariablePattern pattern = VariablePattern.fromTemplateVariables(templateVariables, VariableNumMap.emptyMap());
 		Plate plate = new Plate(dynamic.getVariables().getVariablesByName("PlateReplications"), pattern);
 		
 		dynamic = dynamic.addPlate(plate); 

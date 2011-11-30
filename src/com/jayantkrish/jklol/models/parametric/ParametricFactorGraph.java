@@ -1,17 +1,19 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
+import com.jayantkrish.jklol.models.dynamic.Plate;
+import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
@@ -31,10 +33,15 @@ import com.jayantkrish.jklol.util.Assignment;
 public class ParametricFactorGraph extends AbstractParametricFamily<SufficientStatistics> {
 
   private List<ParametricFactor<SufficientStatistics>> parametricFactors;
+  private List<VariablePattern> factorPatterns;
 
-  public ParametricFactorGraph(FactorGraph factorGraph, List<ParametricFactor<SufficientStatistics>> cptFactors) {
+  public ParametricFactorGraph(FactorGraph factorGraph, 
+      List<ParametricFactor<SufficientStatistics>> parametricFactors, 
+      List<VariablePattern> factorPatterns) {
     super(factorGraph);
-    this.parametricFactors = new ArrayList<ParametricFactor<SufficientStatistics>>(cptFactors);
+    Preconditions.checkArgument(parametricFactors.size() == factorPatterns.size());
+    this.parametricFactors = Lists.newArrayList(parametricFactors);
+    this.factorPatterns = Lists.newArrayList(factorPatterns);
   }
 
   /**
@@ -52,8 +59,9 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     FactorGraph result = getBaseFactorGraph();
     for (int i = 0; i < parameterList.size(); i++) {
-      result = result.addPlateFactor(parametricFactors.get(i)
-          .getFactorFromParameters(parameterList.get(i)));
+      result = result.addPlateFactor(new PlateFactor(
+          parametricFactors.get(i).getFactorFromParameters(parameterList.get(i)),
+          factorPatterns.get(i), Collections.<Plate>emptyList()));
     }
     return result;
   }
@@ -68,13 +76,10 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
   }
 
   @Override
-  public void incrementSufficientStatistics(SufficientStatistics statistics, Assignment assignment, double count) {
-    List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
-    Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
-    
-    for (int i = 0; i < statisticsList.size(); i++) {
-      parametricFactors.get(i).incrementSufficientStatisticsFromAssignment(statisticsList.get(i), assignment, count);
-    }
+  public void incrementSufficientStatistics(SufficientStatistics statistics,  
+      VariableNumMap variables, Assignment assignment, double count) {
+    incrementSufficientStatistics(statistics, FactorMarginalSet.fromAssignment(
+        variables, assignment), count);
   }
 
   @Override
@@ -84,7 +89,7 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
     
     for (int i = 0; i < statisticsList.size(); i++) {
-      VariablePattern pattern = parametricFactors.get(i).getVars();
+      VariablePattern pattern = factorPatterns.get(i);
       List<VariableMatch> matches = pattern.matchVariables(marginals.getVariables());
 
       for (VariableMatch match : matches) {

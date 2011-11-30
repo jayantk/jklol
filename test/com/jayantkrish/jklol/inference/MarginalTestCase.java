@@ -47,12 +47,16 @@ public class MarginalTestCase {
 	
 	public void runTest(MarginalCalculator inference, double tolerance) {
 	  FactorGraph conditionedFactorGraph = factorGraph.conditional(condition);
-		MarginalSet marginals = inference.computeMarginals(conditionedFactorGraph);
-		
-		for (Map.Entry<Integer[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
-			DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(Arrays.asList(testCase.getKey()));
-			testCase.getValue().runTests(marginal, marginals.getPartitionFunction(), tolerance);
-		}
+	  MarginalSet marginals = inference.computeMarginals(conditionedFactorGraph);
+	  
+	  Assert.assertEquals(condition, marginals.getConditionedValues());
+	  Assert.assertTrue(marginals.getVariables().containsAll(
+	      marginals.getConditionedValues().getVariableNums()));
+
+	  for (Map.Entry<Integer[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
+	    DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(Arrays.asList(testCase.getKey()));
+	    testCase.getValue().runTests(marginal, marginals.getPartitionFunction(), tolerance);
+	  }
 	}
 		
 	private static class MarginalTest {

@@ -45,7 +45,8 @@ public class GibbsSampler implements MarginalCalculator {
 			}
 			samples.add(curAssignment);
 		}
-		return new SampleMarginalSet(factorGraph.getVariables(), samples, Assignment.EMPTY);
+		return new SampleMarginalSet(factorGraph.getVariables(), samples, 
+		    factorGraph.getConditionedVariables(), factorGraph.getConditionedValues());
 	}
 
 	/**

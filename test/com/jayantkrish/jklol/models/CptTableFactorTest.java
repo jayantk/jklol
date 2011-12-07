@@ -1,17 +1,17 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Set;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.models.bayesnet.Cpt;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class CptFactorTest extends TestCase {
+public class CptTableFactorTest extends TestCase {
 
   CptTableFactor f;  
   SufficientStatistics parameters;
@@ -50,42 +50,35 @@ public class CptFactorTest extends TestCase {
   }
   
   public void testGetNewSufficientStatistics() {
-    Cpt newStats = f.getNewSufficientStatistics();
-    
-    assertEquals(parents, newStats.getParents());
-    assertEquals(children, newStats.getChildren());
-    assertEquals(allVars, newStats.getVars());
+    DiscreteFactor factor = f.getFactorFromParameters(f.getNewSufficientStatistics());
+    assertEquals(allVars, factor.getVars());
     
     // All assignments should have a count of 0.
-    assertFalse(newStats.assignmentIterator().hasNext());
+    Iterator<Assignment> iter = factor.outcomeIterator();
+    while (iter.hasNext()) {
+      assertEquals(0.0, factor.getUnnormalizedProbability(iter.next()));
+    }
   }
   
   public void testGetSufficientStatisticsFromAssignment() {
-    Cpt newStats = f.getNewSufficientStatistics();
+    SufficientStatistics newStats = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(newStats,
         f.getVars().outcomeToAssignment(assignments[1]), 2.0);
     newStats.increment(1.0);
 
-    assertEquals(parents, newStats.getParents());
-    assertEquals(children, newStats.getChildren());
-    assertEquals(allVars, newStats.getVars());
-
-    assertEquals(3.0 / 6.0, newStats.getProbability(allVars.outcomeToAssignment(assignments[1])));
+    DiscreteFactor factor = f.getFactorFromParameters(newStats);
+    assertEquals(3.0 / 6.0, factor.getUnnormalizedProbability(allVars.outcomeToAssignment(assignments[1])));
   }
   
   public void testGetSufficientStatisticsFromMarginal() {
-    Cpt newStats = f.getNewSufficientStatistics();
+    SufficientStatistics newStats = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromMarginal(newStats, 
         f.getFactorFromParameters(parameters), Assignment.EMPTY, 6.0, 3.0);
-
-    assertEquals(parents, newStats.getParents());
-    assertEquals(children, newStats.getChildren());
-    assertEquals(allVars, newStats.getVars());
-    
     newStats.increment(1.0);
     
-    assertEquals(2.0 / 6.0, newStats.getProbability(allVars.outcomeToAssignment(assignments[1])));
-    assertEquals(3.0 / 6.0, newStats.getProbability(allVars.outcomeToAssignment(assignments[2])));
+    DiscreteFactor factor = f.getFactorFromParameters(newStats);
+    assertEquals(2.0 / 6.0, factor.getUnnormalizedProbability(allVars.outcomeToAssignment(assignments[1])));
+    assertEquals(3.0 / 6.0, factor.getUnnormalizedProbability(allVars.outcomeToAssignment(assignments[2])));
   }
     
   public void testGetFactorFromParameters() {

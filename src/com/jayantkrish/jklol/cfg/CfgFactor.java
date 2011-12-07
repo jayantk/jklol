@@ -309,7 +309,7 @@ public class CfgFactor extends AbstractFactor {
 
   /**
    * Runs the inside portion of CFG parsing, using the distribution over the
-   * child variable as the input to the parser. Returns the resulting chart.
+   * child variable as the inputVar to the parser. Returns the resulting chart.
    * 
    * @param useSumProduct
    * @return
@@ -329,7 +329,7 @@ public class CfgFactor extends AbstractFactor {
 
   /**
    * Runs both the inside and outside portions of CFG parsing, using the
-   * distribution over the child/parent variable as the input to the parser.
+   * distribution over the child/parent variable as the inputVar to the parser.
    * Returns the resulting chart.
    * 
    * @param useSumProduct

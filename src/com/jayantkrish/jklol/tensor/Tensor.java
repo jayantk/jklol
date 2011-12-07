@@ -1,7 +1,7 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Tensors are immutable. All operations on {@code Tensor}s, such as  
@@ -17,9 +17,9 @@ public interface Tensor extends TensorBase {
   
   Tensor elementwiseInverse();
   
-  Tensor sumOutDimensions(Set<Integer> dimensionsToEliminate);
+  Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate);
   
-  Tensor maxOutDimensions(Set<Integer> dimensionsToEliminate);
+  Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate);
   
   Tensor relabelDimensions(int[] newDimensions);
   

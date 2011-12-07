@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import com.jayantkrish.jklol.models.bayesnet.Cpt;
-import com.jayantkrish.jklol.models.loglinear.FeatureSufficientStatistics;
 
 /**
  * The sufficient statistics of a {@code FactorGraph}. This class represents the
@@ -46,22 +44,6 @@ public interface SufficientStatistics {
    * @return
    */
   public double getL2Norm();
-
-  /**
-   * Attempts to convert {@code this} into a {@link Cpt}. Throws
-   * {@code CoercionError} if conversion is not possible.
-   * 
-   * @return
-   */
-  public Cpt coerceToCpt();
-
-  /**
-   * Attempts to convert {@code this} into a {@link FeatureSufficientStatistics}
-   * .
-   * 
-   * @return
-   */
-  public FeatureSufficientStatistics coerceToFeature();
 
   /**
    * Attempts to convert {@code this} into a {@link ListSufficientStatistics}.

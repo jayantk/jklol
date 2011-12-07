@@ -179,7 +179,7 @@ public class FactorGraph {
   public VariableNumMap getVariables() {
     return variables;
   }
-  
+
   /**
    * Gets any variables whose values have been conditioned on. The returned set
    * of variables matches the variables that {@code this.getConditionedValues()}
@@ -189,6 +189,17 @@ public class FactorGraph {
    */
   public VariableNumMap getConditionedVariables() {
     return conditionedVariables;
+  }
+
+  /**
+   * Gets all of the variables contained in this factor graph, including
+   * variables with probability distributions as well as variables with fixed
+   * values.
+   * 
+   * @return
+   */
+  public VariableNumMap getAllVariables() {
+    return variables.union(conditionedVariables);
   }
 
   /**
@@ -205,6 +216,15 @@ public class FactorGraph {
    */
   public int getVariableIndex(String variableName) {
     return variableNames.get(variableName);
+  }
+  
+  /**
+   * Gets any plates in this model.
+   * 
+   * @return
+   */
+  public List<Plate> getPlates() {
+    return Collections.unmodifiableList(plates);
   }
 
   /**
@@ -324,7 +344,7 @@ public class FactorGraph {
    */
   public FactorGraph addVariable(String variableName, Variable variable) {
     Preconditions.checkArgument(!this.variableNames.containsKey(variableName));
-    int varNum = variables.size() > 0 ? Collections.max(variables.getVariableNums()) + 1 : 0;
+    int varNum = getAllVariables().size() > 0 ? Collections.max(getAllVariables().getVariableNums()) + 1 : 0;
     return addVariableWithIndex(variableName, variable, varNum);
   }
 
@@ -369,7 +389,7 @@ public class FactorGraph {
     }
     return factorGraph;
   }
-  
+
   public FactorGraph addPlateFactor(PlateFactor plateFactor) {
     FactorGraph factorGraph = new FactorGraph(this);
     if (plateFactor.canInstantiate(getConditionedValues())) {
@@ -380,7 +400,7 @@ public class FactorGraph {
     } else {
       factorGraph.plateFactors.add(plateFactor);
     }
-    return factorGraph;    
+    return factorGraph;
   }
 
   /**
@@ -454,6 +474,12 @@ public class FactorGraph {
   public FactorGraph conditional(Assignment assignment) {
     Preconditions.checkArgument(variables.containsAll(assignment.getVariableNums()));
 
+    // Short-circuit when nothing is conditioned on. Also the base case when
+    // instantiating assignments from plates.
+    if (assignment.equals(Assignment.EMPTY)) {
+      return this;
+    }
+
     FactorGraph newFactorGraph = new FactorGraph();
     newFactorGraph.conditionedValues = this.conditionedValues.union(assignment);
     newFactorGraph.conditionedVariables = this.conditionedVariables.union(
@@ -469,6 +495,7 @@ public class FactorGraph {
     }
 
     // Dynamic variable instantiation for dynamic factor graphs.
+    Assignment plateAssignment = Assignment.EMPTY;
     for (Plate plate : plates) {
       if (newFactorGraph.conditionedValues.containsAll(
           plate.getReplicationVariables().getVariableNums())) {
@@ -478,12 +505,19 @@ public class FactorGraph {
         for (Map.Entry<String, Variable> newVariable : newVariables.entrySet()) {
           newFactorGraph = newFactorGraph.addVariable(newVariable.getKey(), newVariable.getValue());
         }
+
+        // Collect all of the variables that were created, then instantiate the
+        // plate's
+        // assignment to the created variables.
+        VariableNumMap createdVariables = newFactorGraph.getVariables().getVariablesByName(newVariables.keySet());
+        plateAssignment = plateAssignment.union(plate.instantiateVariableAssignments(
+            createdVariables, newFactorGraph.conditionedValues));
       } else {
         newFactorGraph = newFactorGraph.addPlate(plate);
       }
     }
 
-    // Dynamic factor construction for dynamic factor graphs.    
+    // Dynamic factor construction for dynamic factor graphs.
     for (PlateFactor plateFactor : plateFactors) {
       if (plateFactor.canInstantiate(newFactorGraph.conditionedValues)) {
         List<Factor> newFactors = plateFactor.instantiateFactors(
@@ -502,7 +536,9 @@ public class FactorGraph {
       newFactorGraph = newFactorGraph.addFactor(factor.conditional(assignment));
     }
 
-    return newFactorGraph;
+    // If the instantiated plates assigned values to any variables,
+    // recursively condition on them.
+    return newFactorGraph.conditional(plateAssignment);
   }
 
   /**

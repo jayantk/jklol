@@ -10,7 +10,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
- * A predictor which makes the same prediction for every input.
+ * A predictor which makes the same prediction for every inputVar.
  */
 public class ConstantPredictor<I, O> implements Predictor<I, O> {
 
@@ -18,7 +18,7 @@ public class ConstantPredictor<I, O> implements Predictor<I, O> {
 	private TreeMap<O, Double> outputProbabilities;
 
 	/**
-	 * Creates a predictor which predicts each output with the specified probability.
+	 * Creates a predictor which predicts each outputVar with the specified probability.
 	 * The provided probabilities must sum to 1.
 	 */
 	public ConstantPredictor(Map<O, Double> outputProbabilities) {

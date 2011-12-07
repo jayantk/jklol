@@ -8,10 +8,9 @@ import junit.framework.Assert;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.inference.MarginalCalculator;
-import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -24,7 +23,7 @@ public class MarginalTestCase {
 	private FactorGraph factorGraph;
 	private Assignment condition;
 	
-	private Map<Integer[], MarginalTest> variableMarginalTests;
+	private Map<String[], MarginalTest> variableMarginalTests;
 	
 	/**
 	 * Create a new test case for the marginal distribution over variables. 
@@ -38,7 +37,7 @@ public class MarginalTestCase {
 		variableMarginalTests = Maps.newHashMap();
 	}
 
-	public void addTest(double expectedProb, Integer[] variableNums, String ... varValues) {
+	public void addTest(double expectedProb, String[] variableNums, String ... varValues) {
 		if (!variableMarginalTests.containsKey(variableNums)) {
 			variableMarginalTests.put(variableNums, new MarginalTest());
 		}
@@ -49,12 +48,13 @@ public class MarginalTestCase {
 	  FactorGraph conditionedFactorGraph = factorGraph.conditional(condition);
 	  MarginalSet marginals = inference.computeMarginals(conditionedFactorGraph);
 	  
-	  Assert.assertEquals(condition, marginals.getConditionedValues());
+	  Assert.assertEquals(condition, marginals.getConditionedValues().intersection(condition.getVariableNums()));
 	  Assert.assertTrue(marginals.getVariables().containsAll(
 	      marginals.getConditionedValues().getVariableNums()));
 
-	  for (Map.Entry<Integer[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
-	    DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(Arrays.asList(testCase.getKey()));
+	  for (Map.Entry<String[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
+	    VariableNumMap variables = marginals.getVariables().getVariablesByName(testCase.getKey());
+	    DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(variables.getVariableNums());
 	    testCase.getValue().runTests(marginal, marginals.getPartitionFunction(), tolerance);
 	  }
 	}

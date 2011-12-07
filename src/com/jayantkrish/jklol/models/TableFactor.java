@@ -6,8 +6,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.SparseTensor;
 
 /**
  * A TableFactor is a representation of a factor where each weight is set
@@ -18,14 +18,14 @@ import com.jayantkrish.jklol.util.SparseTensor;
  */
 public class TableFactor extends DiscreteFactor {
 
-  private final SparseTensor weights;
+  private final Tensor weights;
 
   /**
    * Constructs a {@code TableFactor} involving the specified variable numbers
    * (whose possible values are in variables). Note that vars can only contain
    * DiscreteVariables.
    */
-  public TableFactor(VariableNumMap vars, SparseTensor weights) {
+  public TableFactor(VariableNumMap vars, Tensor weights) {
     super(vars);
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
     this.weights = weights;
@@ -79,7 +79,7 @@ public class TableFactor extends DiscreteFactor {
   }
 
   @Override
-  public SparseTensor getWeights() {
+  public Tensor getWeights() {
     return weights;
   }
 

@@ -1,0 +1,57 @@
+package com.jayantkrish.jklol.tensor;
+
+import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
+
+/**
+ * Unit tests for {@link SparseTensor}.
+ * 
+ * @author jayantk
+ */
+public class SparseTensorTest extends TensorTest {
+
+  public SparseTensorTest() {
+    super(new TensorFactory() {
+      @Override
+      public TensorBuilder getBuilder(int[] dimNums, int[] dimSizes) {
+        return new SparseTensorBuilder(dimNums, dimSizes);
+      }
+    });
+  }
+  
+  public void testSize() {
+    assertEquals(2, smallTable.size());
+    assertEquals(1, emptyTable.size());
+  }
+  
+  public void testAssignmentIterator() {
+    Set<List<Integer>> expectedKeys = Sets.newHashSet();
+    expectedKeys.add(Ints.asList(a1));
+    expectedKeys.add(Ints.asList(a2));
+    Set<List<Integer>> actualKeys = Sets.newHashSet();
+    for (int[] key : Lists.newArrayList(smallTable.keyIterator())) {
+      actualKeys.add(Ints.asList(key));
+    }
+    assertEquals(expectedKeys, actualKeys);
+
+    expectedKeys = Sets.newHashSet();
+    expectedKeys.add(Lists.<Integer> newArrayList());
+    actualKeys.clear();
+    for (int[] key : Lists.newArrayList(emptyTable.keyIterator())) {
+      actualKeys.add(Ints.asList(key));
+    }
+    assertEquals(expectedKeys, actualKeys);
+  }
+      
+  public void testVector() {
+    Tensor tensor = SparseTensor.vector(2, 4, new double[] {0, 2, 3, 0});
+    assertEquals(2, tensor.size());
+    assertEquals(2.0, tensor.get(1));
+    assertEquals(3.0, tensor.get(2));
+    assertEquals(0.0, tensor.get(3));
+  }
+}

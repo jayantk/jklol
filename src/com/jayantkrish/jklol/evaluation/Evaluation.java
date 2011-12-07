@@ -5,8 +5,8 @@ import java.util.List;
 /**
  * An Evaluation is a technique for computing the loss of a predictor.
  *
- * @param I the type of the input data that predictions are based on.
- * @param O the type of the output prediction.
+ * @param I the type of the inputVar data that predictions are based on.
+ * @param O the type of the outputVar prediction.
  */
 public interface Evaluation<I, O> {
 

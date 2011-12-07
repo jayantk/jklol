@@ -8,8 +8,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.SparseTensorBuilder;
 
 /**
  * Helper class for constructing {@link TableFactor}s. This class takes
@@ -24,7 +25,7 @@ import com.jayantkrish.jklol.util.SparseTensorBuilder;
 public class TableFactorBuilder {
 
   private final VariableNumMap vars;
-  private final SparseTensorBuilder weightBuilder;
+  private final TensorBuilder weightBuilder;
 
   /**
    * Creates a builder which builds a {@code TableFactor} over {@code variables}
@@ -33,8 +34,17 @@ public class TableFactorBuilder {
    * @param vars
    */
   public TableFactorBuilder(VariableNumMap variables) {
+    Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size());
     this.vars = variables;
-    this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()));
+    
+    // Figure out the required size of the tensor.
+    // TODO: this should be wrapped into some sort of tensor factory. 
+    int[] sizes = new int[vars.size()];
+    List<DiscreteVariable> varTypes = variables.getDiscreteVariables();
+    for (int i = 0; i < varTypes.size(); i++) {
+      sizes[i] = varTypes.get(i).numValues();
+    }
+    this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()), sizes);
   }
 
   /**
@@ -109,17 +119,6 @@ public class TableFactorBuilder {
    */
   public double getWeight(Assignment assignment) {
     return weightBuilder.get(vars.assignmentToIntArray(assignment));
-  }
-
-  /**
-   * Returns {@code true} if this builder has a weight associated with
-   * {@code assignment}.
-   * 
-   * @param assignment
-   * @return
-   */
-  public boolean containsKey(Assignment assignment) {
-    return weightBuilder.containsKey(vars.assignmentToIntArray(assignment));
   }
 
   /**

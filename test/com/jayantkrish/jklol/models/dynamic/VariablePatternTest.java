@@ -8,7 +8,7 @@ import junit.framework.TestCase;
 
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.IntegerVariable;
+import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
@@ -26,7 +26,7 @@ public class VariablePatternTest extends TestCase {
   public void setUp() {
     DiscreteVariable tfVar = new DiscreteVariable("Three values",
         Arrays.asList(new String[] {"T", "F", "U"}));
-    IntegerVariable intVar = new IntegerVariable();
+    ObjectVariable intVar = new ObjectVariable(Integer.class);
     
     templateVars = new VariableNumMap(Ints.asList(5, 6), 
         Arrays.asList("x", "y"), Arrays.<Variable>asList(tfVar, intVar));

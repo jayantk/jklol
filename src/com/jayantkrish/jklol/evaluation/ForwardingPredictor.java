@@ -11,10 +11,10 @@ import com.jayantkrish.jklol.util.Converter;
  * format, then forwards them to an underlying predictor.
  * 
  * @author jayantk
- * @param <I1> input type of this predictor
- * @param <O1> output type of this predictor
- * @param <I2> input type of underlying predictor
- * @param <O2> output type of underlying predictor
+ * @param <I1> inputVar type of this predictor
+ * @param <O1> outputVar type of this predictor
+ * @param <I2> inputVar type of underlying predictor
+ * @param <O2> outputVar type of underlying predictor
  */
 public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
 

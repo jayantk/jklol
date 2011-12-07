@@ -1,10 +1,10 @@
 package com.jayantkrish.jklol.util;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -14,16 +14,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 public class AllAssignmentIterator implements Iterator<Assignment> {
 
 	private VariableNumMap vars;
-	private List<Integer> currentValueInds;
-	private List<Integer> finalValueInds;
+	private Iterator<int[]> valueIterator;
 	private List<Object> currentValues;
-
-	/*
-	public AllAssignmentIterator(List<Integer> varNums, List<DiscreteVariable> varList) {
-		this.vars = new VariableNumMap(varNums, varList);
-		initializeValueState();
-	}
-	*/
 
 	/**
 	 * Create an iterator over the assignments of the variables in varNumMap. varNumMap must contain
@@ -33,60 +25,44 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 	public AllAssignmentIterator(VariableNumMap varNumMap) {
 		Preconditions.checkArgument(varNumMap.getDiscreteVariables().size() == varNumMap.size());
 		this.vars = varNumMap;
-		initializeValueState();
+		currentValues = Lists.newArrayList();
+		for (int i = 0; i < vars.size(); i++) {
+		  currentValues.add(null);
+		}
+		valueIterator = initializeValueIterator(varNumMap);
 	}
 
 	/*
 	 * Initializes the variable values controlling the iteration position. 
 	 */
-	private void initializeValueState() {
-		this.currentValueInds = new ArrayList<Integer>(vars.size());
-		this.currentValues = new ArrayList<Object>(vars.size());
-		this.finalValueInds = new ArrayList<Integer>(vars.size());
-		for (Integer varNum : vars.getVariableNums()) {
-			currentValueInds.add(0);
-			currentValues.add(null);
-			finalValueInds.add(((DiscreteVariable) vars.getVariable(varNum)).numValues() - 1);
+	private static Iterator<int[]> initializeValueIterator(VariableNumMap vars) {
+		int[] dimensionSizes = new int[vars.size()];
+		
+		List<DiscreteVariable> discreteVars = vars.getDiscreteVariables();
+		for (int i = 0; i < discreteVars.size(); i++) {
+		  dimensionSizes[i] = discreteVars.get(i).numValues();
 		}
-		// Set the last index to one higher than the actual number of values; when we increment
-		// currentValues to this point, we will be done.
-		finalValueInds.set(vars.size() - 1, finalValueInds.get(vars.size() - 1) + 1);
+		return new IntegerArrayIterator(dimensionSizes);
 	}
 
 	public boolean hasNext() {
-		return !(currentValueInds.get(vars.size() - 1).equals(finalValueInds.get(vars.size() - 1)));
+		return valueIterator.hasNext();
 	}
 
 	public Assignment next() {
-		Assignment a = getCurrentAssignment();
-		incrementCurrentValueInds();
-		return a;
+	  int[] currentValue = valueIterator.next();
+		return valueToAssignment(currentValue);
 	}
 
 	/*
 	 * Translates currentValueInds into an assignment.
 	 */
-	private Assignment getCurrentAssignment() {
-		List<Integer> varNums = vars.getVariableNums();
-		for (int i = 0; i < currentValueInds.size(); i++) {
-			currentValues.set(i, ((DiscreteVariable) vars.getVariable(varNums.get(i)))
-					.getValue(currentValueInds.get(i)));
+	private Assignment valueToAssignment(int[] value) {
+		List<DiscreteVariable> discreteVars = vars.getDiscreteVariables();
+		for (int i = 0; i < value.length; i++) {
+			currentValues.set(i, discreteVars.get(i).getValue(value[i]));
 		}
 		return new Assignment(vars.getVariableNums(), currentValues);
-	}
-
-	/*
-	 * Advances the internal state of the iterator (currentValueInds) to the next value.
-	 */
-	private void incrementCurrentValueInds() {
-		currentValueInds.set(0, currentValueInds.get(0) + 1);
-		int i = 0;
-		while (i < currentValueInds.size() - 1 && 
-				currentValueInds.get(i) > finalValueInds.get(i)) {
-			currentValueInds.set(i, 0);
-			currentValueInds.set(i + 1, currentValueInds.get(i + 1) + 1);
-			i++;
-		}		
 	}
 
 	public void remove() {

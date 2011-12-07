@@ -29,12 +29,12 @@ import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
  * these sets of tied variables/factors.
  * 
  * {@code VariablePattern}s have two uses. The first use is to dynamically
- * instantiate sets of variables based on an input instance (see {@link Plate}).
- * The second purpose is to identify these dynamically constructed sets in
- * existing {@code FactorGraph}s, for compiling sufficient statistics, etc. In
- * both cases, the generated/identified variables are parameterized by a single
- * integer value, which behaves like the index of the particular replication in
- * a list of replications.
+ * instantiate sets of variables based on an inputVar instance (see
+ * {@link Plate}). The second purpose is to identify these dynamically
+ * constructed sets in existing {@code FactorGraph}s, for compiling sufficient
+ * statistics, etc. In both cases, the generated/identified variables are
+ * parameterized by a single integer value, which behaves like the index of the
+ * particular replication in a list of replications.
  * 
  * @author jayantk
  */
@@ -60,20 +60,20 @@ public class VariablePattern {
   /**
    * Gets the {@code VariablePattern} which generalizes the passed-in
    * {@code VariableNumMap}. The returned pattern matches exactly
-   * {@code variables}. 
+   * {@code variables}.
    * 
    * @return
    */
   public static VariablePattern fromVariableNumMap(VariableNumMap variables) {
-    return new VariablePattern(Collections.<VariableNameMatcher>emptyList(), 
+    return new VariablePattern(Collections.<VariableNameMatcher> emptyList(),
         VariableNumMap.emptyMap(), variables);
   }
-  
+
   /**
    * Gets a {@code VariablePattern} which uses the names in {@code templateVars}
    * as the name templates for matching variables. The names are specified in a
    * rudimentary pattern language: if a name contains a "+", the portion after
-   * the "+" is parsed as an integer offset. Otherwise, the name is given an 
+   * the "+" is parsed as an integer offset. Otherwise, the name is given an
    * offset of 0.
    * 
    * @param variables
@@ -96,9 +96,18 @@ public class VariablePattern {
   }
 
   /**
+   * Gets the variables which may be matched multiple times in the factor graph.
+   * 
+   * @return
+   */
+  public VariableNumMap getTemplateVariables() {
+    return templateVariables;
+  }
+
+  /**
    * Identifies all of the variables which match this pattern, and returns them
    * along with the role served by each variable in the match. Matches are
-   * returned in order of the matched replication index. 
+   * returned in order of the matched replication index.
    * 
    * @param allVariables
    * @return
@@ -113,7 +122,7 @@ public class VariablePattern {
     if (templateVariableMatchers.size() == 0) {
       return Arrays.asList(new VariableMatch(0, fixedVariables));
     }
-    
+
     // Find all variables which begin with a prefix in variableNamePrefixes,
     // identify their replication index, and aggregate the matches by
     // replication index.
@@ -227,11 +236,11 @@ public class VariablePattern {
           templateVariable.getVariableNames().get(0));
       allVariables = allVariables.union(matchedVariable);
     }
-    
+
     @Override
     public String toString() {
-      return allVariables.toString() + " " + variableIndexMap.toString() 
-          + " " + variableNameMap.toString(); 
+      return allVariables.toString() + " " + variableIndexMap.toString()
+          + " " + variableNameMap.toString();
     }
   }
 
@@ -272,10 +281,10 @@ public class VariablePattern {
     public String getPrefix() {
       return variableNamePrefix;
     }
-    
+
     /**
      * Gets the replication index associated with this matcher.
-     *  
+     * 
      * @return
      */
     public Integer getOffset() {

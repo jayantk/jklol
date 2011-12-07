@@ -8,9 +8,9 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.SparseTensor;
 
 /**
  * {@code LogTableFactor} represents a discrete distribution using
@@ -123,5 +123,4 @@ public class LogTableFactor extends DiscreteFactor {
   public DiscreteFactor inverse() {
     return new TableFactor(getVars(), getWeights().elementwiseInverse());
   }
-
 }

@@ -15,7 +15,7 @@ public class ExampleUtils {
   /**
    * Converts {@code data} into a list of {@code Example}s. Each element of
    * {@code data} should be an array of length 2, where the first value is the
-   * input and the second value is the output of the corresponding example.
+   * inputVar and the second value is the outputVar of the corresponding example.
    * 
    * @param data
    * @return

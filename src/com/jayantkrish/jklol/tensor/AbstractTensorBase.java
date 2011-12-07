@@ -2,6 +2,11 @@ package com.jayantkrish.jklol.tensor;
 
 import java.util.Arrays;
 
+/**
+ * Common implementations of basic {@link TensorBase} methods.
+ * 
+ * @author jayantk
+ */
 public abstract class AbstractTensorBase implements TensorBase {
   
   // The dimensions spanned by this tensor, and the size in each dimension.
@@ -21,5 +26,14 @@ public abstract class AbstractTensorBase implements TensorBase {
   @Override
   public int[] getDimensionSizes() {
     return sizes;
+  }
+  
+  protected int getDimensionIndex(int dimensionNum) {
+    for (int i = 0; i < dimensions.length; i++) {
+      if (dimensions[i] == dimensionNum) {
+        return i;
+      }
+    }
+    return -1;
   }
 }

@@ -1,19 +1,28 @@
 package com.jayantkrish.jklol.models.bayesnet;
 
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A CptTableFactor is the typical factor you expect in a Bayesian Network.
- * Its unnormalized probabilities are simply child variable probabilities
+ * A CptTableFactor is the typical factor you expect in a Bayesian Network. Its
+ * unnormalized probabilities are simply child variable probabilities
  * conditioned on a parent.
  */
 public class CptTableFactor extends AbstractParametricFactor<SufficientStatistics> {
@@ -30,46 +39,72 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
    */
   public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars) {
     super(parentVars.union(childVars));
+    Preconditions.checkArgument(parentVars.getDiscreteVariables().size() == parentVars.size());
+    Preconditions.checkArgument(childVars.getDiscreteVariables().size() == childVars.size());
     this.parentVars = parentVars;
     this.childVars = childVars;
   }
-  
+
   // ////////////////////////////////////////////////////////////////
   // ParametricFactor / CptFactor methods
   // ///////////////////////////////////////////////////////////////
-  
+
   @Override
   public DiscreteFactor getFactorFromParameters(SufficientStatistics parameters) {
-    Cpt cpt = parameters.coerceToCpt();
-    Preconditions.checkArgument(cpt.getVars().equals(getVars()));
-
-    return cpt.convertToFactor();
+    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) parameters;
+    Tensor allTensor = tensorStats.get(0).build();
+    Tensor parentTensor = allTensor.sumOutDimensions(childVars.getVariableNums());
+    
+    return new TableFactor(getVars(), allTensor.elementwiseProduct(parentTensor.elementwiseInverse()));
   }
 
   @Override
-  public Cpt getNewSufficientStatistics() {
-    return new Cpt(parentVars, childVars);
+  public TensorSufficientStatistics getNewSufficientStatistics() {
+    TensorBuilder combinedTensor = getTensorFromVariables(getVars());
+    return new TensorSufficientStatistics(Arrays.asList(combinedTensor));
+  }
+
+  /**
+   * Constructs a tensor with one dimension per variable in {@code variables}.
+   * 
+   * @param variables
+   * @return
+   */
+  private static TensorBuilder getTensorFromVariables(VariableNumMap variables) {
+    // Get the dimensions and dimension sizes for the tensor.
+    int[] dimensions = Ints.toArray(variables.getVariableNums());
+    int[] sizes = new int[dimensions.length];
+    List<DiscreteVariable> varTypes = variables.getDiscreteVariables();
+    for (int i = 0; i < varTypes.size(); i++) {
+      sizes[i] = varTypes.get(i).numValues();
+    }
+    return new SparseTensorBuilder(dimensions, sizes);
   }
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
       Assignment a, double count) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
-    Cpt cptStatistics = statistics.coerceToCpt();
-    cptStatistics.incrementOutcomeCount(a, count);
+    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
+
+    int[] combinedIndex = getVars().assignmentToIntArray(a);
+    tensorStats.get(0).incrementEntry(count, combinedIndex);
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     Assignment conditionalSubAssignment = conditionalAssignment.intersection(getVars());
-    
-    Cpt cptStatistics = statistics.coerceToCpt();
+
+    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
     Iterator<Assignment> assignmentIter = marginal.coerceToDiscrete().outcomeIterator();
     while (assignmentIter.hasNext()) {
       Assignment a = assignmentIter.next().union(conditionalSubAssignment);
-      cptStatistics.incrementOutcomeCount(a, 
-          count * marginal.getUnnormalizedProbability(a) / partitionFunction);
+      double incrementAmount = count * marginal.getUnnormalizedProbability(a) / partitionFunction;
+      
+      int[] combinedIndex = getVars().assignmentToIntArray(a);
+    
+      tensorStats.get(0).incrementEntry(incrementAmount, combinedIndex);
     }
   }
 
@@ -79,20 +114,22 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
 
   /**
    * Gets the parent variables of this factor.
+   * 
    * @return
    */
   public VariableNumMap getParents() {
     return parentVars;
   }
-  
+
   /**
    * Gets the child variables of this factor.
+   * 
    * @return
    */
   public VariableNumMap getChildren() {
     return childVars;
   }
-  
+
   /**
    * Get an iterator over all possible assignments to the parent variables
    */
@@ -109,7 +146,7 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
 
   @Override
   public String toString() {
-    return "[CptTableFactor Parents: " + parentVars.toString() 
+    return "[CptTableFactor Parents: " + parentVars.toString()
         + " Children: " + childVars.toString() + "]";
   }
 }

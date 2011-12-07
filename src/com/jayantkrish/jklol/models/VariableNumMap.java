@@ -145,18 +145,34 @@ public class VariableNumMap {
   }
 
   /**
-   * Gets any integer-valued variables in {@code this}.
+   * Gets any variables in {@code this} whose values are objects of type
+   * {@code T}.
    * 
    * @return
    */
-  public List<IntegerVariable> getIntegerVariables() {
-    List<IntegerVariable> integerVars = new ArrayList<IntegerVariable>();
+  public List<ObjectVariable> getObjectVariables() {
+    List<ObjectVariable> integerVars = new ArrayList<ObjectVariable>();
     for (Integer varNum : getVariableNums()) {
-      if (getVariable(varNum) instanceof IntegerVariable) {
-        integerVars.add((IntegerVariable) getVariable(varNum));
+      if (getVariable(varNum) instanceof ObjectVariable) {
+        integerVars.add((ObjectVariable) getVariable(varNum));
       }
     }
     return integerVars;
+  }
+
+  /**
+   * Gets any boolean-valued variables in {@code this}.
+   * 
+   * @return
+   */
+  public List<BooleanVariable> getBooleanVariables() {
+    List<BooleanVariable> booleanVars = new ArrayList<BooleanVariable>();
+    for (int varNum : getVariableNums()) {
+      if (getVariable(varNum) instanceof BooleanVariable) {
+        booleanVars.add((BooleanVariable) getVariable(varNum));
+      }
+    }
+    return booleanVars;
   }
 
   /**
@@ -540,7 +556,16 @@ public class VariableNumMap {
 
   @Override
   public String toString() {
-    return varMap.values().toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append("[");
+    for (Integer varNum : varMap.keySet()) {
+      sb.append(names.get(varNum));
+      sb.append("=");
+      sb.append(varMap.get(varNum));
+      sb.append(",");
+    }
+    sb.append("]");
+    return sb.toString();
   }
 
   @Override
@@ -693,10 +718,10 @@ public class VariableNumMap {
       }
       return new VariableRelabeling(indexMap, nameMap);
     }
-    
+
     /**
      * Constructs the identity relabeling between variables in {@code map}.
-     *  
+     * 
      * @param map
      * @return
      */
@@ -707,15 +732,15 @@ public class VariableNumMap {
         indexMap.put(map.getVariableNums().get(i), map.getVariableNums().get(i));
         nameMap.put(map.getVariableNames().get(i), map.getVariableNames().get(i));
       }
-      return new VariableRelabeling(indexMap, nameMap);      
+      return new VariableRelabeling(indexMap, nameMap);
     }
 
     /**
-     * Replaces each index in {@code input} with its corresponding value in
+     * Replaces each index in {@code inputVar} with its corresponding value in
      * {@code indexReplacements}, and similarly replaces each name in
-     * {@code input} with its value in {@code nameReplacements}.
+     * {@code inputVar} with its value in {@code nameReplacements}.
      * 
-     * @param input
+     * @param inputVar
      * @param indexReplacements
      * @param nameReplacements
      * @return

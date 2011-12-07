@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.training;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -8,6 +7,8 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
+import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
@@ -16,6 +17,8 @@ import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.TensorBase;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class StochasticGradientTrainerTest extends TestCase {
@@ -25,7 +28,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 	List<String> clique1Names;
 	List<String> clique2Names;
 
-	List<Assignment> trainingData;
+	List<Example<Assignment, Assignment>> trainingData;
 
 	public void setUp() {
 		LogLinearModelBuilder builder = new LogLinearModelBuilder();
@@ -49,7 +52,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		    VariablePattern.fromVariableNumMap(builder.getVariables().getVariablesByName(clique2Names)));
 
 		logLinearModel = builder.build();
-		trainingData = new ArrayList<Assignment>();
+		trainingData = Lists.newArrayList();
 		Assignment a1 = logLinearModel.getVariables()
 		    .outcomeToAssignment(Arrays.asList("T", "T", "T", "T"));
 		Assignment a2 = logLinearModel.getVariables()
@@ -57,9 +60,9 @@ public class StochasticGradientTrainerTest extends TestCase {
 		Assignment a3 = logLinearModel.getVariables()
 		    .outcomeToAssignment(Arrays.asList("F", "F", "F", "F"));
 		for (int i = 0; i < 3; i++) {
-			trainingData.add(a1);
-			trainingData.add(a2);
-			trainingData.add(a3);
+			trainingData.add(Example.create(Assignment.EMPTY, a1));
+			trainingData.add(Example.create(Assignment.EMPTY, a2));
+			trainingData.add(Example.create(Assignment.EMPTY, a3));
 		}
 		t = new StochasticGradientTrainer(new JunctionTree(), 10);
 	}
@@ -79,19 +82,22 @@ public class StochasticGradientTrainerTest extends TestCase {
 		SufficientStatistics parameters = t.train(logLinearModel, logLinearModel.getNewSufficientStatistics(), trainingData);
 
 		List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
-		for (SufficientStatistics stats : parameterList) {
-		  List<FeatureFunction> features = stats.coerceToFeature().getFeatures();
-		  double[] weights = stats.coerceToFeature().getWeights();
-		  for (int i = 0; i < features.size(); i++) {
-		    FeatureFunction feat = features.get(i);
+		for (int i = 0; i < parameterList.size(); i++) {
+		  DiscreteLogLinearFactor factor = (DiscreteLogLinearFactor) logLinearModel.getParametricFactors().get(i);
+		  SufficientStatistics stats = parameterList.get(i);
+		  
+		  List<FeatureFunction> features = factor.getFeatures();
+		  TensorBase weights = ((TensorSufficientStatistics) stats).get(0);
+		  for (int j = 0; j < features.size(); j++) {
+		    FeatureFunction feat = features.get(j);
 		    Assignment a = feat.getNonzeroAssignments().next();
 		    if (a.getVariableNums().size() == 3) {
 		      assertTrue(clique1PositiveAssignments.contains(a) ||
-		          weights[i] < 0.0);
+		          weights.get(j) < 0.0);
 		    } else {
 		      assertTrue(clique2NegativeAssignments.contains(a) ||
-		          weights[i] > -1.0);
-		    }    		    
+		          weights.get(j) > -1.0);
+		    }
 		  }
 		}
 	}

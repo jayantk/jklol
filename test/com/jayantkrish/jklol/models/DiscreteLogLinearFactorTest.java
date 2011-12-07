@@ -8,7 +8,9 @@ import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.FeatureSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.TensorBase;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -20,7 +22,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
 
   DiscreteLogLinearFactor f;
   VariableNumMap vars;
-  FeatureSufficientStatistics parameters;
+  SufficientStatistics parameters;
   
   public void setUp() {
     DiscreteVariable v = new DiscreteVariable("Two values",
@@ -50,52 +52,50 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F")), .00001);
   }
-  
-  public void testGetNewSufficientStatistics() {
-    assertEquals(4, f.getNewSufficientStatistics().getFeatures().size());
-    assertEquals(4, f.getNewSufficientStatistics().getWeights().length);
-  }
-  
+    
   public void testGetSufficientStatisticsFromAssignment() {
     Assignment tf = vars.outcomeArrayToAssignment("T", "F"); 
-    FeatureSufficientStatistics s = f.getNewSufficientStatistics();
+    SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
-    List<FeatureFunction> features = s.getFeatures();
-    double[] weights = s.getWeights();
+    List<FeatureFunction> features = f.getFeatures();
+    TensorBase weights = ((TensorSufficientStatistics) s).get(0);
     assertEquals(4, features.size());
-    assertEquals(4, weights.length);
+    assertEquals(1, weights.getDimensionNumbers().length);
+    assertEquals(4, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
-      assertEquals(weights[i], features.get(i).getValue(tf));      
+      assertEquals(weights.get(i), features.get(i).getValue(tf));      
     }
-  }
+  } 
   
   public void testGetSufficientStatisticsFromBigAssignment() {
     VariableNumMap moreVars = vars.addMapping(7, "foo", new DiscreteVariable("Foo",
         Arrays.asList("foo", "bar")));
     Assignment tf = moreVars.outcomeArrayToAssignment("T", "F", "bar"); 
-    FeatureSufficientStatistics s = f.getNewSufficientStatistics();
+    SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
-    List<FeatureFunction> features = s.getFeatures();
-    double[] weights = s.getWeights();
+    List<FeatureFunction> features = f.getFeatures();
+    TensorBase weights = ((TensorSufficientStatistics) s).get(0);
     assertEquals(4, features.size());
-    assertEquals(4, weights.length);
+    assertEquals(1, weights.getDimensionNumbers().length);
+    assertEquals(4, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
-      assertEquals(weights[i], features.get(i).getValue(tf.intersection(vars)));      
+      assertEquals(weights.get(i), features.get(i).getValue(tf.intersection(vars)));      
     }
   }
   
   public void testGetSufficientStatisticsFromMarginal() {
     TableFactor factor = f.getFactorFromParameters(parameters);
     double partitionFunction = 2 * (1.0 + Math.E);
-    FeatureSufficientStatistics s = f.getNewSufficientStatistics();
+    SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromMarginal(s, factor, Assignment.EMPTY, 1.0, partitionFunction);
     
-    List<FeatureFunction> features = s.getFeatures();
-    double[] weights = s.getWeights();
+    List<FeatureFunction> features = f.getFeatures();
+    TensorBase weights = ((TensorSufficientStatistics) s).get(0);
     assertEquals(4, features.size());
-    assertEquals(4, weights.length);
+    assertEquals(1, weights.getDimensionNumbers().length);
+    assertEquals(4, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
       FeatureFunction feature = features.get(i);
       double weight = 0.0;
@@ -105,7 +105,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
         weight += feature.getValue(a) * factor.getUnnormalizedProbability(a);
       }
       weight = weight / partitionFunction; 
-      assertEquals(weights[i], weight);
+      assertEquals(weights.get(i), weight);
     }
   }
 }

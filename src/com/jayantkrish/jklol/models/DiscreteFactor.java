@@ -14,11 +14,12 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
+import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
-import com.jayantkrish.jklol.util.SparseTensor;
 
 /**
  * DiscreteFactor provides a generic implementation of most methods of the
@@ -61,7 +62,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
    * 
    * @return
    */
-  public abstract SparseTensor getWeights();
+  public abstract Tensor getWeights();
 
   // /////////////////////////////////////////////////////////////////////////////////
   // Overrides of Factor methods.
@@ -148,7 +149,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
       factorsBySize.put(factor.size(), factor);
     }
 
-    SparseTensor result = getWeights();
+    Tensor result = getWeights();
     for (Double size : factorsBySize.keySet()) {
       for (DiscreteFactor factor : factorsBySize.get(size)) {
         result = result.elementwiseProduct(factor.getWeights());

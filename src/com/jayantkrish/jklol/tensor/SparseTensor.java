@@ -1,6 +1,7 @@
-package com.jayantkrish.jklol.util;
+package com.jayantkrish.jklol.tensor;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -22,18 +23,21 @@ import com.google.common.primitives.Ints;
  * 
  * SparseTensors are immutable.
  */
-public class SparseTensor {
+public class SparseTensor implements Tensor {
 
-  private int[] dimensionNums;
-  private int[][] outcomes;
-  private double[] values;
+  private final int[] dimensionNums;
+  private final int[] dimensionSizes;
+  private final int[][] outcomes;
+  private final double[] values;
 
-  public SparseTensor(int[] dimensionNums, int[][] outcomes, double[] values) {
+  public SparseTensor(int[] dimensionNums, int[] dimensionSizes, int[][] outcomes, double[] values) {
     this.dimensionNums = Preconditions.checkNotNull(dimensionNums);
+    this.dimensionSizes = Preconditions.checkNotNull(dimensionSizes);
     this.outcomes = Preconditions.checkNotNull(outcomes);
     this.values = Preconditions.checkNotNull(values);
 
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
+    Preconditions.checkArgument(dimensionNums.length == dimensionSizes.length);
     // Each element of outcomes must be the same length as values.
     for (int i = 0; i < outcomes.length; i++) {
       Preconditions.checkArgument(outcomes[i].length == values.length);
@@ -41,13 +45,23 @@ public class SparseTensor {
     Preconditions.checkArgument(dimensionNums.length == outcomes.length);
   }
 
+  // ////////////////////////////////////////////////////////////////////
+  // Inherited from TensorBase
+  // ////////////////////////////////////////////////////////////////////
+
   /**
    * Gets the dimension numbers spanned by this tensor.
    * 
    * @return
    */
+  @Override
   public int[] getDimensionNumbers() {
     return Arrays.copyOf(dimensionNums, dimensionNums.length);
+  }
+
+  @Override
+  public int[] getDimensionSizes() {
+    return dimensionSizes;
   }
 
   /**
@@ -55,6 +69,7 @@ public class SparseTensor {
    * 
    * @return
    */
+  @Override
   public int size() {
     return values.length;
   }
@@ -74,7 +89,8 @@ public class SparseTensor {
    * Get the value associated with a variable assignment. Returns {@code 0.0} if
    * no value is associated with {@code key}.
    */
-  public double get(int[] key) {
+  @Override
+  public double get(int... key) {
     int index = findIndex(key);
     if (index != -1) {
       return values[index];
@@ -85,9 +101,23 @@ public class SparseTensor {
   /**
    * Returns an iterator over all assignments (keys) in this table.
    */
+  @Override
   public Iterator<int[]> keyIterator() {
     return new KeyIterator(outcomes, values.length);
   }
+
+  @Override
+  public double getL2Norm() {
+    double sumSquared = 0.0;
+    for (int i = 0; i < values.length; i++) {
+      sumSquared += values[i] * values[i];
+    }
+    return Math.sqrt(sumSquared);
+  }
+
+  // /////////////////////////////////////////////////////////////////
+  // Inherited from Tensor
+  // /////////////////////////////////////////////////////////////////
 
   /**
    * Elementwise multiplies {@code this} and {@code other}, returning the result
@@ -101,10 +131,12 @@ public class SparseTensor {
    * @param other
    * @return
    */
-  public SparseTensor elementwiseProduct(SparseTensor other) {
+  @Override
+  public SparseTensor elementwiseProduct(Tensor otherTensor) {
+    SparseTensor other = (SparseTensor) otherTensor;
     Set<Integer> myDims = Sets.newHashSet(Ints.asList(dimensionNums));
     Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.dimensionNums)));
-    
+
     // Permute the dimensions of this so that the dimension of other are
     // left-aligned,
     // multiply, then reverse the permutation.
@@ -161,7 +193,8 @@ public class SparseTensor {
         resultInd++;
       }
     }
-    return resizeIntoTable(big.dimensionNums, resultOutcomes, resultValues, resultInd);
+    return resizeIntoTable(big.dimensionNums, big.dimensionSizes,
+        resultOutcomes, resultValues, resultInd);
   }
 
   private static final int advance(int myInd, int[][] myOutcomes, int otherInd, int[][] otherOutcomes) {
@@ -245,8 +278,9 @@ public class SparseTensor {
    * @param other
    * @return
    */
-  public SparseTensor elementwiseAddition(SparseTensor other) {
-    return doElementwise(other, true);
+  @Override
+  public SparseTensor elementwiseAddition(Tensor otherTensor) {
+    return doElementwise((SparseTensor) otherTensor, true);
   }
 
   /**
@@ -259,8 +293,9 @@ public class SparseTensor {
    * @param other
    * @return
    */
-  public SparseTensor elementwiseMaximum(SparseTensor other) {
-    return doElementwise(other, false);
+  @Override
+  public SparseTensor elementwiseMaximum(Tensor otherTensor) {
+    return doElementwise((SparseTensor) otherTensor, false);
   }
 
   /**
@@ -326,7 +361,7 @@ public class SparseTensor {
       resultInd++;
     }
 
-    return resizeIntoTable(dimensionNums, resultOutcomes, resultValues, resultInd);
+    return resizeIntoTable(dimensionNums, dimensionSizes, resultOutcomes, resultValues, resultInd);
   }
 
   /**
@@ -336,6 +371,7 @@ public class SparseTensor {
    * 
    * @return
    */
+  @Override
   public SparseTensor elementwiseInverse() {
     double[] newValues = new double[values.length];
     for (int i = 0; i < values.length; i++) {
@@ -343,7 +379,7 @@ public class SparseTensor {
     }
     // We don't have to copy outcomes because this class is immutable, and it
     // treats both outcomes and values as immutable.
-    return new SparseTensor(dimensionNums, outcomes, newValues);
+    return new SparseTensor(dimensionNums, dimensionSizes, outcomes, newValues);
   }
 
   /**
@@ -355,8 +391,9 @@ public class SparseTensor {
    * @param dimensionsToEliminate
    * @return
    */
-  public SparseTensor sumOutDimensions(Set<Integer> dimensionsToEliminate) {
-    return reduceDimensions(dimensionsToEliminate, true);
+  @Override
+  public SparseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
+    return reduceDimensions(Sets.newHashSet(dimensionsToEliminate), true);
   }
 
   /**
@@ -368,8 +405,9 @@ public class SparseTensor {
    * @param dimensionsToEliminate
    * @return
    */
-  public SparseTensor maxOutDimensions(Set<Integer> dimensionsToEliminate) {
-    return reduceDimensions(dimensionsToEliminate, false);
+  @Override
+  public SparseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {
+    return reduceDimensions(Sets.newHashSet(dimensionsToEliminate), false);
   }
 
   /**
@@ -389,6 +427,7 @@ public class SparseTensor {
     // end of the outcomes array.
     int[] newLabels = new int[dimensionNums.length];
     int[] newDimensions = new int[dimensionNums.length];
+    int[] newDimensionSizes = new int[dimensionNums.length];
     int numEliminated = 0;
     for (int i = 0; i < dimensionNums.length; i++) {
       if (dimensionsToEliminate.contains(dimensionNums[i])) {
@@ -398,6 +437,7 @@ public class SparseTensor {
       } else {
         newLabels[i] = dimensionNums[i];
         newDimensions[i - numEliminated] = dimensionNums[i];
+        newDimensionSizes[i - numEliminated] = dimensionSizes[i];
       }
     }
     // If none of the dimensions being eliminated are actually part of this
@@ -436,7 +476,26 @@ public class SparseTensor {
     }
 
     return resizeIntoTable(Arrays.copyOf(newDimensions, resultNumDimensions),
+        Arrays.copyOf(newDimensionSizes, resultNumDimensions),
         resultOutcomes, resultValues, resultInd);
+  }
+
+  /**
+   * Relabels the dimensions of {@code this}. Each dimension is relabeled to its
+   * value in {@code relabeling}. {@code relabeling} must contain a unique value
+   * for each of {@code this.getDimensionNumbers()}.
+   * 
+   * @param relabeling
+   * @see #relabelDimensions(int[])
+   * @return
+   */
+  @Override
+  public SparseTensor relabelDimensions(Map<Integer, Integer> relabeling) {
+    int[] newDimensions = new int[dimensionNums.length];
+    for (int i = 0; i < dimensionNums.length; i++) {
+      newDimensions[i] = relabeling.get(dimensionNums[i]);
+    }
+    return relabelDimensions(newDimensions);
   }
 
   /**
@@ -449,6 +508,7 @@ public class SparseTensor {
    * @param newDimensions
    * @return
    */
+  @Override
   public SparseTensor relabelDimensions(int[] newDimensions) {
     Preconditions.checkArgument(newDimensions.length == dimensionNums.length);
     if (Ordering.natural().isOrdered(Ints.asList(newDimensions))) {
@@ -457,21 +517,24 @@ public class SparseTensor {
       // happens. Note that outcomes and values are (treated as) immutable, and
       // hence
       // we don't need to copy them.
-      return new SparseTensor(newDimensions, outcomes, values);
+      return new SparseTensor(newDimensions, dimensionSizes, outcomes, values);
     }
 
     int[] sortedDims = Arrays.copyOf(newDimensions, newDimensions.length);
     Arrays.sort(sortedDims);
 
     // Figure out the mapping from the new, sorted dimension indices to
-    // the current indicies of the outcome table.
+    // the current indices of the outcome table.
     Map<Integer, Integer> currentDimInds = Maps.newHashMap();
     for (int i = 0; i < newDimensions.length; i++) {
       currentDimInds.put(newDimensions[i], i);
     }
+
+    int[] sortedSizes = new int[newDimensions.length];
     int[] newOrder = new int[sortedDims.length];
     for (int i = 0; i < sortedDims.length; i++) {
       newOrder[i] = currentDimInds.get(sortedDims[i]);
+      sortedSizes[i] = dimensionSizes[currentDimInds.get(sortedDims[i])];
     }
 
     int[][] resultOutcomes = new int[dimensionNums.length][];
@@ -481,7 +544,7 @@ public class SparseTensor {
     }
 
     sortOutcomeTable(resultOutcomes, resultValues, 0, values.length);
-    return new SparseTensor(sortedDims, resultOutcomes, resultValues);
+    return new SparseTensor(sortedDims, sortedSizes, resultOutcomes, resultValues);
   }
 
   /**
@@ -542,23 +605,6 @@ public class SparseTensor {
     values[j] = swapValue;
   }
 
-  /**
-   * Relabels the dimensions of {@code this}. Each dimension is relabeled to its
-   * value in {@code relabeling}. {@code relabeling} must contain a unique value
-   * for each of {@code this.getDimensionNumbers()}.
-   * 
-   * @param relabeling
-   * @see #relabelDimensions(int[])
-   * @return
-   */
-  public SparseTensor relabelDimensions(Map<Integer, Integer> relabeling) {
-    int[] newDimensions = new int[dimensionNums.length];
-    for (int i = 0; i < dimensionNums.length; i++) {
-      newDimensions[i] = relabeling.get(dimensionNums[i]);
-    }
-    return relabelDimensions(newDimensions);
-  }
-
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -585,6 +631,7 @@ public class SparseTensor {
     SparseTensor other = (SparseTensor) o;
 
     if (Arrays.equals(dimensionNums, other.dimensionNums) &&
+        Arrays.equals(dimensionSizes, other.dimensionSizes) &&
         values.length == other.values.length) {
       for (int i = 0; i < values.length; i++) {
         for (int j = 0; j < outcomes.length; j++) {
@@ -614,7 +661,7 @@ public class SparseTensor {
    * @return
    */
   public static SparseTensor getScalarConstant(double value) {
-    return new SparseTensor(new int[0], new int[0][0], new double[] { value });
+    return new SparseTensor(new int[0], new int[0], new int[0][0], new double[] { value });
   }
 
   /**
@@ -625,8 +672,8 @@ public class SparseTensor {
    * @param dimensionNumbers
    * @return
    */
-  public static SparseTensor empty(int[] dimensionNumbers) {
-    return new SparseTensor(dimensionNumbers,
+  public static SparseTensor empty(int[] dimensionNumbers, int[] dimensionSizes) {
+    return new SparseTensor(dimensionNumbers, dimensionSizes,
         new int[dimensionNumbers.length][0], new double[0]);
   }
 
@@ -637,8 +684,35 @@ public class SparseTensor {
    * @param dimensionNumbers
    * @return
    */
-  public static SparseTensor empty(List<Integer> dimensionNumbers) {
-    return empty(Ints.toArray(dimensionNumbers));
+  public static SparseTensor empty(List<Integer> dimensionNumbers, List<Integer> dimensionSizes) {
+    return empty(Ints.toArray(dimensionNumbers), Ints.toArray(dimensionSizes));
+  }
+
+  /**
+   * Creates a one-dimensional tensor (a vector) with the given dimension number
+   * and size. {@code values} is a dense representation of the vector, i.e., its
+   * {@code i}th value will be the {@code i}th value of the returned tensor.
+   * 
+   * @param dimensionNumber
+   * @param dimensionSize
+   * @param values
+   * @return
+   */
+  public static SparseTensor vector(int dimensionNumber, int dimensionSize, double[] values) {
+    int[][] outcomes = new int[][] {new int[dimensionSize]};
+    double[] outcomeValues = new double[dimensionSize];
+    
+    int numEntries = 0;
+    for (int i = 0; i < dimensionSize; i++) {
+      if (values[i] != 0.0) {
+        outcomes[0][numEntries] = i;
+        outcomeValues[numEntries] = values[i];
+        numEntries++;
+      }
+    }
+
+    return resizeIntoTable(new int[] {dimensionNumber}, new int[] {dimensionSize}, 
+        outcomes, outcomeValues, numEntries);
   }
 
   // ///////////////////////////////////////////////////////////////////////////////
@@ -681,10 +755,10 @@ public class SparseTensor {
    * @param size
    * @return
    */
-  private static SparseTensor resizeIntoTable(int[] dimensions, int[][] outcomes,
-      double[] values, int size) {
+  private static SparseTensor resizeIntoTable(int[] dimensions, int[] dimensionSizes,
+      int[][] outcomes, double[] values, int size) {
     if (values.length == size) {
-      return new SparseTensor(dimensions, outcomes, values);
+      return new SparseTensor(dimensions, dimensionSizes, outcomes, values);
     } else {
       // Resize the result array to fit the actual number of result outcomes.
       int[][] shrunkResultOutcomes = new int[outcomes.length][];
@@ -692,7 +766,7 @@ public class SparseTensor {
         shrunkResultOutcomes[j] = Arrays.copyOf(outcomes[j], size);
       }
       double[] shrunkResultValues = Arrays.copyOf(values, size);
-      return new SparseTensor(dimensions, shrunkResultOutcomes, shrunkResultValues);
+      return new SparseTensor(dimensions, dimensionSizes, shrunkResultOutcomes, shrunkResultValues);
     }
   }
 

@@ -6,7 +6,9 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.Plate;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -59,6 +61,11 @@ public class LogLinearModelBuilder {
     return varNum;
   }
   
+  public int addVariable(String name, Variable variable) {
+    factorGraph = factorGraph.addVariable(name, variable);
+    return factorGraph.getVariableIndex(name);
+  }
+  
   /**
    * Gets the variables that {@code this} is defined over.
    * 
@@ -85,5 +92,14 @@ public class LogLinearModelBuilder {
   public void addFactor(ParametricFactor<SufficientStatistics> factor, VariablePattern factorPattern) {
     logLinearFactors.add(factor);
     factorPatterns.add(factorPattern);
+  }
+  
+  /**
+   * Adds a set of dynamically-instantiated variables to this factor graph.
+   * 
+   * @param plate
+   */
+  public void addPlate(Plate plate) {
+    factorGraph = factorGraph.addPlate(plate);
   }
 }

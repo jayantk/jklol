@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.loglinear;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -13,6 +14,9 @@ import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -34,9 +38,6 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
 
   @Override
   public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
-    FeatureSufficientStatistics featureParameters = parameters.coerceToFeature();
-    Preconditions.checkArgument(featureParameters.getFeatures().size() == myFeatures.size());
-
     // TODO(jayantk): This is probably not the most efficient way to build this
     // factor.
     TableFactorBuilder builder = new TableFactorBuilder(getVars());
@@ -45,46 +46,54 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
       builder.setWeight(allAssignmentIter.next(), 1.0);
     }
     
-    double[] featureWeights = featureParameters.getWeights();
+    TensorBuilder featureWeights = getFeatureWeights(parameters);
     for (int i = 0; i < myFeatures.size(); i++) {
       FeatureFunction feature = myFeatures.get(i);
       Iterator<Assignment> iter = feature.getNonzeroAssignments();
+      int[] index = new int[] {i};
       while (iter.hasNext()) {
         Assignment assignment = iter.next();
-        builder.multiplyWeight(assignment, Math.exp(featureWeights[i] * feature.getValue(assignment)));
+        builder.multiplyWeight(assignment, Math.exp(featureWeights.get(index) * feature.getValue(assignment)));
       }
     }
     return builder.build();
   }
 
   @Override
-  public FeatureSufficientStatistics getNewSufficientStatistics() {
-    return new FeatureSufficientStatistics(myFeatures);
+  public TensorSufficientStatistics getNewSufficientStatistics() {
+    return new TensorSufficientStatistics(Arrays.<TensorBuilder>asList(new DenseTensorBuilder(new int[] {0}, new int[] {myFeatures.size()})));
   }
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
     Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
-    FeatureSufficientStatistics featureStats = statistics.coerceToFeature();
-    double[] weights = featureStats.getWeights();
-    Preconditions.checkArgument(weights.length == myFeatures.size());
+
+    TensorBuilder weights = getFeatureWeights(statistics);
     for (int i = 0; i < myFeatures.size(); i++) {
-      weights[i] += count * myFeatures.get(i).getValue(subAssignment);
+      weights.incrementEntry(count * myFeatures.get(i).getValue(subAssignment), i);  
     }
   }
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    FeatureSufficientStatistics featureStats = statistics.coerceToFeature();
-    double[] weights = featureStats.getWeights();
-    Preconditions.checkArgument(weights.length == myFeatures.size());
+    TensorBuilder weights = getFeatureWeights(statistics);
    
     for (int i = 0; i < myFeatures.size(); i++) {
-      weights[i] += myFeatures.get(i).computeExpectation(marginal, conditionalAssignment) * 
+      double featureExpectation = myFeatures.get(i).computeExpectation(marginal, conditionalAssignment) * 
           count / partitionFunction;
+      weights.incrementEntry(featureExpectation, i);
     }
+  }
+  
+  private TensorBuilder getFeatureWeights(SufficientStatistics parameters) {
+    TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
+    // Check that the parameters are a vector of the appropriate size.
+    Preconditions.checkArgument(featureParameters.size() == 1);
+    Preconditions.checkArgument(featureParameters.get(0).getDimensionNumbers().length == 1);
+    Preconditions.checkArgument(featureParameters.get(0).getDimensionSizes()[0] == myFeatures.size());
+    return featureParameters.get(0);
   }
 
   // ////////////////////////////////////////////////////////////

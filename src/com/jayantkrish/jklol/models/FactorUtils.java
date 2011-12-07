@@ -40,7 +40,7 @@ public final class FactorUtils {
   public static Factor product(List<Factor> factors) {
     Preconditions.checkNotNull(factors);
     Preconditions.checkArgument(!factors.isEmpty());
-    // The specification of .product requires that the variables in the input factors are
+    // The specification of .product requires that the variables in the inputVar factors are
     // a subset of the variables in the outer factor. Hence, we must identify the factor
     // containing the most variables.
     Factor biggestFactor = multiplicativeIdentity();

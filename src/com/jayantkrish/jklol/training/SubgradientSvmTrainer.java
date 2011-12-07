@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.training;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -39,6 +40,8 @@ public class SubgradientSvmTrainer {
   public SubgradientSvmTrainer(int numIterations, int batchSize,
       double regularizationConstant, MarginalCalculator marginalCalculator,
       CostFunction costFunction, LogFunction log) {
+    Preconditions.checkArgument(regularizationConstant > 0);
+    
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.regularization = regularizationConstant;
@@ -50,8 +53,8 @@ public class SubgradientSvmTrainer {
   /**
    * Estimates and returns optimal parameters for {@code modelFamily} on
    * {@code trainingData}. {@code modelFamily} is presumed to be a loglinear
-   * model. {@code trainingData} contains the input/output pairs for training.
-   * The input and output of each training example should be over disjoint sets
+   * model. {@code trainingData} contains the inputVar/outputVar pairs for training.
+   * The inputVar and outputVar of each training example should be over disjoint sets
    * of variables, and the union of these sets should contain all of the
    * variables in {@code modelFamily}.
    * 
@@ -87,6 +90,7 @@ public class SubgradientSvmTrainer {
             currentModel.getVariables().intersection(example.getOutput().getVariableNums()),
             example.getOutput());
         FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(example.getInput());
+        
         MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel)
             .addConditionalVariables(example.getInput());
         
@@ -108,13 +112,13 @@ public class SubgradientSvmTrainer {
               - costAugmentedModel.getUnnormalizedLogProbability(actual)) / batchSize; 
         }
       }
-      
+
+      // TODO: Can we use the Pegasos projection step?
+      // If so, the step size should decay as 1/i, not 1/sqrt(i).
       double stepSize = 1.0 / (regularization * Math.sqrt(i + 1));
       parameters.multiply(1.0 - (stepSize * regularization));
       parameters.increment(subgradient, stepSize / batchSize);
 
-      // TODO: Can we use the Pegasos projection step?
-      // If so, the step size should decay as 1/i, not 1/sqrt(i).
       log.logStatistic(i, "number of examples within margin", Integer.toString(numIncorrect));
       log.logStatistic(i, "approximate objective value", Double.toString(approximateObjectiveValue));
       log.notifyIterationEnd(i);

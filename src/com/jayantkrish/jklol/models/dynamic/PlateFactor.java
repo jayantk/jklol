@@ -15,7 +15,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * {@code PlateFactor} is a generalization of a {@code Factor} that represents a
  * factor replicated across multiple instantiations of a {@link Plate}. This
  * interface behaves like a factory for {@code Factor}s, using the set of
- * variables in a {@code FactorGraph} as input.
+ * variables in a {@code FactorGraph} as inputVar.
  * 
  * Note that this class does not support inference, as it represents a set of
  * factors. Inference can only be performed over factors instantiated by

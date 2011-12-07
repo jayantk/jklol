@@ -4,9 +4,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.jayantkrish.jklol.models.CoercionError;
-import com.jayantkrish.jklol.models.bayesnet.Cpt;
-import com.jayantkrish.jklol.models.loglinear.FeatureSufficientStatistics;
 
 /**
  * Represents a collection of {@code SufficientStatistics}, typically from
@@ -75,16 +72,6 @@ public class ListSufficientStatistics implements SufficientStatistics {
       norm += Math.pow(statistics.get(i).getL2Norm(), 2);
     }
     return Math.sqrt(norm);
-  }
-  
-  @Override
-  public Cpt coerceToCpt() {
-    throw new CoercionError("Cannot coerce ListSufficientStatistics to Cpt.");
-  }
-  
-  @Override
-  public FeatureSufficientStatistics coerceToFeature() {
-    throw new CoercionError("Cannot coerce ListSufficientStatistics instance into a FeatureSufficientStatistics.");
   }
   
   @Override

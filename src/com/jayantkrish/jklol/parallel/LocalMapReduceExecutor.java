@@ -13,7 +13,7 @@ import com.google.common.collect.Lists;
 
 /**
  * An parallelized, single-machine implementation of map-reduce pipelines. This
- * executor batches the input objects and executes them on multiple local CPUs.
+ * executor batches the inputVar objects and executes them on multiple local CPUs.
  * 
  * @author jayantk
  */

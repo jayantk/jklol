@@ -16,8 +16,8 @@ import com.jayantkrish.jklol.util.Assignment;
 /**
  * Adapts a {@link FactorGraph} to the {@code Predictor} interface. Predictions
  * are made in terms of {@code Assignments} to the underlying factor graph. The
- * predicted assignment for a given input is the assignment with the highest
- * conditional probability given the input.
+ * predicted assignment for a given inputVar is the assignment with the highest
+ * conditional probability given the inputVar.
  * 
  * <p>
  * Internally, this class uses a marginal calculator to perform inference on the
@@ -83,10 +83,10 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
   /**
    * {@inheritDoc}
    * 
-   * At the moment, this method returns the output assignments with the highest
+   * At the moment, this method returns the outputVar assignments with the highest
    * marginal probability. Note that this makes this method incompatible with
    * {@link #getBestPrediction()}, which returns the most likely single
-   * assignment (i.e., based on a max-marginal). If {@code input} is not a valid
+   * assignment (i.e., based on a max-marginal). If {@code inputVar} is not a valid
    * assignment to the underlying graphical model, returns the empty list.
    */
   @Override
@@ -104,10 +104,10 @@ public class FactorGraphPredictor implements Predictor<Assignment, Assignment> {
   /**
    * {@inheritDoc}
    * 
-   * The probability of an {@code input}/{@code output} pair is taken to be the
-   * conditional probability of {@code output} given {@code input}. This method
-   * conditions on {@code input}, computes marginals, and returns the marginal
-   * probability of {@code output}. If either of {@code input} or {@code output}
+   * The probability of an {@code inputVar}/{@code outputVar} pair is taken to be the
+   * conditional probability of {@code outputVar} given {@code inputVar}. This method
+   * conditions on {@code inputVar}, computes marginals, and returns the marginal
+   * probability of {@code outputVar}. If either of {@code inputVar} or {@code outputVar}
    * are not valid assignments to the underlying factor graph, this method
    * returns 0.
    */

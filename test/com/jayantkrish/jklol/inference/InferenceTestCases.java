@@ -1,12 +1,14 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.Arrays;
+import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.InferenceHint;
-import com.jayantkrish.jklol.models.IntegerVariable;
+import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -76,13 +78,13 @@ public class InferenceTestCases {
   public static MarginalTestCase testBasicUnconditional() {
     MarginalTestCase testCase = new MarginalTestCase(basicFactorGraph(), Assignment.EMPTY);
     // Test the marginal on variable 1
-    testCase.addTest(27.0 / 43.0, new Integer[] { 1 }, "foo");
-    testCase.addTest(16.0 / 43.0, new Integer[] { 1 }, "bar");
+    testCase.addTest(27.0 / 43.0, new String[] { "Var1" }, "foo");
+    testCase.addTest(16.0 / 43.0, new String[] { "Var1" }, "bar");
     // Test the marginal on variables 0, 2
-    testCase.addTest(25.0 / 43.0, new Integer[] { 0, 2 }, "T", "T");
-    testCase.addTest(6.0 / 43.0, new Integer[] { 0, 2 }, "T", "F");
-    testCase.addTest(12.0 / 43.0, new Integer[] { 0, 2 }, "U", "F");
-    testCase.addTest(0.0, new Integer[] { 0, 2 }, "U", "U");
+    testCase.addTest(25.0 / 43.0, new String[] { "Var0", "Var2" }, "T", "T");
+    testCase.addTest(6.0 / 43.0, new String[] { "Var0", "Var2" }, "T", "F");
+    testCase.addTest(12.0 / 43.0, new String[] { "Var0", "Var2" }, "U", "F");
+    testCase.addTest(0.0, new String[] { "Var0", "Var2" }, "U", "U");
 
     return testCase;
   }
@@ -93,15 +95,15 @@ public class InferenceTestCases {
         Arrays.asList(new String[] { "F" }));
     MarginalTestCase testCase = new MarginalTestCase(f, conditional);
 
-    testCase.addTest(12.0 / 18.0, new Integer[] { 1 }, "foo");
-    testCase.addTest(6.0 / 18.0, new Integer[] { 1 }, "bar");
+    testCase.addTest(12.0 / 18.0, new String[] { "Var1" }, "foo");
+    testCase.addTest(6.0 / 18.0, new String[] { "Var1" }, "bar");
 
-    testCase.addTest(1.0, new Integer[] { 3, 4 }, "F", "U");
-    testCase.addTest(0.0, new Integer[] { 3, 4 }, "T", "F");
+    testCase.addTest(1.0, new String[] { "Var3", "Var4" }, "F", "U");
+    testCase.addTest(0.0, new String[] { "Var3", "Var4" }, "T", "F");
 
-    testCase.addTest(0.0, new Integer[] { 0, 3 }, "T", "T");
-    testCase.addTest(6.0 / 18.0, new Integer[] { 0, 3 }, "T", "F");
-    testCase.addTest(12.0 / 18.0, new Integer[] { 0, 3 }, "U", "F");
+    testCase.addTest(0.0, new String[] { "Var0", "Var3" }, "T", "T");
+    testCase.addTest(6.0 / 18.0, new String[] { "Var0", "Var3" }, "T", "F");
+    testCase.addTest(12.0 / 18.0, new String[] { "Var0", "Var3" }, "U", "F");
 
     return testCase;
   }
@@ -165,8 +167,8 @@ public class InferenceTestCases {
 
   public static MarginalTestCase testNonCliqueTreeUnconditional() {
     MarginalTestCase testCase = new MarginalTestCase(nonCliqueTreeFactorGraph(), Assignment.EMPTY);
-    testCase.addTest(28.0 / 60.0, new Integer[] { 0 }, "T");
-    testCase.addTest(32.0 / 60.0, new Integer[] { 0 }, "F");
+    testCase.addTest(28.0 / 60.0, new String[] { "Var0" }, "T");
+    testCase.addTest(32.0 / 60.0, new String[] { "Var0" }, "F");
 
     return testCase;
   }
@@ -174,7 +176,7 @@ public class InferenceTestCases {
   public static FactorGraph sequenceModel() {
     FactorGraph fg = new FactorGraph();
     
-    fg = fg.addVariable("replication_count", new IntegerVariable());
+    fg = fg.addVariable("replication_count", new ObjectVariable(List.class));
 
     VariableNumMap replicatedVariables = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("x", "y"), Arrays.asList(threeValueVar, trueFalseVar));
@@ -192,23 +194,67 @@ public class InferenceTestCases {
     
     // Add the factors
     TableFactorBuilder outputFactorBuilder = new TableFactorBuilder(replicatedVariables);
+    // Marginal on T = 6
     outputFactorBuilder.setWeight(1.0, "U", "T");
     outputFactorBuilder.setWeight(2.0, "T", "T");
     outputFactorBuilder.setWeight(3.0, "F", "T");
+    // Marginal on F = 9
     outputFactorBuilder.setWeight(3.0, "U", "F");
-    outputFactorBuilder.setWeight(2.0, "T", "F");
-    outputFactorBuilder.setWeight(1.0, "F", "F");
+    outputFactorBuilder.setWeight(3.0, "T", "F");
+    outputFactorBuilder.setWeight(3.0, "F", "F");
     fg = fg.addPlateFactor(new PlateFactor(outputFactorBuilder.build(), 
         replicationPattern, Arrays.asList(replicatedPlate)));
     
     TableFactorBuilder sequenceFactorBuilder = new TableFactorBuilder(adjacentVariables);
+    // Marginal on T = 2*6 + 9 = 21
     sequenceFactorBuilder.setWeight(2.0, "T", "T");
-    sequenceFactorBuilder.setWeight(1.0, "F", "T");
     sequenceFactorBuilder.setWeight(1.0, "T", "F");
+    // Marginal on F = 2*9 + 6 = 24
+    sequenceFactorBuilder.setWeight(1.0, "F", "T");
     sequenceFactorBuilder.setWeight(2.0, "F", "F");
     fg = fg.addPlateFactor(new PlateFactor(sequenceFactorBuilder.build(), 
         adjacentPattern, Arrays.asList(replicatedPlate)));
     
+    // Partition function on 2 replications = 9 * 24 + 6 * 21 = 216 + 126 = 342 
     return fg;
+  }
+      
+  public static MarginalTestCase testSequenceUnconditional() {
+    List<Assignment> plateAssignment = Lists.newArrayList();
+    plateAssignment.add(Assignment.EMPTY);
+    plateAssignment.add(Assignment.EMPTY);
+    
+    FactorGraph fg = sequenceModel();
+    Assignment a = fg.getVariables().getVariablesByName("replication_count")
+        .outcomeArrayToAssignment(plateAssignment);
+    MarginalTestCase testCase = new MarginalTestCase(fg, a);
+    testCase.addTest(21.0 / 342.0, new String[] {"x-0", "y-0"}, "U", "T");
+    testCase.addTest(42.0 / 342.0, new String[] {"x-0", "y-0"}, "T", "T");
+    testCase.addTest(72.0 / 342.0, new String[] {"x-0", "y-0"}, "F", "F");
+    testCase.addTest(72.0 / 342.0, new String[] {"x-0", "y-0"}, "T", "F");
+    
+    testCase.addTest(162.0 / 342.0, new String[] {"y-0", "y-1"}, "F", "F");
+    testCase.addTest(54.0 / 342.0, new String[] {"y-0", "y-1"}, "T", "F");
+    testCase.addTest(54.0 / 342.0, new String[] {"y-0", "y-1"}, "F", "T");
+    testCase.addTest(72.0 / 342.0, new String[] {"y-0", "y-1"}, "T", "T");
+    
+    return testCase;
+  }
+  
+  public static MarginalTestCase testSequenceConditional() {
+    FactorGraph fg = sequenceModel();
+    VariableNumMap templateVariables = fg.getPlates().get(0).getPattern().getTemplateVariables();
+    
+    List<Assignment> plateAssignment = Lists.newArrayList();
+    plateAssignment.add(templateVariables.getVariablesByName("x").outcomeArrayToAssignment("U"));
+    plateAssignment.add(templateVariables.getVariablesByName("y").outcomeArrayToAssignment("T"));
+    Assignment a = fg.getVariables().getVariablesByName("replication_count")
+        .outcomeArrayToAssignment(plateAssignment);
+
+    MarginalTestCase testCase = new MarginalTestCase(fg, a);
+    testCase.addTest(12.0 / 30.0, new String[] {"y-0"}, "T"); 
+    testCase.addTest(18.0 / 30.0, new String[] {"y-0"}, "F");
+    
+    return testCase;
   }
 }

@@ -35,7 +35,7 @@ public class Converters {
   }
 
   /**
-   * Wraps {@code converter} such that its input is of type {@code V}. The
+   * Wraps {@code converter} such that its inputVar is of type {@code V}. The
    * result of invert on the returned converter is also cast to {@code V} before
    * being returned.
    * 

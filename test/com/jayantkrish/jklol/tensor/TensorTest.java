@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.util;
+package com.jayantkrish.jklol.tensor;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -16,22 +16,34 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
-public class SparseTensorTest extends TestCase {
+/**
+ * Implementation-independent test cases for tensor operations.
+ * 
+ * @author jayantk
+ */
+public abstract class TensorTest extends TestCase {
 
-  private int[] varNums;
-  private SparseTensor smallTable, table, missingMiddle, missingFirst,
+  private final TensorFactory tensorFactory;
+  
+  protected int[] varNums, varSizes;
+  protected Tensor smallTable, table, missingMiddle, missingFirst,
       missingLast, emptyTable, addTable;
 
-  private int[] a1, a2;
+  protected int[] a1, a2;
+  
+  public TensorTest(TensorFactory tensorFactory) {
+    this.tensorFactory = tensorFactory;
+  }
 
   @Override
   public void setUp() {
     varNums = new int[] { 1, 3, 4 };
+    varSizes = new int[] {6, 5, 4};
 
     a1 = new int[] { 0, 0, 0 };
     a2 = new int[] { 0, 2, 3 };
 
-    SparseTensorBuilder builder = new SparseTensorBuilder(varNums);
+    TensorBuilder builder = tensorFactory.getBuilder(varNums, varSizes);
     builder.put(a1, 1.0);
     builder.put(a2, 2.0);
     smallTable = builder.build();
@@ -56,13 +68,13 @@ public class SparseTensorTest extends TestCase {
     builder.put(new int[] { 4, 1, 0 }, 5.0);
     table = builder.build();
 
-    builder = new SparseTensorBuilder(new int[] { 3, 4 });
+    builder = tensorFactory.getBuilder(new int[] { 3, 4 }, new int[] {5, 4});
     builder.put(new int[] { 0, 3 }, 2.0);
     builder.put(new int[] { 1, 3 }, 3.0);
     builder.put(new int[] { 3, 0 }, 4.0);
     missingFirst = builder.build();
 
-    builder = new SparseTensorBuilder(new int[] { 1, 4 });
+    builder = tensorFactory.getBuilder(new int[] { 1, 4 }, new int[] {6, 4});
     builder.put(new int[] { 0, 3 }, 2.0);
     builder.put(new int[] { 1, 3 }, 3.0);
     builder.put(new int[] { 3, 0 }, 4.0);
@@ -70,7 +82,7 @@ public class SparseTensorTest extends TestCase {
     builder.put(new int[] { 4, 1 }, 6.0);
     missingMiddle = builder.build();
 
-    builder = new SparseTensorBuilder(new int[] { 1, 3 });
+    builder = tensorFactory.getBuilder(new int[] { 1, 3 }, new int[] {6, 5});
     builder.put(new int[] { 0, 3 }, 2.0);
     builder.put(new int[] { 1, 3 }, 3.0);
     builder.put(new int[] { 3, 0 }, 4.0);
@@ -80,14 +92,16 @@ public class SparseTensorTest extends TestCase {
 
     // Empty table is a table with no dimensions, which should behave like a
     // scalar.
-    builder = new SparseTensorBuilder(new int[] {});
+    builder = tensorFactory.getBuilder(new int[] {}, new int[] {});
     builder.put(new int[] {}, 5.0);
     emptyTable = builder.build();
   }
 
   public void testGetVarNums() {
     assertTrue(Arrays.equals(varNums, table.getDimensionNumbers()));
+    assertTrue(Arrays.equals(varSizes, table.getDimensionSizes()));
     assertTrue(Arrays.equals(new int[] {}, emptyTable.getDimensionNumbers()));
+    assertTrue(Arrays.equals(new int[] {}, emptyTable.getDimensionSizes()));
   }
 
   public void testGet() {
@@ -108,109 +122,70 @@ public class SparseTensorTest extends TestCase {
     fail("Expected IllegalArgumentException.");
   }
 
-  public void testContainsKey() {
-    assertEquals(true, table.containsKey(a1));
-    assertEquals(true, table.containsKey(a2));
-    assertEquals(true, table.containsKey(Arrays.copyOf(a2, a2.length)));
-
-    assertEquals(false, table.containsKey(new int[] { 0, 0, 1 }));
-    assertEquals(false, table.containsKey(new int[] { 0, 1, 0 }));
-    assertEquals(false, table.containsKey(new int[] { 1, 0, 0 }));
-
-    assertEquals(true, emptyTable.containsKey(new int[] {}));
-    try {
-      table.containsKey(new int[] { 0, 0 });
-    } catch (IllegalArgumentException e) {
-      return;
-    }
-    fail("Expected IllegalArgumentException.");
-  }
-
-  public void testSize() {
-    assertEquals(2, smallTable.size());
-    assertEquals(1, emptyTable.size());
-  }
-
-  public void testAssignmentIterator() {
-    Set<List<Integer>> expectedKeys = Sets.newHashSet();
-    expectedKeys.add(Ints.asList(a1));
-    expectedKeys.add(Ints.asList(a2));
-    Set<List<Integer>> actualKeys = Sets.newHashSet();
-    for (int[] key : Lists.newArrayList(smallTable.keyIterator())) {
-      actualKeys.add(Ints.asList(key));
-    }
-    assertEquals(expectedKeys, actualKeys);
-
-    expectedKeys = Sets.newHashSet();
-    expectedKeys.add(Lists.<Integer> newArrayList());
-    actualKeys.clear();
-    for (int[] key : Lists.newArrayList(emptyTable.keyIterator())) {
-      actualKeys.add(Ints.asList(key));
-    }
-    assertEquals(expectedKeys, actualKeys);
-  }
-
   public void testElementwiseProductEmpty() {
-    SparseTensor expected = simpleMultiply(table, emptyTable);
-    SparseTensor actual = table.elementwiseProduct(emptyTable);
+    Tensor expected = simpleMultiply(table, emptyTable);
+    Tensor actual = table.elementwiseProduct(emptyTable);
 
     assertEquals(expected, actual);
   }
   
   public void testElementwiseProductEmpty2() {
-    SparseTensor expected = simpleMultiply(emptyTable, emptyTable);
-    SparseTensor actual = emptyTable.elementwiseProduct(emptyTable);
+    Tensor expected = simpleMultiply(emptyTable, emptyTable);
+    Tensor actual = emptyTable.elementwiseProduct(emptyTable);
 
     assertEquals(expected, actual);
   }
 
   public void testElementwiseProductMissingFirst() {
-    SparseTensor expected = simpleMultiply(table, missingFirst);
-    SparseTensor actual = table.elementwiseProduct(missingFirst);
+    Tensor expected = simpleMultiply(table, missingFirst);
+    Tensor actual = table.elementwiseProduct(missingFirst);
 
     assertEquals(expected, actual);
   }
 
   public void testElementwiseProductMissingMiddle() {
-    SparseTensor expected = simpleMultiply(table, missingMiddle);
-    SparseTensor actual = table.elementwiseProduct(missingMiddle);
+    Tensor expected = simpleMultiply(table, missingMiddle);
+    Tensor actual = table.elementwiseProduct(missingMiddle);
 
     assertEquals(expected, actual);
   }
 
   public void testElementwiseProductMissingLast() {
-    SparseTensor expected = simpleMultiply(table, missingLast);
-    SparseTensor actual = table.elementwiseProduct(missingLast);
+    Tensor expected = simpleMultiply(table, missingLast);
+    Tensor actual = table.elementwiseProduct(missingLast);
 
     assertEquals(expected, actual);
   }
-
+ 
   public void testElementwiseAddition() {
-    SparseTensor actual = table.elementwiseAddition(addTable);
+    Tensor actual = table.elementwiseAddition(addTable);
 
     assertEquals(2.0, actual.get(a1));
     assertEquals(4.0, actual.get(a2));
     assertEquals(3.0, actual.get(new int[] {4, 0, 0}));
     assertEquals(5.0, actual.get(new int[] {1, 0, 3}));
     assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
   }
   
   public void testElementwiseMaximum() {
-    SparseTensor actual = table.elementwiseMaximum(addTable);
+    Tensor actual = table.elementwiseMaximum(addTable);
     
     assertEquals(1.0, actual.get(a1));
     assertEquals(2.0, actual.get(a2));
     assertEquals(6.0, actual.get(new int[] {3, 0, 1}));
     assertEquals(5.0, actual.get(new int[] {3, 1, 0}));
     assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
   }
 
   public void testElementwiseInverse() {
-    SparseTensor actual = table.elementwiseInverse();
+    Tensor actual = table.elementwiseInverse();
     
     assertEquals(1.0, actual.get(a1));
     assertEquals(1.0 / 2.0, actual.get(a2));
     assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
   }
   
   public void testReduceDimensionsNone() {
@@ -242,8 +217,9 @@ public class SparseTensorTest extends TestCase {
   }
   
   public void testRelabelDimensionsSameOrder() {
-    SparseTensor actual = table.relabelDimensions(new int[] {5, 6, 7});
+    Tensor actual = table.relabelDimensions(new int[] {5, 6, 7});
     assertTrue(Arrays.equals(new int[] {5, 6, 7}, actual.getDimensionNumbers()));
+    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
     
     Function<int[], List<Integer>> toList = new Function<int[], List<Integer>>() {
       @Override
@@ -257,11 +233,12 @@ public class SparseTensorTest extends TestCase {
   }
   
   public void testRelabelDimensions() {
-    SparseTensor actual = table.relabelDimensions(new int[] {7, 5, 6});
+    Tensor actual = table.relabelDimensions(new int[] {7, 5, 6});
     
     assertTrue(Arrays.equals(new int[] {5, 6, 7}, actual.getDimensionNumbers()));
+    assertTrue(Arrays.equals(new int[] {5, 4, 6}, actual.getDimensionSizes()));
+    
     assertEquals(table.size(), actual.size());
-    int[] prevKey = null;
     Iterator<int[]> keyIter = actual.keyIterator();
     while (keyIter.hasNext()) {
       int[] key = keyIter.next();
@@ -270,10 +247,6 @@ public class SparseTensorTest extends TestCase {
       oldKey[2] = key[1];
       oldKey[1] = key[0];
       assertEquals(table.get(oldKey), actual.get(key));
-      if (prevKey != null) {
-        assertTrue(Ints.lexicographicalComparator().compare(prevKey, key) < 0);
-      }
-      prevKey = key;
     }
   }
   
@@ -286,8 +259,9 @@ public class SparseTensorTest extends TestCase {
    * @param second
    * @return
    */
-  private SparseTensor simpleMultiply(SparseTensor first, SparseTensor second) {
-    SparseTensorBuilder builder = new SparseTensorBuilder(first.getDimensionNumbers());
+  private Tensor simpleMultiply(Tensor first, Tensor second) {
+    TensorBuilder builder = tensorFactory.getBuilder(first.getDimensionNumbers(),
+        first.getDimensionSizes());
 
     int firstInd = 0;
     int[] alignment = new int[second.getDimensionNumbers().length];
@@ -321,9 +295,9 @@ public class SparseTensorTest extends TestCase {
   /**
    * Helper method for testing sumOutDimensions / maxOutDimensions.
    */
-  private void runReduceTest(SparseTensor table, Set<Integer> dimsToEliminate) {
-    SparseTensor expected = simpleReduce(table, dimsToEliminate, true);
-    SparseTensor actual = table.sumOutDimensions(dimsToEliminate);
+  private void runReduceTest(Tensor table, Set<Integer> dimsToEliminate) {
+    Tensor expected = simpleReduce(table, dimsToEliminate, true);
+    Tensor actual = table.sumOutDimensions(dimsToEliminate);
     assertEquals(expected, actual);
     expected = simpleReduce(table, dimsToEliminate, false);
     actual = table.maxOutDimensions(dimsToEliminate);
@@ -333,20 +307,24 @@ public class SparseTensorTest extends TestCase {
   /**
    * This is a simple version of sum/max out dimensions algorithm. 
    */
-  private SparseTensor simpleReduce(SparseTensor first, Set<Integer> dimsToEliminate,
+  private Tensor simpleReduce(Tensor first, Set<Integer> dimsToEliminate,
       boolean useSum) {
     int[] currentDims = first.getDimensionNumbers();
+    int[] currentSizes = first.getDimensionSizes();
     int[] newDimNums = new int[currentDims.length];
+    int[] newDimSizes = new int[currentDims.length];
     Map<Integer, Integer> newDimIndices = Maps.newHashMap();    
     for (int i = 0; i < currentDims.length; i++) {
       if (!dimsToEliminate.contains(currentDims[i])) {
         newDimNums[newDimIndices.size()] = currentDims[i];
+        newDimSizes[newDimIndices.size()] = currentSizes[i];
         newDimIndices.put(i, newDimIndices.size());
       }
     }
     
-    SparseTensorBuilder builder = new SparseTensorBuilder(
-        Arrays.copyOf(newDimNums, newDimIndices.size()));
+    TensorBuilder builder = tensorFactory.getBuilder(
+        Arrays.copyOf(newDimNums, newDimIndices.size()),
+        Arrays.copyOf(newDimSizes, newDimIndices.size()));
     Iterator<int[]> keyIter = first.keyIterator();
     while (keyIter.hasNext()) {
       int[] curKey = keyIter.next();

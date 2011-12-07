@@ -78,7 +78,7 @@ public class CfgParserTest extends TestCase {
 	}
 	
 	/**
-	 * Splits each string in the input into component words and adds the result
+	 * Splits each string in the inputVar into component words and adds the result
 	 * to the returned array.
 	 * @return
 	 */

@@ -29,14 +29,6 @@ public class SampleMarginalSet extends AbstractMarginalSet {
 	  this.factorGraphVariables = factorGraphVariables;
 	  this.samples = ImmutableList.copyOf(samples);
 	}
-	
-	@Override
-	public MarginalSet addConditionalVariables(Assignment values, VariableNumMap valueVariables) {
-	  Assignment newValues = getConditionedValues().union(values);
-	  VariableNumMap newConditionedVariables = getConditionedVariables()
-	      .union(valueVariables.intersection(values.getVariableNums()));
-	  return new SampleMarginalSet(factorGraphVariables, samples, newConditionedVariables, newValues);
-	}
 
 	@Override
 	public Factor getMarginal(Collection<Integer> varNums) {

@@ -6,7 +6,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.bayesnet.Cpt;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -20,17 +19,27 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
   private final VariableNumMap rightVar;
   private final VariableNumMap terminalVar;
   
+  private final VariableNumMap rootVar;
+  private final VariableNumMap childVar;
+  
   private ParametricFactor<SufficientStatistics> nonterminalFactor;
   private ParametricFactor<SufficientStatistics> terminalFactor;
   
-  public CptCfgFactor(VariableNumMap parentVar, VariableNumMap childVar) {
-    super(parentVar.union(childVar));
-    Preconditions.checkArgument(parentVar.size() == 1);
-    Preconditions.checkArgument(childVar.size() == 1);
-    this.parentVar = Preconditions.checkNotNull(parentVar);
-    this.childVar = Preconditions.checkNotNull(childVar);
-  }
   
+  public CptCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar, 
+      VariableNumMap terminalVar, VariableNumMap rootVar, VariableNumMap childVar, 
+      ParametricFactor<SufficientStatistics> nonterminalFactor, ParametricFactor<SufficientStatistics> terminalFactor) {
+    super(rootVar.union(childVar));
+    this.parentVar = parentVar;
+    this.leftVar = leftVar;
+    this.rightVar = rightVar;
+    this.terminalVar = terminalVar;
+    this.rootVar = rootVar;
+    this.childVar = childVar;
+    this.nonterminalFactor = nonterminalFactor;
+    this.terminalFactor = terminalFactor;
+  }
+
   @Override
   public Factor getFactorFromParameters(SufficientStatistics parameters) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
@@ -42,7 +51,7 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, 
         nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
         terminalFactor.getFactorFromParameters(terminalStatistics));
-    return new CfgFactor(parentVar, childVar, parser);
+    return new CfgFactor(rootVar, childVar, parser);
   }
 
   @Override

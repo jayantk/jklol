@@ -6,18 +6,14 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.dynamic.Plate;
-import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class FactorGraphTest extends TestCase {
 
-	private FactorGraph f, dynamic;
+	private FactorGraph f;
 	private TableFactorBuilder builder;
 	private DiscreteVariable tfVar;
-	private VariablePattern dynamicPattern; 
 
 	public void setUp() {
 		f = new FactorGraph();
@@ -41,23 +37,13 @@ public class FactorGraphTest extends TestCase {
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0}), 1.0);
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {1, 1}), 1.0);
 		f = f.addFactor(builder.build());
-		
-		// Construct a dynamic factor graph.
-		ObjectVariable plateVar = new ObjectVariable(List.class);
-		dynamic = f.addVariable("PlateReplications", plateVar);
-		VariableNumMap templateVariables = new VariableNumMap(Ints.asList(0, 1),
-		    Arrays.asList("x", "y"), Arrays.<Variable>asList(tfVar, otherVar));
-		dynamicPattern = VariablePattern.fromTemplateVariables(templateVariables, VariableNumMap.emptyMap());
-		Plate plate = new Plate(dynamic.getVariables().getVariablesByName("PlateReplications"), dynamicPattern);
-		
-		dynamic = dynamic.addPlate(plate); 
 	}
 
 	public void testGetFactorsWithVariable() {
 		assertEquals(2,
-				f.getFactorsWithVariable(f.getVariableIndex("Var2")).size());
+				f.getFactorsWithVariable(f.getVariables().getVariableByName("Var2")).size());
 		assertEquals(1,
-				f.getFactorsWithVariable(f.getVariableIndex("Var3")).size());
+				f.getFactorsWithVariable(f.getVariables().getVariableByName("Var3")).size());
 	}
 
 	public void testGetSharedVariables() {
@@ -81,7 +67,7 @@ public class FactorGraphTest extends TestCase {
 	public void testMarginalize() {
 	  FactorGraph m = f.marginalize(Ints.asList(0, 3, 2));
 	  assertEquals(1, m.getVariables().size());
-	  assertTrue(m.getVariableNames().contains("Var1"));
+	  assertTrue(m.getVariables().getVariableNames().contains("Var1"));
 	  
 	  assertEquals(1, m.getFactors().size());
 	  Factor factor = m.getFactors().get(0);
@@ -98,8 +84,8 @@ public class FactorGraphTest extends TestCase {
 
 	  FactorGraph c = f.conditional(a).conditional(b);
 	  assertEquals(2, c.getVariables().size());
-	  assertTrue(c.getVariableNames().contains("Var2")); 
-	  assertFalse(c.getVariableNames().contains("Var1"));
+	  assertTrue(c.getVariables().getVariableNames().contains("Var2")); 
+	  assertFalse(c.getVariables().getVariableNames().contains("Var1"));
 	  assertEquals(a.union(b), c.getConditionedValues());
 	  
 	  Assignment a2 = f.outcomeToAssignment(Arrays.asList("Var2", "Var3"), Arrays.asList("T", "T")); 
@@ -127,35 +113,5 @@ public class FactorGraphTest extends TestCase {
 
 	  assertEquals(0, c.getVariables().size());
 	  assertEquals(1.0, c.getUnnormalizedProbability(Assignment.EMPTY));
-	}
-	
-	public void testConditionalDynamic1() {
-	  List<Assignment> assignments = Lists.newArrayList();
-	  for (int i = 0; i < 5; i++) {
-	    assignments.add(Assignment.EMPTY);
-	  }
-	  
-	  Assignment a = dynamic.outcomeToAssignment(
-	      Arrays.asList("Var0", "PlateReplications"), Arrays.<Object>asList("T", assignments));
-	  
-	  FactorGraph c = dynamic.conditional(a);
-	  assertEquals(13, c.getVariables().size());
-	}
-	
-	public void testConditionalDynamic2() {
-	  List<Assignment> assignments = Lists.newArrayList();
-	  assignments.add(dynamicPattern.getTemplateVariables().getVariablesByName("x")
-	      .outcomeArrayToAssignment("T"));
-	  assignments.add(Assignment.EMPTY);
-	  assignments.add(dynamicPattern.getTemplateVariables().getVariablesByName("y")
-	      .outcomeArrayToAssignment("foo"));
-
-	  Assignment a = dynamic.outcomeToAssignment(
-	      Arrays.asList("Var0", "PlateReplications"), Arrays.<Object>asList("T", assignments));
-
-	  FactorGraph c = dynamic.conditional(a);
-	  assertEquals(7, c.getVariables().size());
-	  assertEquals(1, c.getConditionedVariables().getVariablesByName("x-0").size());
-	  assertEquals(1, c.getVariables().getVariablesByName("y-0").size());
 	}
 }

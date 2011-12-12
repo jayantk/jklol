@@ -66,6 +66,16 @@ public class VariableNumMap {
     varMap = varNumMap;
     names = varNames;
   }
+  
+  public static VariableNumMap fromVariableNames(List<String> variableNames, 
+      List<Variable> variables) {
+    Preconditions.checkArgument(variableNames.size() == variables.size());
+    List<Integer> varNums = Lists.newArrayList();
+    for (int i = 0; i < variables.size(); i++) {
+      varNums.add(i);
+    }
+    return new VariableNumMap(varNums, variableNames, variables);
+  }
 
   /**
    * Get the number of variable mappings contained in the map.
@@ -228,6 +238,25 @@ public class VariableNumMap {
    */
   public VariableNumMap getVariablesByName(String... variableNames) {
     return getVariablesByName(Arrays.asList(variableNames));
+  }
+  
+  /**
+   * Gets all variables whose names begin with {@code namePrefix}.
+   * 
+   * @param namePrefix
+   * @return
+   */
+  public VariableNumMap getVariablesByNamePrefix(String namePrefix) {
+    BiMap<Integer, String> newNames = HashBiMap.create();
+    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+
+    for (Map.Entry<Integer, String> varName : names.entrySet()) {
+      if (varName.getValue().startsWith(namePrefix)) {
+        newNames.put(varName.getKey(), varName.getValue());
+        newVarMap.put(varName.getKey(), varMap.get(varName.getKey()));
+      }
+    }
+    return new VariableNumMap(newVarMap, newNames);
   }
 
   /**

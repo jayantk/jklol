@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import junit.framework.TestCase;
 
+import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPredictor;
 import com.jayantkrish.jklol.inference.InferenceTestCases;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -31,7 +32,8 @@ public class FactorGraphPredictorTest extends TestCase {
     factorGraph = InferenceTestCases.basicFactorGraph();
     outputVars = factorGraph.getVariables().getVariablesByName(Arrays.asList("Var4"));
     inputVars = factorGraph.getVariables().getVariablesByName(Arrays.asList("Var2"));
-    predictor = new FactorGraphPredictor(factorGraph, outputVars, new JunctionTree()); 
+    predictor = new SimpleFactorGraphPredictor(factorGraph, outputVars, 
+        new JunctionTree()); 
   
     wrappedPredictor = new ForwardingPredictor<String, String, Assignment, Assignment>(
         predictor, 
@@ -39,7 +41,8 @@ public class FactorGraphPredictorTest extends TestCase {
         Converters.wrapWithCast(Converters.wrapSingletonList(outputVars.getOutcomeToAssignmentConverter()), String.class));
     
     densityVars = factorGraph.getVariables().getVariablesByName(Arrays.asList("Var0", "Var2"));
-    densityPredictor = new FactorGraphPredictor(factorGraph, densityVars, new JunctionTree());
+    densityPredictor = new SimpleFactorGraphPredictor(factorGraph, densityVars, 
+        new JunctionTree());
   }
   
   public void testGetBestPrediction() {
@@ -96,6 +99,6 @@ public class FactorGraphPredictorTest extends TestCase {
     assertEquals(0.0 / 18.0, wrappedPredictor.getProbability("F", "T"));
     assertEquals(0.0 / 18.0, wrappedPredictor.getProbability("NOT", "VALID"));
     assertEquals(0.0 / 18.0, wrappedPredictor.getProbability("NOT", "T"));
-    assertEquals(0.0 / 18.0, wrappedPredictor.getProbability("T", "VALID"));
+    assertEquals(0.0 / 18.0, wrappedPredictor.getProbability("T", "INVALID"));
   }
 }

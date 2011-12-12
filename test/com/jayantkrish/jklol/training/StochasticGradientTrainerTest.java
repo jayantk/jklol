@@ -11,11 +11,13 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
-import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.TensorBase;
@@ -27,19 +29,21 @@ public class StochasticGradientTrainerTest extends TestCase {
 	StochasticGradientTrainer t;    
 	List<String> clique1Names;
 	List<String> clique2Names;
+	VariableNumMap allVariables;
 
-	List<Example<Assignment, Assignment>> trainingData;
+	List<Example<DynamicAssignment, DynamicAssignment>> trainingData;
 
 	public void setUp() {
-		LogLinearModelBuilder builder = new LogLinearModelBuilder();
+		ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
 
 		DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
 				Arrays.asList(new String[] {"T", "F"}));
 
-		builder.addDiscreteVariable("Var0", tfVar);
-		builder.addDiscreteVariable("Var1", tfVar);
-		builder.addDiscreteVariable("Var2", tfVar);
-		builder.addDiscreteVariable("Var3", tfVar);
+		builder.addVariable("Var0", tfVar);
+		builder.addVariable("Var1", tfVar);
+		builder.addVariable("Var2", tfVar);
+		builder.addVariable("Var3", tfVar);
+		allVariables = builder.getVariables();
 
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
 		builder.addFactor(DiscreteLogLinearFactor
@@ -53,16 +57,16 @@ public class StochasticGradientTrainerTest extends TestCase {
 
 		logLinearModel = builder.build();
 		trainingData = Lists.newArrayList();
-		Assignment a1 = logLinearModel.getVariables()
+		DynamicAssignment a1 = logLinearModel.getVariables()
 		    .outcomeToAssignment(Arrays.asList("T", "T", "T", "T"));
-		Assignment a2 = logLinearModel.getVariables()
+		DynamicAssignment a2 = logLinearModel.getVariables()
 		    .outcomeToAssignment(Arrays.asList("T", "T", "T", "F"));
-		Assignment a3 = logLinearModel.getVariables()
+		DynamicAssignment a3 = logLinearModel.getVariables()
 		    .outcomeToAssignment(Arrays.asList("F", "F", "F", "F"));
 		for (int i = 0; i < 3; i++) {
-			trainingData.add(Example.create(Assignment.EMPTY, a1));
-			trainingData.add(Example.create(Assignment.EMPTY, a2));
-			trainingData.add(Example.create(Assignment.EMPTY, a3));
+			trainingData.add(Example.create(DynamicAssignment.EMPTY, a1));
+			trainingData.add(Example.create(DynamicAssignment.EMPTY, a2));
+			trainingData.add(Example.create(DynamicAssignment.EMPTY, a3));
 		}
 		t = new StochasticGradientTrainer(new JunctionTree(), 10);
 	}
@@ -70,13 +74,13 @@ public class StochasticGradientTrainerTest extends TestCase {
 	public void testTrain() {
 		// These assignments should have positive weight for clique 1
 		Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
-		clique1PositiveAssignments.add(logLinearModel.getVariables().getVariablesByName(clique1Names)
+		clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T"})));
-		clique1PositiveAssignments.add(logLinearModel.getVariables().getVariablesByName(clique1Names)
+		clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "F", "F"})));
 
 		Set<Assignment> clique2NegativeAssignments = new HashSet<Assignment>();
-		clique2NegativeAssignments.add(logLinearModel.getVariables().getVariablesByName(clique2Names)
+		clique2NegativeAssignments.add(allVariables.getVariablesByName(clique2Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
 		SufficientStatistics parameters = t.train(logLinearModel, logLinearModel.getNewSufficientStatistics(), trainingData);

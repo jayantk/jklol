@@ -608,18 +608,22 @@ public class SparseTensor implements Tensor {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
+    sb.append("<");
     for (int i = 0; i < values.length; i++) {
-      sb.append("[");
+      sb.append("{");
       for (int j = 0; j < outcomes.length; j++) {
         if (j > 0) {
           sb.append(", ");
         }
         sb.append(outcomes[j][i]);
       }
-      sb.append("] : ");
+      sb.append("} : ");
       sb.append(values[i]);
-      sb.append("\n");
+      if (i != values.length -1) {
+        sb.append(", ");
+      }
     }
+    sb.append(">");
     return sb.toString();
   }
 

@@ -1,9 +1,7 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -35,12 +33,9 @@ public class ParseChart {
   private Factor binaryRuleExpectations;
   private Factor terminalRuleExpectations;
 
-  private Map<Object, PriorityQueue<Backpointer>>[][] backpointers;
-
   private List<?> terminals;
 
   private int numTerminals;
-  private int beamWidth;
   private boolean sumProduct;
   private boolean insideCalculated;
   private boolean outsideCalculated;
@@ -53,7 +48,6 @@ public class ParseChart {
    * ParseChart computes marginals). Otherwise, updates use the maximum
    * probability, meaning ParseChart computes max-marginals.
    */
-  @SuppressWarnings({ "unchecked" })
   public ParseChart(List<?> terminals, VariableNumMap parent, VariableNumMap left, 
       VariableNumMap right, VariableNumMap terminal, boolean sumProduct) {
     this.terminals = terminals;
@@ -75,10 +69,13 @@ public class ParseChart {
     outsideCalculated = false;
     partitionFunction = 0.0;
 
+    // TODO: backpointers
+    /*
     if (!sumProduct) {
       backpointers = (Map<Object, PriorityQueue<Backpointer>>[][]) Array.newInstance(new HashMap<Object, PriorityQueue<Backpointer>>().getClass(), new int[] { numTerminals, numTerminals });
       beamWidth = 1;
     }
+    */
   }
 
   /**
@@ -86,15 +83,6 @@ public class ParseChart {
    */
   public int chartSize() {
     return numTerminals;
-  }
-
-  /**
-   * If the chart represents the computation of max-marginals, set the width of
-   * the beam used in the beam search for best parses.
-   */
-  public void setBeamWidth(int width) {
-    assert !sumProduct;
-    beamWidth = width;
   }
 
   /**

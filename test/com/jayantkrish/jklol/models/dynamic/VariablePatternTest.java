@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.models.dynamic;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import junit.framework.TestCase;
 
@@ -29,9 +28,9 @@ public class VariablePatternTest extends TestCase {
     ObjectVariable intVar = new ObjectVariable(Integer.class);
     
     templateVars = new VariableNumMap(Ints.asList(5, 6), 
-        Arrays.asList("x", "y"), Arrays.<Variable>asList(tfVar, intVar));
+        Arrays.asList("x-?(0)", "y-?(0)"), Arrays.<Variable>asList(tfVar, intVar));
     offsetVars = new VariableNumMap(Ints.asList(5, 6), 
-        Arrays.asList("x+0", "x+1"), Arrays.<Variable>asList(tfVar, intVar));
+        Arrays.asList("x-?(0)", "x-?(1)"), Arrays.<Variable>asList(tfVar, intVar));
     defaultVars = new VariableNumMap(Ints.asList(0, 1, 2, 3, 4), 
         Arrays.asList("x-0", "y-0", "x-1", "y-1", "z"),
         Arrays.<Variable>asList(tfVar, intVar, tfVar, intVar, tfVar));    
@@ -42,7 +41,7 @@ public class VariablePatternTest extends TestCase {
     twoVarPattern = VariablePattern.fromTemplateVariables(templateVars, 
         defaultVars.getVariablesByName("z"));
     noMatchPattern = VariablePattern.fromTemplateVariables(templateVars, 
-        templateVars.getVariablesByName("x"));
+        templateVars.getVariablesByName("x-?(0)"));
     offsetPattern = VariablePattern.fromTemplateVariables(offsetVars, 
         VariableNumMap.emptyMap());
     emptyPattern = VariablePattern.fromVariableNumMap(
@@ -82,12 +81,5 @@ public class VariablePatternTest extends TestCase {
     assertEquals(1, matches.size());
     assertEquals(defaultVars.getVariablesByName("x-0", "x-1"), 
         matches.get(0).getMatchedVariables());
-  }
-  
-  public void testInstantiate() {
-    Map<String, Variable> instantiation = twoVarPattern.instantiateWithArgument(2);
-    assertEquals(2, instantiation.size());
-    assertTrue(instantiation.containsKey("x-2"));
-    assertTrue(instantiation.containsKey("y-2"));
   }
 }

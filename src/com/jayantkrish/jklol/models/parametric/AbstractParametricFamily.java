@@ -1,7 +1,7 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 
 
 /**
@@ -13,18 +13,18 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 public abstract class AbstractParametricFamily<T>
   implements ParametricFamily<T> {
 
-  private final FactorGraph baseFactorGraph;
+  private final DynamicFactorGraph baseFactorGraph;
   
-  public AbstractParametricFamily(FactorGraph baseFactorGraph) {
+  public AbstractParametricFamily(DynamicFactorGraph baseFactorGraph) {
     this.baseFactorGraph = baseFactorGraph;
   }
   
   @Override
-  public VariableNumMap getVariables() {
+  public DynamicVariableSet getVariables() {
     return baseFactorGraph.getVariables();
   }
   
-  protected FactorGraph getBaseFactorGraph() {
+  protected DynamicFactorGraph getBaseFactorGraph() {
     return baseFactorGraph;
   }
 }

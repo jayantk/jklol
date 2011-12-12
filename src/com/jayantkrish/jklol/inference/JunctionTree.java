@@ -32,6 +32,12 @@ public class JunctionTree implements MarginalCalculator {
 
   @Override
   public MarginalSet computeMarginals(FactorGraph factorGraph) {
+    // Efficiency override -- all variables in the factor graph have assigned values.
+    if (factorGraph.getVariables().size() == 0) {
+      return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(), 
+          factorGraph.getConditionedValues());
+    }
+    
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
     Set<Integer> rootFactorNums = runMessagePassing(cliqueTree, true);
     return cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
@@ -39,9 +45,14 @@ public class JunctionTree implements MarginalCalculator {
 
   @Override
   public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph) {
+    // Efficiency override -- all variables in the factor graph have assigned values.
+    if (factorGraph.getVariables().size() == 0) {
+      return new FactorMaxMarginalSet(new FactorGraph(), factorGraph.getConditionedValues());
+    }
+    
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
     runMessagePassing(cliqueTree, false);
-    return cliqueTreeToMaxMarginalSet(cliqueTree);
+    return cliqueTreeToMaxMarginalSet(cliqueTree, factorGraph);
   }
 
   /**
@@ -214,12 +225,14 @@ public class JunctionTree implements MarginalCalculator {
    * @param rootFactorNum
    * @return
    */
-  private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree) {
+  private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree, 
+      FactorGraph originalFactorGraph) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
       marginalFactors.add(computeMarginal(cliqueTree, i, false));
     }
-    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors), Assignment.EMPTY);
+    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors), 
+        originalFactorGraph.getConditionedValues());
   }
 
   private class CliqueTree {

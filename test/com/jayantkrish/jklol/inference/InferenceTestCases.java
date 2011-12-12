@@ -1,20 +1,12 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.Arrays;
-import java.util.List;
 
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.InferenceHint;
-import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.Variable;
-import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.dynamic.Plate;
-import com.jayantkrish.jklol.models.dynamic.PlateFactor;
-import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -170,91 +162,6 @@ public class InferenceTestCases {
     testCase.addTest(28.0 / 60.0, new String[] { "Var0" }, "T");
     testCase.addTest(32.0 / 60.0, new String[] { "Var0" }, "F");
 
-    return testCase;
-  }
-  
-  public static FactorGraph sequenceModel() {
-    FactorGraph fg = new FactorGraph();
-    
-    fg = fg.addVariable("replication_count", new ObjectVariable(List.class));
-
-    VariableNumMap replicatedVariables = new VariableNumMap(Ints.asList(0, 1), 
-        Arrays.asList("x", "y"), Arrays.asList(threeValueVar, trueFalseVar));
-    VariablePattern replicationPattern = VariablePattern
-        .fromTemplateVariables(replicatedVariables, VariableNumMap.emptyMap());
-    Plate replicatedPlate = new Plate(fg.getVariables().getVariablesByName("replication_count"),
-        replicationPattern);
-    
-    VariableNumMap adjacentVariables = new VariableNumMap(Ints.asList(0, 1), 
-        Arrays.asList("y+0", "y+1"), Arrays.asList(trueFalseVar, trueFalseVar));
-    VariablePattern adjacentPattern = VariablePattern
-        .fromTemplateVariables(adjacentVariables, VariableNumMap.emptyMap());
-
-    fg = fg.addPlate(replicatedPlate);
-    
-    // Add the factors
-    TableFactorBuilder outputFactorBuilder = new TableFactorBuilder(replicatedVariables);
-    // Marginal on T = 6
-    outputFactorBuilder.setWeight(1.0, "U", "T");
-    outputFactorBuilder.setWeight(2.0, "T", "T");
-    outputFactorBuilder.setWeight(3.0, "F", "T");
-    // Marginal on F = 9
-    outputFactorBuilder.setWeight(3.0, "U", "F");
-    outputFactorBuilder.setWeight(3.0, "T", "F");
-    outputFactorBuilder.setWeight(3.0, "F", "F");
-    fg = fg.addPlateFactor(new PlateFactor(outputFactorBuilder.build(), 
-        replicationPattern, Arrays.asList(replicatedPlate)));
-    
-    TableFactorBuilder sequenceFactorBuilder = new TableFactorBuilder(adjacentVariables);
-    // Marginal on T = 2*6 + 9 = 21
-    sequenceFactorBuilder.setWeight(2.0, "T", "T");
-    sequenceFactorBuilder.setWeight(1.0, "T", "F");
-    // Marginal on F = 2*9 + 6 = 24
-    sequenceFactorBuilder.setWeight(1.0, "F", "T");
-    sequenceFactorBuilder.setWeight(2.0, "F", "F");
-    fg = fg.addPlateFactor(new PlateFactor(sequenceFactorBuilder.build(), 
-        adjacentPattern, Arrays.asList(replicatedPlate)));
-    
-    // Partition function on 2 replications = 9 * 24 + 6 * 21 = 216 + 126 = 342 
-    return fg;
-  }
-      
-  public static MarginalTestCase testSequenceUnconditional() {
-    List<Assignment> plateAssignment = Lists.newArrayList();
-    plateAssignment.add(Assignment.EMPTY);
-    plateAssignment.add(Assignment.EMPTY);
-    
-    FactorGraph fg = sequenceModel();
-    Assignment a = fg.getVariables().getVariablesByName("replication_count")
-        .outcomeArrayToAssignment(plateAssignment);
-    MarginalTestCase testCase = new MarginalTestCase(fg, a);
-    testCase.addTest(21.0 / 342.0, new String[] {"x-0", "y-0"}, "U", "T");
-    testCase.addTest(42.0 / 342.0, new String[] {"x-0", "y-0"}, "T", "T");
-    testCase.addTest(72.0 / 342.0, new String[] {"x-0", "y-0"}, "F", "F");
-    testCase.addTest(72.0 / 342.0, new String[] {"x-0", "y-0"}, "T", "F");
-    
-    testCase.addTest(162.0 / 342.0, new String[] {"y-0", "y-1"}, "F", "F");
-    testCase.addTest(54.0 / 342.0, new String[] {"y-0", "y-1"}, "T", "F");
-    testCase.addTest(54.0 / 342.0, new String[] {"y-0", "y-1"}, "F", "T");
-    testCase.addTest(72.0 / 342.0, new String[] {"y-0", "y-1"}, "T", "T");
-    
-    return testCase;
-  }
-  
-  public static MarginalTestCase testSequenceConditional() {
-    FactorGraph fg = sequenceModel();
-    VariableNumMap templateVariables = fg.getPlates().get(0).getPattern().getTemplateVariables();
-    
-    List<Assignment> plateAssignment = Lists.newArrayList();
-    plateAssignment.add(templateVariables.getVariablesByName("x").outcomeArrayToAssignment("U"));
-    plateAssignment.add(templateVariables.getVariablesByName("y").outcomeArrayToAssignment("T"));
-    Assignment a = fg.getVariables().getVariablesByName("replication_count")
-        .outcomeArrayToAssignment(plateAssignment);
-
-    MarginalTestCase testCase = new MarginalTestCase(fg, a);
-    testCase.addTest(12.0 / 30.0, new String[] {"y-0"}, "T"); 
-    testCase.addTest(18.0 / 30.0, new String[] {"y-0"}, "F");
-    
     return testCase;
   }
 }

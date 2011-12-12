@@ -33,18 +33,6 @@ public interface MarginalSet {
   public Assignment getConditionedValues();
 
   /**
-   * Gets a new {@code MarginalSet} identical to this one that conditions on
-   * additional variables. The returned {@code MarginalSet} conditions on the
-   * assignment {@code values}, which is an assignment to a subset of the
-   * variables in {@code valueVariables}.
-   * 
-   * @param vars
-   * @param values
-   * @return
-   */
-  public MarginalSet addConditionalVariables(Assignment values, VariableNumMap valueVariables);
-
-  /**
    * Gets the unnormalized marginal distribution associated with the given
    * variables as a {@link Factor}. {@link #getPartitionFunction()} returns the
    * normalization constant required to convert the values of the returned

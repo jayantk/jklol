@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,6 +8,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -58,8 +58,12 @@ public class OrConstraintFactor extends AbstractFactor {
    */
   public static OrConstraintFactor createWithoutDistributions(VariableNumMap inputVars,
       VariableNumMap orVars, Map<String, Object> orValues) {
-    return new OrConstraintFactor(inputVars, orVars, orValues,
-        Collections.<Factor> nCopies(inputVars.size(), null));
+    List<Factor> inputFactors = Lists.newArrayList();
+    for (int varNum : inputVars.getVariableNums()) {
+      inputFactors.add(TableFactor.unity(inputVars.intersection(Ints.asList(varNum))));
+    }
+    
+    return new OrConstraintFactor(inputVars, orVars, orValues, inputFactors);
   }
     
   @Override

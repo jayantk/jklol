@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,7 +15,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 
@@ -28,19 +26,16 @@ import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
  * of variables (like a {@code VariableNumMap}) no longer serves to identify
  * these sets of tied variables/factors.
  * 
- * {@code VariablePattern}s have two uses. The first use is to dynamically
- * instantiate sets of variables based on an inputVar instance (see
- * {@link Plate}). The second purpose is to identify these dynamically
- * constructed sets in existing {@code FactorGraph}s, for compiling sufficient
- * statistics, etc. In both cases, the generated/identified variables are
- * parameterized by a single integer value, which behaves like the index of the
- * particular replication in a list of replications.
+ * {@link DynamicVariableSet} is used to dynamically instantiate variables.
+ * {@code VariablePattern} identifies these dynamically constructed sets in
+ * existing {@code FactorGraph}s, for compiling sufficient statistics, etc. In
+ * both cases, each generated/identified variable is parameterized by a set of
+ * integer values, which behave like indices into replications of a set of
+ * plates.
  * 
  * @author jayantk
  */
 public class VariablePattern {
-
-  private static final String SEPARATOR = "-";
 
   // These variables may be instantiated multiple times with varying names.
   private final VariableNumMap templateVariables;
@@ -72,9 +67,9 @@ public class VariablePattern {
   /**
    * Gets a {@code VariablePattern} which uses the names in {@code templateVars}
    * as the name templates for matching variables. The names are specified in a
-   * rudimentary pattern language: if a name contains a "+", the portion after
-   * the "+" is parsed as an integer offset. Otherwise, the name is given an
-   * offset of 0.
+   * rudimentary pattern language: if a name contains a "?(x)", this portion is
+   * allowed to match any integer value. x is a number which is an integer
+   * offset for the match.
    * 
    * @param variables
    * @return
@@ -83,14 +78,14 @@ public class VariablePattern {
       VariableNumMap fixedVariables) {
     List<VariableNameMatcher> matchers = Lists.newArrayList();
     for (String variableName : templateVariables.getVariableNames()) {
-      int plusIndex = variableName.indexOf("+");
-      int offset = 0;
-      String variableNamePrefix = variableName;
-      if (plusIndex != -1) {
-        variableNamePrefix = variableName.substring(0, plusIndex);
-        offset = Integer.parseInt(variableName.substring(plusIndex + 1, variableName.length()));
-      }
-      matchers.add(new VariableNameMatcher(variableNamePrefix, offset));
+      int varIndex = variableName.indexOf("?(");
+      String variableNamePrefix = variableName.substring(0, varIndex);
+      String variableNameSuffix = variableName.substring(varIndex + 1);
+
+      int offsetIndex = variableNameSuffix.indexOf(")");
+      int offset = Integer.parseInt(variableNameSuffix.substring(1, offsetIndex));
+      variableNameSuffix = variableNameSuffix.substring(offsetIndex + 1);
+      matchers.add(new VariableNameMatcher(variableNamePrefix, variableNameSuffix, offset));
     }
     return new VariablePattern(matchers, templateVariables, fixedVariables);
   }
@@ -102,6 +97,15 @@ public class VariablePattern {
    */
   public VariableNumMap getTemplateVariables() {
     return templateVariables;
+  }
+
+  /**
+   * Gets the variables which are matched exactly once in the factor graph.
+   * 
+   * @return
+   */
+  public VariableNumMap getFixedVariables() {
+    return fixedVariables;
   }
 
   /**
@@ -153,16 +157,6 @@ public class VariablePattern {
       }
     }
     return validMatches;
-  }
-
-  public Map<String, Variable> instantiateWithArgument(int replicationIndex) {
-    Map<String, Variable> instantiatedVariables = Maps.newHashMap();
-    for (int i = 0; i < templateVariableMatchers.size(); i++) {
-      int instantiatedIndex = templateVariableMatchers.get(i).getOffset() + replicationIndex;
-      instantiatedVariables.put(templateVariableMatchers.get(i).getPrefix() + SEPARATOR + instantiatedIndex,
-          templateVariables.getVariables().get(i));
-    }
-    return instantiatedVariables;
   }
 
   public static class VariableMatch {
@@ -246,15 +240,12 @@ public class VariablePattern {
 
   public static class VariableNameMatcher {
 
-    private final String variableNamePrefix;
     private final Pattern pattern;
     private final int indexOffset;
 
-    public VariableNameMatcher(String variableNamePrefix, int indexOffset) {
-      this.variableNamePrefix = variableNamePrefix;
+    public VariableNameMatcher(String variableNamePrefix, String variableNameSuffix, int indexOffset) {
       this.indexOffset = indexOffset;
-
-      pattern = Pattern.compile(variableNamePrefix + SEPARATOR + "(\\d+)");
+      pattern = Pattern.compile(variableNamePrefix + "(\\d+)" + variableNameSuffix);
     }
 
     /**
@@ -271,15 +262,6 @@ public class VariablePattern {
         return Ints.asList(originalIndex - indexOffset);
       }
       return Collections.emptyList();
-    }
-
-    /**
-     * Gets the prefix of the variable names which are matched by {@code this}.
-     * 
-     * @return
-     */
-    public String getPrefix() {
-      return variableNamePrefix;
     }
 
     /**

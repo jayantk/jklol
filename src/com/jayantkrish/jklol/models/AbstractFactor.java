@@ -57,7 +57,7 @@ public abstract class AbstractFactor implements Factor {
   
   @Override
   public Factor maxMarginalize(VariableNumMap vars) {
-    return marginalize(vars.getVariableNums());
+    return maxMarginalize(vars.getVariableNums());
   }
 
   @Override

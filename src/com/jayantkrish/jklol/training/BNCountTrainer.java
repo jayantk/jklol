@@ -8,10 +8,11 @@ import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Trains a {@link #ParametricFactorGraph} using empirical outcome counts from a data set.
@@ -30,12 +31,12 @@ public class BNCountTrainer {
    * @param bn
    * @param trainingData
    */
-  public SufficientStatistics train(ParametricFactorGraph bn, List<Assignment> trainingData) {
+  public SufficientStatistics train(ParametricFactorGraph bn, List<DynamicAssignment> trainingData) {
     // Instantiate a factor graph using an arbitrary set of parameters.
     // We must instantiate a graph in order to handle dynamic factor graphs,
     // as dynamic factor graphs have assignments of variable size. 
     SufficientStatistics parameters = bn.getNewSufficientStatistics();
-    FactorGraph factorGraph = bn.getFactorGraphFromParameters(parameters);
+    DynamicFactorGraph factorGraph = bn.getFactorGraphFromParameters(parameters);
 
     // Compute sufficient statistics for all examples in parallel.
     SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()

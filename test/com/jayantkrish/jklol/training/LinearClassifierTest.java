@@ -7,16 +7,17 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.Example;
-import com.jayantkrish.jklol.evaluation.FactorGraphPredictor;
+import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPredictor;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -36,14 +37,14 @@ public class LinearClassifierTest extends TestCase {
   List<Example<Assignment, Assignment>> trainingData;
 
   public void setUp() {
-    LogLinearModelBuilder builder = new LogLinearModelBuilder();
+    ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
 
     DiscreteVariable outputVar = new DiscreteVariable("tf",
         Arrays.asList("T", "F"));
     ObjectVariable tensorVar = new ObjectVariable(Tensor.class);
 
     builder.addVariable("x", tensorVar);
-    builder.addDiscreteVariable("y", outputVar);
+    builder.addVariable("y", outputVar);
 
     x = builder.getVariables().getVariablesByName("x");
     y = builder.getVariables().getVariablesByName("y");
@@ -74,29 +75,23 @@ public class LinearClassifierTest extends TestCase {
   }
 
   public void testTrainSvm() {
-    SubgradientSvmTrainer trainer = new SubgradientSvmTrainer(80, 1, 1.0, new JunctionTree(),
-        new SubgradientSvmTrainer.HammingCost(), null);
-
-    SufficientStatistics parameters = trainer.train(linearClassifier, trainingData);
-    FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters);
-
-    // Should be able to get 0 training error.
-    FactorGraphPredictor predictor = new FactorGraphPredictor(trainedModel, y, new JunctionTree());
-    for (Example<Assignment, Assignment> trainingDatum : trainingData) {
-      Assignment prediction = predictor.getBestPrediction(trainingDatum.getInput());
-      assertEquals(trainingDatum.getOutput(), prediction);
-    }
+    runTrainerTest(new SubgradientSvmTrainer(80, 1, 1.0, new JunctionTree(),
+        new SubgradientSvmTrainer.HammingCost(), null));
   }
-  
-  public void testTrainLogisticRegression() {
-    StochasticGradientTrainer trainer = new StochasticGradientTrainer(new JunctionTree(), 80);
 
-    SufficientStatistics parameters = trainer.train(linearClassifier, 
+  public void testTrainLogisticRegression() {
+    runTrainerTest(new StochasticGradientTrainer(new JunctionTree(), 80));
+  }
+
+  private void runTrainerTest(Trainer trainer) {
+    SufficientStatistics parameters = trainer.trainFixed(linearClassifier,
         linearClassifier.getNewSufficientStatistics(), trainingData);
-    FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters);
+    FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)
+        .getFactorGraph(DynamicAssignment.EMPTY);
 
     // Should be able to get 0 training error.
-    FactorGraphPredictor predictor = new FactorGraphPredictor(trainedModel, y, new JunctionTree());
+    SimpleFactorGraphPredictor predictor = new SimpleFactorGraphPredictor(
+        trainedModel, y, new JunctionTree());
     for (Example<Assignment, Assignment> trainingDatum : trainingData) {
       Assignment prediction = predictor.getBestPrediction(trainingDatum.getInput());
       assertEquals(trainingDatum.getOutput(), prediction);

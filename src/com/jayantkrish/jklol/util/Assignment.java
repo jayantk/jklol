@@ -12,8 +12,8 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
- * An Assignment represents a set of values assigned to a set of variables.
- * Assignments are immutable.
+ * An Assignment represents a set of values assigned to a set of variables,
+ * possibly nested within plates. Assignments are immutable.
  */
 public class Assignment {
 
@@ -22,6 +22,13 @@ public class Assignment {
 
   private SortedMap<Integer, Object> varValueMap;
 
+  /**
+   * Creates an {@code Assignment} with the given variable values, and no
+   * plates.
+   * 
+   * @param varNums
+   * @param values
+   */
   public Assignment(List<Integer> varNums, List<? extends Object> values) {
     // TODO: Store actual variables (VariableNumMap) and ensure that
     // assigned values are compatible.

@@ -7,6 +7,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -58,6 +59,22 @@ public class TableFactor extends DiscreteFactor {
     return builder.build();
   }
 
+  /**
+   * Gets a {@code TableFactor} over {@code vars} which assigns weight 1 to all
+   * assignments.
+   * 
+   * @param vars
+   * @return
+   */
+  public static TableFactor unity(VariableNumMap vars) {
+    TableFactorBuilder builder = new TableFactorBuilder(vars);
+    Iterator<Assignment> iter = new AllAssignmentIterator(vars);
+    while (iter.hasNext()) {
+      builder.setWeight(iter.next(), 1.0);
+    }
+    return builder.build();
+  }
+
   // //////////////////////////////////////////////////////////////////////////////
   // Factor overrides.
   // //////////////////////////////////////////////////////////////////////////////
@@ -87,10 +104,10 @@ public class TableFactor extends DiscreteFactor {
   public double size() {
     return weights.size();
   }
-      
+
   @Override
   public TableFactor relabelVariables(VariableRelabeling relabeling) {
-    return new TableFactor(relabeling.apply(getVars()), 
+    return new TableFactor(relabeling.apply(getVars()),
         weights.relabelDimensions(relabeling.getVariableIndexReplacementMap()));
   }
 

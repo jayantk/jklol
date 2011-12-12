@@ -7,23 +7,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalSet;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
-import com.jayantkrish.jklol.models.dynamic.Plate;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
-import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * A parametric family of graphical models. This class can represent either a
  * loglinear model or Bayesian Network, depending on the types of factors it is
  * constructed with. See {@link BayesNetBuilder} and
- * {@link LogLinearModelBuilder} for how to construct each type of model.
+ * {@link ParametricFactorGraphBuilder} for how to construct each type of model.
  * 
  * This class simply delegates all of its methods to the corresponding methods
  * of {@link ParametricFactor}, then aggregates and returns the results.
@@ -35,7 +31,7 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
   private List<ParametricFactor<SufficientStatistics>> parametricFactors;
   private List<VariablePattern> factorPatterns;
 
-  public ParametricFactorGraph(FactorGraph factorGraph, 
+  public ParametricFactorGraph(DynamicFactorGraph factorGraph, 
       List<ParametricFactor<SufficientStatistics>> parametricFactors, 
       List<VariablePattern> factorPatterns) {
     super(factorGraph);
@@ -54,16 +50,16 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
   }
 
   @Override
-  public FactorGraph getFactorGraphFromParameters(SufficientStatistics parameters) {
+  public DynamicFactorGraph getFactorGraphFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
-    FactorGraph result = getBaseFactorGraph();
+    List<PlateFactor> plateFactors = Lists.newArrayList();
     for (int i = 0; i < parameterList.size(); i++) {
-      result = result.addPlateFactor(new PlateFactor(
+      plateFactors.add(new PlateFactor(
           parametricFactors.get(i).getFactorFromParameters(parameterList.get(i)),
-          factorPatterns.get(i), Collections.<Plate>emptyList()));
+          factorPatterns.get(i)));
     }
-    return result;
+    return getBaseFactorGraph().addPlateFactors(plateFactors);
   }
 
   @Override
@@ -114,27 +110,8 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
   public String summary() {
     StringBuilder sb = new StringBuilder();
     sb.append("ParametricFactorGraph: ");
-    sb.append(getBaseFactorGraph().getVariables().size() + " variables, ");
+    sb.append(getBaseFactorGraph().getVariables() + " variables, ");
     sb.append(parametricFactors.size() + " parameteric factors, ");
-    sb.append(getBaseFactorGraph().getFactors().size() + " constant factors.\n");
-
-    sb.append("Discrete Variables:\n");
-    List<DiscreteVariable> variables = getBaseFactorGraph().getVariables().getDiscreteVariables();
-    for (int i = 0; i < variables.size(); i++) {
-      sb.append("  " + i + ": " + variables.get(i).toString() + "\n");
-    }
-    
-    sb.append("Constant Factors: \n");
-    List<Factor> factors = getBaseFactorGraph().getFactors();
-    for (Factor factor : factors) {
-      sb.append("  " + factor.getVars() + " size: " + factor.size() + "\n");
-    }
-
-    sb.append("Parametric Factors: \n");
-    for (ParametricFactor<SufficientStatistics> factor : parametricFactors) {
-      sb.append("  " + factor.getVars() + "\n");
-    }
-
     return sb.toString();
   }
 }

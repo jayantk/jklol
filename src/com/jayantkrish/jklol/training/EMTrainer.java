@@ -2,13 +2,13 @@ package com.jayantkrish.jklol.training;
 
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
-import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Estimates the parameters of a {@link ParametricFactorGraph} using expectation
@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class EMTrainer {
+public class EMTrainer extends AbstractTrainer {
 
   private final int numIterations;
   private final MarginalCalculator marginalCalculator;
@@ -45,20 +45,24 @@ public class EMTrainer {
     }
   }
 
+  @Override
   public SufficientStatistics train(ParametricFactorGraph bn,
-      SufficientStatistics initialParameters, Iterable<Assignment> trainingData) {
-    List<Assignment> trainingDataList = Lists.newArrayList(trainingData);
+      SufficientStatistics initialParameters,
+      Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
+    // This class always performs joint estimation, which corresponds to the
+    // outputs of trainingData.
+    List<DynamicAssignment> trainingDataList = getOutputAssignments(trainingData, true);
 
     SufficientStatistics oldStatistics = null;
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
       // E-step: compute the expected values of the hidden variables given the
       // current set of parameters.
-      FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
+      DynamicFactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
       SufficientStatisticsBatch batchStatistics = MapReduceConfiguration.getMapReduceExecutor()
           .mapReduce(trainingDataList,
-          new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
-          new SufficientStatisticsReducer(bn));
+              new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
+              new SufficientStatisticsReducer(bn));
       SufficientStatistics statistics = batchStatistics.getStatistics();
       log.logStatistic(i, "average loglikelihood",
           Double.toString(batchStatistics.getLoglikelihood() / batchStatistics.getNumExamples()));

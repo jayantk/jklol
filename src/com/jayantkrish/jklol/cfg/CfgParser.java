@@ -111,9 +111,9 @@ public class CfgParser {
     for (int i = 0; i < length; i++) {
       terminals.add(null);
     }
-    
+
+    // TODO: beamWidth.
     ParseChart chart = createParseChart(terminals, false);
-    chart.setBeamWidth(beamWidth);
     initializeChartAllTerminals(chart);
     upwardChartPass(chart);
     chart.updateOutsideEntry(0, chart.chartSize() - 1, 

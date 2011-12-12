@@ -1,15 +1,12 @@
 package com.jayantkrish.jklol.models.dynamic;
 
-import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * {@code PlateFactor} is a generalization of a {@code Factor} that represents a
@@ -28,16 +25,9 @@ public class PlateFactor {
   private final Factor factorToReplicate;
   private final VariablePattern variablePattern;
 
-  // Plates which replicate variables matched by variablePattern. These plates
-  // must be instantiated (i.e., replicated) before the replications of this
-  // factor can be created.
-  private final ImmutableList<Plate> dependentPlates;
-
-  public PlateFactor(Factor factorToReplicate, VariablePattern variablePattern,
-      List<Plate> dependentPlates) {
+  public PlateFactor(Factor factorToReplicate, VariablePattern variablePattern) {
     this.factorToReplicate = Preconditions.checkNotNull(factorToReplicate);
     this.variablePattern = Preconditions.checkNotNull(variablePattern);
-    this.dependentPlates = ImmutableList.copyOf(Preconditions.checkNotNull(dependentPlates));
   }
 
   /**
@@ -49,24 +39,7 @@ public class PlateFactor {
    * @return
    */
   public static PlateFactor fromFactor(Factor factor) {
-    return new PlateFactor(factor, VariablePattern.fromVariableNumMap(factor.getVars()),
-        Collections.<Plate>emptyList());
-  }
-
-  /**
-   * Returns {@code true} if {@code assignment} contains values for all of the
-   * variables necessary to instantiate the replications of this factor.
-   * 
-   * @param assignment
-   * @return
-   */
-  public boolean canInstantiate(Assignment assignment) {
-    for (Plate plate : dependentPlates) {
-      if (!assignment.containsAll(plate.getReplicationVariables().getVariableNums())) {
-        return false;
-      }
-    }
-    return true;
+    return new PlateFactor(factor, VariablePattern.fromVariableNumMap(factor.getVars()));
   }
 
   /**

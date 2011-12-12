@@ -1,8 +1,9 @@
 package com.jayantkrish.jklol.models.parametric;
 
 import com.jayantkrish.jklol.inference.MarginalSet;
-import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -23,23 +24,23 @@ public interface ParametricFamily<T> {
 
   /**
    * Gets the variables over which the distributions in this family are defined.
-   * All {@code FactorGraph}s returned by
+   * All {@code DynamicFactorGraph}s returned by
    * {@link #getFactorGraphFromParameters(Object)} are defined over the same
    * variables.
    * 
    * @return
    */
-  public VariableNumMap getVariables();
+  public DynamicVariableSet getVariables();
 
   /**
-   * Gets a {@code FactorGraph} which is the member of this family indexed by
+   * Gets a {@code DynamicFactorGraph} which is the member of this family indexed by
    * {@code parameters}. Note that multiple values of {@code parameters} may
    * result in the same {@code FactorGraph}.
    * 
    * @param parameters
    * @return
    */
-  public FactorGraph getFactorGraphFromParameters(T parameters);
+  public DynamicFactorGraph getFactorGraphFromParameters(T parameters);
 
   /**
    * Gets a new parameter vector for {@code this} with a reasonable default

@@ -70,4 +70,31 @@ public class OrConstraintFactorTest extends TestCase {
     Factor output = f.product(input);
     assertEquals(input, output.marginalize(output.getVars().removeAll(x3)));
   }
+  
+  public void testConditional() {
+    VariableNumMap z3 = factorGraph.getVariables().getVariablesByName("z3");
+    Factor input = discreteFactor.marginalize(z3);
+    Factor output = f.product(input);
+    Assignment a = factorGraph.getVariables().getVariablesByName("y1", "y2")
+        .outcomeArrayToAssignment(true, false);
+    Factor conditional = output.conditional(a);
+    
+    assertEquals(3.0, conditional.getUnnormalizedProbability("A", "B", "A"), .0001);
+    assertEquals(6.0, conditional.getUnnormalizedProbability("A", "B", "B"), .0001);
+    assertEquals(0.0, conditional.getUnnormalizedProbability("A", "C", "B"), .0001);
+    assertEquals(0.0, conditional.getUnnormalizedProbability("B", "C", "B"), .0001);
+    assertEquals(3.0, conditional.getUnnormalizedProbability("B", "B", "A"), .0001);
+    
+    VariableNumMap x3 = factorGraph.getVariables().getVariablesByName("x3");
+    Factor maxMarginal = conditional.maxMarginalize(conditional.getVars().removeAll(x3));
+    assertEquals(0.0, maxMarginal.getUnnormalizedProbability("B"), .0001);
+    assertEquals(0.0, maxMarginal.getUnnormalizedProbability("C"), .0001);
+    assertEquals(3.0, maxMarginal.getUnnormalizedProbability("A"), .0001);
+    
+    VariableNumMap x2 = factorGraph.getVariables().getVariablesByName("x2");
+    maxMarginal = conditional.maxMarginalize(conditional.getVars().removeAll(x2));
+    assertEquals(1.0, maxMarginal.getUnnormalizedProbability("B"), .0001);
+    assertEquals(0.0, maxMarginal.getUnnormalizedProbability("C"), .0001);
+    assertEquals(1.0, maxMarginal.getUnnormalizedProbability("A"), .0001);
+  }
 }

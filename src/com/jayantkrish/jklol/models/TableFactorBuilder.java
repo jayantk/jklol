@@ -36,9 +36,9 @@ public class TableFactorBuilder {
   public TableFactorBuilder(VariableNumMap variables) {
     Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size());
     this.vars = variables;
-    
+
     // Figure out the required size of the tensor.
-    // TODO: this should be wrapped into some sort of tensor factory. 
+    // TODO: this should be wrapped into some sort of tensor factory.
     int[] sizes = new int[vars.size()];
     List<DiscreteVariable> varTypes = variables.getDiscreteVariables();
     for (int i = 0; i < varTypes.size(); i++) {
@@ -70,7 +70,7 @@ public class TableFactorBuilder {
     setWeight(vars.outcomeToAssignment(varValues), weight);
   }
 
-  public void setWeight(double weight, Object ... varValues) {
+  public void setWeight(double weight, Object... varValues) {
     setWeightList(Arrays.asList(varValues), weight);
   }
 
@@ -96,6 +96,21 @@ public class TableFactorBuilder {
    */
   public void incrementWeight(Assignment assignment, double weight) {
     setWeight(assignment, getWeight(assignment) + weight);
+  }
+
+  /**
+   * Increments the weight of each assignment in {@code this} by its weight in
+   * {@code factor}.
+   * 
+   * @param factor
+   */
+  public void incrementWeight(DiscreteFactor factor) {
+    Preconditions.checkArgument(factor.getVars().equals(getVars()));
+    Iterator<Assignment> iter = factor.outcomeIterator();
+    while (iter.hasNext()) {
+      Assignment assignment = iter.next();
+      incrementWeight(assignment, factor.getUnnormalizedProbability(assignment));
+    }
   }
 
   /**

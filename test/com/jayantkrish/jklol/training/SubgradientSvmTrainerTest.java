@@ -14,10 +14,12 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.LogLinearModelBuilder;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.SubgradientSvmTrainer.HammingCost;
 import com.jayantkrish.jklol.util.Assignment;
@@ -34,16 +36,16 @@ public class SubgradientSvmTrainerTest extends TestCase {
 	
 	VariableNumMap inputVars, outputVars;
 	
-	List<Example<Assignment, Assignment>> trainingData;
+	List<Example<DynamicAssignment, DynamicAssignment>> trainingData;
 	
 	public void setUp() {
-	  LogLinearModelBuilder builder = new LogLinearModelBuilder();
+	  ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
 	  DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
 	      Arrays.asList(new String[] {"T", "F"}));
 
-	  builder.addDiscreteVariable("X0", tfVar);
-		builder.addDiscreteVariable("X1", tfVar);
-		builder.addDiscreteVariable("Y", tfVar);
+	  builder.addVariable("X0", tfVar);
+		builder.addVariable("X1", tfVar);
+		builder.addVariable("Y", tfVar);
 
 		builder.addFactor(DiscreteLogLinearFactor
 		    .createIndicatorFactor(builder.getVariables().getVariablesByName("X0", "Y")),
@@ -57,27 +59,25 @@ public class SubgradientSvmTrainerTest extends TestCase {
 		outputVars = builder.getVariables().getVariablesByName("Y");
 		
 		trainingData = Lists.newArrayList();
-		trainingData.add(Example.create(inputVars.outcomeArrayToAssignment("F", "F"),
-		    outputVars.outcomeArrayToAssignment("T")));
-		trainingData.add(Example.create(inputVars.outcomeArrayToAssignment("T", "F"),
-		    outputVars.outcomeArrayToAssignment("T")));
-		trainingData.add(Example.create(inputVars.outcomeArrayToAssignment("F", "T"),
-		    outputVars.outcomeArrayToAssignment("F")));
-		trainingData.add(Example.create(inputVars.outcomeArrayToAssignment("T", "T"),
-		    outputVars.outcomeArrayToAssignment("F")));
+		trainingData.add(makeExample("F", "F", "T"));
+		trainingData.add(makeExample("T", "F", "T"));
+		trainingData.add(makeExample("F", "T", "F"));
+		trainingData.add(makeExample("T", "T", "F"));
 		
 		t = new SubgradientSvmTrainer(10, 4, 1.0, new JunctionTree(), 
 		    new SubgradientSvmTrainer.HammingCost(), null);
 	}
 	
 	public void testTrain() {
-	  SufficientStatistics parameters = t.train(model, trainingData);
+	  SufficientStatistics parameters = t.train(model, model.getNewSufficientStatistics(), trainingData);
 	  assertEquals(1.0, parameters.getL2Norm(), .01);
 	  
-	  FactorGraph factorGraph = model.getFactorGraphFromParameters(parameters);
-	  for (Example<Assignment, Assignment> example : trainingData) {
-	    Assignment a = example.getInput().union(example.getOutput());
-	    assertEquals(0.5, factorGraph.getUnnormalizedLogProbability(a), .01);
+	  DynamicFactorGraph dynamicFactorGraph = model.getFactorGraphFromParameters(parameters);
+	  FactorGraph factorGraph = dynamicFactorGraph.getFactorGraph(DynamicAssignment.EMPTY);
+	  for (Example<DynamicAssignment, DynamicAssignment> example : trainingData) {
+	    Assignment input = dynamicFactorGraph.getVariables().toAssignment(example.getInput());
+	    Assignment output = dynamicFactorGraph.getVariables().toAssignment(example.getOutput());
+	    assertEquals(0.5, factorGraph.getUnnormalizedLogProbability(input.union(output)), .01);
 	  }
 	  
 	  VariableNumMap vars = inputVars.union(outputVars);
@@ -86,7 +86,7 @@ public class SubgradientSvmTrainerTest extends TestCase {
 	}
   
 	public void testHammingCost() {
-	  FactorGraph graph = model.getFactorGraphFromParameters(model.getNewSufficientStatistics());
+	  FactorGraph graph = model.getFactorGraphFromParameters(model.getNewSufficientStatistics()).getFactorGraph(DynamicAssignment.EMPTY);
 	  HammingCost cost = new HammingCost();
 	  FactorGraph augmented = cost.augmentWithCosts(graph, outputVars, outputVars.outcomeArrayToAssignment("F"));
 	  assertEquals(3, augmented.getFactors().size());
@@ -98,4 +98,10 @@ public class SubgradientSvmTrainerTest extends TestCase {
 	  assertEquals(Math.E, addedFactor.getUnnormalizedProbability(outputVars.outcomeArrayToAssignment("T")));
 	  assertEquals(1.0, addedFactor.getUnnormalizedProbability(outputVars.outcomeArrayToAssignment("F")));
 	}
+	
+	private Example<DynamicAssignment, DynamicAssignment> makeExample(String x0, String x1, String y) {
+	  return Example.create(DynamicAssignment.fromAssignment(inputVars.outcomeArrayToAssignment(x0, x1)),
+		    DynamicAssignment.fromAssignment(outputVars.outcomeArrayToAssignment(y)));  
+	}
+
 }

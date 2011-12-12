@@ -15,6 +15,8 @@ import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
@@ -28,7 +30,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class SubgradientSvmTrainer {
+public class SubgradientSvmTrainer extends AbstractTrainer {
 
   private final int numIterations;
   private final int batchSize;
@@ -41,7 +43,7 @@ public class SubgradientSvmTrainer {
       double regularizationConstant, MarginalCalculator marginalCalculator,
       CostFunction costFunction, LogFunction log) {
     Preconditions.checkArgument(regularizationConstant > 0);
-    
+
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.regularization = regularizationConstant;
@@ -51,11 +53,12 @@ public class SubgradientSvmTrainer {
   }
 
   /**
-   * Estimates and returns optimal parameters for {@code modelFamily} on
-   * {@code trainingData}. {@code modelFamily} is presumed to be a loglinear
-   * model. {@code trainingData} contains the inputVar/outputVar pairs for training.
-   * The inputVar and outputVar of each training example should be over disjoint sets
-   * of variables, and the union of these sets should contain all of the
+   * {@inheritDoc}
+   * 
+   * {@code modelFamily} is presumed to be a loglinear model.
+   * {@code trainingData} contains the inputVar/outputVar pairs for training.
+   * The inputVar and outputVar of each training example should be over disjoint
+   * sets of variables, and the union of these sets should contain all of the
    * variables in {@code modelFamily}.
    * 
    * @param modelFamily
@@ -63,13 +66,15 @@ public class SubgradientSvmTrainer {
    * @return
    */
   public SufficientStatistics train(ParametricFactorGraph modelFamily,
-      Iterable<Example<Assignment, Assignment>> trainingData) {
-    SufficientStatistics parameters = modelFamily.getNewSufficientStatistics();
+      SufficientStatistics initialParameters,
+      Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
+    SufficientStatistics parameters = initialParameters;
 
     // cycledTrainingData loops indefinitely over the elements of trainingData.
     // This is desirable because we want batchSize examples but don't
     // particularly care where in trainingData they come from.
-    Iterator<Example<Assignment, Assignment>> cycledTrainingData = Iterators.cycle(trainingData);
+    Iterator<Example<DynamicAssignment, DynamicAssignment>> cycledTrainingData =
+        Iterators.cycle(trainingData);
 
     // Each iteration processes a single batch of batchSize training examples.
     for (int i = 0; i < numIterations; i++) {
@@ -78,38 +83,23 @@ public class SubgradientSvmTrainer {
       // sample; however, deterministically iterating over the examples may be
       // more efficient and is fairly close if the examples are provided in
       // random order.
-      List<Example<Assignment, Assignment>> batchData = getBatch(cycledTrainingData, batchSize);
+      List<Example<DynamicAssignment, DynamicAssignment>> batchData = getBatch(cycledTrainingData, batchSize);
 
-      FactorGraph currentModel = modelFamily.getFactorGraphFromParameters(parameters);
+      DynamicFactorGraph currentDynamicModel = modelFamily.getFactorGraphFromParameters(parameters);
       SufficientStatistics subgradient = modelFamily.getNewSufficientStatistics();
       int numIncorrect = 0;
       double approximateObjectiveValue = regularization * Math.pow(parameters.getL2Norm(), 2) / 2;
-      for (Example<Assignment, Assignment> example : batchData) {
-        // Get the cost-augmented best prediction for the current example
-        FactorGraph costAugmentedModel = costFunction.augmentWithCosts(currentModel,
-            currentModel.getVariables().intersection(example.getOutput().getVariableNums()),
-            example.getOutput());
-        FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(example.getInput());
-        
-        MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel)
-            .addConditionalVariables(example.getInput());
-        
-        Assignment prediction = predicted.getNthBestAssignment(0);
-        Assignment actual = example.getOutput().union(example.getInput());
-        if (!prediction.equals(actual)) {
-          // Convert the assignments into marginal (point) distributions in order to update 
-          // the parameter vector.
-          VariableNumMap conditionedVariables = conditionalCostAugmentedModel.getVariables().union(
-              conditionalCostAugmentedModel.getConditionedVariables());
-          MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionedVariables, actual);
-          MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionedVariables, prediction);
-          // Update the parameter vector
-          modelFamily.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
-          modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
-          // Update iteration statistics
+      for (Example<DynamicAssignment, DynamicAssignment> example : batchData) {
+
+        FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
+        Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
+        Assignment output = currentDynamicModel.getVariables().toAssignment(example.getOutput());
+
+        double objectiveValue = updateSubgradientWithInstance(currentModel, input, output, modelFamily, subgradient);
+
+        if (objectiveValue != 0.0) {
           numIncorrect++;
-          approximateObjectiveValue += (costAugmentedModel.getUnnormalizedLogProbability(prediction)
-              - costAugmentedModel.getUnnormalizedLogProbability(actual)) / batchSize; 
+          approximateObjectiveValue += objectiveValue / batchSize;
         }
       }
 
@@ -126,9 +116,57 @@ public class SubgradientSvmTrainer {
     return parameters;
   }
 
-  private List<Example<Assignment, Assignment>> getBatch(
-      Iterator<Example<Assignment, Assignment>> trainingData, int batchSize) {
-    List<Example<Assignment, Assignment>> batchData = Lists.newArrayListWithCapacity(batchSize);
+  /**
+   * Computes the subgradient of the given training example ({@code input} and
+   * {@code output}) and adds it to {@code subgradient}. Returns the structured
+   * hinge loss of the prediction vs. the actual output.
+   * 
+   * @param currentModel
+   * @param input
+   * @param output
+   * @param modelFamily
+   * @param subgradient
+   * @return
+   */
+  private double updateSubgradientWithInstance(FactorGraph currentModel, Assignment input, Assignment output,
+      ParametricFactorGraph modelFamily, SufficientStatistics subgradient) {
+    // Get the cost-augmented best prediction based on the current input.
+    FactorGraph costAugmentedModel = costFunction.augmentWithCosts(currentModel,
+        currentModel.getVariables().intersection(output.getVariableNums()),
+        output);
+    FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(input);
+    MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel);
+    Assignment prediction = predicted.getNthBestAssignment(0);
+
+    // Get the best value for any hidden variables, given the current input and
+    // correct output.
+    Assignment observed = output.union(input);
+    FactorGraph conditionalOutputModel = currentModel.conditional(observed);
+    MaxMarginalSet actualMarginals = marginalCalculator.computeMaxMarginals(conditionalOutputModel);
+    Assignment actual = actualMarginals.getNthBestAssignment(0);
+
+    // Update parameters if necessary.
+    if (!prediction.equals(actual)) {
+      // Convert the assignments into marginal (point) distributions in order to
+      // update
+      // the parameter vector.
+      MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionalOutputModel.getAllVariables(), actual);
+      MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionalCostAugmentedModel.getAllVariables(), prediction);
+      // Update the parameter vector
+      modelFamily.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
+      modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
+
+      // Return the loss, which is the amount by which the prediction is within
+      // the margin.
+      return (costAugmentedModel.getUnnormalizedLogProbability(prediction)
+      - costAugmentedModel.getUnnormalizedLogProbability(actual));
+    }
+    return 0.0;
+  }
+
+  private <P, Q> List<Example<P, Q>> getBatch(
+      Iterator<Example<P, Q>> trainingData, int batchSize) {
+    List<Example<P, Q>> batchData = Lists.newArrayListWithCapacity(batchSize);
     for (int i = 0; i < batchSize && trainingData.hasNext(); i++) {
       batchData.add(trainingData.next());
     }

@@ -36,20 +36,12 @@ public class JunctionTreeTest extends TestCase {
 	  JunctionTree jt = new JunctionTree();
 	  MarginalSet marginals = jt.computeMarginals(conditional);
 	  
-	  assertEquals(6.0, marginals.getPartitionFunction());
-	  assertEquals(6.0, marginals.getMarginal(Ints.asList()).getUnnormalizedProbability(Assignment.EMPTY));
+	  assertEquals(1.0, marginals.getMarginal(Ints.asList()).getUnnormalizedProbability(Assignment.EMPTY) / 
+	      marginals.getPartitionFunction());
 	}
 
 	public void testMaxMarginals() {
 		InferenceTestCases.testBasicMaxMarginals().runTest(new JunctionTree());
-	}
-	
-	public void testSequence() {
-	  InferenceTestCases.testSequenceUnconditional().runTest(new JunctionTree(), 0.0);
-	}
-	
-	public void testSequenceConditional() {
-	  InferenceTestCases.testSequenceConditional().runTest(new JunctionTree(), 0.0);
 	}
 }
 

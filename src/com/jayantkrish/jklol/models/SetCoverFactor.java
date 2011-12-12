@@ -16,7 +16,7 @@ public class SetCoverFactor extends AbstractFactor {
   private final Set<Object> requiredValues;
   private final Set<Object> impossibleValues;
   
-  private final List<DiscreteFactor> inputVarFactors;
+  private final List<Factor> inputVarFactors;
   private final List<Factor> cachedMaxMarginals;
   
   public SetCoverFactor(VariableNumMap inputVars, Set<Object> requiredValues, 
@@ -26,12 +26,11 @@ public class SetCoverFactor extends AbstractFactor {
     this.requiredValues = requiredValues;
     this.impossibleValues = impossibleValues;
     
-    // Ensure each argument factor is discrete. 
-    List<DiscreteFactor> discreteFactors = Lists.newArrayList();
+    // Ensure each argument factor is non-null 
     for (Factor factor : inputVarFactors) {
-      discreteFactors.add(factor.coerceToDiscrete());
+      Preconditions.checkArgument(factor != null);
     }
-    this.inputVarFactors = discreteFactors;
+    this.inputVarFactors = Lists.newArrayList(inputVarFactors);
     
     // Precompute max-marginals.
     this.cachedMaxMarginals = cacheMaxMarginals();
@@ -39,18 +38,17 @@ public class SetCoverFactor extends AbstractFactor {
   
   private List<Factor> cacheMaxMarginals() {
     List<Factor> maxMarginals = Lists.newArrayListWithCapacity(inputVarFactors.size());
-    Collections.fill(maxMarginals, null);
+    for (int i = 0; i < inputVarFactors.size(); i++) {
+      maxMarginals.add(null);
+    }
     for (Object requiredValue : requiredValues) {
       // Fulfill each requirement by greedily selecting the factor with the best probability of each required value.
       double bestProbability = Double.NEGATIVE_INFINITY;
       int bestFactorIndex = -1;
       for (int i = 0; i < this.inputVarFactors.size(); i++) {
-        Factor factor = inputVarFactors.get(i); 
-        if (factor == null) {
-          continue;
-        }
-        
+        Factor factor = inputVarFactors.get(i);
         double prob = factor.getUnnormalizedProbability(requiredValue);
+        
         if (prob >= bestProbability) {
           bestFactorIndex = i;
           bestProbability = prob;
@@ -59,7 +57,7 @@ public class SetCoverFactor extends AbstractFactor {
       Preconditions.checkState(bestFactorIndex != -1);
       VariableNumMap factorVariables = inputVarFactors.get(bestFactorIndex).getVars();
       Factor maxMarginal = TableFactor.pointDistribution(factorVariables, 
-          factorVariables.outcomeArrayToAssignment(requiredValue));
+          factorVariables.outcomeArrayToAssignment(requiredValue)).product(bestProbability);
       maxMarginals.set(bestFactorIndex, maxMarginal);
     }
 
@@ -67,20 +65,14 @@ public class SetCoverFactor extends AbstractFactor {
     // removed.
     for (int i = 0; i < inputVarFactors.size(); i++) {
       if (maxMarginals.get(i) == null) {
-        Factor currentFactor = inputVarFactors.get(i);
+        DiscreteFactor currentFactor = inputVarFactors.get(i).coerceToDiscrete(); 
         TableFactorBuilder builder = new TableFactorBuilder(currentFactor.getVars());
+        builder.incrementWeight(currentFactor);
         for (Object impossibleValue : impossibleValues) {
-          if (inputVarFactors.get(i).getUnnormalizedProbability(impossibleValue) > 0) {
-            builder.setWeight(-1.0 * currentFactor.getUnnormalizedProbability(impossibleValue), 
-                impossibleValue);
-          }
+          builder.setWeight(0.0, impossibleValue);
         }
-        
-        Factor maxMarginal = currentFactor;
-        if (builder.size() > 0) {
-          maxMarginal = currentFactor.add(builder.build());
-        }
-        maxMarginals.set(i, maxMarginal);
+                
+        maxMarginals.set(i, builder.build());
       }
     }
     return maxMarginals;

@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
@@ -60,15 +59,6 @@ public class FactorMarginalSet extends AbstractMarginalSet {
       output = output.union(factor.getVars());
     }
     return output;
-  }
-
-  @Override
-  public MarginalSet addConditionalVariables(Assignment values, VariableNumMap valueVariables) {
-    Preconditions.checkArgument(valueVariables.containsAll(values.getVariableNums()));
-    Assignment newValues = getConditionedValues().union(values);
-    VariableNumMap newVariables = getConditionedVariables().union(
-        valueVariables.intersection(values.getVariableNums()));
-    return new FactorMarginalSet(allFactors, partitionFunction, newVariables, newValues);
   }
 
   @Override

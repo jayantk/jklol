@@ -4,19 +4,19 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
-import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Train the weights of a ParametricFactorGraph using stepwise EM, an online
  * variant of EM.
  */
-public class StepwiseEMTrainer {
+public class StepwiseEMTrainer extends AbstractTrainer {
 
   private final int batchSize;
   private final int numIterations;
@@ -58,28 +58,25 @@ public class StepwiseEMTrainer {
   }
 
   /**
-   * Trains {@code bn} using {@code trainingData} as the training data. After
-   * this method returns, the parameters of {@code bn} will be updated to the
-   * trained values.
+   * {@inheritDoc}
    * 
-   * <p>
    * {@code initialParameters} are used as the starting point for training. A
    * reasonable initialization for these parameters is the uniform distribution
    * (add-one smoothing). These parameters can be retrieved using
    * {@code bn.getNewSufficientStatistics().increment(1)}. Note that stepwise EM
    * training will gradually forget the smoothing as the number of iterations
-   * increases. {@code initialParameters} may be modified by this method.
+   * increases.
    * 
    * @param bn
    * @param trainingData
    */
   public SufficientStatistics train(ParametricFactorGraph bn, SufficientStatistics initialParameters,
-      List<Assignment> trainingData) {
+      Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
     // Initialize state variables, which are used in updateBatchStatistics() and
     // updateParameters()
     double totalDecay = 1.0;
     // Make sure that the training data list is safe for concurrent access.
-    List<Assignment> trainingDataList = Lists.newArrayList(trainingData);
+    List<DynamicAssignment> trainingDataList = getOutputAssignments(trainingData, true);
     int numUpdates = 0;
 
     Collections.shuffle(trainingDataList);
@@ -89,15 +86,15 @@ public class StepwiseEMTrainer {
 
       int numBatches = (int) Math.ceil(((double) trainingDataList.size()) / batchSize);
       for (int j = 0; j < numBatches; j++) {
-        List<Assignment> batch = trainingDataList.subList(j * batchSize,
+        List<DynamicAssignment> batch = trainingDataList.subList(j * batchSize,
             Math.min((j + 1) * batchSize, trainingDataList.size()));
 
         // Calculate the sufficient statistics for batch.
-        FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
+        DynamicFactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
         SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()
             .mapReduce(batch,
-            new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
-            new SufficientStatisticsReducer(bn));
+                new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
+                new SufficientStatisticsReducer(bn));
         SufficientStatistics batchStatistics = result.getStatistics();
         log.logStatistic(i, "average loglikelihood",
             Double.toString(result.getLoglikelihood() / result.getNumExamples()));

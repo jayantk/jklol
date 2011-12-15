@@ -78,12 +78,14 @@ public class OrConstraintFactorTest extends TestCase {
     Assignment a = factorGraph.getVariables().getVariablesByName("y1", "y2")
         .outcomeArrayToAssignment(true, false);
     Factor conditional = output.conditional(a);
+    assertEquals(Arrays.asList("x1", "x2", "x3"), conditional.getVars().getVariableNames());
     
     assertEquals(3.0, conditional.getUnnormalizedProbability("A", "B", "A"), .0001);
     assertEquals(6.0, conditional.getUnnormalizedProbability("A", "B", "B"), .0001);
     assertEquals(0.0, conditional.getUnnormalizedProbability("A", "C", "B"), .0001);
     assertEquals(0.0, conditional.getUnnormalizedProbability("B", "C", "B"), .0001);
     assertEquals(3.0, conditional.getUnnormalizedProbability("B", "B", "A"), .0001);
+    assertEquals(0.0, conditional.getUnnormalizedProbability("B", "B", "B"), .0001);
     
     VariableNumMap x3 = factorGraph.getVariables().getVariablesByName("x3");
     Factor maxMarginal = conditional.maxMarginalize(conditional.getVars().removeAll(x3));
@@ -96,5 +98,62 @@ public class OrConstraintFactorTest extends TestCase {
     assertEquals(1.0, maxMarginal.getUnnormalizedProbability("B"), .0001);
     assertEquals(0.0, maxMarginal.getUnnormalizedProbability("C"), .0001);
     assertEquals(1.0, maxMarginal.getUnnormalizedProbability("A"), .0001);
+    
+    Assignment xAssignment = factorGraph.getVariables().getVariablesByName("x1", "x2") 
+        .outcomeArrayToAssignment("B", "B");
+    Factor conditional2 = conditional.conditional(xAssignment);
+    assertEquals(0.0, conditional2.getUnnormalizedProbability("B"), .0001);
+    assertEquals(0.0, conditional2.getUnnormalizedProbability("C"), .0001);
+    assertEquals(3.0, conditional2.getUnnormalizedProbability("A"), .0001);
+    
+    xAssignment = factorGraph.getVariables().getVariablesByName("x1", "x2")
+        .outcomeArrayToAssignment("B", "C");
+    conditional2 = conditional.conditional(xAssignment);
+    assertEquals(0.0, conditional2.getUnnormalizedProbability("B"), .0001);
+    assertEquals(0.0, conditional2.getUnnormalizedProbability("C"), .0001);
+    assertEquals(0.0, conditional2.getUnnormalizedProbability("A"), .0001);
+    
+    xAssignment = factorGraph.getVariables().getVariablesByName("x1", "x2")
+        .outcomeArrayToAssignment("A", "B");
+    conditional2 = conditional.conditional(xAssignment);
+    assertEquals(6.0, conditional2.getUnnormalizedProbability("B"), .0001);
+    assertEquals(0.0, conditional2.getUnnormalizedProbability("C"), .0001);
+    assertEquals(3.0, conditional2.getUnnormalizedProbability("A"), .0001);
+    
+    assertEquals(conditional2.getVars().outcomeArrayToAssignment("B"),
+        conditional2.getMostLikelyAssignments(1).get(0)); 
+  }
+  
+  public void testConditional2() {
+    VariableNumMap z3 = factorGraph.getVariables().getVariablesByName("z3");
+    VariableNumMap x3 = factorGraph.getVariables().getVariablesByName("x3");
+    Factor input = discreteFactor.marginalize(z3);
+    Factor output = f.product(input);
+    Assignment a = factorGraph.getVariables().getVariablesByName("y1", "y2")
+        .outcomeArrayToAssignment(true, true);
+    Factor conditional = output.conditional(a);
+    assertEquals(Arrays.asList("x1", "x2", "x3"), conditional.getVars().getVariableNames());
+    
+    Factor maxMarginal = conditional.maxMarginalize(conditional.getVars().removeAll(x3));
+    assertEquals(0.0, maxMarginal.getUnnormalizedProbability("B"), .0001);
+    assertEquals(0.0, maxMarginal.getUnnormalizedProbability("C"), .0001);
+    assertEquals(3.0, maxMarginal.getUnnormalizedProbability("A"), .0001);
+
+    Assignment best = conditional.getMostLikelyAssignments(1).get(0);
+    assertTrue(best.getValues().contains("C"));
+    assertTrue(best.getValues().contains("A"));
+  }
+  
+  public void testGetMostLikelyAssignments() {
+    VariableNumMap z3 = factorGraph.getVariables().getVariablesByName("z3");
+    VariableNumMap x2 = factorGraph.getVariables().getVariablesByName("x2");
+    VariableNumMap x1 = factorGraph.getVariables().getVariablesByName("x1");
+    Factor input = discreteFactor.marginalize(z3);
+    Factor output = f.product(Arrays.asList(input, 
+        TableFactor.pointDistribution(x2, x2.outcomeArrayToAssignment("A")),
+        TableFactor.pointDistribution(x1, x1.outcomeArrayToAssignment("A"))));
+    
+    Assignment best = output.getMostLikelyAssignments(1).get(0);
+    assertEquals(f.getVars().outcomeArrayToAssignment("A", "A", "B", true, false), best);
   }
 }

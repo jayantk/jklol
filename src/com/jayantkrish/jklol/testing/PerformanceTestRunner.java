@@ -26,15 +26,16 @@ public class PerformanceTestRunner {
     try {
       for (int j = 0; j < repetitions; j++) {
         testCase.setUp();
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
         testMethod.invoke(testCase);
-        total += System.currentTimeMillis() - start;
+        total += System.nanoTime() - start;
         testCase.tearDown();
       }
     } catch (Exception e) {
       e.printStackTrace();
     }
-    long avgTime = total / repetitions;
+
+    double avgTime = ((double) total) / (repetitions * 1000000);
     System.out.println(testMethod.getName() + ": " + avgTime + " ms");
   }
 }

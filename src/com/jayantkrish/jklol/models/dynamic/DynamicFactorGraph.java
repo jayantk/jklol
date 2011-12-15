@@ -42,7 +42,7 @@ public class DynamicFactorGraph {
     
     List<PlateFactor> plateFactors = Lists.newArrayList();
     for (Factor factor : factorGraph.getFactors()) {
-      plateFactors.add(PlateFactor.fromFactor(factor));
+      plateFactors.add(ReplicatedFactor.fromFactor(factor));
     }
     return new DynamicFactorGraph(variables, plateFactors);
   }
@@ -62,7 +62,8 @@ public class DynamicFactorGraph {
       factors.addAll(plateFactor.instantiateFactors(factorGraphVariables));
     }
     
-    return new FactorGraph(factorGraphVariables, factors);
+    return new FactorGraph(factorGraphVariables, factors,
+        VariableNumMap.emptyMap(), Assignment.EMPTY);
   }
   
   public DynamicFactorGraph addPlateFactors(List<PlateFactor> factors) {

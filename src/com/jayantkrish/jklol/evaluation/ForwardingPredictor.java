@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.evaluation;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.Converter;
@@ -19,7 +20,7 @@ import com.jayantkrish.jklol.util.Converter;
 public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
 
   private final Predictor<I2, O2> predictor;
-  private final Converter<I1, I2> inputConverter;
+  private final Function<I1, I2> inputConverter;
   private final Converter<O1, O2> outputConverter;
 
   /**
@@ -30,11 +31,17 @@ public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
    * @param inputConverter
    * @param outputConverter
    */
-  public ForwardingPredictor(Predictor<I2, O2> predictor, Converter<I1, I2> inputConverter,
+  public ForwardingPredictor(Predictor<I2, O2> predictor, Function<I1, I2> inputConverter, 
       Converter<O1, O2> outputConverter) {
     this.predictor = predictor;
     this.inputConverter = inputConverter;
     this.outputConverter = outputConverter;
+  }
+  
+  public static <I1, O1, I2, O2> ForwardingPredictor<I1, O1, I2, O2> create(
+      Predictor<I2, O2> predictor, Function<I1, I2> inputConverter, 
+      Converter<O1, O2> outputConverter) {
+    return new ForwardingPredictor<I1, O1, I2, O2>(predictor, inputConverter, outputConverter);
   }
 
   @Override
@@ -65,7 +72,7 @@ public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
     return predictor;
   }
   
-  public Converter<I1, I2> getInputConverter() {
+  public Function<I1, I2> getInputConverter() {
     return inputConverter;
   }
   

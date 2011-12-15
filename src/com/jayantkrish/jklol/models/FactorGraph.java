@@ -60,7 +60,8 @@ public class FactorGraph {
     inferenceHint = null;
   }
   
-  public FactorGraph(VariableNumMap variables, List<Factor> factors) {
+  public FactorGraph(VariableNumMap variables, List<Factor> factors, 
+      VariableNumMap conditionedVariables, Assignment conditionedAssignment) {
     this.variables = variables;
     this.factors = new IndexedList<Factor>(factors);
     // Initialize variable -> factor mapping
@@ -74,12 +75,11 @@ public class FactorGraph {
       }
     }
         
-    this.conditionedVariables = VariableNumMap.emptyMap();
-    this.conditionedValues = Assignment.EMPTY;
+    this.conditionedVariables = conditionedVariables;
+    this.conditionedValues = conditionedAssignment;
     this.inferenceHint = null;
   }
-
-
+  
   /**
    * Copy constructor. This method is private because {@code FactorGraph}s are
    * immutable.
@@ -109,7 +109,7 @@ public class FactorGraph {
       VariableNumMap factorVars = factors.get(i).getVars();
       allVars = allVars.union(factorVars);
     }
-    return new FactorGraph(allVars, factors);
+    return new FactorGraph(allVars, factors, VariableNumMap.emptyMap(), Assignment.EMPTY);
   }
     
   /**
@@ -411,25 +411,19 @@ public class FactorGraph {
       return this;
     }
 
-    FactorGraph newFactorGraph = new FactorGraph();
-    newFactorGraph.conditionedValues = this.conditionedValues.union(assignment);
-    newFactorGraph.conditionedVariables = this.conditionedVariables.union(
+    Assignment newConditionedValues = this.conditionedValues.union(assignment);
+    VariableNumMap newConditionedVariables = this.conditionedVariables.union(
         this.getVariables().intersection(assignment.getVariableNums()));
-
-    // Copy the uneliminated variables in currentFactorGraph to nextFactorGraph
-    for (String variableName : getVariables().getVariableNames()) {
-      int varIndex = getVariables().getVariableByName(variableName);
-      if (!assignment.contains(varIndex)) {
-        newFactorGraph = newFactorGraph.addVariableWithIndex(variableName,
-            variables.getVariable(varIndex), varIndex);
-      }
-    }
+    
+    VariableNumMap newVariables = getVariables().removeAll(assignment.getVariableNums()); 
 
     // Condition each factor on assignment.
+    List<Factor> newFactors = Lists.newArrayListWithCapacity(getFactors().size());
     for (Factor factor : getFactors()) {
-      newFactorGraph = newFactorGraph.addFactor(factor.conditional(assignment));
+      newFactors.add(factor.conditional(assignment));
     }
-    return newFactorGraph;
+    
+    return new FactorGraph(newVariables, newFactors, newConditionedVariables, newConditionedValues);
   }
 
   /**

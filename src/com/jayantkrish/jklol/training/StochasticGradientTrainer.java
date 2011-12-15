@@ -47,7 +47,8 @@ public class StochasticGradientTrainer extends AbstractTrainer {
     DynamicFactorGraph dynamicFactorGraph = logLinearModel.getFactorGraphFromParameters(parameters);
     FactorGraph factorGraph = dynamicFactorGraph.getFactorGraph(dynamicExample.getInput());
     Assignment input = dynamicFactorGraph.getVariables().toAssignment(dynamicExample.getInput());
-    Assignment output = dynamicFactorGraph.getVariables().toAssignment(dynamicExample.getOutput());
+    Assignment observed = dynamicFactorGraph.getVariables().toAssignment(
+        dynamicExample.getOutput().union(dynamicExample.getInput()));
     
     // The gradient is the conditional expected counts minus the unconditional
     // expected counts
@@ -62,7 +63,7 @@ public class StochasticGradientTrainer extends AbstractTrainer {
 
     // Compute the first term of the gradient, the model expectations
     // conditioned on the training example.
-    FactorGraph outputFactorGraph = factorGraph.conditional(input.union(output)); 
+    FactorGraph outputFactorGraph = factorGraph.conditional(observed); 
     MarginalSet outputMarginals = marginalCalculator.computeMarginals(
         outputFactorGraph);
     logLinearModel.incrementSufficientStatistics(gradient, outputMarginals, 1.0);

@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
+import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 import com.jayantkrish.jklol.util.Assignment;
@@ -55,7 +56,7 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     List<PlateFactor> plateFactors = Lists.newArrayList();
     for (int i = 0; i < parameterList.size(); i++) {
-      plateFactors.add(new PlateFactor(
+      plateFactors.add(new ReplicatedFactor(
           parametricFactors.get(i).getFactorFromParameters(parameterList.get(i)),
           factorPatterns.get(i)));
     }

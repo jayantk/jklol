@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -7,14 +8,16 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class SetCoverFactor extends AbstractFactor {
 
-  private final Set<Object> requiredValues;
-  private final Set<Object> impossibleValues;
+  private final ImmutableSet<Object> requiredValues;
+  private final ImmutableSet<Object> impossibleValues;
   
   private final List<Factor> inputVarFactors;
   private final List<Factor> cachedMaxMarginals;
@@ -23,8 +26,8 @@ public class SetCoverFactor extends AbstractFactor {
       Set<Object> impossibleValues, List<Factor> inputVarFactors) { 
     super(inputVars);
     Preconditions.checkArgument(inputVarFactors.size() == inputVars.size());
-    this.requiredValues = requiredValues;
-    this.impossibleValues = impossibleValues;
+    this.requiredValues = ImmutableSet.copyOf(requiredValues);
+    this.impossibleValues = ImmutableSet.copyOf(impossibleValues);
     
     // Ensure each argument factor is non-null 
     for (Factor factor : inputVarFactors) {
@@ -46,10 +49,10 @@ public class SetCoverFactor extends AbstractFactor {
       double bestProbability = Double.NEGATIVE_INFINITY;
       int bestFactorIndex = -1;
       for (int i = 0; i < this.inputVarFactors.size(); i++) {
-        Factor factor = inputVarFactors.get(i);
+        Factor factor = inputVarFactors.get(i); 
         double prob = factor.getUnnormalizedProbability(requiredValue);
         
-        if (prob >= bestProbability) {
+        if (prob >= bestProbability && maxMarginals.get(i) == null) {
           bestFactorIndex = i;
           bestProbability = prob;
         }
@@ -82,6 +85,7 @@ public class SetCoverFactor extends AbstractFactor {
   public double getUnnormalizedProbability(Assignment assignment) {
     double logProbability = 0.0;
     List<Object> inputValues = assignment.intersection(getVars()).getValues();
+    Set<Object> unfoundValues = Sets.newHashSet(requiredValues);
     for (int i = 0; i < inputValues.size(); i++) {
       Object inputValue = inputValues.get(i);
       if (impossibleValues.contains(inputValue)) {
@@ -90,13 +94,13 @@ public class SetCoverFactor extends AbstractFactor {
         // probability.
         return 0.0;
       }
-      requiredValues.remove(inputValue);
+      unfoundValues.remove(inputValue);
       if (inputVarFactors.get(i) != null) {
         logProbability += Math.log(inputVarFactors.get(i).getUnnormalizedProbability(assignment));
       }
     }
 
-    if (requiredValues.size() > 0) {
+    if (unfoundValues.size() > 0) {
       // Not all of the required values were found in the inputVar.
       return 0.0;
     } else {
@@ -160,7 +164,32 @@ public class SetCoverFactor extends AbstractFactor {
   
   @Override
   public Factor conditional(Assignment assignment) {
-    throw new UnsupportedOperationException();
+    if (!getVars().containsAny(assignment.getVariableNums())) {
+      return this;
+    }
+    VariableNumMap myVars = getVars();    
+    Set<Object> newRequiredValues = Sets.newHashSet(requiredValues);
+    for (Integer varNum : assignment.getVariableNums()) {
+      if (myVars.contains(varNum)) {
+        Object value = assignment.getValue(varNum);
+        newRequiredValues.remove(value);
+        
+        if (impossibleValues.contains(value)) {
+          // Can't possibly satisfy the constraints anymore.
+          return TableFactor.zero(myVars.removeAll(assignment.getVariableNums()));
+        }
+      }
+    }
+    
+    List<Factor> newFactors = Lists.newArrayListWithCapacity(inputVarFactors.size()); 
+    for (Factor inputVarFactor : inputVarFactors) {
+      if (!inputVarFactor.getVars().containsAny(assignment.getVariableNums())) {
+        newFactors.add(inputVarFactor);
+      }
+    }
+    
+    return new SetCoverFactor(myVars.removeAll(assignment.getVariableNums()), 
+        newRequiredValues, impossibleValues, newFactors);
   }
 
   @Override
@@ -195,6 +224,11 @@ public class SetCoverFactor extends AbstractFactor {
 
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
-    throw new UnsupportedOperationException();
+    Preconditions.checkArgument(numAssignments == 1);
+    List<Assignment> outputAssignments = Lists.newArrayListWithCapacity(cachedMaxMarginals.size());
+    for (Factor cached : cachedMaxMarginals) {
+      outputAssignments.addAll(cached.getMostLikelyAssignments(numAssignments));
+    }
+    return Arrays.asList(Assignment.unionAll(outputAssignments));
   }
 }

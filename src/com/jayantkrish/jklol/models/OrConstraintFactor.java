@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +80,7 @@ public class OrConstraintFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(getVars().containsAll(assignment.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
 
     Set<Object> requiredValues = Sets.newHashSet();
     Set<Object> impossibleValues = Sets.newHashSet();
@@ -91,14 +92,18 @@ public class OrConstraintFactor extends AbstractFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
+    if (!getVars().containsAny(assignment.getVariableNums())) {
+      return this;
+    }
     Preconditions.checkArgument(assignment.containsAll(orVars.getVariableNums()));
-    Preconditions.checkArgument(!inputVars.containsAny(assignment.getVariableNums()));
     
     Set<Object> requiredValues = Sets.newHashSet();
     Set<Object> impossibleValues = Sets.newHashSet();
     getRequiredAndImpossibleValues(assignment, requiredValues, impossibleValues);
   
-    return new SetCoverFactor(inputVars, requiredValues, impossibleValues, inputVarFactors);
+    Assignment inputAssignment = assignment.intersection(inputVars.getVariableNums());
+    return new SetCoverFactor(inputVars, requiredValues, impossibleValues, inputVarFactors)
+    .conditional(inputAssignment);
   }
   
   
@@ -217,6 +222,19 @@ public class OrConstraintFactor extends AbstractFactor {
 
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
-    throw new UnsupportedOperationException();
+    Preconditions.checkArgument(numAssignments == 1, "Only 1 best assignment is supported.");
+    Set<Assignment> bestAssignments = Sets.newHashSet();
+    for (Factor factor : inputVarFactors) {
+      bestAssignments.addAll(factor.getMostLikelyAssignments(numAssignments));
+    }
+    Assignment inputAssignment = Assignment.unionAll(bestAssignments);
+    
+    Set<Object> values = Sets.newHashSet(inputAssignment.getValues());
+    List<Boolean> outputOrValues = Lists.newArrayList();
+    for (String variableName : orVars.getVariableNames()) {
+      outputOrValues.add(values.contains(orValues.get(variableName)));
+    }
+    Assignment orAssignment = orVars.outcomeToAssignment(outputOrValues);
+    return Arrays.asList(orAssignment.union(inputAssignment));
   }
 }

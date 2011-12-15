@@ -88,7 +88,7 @@ public class LinearClassifierFactor extends AbstractFactor {
     // Get the log probabilities of each outputVar value.
     Tensor multiplied = logWeights.elementwiseProduct(inputFeatureVector.relabelDimensions(inputVarNums));
     Tensor logProbs = multiplied.sumOutDimensions(Sets.newHashSet(Ints.asList(inputVarNums)));
-    
+
     // Construct a table factor with the unnormalized probabilities of each outputVar value.
     TableFactorBuilder outputBuilder = new TableFactorBuilder(outputVar);
     for (int i = 0; i < outputVariableType.numValues(); i++) {

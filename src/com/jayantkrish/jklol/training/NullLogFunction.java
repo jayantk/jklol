@@ -8,7 +8,9 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class NullLogFunction implements LogFunction {
+public class NullLogFunction extends AbstractLogFunction {
+  
+  public NullLogFunction() { super(); }
 
   @Override
   public void log(Assignment example, FactorGraph graph) {}

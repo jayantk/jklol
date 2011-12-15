@@ -92,8 +92,10 @@ public class SequenceModelTest extends TestCase {
   }
   
   public void testTrainSvm() {
+    DefaultLogFunction logFn = new DefaultLogFunction();
     testZeroTrainingError(new SubgradientSvmTrainer(80, 1, 1.0, new JunctionTree(),
-        new SubgradientSvmTrainer.HammingCost(), null));
+        new SubgradientSvmTrainer.HammingCost(), logFn));
+    logFn.printTimeStatistics();
   }
   
   public void testTrainLogLinear() {
@@ -103,7 +105,7 @@ public class SequenceModelTest extends TestCase {
   private void testZeroTrainingError(Trainer trainer) {
     SufficientStatistics parameters = trainer.train(sequenceModel, sequenceModel.getNewSufficientStatistics(), trainingData); 
     DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);
-
+    
     // Should be able to get 0 training error.
     FactorGraphPredictor predictor = new FactorGraphPredictor(trainedModel, 
         VariablePattern.fromTemplateVariables(y, VariableNumMap.emptyMap()), new JunctionTree());

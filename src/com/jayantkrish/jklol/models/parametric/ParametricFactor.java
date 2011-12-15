@@ -38,7 +38,7 @@ public interface ParametricFactor<T> {
   /**
    * Gets a {@code Factor} from a set of {@code parameters}. This method returns
    * an element of this parametric family. Note that multiple values of
-   * {@code parameters} may return the same {@code PlateFactor}, that is, there
+   * {@code parameters} may return the same {@code ReplicatedFactor}, that is, there
    * is no guarantee of uniqueness.
    * 
    * @param parameters

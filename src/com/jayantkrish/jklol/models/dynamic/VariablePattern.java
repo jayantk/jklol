@@ -91,6 +91,25 @@ public class VariablePattern {
   }
 
   /**
+   * Gets a {@code VariablePattern} which matches {@code plateVariables} in each
+   * replication of {@code plateName}. {@code fixedVariables} are added to each
+   * match as well.
+   * 
+   * @param plateName
+   * @param plateVariables
+   * @param fixedVariables
+   * @return
+   */
+  public static VariablePattern fromPlate(String plateName, VariableNumMap plateVariables,
+      VariableNumMap fixedVariables) {
+    List<VariableNameMatcher> matchers = Lists.newArrayList();
+    for (String variableName : plateVariables.getVariableNames()) {
+      matchers.add(new VariableNameMatcher(plateName, variableName, 0));
+    }
+    return new VariablePattern(matchers, plateVariables, fixedVariables);
+  }
+
+  /**
    * Gets the variables which may be matched multiple times in the factor graph.
    * 
    * @return
@@ -157,6 +176,15 @@ public class VariablePattern {
       }
     }
     return validMatches;
+  }
+
+  public VariableNumMap getAllMatchingVariables(VariableNumMap inputVariables) {
+    // TODO: this is rather inefficient.
+    VariableNumMap jointMatch = VariableNumMap.emptyMap();
+    for (VariableMatch match : matchVariables(inputVariables)) {
+      jointMatch = jointMatch.union(match.getMatchedVariables());
+    }
+    return jointMatch;
   }
 
   public static class VariableMatch {

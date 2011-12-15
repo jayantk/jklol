@@ -17,6 +17,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
 
@@ -75,6 +76,18 @@ public class VariableNumMap {
       varNums.add(i);
     }
     return new VariableNumMap(varNums, variableNames, variables);
+  }
+  
+  /**
+   * Creates a {@code VariableNumMap} containing a single variable.
+   * 
+   * @param varNum
+   * @param varName
+   * @param variable
+   * @return
+   */
+  public static VariableNumMap singleton(int varNum, String varName, Variable variable) {
+    return new VariableNumMap(Ints.asList(varNum), Arrays.asList(varName), Arrays.asList(variable));
   }
 
   /**

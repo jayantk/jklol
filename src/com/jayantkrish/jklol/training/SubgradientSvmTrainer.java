@@ -91,12 +91,16 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       double approximateObjectiveValue = regularization * Math.pow(parameters.getL2Norm(), 2) / 2;
       for (Example<DynamicAssignment, DynamicAssignment> example : batchData) {
 
+        log.startTimer("dynamic_instantiation");
         FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
         Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
-        Assignment output = currentDynamicModel.getVariables().toAssignment(example.getOutput());
-
-        double objectiveValue = updateSubgradientWithInstance(currentModel, input, output, modelFamily, subgradient);
-
+        Assignment observed = currentDynamicModel.getVariables().toAssignment(example.getOutput().union(example.getInput()));
+        log.stopTimer("dynamic_instantiation");
+        
+        log.startTimer("update_subgradient");
+        double objectiveValue = updateSubgradientWithInstance(currentModel, input, observed, modelFamily, subgradient);
+        log.stopTimer("update_subgradient");
+        
         if (objectiveValue != 0.0) {
           numIncorrect++;
           approximateObjectiveValue += objectiveValue / batchSize;
@@ -128,38 +132,54 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
    * @param subgradient
    * @return
    */
-  private double updateSubgradientWithInstance(FactorGraph currentModel, Assignment input, Assignment output,
+  private double updateSubgradientWithInstance(FactorGraph currentModel, Assignment input, Assignment observed,
       ParametricFactorGraph modelFamily, SufficientStatistics subgradient) {
     // Get the cost-augmented best prediction based on the current input.
+    Assignment outputAssignment = observed.removeAll(input.getVariableNums());
+
+    log.startTimer("update_subgradient/cost_augment");
     FactorGraph costAugmentedModel = costFunction.augmentWithCosts(currentModel,
-        currentModel.getVariables().intersection(output.getVariableNums()),
-        output);
+        currentModel.getVariables().intersection(outputAssignment.getVariableNums()),
+        outputAssignment);
+    log.stopTimer("update_subgradient/cost_augment");
+    
+    log.startTimer("update_subgradient/condition");
     FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(input);
+    log.stopTimer("update_subgradient/condition");
+    
+    log.startTimer("update_subgradient/inference");
     MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel);
     Assignment prediction = predicted.getNthBestAssignment(0);
+    log.stopTimer("update_subgradient/inference");
 
     // Get the best value for any hidden variables, given the current input and
     // correct output.
-    Assignment observed = output.union(input);
+    log.startTimer("update_subgradient/condition");
     FactorGraph conditionalOutputModel = currentModel.conditional(observed);
+    log.stopTimer("update_subgradient/condition");
+    
+    log.startTimer("update_subgradient/inference");
     MaxMarginalSet actualMarginals = marginalCalculator.computeMaxMarginals(conditionalOutputModel);
     Assignment actual = actualMarginals.getNthBestAssignment(0);
-
+    log.stopTimer("update_subgradient/inference");
+    
     // Update parameters if necessary.
     if (!prediction.equals(actual)) {
+      log.startTimer("update_subgradient/parameter_update");
       // Convert the assignments into marginal (point) distributions in order to
-      // update
-      // the parameter vector.
+      // update the parameter vector.
       MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionalOutputModel.getAllVariables(), actual);
       MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionalCostAugmentedModel.getAllVariables(), prediction);
       // Update the parameter vector
       modelFamily.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
       modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
-
       // Return the loss, which is the amount by which the prediction is within
       // the margin.
-      return (costAugmentedModel.getUnnormalizedLogProbability(prediction)
-      - costAugmentedModel.getUnnormalizedLogProbability(actual));
+      double loss = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction)
+          - conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual); 
+      log.startTimer("update_subgradient/parameter_update");
+      
+      return loss;
     }
     return 0.0;
   }
@@ -221,6 +241,19 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
         augmentedGraph = augmentedGraph.addFactor(builder.build());
       }
       return augmentedGraph;
+    }
+  }
+
+  /**
+   * A cost function which ignores any errors. This cost function leaves the
+   * input factor graph unchanged. Note that this reduces the structured SVM to
+   * a structured perceptron.
+   * 
+   * @author jayantk
+   */
+  public static class ZeroCost implements CostFunction {
+    public FactorGraph augmentWithCosts(FactorGraph factorGraph, VariableNumMap outputVariables, Assignment trueLabel) {
+      return factorGraph;
     }
   }
 }

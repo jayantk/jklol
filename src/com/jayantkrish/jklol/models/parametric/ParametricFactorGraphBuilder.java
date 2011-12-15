@@ -9,12 +9,13 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
+import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 
 /**
  * Builder for incrementally constructing {@link ParametricFactorGraph}s.
- * Depending on the types of factors added to the builder, this class can
- * build either a Bayesian network or a log-linear model.
+ * Depending on the types of factors added to the builder, this class can build
+ * either a Bayesian network or a log-linear model.
  */
 public class ParametricFactorGraphBuilder {
 
@@ -72,7 +73,17 @@ public class ParametricFactorGraphBuilder {
    * @param factor
    */
   public void addConstantFactor(Factor factor) {
-    constantFactors.add(PlateFactor.fromFactor(factor));
+    constantFactors.add(ReplicatedFactor.fromFactor(factor));
+  }
+
+  /**
+   * Adds an unparameterized, dynamically-instantiated factor to the model under
+   * construction.
+   * 
+   * @param factor
+   */
+  public void addConstantFactor(PlateFactor factor) {
+    constantFactors.add(factor);
   }
 
   /**
@@ -84,7 +95,7 @@ public class ParametricFactorGraphBuilder {
     logLinearFactors.add(factor);
     factorPatterns.add(factorPattern);
   }
-  
+
   /**
    * Adds a parameterized factor to the log linear model being constructed.
    * 

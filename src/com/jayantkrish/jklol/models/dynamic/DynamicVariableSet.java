@@ -54,6 +54,12 @@ public class DynamicVariableSet {
   public VariableNumMap getFixedVariables() {
     return fixedVariables;
   }
+  
+  public DynamicVariableSet getPlate(String plateName) {
+    int index = plateNames.indexOf(plateName);
+    Preconditions.checkArgument(index != -1);
+    return plates.get(index);
+  }
 
   public boolean isValidAssignment(DynamicAssignment assignment) {
     if (!fixedVariables.isValidAssignment(assignment.getFixedAssignment())) {
@@ -95,7 +101,8 @@ public class DynamicVariableSet {
     }
     
     for (int i = 0; i < plateNames.size(); i++) {
-      Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)));
+      Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)),
+          "Cannot assign: " + assignment + " to: " + this);
       List<DynamicAssignment> plateValues = assignment.getPlateValue(plateNames.get(i));
       for (int j = 0; j < plateValues.size(); j++) {
         plates.get(i).instantiateVariablesHelper(plateValues.get(j), 
@@ -113,8 +120,8 @@ public class DynamicVariableSet {
   private int toAssignmentHelper(DynamicAssignment assignment, int varNumOffset, 
       Map<Integer, Object> values) {
     Assignment fixedAssignment = assignment.getFixedAssignment(); 
-    Preconditions.checkArgument(fixedVariables.containsAll(
-        fixedAssignment.getVariableNums()));
+    Preconditions.checkArgument(fixedVariables.containsAll(fixedAssignment.getVariableNums()), 
+        "Cannot assign: " + assignment + " to: " + this);
     
     for (int i = 0; i < fixedVariables.size(); i++) {
       int curVarNum = fixedVariables.getVariableNums().get(i);
@@ -125,7 +132,8 @@ public class DynamicVariableSet {
     
     int curOffset = varNumOffset + fixedVariables.size();
     for (int i = 0; i < plateNames.size(); i++) {
-      Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)));
+      Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)),
+          "Cannot assign: " + assignment + " to: " + this);
       for (DynamicAssignment plateValue : assignment.getPlateValue(plateNames.get(i))) {
         curOffset = plates.get(i).toAssignmentHelper(plateValue, curOffset, values);
       }
@@ -213,5 +221,10 @@ public class DynamicVariableSet {
           otherVariables.plates.equals(this.plates);
     }
     return false;
+  }
+  
+  @Override
+  public String toString() {
+    return "(" + fixedVariables.toString() + " plates: " + plateNames.toString() + ")";  
   }
 }

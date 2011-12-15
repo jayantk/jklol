@@ -9,6 +9,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -250,10 +251,12 @@ public class Assignment {
     return new Assignment(newVarNums, newVarVals);
   }
 
+  @Override
   public int hashCode() {
     return varValueMap.hashCode();
   }
 
+  @Override
   public boolean equals(Object o) {
     if (o instanceof Assignment) {
       Assignment a = (Assignment) o;
@@ -262,7 +265,26 @@ public class Assignment {
     return false;
   }
 
+  @Override
   public String toString() {
     return varValueMap.keySet().toString() + "=" + varValueMap.values().toString();
+  }
+
+  /**
+   * Computes the union of {@code assignments}. Equivalent to computing the
+   * union iteratively using {@link #union(Assignment)}, but may be faster.
+   * 
+   * @param assignments
+   * @return
+   */
+  public static Assignment unionAll(Collection<Assignment> assignments) {
+    SortedMap<Integer, Object> newValues = Maps.newTreeMap();
+    for (Assignment assignment : assignments) {
+      for (Map.Entry<Integer, Object> varValue : assignment.varValueMap.entrySet()) {
+        Preconditions.checkArgument(!newValues.containsKey(varValue.getKey()));
+        newValues.put(varValue.getKey(), varValue.getValue());
+      }
+    }
+    return new Assignment(newValues);
   }
 }

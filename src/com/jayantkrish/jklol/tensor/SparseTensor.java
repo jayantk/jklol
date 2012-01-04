@@ -132,10 +132,9 @@ public class SparseTensor implements Tensor {
    * @return
    */
   @Override
-  public SparseTensor elementwiseProduct(Tensor otherTensor) {
-    SparseTensor other = (SparseTensor) otherTensor;
+  public SparseTensor elementwiseProduct(Tensor other) {
     Set<Integer> myDims = Sets.newHashSet(Ints.asList(dimensionNums));
-    Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.dimensionNums)));
+    Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.getDimensionNumbers())));
 
     // Permute the dimensions of this so that the dimension of other are
     // left-aligned,
@@ -144,7 +143,7 @@ public class SparseTensor implements Tensor {
     int numDimsDifferent = 0;
     int otherInd = 0;
     for (int i = 0; i < dimensionNums.length; i++) {
-      if (otherInd < other.dimensionNums.length && other.dimensionNums[otherInd] > dimensionNums[i]) {
+      if (otherInd < other.getDimensionNumbers().length && other.getDimensionNumbers()[otherInd] > dimensionNums[i]) {
         permutation.put(dimensionNums[i], Integer.MAX_VALUE - numDimsDifferent);
         numDimsDifferent++;
       } else {
@@ -167,7 +166,7 @@ public class SparseTensor implements Tensor {
    * @param small
    * @return
    */
-  protected static final SparseTensor elementwiseMultiplyLeftAligned(SparseTensor big, SparseTensor small) {
+  protected static final SparseTensor elementwiseMultiplyLeftAligned(SparseTensor big, Tensor small) {
     // The result tensor is no larger than the larger (superset of dimensions)
     // tensor.
     int[][] resultOutcomes = new int[big.outcomes.length][big.values.length];
@@ -177,42 +176,52 @@ public class SparseTensor implements Tensor {
 
     // Current positions in each tensor's key/value array.
     int myInd = 0;
-    int otherInd = 0;
+    Iterator<int[]> otherOutcomeIterator = small.keyIterator();
+    int[] otherOutcome = getNextOutcome(otherOutcomeIterator, small);
 
-    for (myInd = 0; myInd < big.values.length; myInd = advance(myInd, big.outcomes, otherInd, small.outcomes)) {
+    for (myInd = 0; myInd < big.values.length; myInd = advance(myInd, big.outcomes, otherOutcome)) {
       // Advance otherInd until other's outcome is >= our outcome.
-      while (otherInd < small.values.length &&
-          compareOutcomes(big.outcomes, myInd, small.outcomes, otherInd) > 0) {
-        otherInd++;
+      while (otherOutcome != null &&
+          compareOutcomes(big.outcomes, myInd, otherOutcome) > 0) {
+        otherOutcome = getNextOutcome(otherOutcomeIterator, small);
       }
 
-      if (otherInd < small.values.length &&
-          compareOutcomes(big.outcomes, myInd, small.outcomes, otherInd) == 0) {
+      if (otherOutcome != null &&
+          compareOutcomes(big.outcomes, myInd, otherOutcome) == 0) {
         copyOutcome(big.outcomes, myInd, resultOutcomes, resultInd);
-        resultValues[resultInd] = big.values[myInd] * small.values[otherInd];
+        resultValues[resultInd] = big.values[myInd] * small.get(otherOutcome);
         resultInd++;
       }
     }
     return resizeIntoTable(big.dimensionNums, big.dimensionSizes,
         resultOutcomes, resultValues, resultInd);
   }
+  
+  private static final int[] getNextOutcome(Iterator<int[]> outcomeIterator, Tensor tensor) {
+    int[] outcome = outcomeIterator.hasNext() ? outcomeIterator.next() : null;
+    while (outcome != null && tensor.get(outcome) == 0) {
+      outcome = outcomeIterator.hasNext() ? outcomeIterator.next() : null;
+    }
 
-  private static final int advance(int myInd, int[][] myOutcomes, int otherInd, int[][] otherOutcomes) {
+    return outcome;
+  }
+
+  private static final int advance(int myInd, int[][] myOutcomes, int[] otherOutcome) {
     // This algorithm advances myInd into a block of outcomes where the first
     // coordinate
     // of this tensor's outcomes matches the first coordinate of the other
     // tensor's outcome.
-    if (otherOutcomes.length == 0) {
-      return myInd + 1;
-    } else if (otherInd == otherOutcomes[0].length) {
+    if (otherOutcome == null) {
       return myOutcomes[0].length;
-    } else if (myOutcomes[0][myInd] == otherOutcomes[0][otherInd]) {
+    } else if (otherOutcome.length == 0) {
+      return myInd + 1;
+    } else if (myOutcomes[0][myInd] == otherOutcome[0]) {
       // We're within a block of outcomes of other that start with the same
       // coordinate as myOutcomes.
       return myInd + 1;
     } else {
       // Find a block of outcomes with the correct starting coordinate.
-      return binarySearch(myOutcomes[0], otherOutcomes[0][otherInd], myInd, myOutcomes[0].length);
+      return binarySearch(myOutcomes[0], otherOutcome[0], myInd, myOutcomes[0].length);
     }
   }
 
@@ -280,7 +289,7 @@ public class SparseTensor implements Tensor {
    */
   @Override
   public SparseTensor elementwiseAddition(Tensor otherTensor) {
-    return doElementwise((SparseTensor) otherTensor, true);
+    return doElementwise(otherTensor, true);
   }
 
   /**
@@ -295,7 +304,7 @@ public class SparseTensor implements Tensor {
    */
   @Override
   public SparseTensor elementwiseMaximum(Tensor otherTensor) {
-    return doElementwise((SparseTensor) otherTensor, false);
+    return doElementwise(otherTensor, false);
   }
 
   /**
@@ -304,31 +313,36 @@ public class SparseTensor implements Tensor {
    * of equivalent outcomes; otherwise, it takes the maximum of the two
    * outcomes.
    */
-  private SparseTensor doElementwise(SparseTensor other, boolean useSum) {
+  private SparseTensor doElementwise(Tensor other, boolean useSum) {
     // TODO(jayantk): This method could be generalized by taking a Function
     // instead of a boolean flag. However, it's unclear how this change
     // affects performance.
-    Preconditions.checkArgument(Arrays.equals(dimensionNums, other.dimensionNums));
-    int[][] resultOutcomes = new int[dimensionNums.length][values.length + other.values.length];
-    double[] resultValues = new double[values.length + other.values.length];
+    Preconditions.checkArgument(Arrays.equals(dimensionNums, other.getDimensionNumbers()));
+    int[][] resultOutcomes = new int[dimensionNums.length][values.length + other.size()];
+    double[] resultValues = new double[values.length + other.size()];
 
     int resultInd = 0;
     int myInd = 0;
-    int otherInd = 0;
-    while (myInd < values.length && otherInd < other.values.length) {
+    Iterator<int[]> otherOutcomeIterator = other.keyIterator();
+    int[] otherOutcome = getNextOutcome(otherOutcomeIterator, other);
+
+    while (myInd < values.length && otherOutcome != null) {
       boolean equal = true;
       for (int j = 0; j < outcomes.length; j++) {
-        if (outcomes[j][myInd] < other.outcomes[j][otherInd]) {
+        if (outcomes[j][myInd] < otherOutcome[j]) {
           copyOutcome(outcomes, myInd, resultOutcomes, resultInd);
           resultValues[resultInd] = values[myInd];
           resultInd++;
           myInd++;
           equal = false;
           break;
-        } else if (outcomes[j][myInd] > other.outcomes[j][otherInd]) {
-          copyOutcome(other.outcomes, otherInd, resultOutcomes, resultInd);
-          resultValues[resultInd] = values[otherInd];
-          otherInd++;
+        } else if (outcomes[j][myInd] > otherOutcome[j]) {
+          // Copy the outcome.
+          for (int k = 0; k < otherOutcome.length; k++) {
+            resultOutcomes[k][resultInd] = otherOutcome[k];
+          }
+          resultValues[resultInd] = other.get(otherOutcome);
+          otherOutcome = getNextOutcome(otherOutcomeIterator, other);
           resultInd++;
           equal = false;
           break;
@@ -338,13 +352,13 @@ public class SparseTensor implements Tensor {
       if (equal) {
         copyOutcome(outcomes, myInd, resultOutcomes, resultInd);
         if (useSum) {
-          resultValues[resultInd] = values[myInd] + other.values[otherInd];
+          resultValues[resultInd] = values[myInd] + other.get(otherOutcome);
         } else {
-          resultValues[resultInd] = Math.max(values[myInd], other.values[otherInd]);
+          resultValues[resultInd] = Math.max(values[myInd], other.get(otherOutcome));
         }
         resultInd++;
         myInd++;
-        otherInd++;
+        otherOutcome = getNextOutcome(otherOutcomeIterator, other);
       }
     }
 
@@ -355,9 +369,11 @@ public class SparseTensor implements Tensor {
       resultInd++;
     }
 
-    for (; otherInd < other.values.length; otherInd++) {
-      copyOutcome(other.outcomes, otherInd, resultOutcomes, resultInd);
-      resultValues[resultInd] = other.values[otherInd];
+    for (; otherOutcome != null; otherOutcome = getNextOutcome(otherOutcomeIterator, other)) {
+      for (int k = 0; k < otherOutcome.length; k++) {
+        resultOutcomes[k][resultInd] = otherOutcome[k];
+      }
+      resultValues[resultInd] = other.get(otherOutcome);
       resultInd++;
     }
 
@@ -805,11 +821,11 @@ public class SparseTensor implements Tensor {
    * @param secondInd
    */
   private static final int compareOutcomes(int[][] firstOutcomes, int firstInd,
-      int[][] secondOutcomes, int secondInd) {
-    for (int j = 0; j < secondOutcomes.length; j++) {
-      if (firstOutcomes[j][firstInd] > secondOutcomes[j][secondInd]) {
+      int[] secondOutcome) {
+    for (int j = 0; j < secondOutcome.length; j++) {
+      if (firstOutcomes[j][firstInd] > secondOutcome[j]) {
         return 1;
-      } else if (firstOutcomes[j][firstInd] < secondOutcomes[j][secondInd]) {
+      } else if (firstOutcomes[j][firstInd] < secondOutcome[j]) {
         return -1;
       }
     }

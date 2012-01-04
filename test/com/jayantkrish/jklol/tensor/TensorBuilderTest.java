@@ -1,6 +1,10 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.util.List;
+
 import junit.framework.TestCase;
+
+import com.google.common.collect.Lists;
 
 /**
  * Test cases for all kinds of {@code TensorBuilder}s. To test an implementation
@@ -12,9 +16,12 @@ import junit.framework.TestCase;
 public abstract class TensorBuilderTest extends TestCase {
 
   private final TensorFactory tensorFactory;
+  private final List<TensorFactory> allTensorFactories;
 
   int[] dimNums, dimSizes;
-  TensorBuilder builder, otherBuilder, wrongDimensionBuilder;
+  TensorBuilder builder;
+  
+  List<TensorBuilder> otherBuilders, wrongDimensionBuilders;
 
   private static final int[] KEY0 = new int[] { 0, 0, 0 };
   private static final int[] KEY1 = new int[] { 0, 1, 2 };
@@ -23,6 +30,8 @@ public abstract class TensorBuilderTest extends TestCase {
 
   public TensorBuilderTest(TensorFactory tensorFactory) {
     this.tensorFactory = tensorFactory;
+    this.allTensorFactories = Lists.newArrayList(SparseTensorBuilder.getFactory(), 
+        DenseTensorBuilder.getFactory());
   }
 
   public void setUp() {
@@ -33,11 +42,18 @@ public abstract class TensorBuilderTest extends TestCase {
     builder.put(KEY1, 1.0);
     builder.put(KEY2, 2.0);
     
-    otherBuilder = tensorFactory.getBuilder(dimNums, dimSizes);
-    otherBuilder.put(KEY1, 3.0);
-    otherBuilder.put(KEY3, 4.0);
+    otherBuilders = Lists.newArrayList();
+    for (TensorFactory otherFactory : allTensorFactories) {
+      TensorBuilder otherBuilder = otherFactory.getBuilder(dimNums, dimSizes);
+      otherBuilder.put(KEY1, 3.0);
+      otherBuilder.put(KEY3, 4.0);
+      otherBuilders.add(otherBuilder);
+    }
     
-    wrongDimensionBuilder = tensorFactory.getBuilder(new int[] {0, 1, 3}, new int[] {0, 1, 3});
+    wrongDimensionBuilders = Lists.newArrayList();
+    for (TensorFactory otherFactory : allTensorFactories) {
+      wrongDimensionBuilders.add(otherFactory.getBuilder(new int[] {0, 1, 3}, new int[] {0, 1, 3}));
+    }
   }
 
   public void testGet() {
@@ -85,21 +101,25 @@ public abstract class TensorBuilderTest extends TestCase {
   }
   
   public void testIncrementWithMultiplier() {
-    builder.incrementWithMultiplier(otherBuilder, 2.0);
+    for (int i = 0; i < otherBuilders.size(); i++) {
+      builder.incrementWithMultiplier(otherBuilders.get(i), 2.0);
 
-    assertEquals(0.0, builder.get(KEY0));
-    assertEquals(7.0, builder.get(KEY1));
-    assertEquals(2.0, builder.get(KEY2));
-    assertEquals(8.0, builder.get(KEY3));
+      assertEquals(0.0, builder.get(KEY0));
+      assertEquals(7.0 + (6.0 * i), builder.get(KEY1));
+      assertEquals(2.0, builder.get(KEY2));
+      assertEquals(8.0 * (i + 1), builder.get(KEY3));
+    }
   }
   
   public void testIncrementInvalid() {
-    try {
-      builder.increment(wrongDimensionBuilder);
-    } catch (IllegalArgumentException e) {
-      return;
+    for (TensorBuilder wrongDimensionBuilder : wrongDimensionBuilders) {
+      try {
+        builder.increment(wrongDimensionBuilder);
+      } catch (IllegalArgumentException e) {
+        continue;
+      }
+      fail("Expected IllegalArgumentException");
     }
-    fail("Expected IllegalArgumentException");
   }
   
   public void testIncrementConstant() {
@@ -120,11 +140,13 @@ public abstract class TensorBuilderTest extends TestCase {
   }
   
   public void testMultiply() {
-    builder.multiply(otherBuilder);
-    assertEquals(0.0, builder.get(KEY0));
-    assertEquals(3.0, builder.get(KEY1));
-    assertEquals(0.0, builder.get(KEY2));
-    assertEquals(0.0, builder.get(KEY3));
+    for (int i = 0; i < otherBuilders.size(); i++) {
+      builder.multiply(otherBuilders.get(i));
+      assertEquals(0.0, builder.get(KEY0));
+      assertEquals(Math.pow(3.0, i + 1), builder.get(KEY1));
+      assertEquals(0.0, builder.get(KEY2));
+      assertEquals(0.0, builder.get(KEY3));
+    }
   }
   
   public void testMultiplyConstant() {
@@ -136,12 +158,14 @@ public abstract class TensorBuilderTest extends TestCase {
   }
       
   public void testMultiplyInvalid() {
-    try {
-      builder.multiply(wrongDimensionBuilder);
-    } catch (IllegalArgumentException e) {
-      return;
+    for (TensorBuilder wrongDimensionBuilder : wrongDimensionBuilders) {
+      try {
+        builder.multiply(wrongDimensionBuilder);
+      } catch (IllegalArgumentException e) {
+        continue;
+      }
+      fail("Expected IllegalArgumentException");
     }
-    fail("Expected IllegalArgumentException");
   }
   
   public void testBuild() {

@@ -9,11 +9,6 @@ package com.jayantkrish.jklol.tensor;
 public class DenseTensorBuilderTest extends TensorBuilderTest {
 
   public DenseTensorBuilderTest() {
-    super(new TensorFactory() {
-      @Override
-      public TensorBuilder getBuilder(int[] dimNums, int[] dimSizes) {
-        return new DenseTensorBuilder(dimNums, dimSizes);
-      }
-    });
+    super(DenseTensorBuilder.getFactory());
   }
 }

@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
-import com.jayantkrish.jklol.models.dynamic.VariablePattern;
+import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -44,7 +44,7 @@ public class SequenceModelTest extends TestCase {
         Arrays.asList("T", "F"));
     ObjectVariable tensorVar = new ObjectVariable(Tensor.class);
     builder.addPlate("plateVar", new VariableNumMap(Ints.asList(0, 1), 
-        Arrays.asList("x", "y"), Arrays.asList(tensorVar, outputVar)));
+        Arrays.asList("x", "y"), Arrays.asList(tensorVar, outputVar)), 10);
 
     // Factor connecting each x to the corresponding y.
     all = new VariableNumMap(Ints.asList(0, 1), 
@@ -52,13 +52,13 @@ public class SequenceModelTest extends TestCase {
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
     ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, 4);
-    builder.addFactor(f, VariablePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+    builder.addFactor(f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
     builder.addFactor(DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariablePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
 
     sequenceModel = builder.build();
     
@@ -108,7 +108,7 @@ public class SequenceModelTest extends TestCase {
     
     // Should be able to get 0 training error.
     FactorGraphPredictor predictor = new FactorGraphPredictor(trainedModel, 
-        VariablePattern.fromTemplateVariables(y, VariableNumMap.emptyMap()), new JunctionTree());
+        VariableNamePattern.fromTemplateVariables(y, VariableNumMap.emptyMap()), new JunctionTree());
     for (Example<DynamicAssignment, DynamicAssignment> trainingDatum : trainingData) {
       DynamicAssignment prediction = predictor.getBestPrediction(trainingDatum.getInput());
       assertEquals(trainingDatum.getOutput(), prediction);

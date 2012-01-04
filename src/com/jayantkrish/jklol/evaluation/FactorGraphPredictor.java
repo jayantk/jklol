@@ -16,6 +16,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
+import com.jayantkrish.jklol.models.dynamic.WrapperVariablePattern;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -173,7 +174,7 @@ public class FactorGraphPredictor implements Predictor<DynamicAssignment, Dynami
     public SimpleFactorGraphPredictor(FactorGraph factorGraph, 
         VariableNumMap outputVariables, MarginalCalculator marginalCalculator) {
       predictor = new FactorGraphPredictor(DynamicFactorGraph.fromFactorGraph(factorGraph),
-          VariablePattern.fromVariableNumMap(outputVariables), marginalCalculator);
+          new WrapperVariablePattern(outputVariables), marginalCalculator);
     }
 
     @Override

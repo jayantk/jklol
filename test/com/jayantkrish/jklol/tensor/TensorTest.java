@@ -24,15 +24,20 @@ import com.google.common.primitives.Ints;
 public abstract class TensorTest extends TestCase {
 
   private final TensorFactory tensorFactory;
+  private final List<TensorFactory> allTensorFactories;
   
   protected int[] varNums, varSizes;
-  protected Tensor smallTable, table, missingMiddle, missingFirst,
-      missingLast, emptyTable, addTable;
+  protected Tensor table, emptyInputTable;
+  
+  protected List<Tensor> smallTables, missingMiddles, missingFirsts,
+      missingLasts, emptyTables, addTables;
 
   protected int[] a1, a2;
   
   public TensorTest(TensorFactory tensorFactory) {
     this.tensorFactory = tensorFactory;
+    this.allTensorFactories = Lists.newArrayList(SparseTensorBuilder.getFactory(), 
+        DenseTensorBuilder.getFactory());
   }
 
   @Override
@@ -43,15 +48,13 @@ public abstract class TensorTest extends TestCase {
     a1 = new int[] { 0, 0, 0 };
     a2 = new int[] { 0, 2, 3 };
 
+    // Build the two tensors which are determined by tensorFactory.
     TensorBuilder builder = tensorFactory.getBuilder(varNums, varSizes);
     builder.put(a1, 1.0);
     builder.put(a2, 2.0);
-    smallTable = builder.build();
     builder.put(new int[] {4, 0, 0}, 3.0);
     builder.put(new int[] {3, 1, 0}, 3.0);
     builder.put(new int[] {3, 0, 1}, 6.0);
-    addTable = builder.build();
-    builder.put(new int[] {4, 0, 0}, 0.0);
     builder.put(new int[] { 0, 0, 3 }, 3.0);
     builder.put(new int[] { 0, 1, 3 }, 4.0);
     builder.put(new int[] { 1, 0, 3 }, 5.0);
@@ -64,44 +67,68 @@ public abstract class TensorTest extends TestCase {
     builder.put(new int[] { 2, 0, 0 }, 3.0);
     builder.put(new int[] { 2, 0, 1 }, 4.0);
     builder.put(new int[] { 2, 1, 0 }, 5.0);
+    builder.put(new int[] { 4, 0, 0 }, 0.0);
     builder.put(new int[] { 4, 0, 1 }, 5.0);
     builder.put(new int[] { 4, 1, 0 }, 5.0);
     table = builder.build();
-
-    builder = tensorFactory.getBuilder(new int[] { 3, 4 }, new int[] {5, 4});
-    builder.put(new int[] { 0, 3 }, 2.0);
-    builder.put(new int[] { 1, 3 }, 3.0);
-    builder.put(new int[] { 3, 0 }, 4.0);
-    missingFirst = builder.build();
-
-    builder = tensorFactory.getBuilder(new int[] { 1, 4 }, new int[] {6, 4});
-    builder.put(new int[] { 0, 3 }, 2.0);
-    builder.put(new int[] { 1, 3 }, 3.0);
-    builder.put(new int[] { 3, 0 }, 4.0);
-    builder.put(new int[] { 4, 0 }, 5.0);
-    builder.put(new int[] { 4, 1 }, 6.0);
-    missingMiddle = builder.build();
-
-    builder = tensorFactory.getBuilder(new int[] { 1, 3 }, new int[] {6, 5});
-    builder.put(new int[] { 0, 3 }, 2.0);
-    builder.put(new int[] { 1, 3 }, 3.0);
-    builder.put(new int[] { 3, 0 }, 4.0);
-    builder.put(new int[] { 4, 0 }, 5.0);
-    builder.put(new int[] { 4, 1 }, 6.0);
-    missingLast = builder.build();
-
+    
     // Empty table is a table with no dimensions, which should behave like a
     // scalar.
     builder = tensorFactory.getBuilder(new int[] {}, new int[] {});
     builder.put(new int[] {}, 5.0);
-    emptyTable = builder.build();
+    emptyInputTable = builder.build();
+
+    smallTables = Lists.newArrayList();
+    addTables = Lists.newArrayList();
+    missingFirsts = Lists.newArrayList();
+    missingMiddles = Lists.newArrayList();
+    missingLasts = Lists.newArrayList();
+    emptyTables = Lists.newArrayList();
+    for (TensorFactory otherFactory : allTensorFactories) {
+      builder = otherFactory.getBuilder(varNums, varSizes);
+      builder.put(a1, 1.0);
+      builder.put(a2, 2.0);
+      smallTables.add(builder.build());
+      builder.put(new int[] {4, 0, 0}, 3.0);
+      builder.put(new int[] {3, 1, 0}, 3.0);
+      builder.put(new int[] {3, 0, 1}, 6.0);
+      addTables.add(builder.build());
+
+      builder = otherFactory.getBuilder(new int[] { 3, 4 }, new int[] {5, 4});
+      builder.put(new int[] { 0, 3 }, 2.0);
+      builder.put(new int[] { 1, 3 }, 3.0);
+      builder.put(new int[] { 3, 0 }, 4.0);
+      missingFirsts.add(builder.build());
+
+      builder = otherFactory.getBuilder(new int[] { 1, 4 }, new int[] {6, 4});
+      builder.put(new int[] { 0, 3 }, 2.0);
+      builder.put(new int[] { 1, 3 }, 3.0);
+      builder.put(new int[] { 3, 0 }, 4.0);
+      builder.put(new int[] { 4, 0 }, 5.0);
+      builder.put(new int[] { 4, 1 }, 6.0);
+      missingMiddles.add(builder.build());
+
+      builder = otherFactory.getBuilder(new int[] { 1, 3 }, new int[] {6, 5});
+      builder.put(new int[] { 0, 3 }, 2.0);
+      builder.put(new int[] { 1, 3 }, 3.0);
+      builder.put(new int[] { 3, 0 }, 4.0);
+      builder.put(new int[] { 4, 0 }, 5.0);
+      builder.put(new int[] { 4, 1 }, 6.0);
+      missingLasts.add(builder.build());
+
+      // Empty table is a table with no dimensions, which should behave like a
+      // scalar.
+      builder = otherFactory.getBuilder(new int[] {}, new int[] {});
+      builder.put(new int[] {}, 5.0);
+      emptyTables.add(builder.build());
+    }
   }
 
   public void testGetVarNums() {
     assertTrue(Arrays.equals(varNums, table.getDimensionNumbers()));
     assertTrue(Arrays.equals(varSizes, table.getDimensionSizes()));
-    assertTrue(Arrays.equals(new int[] {}, emptyTable.getDimensionNumbers()));
-    assertTrue(Arrays.equals(new int[] {}, emptyTable.getDimensionSizes()));
+    assertTrue(Arrays.equals(new int[] {}, emptyInputTable.getDimensionNumbers()));
+    assertTrue(Arrays.equals(new int[] {}, emptyInputTable.getDimensionSizes()));
   }
 
   public void testGet() {
@@ -113,7 +140,7 @@ public abstract class TensorTest extends TestCase {
     assertEquals(0.0, table.get(new int[] { 0, 1, 0 }));
     assertEquals(0.0, table.get(new int[] { 1, 0, 0 }));
 
-    assertEquals(5.0, emptyTable.get(new int[] {}));
+    assertEquals(5.0, emptyInputTable.get(new int[] {}));
     try {
       table.get(new int[] { 0, 0 });
     } catch (IllegalArgumentException e) {
@@ -123,60 +150,74 @@ public abstract class TensorTest extends TestCase {
   }
 
   public void testElementwiseProductEmpty() {
-    Tensor expected = simpleMultiply(table, emptyTable);
-    Tensor actual = table.elementwiseProduct(emptyTable);
+    for (Tensor emptyTable : emptyTables) {
+      Tensor expected = simpleMultiply(table, emptyTable);
+      Tensor actual = table.elementwiseProduct(emptyTable);
 
-    assertEquals(expected, actual);
+      assertEquals(expected, actual);
+    }
   }
   
   public void testElementwiseProductEmpty2() {
-    Tensor expected = simpleMultiply(emptyTable, emptyTable);
-    Tensor actual = emptyTable.elementwiseProduct(emptyTable);
+    for (Tensor emptyTable : emptyTables) {
+      Tensor expected = simpleMultiply(emptyInputTable, emptyTable);
+      Tensor actual = emptyInputTable.elementwiseProduct(emptyTable);
 
-    assertEquals(expected, actual);
+      assertEquals(expected, actual);
+    }
   }
 
   public void testElementwiseProductMissingFirst() {
-    Tensor expected = simpleMultiply(table, missingFirst);
-    Tensor actual = table.elementwiseProduct(missingFirst);
+    for (Tensor missingFirst : missingFirsts) {
+      Tensor expected = simpleMultiply(table, missingFirst);
+      Tensor actual = table.elementwiseProduct(missingFirst);
 
-    assertEquals(expected, actual);
+      assertEquals(expected, actual);
+    }
   }
 
   public void testElementwiseProductMissingMiddle() {
-    Tensor expected = simpleMultiply(table, missingMiddle);
-    Tensor actual = table.elementwiseProduct(missingMiddle);
+    for (Tensor missingMiddle : missingMiddles) {
+      Tensor expected = simpleMultiply(table, missingMiddle);
+      Tensor actual = table.elementwiseProduct(missingMiddle);
 
-    assertEquals(expected, actual);
+      assertEquals(expected, actual);
+    }
   }
 
   public void testElementwiseProductMissingLast() {
-    Tensor expected = simpleMultiply(table, missingLast);
-    Tensor actual = table.elementwiseProduct(missingLast);
+    for (Tensor missingLast : missingLasts) {
+      Tensor expected = simpleMultiply(table, missingLast);
+      Tensor actual = table.elementwiseProduct(missingLast);
 
-    assertEquals(expected, actual);
+      assertEquals(expected, actual);
+    }
   }
  
   public void testElementwiseAddition() {
-    Tensor actual = table.elementwiseAddition(addTable);
+    for (Tensor addTable : addTables) {
+      Tensor actual = table.elementwiseAddition(addTable);
 
-    assertEquals(2.0, actual.get(a1));
-    assertEquals(4.0, actual.get(a2));
-    assertEquals(3.0, actual.get(new int[] {4, 0, 0}));
-    assertEquals(5.0, actual.get(new int[] {1, 0, 3}));
-    assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
-    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
+      assertEquals(2.0, actual.get(a1));
+      assertEquals(4.0, actual.get(a2));
+      assertEquals(3.0, actual.get(new int[] {4, 0, 0}));
+      assertEquals(5.0, actual.get(new int[] {1, 0, 3}));
+      assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+      assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
+    }
   }
   
   public void testElementwiseMaximum() {
-    Tensor actual = table.elementwiseMaximum(addTable);
+    for (Tensor addTable : addTables) {
+      Tensor actual = table.elementwiseMaximum(addTable);
     
-    assertEquals(1.0, actual.get(a1));
-    assertEquals(2.0, actual.get(a2));
-    assertEquals(6.0, actual.get(new int[] {3, 0, 1}));
-    assertEquals(5.0, actual.get(new int[] {3, 1, 0}));
-    assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
-    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
+      assertEquals(1.0, actual.get(a1));
+      assertEquals(2.0, actual.get(a2));
+      assertEquals(6.0, actual.get(new int[] {3, 0, 1}));
+      assertEquals(5.0, actual.get(new int[] {3, 1, 0}));
+      assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+      assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
+    }
   }
 
   public void testElementwiseInverse() {

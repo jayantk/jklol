@@ -167,6 +167,21 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
         Arrays.asList(new Object[] {0,0})));
     t.computeMarginals(c);
   }
+  
+  @PerformanceTest(3)
+  public void testSingleFactorMarginals() {
+    t.computeMarginals(FactorGraph.createFromFactors(Arrays.<Factor>asList(factor1)));
+  }
+  
+  @PerformanceTest(3)
+  public void testSingleFactorMaxMarginals() {
+    t.computeMaxMarginals(FactorGraph.createFromFactors(Arrays.<Factor>asList(factor1)));
+  }
+  
+  @PerformanceTest(1)
+  public void testSingleFactorCliqueTree() {
+    new JunctionTree.CliqueTree(FactorGraph.createFromFactors(Arrays.<Factor>asList(factor1)));
+  }
 
   @PerformanceTest
   public void testConditional() {

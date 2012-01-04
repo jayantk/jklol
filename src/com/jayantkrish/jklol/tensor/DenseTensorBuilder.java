@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.tensor;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 import com.google.common.base.Preconditions;
 
@@ -16,6 +17,20 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     super(dimensions, sizes);
     // Initialize the values of this builder to 0.
     Arrays.fill(values, 0.0);
+  }
+  
+  /**
+   * Gets a {@code TensorFactory} which creates {@code DenseTensorBuilder}s.
+   * 
+   * @return
+   */
+  public static TensorFactory getFactory() {
+    return new TensorFactory() {
+      @Override
+      public TensorBuilder getBuilder(int[] dimNums, int[] dimSizes) {
+        return new DenseTensorBuilder(dimNums, dimSizes);
+      }
+    };
   }
 
   @Override
@@ -50,7 +65,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
         values[i] += otherTensor.values[i] * multiplier;
       }
     } else {
-      throw new UnsupportedOperationException("Not yet implemented.");
+      Iterator<int[]> otherKeyIterator = other.keyIterator();
+      while (otherKeyIterator.hasNext()) {
+        int[] otherKey = otherKeyIterator.next();
+        values[getIndex(otherKey)] += other.get(otherKey) * multiplier; 
+      }
     }
   }
 
@@ -64,7 +83,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
         values[i] *= otherTensor.values[i];
       }
     } else {
-      throw new UnsupportedOperationException("Not yet implemented.");
+      Iterator<int[]> keyIter = keyIterator();
+      while (keyIter.hasNext()) {
+        int[] key = keyIter.next();
+        values[getIndex(key)] *= other.get(key);
+      }
     }
   }
 

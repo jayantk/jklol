@@ -13,7 +13,6 @@ import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -46,23 +45,21 @@ public class StochasticGradientTrainerTest extends TestCase {
 		allVariables = builder.getVariables();
 
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
-		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)),
-		    VariablePattern.fromVariableNumMap(builder.getVariables().getVariablesByName(clique1Names)));
+		builder.addUnreplicatedFactor(DiscreteLogLinearFactor
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)));
 		
 		clique2Names = Arrays.asList("Var2", "Var3");
-		builder.addFactor(DiscreteLogLinearFactor
-		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)),
-		    VariablePattern.fromVariableNumMap(builder.getVariables().getVariablesByName(clique2Names)));
+		builder.addUnreplicatedFactor(DiscreteLogLinearFactor
+		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)));
 
 		logLinearModel = builder.build();
 		trainingData = Lists.newArrayList();
 		DynamicAssignment a1 = logLinearModel.getVariables()
-		    .outcomeToAssignment(Arrays.asList("T", "T", "T", "T"));
+		    .fixedVariableOutcomeToAssignment(Arrays.asList("T", "T", "T", "T"));
 		DynamicAssignment a2 = logLinearModel.getVariables()
-		    .outcomeToAssignment(Arrays.asList("T", "T", "T", "F"));
+		    .fixedVariableOutcomeToAssignment(Arrays.asList("T", "T", "T", "F"));
 		DynamicAssignment a3 = logLinearModel.getVariables()
-		    .outcomeToAssignment(Arrays.asList("F", "F", "F", "F"));
+		    .fixedVariableOutcomeToAssignment(Arrays.asList("F", "F", "F", "F"));
 		for (int i = 0; i < 3; i++) {
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a1));
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a2));

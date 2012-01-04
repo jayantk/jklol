@@ -9,11 +9,6 @@ package com.jayantkrish.jklol.tensor;
 public class SparseTensorBuilderTest extends TensorBuilderTest {
 
   public SparseTensorBuilderTest() {
-    super(new TensorFactory() {
-      @Override
-      public TensorBuilder getBuilder(int[] dimNums, int[] dimSizes) {
-        return new SparseTensorBuilder(dimNums, dimSizes);
-      }
-    });
+    super(SparseTensorBuilder.getFactory());
   }
 }

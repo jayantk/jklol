@@ -90,7 +90,6 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       int numIncorrect = 0;
       double approximateObjectiveValue = regularization * Math.pow(parameters.getL2Norm(), 2) / 2;
       for (Example<DynamicAssignment, DynamicAssignment> example : batchData) {
-
         log.startTimer("dynamic_instantiation");
         FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
         Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
@@ -146,7 +145,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     log.startTimer("update_subgradient/condition");
     FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(input);
     log.stopTimer("update_subgradient/condition");
-    
+
     log.startTimer("update_subgradient/inference");
     MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel);
     Assignment prediction = predicted.getNthBestAssignment(0);
@@ -157,7 +156,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     log.startTimer("update_subgradient/condition");
     FactorGraph conditionalOutputModel = currentModel.conditional(observed);
     log.stopTimer("update_subgradient/condition");
-    
+
     log.startTimer("update_subgradient/inference");
     MaxMarginalSet actualMarginals = marginalCalculator.computeMaxMarginals(conditionalOutputModel);
     Assignment actual = actualMarginals.getNthBestAssignment(0);
@@ -177,7 +176,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       // the margin.
       double loss = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction)
           - conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual); 
-      log.startTimer("update_subgradient/parameter_update");
+      log.stopTimer("update_subgradient/parameter_update");
       
       return loss;
     }

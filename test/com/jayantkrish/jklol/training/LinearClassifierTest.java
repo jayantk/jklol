@@ -14,7 +14,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.dynamic.VariablePattern;
+import com.jayantkrish.jklol.models.dynamic.WrapperVariablePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
@@ -51,7 +51,7 @@ public class LinearClassifierTest extends TestCase {
     all = x.union(y);
 
     builder.addFactor(new ConditionalLogLinearFactor(x, y, 4),
-        VariablePattern.fromVariableNumMap(x.union(y)));
+        new WrapperVariablePattern(x.union(y)));
 
     linearClassifier = builder.build();
 

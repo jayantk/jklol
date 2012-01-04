@@ -135,19 +135,21 @@ public class SetCoverFactor extends AbstractFactor {
   
   @Override
   public Factor product(Factor other) {
-    Preconditions.checkArgument(other.getVars().size() == 1);
-    Preconditions.checkArgument(other.getVars().containsAny(getVars()));
-
-    int otherVarIndex = other.getVars().getVariableNums().get(0);
-    int listIndex = getVars().getVariableNums().indexOf(otherVarIndex);
-
+    return product(Arrays.asList(other));
+  }
+  
+  @Override
+  public Factor product(List<Factor> others) {
     List<Factor> newInputVarFactors = Lists.<Factor>newArrayList(inputVarFactors);
-    if (newInputVarFactors.get(listIndex) == null) {
-      newInputVarFactors.set(listIndex, other);
-    } else {
-      newInputVarFactors.set(listIndex, newInputVarFactors.get(listIndex).product(other));
-    }
+    for (Factor other : others) {
+      Preconditions.checkArgument(other.getVars().size() == 1);
+      Preconditions.checkArgument(other.getVars().containsAny(getVars()));
 
+      int otherVarIndex = other.getVars().getVariableNums().get(0);
+      int listIndex = getVars().getVariableNums().indexOf(otherVarIndex);
+
+      newInputVarFactors.set(listIndex, newInputVarFactors.get(listIndex).product(other));      
+    }
     return new SetCoverFactor(getVars(), requiredValues, 
         impossibleValues, newInputVarFactors);
   }

@@ -48,9 +48,9 @@ public class EMTrainerTest extends TestCase {
     allVars = var0.union(var1);
     
     f0 = new CptTableFactor(VariableNumMap.emptyMap(), var0);
-    builder.addFactor(f0);
+    builder.addUnreplicatedFactor(f0);
     f1 = new CptTableFactor(var0, var1);
-    builder.addFactor(f1);
+    builder.addUnreplicatedFactor(f1);
 
     bn = builder.build();		
     trainingData = Lists.newArrayList();

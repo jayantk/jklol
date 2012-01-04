@@ -36,9 +36,9 @@ public class BNCountTrainerTest extends TestCase {
 		VariableNumMap var1 = builder.getVariables().getVariablesByName("Var1");
 		VariableNumMap var2 = builder.getVariables().getVariablesByName("Var2");
 		
-		builder.addFactor(new CptTableFactor(VariableNumMap.emptyMap(), var0));
-		builder.addFactor(new CptTableFactor(VariableNumMap.emptyMap(), var1));
-		builder.addFactor(new CptTableFactor(var1.union(var0), var2));
+		builder.addUnreplicatedFactor(new CptTableFactor(VariableNumMap.emptyMap(), var0));
+		builder.addUnreplicatedFactor(new CptTableFactor(VariableNumMap.emptyMap(), var1));
+		builder.addUnreplicatedFactor(new CptTableFactor(var1.union(var0), var2));
 
 		bn = builder.build();
 

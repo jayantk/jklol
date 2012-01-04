@@ -9,7 +9,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 
 /**
- * {@code ReplicatedFactor} uses a {@code VariablePattern} to identify
+ * {@code ReplicatedFactor} uses a {@code VariableNamePattern} to identify
  * replicated sets of variables, then duplicates a given {@code Factor} across
  * each replication.
  * 
@@ -34,7 +34,7 @@ public class ReplicatedFactor implements PlateFactor {
    * @return
    */
   public static ReplicatedFactor fromFactor(Factor factor) {
-    return new ReplicatedFactor(factor, VariablePattern.fromVariableNumMap(factor.getVars()));
+    return new ReplicatedFactor(factor, new WrapperVariablePattern(factor.getVars()));
   }
 
   @Override

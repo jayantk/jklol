@@ -6,7 +6,7 @@ import java.util.Iterator;
 /**
  * An iterator over arrays of integers, from [0, ..., 0, 0] to [max_1, max_2,
  * ...], where the maximum value for each dimension is specified during
- * construction.
+ * construction. The iteration treats the last element of the array as the least significant bit, essentially iterating from 0 to max_1 * max_2 * ... 
  * 
  * @author jayantk
  */
@@ -18,16 +18,13 @@ public class IntegerArrayIterator implements Iterator<int[]> {
   private final int[] nextVal;
 
   public IntegerArrayIterator(int[] dimensionSizes) {
-    finalValues = Arrays.copyOf(dimensionSizes, dimensionSizes.length + 1);
-
-    // The final index is 1 and used as a test for the end of iteration.
-    this.finalValues[finalValues.length - 1] = 1;
-    
-    // The code in this iterator goes from 0 to finalValues, inclusive.
+    finalValues = new int[dimensionSizes.length + 1];
+    // The first index is 1 and used as a test for the end of iteration.
+    finalValues[0] = 1;
     for (int i = 0; i < dimensionSizes.length; i++) {
-      finalValues[i]--;
+      finalValues[i + 1] = dimensionSizes[i] - 1;
     }
-
+    
     currentValues = new int[finalValues.length];
     Arrays.fill(currentValues, 0);
 
@@ -36,30 +33,30 @@ public class IntegerArrayIterator implements Iterator<int[]> {
 
   @Override
   public boolean hasNext() {
-    return !(currentValues[currentValues.length - 1] == finalValues[finalValues.length - 1]);
+    return !(currentValues[0] == finalValues[0]);
   }
 
   @Override
   public int[] next() {
-    System.arraycopy(currentValues, 0, nextVal, 0, nextVal.length);
+    System.arraycopy(currentValues, 1, nextVal, 0, nextVal.length);
     
     incrementCurrentValue();
     return nextVal;
   }
   
   /*
-	 * Advances the internal state of the iterator (currentValues) to the next value.
-	 */
-	private void incrementCurrentValue() {
-		currentValues[0]++;
-		int i = 0;
-		while (i < currentValues.length - 1 && 
-				currentValues[i] > finalValues[i]) {
-			currentValues[i] = 0;
-			currentValues[i + 1]++;
-			i++;
-		}
-	}
+   * Advances the internal state of the iterator (currentValues) to the next value.
+   */
+  private void incrementCurrentValue() {
+    currentValues[currentValues.length - 1]++;
+    int i = currentValues.length - 1;
+    while (i > 0 && 
+        currentValues[i] > finalValues[i]) {
+      currentValues[i] = 0;
+      currentValues[i - 1]++;
+      i--;
+    }
+  }
 
   @Override
   public void remove() {

@@ -168,19 +168,21 @@ public class OrConstraintFactor extends AbstractFactor {
 
   @Override
   public Factor product(Factor other) {
-    Preconditions.checkArgument(other.getVars().size() == 1);
-    Preconditions.checkArgument(other.getVars().containsAny(inputVars));
-
-    int otherVarIndex = other.getVars().getVariableNums().get(0);
-    int listIndex = inputVars.getVariableNums().indexOf(otherVarIndex);
-
+    return product(Arrays.asList(other));
+  }
+  
+  @Override
+  public Factor product(List<Factor> others) {
     List<Factor> newInputVarFactors = Lists.newArrayList(inputVarFactors);
-    if (newInputVarFactors.get(listIndex) == null) {
-      newInputVarFactors.set(listIndex, other);
-    } else {
+    for (Factor other : others) {
+      Preconditions.checkArgument(other.getVars().size() == 1);
+      Preconditions.checkArgument(other.getVars().containsAny(inputVars));
+
+      int otherVarIndex = other.getVars().getVariableNums().get(0);
+      int listIndex = inputVars.getVariableNums().indexOf(otherVarIndex);
+
       newInputVarFactors.set(listIndex, newInputVarFactors.get(listIndex).product(other));
     }
-
     return new OrConstraintFactor(inputVars, orVars, orValues, newInputVarFactors);
   }
 

@@ -16,6 +16,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -235,7 +236,7 @@ public class JunctionTree implements MarginalCalculator {
         originalFactorGraph.getConditionedValues());
   }
 
-  private class CliqueTree {
+  public static class CliqueTree {
 
     private List<Factor> cliqueFactors;
 
@@ -277,16 +278,17 @@ public class JunctionTree implements MarginalCalculator {
           initialEliminationOrder.put(factorGraphFactors.get(i), i);
         }
       }
-
+ 
       // Store factors which contain each variable so that we can
       // eliminate factors that are subsets of others.
       Collections.sort(factorGraphFactors, new Comparator<Factor>() {
         public int compare(Factor f1, Factor f2) {
-          return f2.getVars().getVariableNums().size() - f1.getVars().getVariableNums().size();
+          return f2.getVars().size() - f1.getVars().size();
         }
       });
 
-      Map<Factor, Integer> factorCliqueMap = new HashMap<Factor, Integer>();
+      Map<Factor, Integer> factorCliqueMap = Maps.newHashMap();
+      Multimap<Integer, Factor> toMerge = HashMultimap.create();
       HashMultimap<Integer, Factor> varFactorMap = HashMultimap.create();
       varCliqueFactorMap = HashMultimap.create();
       BiMap<Integer, Integer> cliquePriorityMap = HashBiMap.create();
@@ -315,7 +317,7 @@ public class JunctionTree implements MarginalCalculator {
           // System.out.println("Merging " + f.getVars() + " into " +
           // cliqueFactors.get(cliqueNum).getVars());
 
-          cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(f));
+          toMerge.put(cliqueNum, f);
           cliquePriorityMap.put(cliqueNum,
               Math.max(cliquePriorityMap.get(cliqueNum), initialEliminationOrder.get(f)));
           factorCliqueMap.put(f, cliqueNum);
@@ -330,6 +332,12 @@ public class JunctionTree implements MarginalCalculator {
             varCliqueFactorMap.put(varNum, chosenNum);
           }
         }
+      }
+      
+      // Merge any factors which are queued.
+      for (Integer cliqueNum : toMerge.keySet()) {
+        cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(
+            Lists.newArrayList(toMerge.get(cliqueNum))));
       }
 
       for (int i = 0; i < cliqueFactors.size(); i++) {

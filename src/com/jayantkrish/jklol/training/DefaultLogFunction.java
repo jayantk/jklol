@@ -34,6 +34,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	public void notifyIterationEnd(int iteration) {
 	  long elapsedTime = stopTimer("iteration");
 	  System.out.println(iteration + " done. Elapsed: " + elapsedTime + " ms");
+	  printTimeStatistics();
 	}
 
   @Override

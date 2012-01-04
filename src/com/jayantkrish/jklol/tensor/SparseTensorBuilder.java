@@ -34,6 +34,20 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
     this.outcomes = new TreeMap<int[], Double>(Ints.lexicographicalComparator());
   }
+  
+  /**
+   * Gets a {@code TensorFactory} which creates {@code SparseTensorBuilder}s.
+   * 
+   * @return
+   */
+  public static TensorFactory getFactory() {
+    return new TensorFactory() {
+      @Override
+      public TensorBuilder getBuilder(int[] dimNums, int[] dimSizes) {
+        return new SparseTensorBuilder(dimNums, dimSizes);
+      }
+    };
+  }
 
   // /////////////////////////////////////////////////////////////
   // TensorBase methods

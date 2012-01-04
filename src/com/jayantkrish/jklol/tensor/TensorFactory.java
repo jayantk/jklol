@@ -17,4 +17,5 @@ public interface TensorFactory {
    * @return
    */
   TensorBuilder getBuilder(int[] dimensionNums, int[] dimensionSizes);
+ 
 }

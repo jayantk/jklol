@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
+import com.jayantkrish.jklol.models.dynamic.WrapperVariablePattern;
 
 /**
  * Builder for incrementally constructing {@link ParametricFactorGraph}s.
@@ -59,12 +60,12 @@ public class ParametricFactorGraphBuilder {
     variables = variables.addFixedVariable(name, variable);
   }
 
-  public void addPlate(String plateName, DynamicVariableSet plateVariables) {
-    variables = variables.addPlate(plateName, variables);
+  public void addPlate(String plateName, DynamicVariableSet plateVariables, int maxReplications) {
+    variables = variables.addPlate(plateName, variables, maxReplications);
   }
 
-  public void addPlate(String plateName, VariableNumMap plateVariables) {
-    variables = variables.addPlate(plateName, DynamicVariableSet.fromVariables(plateVariables));
+  public void addPlate(String plateName, VariableNumMap plateVariables, int maxReplications) {
+    variables = variables.addPlate(plateName, DynamicVariableSet.fromVariables(plateVariables), maxReplications);
   }
 
   /**
@@ -97,12 +98,12 @@ public class ParametricFactorGraphBuilder {
   }
 
   /**
-   * Adds a parameterized factor to the log linear model being constructed.
+   * Adds a parameterized, unreplicated factor to the model being constructed. The factor will match only the variables which it is defined over. 
    * 
    * @param factor
    */
-  public void addFactor(ParametricFactor<SufficientStatistics> factor) {
+  public void addUnreplicatedFactor(ParametricFactor<SufficientStatistics> factor) {
     logLinearFactors.add(factor);
-    factorPatterns.add(VariablePattern.fromVariableNumMap(factor.getVars()));
+    factorPatterns.add(new WrapperVariablePattern(factor.getVars()));
   }
 }

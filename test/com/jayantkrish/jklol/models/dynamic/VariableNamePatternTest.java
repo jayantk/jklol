@@ -13,11 +13,11 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 
 /**
- * Unit tests for {@link VariablePattern}.
+ * Unit tests for {@link VariableNamePattern}.
  * 
  * @author jayantk
  */
-public class VariablePatternTest extends TestCase {
+public class VariableNamePatternTest extends TestCase {
 
   private VariablePattern twoVarPattern, emptyPattern, noMatchPattern, offsetPattern;
   private VariableNumMap templateVars, offsetVars, defaultVars, testVars;
@@ -38,13 +38,13 @@ public class VariablePatternTest extends TestCase {
         Arrays.asList("x-0", "y-0", "x-1", "y-2", "z-0"),
         Arrays.<Variable>asList(tfVar, intVar, tfVar, intVar, tfVar));
     
-    twoVarPattern = VariablePattern.fromTemplateVariables(templateVars, 
+    twoVarPattern = VariableNamePattern.fromTemplateVariables(templateVars, 
         defaultVars.getVariablesByName("z"));
-    noMatchPattern = VariablePattern.fromTemplateVariables(templateVars, 
+    noMatchPattern = VariableNamePattern.fromTemplateVariables(templateVars, 
         templateVars.getVariablesByName("x-?(0)"));
-    offsetPattern = VariablePattern.fromTemplateVariables(offsetVars, 
+    offsetPattern = VariableNamePattern.fromTemplateVariables(offsetVars, 
         VariableNumMap.emptyMap());
-    emptyPattern = VariablePattern.fromVariableNumMap(
+    emptyPattern = VariableNamePattern.fromTemplateVariables(VariableNumMap.emptyMap(), 
         defaultVars.getVariablesByName("x-0", "y-0", "z"));
   }
   

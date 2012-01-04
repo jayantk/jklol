@@ -10,6 +10,7 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
+import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
@@ -48,7 +49,7 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
         Arrays.asList("T", "F"));
     ObjectVariable tensorVar = new ObjectVariable(Tensor.class);
     builder.addPlate("plateVar", new VariableNumMap(Ints.asList(0, 1), 
-        Arrays.asList("x", "y"), Arrays.asList(tensorVar, outputVar)));
+        Arrays.asList("x", "y"), Arrays.asList(tensorVar, outputVar)), 10000);
 
     // Factor connecting each x to the corresponding y.
     all = new VariableNumMap(Ints.asList(0, 1), 
@@ -56,19 +57,19 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
     ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, 4);
-    builder.addFactor(f, VariablePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
-    platePattern = VariablePattern.fromTemplateVariables(all, VariableNumMap.emptyMap());
+    builder.addFactor(f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+    platePattern = VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap());
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
     builder.addFactor(DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariablePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
 
     sequenceModel = builder.build();
     dynamicFactorGraph = sequenceModel.getFactorGraphFromParameters(sequenceModel.getNewSufficientStatistics());
     replicatedFactor = new ReplicatedFactor(f.getFactorFromParameters(f.getNewSufficientStatistics()), 
-        VariablePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
     
     // Construct some training data.
     List<Assignment> inputAssignments = Lists.newArrayList();
@@ -130,7 +131,7 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
   }
   
   @PerformanceTest(10)
-  public void testPatternMatch() {
+  public void testNamePatternMatch() {
     platePattern.matchVariables(sampleInstantiatedVariables);
   }
 

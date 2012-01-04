@@ -27,7 +27,7 @@ public class DynamicVariableSetTest extends TestCase {
     threeVar = DynamicVariableSet.fromVariables(VariableNumMap.fromVariableNames(
         Arrays.asList("v0", "v1", "v2"), Arrays.asList(var, var, var)));
     
-    oneLevel = twoVar.addPlate("plate1", threeVar).addPlate("plate2", twoVar);
+    oneLevel = twoVar.addPlate("plate1", threeVar, 10).addPlate("plate2", twoVar, 10);
       
     twoVarAssignment = twoVar.outcomeToAssignment("T", "F");
     threeVarAssignment = threeVar.outcomeToAssignment("F", "T", "F");
@@ -48,7 +48,7 @@ public class DynamicVariableSetTest extends TestCase {
     VariableNumMap vars2 = oneLevel.instantiateVariables(oneLevelAssignment2);
     assertEquals(14, vars1.size());
     assertEquals(14, vars2.size());    
-    assertEquals(vars1, vars2);    
+    assertEquals(vars1, vars2);
   }
 
   public void testToAssignment() {

@@ -12,60 +12,113 @@ import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * The variables for a dynamic factor graph, where the number of variables in
+ * the graph is a function of the input instance. {@code DynamicVariableSet}s
+ * convert to {@link VariableNumMap}s by conditioning on a
+ * {@link DynamicAssignment}. During instantiation, a {@code DynamicVariableSet}
+ * creates a {@code VariableNumMap} by repeating certain sets of template
+ * variables ("plates"). The number of repetitions of each plate is dictated by
+ * the input {@code DynamicAssignment}.
+ * 
+ * @author jayant
+ */
 public class DynamicVariableSet {
 
   private final VariableNumMap fixedVariables;
+  private final int fixedVariableMaxInd;
   private final List<String> plateNames;
   private final List<DynamicVariableSet> plates;
-  
+  private final int[] maximumReplications;
+
   private static final String NAMESPACE_SEPARATOR = "/";
-  
-  public static final DynamicVariableSet EMPTY = new DynamicVariableSet(VariableNumMap.emptyMap(), 
-      Collections.<String>emptyList(), Collections.<DynamicVariableSet>emptyList());
-  
-  public DynamicVariableSet(VariableNumMap fixedVariables, 
-      List<String> plateNames, List<DynamicVariableSet> plates) {
+
+  public static final DynamicVariableSet EMPTY = new DynamicVariableSet(VariableNumMap.emptyMap(),
+      Collections.<String> emptyList(), Collections.<DynamicVariableSet> emptyList(), new int[0]);
+
+  public DynamicVariableSet(VariableNumMap fixedVariables,
+      List<String> plateNames, List<DynamicVariableSet> plates, int[] maximumReplications) {
     Preconditions.checkArgument(plateNames.size() == plates.size());
+    Preconditions.checkArgument(plateNames.size() == maximumReplications.length);
     this.fixedVariables = fixedVariables;
+    this.fixedVariableMaxInd = (fixedVariables.size() > 0) ? Collections.max(fixedVariables.getVariableNums()) : 0;
     this.plateNames = plateNames;
     this.plates = plates;
+    this.maximumReplications = maximumReplications;
   }
-  
+
+  /**
+   * Creates a {@code DynamicVariableSet} containing {@code variables} and no
+   * plates.
+   * 
+   * @param variables
+   * @return
+   */
   public static DynamicVariableSet fromVariables(VariableNumMap variables) {
-    return new DynamicVariableSet(variables, Collections.<String>emptyList(),
-        Collections.<DynamicVariableSet>emptyList());
+    return new DynamicVariableSet(variables, Collections.<String> emptyList(),
+        Collections.<DynamicVariableSet> emptyList(), new int[0]);
   }
-  
-  public DynamicAssignment outcomeToAssignment(List<? extends Object> values) {
+
+  /**
+   * Converts {@code values} into an assignment to the fixed (non-plate)
+   * variables of {@code this}.
+   * 
+   * @param values
+   * @return
+   */
+  public DynamicAssignment fixedVariableOutcomeToAssignment(List<? extends Object> values) {
     return DynamicAssignment.fromAssignment(fixedVariables.outcomeToAssignment(values));
   }
-  
+
   public DynamicAssignment outcomeToAssignment(Object... values) {
     Preconditions.checkArgument(values.length == fixedVariables.size() + plateNames.size());
     return DynamicAssignment.fromAssignment(fixedVariables.outcomeToAssignment(values));
   }
-  
-  public DynamicAssignment plateOutcomeToAssignment(List<DynamicAssignment> ... plateValues) {
+
+  public DynamicAssignment plateOutcomeToAssignment(List<DynamicAssignment>... plateValues) {
     Preconditions.checkArgument(plateValues.length == plateNames.size());
     List<List<DynamicAssignment>> plateAssignments = Arrays.asList(plateValues);
     return new DynamicAssignment(Assignment.EMPTY, plateNames, plateAssignments);
   }
-  
+
+  public int getMaximumPlateSize() {
+    int size = fixedVariableMaxInd + 1;
+    for (int i = 0; i < plates.size(); i++) {
+      size += plates.get(i).getMaximumPlateSize() * maximumReplications[i];
+    }
+
+    return size;
+  }
+
   public VariableNumMap getFixedVariables() {
     return fixedVariables;
   }
-  
+
+  /**
+   * Gets the variables which are replicated in the plate named
+   * {@code plateName}.
+   * 
+   * @param plateName
+   * @return
+   */
   public DynamicVariableSet getPlate(String plateName) {
     int index = plateNames.indexOf(plateName);
     Preconditions.checkArgument(index != -1);
     return plates.get(index);
   }
 
+  /**
+   * Returns {@code true} if {@code assignment} is a legitimate assignment to
+   * {@code this}.
+   * 
+   * @param assignment
+   * @return
+   */
   public boolean isValidAssignment(DynamicAssignment assignment) {
     if (!fixedVariables.isValidAssignment(assignment.getFixedAssignment())) {
       return false;
     }
-    
+
     for (int i = 0; i < plateNames.size(); i++) {
       List<DynamicAssignment> plateValues = assignment.getPlateValue(plateNames.get(i));
       for (DynamicAssignment plateValue : plateValues) {
@@ -76,10 +129,14 @@ public class DynamicVariableSet {
     }
     return true;
   }
-  
+
   /**
-   * If two assignments have the same number of replications of each plate, this
-   * method will return the same {@code VariableNumMap}.
+   * Gets a {@code VariableNumMap} by replicating the plates in {@code this}.
+   * {@code assignment} must contain a value (list of assignments) for all
+   * plates in {@code this}; these values determine how many times each plate is
+   * replicated in the returned {@code VariableNumMap}. If two assignments have
+   * the same number of replications of each plate, this method will return the
+   * same {@code VariableNumMap}.
    * 
    * @param assignment
    * @return
@@ -87,28 +144,73 @@ public class DynamicVariableSet {
   public VariableNumMap instantiateVariables(DynamicAssignment assignment) {
     List<String> varNames = Lists.newArrayList();
     List<Variable> variables = Lists.newArrayList();
-    
-    instantiateVariablesHelper(assignment, varNames, variables, "");
+    List<Integer> variableInds = Lists.newArrayList();
+
+    instantiateVariablesHelper(assignment, varNames, variables, variableInds, "", 0);
     Preconditions.checkState(varNames.size() == variables.size());
-    return VariableNumMap.fromVariableNames(varNames, variables);
+    return new VariableNumMap(variableInds, varNames, variables);
   }
-  
-  private void instantiateVariablesHelper(DynamicAssignment assignment, 
-      List<String> variableNames, List<Variable> variables, String namespace) {
+
+  private void instantiateVariablesHelper(DynamicAssignment assignment,
+      List<String> variableNames, List<Variable> variables,
+      List<Integer> variableInds, String namespace, int indexOffset) {
+    // Add each fixedVariable to the output VariableNumMap.
     for (String varName : fixedVariables.getVariableNames()) {
       variableNames.add(namespace + varName);
       variables.add(fixedVariables.getVariable(fixedVariables.getVariableByName(varName)));
+      variableInds.add(fixedVariables.getVariableByName(varName) + indexOffset);
     }
-    
+
     for (int i = 0; i < plateNames.size(); i++) {
       Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)),
           "Cannot assign: " + assignment + " to: " + this);
       List<DynamicAssignment> plateValues = assignment.getPlateValue(plateNames.get(i));
+      // Allocate a fraction of the indices between startOffset and endOffset to
+      // each plate.
+      int plateIndex = indexOffset + getPlateStartIndex(i);
       for (int j = 0; j < plateValues.size(); j++) {
-        plates.get(i).instantiateVariablesHelper(plateValues.get(j), 
-            variableNames, variables, appendPlateToNamespace(namespace, plateNames.get(i), j)); 
+        plates.get(i).instantiateVariablesHelper(plateValues.get(j),
+            variableNames, variables, variableInds,
+            appendPlateToNamespace(namespace, plateNames.get(i), j),
+            plateIndex);
+        plateIndex += plates.get(i).getMaximumPlateSize();
       }
+
+      // Ensure the plate doesn't overrun its index budget.
+      Preconditions.checkState(plateIndex < indexOffset + getPlateEndIndex(i));
     }
+  }
+
+  /**
+   * Gets the first variable index which can contain a replicated variable for
+   * the {@code plateNum}th plate. The returned index is inclusive and may be
+   * used by the plate.
+   * 
+   * @param plateNum
+   * @return
+   */
+  private int getPlateStartIndex(int plateNum) {
+    Preconditions.checkArgument(plateNum >= 0 && plateNum < plateNames.size());
+    int startOffset = fixedVariableMaxInd + 1;
+    for (int i = 0; i < plateNum; i++) {
+      startOffset += plates.get(i).getMaximumPlateSize() * maximumReplications[i];
+    }
+    return startOffset;
+  }
+
+  /**
+   * Gets the end of the block of variable indices which can contain a
+   * replicated variable from the {@code plateNum}th plate. The returned index
+   * is exclusive, i.e., all indices used by {@code plateNum} must be less than
+   * the returned value.
+   * 
+   * @param plateName
+   * @return
+   */
+  private int getPlateEndIndex(int plateNum) {
+    Preconditions.checkArgument(plateNum >= 0 && plateNum < plateNames.size());
+    return getPlateStartIndex(plateNum)
+        + (plates.get(plateNum).getMaximumPlateSize() * maximumReplications[plateNum]);
   }
 
   public Assignment toAssignment(DynamicAssignment assignment) {
@@ -116,36 +218,37 @@ public class DynamicVariableSet {
     toAssignmentHelper(assignment, 0, values);
     return new Assignment(values);
   }
-  
-  private int toAssignmentHelper(DynamicAssignment assignment, int varNumOffset, 
+
+  private void toAssignmentHelper(DynamicAssignment assignment, int indexOffset,
       Map<Integer, Object> values) {
-    Assignment fixedAssignment = assignment.getFixedAssignment(); 
-    Preconditions.checkArgument(fixedVariables.containsAll(fixedAssignment.getVariableNums()), 
+    Assignment fixedAssignment = assignment.getFixedAssignment();
+    Preconditions.checkArgument(fixedVariables.containsAll(fixedAssignment.getVariableNums()),
         "Cannot assign: " + assignment + " to: " + this);
-    
-    for (int i = 0; i < fixedVariables.size(); i++) {
-      int curVarNum = fixedVariables.getVariableNums().get(i);
+
+    for (int curVarNum : fixedVariables.getVariableNums()) {
       if (fixedAssignment.contains(curVarNum)) {
-        values.put(varNumOffset + i, fixedAssignment.getValue(curVarNum));
+        values.put(indexOffset + curVarNum, fixedAssignment.getValue(curVarNum));
       }
     }
-    
-    int curOffset = varNumOffset + fixedVariables.size();
+
     for (int i = 0; i < plateNames.size(); i++) {
       Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)),
           "Cannot assign: " + assignment + " to: " + this);
+      int curOffset = indexOffset + getPlateStartIndex(i);
       for (DynamicAssignment plateValue : assignment.getPlateValue(plateNames.get(i))) {
-        curOffset = plates.get(i).toAssignmentHelper(plateValue, curOffset, values);
+        plates.get(i).toAssignmentHelper(plateValue, curOffset, values);
+        curOffset += plates.get(i).getMaximumPlateSize();
       }
+      Preconditions.checkState(curOffset < indexOffset + getPlateEndIndex(i));
     }
-    return curOffset;
   }
-  
+
   public DynamicAssignment toDynamicAssignment(Assignment assignment, VariableNumMap variables) {
     return toDynamicAssignmentHelper(assignment, variables, "");
   }
-  
-  private DynamicAssignment toDynamicAssignmentHelper(Assignment assignment, VariableNumMap variables, String namespace) {
+
+  private DynamicAssignment toDynamicAssignmentHelper(Assignment assignment,
+      VariableNumMap variables, String namespace) {
     Map<Integer, Object> fixedAssignmentValues = Maps.newHashMap();
     for (int i = 0; i < fixedVariables.size(); i++) {
       // Get the variable's index in assignment.
@@ -158,73 +261,84 @@ public class DynamicVariableSet {
       }
     }
     Assignment fixedAssignment = new Assignment(fixedAssignmentValues);
-    
+
     List<List<DynamicAssignment>> allPlateAssignments = Lists.newArrayList();
     for (int i = 0; i < plateNames.size(); i++) {
       String plateName = plateNames.get(i);
-      List<DynamicAssignment> plateAssignments = Lists.newArrayList();      
+      List<DynamicAssignment> plateAssignments = Lists.newArrayList();
 
-      // Find replications of this plate.      
+      // Find replications of this plate.
       int j = 0;
-      VariableNumMap plateVars = variables.getVariablesByNamePrefix(appendPlateToNamespace(namespace, plateName, j));
+      VariableNumMap plateVars = variables.getVariablesByNamePrefix(appendPlateToNamespace(
+          namespace, plateName, j));
       while (plateVars.size() != 0) {
         Assignment subAssignment = assignment.intersection(plateVars);
-        plateAssignments.add(plates.get(i).toDynamicAssignmentHelper(subAssignment, 
+        plateAssignments.add(plates.get(i).toDynamicAssignmentHelper(subAssignment,
             plateVars, appendPlateToNamespace(namespace, plateName, j)));
-        
+
         // Advance to next replication.
         j++;
-        plateVars = variables.getVariablesByNamePrefix(appendPlateToNamespace(namespace, plateName, j));
+        plateVars = variables.getVariablesByNamePrefix(appendPlateToNamespace(namespace, plateName,
+            j));
       }
       allPlateAssignments.add(plateAssignments);
     }
     return new DynamicAssignment(fixedAssignment, plateNames, allPlateAssignments);
   }
-  
+
   private String appendPlateToNamespace(String namespace, String plateName, int repetitionIndex) {
-    return namespace + plateName + NAMESPACE_SEPARATOR + repetitionIndex + NAMESPACE_SEPARATOR; 
+    return namespace + plateName + NAMESPACE_SEPARATOR + repetitionIndex + NAMESPACE_SEPARATOR;
   }
-  
-  ////////////////////////////////////////////////////////////////
+
+  // //////////////////////////////////////////////////////////////
   // Methods for incrementally building DynamicVariableSets
-  ////////////////////////////////////////////////////////////////
-  
+  // //////////////////////////////////////////////////////////////
+
+  /**
+   * Returns a copy of {@code this} with an additional fixed variable. The
+   * created variable is named {@code name} and has type {@code variable}.
+   * 
+   * @param name
+   * @param variable
+   * @return
+   */
   public DynamicVariableSet addFixedVariable(String name, Variable variable) {
-    // TODO: this index could be taken. Solution: enforce that fixedVariables contains
-    // indices from 0 to fixedVariables.size()-1.
-    int variableIndex = fixedVariables.size();
+    int variableIndex = fixedVariableMaxInd + 1;
     return new DynamicVariableSet(fixedVariables.addMapping(variableIndex, name, variable),
-        plateNames, plates);
+        plateNames, plates, maximumReplications);
   }
-  
-  public DynamicVariableSet addPlate(String plateName, DynamicVariableSet plateVariables) {
+
+  public DynamicVariableSet addPlate(String plateName, DynamicVariableSet plateVariables,
+      int plateMaxReplications) {
     List<String> newPlateNames = Lists.newArrayList(plateNames);
     newPlateNames.add(plateName);
     List<DynamicVariableSet> newPlates = Lists.newArrayList(plates);
     newPlates.add(plateVariables);
-    return new DynamicVariableSet(fixedVariables, newPlateNames, newPlates);
+    int[] newReplications = Arrays.copyOf(maximumReplications, maximumReplications.length + 1);
+    newReplications[maximumReplications.length] = plateMaxReplications;
+    return new DynamicVariableSet(fixedVariables, newPlateNames, newPlates, newReplications);
   }
-  
+
   @Override
   public int hashCode() {
-    return fixedVariables.hashCode() * 7238123 + plateNames.hashCode() * 783 + plates.hashCode();  
+    return fixedVariables.hashCode() * 7238123 + plateNames.hashCode() * 783 + plates.hashCode();
   }
-  
+
   @Override
   public boolean equals(Object other) {
     if (other == this) {
       return true;
     } else if (other instanceof DynamicVariableSet) {
       DynamicVariableSet otherVariables = (DynamicVariableSet) other;
-      return otherVariables.fixedVariables.equals(this.fixedVariables) && 
+      return otherVariables.fixedVariables.equals(this.fixedVariables) &&
           otherVariables.plateNames.equals(this.plateNames) &&
           otherVariables.plates.equals(this.plates);
     }
     return false;
   }
-  
+
   @Override
   public String toString() {
-    return "(" + fixedVariables.toString() + " plates: " + plateNames.toString() + ")";  
+    return "(" + fixedVariables.toString() + " plates: " + plateNames.toString() + ")";
   }
 }

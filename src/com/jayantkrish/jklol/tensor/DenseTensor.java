@@ -65,7 +65,9 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   private Tensor doElementwise(Tensor other, Operation op) {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
-    outputBuilder.increment(this);
+    if (op != Operation.PRODUCT) {
+      outputBuilder.increment(this);
+    }
 
     // Maps a key of other into a partial key of this.
     int[] dimensionMapping = getDimensionMapping(other.getDimensionNumbers());
@@ -98,7 +100,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       for (int i = 0; i < keyOffsets.length; i++) {
         switch (op) {
         case PRODUCT:
-          outputBuilder.values[baseOffset + keyOffsets[i]] *= other.get(otherKey);
+          outputBuilder.values[baseOffset + keyOffsets[i]] = other.get(otherKey);
           break;
         case SUM:
           outputBuilder.values[baseOffset + keyOffsets[i]] += other.get(otherKey);
@@ -109,6 +111,10 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
           break;
         }
       }
+    }
+    
+    if (op == Operation.PRODUCT) {
+      outputBuilder.multiply(this);
     }
     return outputBuilder.buildNoCopy();
   }

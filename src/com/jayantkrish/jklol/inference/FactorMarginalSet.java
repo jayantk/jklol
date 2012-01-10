@@ -92,4 +92,9 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   public double getPartitionFunction() {
     return partitionFunction;
   }
+  
+  @Override
+  public String toString() {
+    return allFactors.toString();
+  }
 }

@@ -25,7 +25,6 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
   private ParametricFactor<SufficientStatistics> nonterminalFactor;
   private ParametricFactor<SufficientStatistics> terminalFactor;
   
-  
   public CptCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar, 
       VariableNumMap terminalVar, VariableNumMap rootVar, VariableNumMap childVar, 
       ParametricFactor<SufficientStatistics> nonterminalFactor, ParametricFactor<SufficientStatistics> terminalFactor) {
@@ -50,7 +49,7 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
     
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, 
         nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
-        terminalFactor.getFactorFromParameters(terminalStatistics));
+        terminalFactor.getFactorFromParameters(terminalStatistics), 0);
     return new CfgFactor(rootVar, childVar, parser);
   }
 

@@ -94,10 +94,10 @@ public class StochasticGradientTrainerTest extends TestCase {
 		    Assignment a = feat.getNonzeroAssignments().next();
 		    if (a.getVariableNums().size() == 3) {
 		      assertTrue(clique1PositiveAssignments.contains(a) ||
-		          weights.get(j) < 0.0);
+		          weights.getByDimKey(j) < 0.0);
 		    } else {
 		      assertTrue(clique2NegativeAssignments.contains(a) ||
-		          weights.get(j) > -1.0);
+		          weights.getByDimKey(j) > -1.0);
 		    }
 		  }
 		}

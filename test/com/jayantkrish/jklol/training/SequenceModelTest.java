@@ -61,7 +61,7 @@ public class SequenceModelTest extends TestCase {
         VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
 
     sequenceModel = builder.build();
-    
+        
     // Construct some training data.
     List<Assignment> inputAssignments = Lists.newArrayList();
     for (int i = 0; i < 8; i++) {

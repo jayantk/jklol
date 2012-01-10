@@ -48,30 +48,30 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
     }
     table12 = builder.build();
     
-    firstTestArray = new double[1000000];
-    secondTestArray = new double[1000000];
-    for (int i = 0; i < 1000000; i++) {
+    firstTestArray = new double[100000];
+    secondTestArray = new double[100000];
+    for (int i = 0; i < 100000; i++) {
       firstTestArray[i] = i;
       secondTestArray[i] = i + 1;
     }
   }
   
-  @PerformanceTest(10)
+  @PerformanceTest(3)
   public void testProductSelf() {
     table012.elementwiseProduct(table012);
   }
 
-  @PerformanceTest(10)
+  @PerformanceTest(3)
   public void testProductLeftAligned() {
     table012.elementwiseProduct(table01);
   }
 
-  @PerformanceTest(10)
+  @PerformanceTest(3)
   public void testProductRightAligned() {
     table012.elementwiseProduct(table12);
   }
   
-  @PerformanceTest(10)
+  @PerformanceTest(3)
   public void testProductDense() {
     double[] output = new double[firstTestArray.length];
     for (int i = 0; i < firstTestArray.length; i++) {

@@ -193,7 +193,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     Iterator<Assignment> iter = outcomeIterator();
     PriorityQueue<Pair<Double, Assignment>> pq = new PriorityQueue<Pair<Double, Assignment>>(
-        numAssignments, new PairComparator<Double, Assignment>());
+        numAssignments + 1, new PairComparator<Double, Assignment>());
 
     while (iter.hasNext()) {
       Assignment a = iter.next();

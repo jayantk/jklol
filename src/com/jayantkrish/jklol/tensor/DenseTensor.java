@@ -84,7 +84,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     Iterator<int[]> myKeyIterator = new IntegerArrayIterator(partialKey);
     int ind = 0;
     while (myKeyIterator.hasNext()) {
-      keyOffsets[ind] = getIndex(myKeyIterator.next());
+      keyOffsets[ind] = dimKeyToKeyInt(myKeyIterator.next());
       ind++;
     }
     Preconditions.checkState(ind == keyOffsets.length);
@@ -100,13 +100,13 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       for (int i = 0; i < keyOffsets.length; i++) {
         switch (op) {
         case PRODUCT:
-          outputBuilder.values[baseOffset + keyOffsets[i]] = other.get(otherKey);
+          outputBuilder.values[baseOffset + keyOffsets[i]] = other.getByDimKey(otherKey);
           break;
         case SUM:
-          outputBuilder.values[baseOffset + keyOffsets[i]] += other.get(otherKey);
+          outputBuilder.values[baseOffset + keyOffsets[i]] += other.getByDimKey(otherKey);
           break;
         case MAX:
-          outputBuilder.values[baseOffset + keyOffsets[i]] = Math.max(other.get(otherKey),
+          outputBuilder.values[baseOffset + keyOffsets[i]] = Math.max(other.getByDimKey(otherKey),
               outputBuilder.values[baseOffset + keyOffsets[i]]);
           break;
         }
@@ -185,9 +185,9 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       double resultVal = (useSum) ? 0.0 : Double.NEGATIVE_INFINITY;
       while (myKeyIterator.hasNext()) {
         if (useSum) {
-          resultVal += get(myKeyIterator.next());
+          resultVal += getByDimKey(myKeyIterator.next());
         } else {
-          resultVal = Math.max(resultVal, get(myKeyIterator.next()));
+          resultVal = Math.max(resultVal, getByDimKey(myKeyIterator.next()));
         }
       }
       outputBuilder.put(otherKey, resultVal);
@@ -231,7 +231,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       for (int i = 0; i < newOrder.length; i++) {
         newKey[i] = oldKey[newOrder[i]];
       }
-      builder.put(newKey, get(oldKey));
+      builder.put(newKey, getByDimKey(oldKey));
     }
     return builder.buildNoCopy();
   }
@@ -271,10 +271,10 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     Iterator<int[]> keyIter = keyIterator();
     while (keyIter.hasNext()) {
       int[] key = keyIter.next();
-      if (get(key) != 0.0) {
+      if (getByDimKey(key) != 0.0) {
         sb.append(Arrays.toString(key));
         sb.append("=");
-        sb.append(get(key));
+        sb.append(getByDimKey(key));
         sb.append(", ");
       }
     }

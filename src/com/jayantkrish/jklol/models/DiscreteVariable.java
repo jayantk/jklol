@@ -1,9 +1,10 @@
 package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.util.*;
-
 import java.util.Collection;
+import java.util.List;
 import java.util.NoSuchElementException;
+
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Represents a discrete random variable type which takes on one value from a 
@@ -38,6 +39,15 @@ public class DiscreteVariable implements Variable {
 	public int numValues() {
 		return values.size();
 	}
+	
+	/**
+	 * Gets all possible values for this variable.
+	 *  
+	 * @return
+	 */
+	public List<Object> getValues() {
+	  return values.items();
+	}
 
 	/**
 	 * Get the value of this enum with the passed-in index. 
@@ -47,7 +57,7 @@ public class DiscreteVariable implements Variable {
 	public Object getValue(int index) {
 		return values.get(index);
 	}
-
+	
 	/**
 	 * Get an integer index which represents the passed in value. Throws a NoSuchElement 
 	 * exception if value is not among the set of values this variable can be assigned.     

@@ -18,5 +18,5 @@ public class DenseTensorPerformanceTest extends TensorPerformanceTest {
   
   public static void main(String[] args) {
     PerformanceTestRunner.run(new DenseTensorPerformanceTest());
-  }
+  } 
 }

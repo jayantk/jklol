@@ -10,10 +10,6 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 public class DenseTensorBase extends AbstractTensorBase {
 
-  // Array storing offsets into values which are combined with keys
-  // to create an index for the key into values.
-  protected final int[] indexOffsets;
-
   // Stores the values of each key in this. Accessible to subclasses for
   // fast mathematical operations.
   protected final double[] values;
@@ -27,8 +23,10 @@ public class DenseTensorBase extends AbstractTensorBase {
   public DenseTensorBase(int[] dimensions, int[] sizes) {
     super(dimensions, sizes);
 
-    indexOffsets = new int[sizes.length];
-    int size = initializeIndexOffsets(sizes);
+    int size = 1;
+    for (int i = 0; i < sizes.length; i++) {
+      size *= sizes[i];
+    }
     values = new double[size];
   }
 
@@ -40,31 +38,15 @@ public class DenseTensorBase extends AbstractTensorBase {
    */
   protected DenseTensorBase(int[] dimensions, int[] sizes, double[] values) {
     super(dimensions, sizes);
-    indexOffsets = new int[sizes.length];
-    int size = initializeIndexOffsets(sizes);
-    Preconditions.checkArgument(values.length == size);
-    this.values = values;
-  }
-
-  /**
-   * Initializes {@code this.indexOffsets} array based on the known dimension
-   * sizes. Returns the total number of values which must be stored in
-   * {@code this.values}.
-   * 
-   * @param sizes
-   * @return
-   */
-  private int initializeIndexOffsets(int[] sizes) {
+    
+    // Check the size of the values array.
     int size = 1;
-    for (int i = sizes.length - 1; i >= 0; i--) {
+    for (int i = 0; i < sizes.length; i++) {
       size *= sizes[i];
-      if (i == sizes.length - 1) {
-        indexOffsets[i] = 1;
-      } else {
-        indexOffsets[i] = indexOffsets[i + 1] * sizes[i + 1];
-      }
     }
-    return size;
+    Preconditions.checkArgument(values.length == size);
+    
+    this.values = values;
   }
 
   @Override
@@ -72,11 +54,21 @@ public class DenseTensorBase extends AbstractTensorBase {
     return values.length;
   }
 
-  @Override
-  public double get(int ... key) {
-    return values[getIndex(key)];
+  @Override 
+  public double getByIndex(int index) {
+    return values[index];
   }
-
+  
+  @Override
+  public int indexToKeyInt(int index) {
+    return index;
+  }
+  
+  @Override
+  public int keyIntToIndex(int keyInt) {
+    return keyInt;
+  }
+  
   @Override
   public Iterator<int[]> keyIterator() {
     return new IntegerArrayIterator(getDimensionSizes());
@@ -89,24 +81,6 @@ public class DenseTensorBase extends AbstractTensorBase {
       sumSquares += values[i] * values[i];
     }
     return Math.sqrt(sumSquares);
-  }
-
-  /**
-   * Gets the index into {@code values} which stores the value for {@code key}.
-   * 
-   * @param key
-   * @return
-   */
-  protected int getIndex(int[] key) {
-    Preconditions.checkArgument(key.length == getDimensionNumbers().length);
-
-    int[] sizes = getDimensionSizes();
-    int index = 0;
-    for (int i = 0; i < key.length; i++) {
-      Preconditions.checkArgument(key[i] >= 0 && key[i] < sizes[i]);
-      index += key[i] * indexOffsets[i];
-    }
-    return index;
   }
   
   protected int[] getDimensionMapping(int[] otherDimensionNums) {

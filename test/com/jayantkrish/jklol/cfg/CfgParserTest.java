@@ -63,7 +63,7 @@ public class CfgParserTest extends TestCase {
 
 		binary = binaryBuilder.build();
 		terminal = terminalBuilder.build();
-		p = new CfgParser(parentVar, leftVar, rightVar, termVar, binary, terminal);
+		p = new CfgParser(parentVar, leftVar, rightVar, termVar, binary, terminal, 10);
 	}
 	
 	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, String term, double weight) {
@@ -205,5 +205,29 @@ public class CfgParserTest extends TestCase {
 		assertEquals(0.125, trees.get(1).getProbability());
 		assertEquals("bar", trees.get(1).getLeft().getRoot());
 		assertEquals("bar", trees.get(1).getRight().getRoot());
+	}
+	
+	public void testBeamSearch() {
+	  List<ParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
+	  assertEquals(2, trees.size());
+	  
+	  ParseTree bestTree = trees.get(0);
+	  assertEquals("barP", bestTree.getRoot());
+	  assertTrue(bestTree.isTerminal());
+	  assertEquals(0.5, bestTree.getProbability());
+	  
+	  ParseTree secondBestTree = trees.get(1);
+	  assertEquals("barP", secondBestTree.getRoot());
+	  assertFalse(secondBestTree.isTerminal());
+	  assertEquals(0.125, secondBestTree.getProbability());
+	  
+	  // Make sure that the beam truncates the less probable tree.
+	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, binary, terminal, 1);
+	  trees = newParser.beamSearch(Arrays.asList("baz", "bbb"));
+	  assertEquals(1, trees.size());
+	  bestTree = trees.get(0);
+	  assertEquals("barP", bestTree.getRoot());
+	  assertTrue(bestTree.isTerminal());
+	  assertEquals(0.5, bestTree.getProbability());
 	}
 }

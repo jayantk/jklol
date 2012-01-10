@@ -132,21 +132,26 @@ public abstract class TensorTest extends TestCase {
   }
 
   public void testGet() {
-    assertEquals(1.0, table.get(a1));
-    assertEquals(2.0, table.get(a2));
-    assertEquals(2.0, table.get(Arrays.copyOf(a2, a2.length)));
+    assertEquals(1.0, table.getByDimKey(a1));
+    assertEquals(2.0, table.getByDimKey(a2));
+    assertEquals(2.0, table.getByDimKey(Arrays.copyOf(a2, a2.length)));
 
-    assertEquals(0.0, table.get(new int[] { 0, 0, 1 }));
-    assertEquals(0.0, table.get(new int[] { 0, 1, 0 }));
-    assertEquals(0.0, table.get(new int[] { 1, 0, 0 }));
+    assertEquals(0.0, table.getByDimKey(new int[] { 0, 0, 1 }));
+    assertEquals(0.0, table.getByDimKey(new int[] { 0, 1, 0 }));
+    assertEquals(0.0, table.getByDimKey(new int[] { 1, 0, 0 }));
 
-    assertEquals(5.0, emptyInputTable.get(new int[] {}));
+    assertEquals(5.0, emptyInputTable.getByDimKey(new int[] {}));
     try {
-      table.get(new int[] { 0, 0 });
+      table.getByDimKey(new int[] { 0, 0 });
     } catch (IllegalArgumentException e) {
       return;
     }
     fail("Expected IllegalArgumentException.");
+  }
+  
+  public void testGetKeyInt() {
+    assertEquals(31, table.dimKeyToKeyInt(new int[] {1, 2, 3}));
+    assertTrue(Arrays.equals(new int[] {1, 2, 3}, table.keyIntToDimKey(31)));
   }
 
   public void testElementwiseProductEmpty() {
@@ -198,11 +203,11 @@ public abstract class TensorTest extends TestCase {
     for (Tensor addTable : addTables) {
       Tensor actual = table.elementwiseAddition(addTable);
 
-      assertEquals(2.0, actual.get(a1));
-      assertEquals(4.0, actual.get(a2));
-      assertEquals(3.0, actual.get(new int[] {4, 0, 0}));
-      assertEquals(5.0, actual.get(new int[] {1, 0, 3}));
-      assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+      assertEquals(2.0, actual.getByDimKey(a1));
+      assertEquals(4.0, actual.getByDimKey(a2));
+      assertEquals(3.0, actual.getByDimKey(new int[] {4, 0, 0}));
+      assertEquals(5.0, actual.getByDimKey(new int[] {1, 0, 3}));
+      assertEquals(0.0, actual.getByDimKey(new int[] {5, 1, 0}));
       assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
     }
   }
@@ -211,11 +216,11 @@ public abstract class TensorTest extends TestCase {
     for (Tensor addTable : addTables) {
       Tensor actual = table.elementwiseMaximum(addTable);
     
-      assertEquals(1.0, actual.get(a1));
-      assertEquals(2.0, actual.get(a2));
-      assertEquals(6.0, actual.get(new int[] {3, 0, 1}));
-      assertEquals(5.0, actual.get(new int[] {3, 1, 0}));
-      assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+      assertEquals(1.0, actual.getByDimKey(a1));
+      assertEquals(2.0, actual.getByDimKey(a2));
+      assertEquals(6.0, actual.getByDimKey(new int[] {3, 0, 1}));
+      assertEquals(5.0, actual.getByDimKey(new int[] {3, 1, 0}));
+      assertEquals(0.0, actual.getByDimKey(new int[] {5, 1, 0}));
       assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
     }
   }
@@ -223,9 +228,9 @@ public abstract class TensorTest extends TestCase {
   public void testElementwiseInverse() {
     Tensor actual = table.elementwiseInverse();
     
-    assertEquals(1.0, actual.get(a1));
-    assertEquals(1.0 / 2.0, actual.get(a2));
-    assertEquals(0.0, actual.get(new int[] {5, 1, 0}));
+    assertEquals(1.0, actual.getByDimKey(a1));
+    assertEquals(1.0 / 2.0, actual.getByDimKey(a2));
+    assertEquals(0.0, actual.getByDimKey(new int[] {5, 1, 0}));
     assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
   }
   
@@ -280,6 +285,7 @@ public abstract class TensorTest extends TestCase {
     assertTrue(Arrays.equals(new int[] {5, 4, 6}, actual.getDimensionSizes()));
     
     assertEquals(table.size(), actual.size());
+    
     Iterator<int[]> keyIter = actual.keyIterator();
     while (keyIter.hasNext()) {
       int[] key = keyIter.next();
@@ -287,7 +293,7 @@ public abstract class TensorTest extends TestCase {
       oldKey[0] = key[2];
       oldKey[2] = key[1];
       oldKey[1] = key[0];
-      assertEquals(table.get(oldKey), actual.get(key));
+      assertEquals(table.getByDimKey(oldKey), actual.getByDimKey(key));
     }
   }
   
@@ -326,7 +332,7 @@ public abstract class TensorTest extends TestCase {
         }
 
         if (equal) {
-          builder.put(firstKey, first.get(firstKey) * second.get(secondKey));
+          builder.put(firstKey, first.getByDimKey(firstKey) * second.getByDimKey(secondKey));
         }
       }
     }
@@ -375,9 +381,9 @@ public abstract class TensorTest extends TestCase {
       }
       
       if (useSum) {
-        builder.put(newKey, builder.get(newKey) + first.get(curKey));
+        builder.put(newKey, builder.getByDimKey(newKey) + first.getByDimKey(curKey));
       } else {
-        builder.put(newKey, Math.max(builder.get(newKey), first.get(curKey)));
+        builder.put(newKey, Math.max(builder.getByDimKey(newKey), first.getByDimKey(curKey)));
       }
     }
     return builder.build();

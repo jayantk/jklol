@@ -30,8 +30,7 @@ public abstract class TensorBuilderTest extends TestCase {
 
   public TensorBuilderTest(TensorFactory tensorFactory) {
     this.tensorFactory = tensorFactory;
-    this.allTensorFactories = Lists.newArrayList(SparseTensorBuilder.getFactory(), 
-        DenseTensorBuilder.getFactory());
+    this.allTensorFactories = Lists.newArrayList(SparseTensorBuilder.getFactory(), DenseTensorBuilder.getFactory());
   }
 
   public void setUp() {
@@ -57,17 +56,17 @@ public abstract class TensorBuilderTest extends TestCase {
   }
 
   public void testGet() {
-    assertEquals(0.0, builder.get(KEY0));
-    assertEquals(1.0, builder.get(KEY1));
-    assertEquals(2.0, builder.get(KEY2));
+    assertEquals(0.0, builder.getByDimKey(KEY0));
+    assertEquals(1.0, builder.getByDimKey(KEY1));
+    assertEquals(2.0, builder.getByDimKey(KEY2));
     
     builder.put(KEY2, 4.0);
-    assertEquals(4.0, builder.get(KEY2));
+    assertEquals(4.0, builder.getByDimKey(KEY2));
   }
   
   public void testGetInvalid1() {
     try {
-      builder.get(new int[] {0, 1});
+      builder.getByDimKey(new int[] {0, 1});
     } catch (IllegalArgumentException e) {
       return;
     }
@@ -76,7 +75,7 @@ public abstract class TensorBuilderTest extends TestCase {
   
   public void testGetOutOfBounds1() {
     try {
-      builder.get(new int[] {5, 2, 4});
+      builder.getByDimKey(new int[] {5, 2, 4});
     } catch (IllegalArgumentException e) {
       return;
     }
@@ -85,7 +84,7 @@ public abstract class TensorBuilderTest extends TestCase {
   
   public void testGetOutOfBounds2() {
     try {
-      builder.get(new int[] {0, -1, 3});
+      builder.getByDimKey(new int[] {0, -1, 3});
     } catch (IllegalArgumentException e) {
       return;
     }
@@ -96,18 +95,18 @@ public abstract class TensorBuilderTest extends TestCase {
     int[] test = new int[] {2, 2, 2};
     builder.put(test, 7.0);
     test[2] = 3;
-    assertEquals(0.0, builder.get(test));
-    assertEquals(7.0, builder.get(new int[] {2, 2, 2}));
+    assertEquals(0.0, builder.getByDimKey(test));
+    assertEquals(7.0, builder.getByDimKey(new int[] {2, 2, 2}));
   }
   
   public void testIncrementWithMultiplier() {
     for (int i = 0; i < otherBuilders.size(); i++) {
       builder.incrementWithMultiplier(otherBuilders.get(i), 2.0);
 
-      assertEquals(0.0, builder.get(KEY0));
-      assertEquals(7.0 + (6.0 * i), builder.get(KEY1));
-      assertEquals(2.0, builder.get(KEY2));
-      assertEquals(8.0 * (i + 1), builder.get(KEY3));
+      assertEquals(0.0, builder.getByDimKey(KEY0));
+      assertEquals(7.0 + (6.0 * i), builder.getByDimKey(KEY1));
+      assertEquals(2.0, builder.getByDimKey(KEY2));
+      assertEquals(8.0 * (i + 1), builder.getByDimKey(KEY3));
     }
   }
   
@@ -124,37 +123,37 @@ public abstract class TensorBuilderTest extends TestCase {
   
   public void testIncrementConstant() {
     builder.increment(5.0);
-    assertEquals(5.0, builder.get(KEY0));
-    assertEquals(6.0, builder.get(KEY1));
-    assertEquals(7.0, builder.get(KEY2));
-    assertEquals(5.0, builder.get(new int[] {3, 2, 4}));
+    assertEquals(5.0, builder.getByDimKey(KEY0));
+    assertEquals(6.0, builder.getByDimKey(KEY1));
+    assertEquals(7.0, builder.getByDimKey(KEY2));
+    assertEquals(5.0, builder.getByDimKey(new int[] {3, 2, 4}));
   }
   
   public void testIncrementEntry() {
     builder.incrementEntry(3.0, KEY0);
     builder.incrementEntry(3.0, KEY2);
-    assertEquals(3.0, builder.get(KEY0));
-    assertEquals(1.0, builder.get(KEY1));
-    assertEquals(5.0, builder.get(KEY2));
-    assertEquals(0.0, builder.get(KEY3));
+    assertEquals(3.0, builder.getByDimKey(KEY0));
+    assertEquals(1.0, builder.getByDimKey(KEY1));
+    assertEquals(5.0, builder.getByDimKey(KEY2));
+    assertEquals(0.0, builder.getByDimKey(KEY3));
   }
   
   public void testMultiply() {
     for (int i = 0; i < otherBuilders.size(); i++) {
       builder.multiply(otherBuilders.get(i));
-      assertEquals(0.0, builder.get(KEY0));
-      assertEquals(Math.pow(3.0, i + 1), builder.get(KEY1));
-      assertEquals(0.0, builder.get(KEY2));
-      assertEquals(0.0, builder.get(KEY3));
+      assertEquals(0.0, builder.getByDimKey(KEY0));
+      assertEquals(Math.pow(3.0, i + 1), builder.getByDimKey(KEY1));
+      assertEquals(0.0, builder.getByDimKey(KEY2));
+      assertEquals(0.0, builder.getByDimKey(KEY3));
     }
   }
   
   public void testMultiplyConstant() {
     builder.multiply(2.0);
-    assertEquals(0.0, builder.get(KEY0));
-    assertEquals(2.0, builder.get(KEY1));
-    assertEquals(4.0, builder.get(KEY2));
-    assertEquals(0.0, builder.get(KEY3));
+    assertEquals(0.0, builder.getByDimKey(KEY0));
+    assertEquals(2.0, builder.getByDimKey(KEY1));
+    assertEquals(4.0, builder.getByDimKey(KEY2));
+    assertEquals(0.0, builder.getByDimKey(KEY3));
   }
       
   public void testMultiplyInvalid() {
@@ -170,9 +169,9 @@ public abstract class TensorBuilderTest extends TestCase {
   
   public void testBuild() {
     Tensor tensor = builder.build();
-    assertEquals(0.0, tensor.get(KEY0));
-    assertEquals(1.0, tensor.get(KEY1));
-    assertEquals(2.0, tensor.get(KEY2));
+    assertEquals(0.0, tensor.getByDimKey(KEY0));
+    assertEquals(1.0, tensor.getByDimKey(KEY1));
+    assertEquals(2.0, tensor.getByDimKey(KEY2));
   }
   
   public void testGetL2Norm() {

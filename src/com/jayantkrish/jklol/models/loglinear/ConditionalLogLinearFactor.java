@@ -81,7 +81,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
     while (keyIter.hasNext()) {
       int[] featureKey = keyIter.next();
       weightKey[0] = featureKey[0];
-      weightTensor.incrementEntry(count * inputValueFeatures.get(featureKey), weightKey);
+      weightTensor.incrementEntry(count * inputValueFeatures.getByDimKey(featureKey), weightKey);
     }
   }
 

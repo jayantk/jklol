@@ -92,7 +92,7 @@ public class TableFactor extends DiscreteFactor {
   @Override
   public double getUnnormalizedProbability(Assignment a) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
-    return weights.get(getVars().assignmentToIntArray(a));
+    return weights.getByDimKey(getVars().assignmentToIntArray(a));
   }
 
   @Override

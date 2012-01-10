@@ -47,8 +47,16 @@ public class SparseTensorTest extends TensorTest {
   public void testVector() {
     Tensor tensor = SparseTensor.vector(2, 4, new double[] {0, 2, 3, 0});
     assertEquals(2, tensor.size());
-    assertEquals(2.0, tensor.get(1));
-    assertEquals(3.0, tensor.get(2));
-    assertEquals(0.0, tensor.get(3));
+    assertEquals(2.0, tensor.getByDimKey(1));
+    assertEquals(3.0, tensor.getByDimKey(2));
+    assertEquals(0.0, tensor.getByDimKey(3));
+  }
+  
+  public void testScalarConstant() {
+    Tensor constant = SparseTensor.getScalarConstant(10);
+    Tensor vector = SparseTensor.vector(2, 4, new double[] {0, 2, 3, 0});
+    Tensor result = vector.elementwiseProduct(constant);
+    assertEquals(0.0, result.get(0));
+    assertEquals(20.0, result.get(1));
   }
 }

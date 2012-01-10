@@ -53,7 +53,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
       int[] index = new int[] {i};
       while (iter.hasNext()) {
         Assignment assignment = iter.next();
-        builder.multiplyWeight(assignment, Math.exp(featureWeights.get(index) * feature.getValue(assignment)));
+        builder.multiplyWeight(assignment, Math.exp(featureWeights.getByDimKey(index) * feature.getValue(assignment)));
       }
     }
     return builder.build();

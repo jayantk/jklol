@@ -7,9 +7,9 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
  * Helper class for constructing {@link SparseTensor}s when the ordering of the
@@ -20,7 +20,7 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
  */
 public class SparseTensorBuilder extends AbstractTensorBase implements TensorBuilder {
 
-  private SortedMap<int[], Double> outcomes;
+  private SortedMap<Integer, Double> outcomes;
 
   /**
    * Gets a builder which constructs a {@code SparseTensor} over dimensions
@@ -32,7 +32,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public SparseTensorBuilder(int[] dimensionNums, int[] dimensionSizes) {
     super(dimensionNums, dimensionSizes);
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
-    this.outcomes = new TreeMap<int[], Double>(Ints.lexicographicalComparator());
+    this.outcomes = new TreeMap<Integer, Double>();
   }
   
   /**
@@ -64,17 +64,21 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   }
 
   @Override
-  public double get(int... key) {
-    Preconditions.checkArgument(key.length == getDimensionNumbers().length);
-    int[] dimSizes = getDimensionSizes();
-    for (int i = 0; i < key.length; i++) {
-      Preconditions.checkArgument(key[i] >= 0 && key[i] < dimSizes[i]);
-    }
-
-    if (outcomes.containsKey(key)) {
-      return outcomes.get(key);
+  public double getByIndex(int index) {
+    if (outcomes.containsKey(index)) {
+      return outcomes.get(index);
     }
     return 0.0;
+  }
+  
+  @Override
+  public int indexToKeyInt(int index) {
+    return index;
+  }
+  
+  @Override
+  public int keyIntToIndex(int keyInt) {
+    return keyInt;
   }
 
   /**
@@ -85,12 +89,12 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
    * @return
    */
   public boolean containsKey(int[] key) {
-    return outcomes.containsKey(key);
+    return outcomes.containsKey(dimKeyToKeyInt(key));
   }
 
   @Override
   public Iterator<int[]> keyIterator() {
-    return outcomes.keySet().iterator();
+    return new SparseKeyIterator(Lists.newArrayList(outcomes.keySet()), this);
   }
 
   @Override
@@ -108,12 +112,15 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
 
   @Override
   public void put(int[] key, double value) {
-    Preconditions.checkArgument(key.length == getDimensionNumbers().length);
+    putByKeyInt(dimKeyToKeyInt(key), value);
+  }
+  
+  public void putByKeyInt(int keyInt, double value) {
     if (value == 0.0) {
-      outcomes.remove(key);
+      outcomes.remove(keyInt);
     } else {
-      outcomes.put(Arrays.copyOf(key, key.length), value);
-    }
+      outcomes.put(keyInt, value);
+    }    
   }
 
   @Override
@@ -125,9 +132,8 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void increment(double amount) {
     // Invoking this method on a sparse tensor is a bad idea, because it
     // destroys the sparsity. Use a dense tensor instead.
-    Iterator<int[]> allKeyIterator = new IntegerArrayIterator(getDimensionSizes());
-    while (allKeyIterator.hasNext()) {
-      incrementEntry(amount, allKeyIterator.next());
+    for (int i = 0; i < maxKeyInt(); i++) {
+      incrementEntryByKeyInt(amount, i);
     }
   }
 
@@ -135,32 +141,29 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void incrementWithMultiplier(TensorBase other, double multiplier) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
 
-    Iterator<int[]> otherKeys = other.keyIterator();
-    while (otherKeys.hasNext()) {
-      int[] key = otherKeys.next();
-      incrementEntry(other.get(key) * multiplier, key);
+    Iterator<int[]> keyIterator = other.keyIterator();
+    while (keyIterator.hasNext()) {
+      int[] key = keyIterator.next();
+      incrementEntry(other.getByDimKey(key) * multiplier, key);
     }
   }
 
   @Override
   public void incrementEntry(double amount, int... key) {
     Preconditions.checkArgument(key.length == getDimensionNumbers().length);
-
-    double value = 0.0;
-    if (outcomes.containsKey(key)) {
-      value = outcomes.get(key);
-    }
-    put(key, value + amount);
+    put(key, getByDimKey(key) + amount);
+  }
+  
+  public void incrementEntryByKeyInt(double amount, int keyInt) {
+    putByKeyInt(keyInt, getByIndex(keyInt) + amount);
   }
 
   @Override
   public void multiply(TensorBase other) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
 
-    Iterator<int[]> keyIterator = keyIterator();
-    while (keyIterator.hasNext()) {
-      int[] key = keyIterator.next();
-      put(key, get(key) * other.get(key));
+    for (Integer keyInt : outcomes.keySet()) {
+      putByKeyInt(keyInt, getByIndex(keyInt) * other.getByIndex(other.keyIntToIndex(keyInt)));
     }
   }
 
@@ -171,14 +174,14 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
       return;
     }
 
-    for (int[] key : outcomes.keySet()) {
-      outcomes.put(key, outcomes.get(key) * amount);
+    for (int keyInt : outcomes.keySet()) {
+      outcomes.put(keyInt, outcomes.get(keyInt) * amount);
     }
   }
   
   @Override
   public void multiplyEntry(double amount, int... key) {
-    put(key, get(key) * amount);
+    put(key, getByDimKey(key) * amount);
   }
 
   /**
@@ -189,26 +192,24 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
    */
   @Override
   public SparseTensor build() {
-    int[][] tableOutcomes = new int[getDimensionNumbers().length][outcomes.size()];
+    int[] tableKeyInts = new int[outcomes.size()];
     double[] tableValues = new double[outcomes.size()];
     int index = 0;
-    for (Map.Entry<int[], Double> entry : outcomes.entrySet()) {
-      for (int j = 0; j < getDimensionNumbers().length; j++) {
-        tableOutcomes[j][index] = entry.getKey()[j];
-      }
+    for (Map.Entry<Integer, Double> entry : outcomes.entrySet()) {
+      tableKeyInts[index] = entry.getKey();
       tableValues[index] = entry.getValue();
       index++;
     }
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(),
-        tableOutcomes, tableValues);
+        tableKeyInts, tableValues);
   }
   
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("{");
-    for (Map.Entry<int[], Double> outcome : outcomes.entrySet()) {
-      builder.append(Arrays.toString(outcome.getKey()));
+    for (Map.Entry<Integer, Double> outcome : outcomes.entrySet()) {
+      builder.append(Arrays.toString(keyIntToDimKey(outcome.getKey())));
       builder.append("=");
       builder.append(outcome.getValue());
       builder.append(", ");

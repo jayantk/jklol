@@ -75,10 +75,8 @@ public class LinearClassifierTest extends TestCase {
   }
 
   public void testTrainSvm() {
-    DefaultLogFunction log = new DefaultLogFunction();
     runTrainerTest(new SubgradientSvmTrainer(80, 1, 1.0, new JunctionTree(),
-        new SubgradientSvmTrainer.HammingCost(), log));
-    log.printTimeStatistics();
+        new SubgradientSvmTrainer.HammingCost(), new DefaultLogFunction()));
   }
 
   public void testTrainLogisticRegression() {

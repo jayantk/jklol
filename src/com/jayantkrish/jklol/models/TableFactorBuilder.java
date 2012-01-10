@@ -124,6 +124,16 @@ public class TableFactorBuilder {
   public void multiplyWeight(Assignment assignment, double weight) {
     setWeight(assignment, getWeight(assignment) * weight);
   }
+  
+  /**
+   * Sets the weight of {@code assignment} to {@code Math.max(getWeight(assignment), weight)}.
+   * 
+   * @param assignment
+   * @param weight
+   */
+  public void maxWeight(Assignment assignment, double weight) {
+    setWeight(assignment, Math.max(getWeight(assignment), weight));
+  }
 
   /**
    * Gets the weight of {@code assignment}. If no weight has been set for
@@ -133,7 +143,7 @@ public class TableFactorBuilder {
    * @return
    */
   public double getWeight(Assignment assignment) {
-    return weightBuilder.get(vars.assignmentToIntArray(assignment));
+    return weightBuilder.getByDimKey(vars.assignmentToIntArray(assignment));
   }
 
   /**

@@ -87,6 +87,17 @@ public class Assignment {
   }
 
   /**
+   * Gets the value assigned to the sole variable in {@code this}. Requires
+   * {@code this.size() == 1}.
+   * 
+   * @return
+   */
+  public Object getOnlyValue() {
+    Preconditions.checkState(varValueMap.size() == 1);
+    return varValueMap.values().iterator().next();
+  }
+
+  /**
    * Gets the value assigned to variable {@code varNum}. Returns {@code null} if
    * {@code varNum} does not have a value.
    * 
@@ -124,11 +135,28 @@ public class Assignment {
   }
 
   /**
-   * If varNums is a subset of the variables in this assignment, this method
-   * returns the value assigned to each variable in varNums.
+   * Returns {@code true} if {@code this} contains all of the mappings in
+   * {@code assignment}. Note that this checks both variable numbers and their
+   * values.
    * 
-   * Puts the return value into "returnValue" if it is non-null, otherwise
-   * allocates and returns a new list.
+   * @param assignment
+   * @return
+   */
+  public boolean containsAll(Assignment assignment) {
+    for (Integer variableNum : assignment.getVariableNums()) {
+      if (!varValueMap.containsKey(variableNum) ||
+          getValue(variableNum) != assignment.getValue(variableNum)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * If varNums is a subset of the variables in this assignment, this method
+   * returns the value assigned to each variable in varNums. Puts the return
+   * value into "returnValue" if it is non-null, otherwise allocates and returns
+   * a new list.
    */
   public List<Object> intersection(List<Integer> varNums,
       List<Object> returnValue) {
@@ -145,11 +173,10 @@ public class Assignment {
 
   /**
    * If varNums is a subset of the variables in this assignment, this method
-   * returns the value assigned to each variable in varNums.
-   * 
-   * varNums may contain indices which are not represented in this assignment.
-   * These indices are ignored; in this case, the returned assignment will
-   * contain fewer variable/value mappings than {@code varNums.size()}.
+   * returns the value assigned to each variable in varNums. varNums may contain
+   * indices which are not represented in this assignment. These indices are
+   * ignored; in this case, the returned assignment will contain fewer
+   * variable/value mappings than {@code varNums.size()}.
    */
   public Assignment intersection(Collection<Integer> varNums) {
     List<Integer> varNumList = new ArrayList<Integer>();

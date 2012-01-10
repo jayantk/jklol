@@ -28,7 +28,6 @@ import com.jayantkrish.jklol.util.Converter;
  * are immutable.
  * 
  * @author jayant
- * 
  */
 public class VariableNumMap {
 
@@ -67,8 +66,8 @@ public class VariableNumMap {
     varMap = varNumMap;
     names = varNames;
   }
-  
-  public static VariableNumMap fromVariableNames(List<String> variableNames, 
+
+  public static VariableNumMap fromVariableNames(List<String> variableNames,
       List<Variable> variables) {
     Preconditions.checkArgument(variableNames.size() == variables.size());
     List<Integer> varNums = Lists.newArrayList();
@@ -77,7 +76,7 @@ public class VariableNumMap {
     }
     return new VariableNumMap(varNums, variableNames, variables);
   }
-  
+
   /**
    * Creates a {@code VariableNumMap} containing a single variable.
    * 
@@ -109,12 +108,34 @@ public class VariableNumMap {
   }
 
   /**
+   * Gets the number of the sole variable contained in {@code this}. Requires
+   * {@code this.size() == 1}.
+   * 
+   * @return
+   */
+  public int getOnlyVariableNum() {
+    Preconditions.checkState(varMap.size() == 1);
+    return varMap.keySet().iterator().next();
+  }
+
+  /**
    * Get the variable types in this map, ordered by variable index.
    * 
    * @return
    */
   public List<Variable> getVariables() {
     return new ArrayList<Variable>(varMap.values());
+  }
+  
+  /**
+   * Gets the {@code Variable} of the sole variable contained in {@code this}. Requires
+   * {@code this.size() == 1}.
+   * 
+   * @return
+   */
+  public Variable getOnlyVariable() {
+    Preconditions.checkState(varMap.size() == 1);
+    return varMap.values().iterator().next();
   }
 
   /**
@@ -252,7 +273,7 @@ public class VariableNumMap {
   public VariableNumMap getVariablesByName(String... variableNames) {
     return getVariablesByName(Arrays.asList(variableNames));
   }
-  
+
   /**
    * Gets all variables whose names begin with {@code namePrefix}.
    * 
@@ -356,7 +377,8 @@ public class VariableNumMap {
   private void checkCompatibility(VariableNumMap other) {
     for (Integer key : other.getVariableNums()) {
       if (varMap.containsKey(key)
-          && (varMap.get(key) != other.varMap.get(key) || !names.get(key).equals(other.names.get(key)))) {
+          && (varMap.get(key) != other.varMap.get(key) || !names.get(key).equals(
+              other.names.get(key)))) {
         throw new IllegalArgumentException(
             "Conflicting number -> (name, variable) mapping! This object: "
                 + this + " other object: " + other);
@@ -537,7 +559,6 @@ public class VariableNumMap {
    * store the possible assignments to discrete variables. The returned array
    * has length equal to {@code this.size()}, and can be converted back into an
    * assignment using {@link #intArrayToAssignment(int[])}.
-   * 
    * <p>
    * If {@code assignment} contains values which are not in the domain of the
    * corresponding discrete variables, this method throws an exception.
@@ -550,7 +571,8 @@ public class VariableNumMap {
     int index = 0;
     for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
       if (entry.getValue() instanceof DiscreteVariable) {
-        value[index] = ((DiscreteVariable) entry.getValue()).getValueIndex(assignment.getValue(entry.getKey()));
+        value[index] = ((DiscreteVariable) entry.getValue()).getValueIndex(assignment
+            .getValue(entry.getKey()));
       }
       index++;
     }
@@ -652,6 +674,10 @@ public class VariableNumMap {
     return curMap;
   }
 
+  public static VariableNumMap unionAll(VariableNumMap... maps) {
+    return unionAll(Arrays.asList(maps));
+  }
+
   /**
    * Converter from assignments to outcomes (list of objects) and vice-versa.
    * 
@@ -743,9 +769,8 @@ public class VariableNumMap {
     /**
      * Constructs a relabeling from {@code domain} to {@code range} by mapping
      * the {@code i}th variable name/index in {@code domain} to the {@code i}th
-     * name/index in {@code range}.
-     * 
-     * Requires {@code domain.size() == range.size()}.
+     * name/index in {@code range}. Requires
+     * {@code domain.size() == range.size()}.
      * 
      * @param domain
      * @param range

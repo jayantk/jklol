@@ -58,8 +58,7 @@ public class StochasticGradientTrainer extends AbstractTrainer {
     // feature counts
     FactorGraph inputFactorGraph = factorGraph.conditional(input);
     MarginalSet inputMarginals = marginalCalculator.computeMarginals(inputFactorGraph);
-    logLinearModel.incrementSufficientStatistics(
-        gradient, inputMarginals, -1.0);
+    logLinearModel.incrementSufficientStatistics(gradient, inputMarginals, -1.0);
 
     // Compute the first term of the gradient, the model expectations
     // conditioned on the training example.

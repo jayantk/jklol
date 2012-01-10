@@ -46,7 +46,7 @@ public class LogTableFactor extends DiscreteFactor {
   @Override
   public double getUnnormalizedProbability(Assignment a) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
-    return Math.exp(logWeights.get(getVars().assignmentToIntArray(a)));
+    return Math.exp(logWeights.getByDimKey(getVars().assignmentToIntArray(a)));
   }
 
   @Override

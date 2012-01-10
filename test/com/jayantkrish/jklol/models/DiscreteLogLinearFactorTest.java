@@ -64,7 +64,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(4, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
-      assertEquals(weights.get(i), features.get(i).getValue(tf));      
+      assertEquals(weights.getByDimKey(i), features.get(i).getValue(tf));      
     }
   } 
   
@@ -81,7 +81,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(4, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
-      assertEquals(weights.get(i), features.get(i).getValue(tf.intersection(vars)));      
+      assertEquals(weights.getByDimKey(i), features.get(i).getValue(tf.intersection(vars)));      
     }
   }
   
@@ -105,7 +105,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
         weight += feature.getValue(a) * factor.getUnnormalizedProbability(a);
       }
       weight = weight / partitionFunction; 
-      assertEquals(weights.get(i), weight);
+      assertEquals(weights.getByDimKey(i), weight);
     }
   }
 }

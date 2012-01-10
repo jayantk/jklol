@@ -1,10 +1,5 @@
 package com.jayantkrish.jklol.models;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -27,7 +22,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class LinearClassifierFactor extends AbstractFactor {
+public class LinearClassifierFactor extends AbstractConditionalFactor {
 
   private final VariableNumMap inputVar;
   private final int[] inputVarNums;
@@ -61,7 +56,7 @@ public class LinearClassifierFactor extends AbstractFactor {
 
     Tensor multiplied = logWeights.elementwiseProduct(inputFeatureVector.relabelDimensions(inputVarNums));
     Tensor logProbs = multiplied.sumOutDimensions(Sets.newHashSet(Ints.asList(inputVarNums)));
-    return Math.exp(logProbs.get(outputIndex)); 
+    return Math.exp(logProbs.getByDimKey(outputIndex)); 
   }
 
   @Override
@@ -92,65 +87,10 @@ public class LinearClassifierFactor extends AbstractFactor {
     // Construct a table factor with the unnormalized probabilities of each outputVar value.
     TableFactorBuilder outputBuilder = new TableFactorBuilder(outputVar);
     for (int i = 0; i < outputVariableType.numValues(); i++) {
-      outputBuilder.setWeight(Math.exp(logProbs.get(new int[] {i})), 
+      outputBuilder.setWeight(Math.exp(logProbs.getByDimKey(new int[] {i})), 
           outputVariableType.getValue(i));
     }
     TableFactor output = outputBuilder.build();
     return output.conditional(assignment);
-  }
-
-  @Override
-  public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Factor marginalize(Collection<Integer> varNumsToEliminate) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Factor maxMarginalize(Collection<Integer> varNumsToEliminate) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Factor add(Factor other) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Factor maximum(Factor other) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Factor product(Factor other) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Factor product(double constant) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Factor inverse() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public double size() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Assignment sample() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public List<Assignment> getMostLikelyAssignments(int numAssignments) {
-    throw new UnsupportedOperationException();
   }
 }

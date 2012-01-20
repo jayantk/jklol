@@ -22,6 +22,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
   private final VariableNumMap leftVar;
   private final VariableNumMap rightVar;
   private final VariableNumMap terminalVar;
+  private final VariableNumMap ruleTypeVar;
 
   // These variables are present in the factor graph.
   private final VariableNumMap treeVar;
@@ -33,8 +34,8 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
   private ParametricFactor<SufficientStatistics> terminalFactor;
 
   public ParametricCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar,
-      VariableNumMap rightVar,
-      VariableNumMap terminalVar, VariableNumMap treeVar, VariableNumMap inputVar,
+      VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
+      VariableNumMap treeVar, VariableNumMap inputVar,
       ParametricFactor<SufficientStatistics> nonterminalFactor,
       ParametricFactor<SufficientStatistics> terminalFactor,
       int beamSize) {
@@ -43,6 +44,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
     this.leftVar = leftVar;
     this.rightVar = rightVar;
     this.terminalVar = terminalVar;
+    this.ruleTypeVar = ruleTypeVar;
 
     this.treeVar = treeVar;
     this.inputVar = inputVar;
@@ -60,7 +62,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
     SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
 
-    CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar,
+    CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
         nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
         terminalFactor.getFactorFromParameters(terminalStatistics), beamSize);
     return new BeamSearchCfgFactor(treeVar, inputVar, parser);
@@ -127,13 +129,15 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
       SufficientStatistics terminalStatistics, double weight) {
     if (tree.isTerminal()) {
       Assignment terminalRule = parentVar.outcomeArrayToAssignment(tree.getRoot())
-          .union(terminalVar.outcomeArrayToAssignment(tree.getTerminalProductions()));
+          .union(terminalVar.outcomeArrayToAssignment(tree.getTerminalProductions()))
+          .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       terminalFactor.incrementSufficientStatisticsFromAssignment(terminalStatistics, terminalRule,
           weight);
     } else {
       Assignment nonterminalRule = parentVar.outcomeArrayToAssignment(tree.getRoot())
           .union(leftVar.outcomeArrayToAssignment(tree.getLeft().getRoot()))
-          .union(rightVar.outcomeArrayToAssignment(tree.getRight().getRoot()));
+          .union(rightVar.outcomeArrayToAssignment(tree.getRight().getRoot()))
+          .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       nonterminalFactor.incrementSufficientStatisticsFromAssignment(nonterminalStatistics,
           nonterminalRule, weight);
       accumulateSufficientStatistics(tree.getLeft(), nonterminalStatistics, terminalStatistics, weight);

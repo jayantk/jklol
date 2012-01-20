@@ -1,26 +1,30 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A CFG parse tree.
  */
 public class ParseTree implements Comparable<ParseTree> {
 
-  private Object root;
-  private List<Object> terminal;
-  
-  private ParseTree left;
-  private ParseTree right;
+  private final Object root;
+  // Field for extra information associated with the current parse tree rule.
+  private final Object ruleType;
+  private final List<Object> terminal;
 
-  private double prob;
+  private final ParseTree left;
+  private final ParseTree right;
+
+  private final double prob;
 
   /**
-   * Create a new parse tree by composing two subtrees with production rule bp.
+   * Create a new parse tree by composing two subtrees with the production rule
+   * {@code ruleType}, resulting in a tree rooted at {@code root}.
    */
-  public ParseTree(Object root, ParseTree left, ParseTree right, double prob) {
+  public ParseTree(Object root, Object ruleType, ParseTree left, ParseTree right, double prob) {
     this.root = root;
+    this.ruleType = ruleType;
     this.left = left;
     this.right = right;
     this.terminal = null;
@@ -30,8 +34,11 @@ public class ParseTree implements Comparable<ParseTree> {
   /**
    * Create a new terminal parse tree with a terminal production rule.
    */
-  public ParseTree(Object root, List<Object> terminal, double prob) {
+  public ParseTree(Object root, Object ruleType, List<Object> terminal, double prob) {
     this.root = root;
+    this.ruleType = ruleType;
+    this.left = null;
+    this.right = null;
     this.terminal = terminal;
     this.prob = prob;
   }
@@ -75,6 +82,10 @@ public class ParseTree implements Comparable<ParseTree> {
     return right;
   }
 
+  public Object getRuleType() {
+    return ruleType;
+  }
+
   /**
    * Gets a new parse tree equivalent to this one, with probability
    * {@code this.probability * amount}.
@@ -84,9 +95,9 @@ public class ParseTree implements Comparable<ParseTree> {
    */
   public ParseTree multiplyProbability(double amount) {
     if (isTerminal()) {
-      return new ParseTree(root, terminal, getProbability() * amount);
+      return new ParseTree(root, ruleType, terminal, getProbability() * amount);
     } else {
-      return new ParseTree(root, left, right, getProbability() * amount);
+      return new ParseTree(root, ruleType, left, right, getProbability() * amount);
     }
   }
 
@@ -104,7 +115,7 @@ public class ParseTree implements Comparable<ParseTree> {
       right.getTerminalProductions(toAppend);
     }
   }
-  
+
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -151,8 +162,8 @@ public class ParseTree implements Comparable<ParseTree> {
   @Override
   public String toString() {
     if (!isTerminal()) {
-      return "(" + root + " --> " + left.toString() + " " + right.toString() + ")";
+      return "(" + root + " --" + ruleType + "--> " + left.toString() + " " + right.toString() + ")";
     }
-    return "(" + root + "-->" + terminal + ")";
+    return "(" + root + "--" + ruleType + "-->" + terminal + ")";
   }
 }

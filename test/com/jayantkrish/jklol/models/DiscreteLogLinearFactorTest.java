@@ -29,8 +29,9 @@ public class DiscreteLogLinearFactorTest extends TestCase {
         Arrays.asList("T", "F" ));
     
     vars = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList("v2", "v3"), Arrays.asList(v, v));
-    
-    f = DiscreteLogLinearFactor.createIndicatorFactor(vars);
+    TableFactorBuilder initialWeights = TableFactorBuilder.ones(vars);
+    initialWeights.setWeight(0.0, "F", "F");
+    f = DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights);
     
     parameters = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "F"),
@@ -50,7 +51,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     assertEquals(Math.E, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T")), .00001);
     assertEquals(Math.E, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "F")), .00001);
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
-    assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F")), .00001);
+    assertEquals(0.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F")), .00001);
   }
     
   public void testGetSufficientStatisticsFromAssignment() {

@@ -9,7 +9,6 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -19,7 +18,7 @@ public class CfgParserTest extends TestCase {
   Factor terminal;
 	CfgParser p;
 	
-	VariableNumMap parentVar, leftVar, rightVar, termVar;
+	VariableNumMap parentVar, leftVar, rightVar, termVar, ruleVar;
 
 	public void setUp() {
 	  DiscreteVariable nonterm = new DiscreteVariable("nonterminals", Arrays.asList(
@@ -27,54 +26,60 @@ public class CfgParserTest extends TestCase {
 	  DiscreteVariable terms = new DiscreteVariable("terminals", listifyWords(Arrays.asList(
 	      "gretzky", "plays", "ice", "hockey", "ice hockey", "baz", "bbb", 
 	      "baz bbb", "a", "b", "c")));
+	  DiscreteVariable ruleTypes = new DiscreteVariable("rules", Arrays.asList("rule1", "rule2"));
 	  
 	  parentVar = new VariableNumMap(Ints.asList(0), Arrays.asList("v0"), Arrays.asList(nonterm));
 	  leftVar = new VariableNumMap(Ints.asList(1), Arrays.asList("v1"), Arrays.asList(nonterm));
 	  rightVar = new VariableNumMap(Ints.asList(2), Arrays.asList("v2"), Arrays.asList(nonterm));
 	  termVar = new VariableNumMap(Ints.asList(3), Arrays.asList("v3"), Arrays.asList(terms));
+	  ruleVar = new VariableNumMap(Ints.asList(4), Arrays.asList("v4"), Arrays.asList(ruleTypes));
 	  
-	  VariableNumMap binaryFactorVars = parentVar.union(leftVar).union(rightVar);
+	  VariableNumMap binaryFactorVars = VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleVar);
 	  TableFactorBuilder binaryBuilder = new TableFactorBuilder(binaryFactorVars);
-	  VariableNumMap terminalFactorVars = parentVar.union(termVar);
+	  VariableNumMap terminalFactorVars = VariableNumMap.unionAll(parentVar, termVar, ruleVar);
 	  TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalFactorVars);
 	    
-		addTerminal(terminalBuilder, "N", "gretzky", 0.25);
-		addTerminal(terminalBuilder, "N", "ice hockey", 0.25);
-		addTerminal(terminalBuilder, "N", "ice", 0.25);
-		addTerminal(terminalBuilder, "N", "hockey", 0.25);
-		addTerminal(terminalBuilder, "V", "plays", 1.0);
+		addTerminal(terminalBuilder, "N", "gretzky", "rule1", 0.25);
+		addTerminal(terminalBuilder, "N", "ice hockey", "rule1", 0.25);
+		addTerminal(terminalBuilder, "N", "ice", "rule1", 0.25);
+		addTerminal(terminalBuilder, "N", "hockey", "rule1", 0.25);
+		addTerminal(terminalBuilder, "V", "plays", "rule1", 1.0);
 
-		addBinary(binaryBuilder, "S", "N", "VP", 1.0);
-		addBinary(binaryBuilder, "S2", "N", "VP", 1.0);
-		addBinary(binaryBuilder, "VP", "V", "N", 1.0);
-		addBinary(binaryBuilder, "NP", "N", "N", 1.0);
-		addBinary(binaryBuilder, "foo", "N", "N", 0.5);
-		addBinary(binaryBuilder, "foo", "R", "S", 0.5);
+		addBinary(binaryBuilder, "S", "N", "VP", "rule1", 1.0);
+		addBinary(binaryBuilder, "S2", "N", "VP", "rule1", 1.0);
+		addBinary(binaryBuilder, "VP", "V", "N", "rule2", 1.0);
+		addBinary(binaryBuilder, "NP", "N", "N", "rule1", 1.0);
+		addBinary(binaryBuilder, "foo", "N", "N", "rule1", 0.5);
+		addBinary(binaryBuilder, "foo", "R", "S", "rule1", 0.5);
 
-		addTerminal(terminalBuilder, "bar", "baz", 0.5);
-		addTerminal(terminalBuilder, "bar", "bbb", 0.5);
-		addTerminal(terminalBuilder, "barP", "baz bbb", 0.5);
-		addBinary(binaryBuilder, "barP", "bar", "bar", 0.5);
+		addTerminal(terminalBuilder, "bar", "baz", "rule1", 0.5);
+		addTerminal(terminalBuilder, "bar", "bbb", "rule1", 0.5);
+		addTerminal(terminalBuilder, "barP", "baz bbb", "rule1", 0.5);
+		addBinary(binaryBuilder, "barP", "bar", "bar", "rule1", 0.5);
+		addBinary(binaryBuilder, "barP", "bar", "bar", "rule2", 0.25);
 
-		addBinary(binaryBuilder, "A", "A", "A", 0.25);
-		addTerminal(terminalBuilder, "A", "a", 0.25);
-		addTerminal(terminalBuilder, "A", "b", 0.25);
-		addTerminal(terminalBuilder, "A", "c", 0.25);
+		addBinary(binaryBuilder, "A", "A", "A", "rule1", 0.25);
+		addTerminal(terminalBuilder, "A", "a", "rule1", 0.25);
+		addTerminal(terminalBuilder, "A", "b", "rule1", 0.25);
+		addTerminal(terminalBuilder, "A", "c", "rule1", 0.25);
 
 		binary = binaryBuilder.build();
 		terminal = terminalBuilder.build();
-		p = new CfgParser(parentVar, leftVar, rightVar, termVar, binary, terminal, 10);
+		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
+		    binary, terminal, 10);
 	}
 	
-	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, String term, double weight) {
+	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
+	    String term, String ruleType, double weight) {
 	  List<String> terminalValue = Arrays.asList(term.split(" "));
 	  terminalBuilder.incrementWeight(terminalBuilder.getVars()
-	      .outcomeArrayToAssignment(nonterm, terminalValue), weight);
+	      .outcomeArrayToAssignment(nonterm, terminalValue, ruleType), weight);
 	}
 	
-	private void addBinary(TableFactorBuilder binaryBuilder, String parent, String left, String right, double weight) {
+	private void addBinary(TableFactorBuilder binaryBuilder, String parent, String left, 
+	    String right, String ruleType, double weight) {
 	  binaryBuilder.incrementWeight(binaryBuilder.getVars()
-	      .outcomeArrayToAssignment(parent, left, right), weight);
+	      .outcomeArrayToAssignment(parent, left, right, ruleType), weight);
 	}
 	
 	/**
@@ -131,14 +136,15 @@ public class CfgParserTest extends TestCase {
 	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor ruleCounts = c.getBinaryRuleExpectations();
-		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("S2", "N", "VP"));
-		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("S", "N", "VP") / c.getPartitionFunction());
-		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("NP", "N", "N"));
-		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("VP", "V", "N") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("S2", "N", "VP", "rule1"));
+		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("S", "N", "VP", "rule1") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("NP", "N", "N", "rule1"));
+		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("VP", "V", "N", "rule2") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("VP", "V", "N", "rule1") / c.getPartitionFunction());
 
 		Factor termCounts = c.getTerminalRuleExpectations();
-		assertEquals(1.0, termCounts.getUnnormalizedProbability("N", Arrays.asList("gretzky")) / c.getPartitionFunction());
-		assertEquals(0.0, termCounts.getUnnormalizedProbability("N", Arrays.asList("hockey")));
+		assertEquals(1.0, termCounts.getUnnormalizedProbability("N", Arrays.asList("gretzky"), "rule1") / c.getPartitionFunction());
+		assertEquals(0.0, termCounts.getUnnormalizedProbability("N", Arrays.asList("hockey"), "rule1"));
 	}
 
 	public void testAmbiguous() {
@@ -151,10 +157,10 @@ public class CfgParserTest extends TestCase {
 		assertEquals(1.0, leftProds.getUnnormalizedProbability("A") / c.getPartitionFunction());
 
 		Factor ruleCounts = c.getBinaryRuleExpectations();
-		assertEquals(2.0, ruleCounts.getUnnormalizedProbability("A", "A", "A") / c.getPartitionFunction());
+		assertEquals(2.0, ruleCounts.getUnnormalizedProbability("A", "A", "A", "rule1") / c.getPartitionFunction());
 
 		Factor termCounts = c.getTerminalRuleExpectations();
-		assertEquals(1.0, termCounts.getUnnormalizedProbability("A", Arrays.asList("b")) / c.getPartitionFunction());	
+		assertEquals(1.0, termCounts.getUnnormalizedProbability("A", Arrays.asList("b"), "rule1") / c.getPartitionFunction());	
 	}
 
 	public void testParseMaxMarginal() {
@@ -164,6 +170,8 @@ public class CfgParserTest extends TestCase {
 		assertEquals(.5, prods.getUnnormalizedProbability("barP"));	
 	}
 
+	// These methods are no longer implemented.
+	/*
 	public void testParseMaxMarginalTree() {
 		ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false); 
 		    
@@ -206,23 +214,33 @@ public class CfgParserTest extends TestCase {
 		assertEquals("bar", trees.get(1).getLeft().getRoot());
 		assertEquals("bar", trees.get(1).getRight().getRoot());
 	}
+	*/
 	
 	public void testBeamSearch() {
 	  List<ParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
-	  assertEquals(2, trees.size());
+	  assertEquals(3, trees.size());
 	  
 	  ParseTree bestTree = trees.get(0);
 	  assertEquals("barP", bestTree.getRoot());
+	  assertEquals("rule1", bestTree.getRuleType());
 	  assertTrue(bestTree.isTerminal());
 	  assertEquals(0.5, bestTree.getProbability());
 	  
 	  ParseTree secondBestTree = trees.get(1);
 	  assertEquals("barP", secondBestTree.getRoot());
+	  assertEquals("rule1", secondBestTree.getRuleType());
 	  assertFalse(secondBestTree.isTerminal());
 	  assertEquals(0.125, secondBestTree.getProbability());
 	  
+	  ParseTree thirdBestTree = trees.get(2);
+	  assertEquals("barP", thirdBestTree.getRoot());
+	  assertEquals("rule2", thirdBestTree.getRuleType());
+	  assertFalse(thirdBestTree.isTerminal());
+	  assertEquals(0.125 / 2.0, thirdBestTree.getProbability());
+
+	  
 	  // Make sure that the beam truncates the less probable tree.
-	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, binary, terminal, 1);
+	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary, terminal, 1);
 	  trees = newParser.beamSearch(Arrays.asList("baz", "bbb"));
 	  assertEquals(1, trees.size());
 	  bestTree = trees.get(0);

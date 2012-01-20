@@ -23,14 +23,24 @@ public interface TensorBuilder extends TensorBase {
   void increment(double amount);
 
   void incrementWithMultiplier(TensorBase other, double multiplier);
-  
+
   void incrementEntry(double amount, int... key);
 
   void multiply(TensorBase other);
 
   void multiply(double amount);
-  
+
   void multiplyEntry(double amount, int... key);
 
   Tensor build();
+
+  /**
+   * Gets a copy of this {@code TensorBuilder}. Mutating the returned builder
+   * will not affect the values in {@code this}. This method preserves the type
+   * of the builder (essentially, whether it is sparse or dense), so it is
+   * preferred over copy constructors.
+   * 
+   * @return
+   */
+  TensorBuilder getCopy();
 }

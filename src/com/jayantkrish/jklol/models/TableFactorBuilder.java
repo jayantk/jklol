@@ -10,6 +10,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -45,6 +46,32 @@ public class TableFactorBuilder {
       sizes[i] = varTypes.get(i).numValues();
     }
     this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()), sizes);
+  }
+
+  /**
+   * Copy constructor.
+   * 
+   * @param toCopy
+   */
+  public TableFactorBuilder(TableFactorBuilder toCopy) {
+    this.vars = Preconditions.checkNotNull(toCopy.getVars());
+    this.weightBuilder = toCopy.weightBuilder.getCopy();
+  }
+
+  /**
+   * Gets a {@code TableFactorBuilder} where each outcome is initialized with a
+   * weight of 1.
+   * 
+   * @param variables
+   * @return
+   */
+  public static TableFactorBuilder ones(VariableNumMap variables) {
+    TableFactorBuilder builder = new TableFactorBuilder(variables);
+    Iterator<Assignment> allAssignmentIter = new AllAssignmentIterator(variables);
+    while (allAssignmentIter.hasNext()) {
+      builder.setWeight(allAssignmentIter.next(), 1.0);
+    }
+    return builder;
   }
 
   /**
@@ -124,9 +151,10 @@ public class TableFactorBuilder {
   public void multiplyWeight(Assignment assignment, double weight) {
     setWeight(assignment, getWeight(assignment) * weight);
   }
-  
+
   /**
-   * Sets the weight of {@code assignment} to {@code Math.max(getWeight(assignment), weight)}.
+   * Sets the weight of {@code assignment} to
+   * {@code Math.max(getWeight(assignment), weight)}.
    * 
    * @param assignment
    * @param weight

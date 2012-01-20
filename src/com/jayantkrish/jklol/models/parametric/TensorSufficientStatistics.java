@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.CoercionError;
+import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 
 /**
@@ -62,6 +63,14 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   public void multiply(double amount) {
     for (int i = 0; i < statistics.size(); i++) {
       statistics.get(i).multiply(amount);
+    }
+  }
+  
+  @Override
+  public void perturb(double stddev) {
+    for (TensorBuilder statistic : statistics) {
+      statistic.increment(DenseTensor.random(
+          statistic.getDimensionNumbers(), statistic.getDimensionSizes(), 0.0, stddev));
     }
   }
 

@@ -89,7 +89,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
       VariableNumMap fixedVariables) {
     List<VariableNameMatcher> matchers = Lists.newArrayList();
     for (String variableName : plateVariables.getVariableNames()) {
-      matchers.add(new VariableNameMatcher(plateName, variableName, 0));
+      matchers.add(new VariableNameMatcher(plateName + "/", "/" + variableName, 0));
     }
     return new VariableNamePattern(matchers, plateVariables, fixedVariables);
   }

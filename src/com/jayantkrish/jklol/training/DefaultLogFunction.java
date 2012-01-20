@@ -11,8 +11,15 @@ import com.jayantkrish.jklol.util.Assignment;
  * A simple default logging function.
  */ 
 public class DefaultLogFunction extends AbstractLogFunction {
+  
+  private final int logInterval;
 
-  public DefaultLogFunction() { super(); }
+  public DefaultLogFunction() { super(); logInterval = 1; }
+  
+  public DefaultLogFunction(int logInterval) { 
+    super(); 
+    this.logInterval = logInterval; 
+  }
   
 	@Override
 	public void log(Assignment example, FactorGraph graph) {
@@ -21,25 +28,33 @@ public class DefaultLogFunction extends AbstractLogFunction {
 
 	@Override
 	public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {
-		System.out.println(iteration + "." + exampleNum + ": example: " + graph.assignmentToObject(example));
+	  if (iteration % logInterval == 0) {
+	    System.out.println(iteration + "." + exampleNum + ": example: " + graph.assignmentToObject(example));
+	  }
 	}
 
 	@Override
 	public void notifyIterationStart(int iteration) {
-		System.out.println("*** ITERATION " + iteration + " ***");
+	  if (iteration % logInterval == 0) {
+	    System.out.println("*** ITERATION " + iteration + " ***");
+	  }
 		startTimer("iteration");
 	}
 
 	@Override
 	public void notifyIterationEnd(int iteration) {
 	  long elapsedTime = stopTimer("iteration");
-	  System.out.println(iteration + " done. Elapsed: " + elapsedTime + " ms");
-	  printTimeStatistics();
+	  if (iteration % logInterval == 0) {
+	    System.out.println(iteration + " done. Elapsed: " + elapsedTime + " ms");
+	    printTimeStatistics();
+	  }
 	}
 
   @Override
   public void logStatistic(int iteration, String statisticName, String value) {
-    System.out.println(iteration + ": " + statisticName + "=" + value);
+    if (iteration % logInterval == 0) {
+      System.out.println(iteration + ": " + statisticName + "=" + value);
+    }
   }
   
   public void printTimeStatistics() {

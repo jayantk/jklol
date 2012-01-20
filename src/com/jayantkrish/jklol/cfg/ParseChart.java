@@ -29,6 +29,7 @@ public class ParseChart {
   private VariableNumMap leftVar;
   private VariableNumMap rightVar;
   private VariableNumMap terminalVar;
+  private VariableNumMap ruleTypeVar;
 
   private Factor binaryRuleExpectations;
   private Factor terminalRuleExpectations;
@@ -49,11 +50,14 @@ public class ParseChart {
    * probability, meaning ParseChart computes max-marginals.
    */
   public ParseChart(List<?> terminals, VariableNumMap parent, VariableNumMap left, 
-      VariableNumMap right, VariableNumMap terminal, boolean sumProduct) {
+      VariableNumMap right, VariableNumMap terminal, VariableNumMap ruleTypeVar, 
+      boolean sumProduct) {
     this.terminals = terminals;
     this.parentVar = parent;
     this.leftVar = left;
     this.rightVar = right;
+    this.ruleTypeVar = ruleTypeVar;
+
     this.terminalVar = terminal;
     this.sumProduct = sumProduct;
     
@@ -62,8 +66,8 @@ public class ParseChart {
     insideChart = new Factor[numTerminals][numTerminals];
     outsideChart = new Factor[numTerminals][numTerminals];
     marginalChart = new Factor[numTerminals][numTerminals];
-    binaryRuleExpectations = TableFactor.zero(parentVar.union(leftVar).union(rightVar));
-    terminalRuleExpectations = TableFactor.zero(parentVar.union(terminalVar));
+    binaryRuleExpectations = TableFactor.zero(VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleTypeVar));
+    terminalRuleExpectations = TableFactor.zero(VariableNumMap.unionAll(parentVar, terminalVar, ruleTypeVar));
 
     insideCalculated = false;
     outsideCalculated = false;
@@ -92,14 +96,16 @@ public class ParseChart {
    */
   public void updateInsideEntry(int spanStart, int spanEnd, int splitInd,
       Factor binaryRuleProbabilities) {
-    Preconditions.checkArgument(binaryRuleProbabilities.getVars().size() == 3);
+    Preconditions.checkArgument(binaryRuleProbabilities.getVars().size() == 4);
 
     // The first entry initializes the chart at this span.
     if (insideChart[spanStart][spanEnd] == null) {
-      if (sumProduct) {
-        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.marginalize(leftVar.union(rightVar));
+      if (sumProduct) { 
+        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.marginalize(
+            VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)); 
       } else {
-        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.maxMarginalize(leftVar.union(rightVar));
+        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.maxMarginalize(
+            VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar));
         // TODO: backpointers
         /*
         backpointers[spanStart][spanEnd] = new HashMap<Object, PriorityQueue<Backpointer>>();
@@ -110,10 +116,12 @@ public class ParseChart {
 
     if (sumProduct) {
       insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(
-          binaryRuleProbabilities.marginalize(leftVar.union(rightVar)));
+          binaryRuleProbabilities.marginalize(
+              VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)));
     } else {
       insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].maximum(
-          binaryRuleProbabilities.maxMarginalize(leftVar.union(rightVar)));
+          binaryRuleProbabilities.maxMarginalize(
+              VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)));
 
       // TODO: backpointers
       /*

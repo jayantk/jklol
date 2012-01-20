@@ -18,6 +18,7 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
   private final VariableNumMap leftVar;
   private final VariableNumMap rightVar;
   private final VariableNumMap terminalVar;
+  private final VariableNumMap ruleTypeVar;
   
   private final VariableNumMap rootVar;
   private final VariableNumMap childVar;
@@ -26,13 +27,15 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
   private ParametricFactor<SufficientStatistics> terminalFactor;
   
   public CptCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar, 
-      VariableNumMap terminalVar, VariableNumMap rootVar, VariableNumMap childVar, 
-      ParametricFactor<SufficientStatistics> nonterminalFactor, ParametricFactor<SufficientStatistics> terminalFactor) {
+      VariableNumMap terminalVar, VariableNumMap ruleTypeVar, VariableNumMap rootVar, 
+      VariableNumMap childVar, ParametricFactor<SufficientStatistics> nonterminalFactor, 
+      ParametricFactor<SufficientStatistics> terminalFactor) {
     super(rootVar.union(childVar));
     this.parentVar = parentVar;
     this.leftVar = leftVar;
     this.rightVar = rightVar;
     this.terminalVar = terminalVar;
+    this.ruleTypeVar = ruleTypeVar;
     this.rootVar = rootVar;
     this.childVar = childVar;
     this.nonterminalFactor = nonterminalFactor;
@@ -47,7 +50,7 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
     SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
     
-    CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, 
+    CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, 
         nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
         terminalFactor.getFactorFromParameters(terminalStatistics), 0);
     return new CfgFactor(rootVar, childVar, parser);

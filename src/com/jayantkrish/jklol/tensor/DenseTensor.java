@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.SortedSet;
 
 import com.google.common.base.Preconditions;
@@ -34,6 +35,27 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
    */
   public DenseTensor(int[] dimensions, int[] sizes, double[] values) {
     super(dimensions, sizes, values);
+  }
+
+  /**
+   * Constructs a random tensor spanning {@code dimensions} each with size
+   * {@code sizes}. Each entry of the tensor is drawn independently at random
+   * from a gaussian with {@code mean} and standard deviation {@code stddev}.
+   * 
+   * @param dimensions
+   * @param sizes
+   * @param mean
+   * @param stddev
+   * @return
+   */
+  public static DenseTensor random(int[] dimensions, int[] sizes, double mean, double stddev) {
+    DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes);
+    Iterator<int[]> keyIter = builder.keyIterator();
+    Random random = new Random();
+    while (keyIter.hasNext()) {
+      builder.put(keyIter.next(), (random.nextGaussian() * stddev) + mean);
+    }
+    return builder.buildNoCopy();
   }
 
   @Override
@@ -112,7 +134,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
         }
       }
     }
-    
+
     if (op == Operation.PRODUCT) {
       outputBuilder.multiply(this);
     }

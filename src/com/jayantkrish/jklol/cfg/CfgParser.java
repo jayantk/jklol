@@ -7,7 +7,6 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
@@ -21,10 +20,17 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class CfgParser {
 
+  // The root nonterminal symbol in binary and terminal production rules
   private final VariableNumMap parentVar;
+  // The left and right components of a production rule.
   private final VariableNumMap leftVar;
   private final VariableNumMap rightVar;
+  // The terminals of a terminal production rule.
   private final VariableNumMap terminalVar;
+  // Variable associated auxiliary information associated with each possible
+  // terminal and production rule. (For example, this variable can represent
+  // typed edges in a dependency parse).
+  private final VariableNumMap ruleTypeVar;
 
   // Each entry in the parse chart contains a factor defined over parentVar.
   // These
@@ -45,8 +51,6 @@ public class CfgParser {
   // for improved parsing
   // speed.
   private final int beamSize;
-  private Object[][] beamAssignmentCache;
-  private double[][] beamProbabilityCache;
 
   /**
    * If {@code beamSize > 0}, this parser will initialize and cache information
@@ -62,14 +66,19 @@ public class CfgParser {
    * @param beamSize
    */
   public CfgParser(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar,
-      VariableNumMap terminalVar, Factor binaryDistribution, Factor terminalDistribution,
-      int beamSize) {
+      VariableNumMap terminalVar, VariableNumMap ruleTypeVar, Factor binaryDistribution,
+      Factor terminalDistribution, int beamSize) {
     Preconditions.checkArgument(parentVar.size() == 1 && leftVar.size() == 1
-        && rightVar.size() == 1 && terminalVar.size() == 1);
+        && rightVar.size() == 1 && terminalVar.size() == 1 && ruleTypeVar.size() == 1);
+    Preconditions.checkArgument(binaryDistribution.getVars().equals(VariableNumMap.unionAll(
+        parentVar, leftVar, rightVar, ruleTypeVar)));
+    Preconditions.checkArgument(terminalDistribution.getVars().equals(VariableNumMap.unionAll(
+        parentVar, terminalVar, ruleTypeVar)));
     this.parentVar = parentVar;
     this.leftVar = leftVar;
     this.rightVar = rightVar;
     this.terminalVar = terminalVar;
+    this.ruleTypeVar = ruleTypeVar;
     this.binaryDistribution = binaryDistribution;
     this.terminalDistribution = terminalDistribution;
 
@@ -81,13 +90,6 @@ public class CfgParser {
     this.parentToRight = VariableRelabeling.createFromVariables(parentVar, rightVar);
 
     this.beamSize = beamSize;
-    if (beamSize > 0) {
-      int numVariableCombinations = leftVar.getDiscreteVariables().get(0).numValues()
-          * rightVar.getDiscreteVariables().get(0).numValues();
-      this.beamAssignmentCache = new Object[numVariableCombinations][beamSize];
-      this.beamProbabilityCache = new double[numVariableCombinations][beamSize];
-      initializeBeamSearchCache();
-    }
   }
 
   public Factor getBinaryDistribution() {
@@ -159,7 +161,7 @@ public class CfgParser {
     Collections.reverse(trees);
     return trees;
   }
-  
+
   /**
    * Gets the probability of generating {@code tree} from {@code terminals}.
    * 
@@ -174,41 +176,22 @@ public class CfgParser {
       return getProbabilityHelper(tree);
     }
   }
-  
+
   private double getProbabilityHelper(ParseTree tree) {
     if (tree.isTerminal()) {
       Assignment terminalAssignment = terminalVar.outcomeArrayToAssignment(tree.getTerminalProductions())
-          .union(parentVar.outcomeArrayToAssignment(tree.getRoot()));
+          .union(parentVar.outcomeArrayToAssignment(tree.getRoot()))
+          .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       return terminalDistribution.getUnnormalizedProbability(terminalAssignment);
     } else {
       Assignment binaryAssignment = leftVar.outcomeArrayToAssignment(tree.getLeft().getRoot())
           .union(rightVar.outcomeArrayToAssignment(tree.getRight().getRoot()))
-          .union(parentVar.outcomeArrayToAssignment(tree.getRoot()));
+          .union(parentVar.outcomeArrayToAssignment(tree.getRoot()))
+          .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       return binaryDistribution.getUnnormalizedProbability(binaryAssignment) *
           getProbabilityHelper(tree.getLeft()) *
           getProbabilityHelper(tree.getRight());
     }
-  }
-
-  /**
-   * Compute the most likely sequence of productions (of a given length)
-   * conditioned on the root symbol.
-   */
-  public ParseChart mostLikelyProductions(Object root, int length, int beamWidth) {
-    // Create a fake list of terminals for the chart.
-    List<?> terminals = Lists.newArrayList();
-    for (int i = 0; i < length; i++) {
-      terminals.add(null);
-    }
-
-    // TODO: beamWidth.
-    ParseChart chart = createParseChart(terminals, false);
-    initializeChartAllTerminals(chart);
-    upwardChartPass(chart);
-    chart.updateOutsideEntry(0, chart.chartSize() - 1,
-        TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment(root)));
-    downwardChartPass(chart);
-    return chart;
   }
 
   // ////////////////////////////////////////////////////////////////////////////////
@@ -253,7 +236,7 @@ public class CfgParser {
    * @return
    */
   private ParseChart createParseChart(List<?> terminals, boolean useSumProduct) {
-    return new ParseChart(terminals, parentVar, leftVar, rightVar, terminalVar, useSumProduct);
+    return new ParseChart(terminals, parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, useSumProduct);
   }
 
   /*
@@ -346,24 +329,26 @@ public class CfgParser {
 
       Factor leftOutside = binaryDistribution.product(Arrays.asList(rightInside, parentOutside));
       Factor rightOutside = binaryDistribution.product(Arrays.asList(leftInside, parentOutside));
+      VariableNumMap allButLeft = VariableNumMap.unionAll(rightVar, parentVar, ruleTypeVar);
+      VariableNumMap allButRight = VariableNumMap.unionAll(leftVar, parentVar, ruleTypeVar);
       Factor leftMarginal, rightMarginal;
       if (chart.getSumProduct()) {
-        leftMarginal = binaryRuleMarginal.marginalize(rightVar.union(parentVar)).relabelVariables(
+        leftMarginal = binaryRuleMarginal.marginalize(allButLeft).relabelVariables(
             leftToParent);
-        rightMarginal = binaryRuleMarginal.marginalize(leftVar.union(parentVar)).relabelVariables(
+        rightMarginal = binaryRuleMarginal.marginalize(allButRight).relabelVariables(
             rightToParent);
-        leftOutside = leftOutside.marginalize(rightVar.union(parentVar)).relabelVariables(
+        leftOutside = leftOutside.marginalize(allButLeft).relabelVariables(
             leftToParent);
-        rightOutside = rightOutside.marginalize(leftVar.union(parentVar)).relabelVariables(
+        rightOutside = rightOutside.marginalize(allButRight).relabelVariables(
             rightToParent);
       } else {
-        leftMarginal = binaryRuleMarginal.maxMarginalize(rightVar.union(parentVar))
+        leftMarginal = binaryRuleMarginal.maxMarginalize(allButLeft)
             .relabelVariables(leftToParent);
-        rightMarginal = binaryRuleMarginal.maxMarginalize(leftVar.union(parentVar))
+        rightMarginal = binaryRuleMarginal.maxMarginalize(allButRight)
             .relabelVariables(rightToParent);
-        leftOutside = leftOutside.maxMarginalize(rightVar.union(parentVar)).relabelVariables(
+        leftOutside = leftOutside.maxMarginalize(allButLeft).relabelVariables(
             leftToParent);
-        rightOutside = rightOutside.maxMarginalize(leftVar.union(parentVar)).relabelVariables(
+        rightOutside = rightOutside.maxMarginalize(allButRight).relabelVariables(
             rightToParent);
       }
       chart.updateOutsideEntry(spanStart, spanStart + k, leftOutside);
@@ -384,26 +369,14 @@ public class CfgParser {
       for (int j = i; j < terminals.size(); j++) {
         if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
-          chart.updateInsideEntryTerminal(i, j, terminalDistribution.conditional(assignment));
+
+          Factor terminalRules = terminalDistribution.conditional(assignment);
+          if (chart.getSumProduct()) {
+            chart.updateInsideEntryTerminal(i, j, terminalRules.marginalize(ruleTypeVar));
+          } else {
+            chart.updateInsideEntryTerminal(i, j, terminalRules.maxMarginalize(ruleTypeVar));
+          }
         }
-      }
-    }
-  }
-
-  /*
-   * Fill in the chart using all terminals.
-   */
-  private void initializeChartAllTerminals(ParseChart chart) {
-    DiscreteVariable terminalListValue = (DiscreteVariable) Iterables.getOnlyElement(terminalVar
-        .getVariables());
-
-    for (int i = 0; i < terminalListValue.numValues(); i++) {
-      List<?> value = (List<?>) terminalListValue.getValue(i);
-      int spanSize = value.size() - 1;
-      Factor conditional = terminalDistribution.conditional(terminalVar
-          .outcomeArrayToAssignment(value));
-      for (int j = 0; j < chart.chartSize() - spanSize; j++) {
-        chart.updateInsideEntryTerminal(j, j + spanSize, conditional);
       }
     }
   }
@@ -411,19 +384,18 @@ public class CfgParser {
   private void updateTerminalRuleCounts(ParseChart chart) {
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
     List<?> terminals = chart.getTerminals();
-    if (terminals != null) {
-      for (int i = 0; i < terminals.size(); i++) {
-        for (int j = i; j < terminals.size(); j++) {
-          if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
-            Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals
-                .subList(i, j + 1));
 
-            Factor terminalRuleMarginal = terminalDistribution.product(
-                TableFactor.pointDistribution(terminalVar, assignment));
-            terminalRuleMarginal = terminalRuleMarginal.product(chart.getOutsideEntries(i, j));
+    for (int i = 0; i < terminals.size(); i++) {
+      for (int j = i; j < terminals.size(); j++) {
+        if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
+          Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals
+              .subList(i, j + 1));
 
-            chart.updateTerminalRuleExpectations(terminalRuleMarginal);
-          }
+          Factor terminalRuleMarginal = terminalDistribution.product(
+              TableFactor.pointDistribution(terminalVar, assignment));
+          terminalRuleMarginal = terminalRuleMarginal.product(chart.getOutsideEntries(i, j));
+
+          chart.updateTerminalRuleExpectations(terminalRuleMarginal);
         }
       }
     }
@@ -446,8 +418,10 @@ public class CfgParser {
 
           for (Assignment bestAssignment : terminalFactor.getMostLikelyAssignments(chart
               .getBeamSize())) {
+            Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
+            Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
             chart.addParseTreeForSpan(i, j,
-                new ParseTree(bestAssignment.getValues().get(0), terminals.subList(i, j + 1),
+                new ParseTree(root, ruleType, terminals.subList(i, j + 1),
                     terminalFactor.getUnnormalizedProbability(bestAssignment)));
           }
         }
@@ -467,58 +441,19 @@ public class CfgParser {
     for (int k = 0; k < spanEnd - spanStart; k++) {
       for (ParseTree leftTree : chart.getParseTreesForSpan(spanStart, spanStart + k)) {
         for (ParseTree rightTree : chart.getParseTreesForSpan(spanStart + k + 1, spanEnd)) {
+
+          Assignment assignment = leftVar.outcomeArrayToAssignment(leftTree.getRoot()).union(
+              rightVar.outcomeArrayToAssignment(rightTree.getRoot()));
+          Factor rootFactor = binaryDistribution.conditional(assignment);
           
-          Object[] possibleParents = getBeamAssignments(leftTree.getRoot(), rightTree.getRoot());
-          double[] parentProbabilities = getBeamProbabilities(leftTree.getRoot(), rightTree.getRoot());
-          
-          for (int i = 0; i < possibleParents.length && parentProbabilities[i] != 0.0; i++) {
-            ParseTree combinedTree = new ParseTree(possibleParents[i], leftTree,
+          for (Assignment bestAssignment : rootFactor.getMostLikelyAssignments(chart.getBeamSize())) {
+            Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
+            Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
+            ParseTree combinedTree = new ParseTree(root, ruleType, leftTree,
                 rightTree, leftTree.getProbability() * rightTree.getProbability()
-                    * parentProbabilities[i]);
+                * rootFactor.getUnnormalizedProbability(bestAssignment));
             chart.addParseTreeForSpan(spanStart, spanEnd, combinedTree);
           }
-        }
-      }
-    }
-  }
-
-  private Object[] getBeamAssignments(Object leftRoot, Object rightRoot) {
-    return beamAssignmentCache[getBeamCacheIndex(leftRoot, rightRoot)];
-  }
-
-  private double[] getBeamProbabilities(Object leftRoot, Object rightRoot) {
-    return beamProbabilityCache[getBeamCacheIndex(leftRoot, rightRoot)];
-  }
-  
-  private int getBeamCacheIndex(Object leftRoot, Object rightRoot) {
-    int leftRootInt = leftVar.getDiscreteVariables().get(0).getValueIndex(leftRoot);
-    int rightRootInt = rightVar.getDiscreteVariables().get(0).getValueIndex(rightRoot);
-    return (rightVar.getDiscreteVariables().get(0).numValues() * leftRootInt) + rightRootInt;
-  }
-
-  /**
-   * Initializes {@code beamAssignmentCache} and {@code beamProbabilityCache} to
-   * enable fast beam searches over parse trees.
-   */
-  private void initializeBeamSearchCache() {
-    DiscreteVariable leftVariableType = leftVar.getDiscreteVariables().get(0);
-    DiscreteVariable rightVariableType = rightVar.getDiscreteVariables().get(0);
-    for (Object leftVarValue : leftVariableType.getValues()) {
-      for (Object rightVarValue : rightVariableType.getValues()) {
-        int index = getBeamCacheIndex(leftVarValue, rightVarValue);
-        Arrays.fill(beamAssignmentCache[index], null);
-        Arrays.fill(beamProbabilityCache[index], 0.0);
-        
-        Assignment combinedAssignment = leftVar.outcomeArrayToAssignment(leftVarValue)
-            .union(rightVar.outcomeArrayToAssignment(rightVarValue));
-
-        Factor parentFactor = binaryDistribution.conditional(combinedAssignment);
-        List<Assignment> bestAssignments = parentFactor.getMostLikelyAssignments(beamSize);
-
-        for (int i = 0; i < bestAssignments.size(); i++) {
-          Assignment a = bestAssignments.get(i);
-          beamAssignmentCache[index][i] = a.getValues().get(0);
-          beamProbabilityCache[index][i] = parentFactor.getUnnormalizedProbability(a);
         }
       }
     }

@@ -66,6 +66,13 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
+  public void perturb(double stddev) {
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).perturb(stddev);
+    }
+  }
+  
+  @Override
   public double getL2Norm() {
     double norm = 0.0;
     for (int i = 0; i < statistics.size(); i++) {

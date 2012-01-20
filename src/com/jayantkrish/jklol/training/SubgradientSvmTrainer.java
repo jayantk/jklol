@@ -84,9 +84,11 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       // more efficient and is fairly close if the examples are provided in
       // random order.
       List<Example<DynamicAssignment, DynamicAssignment>> batchData = getBatch(cycledTrainingData, batchSize);
-
+      System.out.println("got batch");
       DynamicFactorGraph currentDynamicModel = modelFamily.getFactorGraphFromParameters(parameters);
+      System.out.println("dynamic model");
       SufficientStatistics subgradient = modelFamily.getNewSufficientStatistics();
+      System.out.println("new stats");
       int numIncorrect = 0;
       double approximateObjectiveValue = regularization * Math.pow(parameters.getL2Norm(), 2) / 2;
       for (Example<DynamicAssignment, DynamicAssignment> example : batchData) {
@@ -96,8 +98,10 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
         Assignment observed = currentDynamicModel.getVariables().toAssignment(example.getOutput().union(example.getInput()));
         log.stopTimer("dynamic_instantiation");
         
+        System.out.println("instantiated");
+        
         log.startTimer("update_subgradient");
-        double objectiveValue = updateSubgradientWithInstance(currentModel, input, observed, modelFamily, subgradient);
+        double objectiveValue = updateSubgradientWithInstance(i, currentModel, input, observed, modelFamily, subgradient);
         log.stopTimer("update_subgradient");
         
         if (objectiveValue != 0.0) {
@@ -131,8 +135,9 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
    * @param subgradient
    * @return
    */
-  private double updateSubgradientWithInstance(FactorGraph currentModel, Assignment input, Assignment observed,
-      ParametricFactorGraph modelFamily, SufficientStatistics subgradient) {
+  private double updateSubgradientWithInstance(int iterationNum, FactorGraph currentModel, 
+      Assignment input, Assignment observed, ParametricFactorGraph modelFamily, 
+      SufficientStatistics subgradient) {
     // Get the cost-augmented best prediction based on the current input.
     Assignment outputAssignment = observed.removeAll(input.getVariableNums());
 
@@ -142,14 +147,20 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
         outputAssignment);
     log.stopTimer("update_subgradient/cost_augment");
     
+    System.out.println("cost augmented");
+    
     log.startTimer("update_subgradient/condition");
     FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(input);
     log.stopTimer("update_subgradient/condition");
+    
+    System.out.println("conditioned");
 
     log.startTimer("update_subgradient/inference");
     MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel);
     Assignment prediction = predicted.getNthBestAssignment(0);
     log.stopTimer("update_subgradient/inference");
+    
+    System.out.println("predicted");
 
     // Get the best value for any hidden variables, given the current input and
     // correct output.
@@ -161,6 +172,12 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     MaxMarginalSet actualMarginals = marginalCalculator.computeMaxMarginals(conditionalOutputModel);
     Assignment actual = actualMarginals.getNthBestAssignment(0);
     log.stopTimer("update_subgradient/inference");
+    
+    System.out.println("best output");
+    
+    log.log(iterationNum, iterationNum, input, currentModel);
+    log.log(iterationNum, iterationNum, prediction, currentModel);
+    log.log(iterationNum, iterationNum, actual, currentModel);
     
     // Update parameters if necessary.
     if (!prediction.equals(actual)) {

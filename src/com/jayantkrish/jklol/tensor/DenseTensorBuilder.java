@@ -20,6 +20,15 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
   
   /**
+   * Copy constructor
+   * @param builder
+   */
+  public DenseTensorBuilder(DenseTensorBuilder builder) {
+    super(builder.getDimensionNumbers(), builder.getDimensionSizes(), 
+        Arrays.copyOf(builder.values, builder.values.length));
+  }
+  
+  /**
    * Gets a {@code TensorFactory} which creates {@code DenseTensorBuilder}s.
    * 
    * @return
@@ -104,7 +113,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
-  public Tensor build() {
+  public DenseTensor build() {
     return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), Arrays.copyOf(values, values.length));
   }
 
@@ -115,8 +124,13 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
    * 
    * @return
    */
-  public Tensor buildNoCopy() {
+  public DenseTensor buildNoCopy() {
     return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), values);
+  }
+      
+  @Override
+  public DenseTensorBuilder getCopy() {
+    return new DenseTensorBuilder(this);
   }
 
   @Override

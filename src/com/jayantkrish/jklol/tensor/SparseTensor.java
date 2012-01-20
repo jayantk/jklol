@@ -109,6 +109,18 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
   // /////////////////////////////////////////////////////////////////
   // Inherited from Tensor
   // /////////////////////////////////////////////////////////////////
+  
+  @Override
+  public SparseTensor slice(int[] dimensionNumbers, int[] key) {
+    // Figure out the appropriate sizes for the subset of dimensions.
+    int[] dimensionSizes = new int[dimensionNumbers.length];
+    for (int i = 0; i < dimensionNumbers.length; i++){
+      int dimIndex = getDimensionIndex(dimensionNumbers[i]);
+      Preconditions.checkArgument(dimIndex >= 0);
+      dimensionSizes[i] = getDimensionSizes()[dimIndex]; 
+    }
+    SparseTensorBuilder builder = new SparseTensorBuilder(dimensionNumbers, dimensionSizes);
+  }
 
   /**
    * Elementwise multiplies {@code this} and {@code other}, returning the result
@@ -129,8 +141,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.getDimensionNumbers())));
 
     // Permute the dimensions of this so that the dimension of other are
-    // left-aligned,
-    // multiply, then reverse the permutation.
+    // left-aligned, multiply, then reverse the permutation.
     BiMap<Integer, Integer> permutation = HashBiMap.create();
     int numDimsDifferent = 0;
     int otherInd = 0;

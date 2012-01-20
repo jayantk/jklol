@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.models.parametric;
 
-
 /**
  * The sufficient statistics of a {@code FactorGraph}. This class represents the
  * (expected) occurrence counts of a set of events (or outcomes) which can be
@@ -34,6 +33,15 @@ public interface SufficientStatistics {
    * @param amount
    */
   public void multiply(double amount);
+
+  /**
+   * Increments each element of {@code this} with a random perturbation. Each
+   * element is drawn independently from a mean-0 Gaussian with standard
+   * deviation {@code stddev}.
+   * 
+   * @param variance
+   */
+  public void perturb(double stddev);
 
   /**
    * Gets the L2 norm of {@code this}, treating {@code this} as a vector. In

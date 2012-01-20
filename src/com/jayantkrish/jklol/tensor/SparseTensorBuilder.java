@@ -8,6 +8,7 @@ import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 
@@ -33,6 +34,14 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     super(dimensionNums, dimensionSizes);
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
     this.outcomes = new TreeMap<Integer, Double>();
+  }
+  
+  /**
+   * Copy constructor.
+   */
+  public SparseTensorBuilder(SparseTensorBuilder builder) {
+    super(builder.getDimensionNumbers(), builder.getDimensionSizes());
+    this.outcomes = Maps.newTreeMap(builder.outcomes);
   }
   
   /**
@@ -202,6 +211,11 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     }
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(),
         tableKeyInts, tableValues);
+  }
+  
+  @Override
+  public SparseTensorBuilder getCopy() {
+    return new SparseTensorBuilder(this); 
   }
   
   @Override

@@ -239,4 +239,9 @@ public class OrConstraintFactor extends AbstractFactor {
     Assignment orAssignment = orVars.outcomeToAssignment(outputOrValues);
     return Arrays.asList(orAssignment.union(inputAssignment));
   }
+  
+  @Override
+  public String toString() {
+    return "OrConstraintFactor(inputs=" + inputVars.toString() + ",constraints=" + orValues + ")";
+  }
 }

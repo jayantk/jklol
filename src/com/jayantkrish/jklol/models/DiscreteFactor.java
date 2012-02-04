@@ -14,6 +14,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
@@ -53,6 +54,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
    * {@code Assignment} in the returned iterator is a single possible outcome.
    */
   public abstract Iterator<Assignment> outcomeIterator();
+
+  /**
+   * Gets an iterator over all {@code Assignment}s in this which are supersets
+   * of {@code prefix}. {@code prefix} must contain variables in order from
+   * lowest-numbered to highest-numbered. For example, {@code prefix} can assign
+   * both the lowest and second-lowest numbered variables, but cannot assign
+   * just the second-lowest variable.
+   * 
+   * @param prefix
+   * @return
+   */
+  public abstract Iterator<Assignment> outcomePrefixIterator(Assignment prefix);
 
   /**
    * Gets the table of weights over the discrete variables in {@code this}
@@ -98,10 +111,10 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
 
     Assignment subAssignment = a.intersection(varsToEliminate);
-    TableFactorBuilder tableFactorBuilder = new TableFactorBuilder(varsToEliminate);
-    tableFactorBuilder.setWeight(subAssignment, 1.0);
-    return this.product(tableFactorBuilder.build())
-        .marginalize(varsToEliminate.getVariableNums()); 
+    int[] key = varsToEliminate.assignmentToIntArray(subAssignment);
+    int[] eliminatedDimensions = Ints.toArray(varsToEliminate.getVariableNums());
+    return new TableFactor(getVars().removeAll(varsToEliminate),
+        getWeights().slice(eliminatedDimensions, key));
   }
 
   @Override
@@ -202,12 +215,12 @@ public abstract class DiscreteFactor extends AbstractFactor {
         pq.poll();
       }
     }
-    
+
     // There may not be enough assignments with positive probability. Fill up
     // pq with zero probability assignments.
     if (pq.size() < numAssignments) {
       Iterator<Assignment> allAssignmentIter = new AllAssignmentIterator(getVars());
-      while(allAssignmentIter.hasNext() && pq.size() < numAssignments) {
+      while (allAssignmentIter.hasNext() && pq.size() < numAssignments) {
         Assignment a = allAssignmentIter.next();
         if (getUnnormalizedProbability(a) == 0.0) {
           pq.offer(new Pair<Double, Assignment>(0.0, a));
@@ -227,12 +240,12 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteFactor coerceToDiscrete() {
     return this;
   }
-  
+
   @Override
   public int hashCode() {
-    return getVars().hashCode(); 
+    return getVars().hashCode();
   }
-  
+
   @Override
   public boolean equals(Object other) {
     if (other == this) {

@@ -42,7 +42,7 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 		for (int i = 0; i < discreteVars.size(); i++) {
 		  dimensionSizes[i] = discreteVars.get(i).numValues();
 		}
-		return new IntegerArrayIterator(dimensionSizes);
+		return new IntegerArrayIterator(dimensionSizes, new int[0]);
 	}
 
 	public boolean hasNext() {

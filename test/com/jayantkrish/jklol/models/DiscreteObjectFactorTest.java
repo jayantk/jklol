@@ -68,7 +68,6 @@ public class DiscreteObjectFactorTest extends TestCase {
   public void testConditional() {
     Factor conditional = f.conditional(gVars.outcomeArrayToAssignment(0));
     assertEquals(1.0, conditional.getUnnormalizedProbability("0"));
-    assertEquals(0.0, conditional.getUnnormalizedProbability(0));
     assertEquals(2.0, conditional.getUnnormalizedProbability("1"));
     assertEquals(0.0, conditional.getUnnormalizedProbability("2"));
   }
@@ -76,7 +75,6 @@ public class DiscreteObjectFactorTest extends TestCase {
   public void testMarginalize() {
     Factor marginal = f.marginalize(0);
     assertEquals(4.0, marginal.getUnnormalizedProbability("0"));
-    assertEquals(0.0, marginal.getUnnormalizedProbability(0));
     assertEquals(2.0, marginal.getUnnormalizedProbability("1"));
     assertEquals(4.0, marginal.getUnnormalizedProbability("2"));
     assertEquals(0.0, marginal.getUnnormalizedProbability("3"));
@@ -85,7 +83,6 @@ public class DiscreteObjectFactorTest extends TestCase {
   public void testMaxMarginalize() {
     Factor marginal = f.maxMarginalize(0);
     assertEquals(3.0, marginal.getUnnormalizedProbability("0"));
-    assertEquals(0.0, marginal.getUnnormalizedProbability(0));
     assertEquals(2.0, marginal.getUnnormalizedProbability("1"));
     assertEquals(4.0, marginal.getUnnormalizedProbability("2"));
     assertEquals(0.0, marginal.getUnnormalizedProbability("3"));    

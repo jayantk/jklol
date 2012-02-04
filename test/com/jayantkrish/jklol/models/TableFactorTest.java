@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -271,5 +272,20 @@ public class TableFactorTest extends TestCase {
 	  assertEquals(7.0, r.getUnnormalizedProbability(r.getVars().outcomeArrayToAssignment("U", "F", "T")));
 	  assertEquals(0.0, r.getUnnormalizedProbability(r.getVars().outcomeArrayToAssignment("T", "U", "F")));
 	  assertEquals(4.0, r.size());
+	}
+	
+	public void testOutcomePrefixIterator() {
+	  VariableNumMap prefixVars = g.getVars().getFirstVariables(2);
+	  assertTrue(prefixVars.contains(0) && prefixVars.contains(1) && !prefixVars.contains(3));
+	  
+	  Assignment prefix = prefixVars.outcomeArrayToAssignment("T", "U");
+	  Iterator<Assignment> outcomes = g.outcomePrefixIterator(prefix);
+	  assertEquals(g.getVars().outcomeArrayToAssignment("T", "U", "T"), outcomes.next());
+	  assertEquals(g.getVars().outcomeArrayToAssignment("T", "U", "F"), outcomes.next());
+	  assertFalse(outcomes.hasNext());
+	  
+	  prefix = prefixVars.outcomeArrayToAssignment("F", "F");
+	  outcomes = g.outcomePrefixIterator(prefix);
+	  assertFalse(outcomes.hasNext());
 	}
 }

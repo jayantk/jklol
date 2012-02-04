@@ -24,16 +24,16 @@ import com.google.common.primitives.Ints;
  */
 public class SparseTensor extends AbstractTensorBase implements Tensor {
 
-  private final int[] keyInts;
+  private final long[] keyNums;
   private final double[] values;
 
-  public SparseTensor(int[] dimensionNums, int[] dimensionSizes, int[] keyInts, double[] values) {
+  public SparseTensor(int[] dimensionNums, int[] dimensionSizes, long[] keyNums, double[] values) {
     super(dimensionNums, dimensionSizes);
-    this.keyInts = Preconditions.checkNotNull(keyInts);
+    this.keyNums = Preconditions.checkNotNull(keyNums);
     this.values = Preconditions.checkNotNull(values);
 
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
-    Preconditions.checkArgument(keyInts.length == values.length);
+    Preconditions.checkArgument(keyNums.length == values.length);
   }
 
   // ////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * @return
    */
   public boolean containsKey(int[] key) {
-    return keyIntToIndex(dimKeyToKeyInt(key)) != -1;
+    return keyNumToIndex(dimKeyToKeyNum(key)) != -1;
   }
 
   /**
@@ -67,9 +67,9 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    */
   @Override
   public double getByDimKey(int... key) {
-    return getByIndex(keyIntToIndex(dimKeyToKeyInt(key)));
+    return getByIndex(keyNumToIndex(dimKeyToKeyNum(key)));
   }
-  
+
   @Override
   public double getByIndex(int index) {
     if (index == -1) {
@@ -77,16 +77,31 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     }
     return values[index];
   }
-  
+
   @Override
-  public int indexToKeyInt(int index) {
-    return keyInts[index];
+  public long indexToKeyNum(int index) {
+    return keyNums[index];
   }
-  
+
   @Override
-  public int keyIntToIndex(int keyInt) {
-    int possibleIndex = Arrays.binarySearch(keyInts, keyInt);
+  public int keyNumToIndex(long keyNum) {
+    int possibleIndex = Arrays.binarySearch(keyNums, keyNum);
     return possibleIndex >= 0 ? possibleIndex : -1;
+  }
+
+  /**
+   * Gets the first index in {@code this} whose corresponding keyNum is >= than
+   * {@code keyNum}.
+   * 
+   * @param keyNum
+   * @return
+   */
+  private int getFirstIndexAboveKeyNum(long keyNum) {
+    int index = Arrays.binarySearch(keyNums, keyNum);
+    if (index < 0) {
+      index = (-1 * index) - 1;
+    }
+    return index;
   }
 
   /**
@@ -94,13 +109,23 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    */
   @Override
   public Iterator<int[]> keyIterator() {
-    return new SparseKeyIterator(Ints.asList(keyInts), this);
+    return new SparseKeyIterator(keyNums, 0, keyNums.length, this);
   }
-  
+
+  @Override
+  public Iterator<int[]> keyPrefixIterator(int[] keyPrefix) {
+    if (keyPrefix.length == 0) { return keyIterator(); }
+    
+    long startKeyNum = dimKeyPrefixToKeyNum(keyPrefix);
+    long endKeyNum = startKeyNum + indexOffsets[keyPrefix.length - 1];
+    return new SparseKeyIterator(keyNums, getFirstIndexAboveKeyNum(startKeyNum),
+        getFirstIndexAboveKeyNum(endKeyNum), this);
+  }
+
   @Override
   public double getL2Norm() {
     double sumSquared = 0.0;
-    for (int i = 0; i < values.length; i++) {
+    for (int i = 0; i < size(); i++) {
       sumSquared += values[i] * values[i];
     }
     return Math.sqrt(sumSquared);
@@ -109,17 +134,47 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
   // /////////////////////////////////////////////////////////////////
   // Inherited from Tensor
   // /////////////////////////////////////////////////////////////////
-  
+
   @Override
   public SparseTensor slice(int[] dimensionNumbers, int[] key) {
+    if (dimensionNumbers.length == 0) {
+      return this;
+    }
+    // Check for an efficient case, where the dimensions are the first elements
+    // of this.
+    if (Arrays.equals(Arrays.copyOf(getDimensionNumbers(), dimensionNumbers.length),
+        dimensionNumbers)) {
+      long minKeyInt = 0;
+      for (int i = 0; i < dimensionNumbers.length; i++) {
+        minKeyInt += indexOffsets[i] * key[i];
+      }
+      long maxKeyInt = minKeyInt + indexOffsets[dimensionNumbers.length - 1];
+
+      int startIndex = getFirstIndexAboveKeyNum(minKeyInt);
+      int endIndex = getFirstIndexAboveKeyNum(maxKeyInt);
+
+      long[] newKeyInts = Arrays.copyOfRange(keyNums, startIndex, endIndex);
+      for (int i = 0; i < newKeyInts.length; i++) {
+        newKeyInts[i] -= minKeyInt;
+      }
+
+      int[] newDimensionNumbers = Arrays.copyOfRange(getDimensionNumbers(), dimensionNumbers.length, getDimensionNumbers().length);
+      int[] newDimensionSizes = Arrays.copyOfRange(getDimensionSizes(), dimensionNumbers.length, getDimensionSizes().length);
+      double[] newValues = Arrays.copyOfRange(values, startIndex, endIndex);
+      return new SparseTensor(newDimensionNumbers, newDimensionSizes, newKeyInts, newValues);
+    }
+
+    // TODO(jayantk): This is an extremely naive implementation of slice.
     // Figure out the appropriate sizes for the subset of dimensions.
     int[] dimensionSizes = new int[dimensionNumbers.length];
-    for (int i = 0; i < dimensionNumbers.length; i++){
+    for (int i = 0; i < dimensionNumbers.length; i++) {
       int dimIndex = getDimensionIndex(dimensionNumbers[i]);
       Preconditions.checkArgument(dimIndex >= 0);
-      dimensionSizes[i] = getDimensionSizes()[dimIndex]; 
+      dimensionSizes[i] = getDimensionSizes()[dimIndex];
     }
     SparseTensorBuilder builder = new SparseTensorBuilder(dimensionNumbers, dimensionSizes);
+    builder.put(key, 1.0);
+    return elementwiseProduct(builder.build()).sumOutDimensions(Ints.asList(dimensionNumbers));
   }
 
   /**
@@ -163,7 +218,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * Elementwise multiplies two tensors. {@code big} must contain a superset of
    * the dimensions of {@code small}, and the dimensions must be arranged such
    * that all dimensions shared by {@code big} and {@code small} are aligned on
-   * the left side of their respective {@code keyInts} arrays.
+   * the left side of their respective {@code keyNums} arrays.
    * 
    * @param big
    * @param small
@@ -172,30 +227,30 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
   protected static final SparseTensor elementwiseMultiplyLeftAligned(SparseTensor big, Tensor small) {
     // The result tensor is no larger than the larger (superset of dimensions)
     // tensor.
-    int[] resultKeyInts = new int[big.values.length];
-    double[] resultValues = new double[big.values.length];
+    long[] resultKeyInts = new long[big.size()];
+    double[] resultValues = new double[big.size()];
     // How many result values have been filled so far.
     int resultInd = 0;
 
     // Current positions in each tensor's key/value array.
     int myInd = 0;
     int otherInd = advanceToNonzero(-1, small);
-    
+
     int smallIndexMultiplier = 1;
     for (int i = big.numDimensions() - 1; i >= small.numDimensions(); i--) {
       smallIndexMultiplier *= big.getDimensionSizes()[i];
     }
 
-    for (myInd = 0; myInd < big.size(); myInd = advance(myInd, big.keyInts, otherInd, small, smallIndexMultiplier)) {
+    for (myInd = 0; myInd < big.size(); myInd = advance(myInd, big.keyNums, otherInd, small, smallIndexMultiplier)) {
       // Advance otherInd until other's outcome is >= our outcome.
-      while (otherInd < small.size() && 
-          big.indexToKeyInt(myInd) / smallIndexMultiplier > small.indexToKeyInt(otherInd)) {
+      while (otherInd < small.size() &&
+          big.indexToKeyNum(myInd) / smallIndexMultiplier > small.indexToKeyNum(otherInd)) {
         otherInd = advanceToNonzero(otherInd, small);
       }
-      
+
       if (otherInd < small.size() &&
-          big.indexToKeyInt(myInd) / smallIndexMultiplier == small.indexToKeyInt(otherInd)) { 
-        resultKeyInts[resultInd] = big.indexToKeyInt(myInd);
+          big.indexToKeyNum(myInd) / smallIndexMultiplier == small.indexToKeyNum(otherInd)) {
+        resultKeyInts[resultInd] = big.indexToKeyNum(myInd);
         resultValues[resultInd] = big.values[myInd] * small.getByIndex(otherInd);
         resultInd++;
       }
@@ -204,26 +259,27 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
         resultKeyInts, resultValues, resultInd);
   }
 
-  private static final int advance(int myInd, int[] myKeyInts, int otherInd, Tensor other, 
+  private static final int advance(int myInd, long[] myKeyInts, int otherInd, Tensor other,
       int smallKeyIntMultiplier) {
     // This algorithm advances myInd into a block of outcomes where the first
-    // coordinate of this tensor's outcomes matches the first coordinate of the other
+    // coordinate of this tensor's outcomes matches the first coordinate of the
+    // other
     // tensor's outcome.
     if (otherInd >= other.size()) {
       return myKeyInts.length;
     } else if (other.numDimensions() == 0) {
       return myInd + 1;
-    } else if (myKeyInts[myInd] / smallKeyIntMultiplier == other.indexToKeyInt(otherInd)) {
+    } else if (myKeyInts[myInd] / smallKeyIntMultiplier == other.indexToKeyNum(otherInd)) {
       // We're within a block of outcomes of other that start with the same
       // coordinates as myOutcomes.
       return myInd + 1;
     } else {
       // Find a block of outcomes with the correct starting coordinates.
-      return binarySearch(myKeyInts, other.indexToKeyInt(otherInd) * smallKeyIntMultiplier, 
+      return binarySearch(myKeyInts, other.indexToKeyNum(otherInd) * smallKeyIntMultiplier,
           myInd, myKeyInts.length);
     }
   }
-  
+
   private static final int advanceToNonzero(int startInd, Tensor other) {
     int nextInd = startInd + 1;
     while (nextInd < other.size() && other.getByIndex(nextInd) == 0) {
@@ -242,7 +298,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * @param endInd
    * @return
    */
-  private static final int binarySearch(int[] array, int value, int startInd, int endInd) {
+  private static final int binarySearch(long[] array, long value, int startInd, int endInd) {
     if (startInd == endInd) {
       return startInd;
     }
@@ -297,27 +353,27 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     // instead of a boolean flag. However, it's unclear how this change
     // affects performance.
     Preconditions.checkArgument(Arrays.equals(getDimensionNumbers(), other.getDimensionNumbers()));
-    int[] resultKeyInts = new int[values.length + other.size()];
-    double[] resultValues = new double[values.length + other.size()];
+    long[] resultKeyInts = new long[size() + other.size()];
+    double[] resultValues = new double[size() + other.size()];
 
     int resultInd = 0;
     int myInd = 0;
     int otherInd = 0;
 
-    while (myInd < values.length && otherInd < other.size()) {
-      if (keyInts[myInd] < other.indexToKeyInt(otherInd)) {
-        resultKeyInts[resultInd] = keyInts[myInd];
+    while (myInd < size() && otherInd < other.size()) {
+      if (keyNums[myInd] < other.indexToKeyNum(otherInd)) {
+        resultKeyInts[resultInd] = keyNums[myInd];
         resultValues[resultInd] = values[myInd];
         resultInd++;
         myInd++;
-      } else if (keyInts[myInd] > other.indexToKeyInt(otherInd)) {
-        resultKeyInts[resultInd] = other.indexToKeyInt(otherInd);
+      } else if (keyNums[myInd] > other.indexToKeyNum(otherInd)) {
+        resultKeyInts[resultInd] = other.indexToKeyNum(otherInd);
         resultValues[resultInd] = other.getByIndex(otherInd);
         resultInd++;
         otherInd++;
       } else {
         // Keys are equal.
-        resultKeyInts[resultInd] = keyInts[myInd];
+        resultKeyInts[resultInd] = keyNums[myInd];
         if (useSum) {
           resultValues[resultInd] = values[myInd] + other.getByIndex(otherInd);
         } else {
@@ -330,14 +386,14 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     }
 
     // One of the two lists might not be done yet. Finish it off.
-    for (; myInd < values.length; myInd++) {
-      resultKeyInts[resultInd] = keyInts[myInd];
+    for (; myInd < size(); myInd++) {
+      resultKeyInts[resultInd] = keyNums[myInd];
       resultValues[resultInd] = values[myInd];
       resultInd++;
     }
 
     for (; otherInd < other.size(); otherInd++) {
-      resultKeyInts[resultInd] = other.indexToKeyInt(otherInd);
+      resultKeyInts[resultInd] = other.indexToKeyNum(otherInd);
       resultValues[resultInd] = other.getByIndex(otherInd);
       resultInd++;
     }
@@ -354,13 +410,13 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    */
   @Override
   public SparseTensor elementwiseInverse() {
-    double[] newValues = new double[values.length];
-    for (int i = 0; i < values.length; i++) {
+    double[] newValues = new double[size()];
+    for (int i = 0; i < size(); i++) {
       newValues[i] = 1.0 / values[i];
     }
     // We don't have to copy outcomes because this class is immutable, and it
     // treats both outcomes and values as immutable.
-    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyInts, newValues);
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 
   /**
@@ -405,7 +461,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     // performance will be.
 
     // Rotate all of the dimensions which are being eliminated to the
-    // end of the keyInts array.
+    // end of the keyNums array.
     int[] newLabels = new int[numDimensions()];
     int[] newDimensions = new int[numDimensions()];
     int[] newDimensionSizes = new int[numDimensions()];
@@ -432,18 +488,18 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
     SparseTensor relabeled = relabelDimensions(newLabels);
     int resultNumDimensions = dimensionNums.length - numEliminated;
-    
+
     // Get a number which we can divide each key by to map it to a key in the
     // reduced dimensional tensor.
-    int keyIntDenominator = (resultNumDimensions > 0) ? relabeled.indexOffsets[resultNumDimensions - 1] :
-      relabeled.indexOffsets[0] * relabeled.getDimensionSizes()[0];
+    long keyNumDenominator = (resultNumDimensions > 0) ? relabeled.indexOffsets[resultNumDimensions - 1] :
+        relabeled.indexOffsets[0] * relabeled.getDimensionSizes()[0];
 
-    int[] resultKeyInts = new int[relabeled.values.length];
+    long[] resultKeyInts = new long[relabeled.values.length];
     double[] resultValues = new double[relabeled.values.length];
     int resultInd = 0;
     for (int i = 0; i < relabeled.values.length; i++) {
-      if (i != 0 && 
-          (relabeled.keyInts[i - 1] / keyIntDenominator) == (relabeled.keyInts[i] / keyIntDenominator)) {
+      if (i != 0 &&
+          (relabeled.keyNums[i - 1] / keyNumDenominator) == (relabeled.keyNums[i] / keyNumDenominator)) {
         // This key maps to the same entry as the previous key.
         if (useSum) {
           resultValues[resultInd - 1] += relabeled.values[i];
@@ -452,7 +508,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
               relabeled.values[i]);
         }
       } else {
-        resultKeyInts[resultInd] = relabeled.keyInts[i] / keyIntDenominator;
+        resultKeyInts[resultInd] = relabeled.keyNums[i] / keyNumDenominator;
         resultValues[resultInd] = relabeled.values[i];
         resultInd++;
       }
@@ -498,9 +554,9 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     if (Ordering.natural().isOrdered(Ints.asList(newDimensions))) {
       // If the new dimension labels are in sorted order, then we don't have to
       // resort the outcome and value arrays. This is a big efficiency win if it
-      // happens. Note that keyInts and values are (treated as) immutable, and
+      // happens. Note that keyNums and values are (treated as) immutable, and
       // hence we don't need to copy them.
-      return new SparseTensor(newDimensions, getDimensionSizes(), keyInts, values);
+      return new SparseTensor(newDimensions, getDimensionSizes(), keyNums, values);
     }
 
     int[] sortedDims = Arrays.copyOf(newDimensions, newDimensions.length);
@@ -527,12 +583,12 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
     double[] resultValues = Arrays.copyOf(values, values.length);
     // Map each key of this into a key of the relabeled tensor.
-    int[] resultKeyInts = new int[values.length];
-    for (int i = 0; i < keyInts.length; i++) {
-      int curKey = keyInts[i];
-      int newKey = 0;
+    long[] resultKeyInts = new long[values.length];
+    for (int i = 0; i < keyNums.length; i++) {
+      long curKey = keyNums[i];
+      long newKey = 0;
       for (int j = 0; j < numDimensions(); j++) {
-        int dimensionValue = curKey / indexOffsets[j];
+        long dimensionValue = curKey / indexOffsets[j];
         curKey -= dimensionValue * indexOffsets[j];
         newKey += dimensionValue * sortedIndexOffsets[newOrder[j]];
       }
@@ -544,11 +600,11 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
   }
 
   /**
-   * Quicksorts the section of {@code keyInts} from {@code startInd}
-   * (inclusive) to {@code endInd} (not inclusive), simultaneously swapping the
+   * Quicksorts the section of {@code keyNums} from {@code startInd} (inclusive)
+   * to {@code endInd} (not inclusive), simultaneously swapping the
    * corresponding entries of {@code values}.
    */
-  private void sortOutcomeTable(int[] keyInts, double[] values,
+  private void sortOutcomeTable(long[] keyNums, double[] values,
       int startInd, int endInd) {
     // Base case.
     if (startInd == endInd) {
@@ -559,36 +615,36 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     int pivotInd = (int) (Math.random() * (endInd - startInd)) + startInd;
 
     // Perform swaps to partition array around the pivot.
-    swap(keyInts, values, startInd, pivotInd);
+    swap(keyNums, values, startInd, pivotInd);
     pivotInd = startInd;
 
     for (int i = startInd + 1; i < endInd; i++) {
-      if (keyInts[i] < keyInts[pivotInd]) {
-        swap(keyInts, values, pivotInd, pivotInd + 1);
+      if (keyNums[i] < keyNums[pivotInd]) {
+        swap(keyNums, values, pivotInd, pivotInd + 1);
         if (i != pivotInd + 1) {
-          swap(keyInts, values, pivotInd, i);
+          swap(keyNums, values, pivotInd, i);
         }
         pivotInd++;
       }
     }
 
     // Recursively sort the subcomponents of the arrays.
-    sortOutcomeTable(keyInts, values, startInd, pivotInd);
-    sortOutcomeTable(keyInts, values, pivotInd + 1, endInd);
+    sortOutcomeTable(keyNums, values, startInd, pivotInd);
+    sortOutcomeTable(keyNums, values, pivotInd + 1, endInd);
   }
 
   /**
-   * Swaps the keyInts and values at {@code i} with those at {@code j}.
+   * Swaps the keyNums and values at {@code i} with those at {@code j}.
    * 
-   * @param keyInts
+   * @param keyNums
    * @param values
    * @param i
    * @param j
    */
-  private void swap(int[] keyInts, double[] values, int i, int j) {
-    int keySwap = keyInts[i];
-    keyInts[i] = keyInts[j];
-    keyInts[j] = keySwap;
+  private void swap(long[] keyNums, double[] values, int i, int j) {
+    long keySwap = keyNums[i];
+    keyNums[i] = keyNums[j];
+    keyNums[j] = keySwap;
 
     double swapValue = values[i];
     values[i] = values[j];
@@ -600,10 +656,10 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     StringBuilder sb = new StringBuilder();
     sb.append("<");
     for (int i = 0; i < values.length; i++) {
-      sb.append(Arrays.toString(keyIntToDimKey(keyInts[i])));
+      sb.append(Arrays.toString(keyNumToDimKey(keyNums[i])));
       sb.append(" : ");
       sb.append(values[i]);
-      if (i != values.length -1) {
+      if (i != values.length - 1) {
         sb.append(", ");
       }
     }
@@ -620,7 +676,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
     return Arrays.equals(getDimensionNumbers(), other.getDimensionNumbers()) &&
         Arrays.equals(getDimensionSizes(), other.getDimensionSizes()) &&
-        Arrays.equals(keyInts, other.keyInts) &&
+        Arrays.equals(keyNums, other.keyNums) &&
         Arrays.equals(values, other.values);
   }
 
@@ -637,7 +693,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * @return
    */
   public static SparseTensor getScalarConstant(double value) {
-    return new SparseTensor(new int[0], new int[0], new int[] { 0 }, new double[] { value });
+    return new SparseTensor(new int[0], new int[0], new long[] { 0 }, new double[] { value });
   }
 
   /**
@@ -650,7 +706,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    */
   public static SparseTensor empty(int[] dimensionNumbers, int[] dimensionSizes) {
     return new SparseTensor(dimensionNumbers, dimensionSizes,
-        new int[0], new double[0]);
+        new long[0], new double[0]);
   }
 
   /**
@@ -675,20 +731,20 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * @return
    */
   public static SparseTensor vector(int dimensionNumber, int dimensionSize, double[] values) {
-    int[] keyInts = new int[dimensionSize];
+    long[] keyNums = new long[dimensionSize];
     double[] outcomeValues = new double[dimensionSize];
-    
+
     int numEntries = 0;
     for (int i = 0; i < dimensionSize; i++) {
       if (values[i] != 0.0) {
-        keyInts[numEntries] = i;
+        keyNums[numEntries] = i;
         outcomeValues[numEntries] = values[i];
         numEntries++;
       }
     }
 
-    return resizeIntoTable(new int[] {dimensionNumber}, new int[] {dimensionSize}, 
-        keyInts, outcomeValues, numEntries);
+    return resizeIntoTable(new int[] { dimensionNumber }, new int[] { dimensionSize },
+        keyNums, outcomeValues, numEntries);
   }
 
   // ///////////////////////////////////////////////////////////////////////////////
@@ -700,18 +756,18 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * wrong number of filled-in entries, resizes them and constructs a
    * {@code SparseTensor} with them.
    * 
-   * @param keyInts
+   * @param keyNums
    * @param values
    * @param size
    * @return
    */
   private static SparseTensor resizeIntoTable(int[] dimensions, int[] dimensionSizes,
-      int[] keyInts, double[] values, int size) {
+      long[] keyNums, double[] values, int size) {
     if (values.length == size) {
-      return new SparseTensor(dimensions, dimensionSizes, keyInts, values);
+      return new SparseTensor(dimensions, dimensionSizes, keyNums, values);
     } else {
-      // Resize the result array to fit the actual number of result keyInts.
-      int[] shrunkResultKeyInts = Arrays.copyOf(keyInts, size);
+      // Resize the result array to fit the actual number of result keyNums.
+      long[] shrunkResultKeyInts = Arrays.copyOf(keyNums, size);
       double[] shrunkResultValues = Arrays.copyOf(values, size);
       return new SparseTensor(dimensions, dimensionSizes, shrunkResultKeyInts, shrunkResultValues);
     }

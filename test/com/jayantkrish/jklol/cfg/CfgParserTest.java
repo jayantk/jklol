@@ -7,6 +7,7 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -14,8 +15,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 
 public class CfgParserTest extends TestCase {
 
-  Factor binary;
-  Factor terminal;
+  DiscreteFactor binary;
+  DiscreteFactor terminal;
 	CfgParser p;
 	
 	VariableNumMap parentVar, leftVar, rightVar, termVar, ruleVar;
@@ -27,11 +28,11 @@ public class CfgParserTest extends TestCase {
 	      "gretzky", "plays", "ice", "hockey", "ice hockey", "baz", "bbb", 
 	      "baz bbb", "a", "b", "c")));
 	  DiscreteVariable ruleTypes = new DiscreteVariable("rules", Arrays.asList("rule1", "rule2"));
-	  
-	  parentVar = new VariableNumMap(Ints.asList(0), Arrays.asList("v0"), Arrays.asList(nonterm));
-	  leftVar = new VariableNumMap(Ints.asList(1), Arrays.asList("v1"), Arrays.asList(nonterm));
-	  rightVar = new VariableNumMap(Ints.asList(2), Arrays.asList("v2"), Arrays.asList(nonterm));
-	  termVar = new VariableNumMap(Ints.asList(3), Arrays.asList("v3"), Arrays.asList(terms));
+
+	  leftVar = new VariableNumMap(Ints.asList(0), Arrays.asList("v0"), Arrays.asList(nonterm));
+	  rightVar = new VariableNumMap(Ints.asList(1), Arrays.asList("v1"), Arrays.asList(nonterm));
+	  termVar = new VariableNumMap(Ints.asList(2), Arrays.asList("v2"), Arrays.asList(terms));
+	  parentVar = new VariableNumMap(Ints.asList(3), Arrays.asList("v3"), Arrays.asList(nonterm));	  
 	  ruleVar = new VariableNumMap(Ints.asList(4), Arrays.asList("v4"), Arrays.asList(ruleTypes));
 	  
 	  VariableNumMap binaryFactorVars = VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleVar);
@@ -66,20 +67,20 @@ public class CfgParserTest extends TestCase {
 		binary = binaryBuilder.build();
 		terminal = terminalBuilder.build();
 		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binary, terminal, 10);
+		    binary, terminal, 10, false);
 	}
 	
 	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
 	    String term, String ruleType, double weight) {
 	  List<String> terminalValue = Arrays.asList(term.split(" "));
 	  terminalBuilder.incrementWeight(terminalBuilder.getVars()
-	      .outcomeArrayToAssignment(nonterm, terminalValue, ruleType), weight);
+	      .outcomeArrayToAssignment(terminalValue, nonterm, ruleType), weight);
 	}
 	
 	private void addBinary(TableFactorBuilder binaryBuilder, String parent, String left, 
 	    String right, String ruleType, double weight) {
 	  binaryBuilder.incrementWeight(binaryBuilder.getVars()
-	      .outcomeArrayToAssignment(parent, left, right, ruleType), weight);
+	      .outcomeArrayToAssignment(left, right, parent, ruleType), weight);
 	}
 	
 	/**
@@ -136,15 +137,15 @@ public class CfgParserTest extends TestCase {
 	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor ruleCounts = c.getBinaryRuleExpectations();
-		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("S2", "N", "VP", "rule1"));
-		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("S", "N", "VP", "rule1") / c.getPartitionFunction());
-		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("NP", "N", "N", "rule1"));
-		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("VP", "V", "N", "rule2") / c.getPartitionFunction());
-		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("VP", "V", "N", "rule1") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S2", "rule1"));
+		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S", "rule1") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "N", "NP", "rule1"));
+		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("V", "N", "VP", "rule2") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("V", "N", "VP", "rule1") / c.getPartitionFunction());
 
 		Factor termCounts = c.getTerminalRuleExpectations();
-		assertEquals(1.0, termCounts.getUnnormalizedProbability("N", Arrays.asList("gretzky"), "rule1") / c.getPartitionFunction());
-		assertEquals(0.0, termCounts.getUnnormalizedProbability("N", Arrays.asList("hockey"), "rule1"));
+		assertEquals(1.0, termCounts.getUnnormalizedProbability(Arrays.asList("gretzky"), "N", "rule1") / c.getPartitionFunction());
+		assertEquals(0.0, termCounts.getUnnormalizedProbability(Arrays.asList("hockey"), "N", "rule1"));
 	}
 
 	public void testAmbiguous() {
@@ -160,7 +161,7 @@ public class CfgParserTest extends TestCase {
 		assertEquals(2.0, ruleCounts.getUnnormalizedProbability("A", "A", "A", "rule1") / c.getPartitionFunction());
 
 		Factor termCounts = c.getTerminalRuleExpectations();
-		assertEquals(1.0, termCounts.getUnnormalizedProbability("A", Arrays.asList("b"), "rule1") / c.getPartitionFunction());	
+		assertEquals(1.0, termCounts.getUnnormalizedProbability(Arrays.asList("b"), "A", "rule1") / c.getPartitionFunction());	
 	}
 
 	public void testParseMaxMarginal() {
@@ -240,7 +241,7 @@ public class CfgParserTest extends TestCase {
 
 	  
 	  // Make sure that the beam truncates the less probable tree.
-	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary, terminal, 1);
+	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary, terminal, 1, false);
 	  trees = newParser.beamSearch(Arrays.asList("baz", "bbb"));
 	  assertEquals(1, trees.size());
 	  bestTree = trees.get(0);

@@ -182,7 +182,7 @@ public class TableFactorBuilder {
   public int size() {
     return weightBuilder.size();
   }
-
+  
   /**
    * Gets an iterator over all {@code Assignment}s which have nonzero weight.
    * 

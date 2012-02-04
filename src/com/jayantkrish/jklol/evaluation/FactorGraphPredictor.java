@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
+import com.jayantkrish.jklol.inference.MaxMarginalSet.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -76,19 +77,27 @@ public class FactorGraphPredictor implements Predictor<DynamicAssignment, Dynami
    * @return
    */
   public DynamicFactorGraph getFactorGraph() {
-    return factorGraph;
+    return factorGraph; 
   }
 
   @Override
   public DynamicAssignment getBestPrediction(DynamicAssignment dynamicInput) {
+    if (!factorGraph.getVariables().isValidAssignment(dynamicInput)) {
+      return null;
+    }
     // Compute max-marginals conditioned on the input
     Assignment input = factorGraph.getVariables().toAssignment(dynamicInput);
     FactorGraph conditionalFactorGraph = factorGraph.getFactorGraph(dynamicInput).conditional(input);
     MaxMarginalSet maxMarginals = marginalCalculator.computeMaxMarginals(conditionalFactorGraph);
 
-    Assignment output = maxMarginals.getNthBestAssignment(0).intersection(
-        getOutputVariables(conditionalFactorGraph, outputVariablePattern));
-    return factorGraph.getVariables().toDynamicAssignment(output, conditionalFactorGraph.getAllVariables());
+    try {
+      Assignment output = maxMarginals.getNthBestAssignment(0).intersection(
+          getOutputVariables(conditionalFactorGraph, outputVariablePattern));
+      return factorGraph.getVariables().toDynamicAssignment(output, conditionalFactorGraph.getAllVariables());
+    } catch (ZeroProbabilityError e) {
+      // Occurs if all outputs have zero probability under the given assignment.
+      return null;
+    }
   }
 
   /**
@@ -179,8 +188,8 @@ public class FactorGraphPredictor implements Predictor<DynamicAssignment, Dynami
 
     @Override
     public Assignment getBestPrediction(Assignment input) {
-      return predictor.getBestPrediction(DynamicAssignment.fromAssignment(input))
-          .getFixedAssignment();
+     DynamicAssignment best = predictor.getBestPrediction(DynamicAssignment.fromAssignment(input));
+     return (best == null) ? null : best.getFixedAssignment();
     }
 
     @Override

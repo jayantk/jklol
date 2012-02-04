@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.inference;
 
+import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -9,12 +10,12 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Max marginals computed from a list of max marginal {@code Factor}s.
- *
+ * Max-marginals computed from a list of max-marginal {@code Factor}s.
+ * 
  * @author jayant
  */
 public class FactorMaxMarginalSet implements MaxMarginalSet {
-  
+
   private final FactorGraph factorGraph;
 
   private final Assignment conditionedValues;
@@ -23,7 +24,7 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
     this.factorGraph = Preconditions.checkNotNull(factorGraph);
     this.conditionedValues = Preconditions.checkNotNull(conditionedValues);
   }
-  
+
   @Override
   public int beamSize() {
     return 1;
@@ -35,15 +36,14 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
     Preconditions.checkArgument(n == 0);
     if (factorGraph.getFactors().size() == 0) {
       // Special case where the factor graph has no factors in it.
-       return conditionedValues;
+      return conditionedValues;
     } else {
       // General case
-       return getBestAssignmentGiven(factorGraph, 0, Sets.<Integer>newHashSet(), Assignment.EMPTY)
+      return getBestAssignmentGiven(factorGraph, 0, Sets.<Integer> newHashSet(), Assignment.EMPTY)
           .union(conditionedValues);
     }
   }
-  
-  
+
   /**
    * Performs a depth-first search of {@code factorGraph}, starting at
    * {@code factorNum}, to find an assignment with maximal probability. If
@@ -52,20 +52,27 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
    * 
    * @param factorGraph factor graph which is searched.
    * @param factorNum current factor to visit.
-   * @param visitedFactors list of factors already visited by the depth-first search.
-   * @param a the maximal probability assignment for the already visited factors. 
+   * @param visitedFactors list of factors already visited by the depth-first
+   * search.
+   * @param a the maximal probability assignment for the already visited
+   * factors.
    * @return
    */
-  private static Assignment getBestAssignmentGiven(FactorGraph factorGraph, int factorNum, 
+  private static Assignment getBestAssignmentGiven(FactorGraph factorGraph, int factorNum,
       Set<Integer> visitedFactors, Assignment a) {
     Factor curFactor = factorGraph.getFactor(factorNum);
-    Assignment best = curFactor.conditional(a).getMostLikelyAssignments(1).get(0);
-    
+    List<Assignment> bestAssignments = curFactor.conditional(a).getMostLikelyAssignments(1);
+    if (bestAssignments.size() == 0) {
+      // This condition implies that the factor graph does not have a positive
+      // probability assignment.
+      throw new ZeroProbabilityError();
+    }
+    Assignment best = bestAssignments.get(0);
     visitedFactors.add(factorNum);
 
     for (int adjacentFactorNum : factorGraph.getAdjacentFactors(factorNum)) {
       if (!visitedFactors.contains(adjacentFactorNum)) {
-        Assignment bestChild = getBestAssignmentGiven(factorGraph, adjacentFactorNum, 
+        Assignment bestChild = getBestAssignmentGiven(factorGraph, adjacentFactorNum,
             visitedFactors, best).removeAll(best.getVariableNums());
         best = best.union(bestChild);
       }

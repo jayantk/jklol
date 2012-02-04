@@ -77,12 +77,14 @@ public class Converters {
 
     @Override
     public T apply(List<T> item) {
+      if (item == null) { return null; }
       Preconditions.checkArgument(item.size() == 1);
       return item.get(0);
     }
 
     @Override
     public List<T> invert(T item) {
+      if (item == null) { return null; }
       List<T> items = Lists.newArrayList();
       items.add(item);
       return items;

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
@@ -51,8 +52,8 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
     
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, 
-        nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
-        terminalFactor.getFactorFromParameters(terminalStatistics), 0);
+        (DiscreteFactor) nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
+        (DiscreteFactor) terminalFactor.getFactorFromParameters(terminalStatistics), 0, false);
     return new CfgFactor(rootVar, childVar, parser);
   }
 

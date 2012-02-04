@@ -16,8 +16,8 @@ public class IntegerArrayIteratorTest extends TestCase {
   Iterator<int[]> zeroVarIter;
   
   public void setUp() {
-    iter = new IntegerArrayIterator(new int[] {1, 3, 2});
-    zeroVarIter = new IntegerArrayIterator(new int[] {});
+    iter = new IntegerArrayIterator(new int[] {1, 3, 2}, new int[0]);
+    zeroVarIter = new IntegerArrayIterator(new int[] {}, new int[0]);
   }
   
   public void testIterator() {

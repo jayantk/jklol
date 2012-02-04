@@ -87,7 +87,7 @@ public interface Factor {
    * determine replacement name and index of each variable. The type of each
    * variable is preserved.
    * 
-   * Requires {@code relabeling.isInDomain(this.getVars()) == true}. 
+   * Requires {@code relabeling.isInDomain(this.getVars()) == true}.
    * 
    * @param newVariableNums
    * @return
@@ -262,6 +262,10 @@ public interface Factor {
    * likely {@code Assignment}, but all factors support retrieving one
    * assignment. For example, factors with continuous probability distributions
    * only support retrieving a single maximum probability assignment.
+   * 
+   * All returned assignments have positive probability. If an insufficient
+   * number of positive-probability assignments exist, then the returned list
+   * may contain fewer than {@code numAssignments} assignments.
    * 
    * @param numAssignments
    * @return

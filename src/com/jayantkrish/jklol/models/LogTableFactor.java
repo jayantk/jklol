@@ -68,6 +68,11 @@ public class LogTableFactor extends DiscreteFactor {
   }
 
   @Override
+  public Iterator<Assignment> outcomePrefixIterator(Assignment prefix) {
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
+
+  @Override
   public SparseTensor getWeights() {
     // This is conceptually possible, but extremely expensive.
     throw new UnsupportedOperationException("Not implemented");

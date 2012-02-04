@@ -8,6 +8,13 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
+/**
+ * Dense tensors only support tensors with up to {@code Integer.MAX_VALUE}
+ * entries, which is the maximum array size addressable in Java. As a result,
+ * {@code keyNum}s for dense tensors are representable using integers. 
+ * 
+ * @author jayantk
+ */
 public class DenseTensorBase extends AbstractTensorBase {
 
   // Stores the values of each key in this. Accessible to subclasses for
@@ -23,11 +30,12 @@ public class DenseTensorBase extends AbstractTensorBase {
   public DenseTensorBase(int[] dimensions, int[] sizes) {
     super(dimensions, sizes);
 
-    int size = 1;
+    long size = 1;
     for (int i = 0; i < sizes.length; i++) {
       size *= sizes[i];
     }
-    values = new double[size];
+    Preconditions.checkArgument(size <= Integer.MAX_VALUE);
+    values = new double[(int) size];
   }
 
   /**
@@ -38,14 +46,14 @@ public class DenseTensorBase extends AbstractTensorBase {
    */
   protected DenseTensorBase(int[] dimensions, int[] sizes, double[] values) {
     super(dimensions, sizes);
-    
+
     // Check the size of the values array.
     int size = 1;
     for (int i = 0; i < sizes.length; i++) {
       size *= sizes[i];
     }
     Preconditions.checkArgument(values.length == size);
-    
+
     this.values = values;
   }
 
@@ -54,26 +62,40 @@ public class DenseTensorBase extends AbstractTensorBase {
     return values.length;
   }
 
-  @Override 
+  @Override
   public double getByIndex(int index) {
     return values[index];
   }
-  
+
   @Override
-  public int indexToKeyInt(int index) {
-    return index;
+  public long indexToKeyNum(int index) {
+    return (long) index;
+  }
+
+  @Override
+  public int keyNumToIndex(long keyNum) {
+    return (int) keyNum;
   }
   
-  @Override
-  public int keyIntToIndex(int keyInt) {
-    return keyInt;
+  public int dimKeyToIndex(int[] dimKey) {
+    return (int) dimKeyToKeyNum(dimKey);
   }
-  
+
   @Override
   public Iterator<int[]> keyIterator() {
-    return new IntegerArrayIterator(getDimensionSizes());
+    return new IntegerArrayIterator(getDimensionSizes(), new int[0]);
   }
   
+  @Override
+  public Iterator<int[]> keyPrefixIterator(int[] keyPrefix) {
+    int[] dimSizes = getDimensionSizes();
+    int[] sizesForIteration = new int[dimSizes.length - keyPrefix.length];
+    for (int i = keyPrefix.length; i < dimSizes.length; i++) {
+      sizesForIteration[i - keyPrefix.length] = dimSizes[i];
+    }
+    return new IntegerArrayIterator(sizesForIteration, keyPrefix);
+  }
+
   @Override
   public double getL2Norm() {
     double sumSquares = 0.0;
@@ -82,7 +104,7 @@ public class DenseTensorBase extends AbstractTensorBase {
     }
     return Math.sqrt(sumSquares);
   }
-  
+
   protected int[] getDimensionMapping(int[] otherDimensionNums) {
     int[] mapping = new int[otherDimensionNums.length];
     int otherInd = 0;
@@ -92,19 +114,19 @@ public class DenseTensorBase extends AbstractTensorBase {
         otherInd++;
       }
     }
-    // Ensure that the mapping is fully initialized. 
+    // Ensure that the mapping is fully initialized.
     Preconditions.checkArgument(otherInd == otherDimensionNums.length);
     return mapping;
   }
-  
+
   protected class SliceIndexIterator implements Iterator<int[]> {
-    
+
     private final Iterator<int[]> variableDimensionIterator;
     private final int[] variableDimensionInds;
     private final int[] currentIndex;
 
     public SliceIndexIterator(int[] dimensionSizes, int[] fixedIndices) {
-      
+
       currentIndex = new int[dimensionSizes.length];
       List<Integer> variableDimensionIndList = Lists.newArrayList();
       List<Integer> variableDimensionSizes = Lists.newArrayList();
@@ -116,11 +138,11 @@ public class DenseTensorBase extends AbstractTensorBase {
           currentIndex[i] = fixedIndices[i];
         }
       }
-      
-      variableDimensionIterator = new IntegerArrayIterator(Ints.toArray(variableDimensionSizes));
-      variableDimensionInds = Ints.toArray(variableDimensionIndList); 
+
+      variableDimensionIterator = new IntegerArrayIterator(Ints.toArray(variableDimensionSizes), new int[0]);
+      variableDimensionInds = Ints.toArray(variableDimensionIndList);
     }
-    
+
     @Override
     public boolean hasNext() {
       return variableDimensionIterator.hasNext();

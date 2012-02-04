@@ -44,7 +44,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
 
   @Override
   public void put(int[] key, double value) {
-    values[dimKeyToKeyInt(key)] = value;
+    values[dimKeyToIndex(key)] = value;
   }
 
   @Override
@@ -61,7 +61,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
 
   @Override
   public void incrementEntry(double amount, int... key) {
-    values[dimKeyToKeyInt(key)] += amount;
+    values[dimKeyToIndex(key)] += amount;
   }
 
   @Override
@@ -77,7 +77,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       Iterator<int[]> otherKeyIterator = other.keyIterator();
       while (otherKeyIterator.hasNext()) {
         int[] otherKey = otherKeyIterator.next();
-        values[dimKeyToKeyInt(otherKey)] += other.getByDimKey(otherKey) * multiplier; 
+        values[dimKeyToIndex(otherKey)] += other.getByDimKey(otherKey) * multiplier; 
       }
     }
   }
@@ -95,7 +95,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       Iterator<int[]> keyIter = keyIterator();
       while (keyIter.hasNext()) {
         int[] key = keyIter.next();
-        values[dimKeyToKeyInt(key)] *= other.getByDimKey(key);
+        values[dimKeyToIndex(key)] *= other.getByDimKey(key);
       }
     }
   }
@@ -109,7 +109,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
 
   @Override
   public void multiplyEntry(double amount, int... key) {
-    values[dimKeyToKeyInt(key)] *= amount;
+    values[dimKeyToIndex(key)] *= amount;
   }
 
   @Override

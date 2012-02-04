@@ -88,6 +88,17 @@ public class TableFactor extends DiscreteFactor {
       }
     });
   }
+  
+  @Override
+  public Iterator<Assignment> outcomePrefixIterator(Assignment prefix) {
+    int[] keyPrefix = getVars().getFirstVariables(prefix.size()).assignmentToIntArray(prefix);
+    return Iterators.transform(weights.keyPrefixIterator(keyPrefix), new Function<int[], Assignment>() {
+      @Override
+      public Assignment apply(int[] values) {
+        return getVars().intArrayToAssignment(values);
+      }
+    });
+  }
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {

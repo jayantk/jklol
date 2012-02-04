@@ -43,7 +43,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   }
   
   public void testGetFeatures() {
-    assertEquals(4, f.getFeatures().size());
+    assertEquals(3, f.getFeatures().size());
   }
   
   public void testGetFactorFromParameters() {
@@ -61,9 +61,9 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     
     List<FeatureFunction> features = f.getFeatures();
     TensorBase weights = ((TensorSufficientStatistics) s).get(0);
-    assertEquals(4, features.size());
+    assertEquals(3, features.size());
     assertEquals(1, weights.getDimensionNumbers().length);
-    assertEquals(4, weights.getDimensionSizes()[0]);
+    assertEquals(3, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
       assertEquals(weights.getByDimKey(i), features.get(i).getValue(tf));      
     }
@@ -78,9 +78,9 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     
     List<FeatureFunction> features = f.getFeatures();
     TensorBase weights = ((TensorSufficientStatistics) s).get(0);
-    assertEquals(4, features.size());
+    assertEquals(3, features.size());
     assertEquals(1, weights.getDimensionNumbers().length);
-    assertEquals(4, weights.getDimensionSizes()[0]);
+    assertEquals(3, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
       assertEquals(weights.getByDimKey(i), features.get(i).getValue(tf.intersection(vars)));      
     }
@@ -94,9 +94,9 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     
     List<FeatureFunction> features = f.getFeatures();
     TensorBase weights = ((TensorSufficientStatistics) s).get(0);
-    assertEquals(4, features.size());
+    assertEquals(3, features.size());
     assertEquals(1, weights.getDimensionNumbers().length);
-    assertEquals(4, weights.getDimensionSizes()[0]);
+    assertEquals(3, weights.getDimensionSizes()[0]);
     for (int i = 0; i < features.size(); i++) {
       FeatureFunction feature = features.get(i);
       double weight = 0.0;

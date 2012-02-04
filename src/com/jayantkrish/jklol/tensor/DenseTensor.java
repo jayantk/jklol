@@ -57,19 +57,38 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     return builder.buildNoCopy();
   }
+  
+  @Override
+  public DenseTensor slice(int[] dimensionNumbers, int[] key) {
+    if (dimensionNumbers.length == 0) {
+      return this;
+    }
+    // TODO(jayantk): This is an extremely naive implementation of slice.
+    
+    // Figure out the appropriate sizes for the subset of dimensions.
+    int[] dimensionSizes = new int[dimensionNumbers.length];
+    for (int i = 0; i < dimensionNumbers.length; i++){
+      int dimIndex = getDimensionIndex(dimensionNumbers[i]);
+      Preconditions.checkArgument(dimIndex >= 0);
+      dimensionSizes[i] = getDimensionSizes()[dimIndex]; 
+    }
+    SparseTensorBuilder builder = new SparseTensorBuilder(dimensionNumbers, dimensionSizes);
+    builder.put(key, 1.0);
+    return elementwiseProduct(builder.build()).sumOutDimensions(Ints.asList(dimensionNumbers));
+  }
 
   @Override
-  public Tensor elementwiseProduct(Tensor other) {
+  public DenseTensor elementwiseProduct(Tensor other) {
     return doElementwise(other, Operation.PRODUCT);
   }
 
   @Override
-  public Tensor elementwiseAddition(Tensor other) {
+  public DenseTensor elementwiseAddition(Tensor other) {
     return doElementwise(other, Operation.SUM);
   }
 
   @Override
-  public Tensor elementwiseMaximum(Tensor other) {
+  public DenseTensor elementwiseMaximum(Tensor other) {
     return doElementwise(other, Operation.MAX);
   }
 
@@ -84,7 +103,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
    * @param op
    * @return
    */
-  private Tensor doElementwise(Tensor other, Operation op) {
+  private DenseTensor doElementwise(Tensor other, Operation op) {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
     if (op != Operation.PRODUCT) {
@@ -103,10 +122,10 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       numValues *= partialKey[i];
     }
     int[] keyOffsets = new int[numValues];
-    Iterator<int[]> myKeyIterator = new IntegerArrayIterator(partialKey);
+    Iterator<int[]> myKeyIterator = new IntegerArrayIterator(partialKey, new int[0]);
     int ind = 0;
     while (myKeyIterator.hasNext()) {
-      keyOffsets[ind] = dimKeyToKeyInt(myKeyIterator.next());
+      keyOffsets[ind] = dimKeyToIndex(myKeyIterator.next());
       ind++;
     }
     Preconditions.checkState(ind == keyOffsets.length);
@@ -142,7 +161,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   }
 
   @Override
-  public Tensor elementwiseInverse() {
+  public DenseTensor elementwiseInverse() {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
     for (int i = 0; i < values.length; i++) {
@@ -152,12 +171,12 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   }
 
   @Override
-  public Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
+  public DenseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
     return reduceDimensions(dimensionsToEliminate, true);
   }
 
   @Override
-  public Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {
+  public DenseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {
     return reduceDimensions(dimensionsToEliminate, false);
   }
 
@@ -169,7 +188,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
    * @param useSum
    * @return
    */
-  private Tensor reduceDimensions(Collection<Integer> dimensionsToEliminate, boolean useSum) {
+  private DenseTensor reduceDimensions(Collection<Integer> dimensionsToEliminate, boolean useSum) {
     SortedSet<Integer> dimensionsToKeep = Sets.newTreeSet(Ints.asList(getDimensionNumbers()));
     dimensionsToKeep.removeAll(dimensionsToEliminate);
 

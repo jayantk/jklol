@@ -26,4 +26,9 @@ public class ObjectVariable implements Variable {
   public Class<?> getObjectType() {
     return type;
   }
+  
+  @Override
+  public String toString() {
+    return "ObjectVariable(" + type.toString() + ")";
+  }
 }

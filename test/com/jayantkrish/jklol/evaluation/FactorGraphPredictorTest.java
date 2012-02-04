@@ -82,6 +82,7 @@ public class FactorGraphPredictorTest extends TestCase {
   public void testGetBestPredictionWrapped() {
     assertEquals("F", wrappedPredictor.getBestPrediction("T"));
     assertEquals("U", wrappedPredictor.getBestPrediction("F"));
+    assertEquals(null, wrappedPredictor.getBestPrediction("INVALID"));
   }
       
   public void testGetBestPredictionsWrapped() {

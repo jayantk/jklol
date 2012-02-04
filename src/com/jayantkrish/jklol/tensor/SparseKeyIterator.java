@@ -1,24 +1,38 @@
 package com.jayantkrish.jklol.tensor;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
+
+import com.google.common.base.Preconditions;
 
 public class SparseKeyIterator implements Iterator<int[]> {
 
   private int curIndex;
-  private final List<Integer> keyInts;
+  private int finalIndex;
+  private final long[] keyInts;
   private final TensorBase tensor;
 
-  public SparseKeyIterator(List<Integer> keyInts, TensorBase tensor) {
-    this.keyInts = keyInts;
-    this.curIndex = 0;
-    this.tensor = tensor;
+  /**
+   * 
+   * The iterator iterates over all keys from {@code initialIndex} (inclusive)
+   * to {@code finalIndex} (not inclusive).
+   * 
+   * @param keyInts
+   * @param initialIndex
+   * @param tensor
+   */
+  public SparseKeyIterator(long[] keyInts, int initialIndex, 
+      int finalIndex, TensorBase tensor) {
+    Preconditions.checkArgument(finalIndex <= keyInts.length);
+    this.keyInts = Preconditions.checkNotNull(keyInts);
+    this.curIndex = initialIndex;
+    this.finalIndex = finalIndex;
+    this.tensor = Preconditions.checkNotNull(tensor);
   }
 
   @Override
   public boolean hasNext() {
-    return curIndex < keyInts.size();
+    return curIndex < finalIndex;
   }
 
   @Override
@@ -27,7 +41,7 @@ public class SparseKeyIterator implements Iterator<int[]> {
       throw new NoSuchElementException();
     }
     curIndex++;
-    return tensor.keyIntToDimKey(keyInts.get(curIndex - 1));
+    return tensor.keyNumToDimKey(keyInts[curIndex - 1]);
   }
 
   @Override

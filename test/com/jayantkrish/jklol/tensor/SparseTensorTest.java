@@ -19,7 +19,7 @@ public class SparseTensorTest extends TensorTest {
   }
   
   public void testSize() {
-    assertEquals(16, table.size());
+    assertEquals(17, table.size());
     assertEquals(1, emptyInputTable.size());
   }
   

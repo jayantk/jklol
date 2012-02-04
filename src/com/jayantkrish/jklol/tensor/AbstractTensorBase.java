@@ -17,7 +17,7 @@ public abstract class AbstractTensorBase implements TensorBase {
   
   // Array storing offsets into values which are combined with keys
   // to create an index for the key into values.
-  protected final int[] indexOffsets;
+  protected final long[] indexOffsets;
   
   public AbstractTensorBase(int[] dimensions, int[] sizes) {
     Preconditions.checkArgument(dimensions.length == sizes.length);
@@ -25,7 +25,7 @@ public abstract class AbstractTensorBase implements TensorBase {
     this.sizes = Arrays.copyOf(sizes, sizes.length);
     
     // Create the data structure for converting dimension keys to integers.
-    indexOffsets = new int[sizes.length];
+    indexOffsets = new long[sizes.length];
     initializeIndexOffsets(sizes);
   }
   
@@ -40,7 +40,7 @@ public abstract class AbstractTensorBase implements TensorBase {
       if (i == sizes.length - 1) {
         indexOffsets[i] = 1;
       } else {
-        indexOffsets[i] = indexOffsets[i + 1] * sizes[i + 1];
+        indexOffsets[i] = indexOffsets[i + 1] * ((long) sizes[i + 1]);
       }
     }
   }
@@ -61,46 +61,49 @@ public abstract class AbstractTensorBase implements TensorBase {
   }
   
   /**
-   * A keyInt {@code k} is valid for {@code this} if and only if {@code 0 <= k < this.maxKeyInt()}.
+   * A keyNum {@code k} is valid for {@code this} if and only if {@code 0 <= k < this.maxKeyNum()}.
    *  
    * @return
    */
-  public int maxKeyInt() {
+  public long maxKeyNum() {
     return indexOffsets.length == 0 ? 1 : indexOffsets[0] * sizes[0]; 
   }
   
   @Override
-  public int[] keyIntToDimKey(int keyInt) {
+  public int[] keyNumToDimKey(long keyNum) {
     int[] key = new int[sizes.length];
-    int curVal = keyInt;
+    long curVal = keyNum;
     for (int i = 0; i < sizes.length; i++) {
-      key[i] = curVal / indexOffsets[i];
+      key[i] = (int) (curVal / indexOffsets[i]);
       curVal -= key[i] * indexOffsets[i];
     }
     return key;
   }
   
   @Override
-  public int dimKeyToKeyInt(int[] key) {
+  public long dimKeyToKeyNum(int[] key) {
     Preconditions.checkArgument(key.length == getDimensionNumbers().length);
-
+    return dimKeyPrefixToKeyNum(key);
+  }
+  
+  protected long dimKeyPrefixToKeyNum(int[] keyPrefix) {
     int[] sizes = getDimensionSizes();
-    int index = 0;
-    for (int i = 0; i < key.length; i++) {
-      Preconditions.checkArgument(key[i] >= 0 && key[i] < sizes[i]);
-      index += key[i] * indexOffsets[i];
+    long keyNum = 0;
+    for (int i = 0; i < keyPrefix.length; i++) {
+      Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i]);
+      keyNum += ((long) keyPrefix[i]) * indexOffsets[i];
     }
-    return index;    
+    return keyNum;
   }
   
   @Override
   public double getByDimKey(int... key) {
-    return getByIndex(keyIntToIndex(dimKeyToKeyInt(key)));
+    return getByIndex(keyNumToIndex(dimKeyToKeyNum(key)));
   }
   
   @Override
-  public double get(int keyInt) {
-    return getByIndex(keyIntToIndex(keyInt));
+  public double get(long keyInt) {
+    return getByIndex(keyNumToIndex(keyInt));
   }  
   
   protected int getDimensionIndex(int dimensionNum) {

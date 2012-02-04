@@ -2,11 +2,13 @@ package com.jayantkrish.jklol.cfg;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
@@ -33,24 +35,22 @@ public class CfgParser {
   private final VariableNumMap ruleTypeVar;
 
   // Each entry in the parse chart contains a factor defined over parentVar.
-  // These
-  // relabelings are necessary to apply binaryDistribution and
-  // terminalDistribution
-  // during parsing.
+  // These relabelings are necessary to apply binaryDistribution and
+  // terminalDistribution during parsing.
   private final VariableRelabeling leftToParent;
   private final VariableRelabeling rightToParent;
   private final VariableRelabeling parentToLeft;
   private final VariableRelabeling parentToRight;
 
-  private final Factor binaryDistribution;
-  private final Factor terminalDistribution;
+  private final DiscreteFactor binaryDistribution;
+  private final DiscreteFactor terminalDistribution;
 
-  // Performing a beam search over trees requires the most probable parent
-  // objects for each pair
-  // of left and right subtree roots. Cache this information out of the factors
-  // for improved parsing
-  // speed.
+  // If greater than 0, this parser performs a beam search over trees,
+  // maintaining up to beamSize trees at each chart node.
   private final int beamSize;
+  // If true, the parser is allowed to skip portions of the terminal symbols
+  // during parsing.
+  private final boolean canSkipTerminals;
 
   /**
    * If {@code beamSize > 0}, this parser will initialize and cache information
@@ -64,16 +64,21 @@ public class CfgParser {
    * @param binaryDistribution
    * @param terminalDistribution
    * @param beamSize
+   * @param canSkipTerminals if {@code true}, the parser may skip terminal
+   * symbols during the parse. Only implemented for beam searches.
    */
   public CfgParser(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar,
-      VariableNumMap terminalVar, VariableNumMap ruleTypeVar, Factor binaryDistribution,
-      Factor terminalDistribution, int beamSize) {
+      VariableNumMap terminalVar, VariableNumMap ruleTypeVar, DiscreteFactor binaryDistribution,
+      DiscreteFactor terminalDistribution, int beamSize, boolean canSkipTerminals) {
     Preconditions.checkArgument(parentVar.size() == 1 && leftVar.size() == 1
         && rightVar.size() == 1 && terminalVar.size() == 1 && ruleTypeVar.size() == 1);
     Preconditions.checkArgument(binaryDistribution.getVars().equals(VariableNumMap.unionAll(
         parentVar, leftVar, rightVar, ruleTypeVar)));
     Preconditions.checkArgument(terminalDistribution.getVars().equals(VariableNumMap.unionAll(
         parentVar, terminalVar, ruleTypeVar)));
+    Preconditions.checkArgument(terminalVar.getOnlyVariableNum() < parentVar.getOnlyVariableNum());
+    Preconditions.checkArgument(leftVar.getOnlyVariableNum() < parentVar.getOnlyVariableNum());
+    Preconditions.checkArgument(rightVar.getOnlyVariableNum() < parentVar.getOnlyVariableNum());
     this.parentVar = parentVar;
     this.leftVar = leftVar;
     this.rightVar = rightVar;
@@ -90,6 +95,7 @@ public class CfgParser {
     this.parentToRight = VariableRelabeling.createFromVariables(parentVar, rightVar);
 
     this.beamSize = beamSize;
+    this.canSkipTerminals = canSkipTerminals;
   }
 
   public Factor getBinaryDistribution() {
@@ -153,6 +159,19 @@ public class CfgParser {
       for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
         int spanEnd = spanStart + spanSize;
         calculateInsideBeam(spanStart, spanEnd, chart);
+      }
+    }
+
+    if (canSkipTerminals) {
+      // If we can skip terminals, a parse for any subtree of the sentence
+      // is a parse for the entire sentence.
+      for (int spanSize = 0; spanSize < chart.chartSize() - 1; spanSize++) {
+        for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
+          int spanEnd = spanStart + spanSize;
+          for (ParseTree tree : chart.getParseTreesForSpan(spanStart, spanEnd)) {
+            chart.addParseTreeForSpan(0, terminals.size() - 1, tree);
+          }
+        }
       }
     }
 
@@ -414,16 +433,17 @@ public class CfgParser {
       for (int j = i; j < terminals.size(); j++) {
         if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
-          Factor terminalFactor = terminalDistribution.conditional(assignment);
+          Iterator<Assignment> iterator = terminalDistribution.outcomePrefixIterator(assignment);
 
-          for (Assignment bestAssignment : terminalFactor.getMostLikelyAssignments(chart
-              .getBeamSize())) {
+          while (iterator.hasNext()) {
+            Assignment bestAssignment = iterator.next();
             Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
             Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
             chart.addParseTreeForSpan(i, j,
                 new ParseTree(root, ruleType, terminals.subList(i, j + 1),
-                    terminalFactor.getUnnormalizedProbability(bestAssignment)));
+                    terminalDistribution.getUnnormalizedProbability(bestAssignment)));
           }
+          System.out.println(i + "." + j + ": " + assignment + " : " + chart.getParseTreesForSpan(i, j));
         }
       }
     }
@@ -438,21 +458,23 @@ public class CfgParser {
    * @param chart
    */
   private void calculateInsideBeam(int spanStart, int spanEnd, BeamSearchParseChart chart) {
-    for (int k = 0; k < spanEnd - spanStart; k++) {
-      for (ParseTree leftTree : chart.getParseTreesForSpan(spanStart, spanStart + k)) {
-        for (ParseTree rightTree : chart.getParseTreesForSpan(spanStart + k + 1, spanEnd)) {
-
-          Assignment assignment = leftVar.outcomeArrayToAssignment(leftTree.getRoot()).union(
-              rightVar.outcomeArrayToAssignment(rightTree.getRoot()));
-          Factor rootFactor = binaryDistribution.conditional(assignment);
-          
-          for (Assignment bestAssignment : rootFactor.getMostLikelyAssignments(chart.getBeamSize())) {
-            Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
-            Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
-            ParseTree combinedTree = new ParseTree(root, ruleType, leftTree,
-                rightTree, leftTree.getProbability() * rightTree.getProbability()
-                * rootFactor.getUnnormalizedProbability(bestAssignment));
-            chart.addParseTreeForSpan(spanStart, spanEnd, combinedTree);
+    for (int i = 0; i < spanEnd - spanStart; i++) {
+      for (int j = i + 1; j < (canSkipTerminals ? 1 + spanEnd - spanStart : i + 2); j++) {
+        for (ParseTree leftTree : chart.getParseTreesForSpan(spanStart, spanStart + i)) {
+          for (ParseTree rightTree : chart.getParseTreesForSpan(spanStart + j, spanEnd)) {
+            Assignment assignment = leftVar.outcomeArrayToAssignment(leftTree.getRoot()).union(
+                rightVar.outcomeArrayToAssignment(rightTree.getRoot()));
+            
+            Iterator<Assignment> iterator = binaryDistribution.outcomePrefixIterator(assignment);
+            while (iterator.hasNext()) {
+              Assignment bestAssignment = iterator.next();
+              Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
+              Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
+              ParseTree combinedTree = new ParseTree(root, ruleType, leftTree,
+                  rightTree, leftTree.getProbability() * rightTree.getProbability()
+                  * binaryDistribution.getUnnormalizedProbability(bestAssignment));
+              chart.addParseTreeForSpan(spanStart, spanEnd, combinedTree);
+            }
           }
         }
       }

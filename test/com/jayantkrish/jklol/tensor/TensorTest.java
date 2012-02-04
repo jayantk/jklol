@@ -52,9 +52,11 @@ public abstract class TensorTest extends TestCase {
     TensorBuilder builder = tensorFactory.getBuilder(varNums, varSizes);
     builder.put(a1, 1.0);
     builder.put(a2, 2.0);
+    // These keys are overwritten later.
     builder.put(new int[] {4, 0, 0}, 3.0);
     builder.put(new int[] {3, 1, 0}, 3.0);
     builder.put(new int[] {3, 0, 1}, 6.0);
+    // None of the following keys are overwritten.
     builder.put(new int[] { 0, 0, 3 }, 3.0);
     builder.put(new int[] { 0, 1, 3 }, 4.0);
     builder.put(new int[] { 1, 0, 3 }, 5.0);
@@ -64,6 +66,7 @@ public abstract class TensorTest extends TestCase {
     builder.put(new int[] { 3, 0, 0 }, 3.0);
     builder.put(new int[] { 3, 0, 1 }, 4.0);
     builder.put(new int[] { 3, 1, 0 }, 5.0);
+    builder.put(new int[] { 3, 4, 3 }, 7.0);
     builder.put(new int[] { 2, 0, 0 }, 3.0);
     builder.put(new int[] { 2, 0, 1 }, 4.0);
     builder.put(new int[] { 2, 1, 0 }, 5.0);
@@ -150,8 +153,75 @@ public abstract class TensorTest extends TestCase {
   }
   
   public void testGetKeyInt() {
-    assertEquals(31, table.dimKeyToKeyInt(new int[] {1, 2, 3}));
-    assertTrue(Arrays.equals(new int[] {1, 2, 3}, table.keyIntToDimKey(31)));
+    assertEquals(31, table.dimKeyToKeyNum(new int[] {1, 2, 3}));
+    assertTrue(Arrays.equals(new int[] {1, 2, 3}, table.keyNumToDimKey(31)));
+  }
+  
+  public void testSlice() {
+    Tensor slice = table.slice(new int[] {1, 4}, new int[] {2, 0});
+    assertEquals(3.0, slice.getByDimKey(0));
+    assertEquals(5.0, slice.getByDimKey(1));
+    assertEquals(0.0, slice.getByDimKey(2));
+    assertEquals(5, slice.getDimensionSizes()[0]);
+    assertEquals(3, slice.getDimensionNumbers()[0]);
+  }
+  
+  public void testSliceLeft1() {
+    // Test a case where both the start and end index are in the tensor:
+    Tensor slice = table.slice(new int[] {1}, new int[] {3});
+    assertTrue(Arrays.equals(new int[]{5,4}, slice.getDimensionSizes()));
+    assertTrue(Arrays.equals(new int[]{3,4}, slice.getDimensionNumbers()));
+    assertEquals(5.0, slice.getByDimKey(1, 0));
+    assertEquals(3.0, slice.getByDimKey(0, 0));
+    assertEquals(0.0, slice.getByDimKey(0, 3));
+    assertEquals(7.0, slice.getByDimKey(4, 3));
+    assertTrue(4 == slice.size() || 20 == slice.size());
+    
+    // Test a case where neither start nor end are in the tensor:
+    slice = table.slice(new int[] {1}, new int[] {1});
+    assertTrue(Arrays.equals(new int[]{5,4}, slice.getDimensionSizes()));
+    assertTrue(Arrays.equals(new int[]{3,4}, slice.getDimensionNumbers()));
+    assertEquals(5.0, slice.getByDimKey(0, 3));
+    assertEquals(0.0, slice.getByDimKey(1, 3));
+    assertEquals(5.0, slice.getByDimKey(3, 0));
+    assertEquals(0.0, slice.getByDimKey(3, 1));
+    assertEquals(0.0, slice.getByDimKey(4, 3));
+    assertTrue(2 == slice.size() || 20 == slice.size());    
+  }
+  
+  public void testSliceEmpty() {
+    Tensor slice = emptyInputTable.slice(new int[0], new int[0]);
+    assertEquals(5.0, slice.getByDimKey(new int[0]));
+  }
+  
+  public void testKeyPrefixIteratorEmpty() {
+    Iterator<int[]> keyIterator = table.keyPrefixIterator(new int[] {1, 2});
+    
+    while (keyIterator.hasNext()) {
+      assertEquals(0.0, table.getByDimKey(keyIterator.next()));
+    }
+  }
+  
+  public void testKeyPrefixIterator() {
+    Iterator<int[]> keyIterator = table.keyPrefixIterator(new int[] {3});
+    Set<int[]> intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
+    while (keyIterator.hasNext()) {
+      intSet.add(Arrays.copyOf(keyIterator.next(), 3));
+    }
+    assertTrue(intSet.size() == 4 || intSet.size() == 20);
+    assertTrue(intSet.contains(new int[] {3, 0, 0}));
+    assertTrue(intSet.contains(new int[] {3, 0, 1}));
+    assertTrue(intSet.contains(new int[] {3, 1, 0}));
+    assertTrue(intSet.contains(new int[] {3, 4, 3}));
+    
+    keyIterator = table.keyPrefixIterator(new int[] {3, 0});
+    intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
+    while (keyIterator.hasNext()) {
+      intSet.add(Arrays.copyOf(keyIterator.next(), 3));
+    }
+    assertTrue(intSet.size() == 2 || intSet.size() == 4);
+    assertTrue(intSet.contains(new int[] {3, 0, 0}));
+    assertTrue(intSet.contains(new int[] {3, 0, 1}));
   }
 
   public void testElementwiseProductEmpty() {

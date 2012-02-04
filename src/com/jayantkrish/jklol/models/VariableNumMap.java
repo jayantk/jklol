@@ -483,6 +483,27 @@ public class VariableNumMap {
     newNames.put(num, name);
     return new VariableNumMap(newVarMap, newNames);
   }
+  
+  /**
+   * Gets the {@code numVariables} in this with the lowest variable nums.
+   *  
+   * @param numVariables
+   * @return
+   */
+  public VariableNumMap getFirstVariables(int numVariables) {
+    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+    BiMap<Integer, String> newNames = HashBiMap.create();
+    
+    for (Integer key : varMap.keySet()) {
+      if (newVarMap.size() >= numVariables) {
+        break;
+      }
+      
+      newVarMap.put(key, varMap.get(key));
+      newNames.put(key, names.get(key));
+    }
+    return new VariableNumMap(newVarMap, newNames);
+  }
 
   /**
    * Gets the values of the variables in {@code Assignment} and returns them as
@@ -508,12 +529,12 @@ public class VariableNumMap {
    * variable returned by getVariableNums())
    */
   public Assignment outcomeToAssignment(List<? extends Object> outcome) {
-    assert outcome.size() == varMap.size();
+    Preconditions.checkArgument(outcome.size() == varMap.size(), "outcome "+ outcome 
+        + " cannot be assigned to " + this.toString() + "(wrong number of values)");
 
     Map<Integer, Object> varValueMap = new HashMap<Integer, Object>();
     int i = 0;
     for (Map.Entry<Integer, Variable> varIndex : varMap.entrySet()) {
-      assert varIndex.getValue().canTakeValue(outcome.get(i));
       varValueMap.put(varIndex.getKey(), outcome.get(i));
       i++;
     }
@@ -681,6 +702,8 @@ public class VariableNumMap {
   /**
    * Converter from assignments to outcomes (list of objects) and vice-versa.
    * 
+   * The converter maps {@code null} inputs to {@code null} outputs.
+   * 
    * @author jayantk
    */
   private static class AssignmentConverter extends Converter<List<Object>, Assignment> {
@@ -693,14 +716,12 @@ public class VariableNumMap {
 
     @Override
     public Assignment apply(List<Object> item) {
-      Preconditions.checkArgument(item.size() == variables.size());
-      return variables.outcomeToAssignment(item);
+      return (item == null) ? null : variables.outcomeToAssignment(item);
     }
 
     @Override
     public List<Object> invert(Assignment item) {
-      Preconditions.checkArgument(item.size() == variables.size());
-      return variables.assignmentToOutcome(item);
+      return (item == null) ? null : variables.assignmentToOutcome(item);
     }
   }
 

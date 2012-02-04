@@ -8,6 +8,8 @@ import junit.framework.TestCase;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.cfg.BeamSearchCfgFactor.OovMapper;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPredictor;
 import com.jayantkrish.jklol.evaluation.Predictor;
@@ -42,15 +44,18 @@ public class BeamSearchCfgFactorTest extends TestCase {
   List<Example<Assignment, Assignment>> trainingData;
   
   private static final String[] NONTERMINALS = new String[] {"S", "N", "V", "NP", "VP", "DT", "JJ"};
-  private static final String[] TERMINALS = new String[] {"the", "black", "cat", "jumped", "drank", "fence", "milk"};
+  private static final String[] TERMINALS = new String[] {"the", "black", "cat", "jumped", "drank", "fence", "<OOV>"};
   
   private static final String[] TRAINING_DATA = new String[] {
     "(S (NP (DT the) (NP (JJ black) (N cat))) (V jumped))",
     "(S (NP (DT the) (NP (JJ black) (N cat))) (VP (V jumped) (NP (DT the) (N fence))))",
-    "(S (NP (DT the) (NP (JJ black) (N cat))) (VP (V drank) (N milk)))"
+    "(S (NP (DT the) (NP (JJ black) (N cat))) (VP (V drank) (N <OOV>)))"
   };
-  
+    
   private static final String[] TEST_DATA = new String[] {
+    "(S (NP (DT the) (NP (JJ black) (N cat))) (V jumped))",
+    "(S (NP (DT the) (NP (JJ black) (N cat))) (VP (V jumped) (NP (DT the) (N fence))))",
+    "(S (NP (DT the) (NP (JJ black) (N cat))) (VP (V drank) (N milk)))",
     "(S (NP (DT the) (N milk)) (V jumped))"
   };
   
@@ -60,12 +65,12 @@ public class BeamSearchCfgFactorTest extends TestCase {
     Variable emptyVariable = new DiscreteVariable("empty", Arrays.asList(""));
     left = new VariableNumMap(Arrays.asList(0), Arrays.asList("left"), Arrays.asList(parseNodeVariable));
     right = new VariableNumMap(Arrays.asList(1), Arrays.asList("right"), Arrays.asList(parseNodeVariable));
-    parent = new VariableNumMap(Arrays.asList(2), Arrays.asList("parent"), Arrays.asList(parseNodeVariable));
+    parent = new VariableNumMap(Arrays.asList(3), Arrays.asList("parent"), Arrays.asList(parseNodeVariable));
     ruleType = new VariableNumMap(Arrays.asList(4), Arrays.asList("ruleType"), Arrays.asList(emptyVariable));
     VariableNumMap nonterminalVars = VariableNumMap.unionAll(left, right, parent, ruleType);
     ParametricFactor<SufficientStatistics> nonterminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(nonterminalVars);
     
-    List<List<String>> allTerminals = Lists.newArrayList(Iterables.transform(Arrays.asList(TERMINALS), 
+    List<List<String>> allTerminals = Lists.newArrayList(Iterables.transform(Arrays.asList(TERMINALS),
         new Function<String, List<String>>() {
       @Override
       public List<String> apply(String x) {
@@ -73,7 +78,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
       }
     }));
     Variable terminalNodeVariable = new DiscreteVariable("terminalNode", allTerminals);
-    terminal = new VariableNumMap(Arrays.asList(3), Arrays.asList("terminal"), Arrays.asList(terminalNodeVariable));
+    terminal = new VariableNumMap(Arrays.asList(2), Arrays.asList("terminal"), Arrays.asList(terminalNodeVariable));
     VariableNumMap terminalVars = VariableNumMap.unionAll(terminal, parent, ruleType);
     ParametricFactor<SufficientStatistics> terminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(terminalVars);
     
@@ -87,8 +92,9 @@ public class BeamSearchCfgFactorTest extends TestCase {
     x = builder.getVariables().getVariablesByName("x");
     y = builder.getVariables().getVariablesByName("y");
 
+    OovMapper oovMapper = new OovMapper("<OOV>", Sets.newHashSet(Arrays.asList(TERMINALS)));
     ParametricCfgFactor cfgFactor = new ParametricCfgFactor(parent, left, right, terminal, ruleType, 
-        y, x, nonterminalFactor, terminalFactor, 100);
+        y, x, nonterminalFactor, terminalFactor, oovMapper, 10, false);
     builder.addFactor(cfgFactor, new WrapperVariablePattern(x.union(y)));
     cfgModel = builder.build();
     
@@ -141,9 +147,9 @@ public class BeamSearchCfgFactorTest extends TestCase {
     Predictor<Assignment, Assignment> predictor = runTrainerTest(new StochasticGradientTrainer(new JunctionTree(), 5));
     
     for (int i = 0; i < TEST_DATA.length; i++) {
-      ParseTree expected = parseTreeFromString(TEST_DATA[i]);
+      ParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));
       Assignment actual = predictor.getBestPrediction(x.outcomeArrayToAssignment(
-          expected.getTerminalProductions()));
+          parseTreeFromString(TEST_DATA[i]).getTerminalProductions()));
       assertEquals(expected, actual.getOnlyValue());
     }
   }
@@ -153,14 +159,8 @@ public class BeamSearchCfgFactorTest extends TestCase {
         cfgModel.getNewSufficientStatistics(), trainingData);
     FactorGraph trainedModel = cfgModel.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
-
-    // Should be able to get 0 training error.
     SimpleFactorGraphPredictor predictor = new SimpleFactorGraphPredictor(
         trainedModel, y, new JunctionTree());
-    for (Example<Assignment, Assignment> trainingDatum : trainingData) {
-      Assignment prediction = predictor.getBestPrediction(trainingDatum.getInput());
-      assertEquals(trainingDatum.getOutput(), prediction);
-    }
     return predictor;
   }
 }

@@ -39,24 +39,24 @@ public interface TensorBase {
   double getByDimKey(int... key);
 
   /**
-   * Gets the value associated with {@code keyInt}, which is interpreted as a
+   * Gets the value associated with {@code keyNum}, which is interpreted as a
    * key by successively mod'ing it by the size of each dimension of
-   * {@code this}. Equivalent {@code getByDimKey(convertToDimKey(keyInt))}.
+   * {@code this}. Equivalent {@code getByDimKey(convertToDimKey(keyNum))}.
    * 
-   * @param keyInt
+   * @param keyNum
    * @return
    */
-  double get(int keyInt);
+  double get(long keyNum);
   
   double getByIndex(int index);
 
-  int[] keyIntToDimKey(int keyInt);
+  int[] keyNumToDimKey(long keyNum);
 
-  int dimKeyToKeyInt(int[] dimKey);
+  long dimKeyToKeyNum(int[] dimKey);
   
-  int keyIntToIndex(int keyInt);
+  int keyNumToIndex(long keyNum);
     
-  int indexToKeyInt(int index);
+  long indexToKeyNum(int index);
 
   /**
    * Gets an iterator over all keys of {@code this} whose associated value is
@@ -69,6 +69,17 @@ public interface TensorBase {
    */
   Iterator<int[]> keyIterator();
 
+  /**
+   * Gets an iterator over the subset of keys in {@code this} that begin with
+   * {@code keyPrefix}. That is, the first {@code keyPrefix.length} dimensions
+   * of {@code key} are equal to their corresponding values in {@code keyPrefix}
+   * . The returned iterator may not iterate over keys whose value is 0.
+   * 
+   * @param keyPrefix
+   * @return
+   */
+  Iterator<int[]> keyPrefixIterator(int[] keyPrefix);
+  
   /**
    * Gets an iterator over all key/value pairs of {@code this}. The iterator is
    * guaranteed to iterate over all keys with nonzero values, and may optionally

@@ -20,6 +20,10 @@ import com.jayantkrish.jklol.util.Assignment;
  * used when the values of this factor cannot be explicitly enumerated. If the
  * values can be enumerated, then a {@link TableFactor} will be more efficient.
  * 
+ * This factor wraps a {@code Function} f. Assignments to this factor (x, y)
+ * consistent with the function (i.e., f(x) == y) have probability 1.0, and all
+ * other assignments have 0 probability.
+ * 
  * @author jayant
  */
 public class FunctionFactor extends AbstractFactor {
@@ -92,40 +96,68 @@ public class FunctionFactor extends AbstractFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    if (!getVars().containsAny(assignment.getVariableNums())) {
+      return this;
+    }
+
+    VariableNumMap toEliminate = getVars().intersection(assignment.getVariableNums());
+    Assignment subAssignment = assignment.intersection(getVars());
+    Preconditions.checkArgument(toEliminate.size() == 1);
+    if (toEliminate.containsAny(domainVariable)) {
+      DiscreteObjectFactor newDomainFactor = DiscreteObjectFactor.pointDistribution(domainVariable, subAssignment);
+      return product(newDomainFactor).marginalize(toEliminate);
+    } else {
+      TableFactor newRangeFactor = TableFactor.pointDistribution(toEliminate, subAssignment);
+      Factor intermediate = product(newRangeFactor);
+      return intermediate.marginalize(toEliminate);
+    }
   }
 
   @Override
   public Factor marginalize(Collection<Integer> varNumsToEliminate) {
-    Preconditions.checkArgument(varNumsToEliminate.contains(domainVariable.getOnlyVariableNum()));
     Preconditions.checkState(domainFactor != null);
 
-    if (!varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-      return marginalizeToRangeVariable(true);
+    if (varNumsToEliminate.contains(domainVariable.getOnlyVariableNum())) {
+      if (!varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
+        return marginalizeToRangeVariable(true);
+      } else {
+        return marginalizeAllVariables(true);
+      }
     } else {
-      return marginalizeAllVariables(true);
+      if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
+        return domainFactor;
+      } else {
+        return this;
+      }
     }
   }
 
   @Override
   public Factor maxMarginalize(Collection<Integer> varNumsToEliminate) {
-    Preconditions.checkArgument(varNumsToEliminate.contains(domainVariable.getOnlyVariableNum()));
     Preconditions.checkState(domainFactor != null);
 
-    if (!varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-      return marginalizeToRangeVariable(false);
+    if (varNumsToEliminate.contains(domainVariable.getOnlyVariableNum())) {
+      if (!varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
+        return marginalizeToRangeVariable(false);
+      } else {
+        return marginalizeAllVariables(false);
+      }
     } else {
-      return marginalizeAllVariables(false);
+      if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
+        return domainFactor;
+      } else {
+        return this;
+      }
     }
   }
-  
+
   private Factor marginalizeToRangeVariable(boolean useSum) {
     TableFactorBuilder rangeFactor = new TableFactorBuilder(rangeVariable);
     for (Assignment domainAssignment : domainFactor.assignments()) {
       Object rangeValue = function.apply(domainAssignment.getOnlyValue());
       if (rangeValue != null) {
         if (useSum) {
-          rangeFactor.incrementWeight(rangeVariable.outcomeArrayToAssignment(rangeValue), 
+          rangeFactor.incrementWeight(rangeVariable.outcomeArrayToAssignment(rangeValue),
               domainFactor.getUnnormalizedProbability(domainAssignment));
         } else {
           rangeFactor.maxWeight(rangeVariable.outcomeArrayToAssignment(rangeValue),
@@ -135,7 +167,7 @@ public class FunctionFactor extends AbstractFactor {
     }
     return rangeFactor.build();
   }
-  
+
   private Factor marginalizeAllVariables(boolean useSum) {
     double totalProbability = 0.0;
     for (Assignment domainAssignment : domainFactor.assignments()) {
@@ -167,7 +199,7 @@ public class FunctionFactor extends AbstractFactor {
     Preconditions.checkArgument(other.getVars().size() == 1);
     if (other.getVars().containsAll(domainVariable)) {
       if (this.domainFactor == null) {
-        return new FunctionFactor(domainVariable, rangeVariable, function, 
+        return new FunctionFactor(domainVariable, rangeVariable, function,
             (DiscreteObjectFactor) other);
       } else {
         return new FunctionFactor(domainVariable, rangeVariable, function,
@@ -177,7 +209,7 @@ public class FunctionFactor extends AbstractFactor {
       Preconditions.checkState(domainFactor != null);
       Map<Assignment, Double> probabilities = Maps.newHashMap();
       for (Assignment domainAssignment : domainFactor.assignments()) {
-        Object rangeObject = function.apply(domainAssignment.getValues().get(0));
+        Object rangeObject = function.apply(domainAssignment.getOnlyValue());
 
         double newProb = domainFactor.getUnnormalizedProbability(domainAssignment) *
             other.getUnnormalizedProbability(rangeObject);
@@ -208,7 +240,7 @@ public class FunctionFactor extends AbstractFactor {
 
   @Override
   public Assignment sample() {
-    return mapDomainAssignmentToFactor(domainFactor.sample());
+    return mapDomainAssignmentToFactorAssignment(domainFactor.sample());
   }
 
   @Override
@@ -216,14 +248,20 @@ public class FunctionFactor extends AbstractFactor {
     List<Assignment> domainAssignments = domainFactor.getMostLikelyAssignments(numAssignments);
     List<Assignment> mostLikely = Lists.newArrayListWithCapacity(domainAssignments.size());
     for (Assignment domainAssignment : domainAssignments) {
-      mostLikely.add(mapDomainAssignmentToFactor(domainAssignment));
+      mostLikely.add(mapDomainAssignmentToFactorAssignment(domainAssignment));
     }
     return mostLikely;
   }
 
-  private Assignment mapDomainAssignmentToFactor(Assignment domainAssignment) {
+  private Assignment mapDomainAssignmentToFactorAssignment(Assignment domainAssignment) {
     Object domainValue = domainAssignment.getValues().get(0);
     Object rangeValue = function.apply(domainValue);
     return domainAssignment.union(rangeVariable.outcomeArrayToAssignment(rangeValue));
+  }
+  
+  @Override
+  public String toString() {
+    return "FunctionFactor(" + domainVariable.toString() + ", " + rangeVariable.toString() + "):"
+        + ((domainFactor != null) ? domainFactor.toString() : "uniform");
   }
 }

@@ -2,8 +2,10 @@ package com.jayantkrish.jklol.cfg;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteObjectFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -27,18 +29,22 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
   // These variables are present in the factor graph.
   private final VariableNumMap treeVar;
   private final VariableNumMap inputVar;
-
-  private final int beamSize;
-
+    
   private ParametricFactor<SufficientStatistics> nonterminalFactor;
   private ParametricFactor<SufficientStatistics> terminalFactor;
+  
+  private final Function<Object, List<Object>> terminalFunction;
+
+  private final int beamSize;
+  private final boolean canSkipTerminals;
 
   public ParametricCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar,
       VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
       VariableNumMap treeVar, VariableNumMap inputVar,
       ParametricFactor<SufficientStatistics> nonterminalFactor,
       ParametricFactor<SufficientStatistics> terminalFactor,
-      int beamSize) {
+      Function<Object, List<Object>> terminalFunction,
+      int beamSize, boolean canSkipTerminals) {
     super(treeVar.union(inputVar));
     this.parentVar = parentVar;
     this.leftVar = leftVar;
@@ -52,6 +58,8 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
     this.nonterminalFactor = nonterminalFactor;
     this.terminalFactor = terminalFactor;
     this.beamSize = beamSize;
+    this.canSkipTerminals = canSkipTerminals;
+    this.terminalFunction = terminalFunction;
   }
 
   @Override
@@ -63,9 +71,9 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
 
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
-        nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
-        terminalFactor.getFactorFromParameters(terminalStatistics), beamSize);
-    return new BeamSearchCfgFactor(treeVar, inputVar, parser);
+        (DiscreteFactor) nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
+        (DiscreteFactor) terminalFactor.getFactorFromParameters(terminalStatistics), beamSize, canSkipTerminals);
+    return new BeamSearchCfgFactor(treeVar, inputVar, parser, terminalFunction);
   }
 
   @Override
@@ -87,8 +95,6 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNums()));
     
-    List<?> terminals = (List<?>) conditionalAssignment.getValue(inputVar.getVariableNums().get(0));
-    
     Preconditions.checkArgument(statistics instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) statistics;
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
@@ -97,19 +103,16 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
 
     if (conditionalAssignment.containsAll(treeVar.getVariableNums())) {
       ParseTree tree = (ParseTree) conditionalAssignment.getValue(treeVar.getVariableNums().get(0));
-      if (tree.getTerminalProductions().equals(terminals)) {
-        accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, count);
-      }
+      
+      accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, count);
     } else {
       DiscreteObjectFactor objectMarginal = (DiscreteObjectFactor) marginal;
       
       for (Assignment assignment : objectMarginal.assignments()) {
         ParseTree tree = (ParseTree) assignment.getValue(treeVar.getVariableNums().get(0));
         
-        if (tree.getTerminalProductions().equals(terminals)) {
-          accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, 
-              count * objectMarginal.getUnnormalizedProbability(assignment) / partitionFunction);
-        }
+        accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, 
+            count * objectMarginal.getUnnormalizedProbability(assignment) / partitionFunction);
       }
     }
   }

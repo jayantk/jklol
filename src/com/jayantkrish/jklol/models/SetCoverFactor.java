@@ -59,6 +59,7 @@ public class SetCoverFactor extends AbstractFactor {
       }
       Preconditions.checkState(bestFactorIndex != -1);
       VariableNumMap factorVariables = inputVarFactors.get(bestFactorIndex).getVars();
+      
       Factor maxMarginal = TableFactor.pointDistribution(factorVariables, 
           factorVariables.outcomeArrayToAssignment(requiredValue)).product(bestProbability);
       maxMarginals.set(bestFactorIndex, maxMarginal);
@@ -78,6 +79,7 @@ public class SetCoverFactor extends AbstractFactor {
         maxMarginals.set(i, builder.build());
       }
     }
+
     return maxMarginals;
   }
   

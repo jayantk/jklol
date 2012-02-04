@@ -11,4 +11,9 @@ public class BooleanVariable implements Variable {
   public boolean canTakeValue(Object value) {
     return value instanceof Boolean;
   }
+  
+  @Override
+  public String toString() {
+    return "BooleanVariable";
+  }
 }

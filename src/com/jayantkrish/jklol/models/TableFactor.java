@@ -74,6 +74,15 @@ public class TableFactor extends DiscreteFactor {
     }
     return builder.build();
   }
+  
+  public static FactorFactory getFactory() {
+    return new FactorFactory() {
+      @Override
+      public Factor pointDistribution(VariableNumMap vars, Assignment assignment) {
+        return TableFactor.pointDistribution(vars, assignment);
+      }
+    };
+  }
 
   // //////////////////////////////////////////////////////////////////////////////
   // Factor overrides.

@@ -29,9 +29,7 @@ public class StochasticGradientTrainer extends AbstractTrainer {
     for (int i = 0; i < numIterations; i++) {
       for (Example<DynamicAssignment, DynamicAssignment> trainingExample : trainingData) {
         SufficientStatistics gradient = computeGradient(initialParameters, logLinearModel, trainingExample);
-        // TODO: decay the gradient increment amount as (say)
-        // sqrt(numIterations)
-        initialParameters.increment(gradient, 1.0);
+        initialParameters.increment(gradient, 1.0 / Math.sqrt(i + 2));
       }
     }
     return initialParameters;

@@ -63,6 +63,14 @@ public class DiscreteObjectFactorTest extends TestCase {
   public void testGetUnnormalizedProbability() {
     assertEquals(5.0, g.getUnnormalizedProbability(0));
     assertEquals(0.0, g.getUnnormalizedProbability(7));
+    assertEquals(5.0, g.getUnnormalizedProbability(f.getVars().outcomeArrayToAssignment(0, "1")));
+    
+    try {
+      f.getUnnormalizedProbability(fVars.getVariablesByName("0").outcomeArrayToAssignment(0));
+    } catch (IllegalArgumentException e) {
+      return;
+    }
+    fail("Expected IllegalArgumentException");
   }
   
   public void testConditional() {

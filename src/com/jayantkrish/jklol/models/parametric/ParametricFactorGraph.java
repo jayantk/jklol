@@ -108,11 +108,16 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
    * Gets some basic statistics about {@code this}.  
    * @return
    */
-  public String summary() {
+  @Override
+  public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("ParametricFactorGraph: ");
     sb.append(getBaseFactorGraph().getVariables() + " variables, ");
-    sb.append(parametricFactors.size() + " parameteric factors, ");
+    sb.append(parametricFactors.size() + " parametric factors, ");
+    for (ParametricFactor<SufficientStatistics> factor : parametricFactors) {
+      sb.append(factor.toString());
+    }
+    sb.append("base factor graph: " + getBaseFactorGraph());
     return sb.toString();
   }
 }

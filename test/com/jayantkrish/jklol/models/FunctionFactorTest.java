@@ -39,14 +39,14 @@ public class FunctionFactorTest extends TestCase {
       }
     };
     
-    uniformFactor = new FunctionFactor(domain, range, function, null);
+    uniformFactor = new FunctionFactor(domain, range, function, null, TableFactor.getFactory());
     
     Map<Assignment, Double> probs = Maps.newHashMap();
     probs.put(domain.outcomeArrayToAssignment("alphabet"), 2.0);
     probs.put(domain.outcomeArrayToAssignment("betabet"), 3.0);
     probs.put(domain.outcomeArrayToAssignment("bbbb"), 1.0);
     DiscreteObjectFactor domainFactor = new DiscreteObjectFactor(domain, probs);
-    nonuniformFactor = new FunctionFactor(domain, range, function, domainFactor);
+    nonuniformFactor = new FunctionFactor(domain, range, function, domainFactor, TableFactor.getFactory());
   }
   
   public void testGetUnnormalizedProbability() {
@@ -77,13 +77,10 @@ public class FunctionFactorTest extends TestCase {
     assertEquals(0.0, factor.getUnnormalizedProbability("c"));
   }
   
-  public void testConditionalRangeInvalid() {
-    try {
-      uniformFactor.conditional(range.outcomeArrayToAssignment("a")); 
-    } catch (IllegalStateException e) {
-      return;
-    }
-    fail("Expected IllegalStateException"); 
+  public void testConditionalRangeNoDomain() {
+    Factor factor = uniformFactor.conditional(range.outcomeArrayToAssignment("a"));
+    assertEquals(1.0, factor.getUnnormalizedProbability("alphabet"));
+    assertEquals(0.0, factor.getUnnormalizedProbability("betabet"));
   }
   
   public void testConditionalRange() {

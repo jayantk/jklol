@@ -30,10 +30,12 @@ public class FunctionFactor extends AbstractFactor {
 
   private final VariableNumMap domainVariable;
   private final VariableNumMap rangeVariable;
-
+  
   private final DiscreteObjectFactor domainFactor;
 
   private final Function<Object, Object> function;
+
+  private final FactorFactory rangeVariableFactory;
 
   /**
    * {@code domainFactor} may be null, in which case this factor represents a
@@ -43,32 +45,41 @@ public class FunctionFactor extends AbstractFactor {
    * @param rangeVariable
    * @param function
    * @param domainFactor
+   * @param rangeVariableFactory determines the type of factor constructed over
+   * the range variable.
    */
   public FunctionFactor(VariableNumMap domainVariable, VariableNumMap rangeVariable,
-      Function<Object, Object> function, DiscreteObjectFactor domainFactor) {
+      Function<Object, Object> function, DiscreteObjectFactor domainFactor, 
+      FactorFactory rangeVariableFactory) {
     super(domainVariable.union(rangeVariable));
     this.domainVariable = Preconditions.checkNotNull(domainVariable);
     this.rangeVariable = Preconditions.checkNotNull(rangeVariable);
     this.domainFactor = domainFactor;
+    Preconditions.checkArgument(domainFactor == null || domainFactor.getVars().equals(domainVariable));
     this.function = Preconditions.checkNotNull(function);
+    this.rangeVariableFactory = Preconditions.checkNotNull(rangeVariableFactory);
   }
-
+  
+  private double getDomainProbability(Object domainValue) {
+    if (domainFactor == null) {
+      return 1.0;
+    } else {
+      return domainFactor.getUnnormalizedProbability(domainValue);
+    }
+  }
+  
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
     Object inputValue = assignment.getValue(domainVariable.getOnlyVariableNum());
     Object outputValue = assignment.getValue(rangeVariable.getOnlyVariableNum());
     if (outputValue.equals(function.apply(inputValue))) {
-      if (domainFactor == null) {
-        return 1.0;
-      } else {
-        return domainFactor.getUnnormalizedProbability(inputValue);
-      }
+      return getDomainProbability(inputValue);
     } else {
       return 0.0;
     }
   }
 
-  @Override
+  @Override 
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {
     Preconditions.checkNotNull(inboundMessages);
 
@@ -79,7 +90,7 @@ public class FunctionFactor extends AbstractFactor {
       }
     }
 
-    if (possibleOutbound.size() == 1) {
+    if (possibleOutbound.size() == 1 && domainFactor != null) {
       return possibleOutbound;
     } else if (possibleOutbound.size() == 0) {
       return inboundMessages.keySet();
@@ -90,8 +101,12 @@ public class FunctionFactor extends AbstractFactor {
 
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
-    return new FunctionFactor(relabeling.apply(domainVariable),
-        relabeling.apply(rangeVariable), function, domainFactor);
+    DiscreteObjectFactor newDomainFactor = null;
+    if (domainFactor != null) {
+      newDomainFactor = domainFactor.relabelVariables(relabeling);
+    }
+    return new FunctionFactor(relabeling.apply(domainVariable), relabeling.apply(rangeVariable),
+        function, newDomainFactor, rangeVariableFactory); 
   }
 
   @Override
@@ -102,20 +117,27 @@ public class FunctionFactor extends AbstractFactor {
 
     VariableNumMap toEliminate = getVars().intersection(assignment.getVariableNums());
     Assignment subAssignment = assignment.intersection(getVars());
+    Factor returnValue = this;
     Preconditions.checkArgument(toEliminate.size() == 1);
     if (toEliminate.containsAny(domainVariable)) {
       DiscreteObjectFactor newDomainFactor = DiscreteObjectFactor.pointDistribution(domainVariable, subAssignment);
-      return product(newDomainFactor).marginalize(toEliminate);
-    } else {
-      TableFactor newRangeFactor = TableFactor.pointDistribution(toEliminate, subAssignment);
-      Factor intermediate = product(newRangeFactor);
-      return intermediate.marginalize(toEliminate);
+      returnValue = returnValue.product(newDomainFactor);
+    } else if (toEliminate.containsAny(rangeVariable)) {
+      if (domainFactor == null) {
+        return new MappingFactor(domainVariable, function, 
+            rangeVariableFactory.pointDistribution(toEliminate, subAssignment));
+      } else {
+        Factor newRangeFactor = rangeVariableFactory.pointDistribution(toEliminate, subAssignment);
+        returnValue = returnValue.product(newRangeFactor);
+      }
     }
+    return returnValue.marginalize(toEliminate);
   }
 
   @Override
   public Factor marginalize(Collection<Integer> varNumsToEliminate) {
-    Preconditions.checkState(domainFactor != null);
+    Preconditions.checkState(domainFactor != null, "Could not marginalize out " 
+        + varNumsToEliminate + " from: " + this.toString());
 
     if (varNumsToEliminate.contains(domainVariable.getOnlyVariableNum())) {
       if (!varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
@@ -200,27 +222,31 @@ public class FunctionFactor extends AbstractFactor {
     if (other.getVars().containsAll(domainVariable)) {
       if (this.domainFactor == null) {
         return new FunctionFactor(domainVariable, rangeVariable, function,
-            (DiscreteObjectFactor) other);
+            (DiscreteObjectFactor) other, rangeVariableFactory);
       } else {
         return new FunctionFactor(domainVariable, rangeVariable, function,
-            domainFactor.product(other));
+            domainFactor.product(other), rangeVariableFactory);
       }
     } else {
       Preconditions.checkState(domainFactor != null);
-      Map<Assignment, Double> probabilities = Maps.newHashMap();
-      for (Assignment domainAssignment : domainFactor.assignments()) {
-        Object rangeObject = function.apply(domainAssignment.getOnlyValue());
-
-        double newProb = domainFactor.getUnnormalizedProbability(domainAssignment) *
-            other.getUnnormalizedProbability(rangeObject);
-        if (newProb != 0.0) {
-          probabilities.put(domainAssignment, newProb);
-        }
-      }
-
       return new FunctionFactor(domainVariable, rangeVariable, function,
-          new DiscreteObjectFactor(domainVariable, probabilities));
+          combineDomainAndRangeFactors(domainFactor, other, function), rangeVariableFactory);
     }
+  }
+  
+  private static DiscreteObjectFactor combineDomainAndRangeFactors(DiscreteObjectFactor domainFactor, 
+      Factor rangeFactor, Function<Object, Object> function) {
+    Map<Assignment, Double> probabilities = Maps.newHashMap();
+    for (Assignment domainAssignment : domainFactor.assignments()) {
+      Object rangeObject = function.apply(domainAssignment.getOnlyValue());
+      
+      double newProb = domainFactor.getUnnormalizedProbability(domainAssignment) *
+          rangeFactor.getUnnormalizedProbability(rangeObject);
+      if (newProb != 0.0) {
+        probabilities.put(domainAssignment, newProb);
+      }
+    }
+    return new DiscreteObjectFactor(domainFactor.getVars(), probabilities);
   }
 
   @Override
@@ -258,10 +284,103 @@ public class FunctionFactor extends AbstractFactor {
     Object rangeValue = function.apply(domainValue);
     return domainAssignment.union(rangeVariable.outcomeArrayToAssignment(rangeValue));
   }
-  
+
   @Override
   public String toString() {
     return "FunctionFactor(" + domainVariable.toString() + ", " + rangeVariable.toString() + "):"
         + ((domainFactor != null) ? domainFactor.toString() : "uniform");
   }
+  
+  private static class MappingFactor extends AbstractFactor {
+    
+    private final Function<Object, Object> function;
+    private final Factor rangeFactor;
+
+    public MappingFactor(VariableNumMap vars, Function<Object, Object> function, 
+        Factor rangeFactor) {
+      super(vars);
+      Preconditions.checkArgument(vars.size() == 1);
+      this.function = Preconditions.checkNotNull(function);
+      this.rangeFactor = Preconditions.checkNotNull(rangeFactor);
+    }
+    
+    private double getDomainProbability(Object object) {
+      return rangeFactor.getUnnormalizedProbability(function.apply(object));
+    }
+
+    @Override
+    public double getUnnormalizedProbability(Assignment assignment) {
+      return getDomainProbability(assignment.getValue(getVars().getOnlyVariableNum()));
+    }
+
+    @Override
+    public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {
+      return Collections.emptySet();
+    }
+
+    @Override
+    public Factor relabelVariables(VariableRelabeling relabeling) {
+      return new MappingFactor(relabeling.apply(getVars()), function, rangeFactor);
+    }
+
+    @Override
+    public Factor conditional(Assignment assignment) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Factor marginalize(Collection<Integer> varNumsToEliminate) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Factor maxMarginalize(Collection<Integer> varNumsToEliminate) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Factor add(Factor other) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Factor maximum(Factor other) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Factor product(Factor other) {
+      Preconditions.checkArgument(getVars().containsAll(other.getVars()));
+      return combineDomainAndRangeFactors((DiscreteObjectFactor) other, rangeFactor, function);
+    }
+
+    @Override
+    public Factor product(double constant) {
+      return new MappingFactor(getVars(), function, rangeFactor.product(constant));
+    }
+
+    @Override
+    public Factor inverse() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public double size() {
+      // This isn't really the right value to return for this method, but there
+      // aren't any better options.
+      return rangeFactor.size();
+    }
+
+    @Override
+    public Assignment sample() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<Assignment> getMostLikelyAssignments(int numAssignments) {
+      // TODO Auto-generated method stub
+      return null;
+    }    
+  }
 }
+ 

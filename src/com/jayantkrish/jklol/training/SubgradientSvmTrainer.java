@@ -80,6 +80,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     // Each iteration processes a single batch of batchSize training examples.
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
+      System.out.println(parameters);
       // Get the examples for this batch. Ideally, this would be a random
       // sample; however, deterministically iterating over the examples may be
       // more efficient and is fairly close if the examples are provided in
@@ -115,7 +116,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
 
       // TODO: Can we use the Pegasos projection step?
       // If so, the step size should decay as 1/i, not 1/sqrt(i).
-      double stepSize = 1.0 / (regularization * Math.sqrt(i + 1));
+      double stepSize = 1.0 / (regularization * Math.sqrt(i + 2));  
       parameters.multiply(1.0 - (stepSize * regularization));
       parameters.increment(subgradient, stepSize / batchSize);
 
@@ -156,7 +157,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     log.stopTimer("update_subgradient/condition");
 
     log.startTimer("update_subgradient/inference");
-    MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel);
+    MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel); 
     Assignment prediction = predicted.getNthBestAssignment(0);
     log.stopTimer("update_subgradient/inference");
 
@@ -190,10 +191,12 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
       // Return the loss, which is the amount by which the prediction is within
       // the margin.
-      double loss = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction)
-          - conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual);
+      double predictedProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction);
+      double actualProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual);
+      double loss = predictedProb - actualProb;
       log.stopTimer("update_subgradient/parameter_update");
 
+      System.out.println("PROBS:" + predictedProb + " " + actualProb);
       return loss;
     }
     return 0.0;

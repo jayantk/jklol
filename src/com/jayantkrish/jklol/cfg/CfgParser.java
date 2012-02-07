@@ -188,8 +188,8 @@ public class CfgParser {
    * @param tree
    * @return
    */
-  public double getProbability(List<?> terminals, ParseTree tree) {
-    if (!tree.getTerminalProductions().equals(terminals)) {
+  public double getProbability(List<?> terminals, ParseTree tree) {  
+    if (!tree.getTerminalProductions().equals(terminals) && !canSkipTerminals) {
       return 0.0;
     } else {
       return getProbabilityHelper(tree);

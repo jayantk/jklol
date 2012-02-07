@@ -1,5 +1,5 @@
 package com.jayantkrish.jklol.cfg;
-
+ 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +55,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
   public double getUnnormalizedProbability(Assignment assignment) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
 
-    List<Object> terminals = terminalValueToTerminals.apply(assignment.getValue(terminalVariable.getVariableNums().get(0)));
+    List<Object> terminals = terminalValueToTerminals.apply(assignment.getValue(terminalVariable.getOnlyVariableNum()));
     ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));
     return parser.getProbability(terminals, tree);
   }
@@ -77,8 +77,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
 
     if (conditionedVars.containsAll(treeVariable)) {
       // If we also observe the tree, generate a factor over no variables with
-      // the appropriate
-      // probability.
+      // the appropriate probability. 
       ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));
       return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(
           parser.getProbability(terminals, tree));

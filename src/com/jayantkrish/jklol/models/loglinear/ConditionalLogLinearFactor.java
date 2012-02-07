@@ -50,8 +50,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
     this.inputVar = inputVar;
     this.outputVar = outputVar;
     
-    this.dimensionNums = new int[] {inputVar.getVariableNums().get(0), 
-        outputVar.getVariableNums().get(0)};
+    this.dimensionNums = new int[] {inputVar.getOnlyVariableNum(), 
+        outputVar.getOnlyVariableNum()};
     this.dimensionSizes = new int[] {featureVectorDimensionality, 
         outputVar.getDiscreteVariables().get(0).numValues()};
   }

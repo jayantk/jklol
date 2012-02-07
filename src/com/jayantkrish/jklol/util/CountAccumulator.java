@@ -54,8 +54,8 @@ public class CountAccumulator<T> {
    * 
    * @param amounts
    */
-  public void increment(Map<T, Double> amounts) {
-    for (Map.Entry<T, Double> entry : amounts.entrySet()) {
+  public void increment(Map<? extends T, Double> amounts) {
+    for (Map.Entry<? extends T, Double> entry : amounts.entrySet()) {
       increment(entry.getKey(), entry.getValue());
     }
   }
@@ -66,10 +66,8 @@ public class CountAccumulator<T> {
    * 
    * @param amounts
    */
-  public void increment(CountAccumulator<T> amounts) {
-    for (T item : amounts.keySet()) {
-      increment(item, amounts.getCount(item));
-    }
+  public void increment(CountAccumulator<? extends T> amounts) {
+    increment(amounts.getCountMap());
   }
 
   /**
@@ -135,5 +133,37 @@ public class CountAccumulator<T> {
       probabilityMap.put(item, getProbability(item));      
     }
     return probabilityMap;
+  }
+  
+  
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((counts == null) ? 0 : counts.hashCode());
+    long temp;
+    temp = Double.doubleToLongBits(totalCount);
+    result = prime * result + (int) (temp ^ (temp >>> 32));
+    return result;
+  }
+
+  @SuppressWarnings("rawtypes")
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CountAccumulator other = (CountAccumulator) obj;
+    if (counts == null) {
+      if (other.counts != null)
+        return false;
+    } else if (!counts.equals(other.counts))
+      return false;
+    if (Double.doubleToLongBits(totalCount) != Double.doubleToLongBits(other.totalCount))
+      return false;
+    return true;
   }
 }

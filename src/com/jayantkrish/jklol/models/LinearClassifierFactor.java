@@ -79,7 +79,7 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     }
     
     // Build a TableFactor over the outputVar based on the inputVar feature vector. 
-    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getVariableNums().get(0));
+    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
     // Get the log probabilities of each outputVar value.
     Tensor multiplied = logWeights.elementwiseProduct(inputFeatureVector.relabelDimensions(inputVarNums));
     Tensor logProbs = multiplied.sumOutDimensions(Sets.newHashSet(Ints.asList(inputVarNums)));

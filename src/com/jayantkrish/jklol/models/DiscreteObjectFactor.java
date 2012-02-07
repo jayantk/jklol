@@ -45,6 +45,15 @@ public class DiscreteObjectFactor extends AbstractFactor {
     return new DiscreteObjectFactor(vars, probabilities);
   }
   
+  public static FactorFactory getFactory() {
+    return new FactorFactory() {
+      @Override
+      public Factor pointDistribution(VariableNumMap vars, Assignment assignment) {
+        return DiscreteObjectFactor.pointDistribution(vars, assignment);
+      }
+    };
+  }
+  
   /**
    * Gets all {@code Assignments} in {@code this} with nonzero probability.
    * 
@@ -56,8 +65,10 @@ public class DiscreteObjectFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    if (probabilities.containsKey(assignment)) {
-      return probabilities.get(assignment);
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums())); 
+    Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
+    if (probabilities.containsKey(subAssignment)) {
+      return probabilities.get(subAssignment);
     }
     return 0.0;
   }

@@ -29,7 +29,11 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	@Override
 	public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {
 	  if (iteration % logInterval == 0) {
-	    System.out.println(iteration + "." + exampleNum + ": example: " + graph.assignmentToObject(example));
+	    String prob = "";
+	    if (example.containsAll(graph.getVariables().getVariableNums())) {
+	      prob = Double.toString(graph.getUnnormalizedProbability(example));
+	    } 
+	    System.out.println(iteration + "." + exampleNum + " " + prob + ": example: " + graph.assignmentToObject(example));
 	  }
 	}
 

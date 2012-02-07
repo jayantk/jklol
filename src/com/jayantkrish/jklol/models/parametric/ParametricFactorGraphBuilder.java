@@ -98,7 +98,8 @@ public class ParametricFactorGraphBuilder {
   }
 
   /**
-   * Adds a parameterized, unreplicated factor to the model being constructed. The factor will match only the variables which it is defined over. 
+   * Adds a parameterized, unreplicated factor to the model being constructed.
+   * The factor will match only the variables which it is defined over.
    * 
    * @param factor
    */

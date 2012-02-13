@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.util;
 import java.util.Iterator;
 
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorFactory;
 import com.jayantkrish.jklol.testing.PerformanceTest;
@@ -91,7 +92,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
 
   @PerformanceTest
   public void testIteration() {
-    Iterator<int[]> iter = table012.keyValueIterator();
+    Iterator<KeyValue> iter = table012.keyValueIterator();
     while (iter.hasNext()) {
       iter.next();
     }

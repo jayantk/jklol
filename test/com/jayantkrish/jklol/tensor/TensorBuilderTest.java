@@ -1,10 +1,16 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 
 /**
  * Test cases for all kinds of {@code TensorBuilder}s. To test an implementation
@@ -38,8 +44,8 @@ public abstract class TensorBuilderTest extends TestCase {
     dimSizes = new int[] { 4, 3, 5 };
 
     builder = tensorFactory.getBuilder(dimNums, dimSizes);
-    builder.put(KEY1, 1.0);
     builder.put(KEY2, 2.0);
+    builder.put(KEY1, 1.0);
     
     otherBuilders = Lists.newArrayList();
     for (TensorFactory otherFactory : allTensorFactories) {
@@ -91,6 +97,18 @@ public abstract class TensorBuilderTest extends TestCase {
     fail("Expected IllegalArgumentException");
   }
   
+  public void testKeyValueIterator() {
+    Iterator<KeyValue> keyValueIterator = builder.keyValueIterator();
+    Set<int[]> intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
+    while (keyValueIterator.hasNext()) {
+      KeyValue keyValue = keyValueIterator.next();
+      System.out.println(keyValue);
+      assertEquals(builder.getByDimKey(keyValue.getKey()), keyValue.getValue());
+      intSet.add(Arrays.copyOf(keyValue.getKey(), 3));
+    }
+    assertTrue(intSet.size() == 2 || intSet.size() == 60);
+  }
+  
   public void testPutRepresentationExposure() {
     int[] test = new int[] {2, 2, 2};
     builder.put(test, 7.0);
@@ -104,9 +122,13 @@ public abstract class TensorBuilderTest extends TestCase {
       builder.incrementWithMultiplier(otherBuilders.get(i), 2.0);
 
       assertEquals(0.0, builder.getByDimKey(KEY0));
+      assertEquals(0.0, builder.get(builder.dimKeyToKeyNum(KEY0)));
       assertEquals(7.0 + (6.0 * i), builder.getByDimKey(KEY1));
+      assertEquals(7.0 + (6.0 * i), builder.get(builder.dimKeyToKeyNum(KEY1)));
       assertEquals(2.0, builder.getByDimKey(KEY2));
+      assertEquals(2.0, builder.get(builder.dimKeyToKeyNum(KEY2)));
       assertEquals(8.0 * (i + 1), builder.getByDimKey(KEY3));
+      assertEquals(8.0 * (i + 1), builder.get(builder.dimKeyToKeyNum(KEY3)));
     }
   }
   

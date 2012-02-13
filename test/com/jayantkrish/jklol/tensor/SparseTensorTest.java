@@ -6,6 +6,7 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 
 /**
  * Unit tests for {@link SparseTensor}.
@@ -38,8 +39,8 @@ public class SparseTensorTest extends TensorTest {
     expectedKeys = Sets.newHashSet();
     expectedKeys.add(Lists.<Integer> newArrayList());
     actualKeys.clear();
-    for (int[] key : Lists.newArrayList(emptyInputTable.keyValueIterator())) {
-      actualKeys.add(Ints.asList(key));
+    for (KeyValue keyValue : Lists.newArrayList(emptyInputTable.keyValueIterator())) {
+      actualKeys.add(Ints.asList(keyValue.getKey()));
     }
     assertEquals(expectedKeys, actualKeys);
   }

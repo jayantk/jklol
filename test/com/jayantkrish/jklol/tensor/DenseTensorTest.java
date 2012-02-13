@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.tensor;
 
 import java.util.Iterator;
 
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
+
 /**
  * Unit tests for {@link DenseTensor}.
  * 
@@ -17,10 +19,10 @@ public class DenseTensorTest extends TensorTest {
     DenseTensor randomTensor = DenseTensor.random(new int[] {0, 1}, new int[] {2, 3}, 1.0, 1.0);
     
     assertEquals(6, randomTensor.size());
-    Iterator<int[]> keyIter = randomTensor.keyValueIterator();
+    Iterator<KeyValue> keyValueIter = randomTensor.keyValueIterator();
     int keyCount = 0;
-    while (keyIter.hasNext()) {
-      assertTrue(0.0 != randomTensor.getByDimKey(keyIter.next()));
+    while (keyValueIter.hasNext()) {
+      assertTrue(0.0 != keyValueIter.next().getValue());
       keyCount++;
     }
     assertEquals(6, keyCount);

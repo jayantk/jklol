@@ -11,6 +11,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
@@ -120,13 +121,13 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   }
 
   @Override
-  public Iterator<int[]> keyValueIterator() {
-    return new SparseKeyIterator(Longs.toArray(outcomes.keySet()), 
-        0, outcomes.size(), this);
+  public Iterator<KeyValue> keyValueIterator() {
+    return new SparseKeyValueIterator(Longs.toArray(outcomes.keySet()),
+        Doubles.toArray(outcomes.values()), 0, outcomes.size(), this);
   }
   
   @Override
-  public Iterator<int[]> keyPrefixIterator(int[] keyPrefix) {
+  public Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix) {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
 
@@ -151,7 +152,6 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void putByKeyNum(long keyNum, double value) {
     if (value == 0.0) {
       outcomes.remove(keyNum);
-      outcomeIndexes.remove(keyNum);
     } else {
       outcomes.put(keyNum, value);
       if (!outcomeIndexes.containsKey(keyNum)) {
@@ -179,10 +179,10 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void incrementWithMultiplier(TensorBase other, double multiplier) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
 
-    Iterator<int[]> keyIterator = other.keyValueIterator();
-    while (keyIterator.hasNext()) {
-      int[] key = keyIterator.next();
-      incrementEntry(other.getByDimKey(key) * multiplier, key);
+    Iterator<KeyValue> keyValueIterator = other.keyValueIterator();
+    while (keyValueIterator.hasNext()) {
+      KeyValue keyValue = keyValueIterator.next();
+      incrementEntry(keyValue.getValue() * multiplier, keyValue.getKey());
     }
   }
 

@@ -108,17 +108,17 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * Returns an iterator over all assignments (keys) in this table.
    */
   @Override
-  public Iterator<int[]> keyValueIterator() {
-    return new SparseKeyIterator(keyNums, 0, keyNums.length, this);
+  public Iterator<KeyValue> keyValueIterator() {
+    return new SparseKeyValueIterator(keyNums, values, 0, keyNums.length, this);
   }
 
   @Override
-  public Iterator<int[]> keyPrefixIterator(int[] keyPrefix) {
+  public Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix) {
     if (keyPrefix.length == 0) { return keyValueIterator(); }
     
     long startKeyNum = dimKeyPrefixToKeyNum(keyPrefix);
     long endKeyNum = startKeyNum + indexOffsets[keyPrefix.length - 1];
-    return new SparseKeyIterator(keyNums, getFirstIndexAboveKeyNum(startKeyNum),
+    return new SparseKeyValueIterator(keyNums, values, getFirstIndexAboveKeyNum(startKeyNum),
         getFirstIndexAboveKeyNum(endKeyNum), this);
   }
 

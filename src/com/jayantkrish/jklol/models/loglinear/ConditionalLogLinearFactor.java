@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorFactory;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
@@ -79,13 +80,13 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
     
     TensorBuilder weightTensor = getWeightTensorFromStatistics(statistics);
     Tensor inputValueFeatures = (Tensor) assignment.getValue(inputVar.getVariableNums().get(0));
-    Iterator<int[]> keyIter = inputValueFeatures.keyValueIterator();
+    Iterator<KeyValue> keyValueIter = inputValueFeatures.keyValueIterator();
     int[] weightKey = new int[2];
     weightKey[1] = outputVar.assignmentToIntArray(assignment.intersection(outputVar))[0];
-    while (keyIter.hasNext()) {
-      int[] featureKey = keyIter.next();
-      weightKey[0] = featureKey[0];
-      weightTensor.incrementEntry(count * inputValueFeatures.getByDimKey(featureKey), weightKey);
+    while (keyValueIter.hasNext()) {
+      KeyValue featureKeyValue = keyValueIter.next();
+      weightKey[0] = featureKeyValue.getKey()[0];
+      weightTensor.incrementEntry(count * featureKeyValue.getValue(), weightKey);
     }
   }
 

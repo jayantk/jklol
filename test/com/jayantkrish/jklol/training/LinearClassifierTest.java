@@ -89,6 +89,8 @@ public class LinearClassifierTest extends TestCase {
         linearClassifier.getNewSufficientStatistics(), trainingData);
     FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
+    
+    System.out.println(parameters);
 
     // Should be able to get 0 training error.
     SimpleFactorGraphPredictor predictor = new SimpleFactorGraphPredictor(

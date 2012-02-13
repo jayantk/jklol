@@ -4,14 +4,24 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 
-public class SparseKeyIterator implements Iterator<int[]> {
+/**
+ * An {@code Iterator} for efficiently accessing keys and values of
+ * {@link SparseTensor}s.
+ * 
+ * @author jayantk
+ */
+public class SparseKeyValueIterator implements Iterator<KeyValue> {
 
   private int curIndex;
   private int finalIndex;
   private final long[] keyInts;
+  private final double[] values;
   private final TensorBase tensor;
 
+  private final KeyValue keyValue;
+  
   /**
    * 
    * The iterator iterates over all keys from {@code initialIndex} (inclusive)
@@ -21,13 +31,17 @@ public class SparseKeyIterator implements Iterator<int[]> {
    * @param initialIndex
    * @param tensor
    */
-  public SparseKeyIterator(long[] keyInts, int initialIndex, 
+  public SparseKeyValueIterator(long[] keyInts, double[] values, int initialIndex, 
       int finalIndex, TensorBase tensor) {
     Preconditions.checkArgument(finalIndex <= keyInts.length);
+    Preconditions.checkArgument(keyInts.length == values.length);
     this.keyInts = Preconditions.checkNotNull(keyInts);
+    this.values = values;
     this.curIndex = initialIndex;
     this.finalIndex = finalIndex;
     this.tensor = Preconditions.checkNotNull(tensor);
+    
+    this.keyValue = new KeyValue(new int[tensor.getDimensionNumbers().length], 0.0);
   }
 
   @Override
@@ -36,12 +50,15 @@ public class SparseKeyIterator implements Iterator<int[]> {
   }
 
   @Override
-  public int[] next() {
+  public KeyValue next() {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
+    // This call mutates the key field of {@code keyValue}.
+    tensor.keyNumToDimKey(keyInts[curIndex], keyValue.getKey());
+    keyValue.setValue(values[curIndex]);
     curIndex++;
-    return tensor.keyNumToDimKey(keyInts[curIndex - 1]);
+    return keyValue;
   }
 
   @Override

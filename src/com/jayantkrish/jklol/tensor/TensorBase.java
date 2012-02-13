@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
 /**
@@ -52,6 +53,17 @@ public interface TensorBase {
 
   int[] keyNumToDimKey(long keyNum);
 
+  /**
+   * Same as {@link #keyNumToDimKey(long)}, except that {@code dimKey} is
+   * overwritten with the dim key. This method avoids allocating another
+   * {@code int[]}. Requires
+   * {@code dimKey.length >= getDimensionNumbers().length}.
+   * 
+   * @param keyNum
+   * @param dimKey
+   */
+  void keyNumToDimKey(long keyNum, int[] dimKey);
+
   long dimKeyToKeyNum(int[] dimKey);
 
   int keyNumToIndex(long keyNum);
@@ -73,23 +85,14 @@ public interface TensorBase {
   /**
    * Gets an iterator over the subset of keys in {@code this} that begin with
    * {@code keyPrefix}. That is, the first {@code keyPrefix.length} dimensions
-   * of {@code key} are equal to their corresponding values in {@code keyPrefix}
-   * . The returned iterator may not iterate over keys whose value is 0.
+   * of each returned {@code KeyValue} are equal to their corresponding values
+   * in {@code keyPrefix}. The returned iterator may optionally iterate over
+   * keys whose value is 0.
    * 
    * @param keyPrefix
    * @return
    */
-  Iterator<int[]> keyPrefixIterator(int[] keyPrefix);
-
-  /**
-   * Gets an iterator over all key/value pairs of {@code this}. The iterator is
-   * guaranteed to iterate over all keys with nonzero values, and may optionally
-   * iterate over keys with value 0. This method is more efficient than
-   * {@link #keyIterator()} for accessing all values in {@code this}.
-   * 
-   * @return
-   */
-  // Iterator<KeyValue> entryIterator();
+  Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix);
 
   /**
    * Gets the Frobenius norm of this tensor, which is the square root of the sum
@@ -99,6 +102,14 @@ public interface TensorBase {
    */
   double getL2Norm();
 
+  /**
+   * The key of a tensor and its corresponding value. For efficiency reasons,
+   * <b>{@code KeyValue}s are mutable</b>. For example, iterators over tensors
+   * typically return the same {@code KeyValue} object after updating both the
+   * key and value field.
+   * 
+   * @author jayantk
+   */
   public class KeyValue {
     private int[] key;
     private double value;
@@ -112,8 +123,21 @@ public interface TensorBase {
       return key;
     }
 
+    protected void setKey(int[] key) {
+      this.key = key;
+    }
+
     public double getValue() {
       return value;
+    }
+
+    protected void setValue(double value) {
+      this.value = value;
+    }
+
+    @Override
+    public String toString() {
+      return "<" + Arrays.toString(key) + " : " + value + ">";
     }
   }
 }

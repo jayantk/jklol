@@ -8,6 +8,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -92,10 +93,10 @@ public class DictionaryFeatureVectorGenerator<T, U> implements FeatureVectorGene
         && featureVector.getDimensionSizes()[0] == getNumberOfFeatures());
 
     Map<U, Double> features = Maps.newHashMap();
-    Iterator<int[]> keyIter = featureVector.keyValueIterator();
-    while (keyIter.hasNext()) {
-      int featureKey = keyIter.next()[0];
-      features.put(featureIndexes.get(featureKey), featureVector.getByDimKey(featureKey));
+    Iterator<KeyValue> keyValueIter = featureVector.keyValueIterator();
+    while (keyValueIter.hasNext()) {
+      KeyValue featureKeyValue = keyValueIter.next();
+      features.put(featureIndexes.get(featureKeyValue.getKey()[0]), featureKeyValue.getValue());
     }
     return features;
   }

@@ -15,6 +15,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 
 /**
  * Implementation-independent test cases for tensor operations.
@@ -152,6 +153,18 @@ public abstract class TensorTest extends TestCase {
     fail("Expected IllegalArgumentException.");
   }
   
+  public void testKeyValueIterator() {
+    Iterator<KeyValue> keyValueIterator = table.keyValueIterator();
+    Set<int[]> intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
+    while (keyValueIterator.hasNext()) {
+      KeyValue keyValue = keyValueIterator.next();
+      assertEquals(table.getByDimKey(keyValue.getKey()), keyValue.getValue());
+      intSet.add(Arrays.copyOf(keyValue.getKey(), 3));
+    }
+    assertTrue("Found " + intSet.size() + " keys, expected either 18 or 120", 
+        intSet.size() == 17 || intSet.size() == 120);
+  }
+  
   public void testGetKeyInt() {
     assertEquals(31, table.dimKeyToKeyNum(new int[] {1, 2, 3}));
     assertTrue(Arrays.equals(new int[] {1, 2, 3}, table.keyNumToDimKey(31)));
@@ -195,18 +208,21 @@ public abstract class TensorTest extends TestCase {
   }
   
   public void testKeyPrefixIteratorEmpty() {
-    Iterator<int[]> keyIterator = table.keyPrefixIterator(new int[] {1, 2});
+    Iterator<KeyValue> keyValueIterator = table.keyValuePrefixIterator(new int[] {1, 2});
     
-    while (keyIterator.hasNext()) {
-      assertEquals(0.0, table.getByDimKey(keyIterator.next()));
+    while (keyValueIterator.hasNext()) {
+      KeyValue keyValue = keyValueIterator.next();
+      // Both of these methods should be equivalent.
+      assertEquals(0.0, keyValue.getValue());
+      assertEquals(0.0, table.getByDimKey(keyValue.getKey()));
     }
   }
   
   public void testKeyPrefixIterator() {
-    Iterator<int[]> keyIterator = table.keyPrefixIterator(new int[] {3});
+    Iterator<KeyValue> keyValueIterator = table.keyValuePrefixIterator(new int[] {3});
     Set<int[]> intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
-    while (keyIterator.hasNext()) {
-      intSet.add(Arrays.copyOf(keyIterator.next(), 3));
+    while (keyValueIterator.hasNext()) {
+      intSet.add(Arrays.copyOf(keyValueIterator.next().getKey(), 3));
     }
     assertTrue(intSet.size() == 4 || intSet.size() == 20);
     assertTrue(intSet.contains(new int[] {3, 0, 0}));
@@ -214,10 +230,10 @@ public abstract class TensorTest extends TestCase {
     assertTrue(intSet.contains(new int[] {3, 1, 0}));
     assertTrue(intSet.contains(new int[] {3, 4, 3}));
     
-    keyIterator = table.keyPrefixIterator(new int[] {3, 0});
+    keyValueIterator = table.keyValuePrefixIterator(new int[] {3, 0});
     intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
-    while (keyIterator.hasNext()) {
-      intSet.add(Arrays.copyOf(keyIterator.next(), 3));
+    while (keyValueIterator.hasNext()) {
+      intSet.add(Arrays.copyOf(keyValueIterator.next().getKey(), 3));
     }
     assertTrue(intSet.size() == 2 || intSet.size() == 4);
     assertTrue(intSet.contains(new int[] {3, 0, 0}));
@@ -246,7 +262,7 @@ public abstract class TensorTest extends TestCase {
     for (Tensor missingFirst : missingFirsts) {
       Tensor expected = simpleMultiply(table, missingFirst);
       Tensor actual = table.elementwiseProduct(missingFirst);
-
+      
       assertEquals(expected, actual);
     }
   }
@@ -337,10 +353,10 @@ public abstract class TensorTest extends TestCase {
     assertTrue(Arrays.equals(new int[] {5, 6, 7}, actual.getDimensionNumbers()));
     assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
     
-    Function<int[], List<Integer>> toList = new Function<int[], List<Integer>>() {
+    Function<KeyValue, List<Integer>> toList = new Function<KeyValue, List<Integer>>() {
       @Override
-      public List<Integer> apply(int[] key) {
-        return Ints.asList(key);
+      public List<Integer> apply(KeyValue keyValue) {
+        return Ints.asList(keyValue.getKey());
       }
     };
     
@@ -356,14 +372,16 @@ public abstract class TensorTest extends TestCase {
     
     assertEquals(table.size(), actual.size());
     
-    Iterator<int[]> keyIter = actual.keyValueIterator();
-    while (keyIter.hasNext()) {
-      int[] key = keyIter.next();
+    Iterator<KeyValue> keyValueIter = actual.keyValueIterator();
+    while (keyValueIter.hasNext()) {
+      KeyValue keyValue = keyValueIter.next();
+      int[] key = keyValue.getKey();
       int[] oldKey = new int[key.length];
       oldKey[0] = key[2];
       oldKey[2] = key[1];
       oldKey[1] = key[0];
       assertEquals(table.getByDimKey(oldKey), actual.getByDimKey(key));
+      assertEquals(table.getByDimKey(oldKey), keyValue.getValue());
     }
   }
   
@@ -390,19 +408,19 @@ public abstract class TensorTest extends TestCase {
       alignment[i] = firstInd;
     }
 
-    Iterator<int[]> firstIter = first.keyValueIterator();
+    Iterator<KeyValue> firstIter = first.keyValueIterator();
     while (firstIter.hasNext()) {
-      int[] firstKey = firstIter.next();
-      Iterator<int[]> secondIter = second.keyValueIterator();
+      KeyValue firstKeyValue = firstIter.next();
+      Iterator<KeyValue> secondIter = second.keyValueIterator();
       while (secondIter.hasNext()) {
-        int[] secondKey = secondIter.next();
+        KeyValue secondKeyValue = secondIter.next();
         boolean equal = true;
         for (int i = 0; i < alignment.length; i++) {
-          equal = equal && secondKey[i] == firstKey[alignment[i]];
+          equal = equal && secondKeyValue.getKey()[i] == firstKeyValue.getKey()[alignment[i]];
         }
 
         if (equal) {
-          builder.put(firstKey, first.getByDimKey(firstKey) * second.getByDimKey(secondKey));
+          builder.put(firstKeyValue.getKey(), firstKeyValue.getValue() * secondKeyValue.getValue());
         }
       }
     }
@@ -442,18 +460,18 @@ public abstract class TensorTest extends TestCase {
     TensorBuilder builder = tensorFactory.getBuilder(
         Arrays.copyOf(newDimNums, newDimIndices.size()),
         Arrays.copyOf(newDimSizes, newDimIndices.size()));
-    Iterator<int[]> keyIter = first.keyValueIterator();
-    while (keyIter.hasNext()) {
-      int[] curKey = keyIter.next();
+    Iterator<KeyValue> keyValueIter = first.keyValueIterator();
+    while (keyValueIter.hasNext()) {
+      KeyValue curKeyValue = keyValueIter.next();
       int[] newKey = new int[newDimIndices.size()];
       for (Map.Entry<Integer, Integer> entry : newDimIndices.entrySet()) {
-        newKey[entry.getValue()] = curKey[entry.getKey()];
+        newKey[entry.getValue()] = curKeyValue.getKey()[entry.getKey()];
       }
       
       if (useSum) {
-        builder.put(newKey, builder.getByDimKey(newKey) + first.getByDimKey(curKey));
+        builder.put(newKey, builder.getByDimKey(newKey) + curKeyValue.getValue());
       } else {
-        builder.put(newKey, Math.max(builder.getByDimKey(newKey), first.getByDimKey(curKey)));
+        builder.put(newKey, Math.max(builder.getByDimKey(newKey), curKeyValue.getValue()));
       }
     }
     return builder.build();

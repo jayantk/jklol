@@ -273,4 +273,17 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
     return partitionFunction;
   }
+
+  /**
+   * An assignment and its corresponding unnormalized probability. For
+   * efficiency, {@code Outcome}s are mutable. Typically, an iterator will
+   * repeatedly return the same outcome instance with a different wrapped
+   * assignment and value.
+   * 
+   * @author jayantk
+   */
+  public class Outcome {
+    private Assignment assignment;
+    private double probability;
+  }
 }

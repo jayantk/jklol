@@ -72,12 +72,19 @@ public abstract class AbstractTensorBase implements TensorBase {
   @Override
   public int[] keyNumToDimKey(long keyNum) {
     int[] key = new int[sizes.length];
+    keyNumToDimKey(keyNum, key);
+    return key;
+  }
+  
+  @Override
+  public void keyNumToDimKey(long keyNum, int[] key) {
+    Preconditions.checkArgument(key.length >= sizes.length);
+
     long curVal = keyNum;
     for (int i = 0; i < sizes.length; i++) {
       key[i] = (int) (curVal / indexOffsets[i]);
       curVal -= key[i] * indexOffsets[i];
     }
-    return key;
   }
   
   @Override

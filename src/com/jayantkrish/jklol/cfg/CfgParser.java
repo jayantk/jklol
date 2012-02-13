@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -44,6 +45,11 @@ public class CfgParser {
 
   private final DiscreteFactor binaryDistribution;
   private final DiscreteFactor terminalDistribution;
+
+  // The parser uses the tensor representations of the nonterminal and terminal
+  // distributions in order to improve parsing speed.
+  private final Tensor binaryDistributionWeights;
+  private final Tensor terminalDistributionWeights;
 
   // If greater than 0, this parser performs a beam search over trees,
   // maintaining up to beamSize trees at each chart node.
@@ -85,6 +91,7 @@ public class CfgParser {
     this.terminalVar = terminalVar;
     this.ruleTypeVar = ruleTypeVar;
     this.binaryDistribution = binaryDistribution;
+    this.binaryDistributionWeights = binaryDistribution.getWeights();
     this.terminalDistribution = terminalDistribution;
 
     // Construct some variable->variable renamings which are useful during
@@ -174,7 +181,7 @@ public class CfgParser {
         }
       }
     }
-    
+
     int numTruncatedEntries = 0;
     for (int spanSize = 0; spanSize < chart.chartSize() - 1; spanSize++) {
       for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
@@ -183,7 +190,7 @@ public class CfgParser {
         }
       }
     }
-    System.out.println("Truncated "+ numTruncatedEntries + " chart entries");
+    System.out.println("Truncated " + numTruncatedEntries + " chart entries");
 
     List<ParseTree> trees = Lists.newArrayList(chart.getParseTreesForSpan(0, terminals.size() - 1));
     Collections.sort(trees);
@@ -198,7 +205,7 @@ public class CfgParser {
    * @param tree
    * @return
    */
-  public double getProbability(List<?> terminals, ParseTree tree) {  
+  public double getProbability(List<?> terminals, ParseTree tree) {
     if (!tree.getTerminalProductions().equals(terminals) && !canSkipTerminals) {
       return 0.0;
     } else {
@@ -474,13 +481,13 @@ public class CfgParser {
           for (ParseTree rightTree : chart.getParseTreesForSpan(spanStart + j, spanEnd)) {
             Assignment assignment = leftVar.outcomeArrayToAssignment(leftTree.getRoot()).union(
                 rightVar.outcomeArrayToAssignment(rightTree.getRoot()));
-            
+
             Iterator<Assignment> iterator = binaryDistribution.outcomePrefixIterator(assignment);
             while (iterator.hasNext()) {
               Assignment bestAssignment = iterator.next();
               double treeProb = leftTree.getProbability() * rightTree.getProbability()
                   * binaryDistribution.getUnnormalizedProbability(bestAssignment);
-              if (treeProb >= chart.getMinimumProbabilityForSpan(spanStart, spanEnd)) { 
+              if (treeProb >= chart.getMinimumProbabilityForSpan(spanStart, spanEnd)) {
                 Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
                 Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
                 ParseTree combinedTree = new ParseTree(root, ruleType, leftTree,

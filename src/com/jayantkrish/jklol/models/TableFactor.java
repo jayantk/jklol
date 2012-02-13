@@ -86,7 +86,7 @@ public class TableFactor extends DiscreteFactor {
   }
 
   // //////////////////////////////////////////////////////////////////////////////
-  // Factor overrides.
+  // DiscreteFactor overrides.
   // //////////////////////////////////////////////////////////////////////////////
 
   @Override
@@ -102,10 +102,10 @@ public class TableFactor extends DiscreteFactor {
   @Override
   public Iterator<Assignment> outcomePrefixIterator(Assignment prefix) {
     int[] keyPrefix = getVars().getFirstVariables(prefix.size()).assignmentToIntArray(prefix);
-    return Iterators.transform(weights.keyPrefixIterator(keyPrefix), new Function<int[], Assignment>() {
+    return Iterators.transform(weights.keyValuePrefixIterator(keyPrefix), new Function<KeyValue, Assignment>() {
       @Override
-      public Assignment apply(int[] values) {
-        return getVars().intArrayToAssignment(values);
+      public Assignment apply(KeyValue keyValue) {
+        return getVars().intArrayToAssignment(keyValue.getKey());
       }
     });
   }

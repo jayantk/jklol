@@ -14,7 +14,7 @@ public interface TensorBase {
   int[] getDimensionNumbers();
 
   int[] getDimensionSizes();
-  
+
   int numDimensions();
 
   /**
@@ -47,27 +47,28 @@ public interface TensorBase {
    * @return
    */
   double get(long keyNum);
-  
+
   double getByIndex(int index);
 
   int[] keyNumToDimKey(long keyNum);
 
   long dimKeyToKeyNum(int[] dimKey);
-  
+
   int keyNumToIndex(long keyNum);
-    
+
   long indexToKeyNum(int index);
 
   /**
-   * Gets an iterator over all keys of {@code this} whose associated value is
-   * nonzero. The returned iterator is guaranteed to iterate over keys with
-   * nonzero value, and may optionally iterate over keys whose value is zero.
-   * The {@code int[]} returned by the iterator may be modified later by the
-   * iterator, and must be copied in order to retain their value.
+   * Gets an iterator over all keys and values of {@code this} whose associated
+   * value is nonzero. The returned iterator is guaranteed to iterate over keys
+   * with nonzero value, and may optionally iterate over keys whose value is
+   * zero. The {@code KeyValue} returned by the iterator and its fields may be
+   * modified later by the iterator, and must be copied in order to retain their
+   * value.
    * 
    * @return
    */
-  Iterator<int[]> keyIterator();
+  Iterator<KeyValue> keyValueIterator();
 
   /**
    * Gets an iterator over the subset of keys in {@code this} that begin with
@@ -79,7 +80,7 @@ public interface TensorBase {
    * @return
    */
   Iterator<int[]> keyPrefixIterator(int[] keyPrefix);
-  
+
   /**
    * Gets an iterator over all key/value pairs of {@code this}. The iterator is
    * guaranteed to iterate over all keys with nonzero values, and may optionally

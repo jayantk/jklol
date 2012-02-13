@@ -50,7 +50,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
    */
   public static DenseTensor random(int[] dimensions, int[] sizes, double mean, double stddev) {
     DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes);
-    Iterator<int[]> keyIter = builder.keyIterator();
+    Iterator<int[]> keyIter = builder.keyValueIterator();
     Random random = new Random();
     while (keyIter.hasNext()) {
       builder.put(keyIter.next(), (random.nextGaussian() * stddev) + mean);
@@ -130,7 +130,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     Preconditions.checkState(ind == keyOffsets.length);
 
-    Iterator<int[]> otherKeys = other.keyIterator();
+    Iterator<int[]> otherKeys = other.keyValueIterator();
     while (otherKeys.hasNext()) {
       int[] otherKey = otherKeys.next();
       int baseOffset = 0;
@@ -215,7 +215,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     int[] dimensionMapping = getDimensionMapping(outputBuilder.getDimensionNumbers());
     int[] partialKey = new int[getDimensionNumbers().length];
     Arrays.fill(partialKey, -1);
-    Iterator<int[]> otherKeys = outputBuilder.keyIterator();
+    Iterator<int[]> otherKeys = outputBuilder.keyValueIterator();
     while (otherKeys.hasNext()) {
       int[] otherKey = otherKeys.next();
       for (int i = 0; i < otherKey.length; i++) {
@@ -265,7 +265,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
 
     DenseTensorBuilder builder = new DenseTensorBuilder(sortedDims, sortedSizes);
-    Iterator<int[]> keyIter = keyIterator();
+    Iterator<int[]> keyIter = keyValueIterator();
     int[] newKey = new int[newOrder.length];
     while (keyIter.hasNext()) {
       int[] oldKey = keyIter.next();
@@ -309,7 +309,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[DenseTensor ");
-    Iterator<int[]> keyIter = keyIterator();
+    Iterator<int[]> keyIter = keyValueIterator();
     while (keyIter.hasNext()) {
       int[] key = keyIter.next();
       if (getByDimKey(key) != 0.0) {

@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -50,7 +51,7 @@ public class LinearClassifierTest extends TestCase {
     y = builder.getVariables().getVariablesByName("y");
     all = x.union(y);
 
-    builder.addFactor(new ConditionalLogLinearFactor(x, y, 4),
+    builder.addFactor(new ConditionalLogLinearFactor(x, y, 4, SparseTensorBuilder.getFactory()),
         new WrapperVariablePattern(x.union(y)));
 
     linearClassifier = builder.build();

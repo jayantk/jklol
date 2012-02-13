@@ -74,7 +74,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
         values[i] += otherTensor.values[i] * multiplier;
       }
     } else {
-      Iterator<int[]> otherKeyIterator = other.keyIterator();
+      Iterator<int[]> otherKeyIterator = other.keyValueIterator();
       while (otherKeyIterator.hasNext()) {
         int[] otherKey = otherKeyIterator.next();
         values[dimKeyToIndex(otherKey)] += other.getByDimKey(otherKey) * multiplier; 
@@ -92,7 +92,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
         values[i] *= otherTensor.values[i];
       }
     } else {
-      Iterator<int[]> keyIter = keyIterator();
+      Iterator<int[]> keyIter = keyValueIterator();
       while (keyIter.hasNext()) {
         int[] key = keyIter.next();
         values[dimKeyToIndex(key)] *= other.getByDimKey(key);

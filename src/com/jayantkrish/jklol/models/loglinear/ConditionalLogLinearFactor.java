@@ -10,9 +10,9 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
+import com.jayantkrish.jklol.tensor.TensorFactory;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -31,6 +31,9 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
   // Size parameters for the sufficient statistics tensor. 
   private final int[] dimensionNums;
   private final int[] dimensionSizes;
+  
+  // Constructs the type of tensor to use.
+  private final TensorFactory tensorFactory;
 
   /**
    * Create a factor which represents a conditional distribution over outputVar
@@ -42,7 +45,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
    * @param featureVectorDimensionality
    */
   public ConditionalLogLinearFactor(VariableNumMap inputVar, VariableNumMap outputVar,
-      int featureVectorDimensionality) {
+      int featureVectorDimensionality, TensorFactory tensorFactory) {
     super(inputVar.union(outputVar));
     Preconditions.checkArgument(inputVar.size() == 1);
     Preconditions.checkArgument(outputVar.size() == 1);
@@ -54,6 +57,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
         outputVar.getOnlyVariableNum()};
     this.dimensionSizes = new int[] {featureVectorDimensionality, 
         outputVar.getDiscreteVariables().get(0).numValues()};
+    this.tensorFactory = Preconditions.checkNotNull(tensorFactory);
   }
 
   @Override
@@ -65,7 +69,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
   @Override
   public SufficientStatistics getNewSufficientStatistics() {    
     return new TensorSufficientStatistics(Arrays.<TensorBuilder>asList(
-        new SparseTensorBuilder(dimensionNums, dimensionSizes)));
+        tensorFactory.getBuilder(dimensionNums, dimensionSizes)));
   }
 
   @Override
@@ -75,7 +79,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
     
     TensorBuilder weightTensor = getWeightTensorFromStatistics(statistics);
     Tensor inputValueFeatures = (Tensor) assignment.getValue(inputVar.getVariableNums().get(0));
-    Iterator<int[]> keyIter = inputValueFeatures.keyIterator();
+    Iterator<int[]> keyIter = inputValueFeatures.keyValueIterator();
     int[] weightKey = new int[2];
     weightKey[1] = outputVar.assignmentToIntArray(assignment.intersection(outputVar))[0];
     while (keyIter.hasNext()) {

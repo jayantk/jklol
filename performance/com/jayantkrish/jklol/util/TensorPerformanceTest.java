@@ -91,7 +91,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
 
   @PerformanceTest
   public void testIteration() {
-    Iterator<int[]> iter = table012.keyIterator();
+    Iterator<int[]> iter = table012.keyValueIterator();
     while (iter.hasNext()) {
       iter.next();
     }

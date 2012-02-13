@@ -80,7 +80,6 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     // Each iteration processes a single batch of batchSize training examples.
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
-      System.out.println(parameters);
       // Get the examples for this batch. Ideally, this would be a random
       // sample; however, deterministically iterating over the examples may be
       // more efficient and is fairly close if the examples are provided in

@@ -82,7 +82,7 @@ public class DenseTensorBase extends AbstractTensorBase {
   }
 
   @Override
-  public Iterator<int[]> keyIterator() {
+  public Iterator<int[]> keyValueIterator() {
     return new IntegerArrayIterator(getDimensionSizes(), new int[0]);
   }
   

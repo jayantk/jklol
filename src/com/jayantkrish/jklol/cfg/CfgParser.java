@@ -174,6 +174,16 @@ public class CfgParser {
         }
       }
     }
+    
+    int numTruncatedEntries = 0;
+    for (int spanSize = 0; spanSize < chart.chartSize() - 1; spanSize++) {
+      for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
+        if (chart.getParseTreesForSpan(spanStart, spanStart + spanSize).size() == beamSize) {
+          numTruncatedEntries++;
+        }
+      }
+    }
+    System.out.println("Truncated "+ numTruncatedEntries + " chart entries");
 
     List<ParseTree> trees = Lists.newArrayList(chart.getParseTreesForSpan(0, terminals.size() - 1));
     Collections.sort(trees);
@@ -468,12 +478,15 @@ public class CfgParser {
             Iterator<Assignment> iterator = binaryDistribution.outcomePrefixIterator(assignment);
             while (iterator.hasNext()) {
               Assignment bestAssignment = iterator.next();
-              Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
-              Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
-              ParseTree combinedTree = new ParseTree(root, ruleType, leftTree,
-                  rightTree, leftTree.getProbability() * rightTree.getProbability()
-                  * binaryDistribution.getUnnormalizedProbability(bestAssignment));
-              chart.addParseTreeForSpan(spanStart, spanEnd, combinedTree);
+              double treeProb = leftTree.getProbability() * rightTree.getProbability()
+                  * binaryDistribution.getUnnormalizedProbability(bestAssignment);
+              if (treeProb >= chart.getMinimumProbabilityForSpan(spanStart, spanEnd)) { 
+                Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
+                Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
+                ParseTree combinedTree = new ParseTree(root, ruleType, leftTree,
+                    rightTree, treeProb);
+                chart.addParseTreeForSpan(spanStart, spanEnd, combinedTree);
+              }
             }
           }
         }

@@ -10,6 +10,7 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 /**
@@ -35,7 +36,7 @@ public class ConditionalLogLinearFactorTest extends TestCase {
         Arrays.<Variable>asList(discreteVar));
     both = input.union(output);
     
-    factor = new ConditionalLogLinearFactor(input, output, 5);
+    factor = new ConditionalLogLinearFactor(input, output, 5, SparseTensorBuilder.getFactory());
     
     featureVectors = Lists.newArrayList();
     featureVectors.add(SparseTensor.vector(0, 4, new double[] {1, 2, 0, 0, 0}));

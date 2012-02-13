@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -51,7 +52,7 @@ public class SequenceModelTest extends TestCase {
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, 4);
+    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, 4, DenseTensorBuilder.getFactory());
     builder.addFactor(f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
 
     // Factor connecting adjacent y's

@@ -265,7 +265,6 @@ public class FactorGraph {
     for (Factor factor : factors) {
       double factorProb = factor.getUnnormalizedProbability(assignment);
       probability *= factorProb;
-      System.out.println("FACTOR: " + factor.getVars() + " : " + factorProb);
     }
     return probability;
   }
@@ -286,7 +285,6 @@ public class FactorGraph {
     for (Factor factor : factors) {
       double logProb = Math.log(factor.getUnnormalizedProbability(assignment));
       logProbability += logProb;
-      System.out.println("LOGFACTOR: " + factor.getVars() + " : " + logProb);
     }
     return logProbability;
   }

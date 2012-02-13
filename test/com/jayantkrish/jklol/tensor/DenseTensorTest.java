@@ -17,7 +17,7 @@ public class DenseTensorTest extends TensorTest {
     DenseTensor randomTensor = DenseTensor.random(new int[] {0, 1}, new int[] {2, 3}, 1.0, 1.0);
     
     assertEquals(6, randomTensor.size());
-    Iterator<int[]> keyIter = randomTensor.keyIterator();
+    Iterator<int[]> keyIter = randomTensor.keyValueIterator();
     int keyCount = 0;
     while (keyIter.hasNext()) {
       assertTrue(0.0 != randomTensor.getByDimKey(keyIter.next()));

@@ -38,7 +38,7 @@ public class SparseTensorTest extends TensorTest {
     expectedKeys = Sets.newHashSet();
     expectedKeys.add(Lists.<Integer> newArrayList());
     actualKeys.clear();
-    for (int[] key : Lists.newArrayList(emptyInputTable.keyIterator())) {
+    for (int[] key : Lists.newArrayList(emptyInputTable.keyValueIterator())) {
       actualKeys.add(Ints.asList(key));
     }
     assertEquals(expectedKeys, actualKeys);

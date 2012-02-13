@@ -344,8 +344,8 @@ public abstract class TensorTest extends TestCase {
       }
     };
     
-    assertEquals(Lists.newArrayList(Iterators.transform(table.keyIterator(), toList)),
-          Lists.newArrayList(Iterators.transform(actual.keyIterator(), toList)));
+    assertEquals(Lists.newArrayList(Iterators.transform(table.keyValueIterator(), toList)),
+          Lists.newArrayList(Iterators.transform(actual.keyValueIterator(), toList)));
   }
   
   public void testRelabelDimensions() {
@@ -356,7 +356,7 @@ public abstract class TensorTest extends TestCase {
     
     assertEquals(table.size(), actual.size());
     
-    Iterator<int[]> keyIter = actual.keyIterator();
+    Iterator<int[]> keyIter = actual.keyValueIterator();
     while (keyIter.hasNext()) {
       int[] key = keyIter.next();
       int[] oldKey = new int[key.length];
@@ -390,10 +390,10 @@ public abstract class TensorTest extends TestCase {
       alignment[i] = firstInd;
     }
 
-    Iterator<int[]> firstIter = first.keyIterator();
+    Iterator<int[]> firstIter = first.keyValueIterator();
     while (firstIter.hasNext()) {
       int[] firstKey = firstIter.next();
-      Iterator<int[]> secondIter = second.keyIterator();
+      Iterator<int[]> secondIter = second.keyValueIterator();
       while (secondIter.hasNext()) {
         int[] secondKey = secondIter.next();
         boolean equal = true;
@@ -442,7 +442,7 @@ public abstract class TensorTest extends TestCase {
     TensorBuilder builder = tensorFactory.getBuilder(
         Arrays.copyOf(newDimNums, newDimIndices.size()),
         Arrays.copyOf(newDimSizes, newDimIndices.size()));
-    Iterator<int[]> keyIter = first.keyIterator();
+    Iterator<int[]> keyIter = first.keyValueIterator();
     while (keyIter.hasNext()) {
       int[] curKey = keyIter.next();
       int[] newKey = new int[newDimIndices.size()];

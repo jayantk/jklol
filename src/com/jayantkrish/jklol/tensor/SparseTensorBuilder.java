@@ -120,7 +120,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   }
 
   @Override
-  public Iterator<int[]> keyIterator() {
+  public Iterator<int[]> keyValueIterator() {
     return new SparseKeyIterator(Longs.toArray(outcomes.keySet()), 
         0, outcomes.size(), this);
   }
@@ -179,7 +179,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void incrementWithMultiplier(TensorBase other, double multiplier) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
 
-    Iterator<int[]> keyIterator = other.keyIterator();
+    Iterator<int[]> keyIterator = other.keyValueIterator();
     while (keyIterator.hasNext()) {
       int[] key = keyIterator.next();
       incrementEntry(other.getByDimKey(key) * multiplier, key);

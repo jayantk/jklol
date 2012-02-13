@@ -7,6 +7,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -90,10 +91,10 @@ public class TableFactor extends DiscreteFactor {
 
   @Override
   public Iterator<Assignment> outcomeIterator() {
-    return Iterators.transform(weights.keyIterator(), new Function<int[], Assignment>() {
+    return Iterators.transform(weights.keyValueIterator(), new Function<KeyValue, Assignment>() {
       @Override
-      public Assignment apply(int[] values) {
-        return getVars().intArrayToAssignment(values);
+      public Assignment apply(KeyValue keyValue) {
+        return getVars().intArrayToAssignment(keyValue.getKey());
       }
     });
   }

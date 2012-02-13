@@ -10,6 +10,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -189,10 +190,10 @@ public class TableFactorBuilder {
    * @return
    */
   public Iterator<Assignment> assignmentIterator() {
-    return Iterators.transform(weightBuilder.keyIterator(), new Function<int[], Assignment>() {
+    return Iterators.transform(weightBuilder.keyValueIterator(), new Function<KeyValue, Assignment>() {
       @Override
-      public Assignment apply(int[] values) {
-        return getVars().intArrayToAssignment(values);
+      public Assignment apply(KeyValue keyValue) {
+        return getVars().intArrayToAssignment(keyValue.getKey());
       }
     });
   }

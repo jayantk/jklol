@@ -92,7 +92,7 @@ public class DictionaryFeatureVectorGenerator<T, U> implements FeatureVectorGene
         && featureVector.getDimensionSizes()[0] == getNumberOfFeatures());
 
     Map<U, Double> features = Maps.newHashMap();
-    Iterator<int[]> keyIter = featureVector.keyIterator();
+    Iterator<int[]> keyIter = featureVector.keyValueIterator();
     while (keyIter.hasNext()) {
       int featureKey = keyIter.next()[0];
       features.put(featureIndexes.get(featureKey), featureVector.getByDimKey(featureKey));

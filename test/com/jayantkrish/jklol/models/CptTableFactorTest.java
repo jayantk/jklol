@@ -7,6 +7,7 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
@@ -54,9 +55,11 @@ public class CptTableFactorTest extends TestCase {
     assertEquals(allVars, factor.getVars());
     
     // All assignments should have a count of 0.
-    Iterator<Assignment> iter = factor.outcomeIterator();
+    Iterator<Outcome> iter = factor.outcomeIterator();
     while (iter.hasNext()) {
-      assertEquals(0.0, factor.getUnnormalizedProbability(iter.next()));
+      Outcome outcome = iter.next();
+      assertEquals(0.0, factor.getUnnormalizedProbability(outcome.getAssignment()));
+      assertEquals(0.0, outcome.getProbability());
     }
   }
   
@@ -83,7 +86,12 @@ public class CptTableFactorTest extends TestCase {
     
   public void testGetFactorFromParameters() {
     DiscreteFactor factor = f.getFactorFromParameters(parameters);
-    assertEquals(factorAssignments, Sets.newHashSet(factor.outcomeIterator()));
+    Iterator<Outcome> iter = factor.outcomeIterator();
+    Set<Assignment> foundOutcomes = Sets.newHashSet();
+    while (iter.hasNext()) {
+      foundOutcomes.add(iter.next().getAssignment());
+    }
+    assertEquals(factorAssignments, foundOutcomes);
     
     assertEquals(0.5, factor.getUnnormalizedProbability(
         f.getVars().outcomeToAssignment(assignments[0])));

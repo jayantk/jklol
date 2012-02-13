@@ -10,6 +10,7 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -279,9 +280,9 @@ public class TableFactorTest extends TestCase {
 	  assertTrue(prefixVars.contains(0) && prefixVars.contains(1) && !prefixVars.contains(3));
 	  
 	  Assignment prefix = prefixVars.outcomeArrayToAssignment("T", "U");
-	  Iterator<Assignment> outcomes = g.outcomePrefixIterator(prefix);
-	  assertEquals(g.getVars().outcomeArrayToAssignment("T", "U", "T"), outcomes.next());
-	  assertEquals(g.getVars().outcomeArrayToAssignment("T", "U", "F"), outcomes.next());
+	  Iterator<Outcome> outcomes = g.outcomePrefixIterator(prefix);
+	  assertEquals(g.getVars().outcomeArrayToAssignment("T", "U", "T"), outcomes.next().getAssignment());
+	  assertEquals(g.getVars().outcomeArrayToAssignment("T", "U", "F"), outcomes.next().getAssignment());
 	  assertFalse(outcomes.hasNext());
 	  
 	  prefix = prefixVars.outcomeArrayToAssignment("F", "F");

@@ -8,6 +8,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
@@ -134,10 +135,10 @@ public class TableFactorBuilder {
    */
   public void incrementWeight(DiscreteFactor factor) {
     Preconditions.checkArgument(factor.getVars().equals(getVars()));
-    Iterator<Assignment> iter = factor.outcomeIterator();
+    Iterator<Outcome> iter = factor.outcomeIterator();
     while (iter.hasNext()) {
-      Assignment assignment = iter.next();
-      incrementWeight(assignment, factor.getUnnormalizedProbability(assignment));
+      Outcome outcome = iter.next();
+      incrementWeight(outcome.getAssignment(), outcome.getProbability());
     }
   }
 

@@ -75,7 +75,7 @@ public class TableFactor extends DiscreteFactor {
     }
     return builder.build();
   }
-  
+
   public static FactorFactory getFactory() {
     return new FactorFactory() {
       @Override
@@ -90,22 +90,29 @@ public class TableFactor extends DiscreteFactor {
   // //////////////////////////////////////////////////////////////////////////////
 
   @Override
-  public Iterator<Assignment> outcomeIterator() {
-    return Iterators.transform(weights.keyValueIterator(), new Function<KeyValue, Assignment>() {
-      @Override
-      public Assignment apply(KeyValue keyValue) {
-        return getVars().intArrayToAssignment(keyValue.getKey());
-      }
-    });
+  public Iterator<Outcome> outcomeIterator() {
+    return mapKeyValuesToOutcomes(weights.keyValueIterator());
   }
-  
+
   @Override
-  public Iterator<Assignment> outcomePrefixIterator(Assignment prefix) {
+  public Iterator<Outcome> outcomePrefixIterator(Assignment prefix) {
     int[] keyPrefix = getVars().getFirstVariables(prefix.size()).assignmentToIntArray(prefix);
-    return Iterators.transform(weights.keyValuePrefixIterator(keyPrefix), new Function<KeyValue, Assignment>() {
+    return mapKeyValuesToOutcomes(weights.keyValuePrefixIterator(keyPrefix));
+  }
+
+  /**
+   * Maps an iterator over a tensor's {@code KeyValue}s into {@code Outcome}s.
+   */
+  private Iterator<Outcome> mapKeyValuesToOutcomes(Iterator<KeyValue> iterator) {
+    final Outcome outcome = new Outcome(null, 0.0);
+    final VariableNumMap vars = getVars();
+
+    return Iterators.transform(iterator, new Function<KeyValue, Outcome>() {
       @Override
-      public Assignment apply(KeyValue keyValue) {
-        return getVars().intArrayToAssignment(keyValue.getKey());
+      public Outcome apply(KeyValue keyValue) {
+        outcome.setAssignment(vars.intArrayToAssignment(keyValue.getKey()));
+        outcome.setProbability(keyValue.getValue());
+        return outcome;
       }
     });
   }

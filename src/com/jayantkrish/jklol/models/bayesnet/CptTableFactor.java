@@ -7,6 +7,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -97,10 +98,11 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
     Assignment conditionalSubAssignment = conditionalAssignment.intersection(getVars());
 
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
-    Iterator<Assignment> assignmentIter = marginal.coerceToDiscrete().outcomeIterator();
-    while (assignmentIter.hasNext()) {
-      Assignment a = assignmentIter.next().union(conditionalSubAssignment);
-      double incrementAmount = count * marginal.getUnnormalizedProbability(a) / partitionFunction;
+    Iterator<Outcome> outcomeIter = marginal.coerceToDiscrete().outcomeIterator();
+    while (outcomeIter.hasNext()) {
+      Outcome outcome = outcomeIter.next();
+      Assignment a = outcome.getAssignment().union(conditionalSubAssignment);
+      double incrementAmount = count * outcome.getProbability() / partitionFunction;
       
       int[] combinedIndex = getVars().assignmentToIntArray(a);
     

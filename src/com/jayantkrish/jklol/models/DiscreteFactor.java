@@ -53,7 +53,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
    * Gets an iterator over all outcomes with nonzero probability. Each
    * {@code Assignment} in the returned iterator is a single possible outcome.
    */
-  public abstract Iterator<Assignment> outcomeIterator();
+  public abstract Iterator<Outcome> outcomeIterator();
 
   /**
    * Gets an iterator over all {@code Assignment}s in this which are supersets
@@ -65,7 +65,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
    * @param prefix
    * @return
    */
-  public abstract Iterator<Assignment> outcomePrefixIterator(Assignment prefix);
+  public abstract Iterator<Outcome> outcomePrefixIterator(Assignment prefix);
 
   /**
    * Gets the table of weights over the discrete variables in {@code this}
@@ -187,11 +187,13 @@ public abstract class DiscreteFactor extends AbstractFactor {
     double draw = Math.random();
     double partitionFunction = getPartitionFunction();
     double sumProb = 0.0;
-    Iterator<Assignment> iter = outcomeIterator();
+    Iterator<Outcome> iter = outcomeIterator();
     Assignment a = null;
+    Outcome o = null;
     while (iter.hasNext() && sumProb <= draw) {
-      a = iter.next();
-      sumProb += getUnnormalizedProbability(a) / partitionFunction;
+      o = iter.next();
+      a = o.getAssignment();
+      sumProb += o.getProbability() / partitionFunction;
     }
 
     if (a == null) {
@@ -204,13 +206,13 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
-    Iterator<Assignment> iter = outcomeIterator();
+    Iterator<Outcome> iter = outcomeIterator();
     PriorityQueue<Pair<Double, Assignment>> pq = new PriorityQueue<Pair<Double, Assignment>>(
         numAssignments + 1, new PairComparator<Double, Assignment>());
 
     while (iter.hasNext()) {
-      Assignment a = iter.next();
-      pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), new Assignment(a)));
+      Outcome outcome = iter.next();
+      pq.offer(new Pair<Double, Assignment>(outcome.getProbability(), outcome.getAssignment()));
       if (pq.size() > numAssignments) {
         pq.poll();
       }
@@ -267,9 +269,9 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
 
     partitionFunction = 0.0;
-    Iterator<Assignment> outcomeIterator = outcomeIterator();
+    Iterator<Outcome> outcomeIterator = outcomeIterator();
     while (outcomeIterator.hasNext()) {
-      partitionFunction += getUnnormalizedProbability(outcomeIterator.next());
+      partitionFunction += outcomeIterator.next().getProbability();
     }
     return partitionFunction;
   }
@@ -285,5 +287,26 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public class Outcome {
     private Assignment assignment;
     private double probability;
+    
+    public Outcome(Assignment assignment, double probability) {
+      this.assignment = assignment;
+      this.probability = probability;
+    }
+
+    public Assignment getAssignment() {
+      return assignment;
+    }
+
+    public void setAssignment(Assignment assignment) {
+      this.assignment = assignment;
+    }
+
+    public double getProbability() {
+      return probability;
+    }
+
+    public void setProbability(double probability) {
+      this.probability = probability;
+    }
   }
 }

@@ -14,6 +14,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.AbstractFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorUtils;
@@ -320,8 +321,8 @@ public class CfgFactor extends AbstractFactor {
     }
     // First, try to marginalize out the child variable.
     Preconditions.checkState(childInboundMessage != null);
-    Assignment childAssignment = Iterators.getOnlyElement(childInboundMessage.outcomeIterator());
-    List<?> childValue = (List<?>) childAssignment.getValues().get(0);
+    Outcome childOutcome = Iterators.getOnlyElement(childInboundMessage.outcomeIterator());
+    List<?> childValue = (List<?>) childOutcome.getAssignment().getValues().get(0);
 
     cachedCharts.put(useSumProduct, parser.parseInsideMarginal(childValue, useSumProduct));
     return cachedCharts.get(useSumProduct);

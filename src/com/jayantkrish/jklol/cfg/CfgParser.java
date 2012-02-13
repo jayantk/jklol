@@ -9,12 +9,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -35,6 +38,10 @@ public class CfgParser {
   // typed edges in a dependency parse).
   private final VariableNumMap ruleTypeVar;
 
+  // The types of variables mapping nonterminals and rule types to indexes.
+  private final DiscreteVariable nonterminalVariableType;
+  private final DiscreteVariable ruleVariableType;
+
   // Each entry in the parse chart contains a factor defined over parentVar.
   // These relabelings are necessary to apply binaryDistribution and
   // terminalDistribution during parsing.
@@ -46,10 +53,9 @@ public class CfgParser {
   private final DiscreteFactor binaryDistribution;
   private final DiscreteFactor terminalDistribution;
 
-  // The parser uses the tensor representations of the nonterminal and terminal
-  // distributions in order to improve parsing speed.
+  // The parser uses the tensor representations of the nonterminal distributions
+  // in order to improve parsing speed.
   private final Tensor binaryDistributionWeights;
-  private final Tensor terminalDistributionWeights;
 
   // If greater than 0, this parser performs a beam search over trees,
   // maintaining up to beamSize trees at each chart node.
@@ -91,8 +97,11 @@ public class CfgParser {
     this.terminalVar = terminalVar;
     this.ruleTypeVar = ruleTypeVar;
     this.binaryDistribution = binaryDistribution;
-    this.binaryDistributionWeights = binaryDistribution.getWeights();
     this.terminalDistribution = terminalDistribution;
+
+    this.ruleVariableType = ruleTypeVar.getDiscreteVariables().get(0);
+    this.nonterminalVariableType = parentVar.getDiscreteVariables().get(0);
+    this.binaryDistributionWeights = binaryDistribution.getWeights();
 
     // Construct some variable->variable renamings which are useful during
     // parsing.
@@ -192,10 +201,24 @@ public class CfgParser {
     }
     System.out.println("Truncated " + numTruncatedEntries + " chart entries");
 
-    List<ParseTree> trees = Lists.newArrayList(chart.getParseTreesForSpan(0, terminals.size() - 1));
+    List<ParseTree> trees = Lists.newArrayList();
+    for (ParseTree tree : chart.getParseTreesForSpan(0, terminals.size() - 1)) {
+      trees.add(mapIntTreeToObjectTree(tree));
+    }
     Collections.sort(trees);
     Collections.reverse(trees);
     return trees;
+  }
+  
+  private ParseTree mapIntTreeToObjectTree(ParseTree tree) {
+    Object rootObj = nonterminalVariableType.getValue((Integer) tree.getRoot());
+    Object ruleObj = ruleVariableType.getValue((Integer) tree.getRuleType());
+    if (tree.isTerminal()) {
+      return new ParseTree(rootObj, ruleObj, tree.getTerminalProductions(), tree.getProbability());
+    } else {
+      return new ParseTree(rootObj, ruleObj, mapIntTreeToObjectTree(tree.getLeft()),
+          mapIntTreeToObjectTree(tree.getRight()), tree.getProbability());
+    }
   }
 
   /**
@@ -450,15 +473,15 @@ public class CfgParser {
       for (int j = i; j < terminals.size(); j++) {
         if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
-          Iterator<Assignment> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+          Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
 
           while (iterator.hasNext()) {
-            Assignment bestAssignment = iterator.next();
-            Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
-            Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
+            Outcome bestOutcome = iterator.next();
+            int root = nonterminalVariableType.getValueIndex(bestOutcome.getAssignment().getValue(parentVar.getOnlyVariableNum()));
+            int ruleType = ruleVariableType.getValueIndex(bestOutcome.getAssignment().getValue(ruleTypeVar.getOnlyVariableNum()));
             chart.addParseTreeForSpan(i, j,
                 new ParseTree(root, ruleType, terminals.subList(i, j + 1),
-                    terminalDistribution.getUnnormalizedProbability(bestAssignment)));
+                    bestOutcome.getProbability()));
           }
           System.out.println(i + "." + j + ": " + assignment + " : " + chart.getParseTreesForSpan(i, j));
         }
@@ -470,27 +493,30 @@ public class CfgParser {
    * Calculates the parse trees that span {@code spanStart} to {@code spanEnd},
    * inclusive. Requires {@code spanEnd - spanStart > 1}.
    * 
+   * For efficiency, this beam search computes parse trees whose nodes are
+   * integers (which map to values of nonterminals).
+   * 
    * @param spanStart
    * @param spanEnd
    * @param chart
    */
   private void calculateInsideBeam(int spanStart, int spanEnd, BeamSearchParseChart chart) {
+    int[] nonterminalKeyPrefix = new int[2];
+
     for (int i = 0; i < spanEnd - spanStart; i++) {
       for (int j = i + 1; j < (canSkipTerminals ? 1 + spanEnd - spanStart : i + 2); j++) {
-        for (ParseTree leftTree : chart.getParseTreesForSpan(spanStart, spanStart + i)) {
+        for (ParseTree leftTree : chart.getParseTreesForSpan(spanStart, spanStart + i)) { 
           for (ParseTree rightTree : chart.getParseTreesForSpan(spanStart + j, spanEnd)) {
-            Assignment assignment = leftVar.outcomeArrayToAssignment(leftTree.getRoot()).union(
-                rightVar.outcomeArrayToAssignment(rightTree.getRoot()));
+            nonterminalKeyPrefix[0] = (Integer) leftTree.getRoot();
+            nonterminalKeyPrefix[1] = (Integer) rightTree.getRoot();
 
-            Iterator<Assignment> iterator = binaryDistribution.outcomePrefixIterator(assignment);
+            Iterator<KeyValue> iterator = binaryDistributionWeights.keyValuePrefixIterator(nonterminalKeyPrefix);
             while (iterator.hasNext()) {
-              Assignment bestAssignment = iterator.next();
+              KeyValue keyValue = iterator.next();
               double treeProb = leftTree.getProbability() * rightTree.getProbability()
-                  * binaryDistribution.getUnnormalizedProbability(bestAssignment);
-              if (treeProb >= chart.getMinimumProbabilityForSpan(spanStart, spanEnd)) {
-                Object root = bestAssignment.getValue(parentVar.getOnlyVariableNum());
-                Object ruleType = bestAssignment.getValue(ruleTypeVar.getOnlyVariableNum());
-                ParseTree combinedTree = new ParseTree(root, ruleType, leftTree,
+                  * keyValue.getValue();
+              if (treeProb >= chart.getMinimumProbabilityForSpan(i, j)) {
+                ParseTree combinedTree = new ParseTree(keyValue.getKey()[2], keyValue.getKey()[3], leftTree,
                     rightTree, treeProb);
                 chart.addParseTreeForSpan(spanStart, spanEnd, combinedTree);
               }

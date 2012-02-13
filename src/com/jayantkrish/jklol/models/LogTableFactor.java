@@ -9,7 +9,6 @@ import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.SparseTensor;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -61,14 +60,14 @@ public class LogTableFactor extends DiscreteFactor {
   }
 
   @Override
-  public Iterator<Assignment> outcomeIterator() {
+  public Iterator<Outcome> outcomeIterator() {
     // Note that all assignments have nonzero probability, hence the returned
     // iterator must iterate over all assignments to this.
-    return new AllAssignmentIterator(getVars());
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   @Override
-  public Iterator<Assignment> outcomePrefixIterator(Assignment prefix) {
+  public Iterator<Outcome> outcomePrefixIterator(Assignment prefix) {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
 

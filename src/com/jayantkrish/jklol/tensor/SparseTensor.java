@@ -26,14 +26,13 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
   private final long[] keyNums;
   private final double[] values;
-
   public SparseTensor(int[] dimensionNums, int[] dimensionSizes, long[] keyNums, double[] values) {
     super(dimensionNums, dimensionSizes);
-    this.keyNums = Preconditions.checkNotNull(keyNums);
-    this.values = Preconditions.checkNotNull(values);
-
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
     Preconditions.checkArgument(keyNums.length == values.length);
+
+    this.keyNums = Preconditions.checkNotNull(keyNums);
+    this.values = Preconditions.checkNotNull(values);
   }
 
   // ////////////////////////////////////////////////////////////////////
@@ -233,51 +232,62 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     int resultInd = 0;
 
     // Current positions in each tensor's key/value array.
-    int myInd = 0;
-    int otherInd = advanceToNonzero(-1, small);
+    int bigInd = 0;
+    int smallInd = advanceToNonzero(-1, small);
 
     int smallIndexMultiplier = 1;
     for (int i = big.numDimensions() - 1; i >= small.numDimensions(); i--) {
       smallIndexMultiplier *= big.getDimensionSizes()[i];
     }
+    
+    // Variables for the binary search  
+    int startInd, endInd, cmpInd;
+    long targetKeyNum;
 
-    for (myInd = 0; myInd < big.size(); myInd = advance(myInd, big.keyNums, otherInd, small, smallIndexMultiplier)) {
-      // Advance otherInd until other's outcome is >= our outcome.
-      while (otherInd < small.size() &&
-          big.indexToKeyNum(myInd) / smallIndexMultiplier > small.indexToKeyNum(otherInd)) {
-        otherInd = advanceToNonzero(otherInd, small);
+    // Caches to avoid recomputing method values.
+    int bigSize = big.size();
+    int smallSize = small.size();
+    long bigKeyNum, smallKeyNum, bigKeyNumDividedByMultiplier;
+    outerloop: for (bigInd = 0; bigInd < bigSize && smallInd < smallSize; ) {
+      // Advance smallInd until other's outcome is >= our outcome.
+      bigKeyNum = big.indexToKeyNum(bigInd); 
+      bigKeyNumDividedByMultiplier = bigKeyNum / smallIndexMultiplier;
+      while (bigKeyNumDividedByMultiplier > small.indexToKeyNum(smallInd) ||
+          small.getByIndex(smallInd) == 0) {
+        smallInd++;
+        if (smallInd >= smallSize) {
+          break outerloop;
+        }
       }
+      smallKeyNum = small.indexToKeyNum(smallInd); 
 
-      if (otherInd < small.size() &&
-          big.indexToKeyNum(myInd) / smallIndexMultiplier == small.indexToKeyNum(otherInd)) {
-        resultKeyInts[resultInd] = big.indexToKeyNum(myInd);
-        resultValues[resultInd] = big.values[myInd] * small.getByIndex(otherInd);
+      if (bigKeyNumDividedByMultiplier == smallKeyNum) {
+        resultKeyInts[resultInd] = bigKeyNum;
+        resultValues[resultInd] = big.values[bigInd] * small.getByIndex(smallInd);
         resultInd++;
+        bigInd++;
+      } else {
+        // Advance bigInd by a large amount.
+
+        // Find a block of outcomes with the correct starting coordinates.
+        // This performs a binary search between the starting value of bigInd
+        // and the end of the array.
+        startInd = bigInd + 1;
+        endInd = big.keyNums.length;
+        targetKeyNum = smallKeyNum * smallIndexMultiplier;
+        while (startInd != endInd) {
+          cmpInd = (startInd + endInd) / 2;
+          if (targetKeyNum > big.keyNums[cmpInd]) {
+            startInd = cmpInd + 1;
+          } else {
+            endInd = cmpInd; 
+          }
+        }
+        bigInd = startInd;
       }
     }
     return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(),
         resultKeyInts, resultValues, resultInd);
-  }
-
-  private static final int advance(int myInd, long[] myKeyInts, int otherInd, Tensor other,
-      int smallKeyIntMultiplier) {
-    // This algorithm advances myInd into a block of outcomes where the first
-    // coordinate of this tensor's outcomes matches the first coordinate of the
-    // other
-    // tensor's outcome.
-    if (otherInd >= other.size()) {
-      return myKeyInts.length;
-    } else if (other.numDimensions() == 0) {
-      return myInd + 1;
-    } else if (myKeyInts[myInd] / smallKeyIntMultiplier == other.indexToKeyNum(otherInd)) {
-      // We're within a block of outcomes of other that start with the same
-      // coordinates as myOutcomes.
-      return myInd + 1;
-    } else {
-      // Find a block of outcomes with the correct starting coordinates.
-      return binarySearch(myKeyInts, other.indexToKeyNum(otherInd) * smallKeyIntMultiplier,
-          myInd, myKeyInts.length);
-    }
   }
 
   private static final int advanceToNonzero(int startInd, Tensor other) {
@@ -286,31 +296,6 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       nextInd++;
     }
     return nextInd;
-  }
-
-  /**
-   * Returns the first index of {@code value} in {@code array} that occurs
-   * between {@code array[startInd]} and {@code array[endInd - 1]}.
-   * 
-   * @param array
-   * @param value
-   * @param startInd
-   * @param endInd
-   * @return
-   */
-  private static final int binarySearch(long[] array, long value, int startInd, int endInd) {
-    if (startInd == endInd) {
-      return startInd;
-    }
-
-    int cmpInd = (startInd + endInd) / 2;
-    if (value > array[cmpInd]) {
-      // Value comes after cmpInd in array.
-      return binarySearch(array, value, cmpInd + 1, endInd);
-    } else {
-      // either array[cmpInd] equals value, or is less than value
-      return binarySearch(array, value, startInd, cmpInd);
-    }
   }
 
   /**

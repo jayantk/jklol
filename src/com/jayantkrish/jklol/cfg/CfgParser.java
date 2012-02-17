@@ -17,7 +17,6 @@ import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -73,6 +72,7 @@ public class CfgParser {
    * @param leftVar
    * @param rightVar
    * @param terminalVar
+   * @param ruleTypeVar
    * @param binaryDistribution
    * @param terminalDistribution
    * @param beamSize
@@ -501,22 +501,37 @@ public class CfgParser {
    * @param chart
    */
   private void calculateInsideBeam(int spanStart, int spanEnd, BeamSearchParseChart chart) {
+    // For efficiency, precompute values which are used repeatedly in the loop below.
     int[] nonterminalKeyPrefix = new int[2];
-
+    int[] keyCache = new int[binaryDistributionWeights.getDimensionNumbers().length];
+    double[] values = binaryDistributionWeights.getValues();
+    long[] dimensionOffsets = binaryDistributionWeights.getDimensionOffsets();
+    long startIndexToEndIndexOffset = dimensionOffsets[1];
+    
+    int startIndex, endIndex;
+    double treeProb;
+    long partialKeyNum;
+    
     for (int i = 0; i < spanEnd - spanStart; i++) {
       for (int j = i + 1; j < (canSkipTerminals ? 1 + spanEnd - spanStart : i + 2); j++) {
-        for (ParseTree leftTree : chart.getParseTreesForSpan(spanStart, spanStart + i)) { 
+        for (ParseTree leftTree : chart.getParseTreesForSpan(spanStart, spanStart + i)) {
+          nonterminalKeyPrefix[0] = (Integer) leftTree.getRoot();
+          double leftTreeProb = leftTree.getProbability();
           for (ParseTree rightTree : chart.getParseTreesForSpan(spanStart + j, spanEnd)) {
-            nonterminalKeyPrefix[0] = (Integer) leftTree.getRoot();
             nonterminalKeyPrefix[1] = (Integer) rightTree.getRoot();
+            double partialTreeProb = rightTree.getProbability() * leftTreeProb;
+            partialKeyNum = binaryDistributionWeights.dimKeyPrefixToKeyNum(nonterminalKeyPrefix); 
 
-            Iterator<KeyValue> iterator = binaryDistributionWeights.keyValuePrefixIterator(nonterminalKeyPrefix);
-            while (iterator.hasNext()) {
-              KeyValue keyValue = iterator.next();
-              double treeProb = leftTree.getProbability() * rightTree.getProbability()
-                  * keyValue.getValue();
+            startIndex = binaryDistributionWeights.getNearestIndex(partialKeyNum);
+            endIndex = binaryDistributionWeights.getNearestIndex(partialKeyNum + startIndexToEndIndexOffset);
+            for (; startIndex < endIndex; startIndex++) {
+              treeProb = partialTreeProb * values[startIndex];
               if (treeProb >= chart.getMinimumProbabilityForSpan(i, j)) {
-                ParseTree combinedTree = new ParseTree(keyValue.getKey()[2], keyValue.getKey()[3], leftTree,
+                
+                binaryDistributionWeights.keyNumToDimKey(
+                    binaryDistributionWeights.indexToKeyNum(startIndex), keyCache);
+                
+                ParseTree combinedTree = new ParseTree(keyCache[2], keyCache[3], leftTree,
                     rightTree, treeProb);
                 chart.addParseTreeForSpan(spanStart, spanEnd, combinedTree);
               }

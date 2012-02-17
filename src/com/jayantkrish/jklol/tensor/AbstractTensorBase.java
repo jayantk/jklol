@@ -56,6 +56,11 @@ public abstract class AbstractTensorBase implements TensorBase {
   }
   
   @Override
+  public long[] getDimensionOffsets() {
+    return indexOffsets;
+  }
+  
+  @Override
   public int numDimensions() {
     return dimensions.length;
   }
@@ -93,11 +98,13 @@ public abstract class AbstractTensorBase implements TensorBase {
     return dimKeyPrefixToKeyNum(key);
   }
   
-  protected long dimKeyPrefixToKeyNum(int[] keyPrefix) {
-    int[] sizes = getDimensionSizes();
+  @Override
+  public long dimKeyPrefixToKeyNum(int[] keyPrefix) {
+    // TODO: replace preconditions check.
+    // int[] sizes = getDimensionSizes();
     long keyNum = 0;
     for (int i = 0; i < keyPrefix.length; i++) {
-      Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i]);
+      // Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i]);
       keyNum += ((long) keyPrefix[i]) * indexOffsets[i];
     }
     return keyNum;

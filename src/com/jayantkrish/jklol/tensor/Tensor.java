@@ -4,7 +4,8 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * Tensors are immutable. All operations on {@code Tensor}s, such as
+ * Tensors are immutable. All operations on {@code Tensor}s return new objects,
+ * leaving the originals unchanged.
  * 
  * @author jayant
  */
@@ -37,4 +38,27 @@ public interface Tensor extends TensorBase {
   Tensor relabelDimensions(int[] newDimensions);
 
   Tensor relabelDimensions(Map<Integer, Integer> relabeling);
+  
+  /**
+   * Gets the first index in {@code this} whose corresponding keyNum is >= than
+   * {@code keyNum}. This method is intended for advanced use only.
+   * 
+   * @param keyNum
+   * @return
+   */
+  public int getNearestIndex(long keyNum);
+  
+  
+
+  /**
+   * Gets an array of the values stored in this tensor. Values are addressable
+   * by tensor indexes. This method is intended for advanced use only,
+   * specifically for sections of code which must be extremely efficient. In
+   * most cases, the other math operations in this file are more suitable.
+   * 
+   * Elements of the returned array must not be modified by the caller.
+   * 
+   * @return
+   */
+  double[] getValues();
 }

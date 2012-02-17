@@ -16,6 +16,16 @@ public interface TensorBase {
 
   int[] getDimensionSizes();
 
+  /**
+   * Gets an array whose vector product with a {@code dimKey} constructs its
+   * corresponding {@code keyNum}. This method should only be used when
+   * performance is an issue; in other cases, use {@link #dimKeyToKeyNum(int[])}
+   * .
+   * 
+   * @return
+   */
+  long[] getDimensionOffsets();
+
   int numDimensions();
 
   /**
@@ -65,6 +75,8 @@ public interface TensorBase {
   void keyNumToDimKey(long keyNum, int[] dimKey);
 
   long dimKeyToKeyNum(int[] dimKey);
+
+  long dimKeyPrefixToKeyNum(int[] dimKeyPrefix);
 
   int keyNumToIndex(long keyNum);
 

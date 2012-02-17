@@ -59,6 +59,17 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   }
   
   @Override
+  public int getNearestIndex(long keyNum) {
+    // Dense tensors contain values for all keyNums.
+    return (int) keyNum;
+  }
+  
+  @Override
+  public double[] getValues() {
+    return super.values;
+  }
+  
+  @Override
   public DenseTensor slice(int[] dimensionNumbers, int[] key) {
     if (dimensionNumbers.length == 0) {
       return this;

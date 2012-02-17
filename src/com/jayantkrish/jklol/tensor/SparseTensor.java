@@ -26,6 +26,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
   private final long[] keyNums;
   private final double[] values;
+
   public SparseTensor(int[] dimensionNums, int[] dimensionSizes, long[] keyNums, double[] values) {
     super(dimensionNums, dimensionSizes);
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
@@ -88,19 +89,18 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     return possibleIndex >= 0 ? possibleIndex : -1;
   }
 
-  /**
-   * Gets the first index in {@code this} whose corresponding keyNum is >= than
-   * {@code keyNum}.
-   * 
-   * @param keyNum
-   * @return
-   */
-  private int getFirstIndexAboveKeyNum(long keyNum) {
+  @Override
+  public int getNearestIndex(long keyNum) {
     int index = Arrays.binarySearch(keyNums, keyNum);
     if (index < 0) {
       index = (-1 * index) - 1;
     }
     return index;
+  }
+  
+  @Override
+  public double[] getValues() {
+    return values;
   }
 
   /**
@@ -113,12 +113,14 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
   @Override
   public Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix) {
-    if (keyPrefix.length == 0) { return keyValueIterator(); }
-    
+    if (keyPrefix.length == 0) {
+      return keyValueIterator();
+    }
+
     long startKeyNum = dimKeyPrefixToKeyNum(keyPrefix);
     long endKeyNum = startKeyNum + indexOffsets[keyPrefix.length - 1];
-    return new SparseKeyValueIterator(keyNums, values, getFirstIndexAboveKeyNum(startKeyNum),
-        getFirstIndexAboveKeyNum(endKeyNum), this);
+    return new SparseKeyValueIterator(keyNums, values, getNearestIndex(startKeyNum),
+        getNearestIndex(endKeyNum), this);
   }
 
   @Override
@@ -149,8 +151,8 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       }
       long maxKeyInt = minKeyInt + indexOffsets[dimensionNumbers.length - 1];
 
-      int startIndex = getFirstIndexAboveKeyNum(minKeyInt);
-      int endIndex = getFirstIndexAboveKeyNum(maxKeyInt);
+      int startIndex = getNearestIndex(minKeyInt);
+      int endIndex = getNearestIndex(maxKeyInt);
 
       long[] newKeyInts = Arrays.copyOfRange(keyNums, startIndex, endIndex);
       for (int i = 0; i < newKeyInts.length; i++) {
@@ -239,8 +241,8 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     for (int i = big.numDimensions() - 1; i >= small.numDimensions(); i--) {
       smallIndexMultiplier *= big.getDimensionSizes()[i];
     }
-    
-    // Variables for the binary search  
+
+    // Variables for the binary search
     int startInd, endInd, cmpInd;
     long targetKeyNum;
 
@@ -248,9 +250,9 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     int bigSize = big.size();
     int smallSize = small.size();
     long bigKeyNum, smallKeyNum, bigKeyNumDividedByMultiplier;
-    outerloop: for (bigInd = 0; bigInd < bigSize && smallInd < smallSize; ) {
+    outerloop: for (bigInd = 0; bigInd < bigSize && smallInd < smallSize;) {
       // Advance smallInd until other's outcome is >= our outcome.
-      bigKeyNum = big.indexToKeyNum(bigInd); 
+      bigKeyNum = big.indexToKeyNum(bigInd);
       bigKeyNumDividedByMultiplier = bigKeyNum / smallIndexMultiplier;
       while (bigKeyNumDividedByMultiplier > small.indexToKeyNum(smallInd) ||
           small.getByIndex(smallInd) == 0) {
@@ -259,7 +261,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
           break outerloop;
         }
       }
-      smallKeyNum = small.indexToKeyNum(smallInd); 
+      smallKeyNum = small.indexToKeyNum(smallInd);
 
       if (bigKeyNumDividedByMultiplier == smallKeyNum) {
         resultKeyInts[resultInd] = bigKeyNum;
@@ -280,7 +282,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
           if (targetKeyNum > big.keyNums[cmpInd]) {
             startInd = cmpInd + 1;
           } else {
-            endInd = cmpInd; 
+            endInd = cmpInd;
           }
         }
         bigInd = startInd;

@@ -170,7 +170,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void increment(double amount) {
     // Invoking this method on a sparse tensor is a bad idea, because it
     // destroys the sparsity. Use a dense tensor instead.
-    for (int i = 0; i < maxKeyNum(); i++) {
+    for (int i = 0; i < getMaxKeyNum(); i++) {
       incrementEntryByKeyInt(amount, i);
     }
   }

@@ -37,6 +37,13 @@ public interface TensorBase {
    * @return
    */
   int size();
+  
+  /**
+   * A keyNum {@code k} is valid for {@code this} if and only if {@code 0 <= k < this.maxKeyNum()}.
+   *  
+   * @return
+   */
+  public long getMaxKeyNum();
 
   /**
    * Gets the value associated with {@code key} in {@code this}. The {@code i}th

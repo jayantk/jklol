@@ -249,4 +249,16 @@ public class CfgParserTest extends TestCase {
 	  assertTrue(bestTree.isTerminal());
 	  assertEquals(0.5, bestTree.getProbability());
 	}
+	
+	public void testBeamSearch2() {
+	  List<ParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"));
+	  assertEquals(5, trees.size());
+	  
+	  for (ParseTree tree : trees) {
+	    assertEquals("A", tree.getRoot());
+	    assertEquals("rule1", tree.getRuleType());
+	    assertFalse(tree.isTerminal());
+	    assertEquals(1.0 / Math.pow(4, 7), tree.getProbability());
+	  }
+	}
 }

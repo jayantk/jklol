@@ -1,29 +1,39 @@
 package com.jayantkrish.jklol.cfg;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.PriorityQueue;
+
+import com.jayantkrish.jklol.util.HeapUtils;
 
 public class BeamSearchParseChart {
 
-  private final List<?> terminals;
+  private final List<Object> terminals;
   private final int beamSize;
-  private final PriorityQueue<ParseTree>[][] chart;
-  private final double[] minimumProbabilities;
 
-  @SuppressWarnings({ "unchecked" })
-  public BeamSearchParseChart(List<?> terminals, int beamSize) {
+  // Together, chart and chartProbabilities are a collection of min-heaps. They
+  // contain one min-heap per parse tree node. chartProbabilities contains the
+  // values that the heap is sorted by, while chart contains a key for each
+  // value.
+  private final long[][][] chart;
+  private final double[][][] chartProbabilities;
+  private final int[] chartSizes;
+
+  public BeamSearchParseChart(List<Object> terminals, int beamSize) {
     this.terminals = terminals;
     this.beamSize = beamSize;
-    this.chart = (PriorityQueue<ParseTree>[][]) new PriorityQueue[terminals.size()][terminals.size()];
-    this.minimumProbabilities = new double[terminals.size() * terminals.size()];
-    Arrays.fill(minimumProbabilities, 0.0);
+
+    this.chart = new long[terminals.size()][terminals.size()][beamSize + 1];
+    this.chartProbabilities = new double[terminals.size()][terminals.size()][beamSize + 1];
+    this.chartSizes = new int[terminals.size() * terminals.size()];
+    Arrays.fill(chartSizes, 0);
   }
 
   public int chartSize() {
     return terminals.size();
+  }
+  
+  public List<Object> getTerminals() {
+    return terminals;
   }
 
   public int getBeamSize() {
@@ -31,53 +41,39 @@ public class BeamSearchParseChart {
   }
 
   /**
-   * Gets the parse trees spanning the terminals from {@code spanStart} to
+   * Gets the keys spanning the terminals from {@code spanStart} to
    * {@code spanEnd}, inclusive.
    * 
    * @param spanStart
    * @param spanEnd
    * @return
    */
-  public Collection<ParseTree> getParseTreesForSpan(int spanStart, int spanEnd) {
-    if (chart[spanStart][spanEnd] == null) {
-      return Collections.emptyList();
-    } else {
-      return chart[spanStart][spanEnd];
-    }
+  public long[] getParseTreeKeysForSpan(int spanStart, int spanEnd) {
+    return chart[spanStart][spanEnd];
   }
 
-  /**
-   * Gets the minimum unnormalized probability required for a tree to enter the
-   * beam spanning {@code spanStart} to {@code spanEnd}. Trees below this
-   * probability, if added using
-   * {@link #addParseTreeForSpan(int, int, ParseTree)}, will be ignored. 
-   * 
-   * @param spanStart
-   * @param spanEnd
-   * @return
-   */
-  public double getMinimumProbabilityForSpan(int spanStart, int spanEnd) {
-    return minimumProbabilities[spanEnd + (terminals.size() * spanStart)];
+  public double[] getParseTreeProbsForSpan(int spanStart, int spanEnd) {
+    return chartProbabilities[spanStart][spanEnd];
   }
 
-  public void addParseTreeForSpan(int spanStart, int spanEnd, ParseTree tree) {
-    if (chart[spanStart][spanEnd] == null) {
-      chart[spanStart][spanEnd] = new PriorityQueue<ParseTree>(beamSize + 1);
-    }
+  public int getNumParseTreeKeysForSpan(int spanStart, int spanEnd) {
+    return chartSizes[spanEnd + (terminals.size() * spanStart)];
+  }
 
-    if (tree.getProbability() == 0.0) {
-      // Trees with zero probability can be safely ignored.
+  public void addParseTreeKeyForSpan(int spanStart, int spanEnd, long treeKey, double probability) {
+    if (chartSizes[spanEnd + (terminals.size() * spanStart)] == beamSize &&
+        probability <= chartProbabilities[spanStart][spanEnd][0]) {
+      // Trees below the minimum probability can be ignored as long as the beam is full.
       return;
     }
 
-    PriorityQueue<ParseTree> spanQueue = chart[spanStart][spanEnd];
-    spanQueue.offer(tree);
-
-    if (spanQueue.size() > beamSize) {
-      // Removes the smallest entry, which is the parse tree with the least
-      // probability.
-      ParseTree worstTree = spanQueue.poll();
-      minimumProbabilities[spanEnd + (terminals.size() * spanStart)] = worstTree.getProbability();
+    HeapUtils.offer(chart[spanStart][spanEnd], chartProbabilities[spanStart][spanEnd], 
+        chartSizes[spanEnd + (terminals.size() * spanStart)], treeKey, probability);
+    chartSizes[spanEnd + (terminals.size() * spanStart)]++;
+    if (chartSizes[spanEnd + (terminals.size() * spanStart)] > beamSize) {
+      HeapUtils.removeMin(chart[spanStart][spanEnd], chartProbabilities[spanStart][spanEnd], 
+          chartSizes[spanEnd + (terminals.size() * spanStart)]);
+      chartSizes[spanEnd + (terminals.size() * spanStart)]--;
     }
   }
 }

@@ -70,7 +70,8 @@ public abstract class AbstractTensorBase implements TensorBase {
    *  
    * @return
    */
-  public long maxKeyNum() {
+  @Override
+  public long getMaxKeyNum() {
     return indexOffsets.length == 0 ? 1 : indexOffsets[0] * sizes[0]; 
   }
   
@@ -100,11 +101,10 @@ public abstract class AbstractTensorBase implements TensorBase {
   
   @Override
   public long dimKeyPrefixToKeyNum(int[] keyPrefix) {
-    // TODO: replace preconditions check.
-    // int[] sizes = getDimensionSizes();
+    int[] sizes = getDimensionSizes();
     long keyNum = 0;
     for (int i = 0; i < keyPrefix.length; i++) {
-      // Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i]);
+      Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i]);
       keyNum += ((long) keyPrefix[i]) * indexOffsets[i];
     }
     return keyNum;

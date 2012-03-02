@@ -314,4 +314,15 @@ public class Assignment {
     }
     return new Assignment(newValues);
   }
+
+  /**
+   * Same as {{@link #unionAll(Collection)} with an array instead of a
+   * Collection.
+   * 
+   * @param assignments
+   * @return
+   */
+  public static Assignment unionAll(Assignment... assignments) {
+    return Assignment.unionAll(Arrays.asList(assignments));
+  }
 }

@@ -57,7 +57,7 @@ public abstract class TensorBuilderTest extends TestCase {
     
     wrongDimensionBuilders = Lists.newArrayList();
     for (TensorFactory otherFactory : allTensorFactories) {
-      wrongDimensionBuilders.add(otherFactory.getBuilder(new int[] {0, 1, 3}, new int[] {0, 1, 3}));
+      wrongDimensionBuilders.add(otherFactory.getBuilder(new int[] {0, 1, 3}, new int[] {1, 1, 3}));
     }
   }
 
@@ -102,7 +102,6 @@ public abstract class TensorBuilderTest extends TestCase {
     Set<int[]> intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
     while (keyValueIterator.hasNext()) {
       KeyValue keyValue = keyValueIterator.next();
-      System.out.println(keyValue);
       assertEquals(builder.getByDimKey(keyValue.getKey()), keyValue.getValue());
       intSet.add(Arrays.copyOf(keyValue.getKey(), 3));
     }

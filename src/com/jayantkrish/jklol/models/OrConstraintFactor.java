@@ -80,6 +80,11 @@ public class OrConstraintFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
+    return Math.exp(getUnnormalizedLogProbability(assignment));
+  }
+  
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
 
     Set<Object> requiredValues = Sets.newHashSet();
@@ -87,7 +92,7 @@ public class OrConstraintFactor extends AbstractFactor {
     getRequiredAndImpossibleValues(assignment, requiredValues, impossibleValues);
 
     return (new SetCoverFactor(inputVars, requiredValues, impossibleValues, inputVarFactors))
-        .getUnnormalizedProbability(assignment);
+        .getUnnormalizedLogProbability(assignment);
   }
 
   @Override

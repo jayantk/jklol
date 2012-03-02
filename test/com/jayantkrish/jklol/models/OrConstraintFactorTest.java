@@ -1,11 +1,13 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -18,7 +20,7 @@ public class OrConstraintFactorTest extends TestCase {
   OrConstraintFactor f;
   VariableNumMap inputVars, orVars;
   
-  Factor discreteFactor;
+  DiscreteFactor discreteFactor;
   FactorGraph factorGraph;
   
   public void setUp() {
@@ -66,9 +68,16 @@ public class OrConstraintFactorTest extends TestCase {
   public void testMarginalize() {
     VariableNumMap z3 = factorGraph.getVariables().getVariablesByName("z3");
     VariableNumMap x3 = factorGraph.getVariables().getVariablesByName("x3");
-    Factor input = discreteFactor.marginalize(z3);
-    Factor output = f.product(input);
-    assertEquals(input, output.marginalize(output.getVars().removeAll(x3)));
+    DiscreteFactor input = discreteFactor.marginalize(z3.getVariableNums());
+    
+    Factor predicted = f.product(input).marginalize(f.getVars().removeAll(x3));
+
+    Iterator<Outcome> outcomeIter = input.outcomeIterator();
+    while (outcomeIter.hasNext()) {
+      Outcome outcome = outcomeIter.next();
+      assertEquals(outcome.getProbability(), 
+          predicted.getUnnormalizedProbability(outcome.getAssignment()), .00001);
+    }
   }
   
   public void testConditional() {

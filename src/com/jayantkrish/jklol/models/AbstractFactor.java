@@ -34,12 +34,26 @@ public abstract class AbstractFactor implements Factor {
     Assignment a = getVars().outcomeToAssignment(outcome);
     return getUnnormalizedProbability(a);
   }
-
+  
   @Override
   public double getUnnormalizedProbability(Object... outcome) {
     return getUnnormalizedProbability(Arrays.asList(outcome));
   }
+  
+  @Override
+  public double getUnnormalizedLogProbability(List<? extends Object> outcome) {
+    Preconditions.checkNotNull(outcome);
+    Preconditions.checkArgument(outcome.size() == getVars().size());
 
+    Assignment a = getVars().outcomeToAssignment(outcome);
+    return getUnnormalizedLogProbability(a);
+  }
+  
+  @Override
+  public double getUnnormalizedLogProbability(Object... outcome) {
+    return getUnnormalizedLogProbability(Arrays.asList(outcome));
+  }
+  
   @Override
   public Factor marginalize(Integer... varNums) {
     return marginalize(Arrays.asList(varNums));

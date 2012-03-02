@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * A CFG parse tree.
  */
-public class ParseTree implements Comparable<ParseTree> {
+public class ParseTree implements Comparable<ParseTree> { 
 
   private final Object root;
   // Field for extra information associated with the current parse tree rule.
@@ -117,12 +117,24 @@ public class ParseTree implements Comparable<ParseTree> {
   }
 
   @Override
+  public String toString() {
+    if (!isTerminal()) {
+      return "(" + root + " --" + ruleType + "--> " + left.toString() + " " + right.toString() + ")";
+    }
+    return "(" + root + "--" + ruleType + "-->" + terminal + ")";
+  }
+
+  @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result + ((left == null) ? 0 : left.hashCode());
+    long temp;
+    temp = Double.doubleToLongBits(prob);
+    result = prime * result + (int) (temp ^ (temp >>> 32));
     result = prime * result + ((right == null) ? 0 : right.hashCode());
     result = prime * result + ((root == null) ? 0 : root.hashCode());
+    result = prime * result + ((ruleType == null) ? 0 : ruleType.hashCode());
     result = prime * result + ((terminal == null) ? 0 : terminal.hashCode());
     return result;
   }
@@ -151,19 +163,16 @@ public class ParseTree implements Comparable<ParseTree> {
         return false;
     } else if (!root.equals(other.root))
       return false;
+    if (ruleType == null) {
+      if (other.ruleType != null)
+        return false;
+    } else if (!ruleType.equals(other.ruleType))
+      return false;
     if (terminal == null) {
       if (other.terminal != null)
         return false;
     } else if (!terminal.equals(other.terminal))
       return false;
     return true;
-  }
-
-  @Override
-  public String toString() {
-    if (!isTerminal()) {
-      return "(" + root + " --" + ruleType + "--> " + left.toString() + " " + right.toString() + ")";
-    }
-    return "(" + root + "--" + ruleType + "-->" + terminal + ")";
   }
 }

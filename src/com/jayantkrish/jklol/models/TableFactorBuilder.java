@@ -9,9 +9,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.tensor.DenseTensor;
+import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
-import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
+import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -39,15 +41,8 @@ public class TableFactorBuilder {
   public TableFactorBuilder(VariableNumMap variables) {
     Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size());
     this.vars = variables;
-
-    // Figure out the required size of the tensor.
-    // TODO: this should be wrapped into some sort of tensor factory.
-    int[] sizes = new int[vars.size()];
-    List<DiscreteVariable> varTypes = variables.getDiscreteVariables();
-    for (int i = 0; i < varTypes.size(); i++) {
-      sizes[i] = varTypes.get(i).numValues();
-    }
-    this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()), sizes);
+    this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()), 
+        vars.getVariableSizes());
   }
 
   /**
@@ -184,7 +179,7 @@ public class TableFactorBuilder {
   public int size() {
     return weightBuilder.size();
   }
-  
+
   /**
    * Gets an iterator over all {@code Assignment}s which have nonzero weight.
    * 
@@ -208,5 +203,17 @@ public class TableFactorBuilder {
    */
   public TableFactor build() {
     return new TableFactor(vars, weightBuilder.build());
+  }
+
+  /**
+   * Creates a {@code TableFactor} containing all of the assignment/weight
+   * mappings that added to {@code this} builder. Unlike {@link #build()},
+   * assignments and weights added to this are interpreted as log weights.
+   * 
+   * @return
+   */
+  public TableFactor buildInLogSpace() {
+    return new TableFactor(vars, new LogSpaceTensorAdapter(
+        DenseTensor.copyOf(weightBuilder.build()))); 
   }
 }

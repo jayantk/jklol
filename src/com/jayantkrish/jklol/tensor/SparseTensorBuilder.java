@@ -49,11 +49,27 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   /**
    * Copy constructor.
    */
-  public SparseTensorBuilder(SparseTensorBuilder builder) {
+  private SparseTensorBuilder(SparseTensorBuilder builder) {
     super(builder.getDimensionNumbers(), builder.getDimensionSizes());
     this.outcomes = Maps.newTreeMap(builder.outcomes);
     this.nextIndex = builder.nextIndex;
     this.outcomeIndexes = HashBiMap.create(builder.outcomeIndexes);
+  }
+  
+  /**
+   * Gets a builder which contains the same key value pairs as {@code tensor}. 
+   * @param tensor
+   * @return
+   */
+  public static SparseTensorBuilder copyOf(TensorBase tensor) {
+    SparseTensorBuilder builder = new SparseTensorBuilder(tensor.getDimensionNumbers(), 
+        tensor.getDimensionSizes());
+    Iterator<KeyValue> initialWeightIter = tensor.keyValueIterator();
+    while (initialWeightIter.hasNext()) {
+      KeyValue keyValue = initialWeightIter.next();
+      builder.put(keyValue.getKey(), keyValue.getValue());
+    }
+    return builder;
   }
 
   /**
@@ -93,6 +109,11 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
       return outcomes.get(keyNum);
     }
     return 0.0;
+  }
+  
+  @Override
+  public double getLogByIndex(int index) {
+    return Math.log(getByIndex(index));
   }
 
   @Override
@@ -192,7 +213,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     put(key, getByDimKey(key) + amount);
   }
 
-  public void incrementEntryByKeyInt(double amount, int keyNum) {
+  public void incrementEntryByKeyInt(double amount, long keyNum) {
     putByKeyNum(keyNum, get(keyNum) + amount);
   }
 
@@ -237,7 +258,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
       tableKeyNums[index] = entry.getKey();
       tableValues[index] = entry.getValue();
       index++;
-    }
+    } 
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(),
         tableKeyNums, tableValues);
   }

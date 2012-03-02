@@ -84,9 +84,11 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       // sample; however, deterministically iterating over the examples may be
       // more efficient and is fairly close if the examples are provided in
       // random order.
+      log.startTimer("factor_graph_from_parameters");
       List<Example<DynamicAssignment, DynamicAssignment>> batchData = getBatch(cycledTrainingData, batchSize);
       DynamicFactorGraph currentDynamicModel = modelFamily.getFactorGraphFromParameters(parameters);
       SufficientStatistics subgradient = modelFamily.getNewSufficientStatistics();
+      log.stopTimer("factor_graph_from_parameters");
       int numIncorrect = 0;
       double approximateObjectiveValue = regularization * Math.pow(parameters.getL2Norm(), 2) / 2;
       int searchErrors = 0;
@@ -95,8 +97,8 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
         FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
         Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
         Assignment observed = currentDynamicModel.getVariables().toAssignment(example.getOutput().union(example.getInput()));
-        System.out.println("input: " + input);
-        System.out.println("output: " + observed);
+        log.log(input, currentModel);
+        log.log(observed, currentModel);
         log.stopTimer("dynamic_instantiation");
 
         log.startTimer("update_subgradient");
@@ -115,9 +117,11 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
 
       // TODO: Can we use the Pegasos projection step?
       // If so, the step size should decay as 1/i, not 1/sqrt(i).
+      log.startTimer("parameter_update");
       double stepSize = 1.0 / (regularization * Math.sqrt(i + 2));  
       parameters.multiply(1.0 - (stepSize * regularization));
       parameters.increment(subgradient, stepSize / batchSize);
+      log.stopTimer("parameter_update");
 
       log.logStatistic(i, "number of examples within margin", Integer.toString(numIncorrect));
       log.logStatistic(i, "approximate objective value", Double.toString(approximateObjectiveValue));

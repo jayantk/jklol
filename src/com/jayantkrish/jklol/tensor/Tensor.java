@@ -21,15 +21,19 @@ public interface Tensor extends TensorBase {
    * @param keys
    * @return
    */
-  Tensor slice(int[] dimensionNumbers, int[] keys);
+  Tensor slice(int[] dimensionNumbers, int[] keys); 
 
   Tensor elementwiseProduct(Tensor other);
-
+  
   Tensor elementwiseAddition(Tensor other);
 
   Tensor elementwiseMaximum(Tensor other);
 
   Tensor elementwiseInverse();
+
+  Tensor elementwiseLog();
+
+  Tensor elementwiseExp();
 
   Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate);
 
@@ -38,7 +42,7 @@ public interface Tensor extends TensorBase {
   Tensor relabelDimensions(int[] newDimensions);
 
   Tensor relabelDimensions(Map<Integer, Integer> relabeling);
-  
+
   /**
    * Gets the first index in {@code this} whose corresponding keyNum is >= than
    * {@code keyNum}. This method is intended for advanced use only.
@@ -47,8 +51,6 @@ public interface Tensor extends TensorBase {
    * @return
    */
   public int getNearestIndex(long keyNum);
-  
-  
 
   /**
    * Gets an array of the values stored in this tensor. Values are addressable

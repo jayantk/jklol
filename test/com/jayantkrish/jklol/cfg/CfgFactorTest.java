@@ -7,6 +7,11 @@ import junit.framework.TestCase;
  */
 public class CfgFactorTest extends TestCase {
 
+  public void testFoo() {
+    // Dummy placeholder.
+    assertTrue(true);
+  }
+  
   /*
 	BasicGrammar g;
 	CptCfgFactor cfgFactor;

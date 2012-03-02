@@ -66,6 +66,11 @@ public class DenseTensorBase extends AbstractTensorBase {
   public double getByIndex(int index) {
     return values[index];
   }
+  
+  @Override
+  public double getLogByIndex(int index) {
+    return Math.log(values[index]);
+  }
 
   @Override
   public long indexToKeyNum(int index) {

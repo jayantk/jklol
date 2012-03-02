@@ -46,22 +46,21 @@ public class SetCoverFactor extends AbstractFactor {
     }
     for (Object requiredValue : requiredValues) {
       // Fulfill each requirement by greedily selecting the factor with the best probability of each required value.
-      double bestProbability = Double.NEGATIVE_INFINITY;
+      double bestLogProbability = Double.NEGATIVE_INFINITY;
       int bestFactorIndex = -1;
       for (int i = 0; i < this.inputVarFactors.size(); i++) {
-        Factor factor = inputVarFactors.get(i); 
-        double prob = factor.getUnnormalizedProbability(requiredValue);
-        
-        if (prob >= bestProbability && maxMarginals.get(i) == null) {
+        Factor factor = inputVarFactors.get(i);
+        double logProb = factor.getUnnormalizedLogProbability(requiredValue);
+        if (logProb >= bestLogProbability && maxMarginals.get(i) == null) {
           bestFactorIndex = i;
-          bestProbability = prob;
+          bestLogProbability = logProb;
         }
       }
       Preconditions.checkState(bestFactorIndex != -1);
       VariableNumMap factorVariables = inputVarFactors.get(bestFactorIndex).getVars();
       
-      Factor maxMarginal = TableFactor.pointDistribution(factorVariables, 
-          factorVariables.outcomeArrayToAssignment(requiredValue)).product(bestProbability);
+      Factor maxMarginal = TableFactor.logPointDistribution(factorVariables, 
+          factorVariables.outcomeArrayToAssignment(requiredValue)).product(Math.exp(bestLogProbability)); 
       maxMarginals.set(bestFactorIndex, maxMarginal);
     }
 
@@ -85,28 +84,34 @@ public class SetCoverFactor extends AbstractFactor {
   
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
+    return Math.exp(getUnnormalizedLogProbability(assignment));
+  }
+  
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
     double logProbability = 0.0;
     List<Object> inputValues = assignment.intersection(getVars()).getValues();
     Set<Object> unfoundValues = Sets.newHashSet(requiredValues);
+    
     for (int i = 0; i < inputValues.size(); i++) {
       Object inputValue = inputValues.get(i);
       if (impossibleValues.contains(inputValue)) {
+
         // If any value is in the set of impossible values, then this assignment
-        // has zero
-        // probability.
-        return 0.0;
+        // has zero probability.
+        return Double.NEGATIVE_INFINITY;
       }
       unfoundValues.remove(inputValue);
       if (inputVarFactors.get(i) != null) {
-        logProbability += Math.log(inputVarFactors.get(i).getUnnormalizedProbability(assignment));
+        logProbability += inputVarFactors.get(i).getUnnormalizedLogProbability(assignment);
       }
     }
 
     if (unfoundValues.size() > 0) {
       // Not all of the required values were found in the inputVar.
-      return 0.0;
+      return Double.NEGATIVE_INFINITY;
     } else {
-      return Math.exp(logProbability);
+      return logProbability;
     }
   }
 
@@ -233,6 +238,11 @@ public class SetCoverFactor extends AbstractFactor {
     for (Factor cached : cachedMaxMarginals) {
       outputAssignments.addAll(cached.getMostLikelyAssignments(numAssignments));
     }
-    return Arrays.asList(Assignment.unionAll(outputAssignments));
+        
+    if (outputAssignments.size() == cachedMaxMarginals.size()) {
+      return Arrays.asList(Assignment.unionAll(outputAssignments));
+    } else {
+      return Collections.emptyList();
+    }
   }
 }

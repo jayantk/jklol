@@ -44,6 +44,16 @@ public interface TensorBase {
    * @return
    */
   public long getMaxKeyNum();
+  
+  /**
+   * Gets the value associated with {@code keyNum}, which is interpreted as a
+   * key by successively mod'ing it by the size of each dimension of
+   * {@code this}. Equivalent {@code getByDimKey(convertToDimKey(keyNum))}.
+   * 
+   * @param keyNum
+   * @return
+   */
+  double get(long keyNum);
 
   /**
    * Gets the value associated with {@code key} in {@code this}. The {@code i}th
@@ -55,18 +65,20 @@ public interface TensorBase {
    * @return
    */
   double getByDimKey(int... key);
+  
+  double getByIndex(int index);
 
   /**
-   * Gets the value associated with {@code keyNum}, which is interpreted as a
-   * key by successively mod'ing it by the size of each dimension of
-   * {@code this}. Equivalent {@code getByDimKey(convertToDimKey(keyNum))}.
+   * Gets the log of the value associated with {@code keyNum}.
    * 
    * @param keyNum
    * @return
    */
-  double get(long keyNum);
+  double getLog(long keyNum);
 
-  double getByIndex(int index);
+  double getLogByDimKey(int... key);
+  
+  double getLogByIndex(int index);
 
   int[] keyNumToDimKey(long keyNum);
 

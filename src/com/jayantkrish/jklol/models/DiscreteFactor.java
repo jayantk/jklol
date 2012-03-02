@@ -17,7 +17,6 @@ import com.google.common.collect.TreeMultimap;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
@@ -220,6 +219,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
     // There may not be enough assignments with positive probability. Fill up
     // pq with zero probability assignments.
+    /*
     if (pq.size() < numAssignments) {
       Iterator<Assignment> allAssignmentIter = new AllAssignmentIterator(getVars());
       while (allAssignmentIter.hasNext() && pq.size() < numAssignments) {
@@ -229,6 +229,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
         }
       }
     }
+    */
 
     List<Assignment> mostLikely = new ArrayList<Assignment>();
     while (pq.size() > 0) {
@@ -307,6 +308,11 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
     public void setProbability(double probability) {
       this.probability = probability;
+    }
+    
+    @Override
+    public String toString() {
+      return assignment + "=" + probability;
     }
   }
 }

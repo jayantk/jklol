@@ -5,10 +5,12 @@ import java.util.Iterator;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -49,6 +51,23 @@ public class TableFactor extends DiscreteFactor {
   }
 
   /**
+   * Gets a {@code TableFactor} over {@code vars} which assigns unit weight to
+   * {@code assignment} and 0 to all other assignments. Requires
+   * {@code assignment} to contain all of {@code vars}. The weights in the
+   * returned factor are represented in logspace.
+   * 
+   * @param vars
+   * @param assignment
+   * @return
+   */
+  public static TableFactor logPointDistribution(VariableNumMap vars, Assignment assignment) {
+     DenseTensorBuilder builder = new DenseTensorBuilder(Ints.toArray(vars.getVariableNums()), 
+         vars.getVariableSizes(), Double.NEGATIVE_INFINITY);
+     builder.put(vars.assignmentToIntArray(assignment), 0.0);
+     return new TableFactor(vars, new LogSpaceTensorAdapter(builder.build()));
+  }
+
+  /**
    * Gets a {@code TableFactor} over {@code vars} which assigns 0 weight to all
    * assignments.
    * 
@@ -69,11 +88,7 @@ public class TableFactor extends DiscreteFactor {
    */
   public static TableFactor unity(VariableNumMap vars) {
     TableFactorBuilder builder = new TableFactorBuilder(vars);
-    Iterator<Assignment> iter = new AllAssignmentIterator(vars);
-    while (iter.hasNext()) {
-      builder.setWeight(iter.next(), 1.0);
-    }
-    return builder.build();
+    return builder.buildInLogSpace();
   }
 
   public static FactorFactory getFactory() {
@@ -121,6 +136,12 @@ public class TableFactor extends DiscreteFactor {
   public double getUnnormalizedProbability(Assignment a) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
     return weights.getByDimKey(getVars().assignmentToIntArray(a));
+  }
+
+  @Override
+  public double getUnnormalizedLogProbability(Assignment a) {
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
+    return weights.getLogByDimKey(getVars().assignmentToIntArray(a));
   }
 
   @Override

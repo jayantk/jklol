@@ -58,6 +58,26 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     return builder.buildNoCopy();
   }
   
+  /**
+   * Gets a dense copy of {@code tensor}.
+   * @param tensor
+   * @return
+   */
+  public static DenseTensor copyOf(Tensor tensor) {
+    if (tensor instanceof DenseTensor) {
+      // Tensors are immutable, so there's no reason to copy the input.
+      return (DenseTensor) tensor;
+    } else {
+      DenseTensorBuilder builder = new DenseTensorBuilder(tensor.getDimensionNumbers(), 
+          tensor.getDimensionSizes());
+      double[] otherValues = tensor.getValues();
+      for (int i = 0; i < otherValues.length; i++) {
+        builder.putByKeyNum(tensor.indexToKeyNum(i), otherValues[i]);
+      }
+      return builder.buildNoCopy();
+    }
+  }
+  
   @Override
   public int getNearestIndex(long keyNum) {
     // Dense tensors contain values for all keyNums.
@@ -108,7 +128,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   };
 
   /**
-   * Performs elementwise operations, like products, sums and maxes.
+   * Performs elementwise operations, like products, sums and maxes. 
    * 
    * @param other
    * @param op
@@ -180,6 +200,26 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     return outputBuilder.buildNoCopy();
   }
+  
+  @Override
+  public DenseTensor elementwiseLog() {
+    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    for (int i = 0; i < values.length; i++) {
+      outputBuilder.values[i] = Math.log(values[i]);
+    }
+    return outputBuilder.buildNoCopy();
+  }
+  
+  @Override
+  public DenseTensor elementwiseExp() {
+    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    for (int i = 0; i < values.length; i++) {
+      outputBuilder.values[i] = Math.exp(values[i]);
+    }
+    return outputBuilder.buildNoCopy();
+  }
 
   @Override
   public DenseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
@@ -248,7 +288,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   }
 
   @Override
-  public Tensor relabelDimensions(int[] newDimensions) {
+  public DenseTensor relabelDimensions(int[] newDimensions) {
     Preconditions.checkArgument(newDimensions.length == getDimensionNumbers().length);
     if (Ordering.natural().isOrdered(Ints.asList(newDimensions))) {
       // If the new dimension labels are in sorted order, then we don't have to
@@ -289,7 +329,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   }
 
   @Override
-  public Tensor relabelDimensions(Map<Integer, Integer> relabeling) {
+  public DenseTensor relabelDimensions(Map<Integer, Integer> relabeling) {
     int[] newDimensions = new int[getDimensionNumbers().length];
     for (int i = 0; i < getDimensionNumbers().length; i++) {
       newDimensions[i] = relabeling.get(getDimensionNumbers()[i]);

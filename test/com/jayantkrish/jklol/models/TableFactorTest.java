@@ -253,8 +253,7 @@ public class TableFactorTest extends TestCase {
 				g.getUnnormalizedProbability(likely.get(1)));
 		
 		likely = g.getMostLikelyAssignments(5);
-		assertEquals(5, likely.size());
-		assertEquals(0.0, g.getUnnormalizedProbability(likely.get(4)));
+		assertEquals(4, likely.size());
 	}
 	
 	public void testRelabelVariables() {

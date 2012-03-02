@@ -18,16 +18,29 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     // Initialize the values of this builder to 0.
     Arrays.fill(values, 0.0);
   }
-  
+
+  /**
+   * Creates a {@code DenseTensorBuilder} with all values initialized to
+   * {@code initialValue}. 
+   * 
+   * @param dimensions
+   * @param sizes
+   */
+  public DenseTensorBuilder(int[] dimensions, int[] sizes, double initialValue) {
+    super(dimensions, sizes);
+    Arrays.fill(values, initialValue);
+  }
+
   /**
    * Copy constructor
+   * 
    * @param builder
    */
   public DenseTensorBuilder(DenseTensorBuilder builder) {
-    super(builder.getDimensionNumbers(), builder.getDimensionSizes(), 
+    super(builder.getDimensionNumbers(), builder.getDimensionSizes(),
         Arrays.copyOf(builder.values, builder.values.length));
   }
-  
+
   /**
    * Gets a {@code TensorFactory} which creates {@code DenseTensorBuilder}s.
    * 
@@ -45,6 +58,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   @Override
   public void put(int[] key, double value) {
     values[dimKeyToIndex(key)] = value;
+  }
+  
+  @Override
+  public void putByKeyNum(long keyNum, double value) {
+    values[(int) keyNum] = value;
   }
 
   @Override
@@ -77,7 +95,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       Iterator<KeyValue> otherKeyValueIterator = other.keyValueIterator();
       while (otherKeyValueIterator.hasNext()) {
         KeyValue otherKeyValue = otherKeyValueIterator.next();
-        values[dimKeyToIndex(otherKeyValue.getKey())] += otherKeyValue.getValue() * multiplier; 
+        values[dimKeyToIndex(otherKeyValue.getKey())] += otherKeyValue.getValue() * multiplier;
       }
     }
   }
@@ -127,7 +145,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   public DenseTensor buildNoCopy() {
     return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), values);
   }
-      
+
   @Override
   public DenseTensorBuilder getCopy() {
     return new DenseTensorBuilder(this);

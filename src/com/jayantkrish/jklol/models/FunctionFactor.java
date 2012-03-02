@@ -78,6 +78,11 @@ public class FunctionFactor extends AbstractFactor {
       return 0.0;
     }
   }
+  
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    return Math.log(getUnnormalizedProbability(assignment));    
+  }
 
   @Override 
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {
@@ -311,6 +316,11 @@ public class FunctionFactor extends AbstractFactor {
     @Override
     public double getUnnormalizedProbability(Assignment assignment) {
       return getDomainProbability(assignment.getValue(getVars().getOnlyVariableNum()));
+    }
+    
+    @Override
+    public double getUnnormalizedLogProbability(Assignment assignment) {
+      return Math.log(getUnnormalizedProbability(assignment));
     }
 
     @Override

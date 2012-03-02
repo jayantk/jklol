@@ -628,18 +628,18 @@ public class CfgParser {
             // nonterminal.
             long partialKeyNum = leftRoot * dimensionOffsets[0] + rightRoot * dimensionOffsets[1];
             int startIndex = binaryDistributionWeights.getNearestIndex(partialKeyNum);
-            long startKeyNum =  binaryDistributionWeights.indexToKeyNum(startIndex);
             long endKeyNum = partialKeyNum + dimensionOffsets[1];
+            long startKeyNum;
+
             
-            while (startKeyNum < endKeyNum && startIndex < values.length) {
+            while (startIndex < values.length) {
+              startKeyNum = binaryDistributionWeights.indexToKeyNum(startIndex);
+              if (startKeyNum >= endKeyNum) { break; }
               double treeProb = leftParseTreeProbs[leftIndex] * rightParseTreeProbs[rightIndex] * values[startIndex];
               long treeKeyNum = rightIndexPartialKey + startKeyNum - partialKeyNum;
               chart.addParseTreeKeyForSpan(spanStart, spanEnd, treeKeyNum, treeProb);
 
               startIndex++;
-              if (startIndex < values.length) {
-                startKeyNum = binaryDistributionWeights.indexToKeyNum(startIndex);
-              }
             }
           }
         }

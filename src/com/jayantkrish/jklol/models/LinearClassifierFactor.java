@@ -4,6 +4,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.DenseTensor;
+import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -50,13 +52,17 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
-
+    return Math.exp(getUnnormalizedLogProbability(assignment));
+  }
+  
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
     Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getVariableNums().get(0));
     int outputIndex = outputVariableType.getValueIndex(assignment.getValue(outputVar.getVariableNums().get(0)));
 
     Tensor multiplied = logWeights.elementwiseProduct(inputFeatureVector.relabelDimensions(inputVarNums));
     Tensor logProbs = multiplied.sumOutDimensions(Sets.newHashSet(Ints.asList(inputVarNums)));
-    return Math.exp(logProbs.getByDimKey(outputIndex)); 
+    return logProbs.getByDimKey(outputIndex);
   }
 
   @Override
@@ -83,8 +89,12 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     // Get the log probabilities of each outputVar value.
     Tensor multiplied = logWeights.elementwiseProduct(inputFeatureVector.relabelDimensions(inputVarNums));
     Tensor logProbs = multiplied.sumOutDimensions(Sets.newHashSet(Ints.asList(inputVarNums)));
-
+    TableFactor outputFactor = new TableFactor(outputVar, 
+        new LogSpaceTensorAdapter(DenseTensor.copyOf(logProbs)));
+    return outputFactor.conditional(assignment);
+    
     // Construct a table factor with the unnormalized probabilities of each outputVar value.
+    /*
     TableFactorBuilder outputBuilder = new TableFactorBuilder(outputVar);
     for (int i = 0; i < outputVariableType.numValues(); i++) {
       outputBuilder.setWeight(Math.exp(logProbs.getByDimKey(new int[] {i})), 
@@ -92,5 +102,6 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     }
     TableFactor output = outputBuilder.build();
     return output.conditional(assignment);
+    */
   }
 }

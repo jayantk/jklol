@@ -96,12 +96,8 @@ public class LossFunctions {
       falsePositives = 0;
       falseNegatives = 0;
     }
-
-    @Override
-    public void accumulateLoss(Predictor<I, Boolean> predictor, I input, Boolean actual) {
-      Preconditions.checkNotNull(predictor);
-
-      Boolean prediction = predictor.getBestPrediction(input);
+    
+    public void accumulatePrediction(Boolean prediction, Boolean actual) {
       if (actual && prediction) {
         truePositives++;
       } else if (actual && !prediction) {
@@ -110,7 +106,13 @@ public class LossFunctions {
         falsePositives++;
       } else {
         trueNegatives++;
-      }
+      }      
+    }
+
+    @Override
+    public void accumulateLoss(Predictor<I, Boolean> predictor, I input, Boolean actual) {
+      Preconditions.checkNotNull(predictor);
+      accumulatePrediction(predictor.getBestPrediction(input), actual);
     }
 
     public double getPrecision() {
@@ -124,10 +126,22 @@ public class LossFunctions {
     public double getAccuracy() {
       return ((double) truePositives + trueNegatives) / (truePositives + trueNegatives + falsePositives + falseNegatives);
     }
+    
+    public int getNumInstances() {
+      return truePositives + trueNegatives + falsePositives + falseNegatives;
+    }
+    
+    @Override
+    public String toString() {
+      int totalPositives = (truePositives + falsePositives);
+      int totalGoldPositives = (truePositives + falseNegatives);
+      return "precision: " + getPrecision() + " (" + truePositives + "/" + totalPositives + 
+          "), recall: " + getRecall() + " ("+ truePositives + "/" + totalGoldPositives + ")";
+    }
   }
 
   /**
-   * Evaluates the loglikelihood of a predictor's predictions, using the natural
+   * evaluates the loglikelihood of a predictor's predictions, using the natural
    * log.
    * 
    * <p>

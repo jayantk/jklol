@@ -50,7 +50,7 @@ public class IndicatorFeatureFunction implements FeatureFunction {
 	  Collection<Integer> inputAssignmentVars = assignment.getVariableNums();
 	  for (Assignment a : assignments) {
 	    if (a.intersection(inputAssignmentVars).equals(assignment)) {
-	      expectedValue += getValue(a) * factor.getUnnormalizedProbability(a.removeAll(inputAssignmentVars));
+	      expectedValue += factor.getUnnormalizedProbability(a.removeAll(inputAssignmentVars));
 	    }
 	  }
 	  return expectedValue;

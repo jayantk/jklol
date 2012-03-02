@@ -283,8 +283,7 @@ public class FactorGraph {
     Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()));
     double logProbability = 0.0;
     for (Factor factor : factors) {
-      double logProb = Math.log(factor.getUnnormalizedProbability(assignment));
-      logProbability += logProb;
+      logProbability += factor.getUnnormalizedLogProbability(assignment);
     }
     return logProbability;
   }

@@ -153,6 +153,24 @@ public abstract class TensorTest extends TestCase {
     fail("Expected IllegalArgumentException.");
   }
   
+  public void testGetLog() {
+    assertEquals(0.0, table.getLogByDimKey(a1));
+    assertEquals(Math.log(2.0), table.getLogByDimKey(a2));
+    assertEquals(Math.log(2.0), table.getLogByDimKey(Arrays.copyOf(a2, a2.length)));
+
+    assertEquals(Double.NEGATIVE_INFINITY, table.getLogByDimKey(new int[] { 0, 0, 1 }));
+    assertEquals(Double.NEGATIVE_INFINITY, table.getLogByDimKey(new int[] { 0, 1, 0 }));
+    assertEquals(Double.NEGATIVE_INFINITY, table.getLogByDimKey(new int[] { 1, 0, 0 }));
+
+    assertEquals(Math.log(5.0), emptyInputTable.getLogByDimKey(new int[] {}));
+    try {
+      table.getLogByDimKey(new int[] { 0, 0 });
+    } catch (IllegalArgumentException e) {
+      return;
+    }
+    fail("Expected IllegalArgumentException.");
+  }
+  
   public void testKeyValueIterator() {
     Iterator<KeyValue> keyValueIterator = table.keyValueIterator();
     Set<int[]> intSet = Sets.newTreeSet(Ints.lexicographicalComparator());
@@ -317,6 +335,15 @@ public abstract class TensorTest extends TestCase {
     assertEquals(1.0, actual.getByDimKey(a1));
     assertEquals(1.0 / 2.0, actual.getByDimKey(a2));
     assertEquals(0.0, actual.getByDimKey(new int[] {5, 1, 0}));
+    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
+  }
+    
+  public void testElementwiseLog() {
+    Tensor actual = table.elementwiseLog();
+    
+    assertEquals(0.0, actual.getByDimKey(a1));
+    assertEquals(Math.log(2.0), actual.getByDimKey(a2));
+    assertEquals(Double.NEGATIVE_INFINITY, actual.getByDimKey(new int[] {5, 1, 0}));
     assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
   }
   

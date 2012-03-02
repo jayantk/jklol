@@ -11,10 +11,10 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -87,11 +87,13 @@ public class StochasticGradientTrainerTest extends TestCase {
 		  DiscreteLogLinearFactor factor = (DiscreteLogLinearFactor) logLinearModel.getParametricFactors().get(i);
 		  SufficientStatistics stats = parameterList.get(i);
 		  
-		  List<FeatureFunction> features = factor.getFeatures();
+		  TableFactor featureValues = factor.getFeatureValues();
+		  VariableNumMap featureVariable = featureValues.getVars().removeAll(factor.getVars());
 		  TensorBase weights = ((TensorSufficientStatistics) stats).get(0);
-		  for (int j = 0; j < features.size(); j++) {
-		    FeatureFunction feat = features.get(j);
-		    Assignment a = feat.getNonzeroAssignments().next();
+		  for (int j = 0; j < weights.size(); j++) {
+		    
+		    Assignment a = featureValues.conditional(featureVariable.intArrayToAssignment(new int[] {j}))
+		        .outcomeIterator().next().getAssignment();
 		    if (a.getVariableNums().size() == 3) {
 		      assertTrue(clique1PositiveAssignments.contains(a) ||
 		          weights.getByDimKey(j) < 0.0);

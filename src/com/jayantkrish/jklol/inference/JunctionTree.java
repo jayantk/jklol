@@ -104,12 +104,6 @@ public class JunctionTree implements MarginalCalculator {
    * Compute the message that gets passed from startFactor to destFactor.
    */
   private void passMessage(CliqueTree cliqueTree, int startFactor, int destFactor, boolean useSumProduct) {
-    System.out.println(startFactor + ":" +
-        cliqueTree.getFactor(startFactor).getVars() + " (" +
-        cliqueTree.getFactor(startFactor).size() + ") --> "
-        + destFactor + ":" + cliqueTree.getFactor(destFactor).getVars() + " (" +
-        cliqueTree.getFactor(destFactor).size() + ")");
-
     VariableNumMap sharedVars = cliqueTree.getFactor(startFactor).getVars().intersection(cliqueTree.getFactor(destFactor).getVars());
 
     // Find the factors which have yet to be merged into the marginal

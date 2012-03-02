@@ -126,10 +126,10 @@ public class VariableNumMap {
   public List<Variable> getVariables() {
     return new ArrayList<Variable>(varMap.values());
   }
-  
+
   /**
-   * Gets the {@code Variable} of the sole variable contained in {@code this}. Requires
-   * {@code this.size() == 1}.
+   * Gets the {@code Variable} of the sole variable contained in {@code this}.
+   * Requires {@code this.size() == 1}.
    * 
    * @return
    */
@@ -173,6 +173,22 @@ public class VariableNumMap {
       }
     }
     return discreteVars;
+  }
+
+  /**
+   * Gets an array containing the number of possible values for each variable in
+   * this. Requires all {@code Variable}s in this to be {@code DiscreteVariable}
+   * s. The returned size array is sorted by dimension number.
+   * 
+   * @return
+   */
+  public int[] getVariableSizes() {
+    int[] sizes = new int[size()];
+    List<DiscreteVariable> varTypes = getDiscreteVariables();
+    for (int i = 0; i < varTypes.size(); i++) {
+      sizes[i] = varTypes.get(i).numValues();
+    }
+    return sizes;
   }
 
   /**
@@ -483,22 +499,22 @@ public class VariableNumMap {
     newNames.put(num, name);
     return new VariableNumMap(newVarMap, newNames);
   }
-  
+
   /**
    * Gets the {@code numVariables} in this with the lowest variable nums.
-   *  
+   * 
    * @param numVariables
    * @return
    */
   public VariableNumMap getFirstVariables(int numVariables) {
     SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
     BiMap<Integer, String> newNames = HashBiMap.create();
-    
+
     for (Integer key : varMap.keySet()) {
       if (newVarMap.size() >= numVariables) {
         break;
       }
-      
+
       newVarMap.put(key, varMap.get(key));
       newNames.put(key, names.get(key));
     }
@@ -529,7 +545,7 @@ public class VariableNumMap {
    * variable returned by getVariableNums())
    */
   public Assignment outcomeToAssignment(List<? extends Object> outcome) {
-    Preconditions.checkArgument(outcome.size() == varMap.size(), "outcome "+ outcome 
+    Preconditions.checkArgument(outcome.size() == varMap.size(), "outcome " + outcome
         + " cannot be assigned to " + this.toString() + "(wrong number of values)");
 
     Map<Integer, Object> varValueMap = new HashMap<Integer, Object>();

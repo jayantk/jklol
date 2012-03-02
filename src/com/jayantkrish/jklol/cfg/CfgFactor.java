@@ -121,6 +121,11 @@ public class CfgFactor extends AbstractFactor {
     }
     return probability;
   }
+  
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    return Math.log(getUnnormalizedProbability(assignment));
+  }
 
   // ///////////////////////////////////////////////////////////
   // Inference stuff

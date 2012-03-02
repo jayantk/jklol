@@ -59,6 +59,11 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
     ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));
     return parser.getProbability(terminals, tree);
   }
+  
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    return Math.log(getUnnormalizedProbability(assignment));
+  }
 
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {

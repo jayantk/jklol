@@ -62,7 +62,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
   public void setUp() {
     // Define the CFG grammar using a special set of variables.
     Variable parseNodeVariable = new DiscreteVariable("parseNode", Arrays.asList(NONTERMINALS));
-    Variable emptyVariable = new DiscreteVariable("empty", Arrays.asList(""));
+    Variable emptyVariable = new DiscreteVariable("empty", Arrays.asList("RULE"));
     left = new VariableNumMap(Arrays.asList(0), Arrays.asList("left"), Arrays.asList(parseNodeVariable));
     right = new VariableNumMap(Arrays.asList(1), Arrays.asList("right"), Arrays.asList(parseNodeVariable));
     parent = new VariableNumMap(Arrays.asList(3), Arrays.asList("parent"), Arrays.asList(parseNodeVariable));
@@ -115,11 +115,11 @@ public class BeamSearchCfgFactorTest extends TestCase {
     String curPos = elements[0];
     if (elements.length == 2) {
       String terminalNode = elements[1];
-      return new ParseTree(curPos, "", Arrays.<Object>asList(terminalNode), 1.0);
+      return new ParseTree(curPos, "RULE", Arrays.<Object>asList(terminalNode), 1.0);
     } else {
       ParseTree leftTree = parseTreeFromString(elements[1]);
       ParseTree rightTree = parseTreeFromString(elements[2]);
-      return new ParseTree(curPos, "", leftTree, rightTree, 1.0);
+      return new ParseTree(curPos, "RULE", leftTree, rightTree, 1.0);
     }
   }
   

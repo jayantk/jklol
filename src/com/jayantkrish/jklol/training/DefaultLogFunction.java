@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.training;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -13,17 +15,29 @@ import com.jayantkrish.jklol.util.Assignment;
 public class DefaultLogFunction extends AbstractLogFunction {
   
   private final int logInterval;
+  
+  // Print asynchronously for speed.
+  private final ExecutorService printExecutor;
 
-  public DefaultLogFunction() { super(); logInterval = 1; }
+  public DefaultLogFunction() {
+    super();
+    this.logInterval = 1; 
+    this.printExecutor = Executors.newSingleThreadExecutor();
+  }
   
   public DefaultLogFunction(int logInterval) { 
     super(); 
-    this.logInterval = logInterval; 
+    this.logInterval = logInterval;
+    this.printExecutor = Executors.newSingleThreadExecutor();
+  }
+  
+  private void print(String toPrint) {
+    printExecutor.submit(new PrintTask(toPrint));
   }
   
 	@Override
 	public void log(Assignment example, FactorGraph graph) {
-	  System.out.println("?.?: example: " + graph.assignmentToObject(example));
+	  print("?.?: example: " + graph.assignmentToObject(example));
 	}
 
 	@Override
@@ -31,16 +45,16 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	  if (iteration % logInterval == 0) {
 	    String prob = "";
 	    if (example.containsAll(graph.getVariables().getVariableNums())) {
-	      prob = Double.toString(graph.getUnnormalizedProbability(example));
+	      prob = Double.toString(graph.getUnnormalizedLogProbability(example));
 	    } 
-	    System.out.println(iteration + "." + exampleNum + " " + prob + ": example: " + graph.assignmentToObject(example));
+	    print(iteration + "." + exampleNum + " " + prob + ": example: " + graph.assignmentToObject(example));
 	  }
 	}
 
 	@Override
 	public void notifyIterationStart(int iteration) {
 	  if (iteration % logInterval == 0) {
-	    System.out.println("*** ITERATION " + iteration + " ***");
+	    print("*** ITERATION " + iteration + " ***");
 	  }
 		startTimer("iteration");
 	}
@@ -49,7 +63,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	public void notifyIterationEnd(int iteration) {
 	  long elapsedTime = stopTimer("iteration");
 	  if (iteration % logInterval == 0) {
-	    System.out.println(iteration + " done. Elapsed: " + elapsedTime + " ms");
+	    print(iteration + " done. Elapsed: " + elapsedTime + " ms");
 	    printTimeStatistics();
 	  }
 	}
@@ -57,12 +71,12 @@ public class DefaultLogFunction extends AbstractLogFunction {
   @Override
   public void logStatistic(int iteration, String statisticName, String value) {
     if (iteration % logInterval == 0) {
-      System.out.println(iteration + ": " + statisticName + "=" + value);
+      print(iteration + ": " + statisticName + "=" + value);
     }
   }
   
   public void printTimeStatistics() {
-    System.out.println("Elapsed time statistics:");
+    print("Elapsed time statistics:");
 
     List<String> timers = Lists.newArrayList(getAllTimers());
     Collections.sort(timers);
@@ -70,7 +84,21 @@ public class DefaultLogFunction extends AbstractLogFunction {
       long total = getTimerElapsedTime(timer);
       long invocations = getTimerInvocations(timer);
       double average = ((double) total) / invocations;
-      System.out.println(timer + ": " +  total + " ms (" + average + " * " + invocations + ")");
+      print(timer + ": " +  total + " ms (" + average + " * " + invocations + ")");
+    }
+  }
+  
+  private static class PrintTask implements Runnable {
+    
+    private final String toPrint;
+    
+    public PrintTask(String toPrint) { 
+      this.toPrint = toPrint;
+    }
+
+    @Override
+    public void run() {
+      System.out.println(toPrint);      
     }
   }
 }

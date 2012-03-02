@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.tensor;
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 
 /**
  * Common implementations of basic {@link TensorBase} methods.
@@ -21,6 +22,11 @@ public abstract class AbstractTensorBase implements TensorBase {
   
   public AbstractTensorBase(int[] dimensions, int[] sizes) {
     Preconditions.checkArgument(dimensions.length == sizes.length);
+    for (int i = 0; i < sizes.length; i++) {
+      Preconditions.checkArgument(sizes[i] > 0, 
+          "Cannot create Tensors with zero-size dimensions. Requested dimensions: %s and sizes: %s",
+          Ints.asList(dimensions), Ints.asList(sizes));
+    }
     this.dimensions = Arrays.copyOf(dimensions, dimensions.length);
     this.sizes = Arrays.copyOf(sizes, sizes.length);
     
@@ -104,7 +110,8 @@ public abstract class AbstractTensorBase implements TensorBase {
     int[] sizes = getDimensionSizes();
     long keyNum = 0;
     for (int i = 0; i < keyPrefix.length; i++) {
-      Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i]);
+      Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i], 
+          "Illegal key prefix.");
       keyNum += ((long) keyPrefix[i]) * indexOffsets[i];
     }
     return keyNum;
@@ -116,10 +123,20 @@ public abstract class AbstractTensorBase implements TensorBase {
   }
   
   @Override
-  public double get(long keyInt) {
-    return getByIndex(keyNumToIndex(keyInt));
-  }  
+  public double get(long keyNum) {
+    return getByIndex(keyNumToIndex(keyNum));
+  }
   
+  @Override
+  public double getLogByDimKey(int... key) {
+    return getLogByIndex(keyNumToIndex(dimKeyToKeyNum(key)));
+  }
+  
+  @Override
+  public double getLog(long keyNum) {
+    return getLogByIndex(keyNumToIndex(keyNum));
+  }
+   
   protected int getDimensionIndex(int dimensionNum) {
     for (int i = 0; i < dimensions.length; i++) {
       if (dimensions[i] == dimensionNum) {

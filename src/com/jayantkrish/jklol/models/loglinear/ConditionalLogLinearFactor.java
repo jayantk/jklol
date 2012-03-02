@@ -110,7 +110,9 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
   
   private TensorBuilder getWeightTensorFromStatistics(SufficientStatistics stats) {
     TensorBuilder weightTensor = ((TensorSufficientStatistics) stats).get(0);
-    Preconditions.checkArgument(Arrays.equals(dimensionNums, weightTensor.getDimensionNumbers()));
+    Preconditions.checkArgument(Arrays.equals(dimensionNums, weightTensor.getDimensionNumbers()),
+        "Wrong parameter dimensions. Expected %s, got %s", Arrays.toString(dimensionNums), 
+        Arrays.toString(weightTensor.getDimensionNumbers()));
     Preconditions.checkArgument(Arrays.equals(dimensionSizes, weightTensor.getDimensionSizes()));
     return weightTensor;
   }

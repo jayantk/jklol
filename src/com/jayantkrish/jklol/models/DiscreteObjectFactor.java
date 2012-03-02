@@ -72,6 +72,10 @@ public class DiscreteObjectFactor extends AbstractFactor {
     }
     return 0.0;
   }
+  
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    return Math.log(getUnnormalizedProbability(assignment));
+  }
 
   @Override
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {

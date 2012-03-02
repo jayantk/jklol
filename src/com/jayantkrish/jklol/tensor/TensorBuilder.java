@@ -17,6 +17,8 @@ public interface TensorBuilder extends TensorBase {
    * @param value
    */
   void put(int[] key, double value);
+  
+  void putByKeyNum(long keyNum, double value);
 
   void increment(TensorBase other);
 

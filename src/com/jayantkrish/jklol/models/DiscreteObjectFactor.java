@@ -12,6 +12,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.CountAccumulator;
@@ -218,6 +219,11 @@ public class DiscreteObjectFactor extends AbstractFactor {
     }
     Collections.reverse(mostLikely);
     return mostLikely;
+  }
+  
+  @Override
+  public FactorProto toProto() {
+    throw new UnsupportedOperationException();
   }
   
   @Override

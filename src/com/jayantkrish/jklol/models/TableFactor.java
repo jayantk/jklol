@@ -6,10 +6,13 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
+import com.jayantkrish.jklol.models.FactorGraphProtos.TableFactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.Tensors;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -32,6 +35,7 @@ public class TableFactor extends DiscreteFactor {
   public TableFactor(VariableNumMap vars, Tensor weights) {
     super(vars);
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
+    Preconditions.checkArgument(vars.size() == weights.getDimensionNumbers().length);
     this.weights = weights;
   }
 
@@ -61,10 +65,10 @@ public class TableFactor extends DiscreteFactor {
    * @return
    */
   public static TableFactor logPointDistribution(VariableNumMap vars, Assignment assignment) {
-     DenseTensorBuilder builder = new DenseTensorBuilder(Ints.toArray(vars.getVariableNums()), 
-         vars.getVariableSizes(), Double.NEGATIVE_INFINITY);
-     builder.put(vars.assignmentToIntArray(assignment), 0.0);
-     return new TableFactor(vars, new LogSpaceTensorAdapter(builder.build()));
+    DenseTensorBuilder builder = new DenseTensorBuilder(Ints.toArray(vars.getVariableNums()),
+        vars.getVariableSizes(), Double.NEGATIVE_INFINITY);
+    builder.put(vars.assignmentToIntArray(assignment), 0.0);
+    return new TableFactor(vars, new LogSpaceTensorAdapter(builder.build()));
   }
 
   /**
@@ -98,6 +102,20 @@ public class TableFactor extends DiscreteFactor {
         return TableFactor.pointDistribution(vars, assignment);
       }
     };
+  }
+
+  /**
+   * Construct a {@code TableFactor} over {@code variables}, deserializing any
+   * other values from {@code proto}. In most cases, this method should be used
+   * indirectly via {@link FactorGraph#fromProto()}.
+   * 
+   * @param variables
+   * @param proto
+   * @return
+   */
+  public static TableFactor fromProto(VariableNumMap variables, TableFactorProto proto) {
+    Preconditions.checkArgument(proto.hasWeights());
+    return new TableFactor(variables, Tensors.fromProto(proto.getWeights()));
   }
 
   // //////////////////////////////////////////////////////////////////////////////
@@ -158,6 +176,17 @@ public class TableFactor extends DiscreteFactor {
   public TableFactor relabelVariables(VariableRelabeling relabeling) {
     return new TableFactor(relabeling.apply(getVars()),
         weights.relabelDimensions(relabeling.getVariableIndexReplacementMap()));
+  }
+  
+  @Override
+  public FactorProto toProto() {
+    FactorProto.Builder builder = getProtoBuilder();
+    builder.setType(FactorProto.FactorType.TABLE);
+    
+    TableFactorProto.Builder tableBuilder = builder.getTableFactorBuilder();
+    tableBuilder.setWeights(weights.toProto());
+    
+    return builder.build();
   }
 
   @Override

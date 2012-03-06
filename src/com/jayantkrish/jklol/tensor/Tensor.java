@@ -3,6 +3,8 @@ package com.jayantkrish.jklol.tensor;
 import java.util.Collection;
 import java.util.Map;
 
+import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
+
 /**
  * Tensors are immutable. All operations on {@code Tensor}s return new objects,
  * leaving the originals unchanged.
@@ -21,10 +23,10 @@ public interface Tensor extends TensorBase {
    * @param keys
    * @return
    */
-  Tensor slice(int[] dimensionNumbers, int[] keys); 
+  Tensor slice(int[] dimensionNumbers, int[] keys);
 
   Tensor elementwiseProduct(Tensor other);
-  
+
   Tensor elementwiseAddition(Tensor other);
 
   Tensor elementwiseMaximum(Tensor other);
@@ -63,4 +65,13 @@ public interface Tensor extends TensorBase {
    * @return
    */
   double[] getValues();
+
+  /**
+   * Serializes {@code this} tensor into a protocol buffer. The returned
+   * protocol buffer can be deserialized (to reconstruct a copy of this) using
+   * {@link Tensors#fromProto()}.
+   * 
+   * @return
+   */
+  TensorProto toProto();
 }

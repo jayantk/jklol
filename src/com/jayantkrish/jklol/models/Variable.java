@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.models;
 
+import com.jayantkrish.jklol.models.FactorGraphProtos.VariableProto;
+
 /**
  * A Variable represents a random variable which can take on some set of Object values.
  * Typing in Java doesn't handle dynamically-generated lists of types particularly well,
@@ -21,4 +23,11 @@ public interface Variable {
 	 * Returns true if value can be legitimately assigned to this variable.
 	 */
 	public boolean canTakeValue(Object value);
+	
+	/**
+	 * Serializes {@code this} into a protocol buffer.
+	 *  
+	 * @return
+	 */
+	public VariableProto toProto();
 }

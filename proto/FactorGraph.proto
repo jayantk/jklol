@@ -1,0 +1,99 @@
+package jklol.models;
+
+import "Tensor.proto";
+
+option java_package = "com.jayantkrish.jklol.models";
+option java_outer_classname = "FactorGraphProtos";
+
+message VariableProto {
+  enum VariableType {
+     UNKNOWN = 0;
+     DISCRETE = 1;
+     DISCRETE_OBJECT = 2;
+  }
+
+  // Mandatory fields for any type of variable.
+  optional VariableType type = 1 [default = UNKNOWN];
+
+  // Fields conditionally filled out based on the value
+  // of type.
+  optional DiscreteVariableProto discrete_variable = 2;
+  optional DiscreteObjectVariableProto discrete_object_variable = 3;
+}
+
+message DiscreteVariableProto {
+  // Name indicating the type of the variable.
+  optional string name = 1;
+
+  // List of values, stored as objects serialized using the
+  // Java serialization API.
+  repeated bytes serialized_value = 2;
+}
+
+message DiscreteObjectVariableProto {
+  // This variable takes as a value any object of the named Java class
+  optional string java_class_name = 1;
+}
+
+message VariableNumMapProto {
+  repeated int32 num = 1;
+  repeated VariableProto variable = 2;
+  repeated string name = 3;
+}
+
+message FactorProto {
+  enum FactorType {
+    UNKNOWN = 0;
+    TABLE = 1;
+    LINEAR_CLASSIFIER = 2;
+    BEAM_SEARCH_CFG = 3;
+  }
+
+  // Mandatory definition of the variable numbers in this factor.
+  repeated int32 variable_num = 1;
+  optional FactorType type = 2;
+
+  // Conditionally required, depending on 
+  optional TableFactorProto table_factor = 3;
+  optional LinearClassifierProto linear_classifier_factor = 4;
+  optional BeamSearchCfgProto beam_search_cfg_factor = 5;
+}
+
+message TableFactorProto {
+  // Weights of the table factor. Mandatory.
+  optional jklol.tensor.TensorProto weights = 1;
+}
+
+message LinearClassifierProto {
+  // The variable numbers which are the input and output of
+  // this factor. The values must agree with the containing
+  // FactorProto's variable_num field.
+  optional int32 input_variable_num = 1;
+  optional int32 output_variable_num = 2;
+
+  // Weights of the linear classifier. Mandatory.
+  optional jklol.tensor.TensorProto weights = 3;
+}
+
+message BeamSearchCfgProto {
+
+  optional int32 tree_variable_num = 1;
+  optional int32 terminal_variable_num = 2;
+
+  optional VariableNumMapProto parser_variables = 3;
+}
+
+message CfgParserProto {
+  optional FactorProto binary_distribution = 4;
+  optional FactorProto terminal_distribution = 5;
+}
+
+message FactorGraphProto {
+  // The variables contained in this FactorGraph (and their numbers).
+  optional VariableNumMapProto variables = 1;
+
+  // optional VariableNumMapProto conditioned_variables = 2;
+  // optional AssignmentProto conditioned_values = 3;
+
+  repeated FactorProto factor = 4;
+}

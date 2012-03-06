@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -103,6 +104,16 @@ public abstract class AbstractFactor implements Factor {
       current = current.product(other);
     }
     return current;
+  }
+  
+  /**
+   * Initializes a protocol buffer builder for {@code this} with the
+   * variables it contains. 
+   */
+  protected FactorProto.Builder getProtoBuilder() {
+    FactorProto.Builder builder = FactorProto.newBuilder();
+    builder.addAllVariableNum(getVars().getVariableNums());
+    return builder;
   }
 
   /**

@@ -1,0 +1,49 @@
+package jklol.tensor;
+
+option java_package = "com.jayantkrish.jklol.tensor";
+option java_outer_classname = "TensorProtos";
+
+// The dimension numbers in a tensor and their sizes.
+// These fields determine the overall shape of the tensor.
+message TensorDimensionProto {
+  repeated int32 dimension = 1;
+  repeated int32 size = 2;
+}
+
+message DenseTensorProto {
+  // Both of these fields are mandatory.
+  optional TensorDimensionProto dimensions = 1;
+  repeated double value = 2;
+}
+
+message SparseTensorProto {
+  // All of these fields are mandatory.
+  optional TensorDimensionProto dimensions = 1;
+  repeated int64 key_num = 2;
+  repeated double value = 3;
+}
+
+message LogSpaceAdapterProto {
+  // All fields are mandatory. logWeights contains
+  // the log weights of this tensor.
+  optional DenseTensorProto log_weights = 1;
+}
+
+message TensorProto {
+  enum TensorType {
+    UNKNOWN = 0;
+    SPARSE = 1;
+    DENSE = 2;
+    LOG_ADAPTER = 3;
+  }
+  
+  // The type of the tensor is mandatory field. Depending on its value,
+  // the corresponding tensor field is mandatory.
+  optional TensorType type = 1 [default = UNKNOWN];
+
+  // Exactly one of these protos will exist, depending on
+  // the value of the type enum.
+  optional DenseTensorProto dense_tensor = 2;
+  optional SparseTensorProto sparse_tensor = 3;
+  optional LogSpaceAdapterProto log_tensor = 4;
+}

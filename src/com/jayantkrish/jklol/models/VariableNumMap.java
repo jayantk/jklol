@@ -18,6 +18,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.FactorGraphProtos.VariableNumMapProto;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
 
@@ -87,6 +88,29 @@ public class VariableNumMap {
    */
   public static VariableNumMap singleton(int varNum, String varName, Variable variable) {
     return new VariableNumMap(Ints.asList(varNum), Arrays.asList(varName), Arrays.asList(variable));
+  }
+
+  /**
+   * Creates a {@code VariableNumMap} from its serialization as a protocol
+   * buffer.
+   * 
+   * @param proto
+   * @return
+   */
+  public static VariableNumMap fromProto(VariableNumMapProto proto) {
+    Preconditions.checkArgument(proto.getNumCount() == proto.getVariableCount());
+    Preconditions.checkArgument(proto.getNumCount() == proto.getNameCount());
+    
+    List<Integer> varNums = Lists.newArrayList();
+    List<String> varNames = Lists.newArrayList();
+    List<Variable> variables = Lists.newArrayList();
+    for (int i = 0; i < proto.getNumCount(); i++) {
+      varNums.add(proto.getNum(i));
+      varNames.add(proto.getName(i));
+      variables.add(Variables.fromProto(proto.getVariable(i)));
+    }
+    
+    return new VariableNumMap(varNums, varNames, variables);
   }
 
   /**
@@ -653,6 +677,21 @@ public class VariableNumMap {
       }
     }
     return true;
+  }
+  
+  /**
+   * Serializes {@code this} into a protocol buffer.
+   * 
+   * @return
+   */
+  public VariableNumMapProto toProto() {
+    VariableNumMapProto.Builder builder = VariableNumMapProto.newBuilder();
+    for (Integer variableNum : varMap.keySet()) {
+      builder.addNum(variableNum);
+      builder.addName(names.get(variableNum));
+      builder.addVariable(varMap.get(variableNum).toProto());
+    }
+    return builder.build();
   }
 
   @Override

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.FactorGraphProtos.VariableProto;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 
 /**
@@ -32,5 +33,10 @@ public class RealVariable implements Variable {
 	public boolean canTakeValue(Object o) {
 		return o instanceof SparseTensor && 
 		((SparseTensor) o).getDimensionNumbers().length == 1;
+	}
+	
+	@Override
+	public VariableProto toProto() {
+	  throw new UnsupportedOperationException("Not yet implemented.");
 	}
 }

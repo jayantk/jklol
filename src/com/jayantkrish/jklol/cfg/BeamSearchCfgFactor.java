@@ -13,6 +13,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.AbstractConditionalFactor;
 import com.jayantkrish.jklol.models.DiscreteObjectFactor;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
@@ -95,6 +96,17 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
       }
       return new DiscreteObjectFactor(treeVariable, treeProbabilities);
     }
+  }
+  
+  @Override 
+  public FactorProto toProto() {
+    throw new UnsupportedOperationException("Not yet implemented");
+    /*
+    FactorProto.Builder builder = getProtoBuilder();
+    builder.setType(FactorProto.FactorType.BEAM_SEARCH_CFG);
+    
+    BeamSearchCfgProto.Builder cfgBuilder = builder.getBeamSearchCfgFactorBuilder();
+    */
   }
 
   /**

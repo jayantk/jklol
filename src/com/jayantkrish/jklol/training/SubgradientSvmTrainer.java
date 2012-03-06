@@ -40,10 +40,21 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
   private final CostFunction costFunction;
   private final LogFunction log;
 
+  /**
+   * If {@code regularizationConstant == 0}, the update rule is equivalent to a
+   * structured perceptron.
+   * 
+   * @param numIterations
+   * @param batchSize
+   * @param regularizationConstant
+   * @param marginalCalculator
+   * @param costFunction
+   * @param log
+   */
   public SubgradientSvmTrainer(int numIterations, int batchSize,
       double regularizationConstant, MarginalCalculator marginalCalculator,
       CostFunction costFunction, LogFunction log) {
-    Preconditions.checkArgument(regularizationConstant > 0);
+    Preconditions.checkArgument(regularizationConstant >= 0);
 
     this.numIterations = numIterations;
     this.batchSize = batchSize;
@@ -109,7 +120,8 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
             approximateObjectiveValue += objectiveValue / batchSize;
           }
         } catch (ZeroProbabilityError e) {
-          // Search error -- could not find positive probability assignments to the graphical model.
+          // Search error -- could not find positive probability assignments to
+          // the graphical model.
           searchErrors++;
         }
         log.stopTimer("update_subgradient");
@@ -118,8 +130,13 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       // TODO: Can we use the Pegasos projection step?
       // If so, the step size should decay as 1/i, not 1/sqrt(i).
       log.startTimer("parameter_update");
-      double stepSize = 1.0 / (regularization * Math.sqrt(i + 2));  
-      parameters.multiply(1.0 - (stepSize * regularization));
+      double stepSize;
+      if (regularization > 0) {
+        stepSize = 1.0 / (regularization * Math.sqrt(i + 2));
+        parameters.multiply(1.0 - (stepSize * regularization));
+      } else {
+        stepSize = 1.0;
+      }
       parameters.increment(subgradient, stepSize / batchSize);
       log.stopTimer("parameter_update");
 
@@ -160,7 +177,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     log.stopTimer("update_subgradient/condition");
 
     log.startTimer("update_subgradient/inference");
-    MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel); 
+    MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel);
     Assignment prediction = predicted.getNthBestAssignment(0);
     log.stopTimer("update_subgradient/inference");
 

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -290,6 +291,13 @@ public interface Factor {
    * @return
    */
   public List<Assignment> getMostLikelyAssignments(int numAssignments);
+  
+  /**
+   * Serializes {@code this} into a protocol buffer.
+   * 
+   * @return
+   */
+  public FactorProto toProto();
 
   // Coercion methods
 

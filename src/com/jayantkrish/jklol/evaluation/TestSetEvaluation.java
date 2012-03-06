@@ -92,7 +92,8 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
    * and pass it to {@link #evaluateLoss(Predictor, List)}.
    */
   @Override
-  public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, List<LossFunction<I, O>> lossFunctions) {
+  public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, 
+      List<LossFunction<I, O>> lossFunctions) {
     Predictor<I, O> predictor = predictorTrainer.train(trainingData);
     evaluateLoss(predictor, lossFunctions);
   }

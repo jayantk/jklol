@@ -82,9 +82,11 @@ public class DefaultLogFunction extends AbstractLogFunction {
     Collections.sort(timers);
     for (String timer : timers) {
       long total = getTimerElapsedTime(timer);
+      long totalSecs = total / 1000;
+      long totalDecimal = total % 1000;
       long invocations = getTimerInvocations(timer);
       double average = ((double) total) / invocations;
-      print(timer + ": " +  total + " ms (" + average + " * " + invocations + ")");
+      print(timer + ": " +  totalSecs + "." + totalDecimal + " s (" + average + " * " + invocations + ")");
     }
   }
   

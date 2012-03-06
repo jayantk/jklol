@@ -16,6 +16,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
+import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
 
 /**
  * Implementation-independent test cases for tensor operations.
@@ -410,6 +411,26 @@ public abstract class TensorTest extends TestCase {
       assertEquals(table.getByDimKey(oldKey), actual.getByDimKey(key));
       assertEquals(table.getByDimKey(oldKey), keyValue.getValue());
     }
+  }
+  
+  public void testSerialization() {
+    TensorProto proto = table.toProto();
+    Tensor tableCopy = Tensors.fromProto(proto);
+    
+    assertTrue(Arrays.equals(tableCopy.getDimensionNumbers(), table.getDimensionNumbers()));
+    assertTrue(Arrays.equals(tableCopy.getDimensionSizes(), table.getDimensionSizes()));
+
+    Iterator<KeyValue> iter = table.keyValueIterator();
+    Iterator<KeyValue> copyIter = tableCopy.keyValueIterator();
+    while (iter.hasNext()) {
+      assertTrue(copyIter.hasNext());
+      
+      KeyValue val = iter.next();
+      KeyValue valCopy = copyIter.next();
+      assertTrue(Arrays.equals(val.getKey(), valCopy.getKey()));
+      assertEquals(val.getValue(), valCopy.getValue());
+    }    
+    assertFalse(copyIter.hasNext());
   }
   
   /**

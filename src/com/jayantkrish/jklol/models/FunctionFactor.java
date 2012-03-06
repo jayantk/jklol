@@ -11,6 +11,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -233,6 +234,8 @@ public class FunctionFactor extends AbstractFactor {
             domainFactor.product(other), rangeVariableFactory);
       }
     } else {
+      // TODO (jayantk): fix this type of factor to support conditioning on the range variable,
+      // without requiring a known factor value for the domain.
       Preconditions.checkState(domainFactor != null);
       return new FunctionFactor(domainVariable, rangeVariable, function,
           combineDomainAndRangeFactors(domainFactor, other, function), rangeVariableFactory);
@@ -288,6 +291,11 @@ public class FunctionFactor extends AbstractFactor {
     Object domainValue = domainAssignment.getValues().get(0);
     Object rangeValue = function.apply(domainValue);
     return domainAssignment.union(rangeVariable.outcomeArrayToAssignment(rangeValue));
+  }
+  
+  @Override
+  public FactorProto toProto() {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -388,9 +396,13 @@ public class FunctionFactor extends AbstractFactor {
 
     @Override
     public List<Assignment> getMostLikelyAssignments(int numAssignments) {
-      // TODO Auto-generated method stub
-      return null;
-    }    
+      throw new UnsupportedOperationException();
+    }
+    
+    @Override
+    public FactorProto toProto() {
+      throw new UnsupportedOperationException();
+    }
   }
 }
  

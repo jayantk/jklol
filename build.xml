@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <project name="jklol" default="jar">
   <property name="tst-dir" location="test" />
+  <property name="proto-dir" location="proto" />
+  <property name="proto-src-dir" location="proto_src" />
   <property name="perf-dir" location="performance" />
 
   <path id="classpath.base">
@@ -13,7 +15,17 @@
     <path refid="classpath.base" />
   </path>
 
-  <target name="compile">
+  <target name="compile-proto">
+    <mkdir dir="${proto-src-dir}" />
+    <exec executable="protoc">
+      <arg value="-I=${proto-dir}" />
+      <arg value="--java_out=${proto-src-dir}" />
+      <arg value="${proto-dir}/Tensor.proto" />
+      <arg value="${proto-dir}/FactorGraph.proto" />
+    </exec>
+  </target>
+
+  <target name="compile" depends="compile-proto">
     <mkdir dir="build" />
     <javac srcdir="src" destdir="build" debug="on">
       <classpath refid="classpath.base"/>
@@ -61,6 +73,9 @@
       <test name="com.jayantkrish.jklol.util.SparseOutcomeTablePerformanceTest" />
       <test name="com.jayantkrish.jklol.inference.JunctionTreePerformanceTest" />
     </junit>
+  </target>
+
+  <target name="proto" depends="compile-proto">
   </target>
 
   <target name="jar" depends="compile">

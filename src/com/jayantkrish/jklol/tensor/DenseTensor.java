@@ -13,7 +13,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.tensor.TensorProtos.DenseTensorProto;
+import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
@@ -57,9 +60,10 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     return builder.buildNoCopy();
   }
-  
+
   /**
    * Gets a dense copy of {@code tensor}.
+   * 
    * @param tensor
    * @return
    */
@@ -68,7 +72,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       // Tensors are immutable, so there's no reason to copy the input.
       return (DenseTensor) tensor;
     } else {
-      DenseTensorBuilder builder = new DenseTensorBuilder(tensor.getDimensionNumbers(), 
+      DenseTensorBuilder builder = new DenseTensorBuilder(tensor.getDimensionNumbers(),
           tensor.getDimensionSizes());
       double[] otherValues = tensor.getValues();
       for (int i = 0; i < otherValues.length; i++) {
@@ -77,31 +81,47 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       return builder.buildNoCopy();
     }
   }
-  
+
+  /**
+   * Creates a {@code DenseTensor} from its serialization as a protocol buffer.
+   * 
+   * @param proto
+   * @return
+   */
+  public static DenseTensor fromProto(DenseTensorProto proto) {
+    Preconditions.checkArgument(proto.hasDimensions());
+    int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
+    int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
+    Preconditions.checkArgument(dimensionNums.length == sizes.length);
+    
+    double[] values = Doubles.toArray(proto.getValueList());
+    return new DenseTensor(dimensionNums, sizes, values);
+  }
+
   @Override
   public int getNearestIndex(long keyNum) {
     // Dense tensors contain values for all keyNums.
     return (int) keyNum;
   }
-  
+
   @Override
   public double[] getValues() {
     return super.values;
   }
-  
+
   @Override
   public DenseTensor slice(int[] dimensionNumbers, int[] key) {
     if (dimensionNumbers.length == 0) {
       return this;
     }
     // TODO(jayantk): This is an extremely naive implementation of slice.
-    
+
     // Figure out the appropriate sizes for the subset of dimensions.
     int[] dimensionSizes = new int[dimensionNumbers.length];
-    for (int i = 0; i < dimensionNumbers.length; i++){
+    for (int i = 0; i < dimensionNumbers.length; i++) {
       int dimIndex = getDimensionIndex(dimensionNumbers[i]);
       Preconditions.checkArgument(dimIndex >= 0);
-      dimensionSizes[i] = getDimensionSizes()[dimIndex]; 
+      dimensionSizes[i] = getDimensionSizes()[dimIndex];
     }
     SparseTensorBuilder builder = new SparseTensorBuilder(dimensionNumbers, dimensionSizes);
     builder.put(key, 1.0);
@@ -128,7 +148,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   };
 
   /**
-   * Performs elementwise operations, like products, sums and maxes. 
+   * Performs elementwise operations, like products, sums and maxes.
    * 
    * @param other
    * @param op
@@ -200,7 +220,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     return outputBuilder.buildNoCopy();
   }
-  
+
   @Override
   public DenseTensor elementwiseLog() {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
@@ -210,7 +230,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     return outputBuilder.buildNoCopy();
   }
-  
+
   @Override
   public DenseTensor elementwiseExp() {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
@@ -335,6 +355,17 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       newDimensions[i] = relabeling.get(getDimensionNumbers()[i]);
     }
     return relabelDimensions(newDimensions);
+  }
+  
+  @Override
+  public TensorProto toProto() {
+    TensorProto.Builder builder = TensorProto.newBuilder();
+    builder.setType(TensorProto.TensorType.DENSE);
+    
+    DenseTensorProto.Builder denseTensorBuilder = builder.getDenseTensorBuilder();
+    denseTensorBuilder.setDimensions(getDimensionProto());
+    denseTensorBuilder.addAllValue(Doubles.asList(values));
+    return builder.build();
   }
 
   @Override

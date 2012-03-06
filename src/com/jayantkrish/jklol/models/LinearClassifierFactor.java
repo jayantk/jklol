@@ -3,6 +3,8 @@ package com.jayantkrish.jklol.models;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
+import com.jayantkrish.jklol.models.FactorGraphProtos.LinearClassifierProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
@@ -42,9 +44,9 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
         Ints.asList(logWeights.getDimensionNumbers())));
 
     this.inputVar = inputVar;
-    this.inputVarNums = new int[] {inputVar.getVariableNums().get(0)};
+    this.inputVarNums = new int[] {inputVar.getOnlyVariableNum()};
     this.outputVar = outputVar;
-    this.outputVariableType = (DiscreteVariable) outputVar.getVariables().get(0);
+    this.outputVariableType = (DiscreteVariable) outputVar.getOnlyVariable();
     
     this.logWeights = logWeights;
   }
@@ -57,8 +59,8 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
   
   @Override
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getVariableNums().get(0));
-    int outputIndex = outputVariableType.getValueIndex(assignment.getValue(outputVar.getVariableNums().get(0)));
+    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
+    int outputIndex = outputVariableType.getValueIndex(assignment.getValue(outputVar.getOnlyVariableNum()));
 
     Tensor multiplied = logWeights.elementwiseProduct(inputFeatureVector.relabelDimensions(inputVarNums));
     Tensor logProbs = multiplied.sumOutDimensions(Sets.newHashSet(Ints.asList(inputVarNums)));
@@ -73,8 +75,8 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
-    int inputVarNum = inputVar.getVariableNums().get(0);
-    int outputVarNum = outputVar.getVariableNums().get(0);
+    int inputVarNum = inputVar.getOnlyVariableNum();
+    int outputVarNum = outputVar.getOnlyVariableNum();
     // We can only condition on the outputVar variable if we also condition on the
     // inputVar variable.
     Preconditions.checkArgument(!assignment.contains(outputVarNum)
@@ -103,5 +105,18 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     TableFactor output = outputBuilder.build();
     return output.conditional(assignment);
     */
+  }
+  
+  @Override
+  public FactorProto toProto() { 
+    FactorProto.Builder builder = getProtoBuilder();
+    builder.setType(FactorProto.FactorType.LINEAR_CLASSIFIER);
+        
+    LinearClassifierProto.Builder linearBuilder = builder.getLinearClassifierFactorBuilder();
+    linearBuilder.setInputVariableNum(inputVar.getOnlyVariableNum());
+    linearBuilder.setOutputVariableNum(outputVar.getOnlyVariableNum());
+    linearBuilder.setWeights(logWeights.toProto());
+    
+    return builder.build();
   }
 }

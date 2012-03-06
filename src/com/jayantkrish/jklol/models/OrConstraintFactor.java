@@ -10,6 +10,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -243,6 +244,11 @@ public class OrConstraintFactor extends AbstractFactor {
     }
     Assignment orAssignment = orVars.outcomeToAssignment(outputOrValues);
     return Arrays.asList(orAssignment.union(inputAssignment));
+  }
+  
+  @Override
+  public FactorProto toProto() {
+    throw new UnsupportedOperationException();
   }
   
   @Override

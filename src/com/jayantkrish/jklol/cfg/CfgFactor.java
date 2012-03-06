@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.FactorUtils;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -356,5 +357,10 @@ public class CfgFactor extends AbstractFactor {
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
     throw new UnsupportedOperationException("Not implemented.");
+  }
+  
+  @Override
+  public FactorProto toProto() {
+    throw new UnsupportedOperationException();
   }
 }

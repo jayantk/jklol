@@ -15,6 +15,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorGraphProto;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -59,8 +61,8 @@ public class FactorGraph {
     conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
-  
-  public FactorGraph(VariableNumMap variables, List<Factor> factors, 
+
+  public FactorGraph(VariableNumMap variables, List<Factor> factors,
       VariableNumMap conditionedVariables, Assignment conditionedAssignment) {
     this.variables = variables;
     this.factors = new IndexedList<Factor>(factors);
@@ -74,12 +76,12 @@ public class FactorGraph {
         factorVariableMap.put(i, j);
       }
     }
-        
+
     this.conditionedVariables = conditionedVariables;
     this.conditionedValues = conditionedAssignment;
     this.inferenceHint = null;
   }
-  
+
   /**
    * Copy constructor. This method is private because {@code FactorGraph}s are
    * immutable.
@@ -95,7 +97,7 @@ public class FactorGraph {
     this.conditionedValues = factorGraph.conditionedValues;
     this.inferenceHint = factorGraph.inferenceHint;
   }
-  
+
   /**
    * Constructs a {@code FactorGraph} directly from a list of factors. The
    * variables and variable numbers in the graph are determined by the factors,
@@ -111,7 +113,7 @@ public class FactorGraph {
     }
     return new FactorGraph(allVars, factors, VariableNumMap.emptyMap(), Assignment.EMPTY);
   }
-    
+
   /**
    * Get the number of factors in the graph.
    */
@@ -197,7 +199,7 @@ public class FactorGraph {
     List<Integer> varNums = new ArrayList<Integer>(factorVariables.size());
     List<Object> outcomeValueInds = new ArrayList<Object>(outcome.size());
     for (int i = 0; i < factorVariables.size(); i++) {
-      int varInd = getVariables().getVariableByName(factorVariables.get(i)); 
+      int varInd = getVariables().getVariableByName(factorVariables.get(i));
       varNums.add(varInd);
       outcomeValueInds.add(outcome.get(i));
     }
@@ -415,15 +417,15 @@ public class FactorGraph {
     Assignment newConditionedValues = this.conditionedValues.union(assignment);
     VariableNumMap newConditionedVariables = this.conditionedVariables.union(
         this.getVariables().intersection(assignment.getVariableNums()));
-    
-    VariableNumMap newVariables = getVariables().removeAll(assignment.getVariableNums()); 
+
+    VariableNumMap newVariables = getVariables().removeAll(assignment.getVariableNums());
 
     // Condition each factor on assignment.
     List<Factor> newFactors = Lists.newArrayListWithCapacity(getFactors().size());
     for (Factor factor : getFactors()) {
       newFactors.add(factor.conditional(assignment));
     }
-    
+
     return new FactorGraph(newVariables, newFactors, newConditionedVariables, newConditionedValues);
   }
 
@@ -437,5 +439,50 @@ public class FactorGraph {
     FactorGraph factorGraph = new FactorGraph(this);
     factorGraph.inferenceHint = inferenceHint;
     return factorGraph;
+  }
+
+  /**
+   * Serializes {@code this} into a protocol buffer. The returned proto can be
+   * parsed back into an identical object using {@link FactorGraph#fromProto()}.
+   * 
+   * @return
+   */
+  public FactorGraphProto toProto() {
+    Preconditions.checkState(conditionedValues.size() == 0);
+    Preconditions.checkState(conditionedVariables.size() == 0);
+    
+    FactorGraphProto.Builder builder = FactorGraphProto.newBuilder();
+    builder.setVariables(variables.toProto());
+    
+    for (Factor factor : factors) {
+      builder.addFactor(factor.toProto());
+    }
+
+    return builder.build();
+  }
+  
+  public static FactorGraph fromProto(FactorGraphProto factorGraphProto) {
+    Preconditions.checkArgument(factorGraphProto.hasVariables());
+    VariableNumMap variables = VariableNumMap.fromProto(factorGraphProto.getVariables());
+ 
+    // Deserialize the factors in the factor graph.
+    List<Factor> factors = Lists.newArrayList();
+    for (FactorProto factorProto : factorGraphProto.getFactorList()) {
+      Preconditions.checkArgument(variables.containsAll(factorProto.getVariableNumList()));
+      VariableNumMap factorVariables = variables.intersection(factorProto.getVariableNumList());
+      factors.add(FactorGraph.factorFromProto(factorVariables, factorProto));
+    }
+    
+    return new FactorGraph(variables, factors, VariableNumMap.emptyMap(), Assignment.EMPTY);
+  }
+  
+  private static Factor factorFromProto(VariableNumMap variables, FactorProto factorProto) {
+    switch (factorProto.getType().getNumber()) { 
+    case FactorProto.FactorType.TABLE_VALUE:
+      Preconditions.checkArgument(factorProto.hasTableFactor());
+      return TableFactor.fromProto(variables, factorProto.getTableFactor());
+    default:
+      throw new IllegalArgumentException("Invalid factor type: " + factorProto.getType());
+    }
   }
 }

@@ -9,11 +9,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
-import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -30,7 +30,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class TableFactorBuilder {
 
   private final VariableNumMap vars;
-  private final TensorBuilder weightBuilder;
+  private final SparseTensorBuilder weightBuilder;
 
   /**
    * Creates a builder which builds a {@code TableFactor} over {@code variables}
@@ -41,7 +41,7 @@ public class TableFactorBuilder {
   public TableFactorBuilder(VariableNumMap variables) {
     Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size());
     this.vars = variables;
-    this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()), 
+    this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()),
         vars.getVariableSizes());
   }
 
@@ -207,6 +207,18 @@ public class TableFactorBuilder {
 
   /**
    * Creates a {@code TableFactor} containing all of the assignment/weight
+   * mappings that added to {@code this} builder. Caches out all permutations of
+   * the weight tensor, for fast multiplication and additions. The returned
+   * factor is defined over the variables in {@code this.getVars()}.
+   * 
+   * @return
+   */
+  public TableFactor buildWithCache() {
+    return new TableFactor(vars, CachedSparseTensor.cacheAllPermutations(weightBuilder.build()));
+  }
+
+  /**
+   * Creates a {@code TableFactor} containing all of the assignment/weight
    * mappings that added to {@code this} builder. Unlike {@link #build()},
    * assignments and weights added to this are interpreted as log weights.
    * 
@@ -214,6 +226,6 @@ public class TableFactorBuilder {
    */
   public TableFactor buildInLogSpace() {
     return new TableFactor(vars, new LogSpaceTensorAdapter(
-        DenseTensor.copyOf(weightBuilder.build()))); 
+        DenseTensor.copyOf(weightBuilder.build())));
   }
 }

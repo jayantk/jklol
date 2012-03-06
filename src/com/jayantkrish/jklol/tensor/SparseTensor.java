@@ -13,7 +13,11 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.jayantkrish.jklol.tensor.TensorProtos.SparseTensorProto;
+import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
 
 /**
  * A SparseTensor sparsely stores a mapping from int[] to double. This class
@@ -24,7 +28,7 @@ import com.google.common.primitives.Ints;
  */
 public class SparseTensor extends AbstractTensorBase implements Tensor {
 
-  protected final long[] keyNums; 
+  protected final long[] keyNums;
   protected final double[] values;
 
   public SparseTensor(int[] dimensionNums, int[] dimensionSizes, long[] keyNums, double[] values) {
@@ -67,7 +71,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     }
     return values[index];
   }
-  
+
   @Override
   public double getLogByIndex(int index) {
     return Math.log(getByIndex(index));
@@ -232,15 +236,15 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     int bigInd = 0;
     int smallInd = advanceToNonzero(-1, small);
 
-    long smallIndexMultiplier = 1; 
+    long smallIndexMultiplier = 1;
     for (int i = big.numDimensions() - 1; i >= small.numDimensions(); i--) {
-      smallIndexMultiplier *= ((long) big.getDimensionSizes()[i]); 
+      smallIndexMultiplier *= ((long) big.getDimensionSizes()[i]);
     }
 
     // Variables for the binary search
     int startInd, endInd, cmpInd;
     long targetKeyNum;
-    
+
     // Caches to avoid recomputing method values.
     int bigSize = big.size();
     int smallSize = small.size();
@@ -401,22 +405,22 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     // treats both outcomes and values as immutable.
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
-  
+
   @Override
   public DenseTensor elementwiseLog() {
-    // Zero entries of this map to negative infinity in the returned tensor. 
-    DenseTensorBuilder builder = new DenseTensorBuilder(this.getDimensionNumbers(), 
+    // Zero entries of this map to negative infinity in the returned tensor.
+    DenseTensorBuilder builder = new DenseTensorBuilder(this.getDimensionNumbers(),
         this.getDimensionSizes(), Double.NEGATIVE_INFINITY);
     for (int i = 0; i < size(); i++) {
       builder.putByKeyNum(keyNums[i], Math.log(values[i]));
     }
     return builder.buildNoCopy();
   }
-  
+
   @Override
   public DenseTensor elementwiseExp() {
-    // Zero entries of this map to 1.0 in the returned tensor. 
-    DenseTensorBuilder builder = new DenseTensorBuilder(this.getDimensionNumbers(), 
+    // Zero entries of this map to 1.0 in the returned tensor.
+    DenseTensorBuilder builder = new DenseTensorBuilder(this.getDimensionNumbers(),
         this.getDimensionSizes(), 1.0);
     for (int i = 0; i < size(); i++) {
       builder.putByKeyNum(keyNums[i], Math.exp(values[i]));
@@ -558,7 +562,8 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     Preconditions.checkArgument(newDimensions.length == numDimensions());
     if (Ordering.natural().isOrdered(Ints.asList(newDimensions))) {
       // If the new dimension labels are in sorted order, then we don't have to
-      // re-sort the outcome and value arrays. This is a big efficiency win if it
+      // re-sort the outcome and value arrays. This is a big efficiency win if
+      // it
       // happens. Note that keyNums and values are (treated as) immutable, and
       // hence we don't need to copy them.
       return new SparseTensor(newDimensions, getDimensionSizes(), keyNums, values);
@@ -575,7 +580,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     }
 
     int[] sortedSizes = new int[newDimensions.length];
-    long[] sortedIndexOffsets = new long[newDimensions.length]; 
+    long[] sortedIndexOffsets = new long[newDimensions.length];
     int[] newOrder = new int[sortedDims.length];
     int[] dimensionSizes = getDimensionSizes();
     long curIndexOffset = 1;
@@ -609,7 +614,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * to {@code endInd} (not inclusive), simultaneously swapping the
    * corresponding entries of {@code values}.
    */
-  private void sortOutcomeTable(long[] keyNums, double[] values,
+  private static void sortOutcomeTable(long[] keyNums, double[] values,
       int startInd, int endInd) {
     // Base case.
     if (startInd == endInd) {
@@ -646,7 +651,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * @param i
    * @param j
    */
-  private void swap(long[] keyNums, double[] values, int i, int j) {
+  private static void swap(long[] keyNums, double[] values, int i, int j) {
     long keySwap = keyNums[i];
     keyNums[i] = keyNums[j];
     keyNums[j] = keySwap;
@@ -654,6 +659,18 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     double swapValue = values[i];
     values[i] = values[j];
     values[j] = swapValue;
+  }
+  
+  @Override
+  public TensorProto toProto() {
+    TensorProto.Builder builder = TensorProto.newBuilder();
+    builder.setType(TensorProto.TensorType.SPARSE);
+    
+    SparseTensorProto.Builder sparseTensorBuilder = builder.getSparseTensorBuilder();
+    sparseTensorBuilder.setDimensions(getDimensionProto());
+    sparseTensorBuilder.addAllKeyNum(Longs.asList(keyNums));
+    sparseTensorBuilder.addAllValue(Doubles.asList(values));
+    return builder.build();
   }
 
   @Override
@@ -750,6 +767,23 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
     return resizeIntoTable(new int[] { dimensionNumber }, new int[] { dimensionSize },
         keyNums, outcomeValues, numEntries);
+  }
+
+  /**
+   * Creates a {@code SparseTensor} from its serialization as a protocol buffer.
+   * 
+   * @param proto
+   * @return
+   */
+  public static SparseTensor fromProto(SparseTensorProto proto) {
+    Preconditions.checkArgument(proto.hasDimensions()); 
+    int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
+    int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
+    Preconditions.checkArgument(dimensionNums.length == sizes.length);
+
+    long[] keyNums = Longs.toArray(proto.getKeyNumList());
+    double[] values = Doubles.toArray(proto.getValueList());
+    return new SparseTensor(dimensionNums, sizes, keyNums, values);
   }
 
   // ///////////////////////////////////////////////////////////////////////////////

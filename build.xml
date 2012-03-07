@@ -27,6 +27,9 @@
 
   <target name="compile" depends="compile-proto">
     <mkdir dir="build" />
+    <javac srcdir="${proto-src-dir}" destdir="build" debug="on">
+      <classpath refid="classpath.base"/>
+    </javac>
     <javac srcdir="src" destdir="build" debug="on">
       <classpath refid="classpath.base"/>
     </javac>

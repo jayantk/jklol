@@ -9,7 +9,6 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
-import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -24,15 +23,17 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayant
  */
-public class WeightedRelationFactor extends AbstractFactor {
+public abstract class WeightedRelationFactor extends AbstractFactor {
 
   private final VariableNumMap domainVariable;
   private final VariableNumMap rangeVariable;
+  private final VariableNumMap auxiliaryVariables;
   
   private final Factor domainFactor;
   private final Factor rangeFactor;
-
-  private final WeightedRelation function;
+  
+  private final FactorFactory domainFactory;
+  private final FactorFactory rangeFactory;
 
   /**
    * {@code domainFactor} may be null, in which case this factor represents a
@@ -46,17 +47,27 @@ public class WeightedRelationFactor extends AbstractFactor {
    * the range variable.
    */
   public WeightedRelationFactor(VariableNumMap domainVariable, VariableNumMap rangeVariable,
-      WeightedRelation function, Factor domainFactor, Factor rangeFactor) {
+      VariableNumMap auxiliaryVariables, Factor domainFactor, Factor rangeFactor, 
+      FactorFactory domainFactory, FactorFactory rangeFactory) {
     super(domainVariable.union(rangeVariable));
     this.domainVariable = Preconditions.checkNotNull(domainVariable);
     this.rangeVariable = Preconditions.checkNotNull(rangeVariable);
+    this.auxiliaryVariables = Preconditions.checkNotNull(auxiliaryVariables);
+    
     this.domainFactor = domainFactor;
     this.rangeFactor = rangeFactor;
     Preconditions.checkArgument(domainFactor == null || domainFactor.getVars().equals(domainVariable));
-    Preconditions.checkArgument(rangeFactor == null || rangeFactor.getVars().equals(rangeVariable));
-    this.function = Preconditions.checkNotNull(function);
+    Preconditions.checkArgument(rangeFactor.getVars().equals(rangeVariable));
+    this.domainFactory = Preconditions.checkNotNull(domainFactory);
+    this.rangeFactory = Preconditions.checkNotNull(rangeFactory);
   }
   
+  protected abstract DiscreteObjectFactor constructJointDistribution(Factor domainFactor, 
+      Factor rangeFactor);
+  
+  protected abstract Factor replaceFactors(Factor newDomainFactor, Factor newRangeFactor);
+  
+  /*
   private double getFactorProbability(Factor factor, Object value) {
     if (factor == null) {
       return 1.0;
@@ -64,13 +75,17 @@ public class WeightedRelationFactor extends AbstractFactor {
       return factor.getUnnormalizedProbability(value);
     }
   }
-  
+  */
+
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
+    throw new UnsupportedOperationException();
+    /*
     Object inputValue = assignment.getValue(domainVariable.getOnlyVariableNum());
     Object outputValue = assignment.getValue(rangeVariable.getOnlyVariableNum());
     return function.getWeight(inputValue, outputValue) * getFactorProbability(domainFactor, inputValue) 
         * getFactorProbability(rangeFactor, outputValue);
+    */
   }
   
   @Override
@@ -110,68 +125,55 @@ public class WeightedRelationFactor extends AbstractFactor {
     }
     
     return new WeightedRelationFactor(relabeling.apply(domainVariable), 
-        relabeling.apply(rangeVariable), function, newDomainFactor, newRangeFactor); 
+        relabeling.apply(rangeVariable), auxiliaryVariables, newDomainFactor, newRangeFactor,
+        domainFactory, rangeFactory); 
   }
+
 
   @Override
   public Factor conditional(Assignment assignment) {
     if (!getVars().containsAny(assignment.getVariableNums())) {
       return this;
     }
-
+    
+    Factor toReturn = this;
     VariableNumMap toEliminate = getVars().intersection(assignment.getVariableNums());
-    Preconditions.checkArgument(toEliminate.size() == 1);
     if (toEliminate.containsAny(domainVariable)) {
-      return function.apply(assignment.intersection(domainVariable).getValues());
-    } else { 
-      // Must contain the range variable.
-      if (domainFactor == null) {
-        return function.invert(assignment.intersection(rangeVariable).getValues());
-      } else {
-        return function.invert(assignment.intersection(rangeVariable).getValues()).product(domainFactor);
-      }
+      toReturn = toReturn.product(domainFactory.pointDistribution(domainVariable, 
+          assignment.intersection(domainVariable)));
+    } else {
+      toReturn = toReturn.product(rangeFactory.pointDistribution(rangeVariable,
+          assignment.intersection(rangeVariable)));
     }
+    return toReturn.marginalize(toEliminate);
   }
 
   @Override
   public Factor marginalize(Collection<Integer> varNumsToEliminate) {
-    Preconditions.checkState(domainFactor != null, "Could not marginalize out " 
-        + varNumsToEliminate + " from: " + this.toString());
-
-    if (varNumsToEliminate.contains(domainVariable.getOnlyVariableNum())) {
-      if (!varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-        return function.computeRangeMarginal(domainFactor);
+    if (domainFactor == null) {
+      // If domainFactor is null, some marginals cannot be computed.
+      // Other marginals can only be computed lazily.
+      Preconditions.checkArgument(!varNumsToEliminate.contains(domainVariable.getOnlyVariableNum()));
+      
+      if (getVars().intersection(varNumsToEliminate).size() == 0) {
+        return this;
+      } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())
+          && varNumsToEliminate.containsAll(auxiliaryVariables.getVariableNums())) {
+        return new FilterFactor(domainVariable, this, rangeFactor, domainFactory, false);        
       } else {
-        return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY)
-        .product(function.getPartitionFunction(domainFactor));
+        throw new UnsupportedOperationException();
       }
     } else {
-      if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-        return function.computeDomainMarginal(domainFactor);
-      } else {
-        return this;
-      }
+      // Easy case: we've received a message in the domain, so we can construct the
+      // joint distribution and everything 
+      DiscreteObjectFactor thisAsDiscrete = constructJointDistribution(domainFactor, rangeFactor);
+      return thisAsDiscrete.marginalize(varNumsToEliminate);
     }
   }
 
   @Override
   public Factor maxMarginalize(Collection<Integer> varNumsToEliminate) {
-    Preconditions.checkState(domainFactor != null);
-
-    if (varNumsToEliminate.contains(domainVariable.getOnlyVariableNum())) {
-      if (!varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-        return function.computeRangeMaxMarginal(domainFactor);
-      } else {
-        return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY)
-        .product(function.getMaxPartitionFunction(domainFactor));
-      }
-    } else {
-      if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-        return function.computeDomainMaxMarginal(domainFactor);
-      } else {
-        return this;
-      }
-    }
+    throw new UnsupportedOperationException("Not yet implemented");
   }
 
   @Override
@@ -189,19 +191,15 @@ public class WeightedRelationFactor extends AbstractFactor {
     Preconditions.checkArgument(other.getVars().size() == 1);
     if (other.getVars().containsAll(domainVariable)) {
       if (this.domainFactor == null) {
-        return new WeightedRelationFactor(domainVariable, rangeVariable, function,
-            other, rangeFactor);
+        return replaceFactors(other, rangeFactor);
       } else {
-        return new WeightedRelationFactor(domainVariable, rangeVariable, function,
-            domainFactor.product(other), rangeFactor);
+        return replaceFactors(domainFactor.product(other), rangeFactor);
       }
     } else {
       if (this.rangeFactor == null) {
-        return new WeightedRelationFactor(domainVariable, rangeVariable, function,
-            domainFactor, other);
+        return replaceFactors(domainFactor, other);
       } else {
-        return new WeightedRelationFactor(domainVariable, rangeVariable, function,
-            domainFactor, rangeFactor.product(other));
+        return replaceFactors(domainFactor, rangeFactor.product(other));
       }
     }
   }
@@ -246,8 +244,9 @@ public class WeightedRelationFactor extends AbstractFactor {
 
   @Override
   public String toString() {
-    return "FunctionFactor(" + domainVariable.toString() + ", " + rangeVariable.toString() + "):"
-        + ((domainFactor != null) ? domainFactor.toString() : "uniform");
+    return "WeightedRelationFactor(" + domainVariable.toString() + ", " + rangeVariable.toString() + "):"
+        + ((domainFactor != null) ? domainFactor.toString() : "uniform") + ", "
+        + ((rangeFactor != null) ? rangeFactor.toString() : "uniform");
   }
 }
  

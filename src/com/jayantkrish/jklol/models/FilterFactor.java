@@ -22,7 +22,7 @@ public class FilterFactor extends AbstractFactor {
     super(vars);
     Preconditions.checkArgument(vars.size() == 1);
     this.relationFactor = relationFactor;
-    this.rangeFactor = rangeFactor;
+    this.rangeFactor = Preconditions.checkNotNull(rangeFactor);
     this.isMaxMarginal = isMaxMarginal;
   }
 

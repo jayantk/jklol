@@ -13,14 +13,15 @@ import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A factor representing a deterministic (functional) relationship between two
- * variables. As with {@link DiscreteObjectFactor}, this factor should only be
- * used when the values of this factor cannot be explicitly enumerated. If the
- * values can be enumerated, then a {@link TableFactor} will be more efficient.
+ * A factor representing a relationship between an {@code ObjectVariable} and
+ * some other variables. As with {@link DiscreteObjectFactor}, this factor
+ * should only be used when the values of this factor cannot be explicitly
+ * enumerated. (If the values can be enumerated, then a {@link TableFactor} will
+ * be more efficient.)
  * 
- * This factor wraps a {@code Function} f. Assignments to this factor (x, y)
- * consistent with the function (i.e., f(x) == y) have probability 1.0, and all
- * other assignments have 0 probability.
+ * The weighted relationship between the variables is represented implicitly by
+ * an abstract method. This method must be overriden to implement any given
+ * relationship. (For an example, see {@link FunctionFactor}.)
  * 
  * @author jayant
  */
@@ -29,7 +30,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
   private final VariableNumMap domainVariable;
   private final VariableNumMap rangeVariable;
   private final VariableNumMap auxiliaryVariables;
-  
+
   private final Factor domainFactor;
   private final Factor rangeFactor;
 
@@ -50,46 +51,68 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
     this.domainVariable = Preconditions.checkNotNull(domainVariable);
     this.rangeVariable = Preconditions.checkNotNull(rangeVariable);
     this.auxiliaryVariables = Preconditions.checkNotNull(auxiliaryVariables);
-    
+
     this.domainFactor = domainFactor;
     this.rangeFactor = rangeFactor;
     Preconditions.checkArgument(domainFactor == null || domainFactor.getVars().equals(domainVariable));
-    Preconditions.checkArgument(rangeFactor.getVars().equals(rangeVariable));
+    Preconditions.checkArgument(rangeFactor == null || rangeFactor.getVars().equals(rangeVariable));
   }
-  
-  protected abstract DiscreteObjectFactor constructJointDistribution(Factor domainFactor, 
+
+  /**
+   * Gets the unnormalized probability of {@code assignment}, ignoring any
+   * factors which may have been multiplied into {@code this}.
+   * 
+   * @param assignment
+   * @return
+   */
+  protected abstract double getAssignmentRelationProbability(Assignment assignment);
+
+  /**
+   * Constructs a joint distribution over all of the variables in this factor.
+   * {@code domainFactor} is guaranteed to be non-null. If {@code rangeFactor}
+   * is null, it should be treated as if it were the uniform distribution over
+   * possible outcomes (i.e., as if it assigned weight 1.0 to all outcomes).
+   * 
+   * @param domainFactor
+   * @param rangeFactor
+   * @return
+   */
+  protected abstract DiscreteObjectFactor constructJointDistribution(Factor domainFactor,
       Factor rangeFactor);
+
   
-  protected abstract Factor replaceFactors(VariableRelabeling variableRelabeling, 
+  protected abstract Factor replaceFactors(VariableRelabeling variableRelabeling,
       Factor newDomainFactor, Factor newRangeFactor);
-  
-  /*
-  private double getFactorProbability(Factor factor, Object value) {
-    if (factor == null) {
-      return 1.0;
-    } else {
-      return factor.getUnnormalizedProbability(value);
-    }
+
+  public VariableNumMap getDomainVariable() {
+    return domainVariable;
   }
-  */
+
+  public VariableNumMap getRangeVariable() {
+    return rangeVariable;
+  }
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    throw new UnsupportedOperationException();
-    /*
-    Object inputValue = assignment.getValue(domainVariable.getOnlyVariableNum());
-    Object outputValue = assignment.getValue(rangeVariable.getOnlyVariableNum());
-    return function.getWeight(inputValue, outputValue) * getFactorProbability(domainFactor, inputValue) 
-        * getFactorProbability(rangeFactor, outputValue);
-    */
-  }
-  
-  @Override
-  public double getUnnormalizedLogProbability(Assignment assignment) {
-    return Math.log(getUnnormalizedProbability(assignment));    
+    double prob = 1.0;
+    if (domainFactor != null) {
+      prob *= domainFactor.getUnnormalizedProbability(assignment);
+    }
+    if (rangeFactor != null) {
+      prob *= rangeFactor.getUnnormalizedProbability(assignment);
+    }
+    if (prob > 0) {
+      prob *= getAssignmentRelationProbability(assignment);
+    }
+    return prob;
   }
 
-  @Override 
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    return Math.log(getUnnormalizedProbability(assignment));
+  }
+
+  @Override
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {
     Preconditions.checkNotNull(inboundMessages);
 
@@ -119,7 +142,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
     if (rangeFactor != null) {
       newRangeFactor = rangeFactor.relabelVariables(relabeling);
     }
-    
+
     return replaceFactors(relabeling, newDomainFactor, newRangeFactor);
   }
 
@@ -128,11 +151,11 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
     if (!getVars().containsAny(assignment.getVariableNums())) {
       return this;
     }
-    
+
     Factor toReturn = this;
     VariableNumMap toEliminate = getVars().intersection(assignment.getVariableNums());
     if (toEliminate.containsAny(domainVariable)) {
-      toReturn = toReturn.product(DiscreteObjectFactor.pointDistribution(domainVariable, 
+      toReturn = toReturn.product(DiscreteObjectFactor.pointDistribution(domainVariable,
           assignment.intersection(domainVariable)));
     } else {
       toReturn = toReturn.product(DiscreteObjectFactor.pointDistribution(rangeVariable,
@@ -147,18 +170,19 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
       // If domainFactor is null, some marginals cannot be computed.
       // Other marginals can only be computed lazily.
       Preconditions.checkArgument(!varNumsToEliminate.contains(domainVariable.getOnlyVariableNum()));
-      
+
       if (getVars().intersection(varNumsToEliminate).size() == 0) {
         return this;
       } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())
           && varNumsToEliminate.containsAll(auxiliaryVariables.getVariableNums())) {
-        return new FilterFactor(domainVariable, this, rangeFactor, false);        
+        return new FilterFactor(domainVariable, this, rangeFactor, false);
       } else {
         throw new UnsupportedOperationException();
       }
     } else {
-      // Easy case: we've received a message in the domain, so we can construct the
-      // joint distribution and everything 
+      // Easy case: we've received a message in the domain, so we can construct
+      // the
+      // joint distribution and everything
       DiscreteObjectFactor thisAsDiscrete = constructJointDistribution(domainFactor, rangeFactor);
       return thisAsDiscrete.marginalize(varNumsToEliminate);
     }
@@ -186,14 +210,15 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
       if (this.domainFactor == null) {
         return replaceFactors(VariableRelabeling.identity(getVars()), other, rangeFactor);
       } else {
-        return replaceFactors(VariableRelabeling.identity(getVars()), 
+        return replaceFactors(VariableRelabeling.identity(getVars()),
             domainFactor.product(other), rangeFactor);
       }
     } else {
       if (this.rangeFactor == null) {
-        return replaceFactors(VariableRelabeling.identity(getVars()), domainFactor, other);
+        Factor toReturn = replaceFactors(VariableRelabeling.identity(getVars()), domainFactor, other);
+        return toReturn;
       } else {
-        return replaceFactors(VariableRelabeling.identity(getVars()), 
+        return replaceFactors(VariableRelabeling.identity(getVars()),
             domainFactor, rangeFactor.product(other));
       }
     }
@@ -223,15 +248,15 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     throw new UnsupportedOperationException("Not implemented");
     /*
-    List<Assignment> domainAssignments = domainFactor.getMostLikelyAssignments(numAssignments);
-    List<Assignment> mostLikely = Lists.newArrayListWithCapacity(domainAssignments.size());
-    for (Assignment domainAssignment : domainAssignments) {
-      mostLikely.add(mapDomainAssignmentToFactorAssignment(domainAssignment));
-    }
-    return mostLikely;
-    */
+     * List<Assignment> domainAssignments =
+     * domainFactor.getMostLikelyAssignments(numAssignments); List<Assignment>
+     * mostLikely = Lists.newArrayListWithCapacity(domainAssignments.size());
+     * for (Assignment domainAssignment : domainAssignments) {
+     * mostLikely.add(mapDomainAssignmentToFactorAssignment(domainAssignment));
+     * } return mostLikely;
+     */
   }
-  
+
   @Override
   public FactorProto toProto() {
     throw new UnsupportedOperationException("Not implemented");
@@ -244,4 +269,3 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
         + ((rangeFactor != null) ? rangeFactor.toString() : "uniform");
   }
 }
- 

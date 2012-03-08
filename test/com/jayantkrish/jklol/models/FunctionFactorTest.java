@@ -39,14 +39,14 @@ public class FunctionFactorTest extends TestCase {
       }
     };
     
-    uniformFactor = new FunctionFactor(domain, range, function, null, TableFactor.getFactory());
+    uniformFactor = new FunctionFactor(domain, range, function, null, null);
     
     Map<Assignment, Double> probs = Maps.newHashMap();
     probs.put(domain.outcomeArrayToAssignment("alphabet"), 2.0);
     probs.put(domain.outcomeArrayToAssignment("betabet"), 3.0);
     probs.put(domain.outcomeArrayToAssignment("bbbb"), 1.0);
     DiscreteObjectFactor domainFactor = new DiscreteObjectFactor(domain, probs);
-    nonuniformFactor = new FunctionFactor(domain, range, function, domainFactor, TableFactor.getFactory());
+    nonuniformFactor = new FunctionFactor(domain, range, function, domainFactor, null);
   }
   
   public void testGetUnnormalizedProbability() {
@@ -64,8 +64,28 @@ public class FunctionFactorTest extends TestCase {
     Factor rangeFactor = TableFactor.pointDistribution(range, range.outcomeArrayToAssignment("b"));
     Factor result = nonuniformFactor.product(rangeFactor);
     
-    assertEquals(1.0, result.getUnnormalizedProbability("bobobo"));
-    assertEquals(0.0, result.getUnnormalizedProbability("ababa"));    
+    assertEquals(1.0, result.getUnnormalizedProbability("bbbb", "b"));
+    assertEquals(3.0, result.getUnnormalizedProbability("betabet", "b"));
+    assertEquals(0.0, result.getUnnormalizedProbability("ababa", "a"));
+    assertEquals(0.0, result.getUnnormalizedProbability("ababa", "b"));
+    
+    Factor domainMarginal = result.marginalize(range);
+    assertEquals(1.0, domainMarginal.getUnnormalizedProbability("bbbb"));
+    assertEquals(3.0, domainMarginal.getUnnormalizedProbability("betabet"));
+    assertEquals(0.0, domainMarginal.getUnnormalizedProbability("ababa"));
+    
+    // Try it with a uniform domain factor.
+    result = uniformFactor.product(rangeFactor);
+    assertEquals(1.0, result.getUnnormalizedProbability("bazbaz", "b"));
+    assertEquals(1.0, result.getUnnormalizedProbability("bbbb", "b"));
+    assertEquals(1.0, result.getUnnormalizedProbability("betabet", "b"));
+    assertEquals(0.0, result.getUnnormalizedProbability("ababa", "a"));
+    assertEquals(0.0, result.getUnnormalizedProbability("ababa", "b"));
+    
+    domainMarginal = result.marginalize(range);
+    assertEquals(1.0, domainMarginal.getUnnormalizedProbability("bbbb"));
+    assertEquals(1.0, domainMarginal.getUnnormalizedProbability("bazetnh"));
+    assertEquals(0.0, domainMarginal.getUnnormalizedProbability("ababa"));
   }
   
   public void testMarginalRange() {

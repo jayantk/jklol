@@ -106,6 +106,11 @@ public abstract class AbstractFactor implements Factor {
     return current;
   }
   
+  @Override
+  public Factor product(Factor... others) {
+    return product(Arrays.asList(others));
+  }
+  
   /**
    * Initializes a protocol buffer builder for {@code this} with the
    * variables it contains. 

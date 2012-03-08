@@ -41,16 +41,19 @@ public class TableFactor extends DiscreteFactor {
 
   /**
    * Gets a {@code TableFactor} over {@code vars} which assigns unit weight to
-   * {@code assignment} and 0 to all other assignments. Requires
-   * {@code assignment} to contain all of {@code vars}.
+   * all assignments in {@code assignments} and 0 to all other assignments.
+   * Requires each assignment in {@code assignments} to contain all of
+   * {@code vars}.
    * 
    * @param vars
    * @param assignment
    * @return
    */
-  public static TableFactor pointDistribution(VariableNumMap vars, Assignment assignment) {
+  public static TableFactor pointDistribution(VariableNumMap vars, Assignment... assignments) {
     TableFactorBuilder builder = new TableFactorBuilder(vars);
-    builder.setWeight(assignment, 1.0);
+    for (int i = 0; i < assignments.length; i++) {
+      builder.setWeight(assignments[i], 1.0);
+    }
     return builder.build();
   }
 
@@ -177,15 +180,15 @@ public class TableFactor extends DiscreteFactor {
     return new TableFactor(relabeling.apply(getVars()),
         weights.relabelDimensions(relabeling.getVariableIndexReplacementMap()));
   }
-  
+
   @Override
   public FactorProto toProto() {
     FactorProto.Builder builder = getProtoBuilder();
     builder.setType(FactorProto.FactorType.TABLE);
-    
+
     TableFactorProto.Builder tableBuilder = builder.getTableFactorBuilder();
     tableBuilder.setWeights(weights.toProto());
-    
+
     return builder.build();
   }
 

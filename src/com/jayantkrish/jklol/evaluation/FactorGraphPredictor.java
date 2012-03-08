@@ -79,7 +79,7 @@ public class FactorGraphPredictor implements Predictor<DynamicAssignment, Dynami
   public DynamicFactorGraph getFactorGraph() {
     return factorGraph; 
   }
-
+  
   @Override
   public DynamicAssignment getBestPrediction(DynamicAssignment dynamicInput) {
     if (!factorGraph.getVariables().isValidAssignment(dynamicInput)) {

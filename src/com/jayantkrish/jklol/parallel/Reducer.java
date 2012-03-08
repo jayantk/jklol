@@ -19,7 +19,7 @@ public interface Reducer<B, C> {
   public C getInitialValue();
 
   /**
-   * Returns the result of accumulating @{code item} and {@code accumulated}.
+   * Returns the result of accumulating {@code item} and {@code accumulated}.
    * This method may mutate and return {@code accumulated}, which may be more
    * efficient than allocating and returning a new object.
    * 

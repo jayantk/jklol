@@ -9,6 +9,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -31,9 +32,6 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
   
   private final Factor domainFactor;
   private final Factor rangeFactor;
-  
-  private final FactorFactory domainFactory;
-  private final FactorFactory rangeFactory;
 
   /**
    * {@code domainFactor} may be null, in which case this factor represents a
@@ -47,8 +45,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
    * the range variable.
    */
   public WeightedRelationFactor(VariableNumMap domainVariable, VariableNumMap rangeVariable,
-      VariableNumMap auxiliaryVariables, Factor domainFactor, Factor rangeFactor, 
-      FactorFactory domainFactory, FactorFactory rangeFactory) {
+      VariableNumMap auxiliaryVariables, Factor domainFactor, Factor rangeFactor) {
     super(domainVariable.union(rangeVariable));
     this.domainVariable = Preconditions.checkNotNull(domainVariable);
     this.rangeVariable = Preconditions.checkNotNull(rangeVariable);
@@ -58,14 +55,13 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
     this.rangeFactor = rangeFactor;
     Preconditions.checkArgument(domainFactor == null || domainFactor.getVars().equals(domainVariable));
     Preconditions.checkArgument(rangeFactor.getVars().equals(rangeVariable));
-    this.domainFactory = Preconditions.checkNotNull(domainFactory);
-    this.rangeFactory = Preconditions.checkNotNull(rangeFactory);
   }
   
   protected abstract DiscreteObjectFactor constructJointDistribution(Factor domainFactor, 
       Factor rangeFactor);
   
-  protected abstract Factor replaceFactors(Factor newDomainFactor, Factor newRangeFactor);
+  protected abstract Factor replaceFactors(VariableRelabeling variableRelabeling, 
+      Factor newDomainFactor, Factor newRangeFactor);
   
   /*
   private double getFactorProbability(Factor factor, Object value) {
@@ -124,11 +120,8 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
       newRangeFactor = rangeFactor.relabelVariables(relabeling);
     }
     
-    return new WeightedRelationFactor(relabeling.apply(domainVariable), 
-        relabeling.apply(rangeVariable), auxiliaryVariables, newDomainFactor, newRangeFactor,
-        domainFactory, rangeFactory); 
+    return replaceFactors(relabeling, newDomainFactor, newRangeFactor);
   }
-
 
   @Override
   public Factor conditional(Assignment assignment) {
@@ -139,10 +132,10 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
     Factor toReturn = this;
     VariableNumMap toEliminate = getVars().intersection(assignment.getVariableNums());
     if (toEliminate.containsAny(domainVariable)) {
-      toReturn = toReturn.product(domainFactory.pointDistribution(domainVariable, 
+      toReturn = toReturn.product(DiscreteObjectFactor.pointDistribution(domainVariable, 
           assignment.intersection(domainVariable)));
     } else {
-      toReturn = toReturn.product(rangeFactory.pointDistribution(rangeVariable,
+      toReturn = toReturn.product(DiscreteObjectFactor.pointDistribution(rangeVariable,
           assignment.intersection(rangeVariable)));
     }
     return toReturn.marginalize(toEliminate);
@@ -159,7 +152,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
         return this;
       } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())
           && varNumsToEliminate.containsAll(auxiliaryVariables.getVariableNums())) {
-        return new FilterFactor(domainVariable, this, rangeFactor, domainFactory, false);        
+        return new FilterFactor(domainVariable, this, rangeFactor, false);        
       } else {
         throw new UnsupportedOperationException();
       }
@@ -191,15 +184,17 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
     Preconditions.checkArgument(other.getVars().size() == 1);
     if (other.getVars().containsAll(domainVariable)) {
       if (this.domainFactor == null) {
-        return replaceFactors(other, rangeFactor);
+        return replaceFactors(VariableRelabeling.identity(getVars()), other, rangeFactor);
       } else {
-        return replaceFactors(domainFactor.product(other), rangeFactor);
+        return replaceFactors(VariableRelabeling.identity(getVars()), 
+            domainFactor.product(other), rangeFactor);
       }
     } else {
       if (this.rangeFactor == null) {
-        return replaceFactors(domainFactor, other);
+        return replaceFactors(VariableRelabeling.identity(getVars()), domainFactor, other);
       } else {
-        return replaceFactors(domainFactor, rangeFactor.product(other));
+        return replaceFactors(VariableRelabeling.identity(getVars()), 
+            domainFactor, rangeFactor.product(other));
       }
     }
   }

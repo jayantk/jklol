@@ -39,13 +39,23 @@ public class DiscreteObjectFactor extends AbstractFactor {
     super(vars);
     this.probabilities = Preconditions.checkNotNull(probabilities);
   }
-  
-  public static DiscreteObjectFactor pointDistribution(VariableNumMap vars, Assignment assignment) {
+
+  /**
+   * Creates a {@code DiscreteObjectFactor} that assigns weight 1.0 to each
+   * assignment in {@code assignments}, and 0 to all other assignments.
+   * 
+   * @param vars
+   * @param assignments
+   * @return
+   */
+  public static DiscreteObjectFactor pointDistribution(VariableNumMap vars, Assignment... assignments) {
     Map<Assignment, Double> probabilities = Maps.newHashMap();
-    probabilities.put(assignment, 1.0);
+    for (int i = 0; i < assignments.length; i++) {
+      probabilities.put(assignments[i], 1.0);
+    }
     return new DiscreteObjectFactor(vars, probabilities);
   }
-  
+
   public static FactorFactory getFactory() {
     return new FactorFactory() {
       @Override
@@ -54,7 +64,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
       }
     };
   }
-  
+
   /**
    * Gets all {@code Assignments} in {@code this} with nonzero probability.
    * 
@@ -66,14 +76,14 @@ public class DiscreteObjectFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums())); 
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
     Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
     if (probabilities.containsKey(subAssignment)) {
       return probabilities.get(subAssignment);
     }
     return 0.0;
   }
-  
+
   public double getUnnormalizedLogProbability(Assignment assignment) {
     return Math.log(getUnnormalizedProbability(assignment));
   }
@@ -103,17 +113,17 @@ public class DiscreteObjectFactor extends AbstractFactor {
     Map<Assignment, Double> newProbabilities = Maps.newHashMap();
     BiMap<Integer, Integer> variableNumberReplacementMap = relabeling.getVariableIndexReplacementMap();
     for (Map.Entry<Assignment, Double> entry : probabilities.entrySet()) {
-      newProbabilities.put(entry.getKey().mapVariables(variableNumberReplacementMap), 
+      newProbabilities.put(entry.getKey().mapVariables(variableNumberReplacementMap),
           entry.getValue());
     }
-    return new DiscreteObjectFactor(relabeling.apply(getVars()), newProbabilities); 
+    return new DiscreteObjectFactor(relabeling.apply(getVars()), newProbabilities);
   }
 
   @Override
   public Factor conditional(Assignment assignment) {
     Assignment subAssignment = assignment.intersection(getVars());
     VariableNumMap conditionedVars = getVars().intersection(assignment.getVariableNums());
-    
+
     if (subAssignment.size() == 0) {
       return this;
     }
@@ -125,13 +135,13 @@ public class DiscreteObjectFactor extends AbstractFactor {
     if (varNumsToEliminate.size() == 0) {
       return this;
     }
-    
+
     CountAccumulator<Assignment> newProbabilities = CountAccumulator.create();
     for (Assignment a : probabilities.keySet()) {
       Assignment subAssignment = a.removeAll(varNumsToEliminate);
       newProbabilities.increment(subAssignment, probabilities.get(a));
     }
-    return new DiscreteObjectFactor(getVars().removeAll(varNumsToEliminate), 
+    return new DiscreteObjectFactor(getVars().removeAll(varNumsToEliminate),
         newProbabilities.getCountMap());
   }
 
@@ -140,7 +150,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
     if (varNumsToEliminate.size() == 0) {
       return this;
     }
-    
+
     DefaultHashMap<Assignment, Double> newProbabilities = new DefaultHashMap<Assignment, Double>(0.0);
     for (Assignment a : probabilities.keySet()) {
       Assignment subAssignment = a.removeAll(varNumsToEliminate);
@@ -148,7 +158,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
           probabilities.get(a));
       newProbabilities.put(subAssignment, maxProb);
     }
-    return new DiscreteObjectFactor(getVars().removeAll(varNumsToEliminate), 
+    return new DiscreteObjectFactor(getVars().removeAll(varNumsToEliminate),
         newProbabilities.getBaseMap());
   }
 
@@ -212,7 +222,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
         pq.poll();
       }
     }
-    
+
     List<Assignment> mostLikely = new ArrayList<Assignment>();
     while (pq.size() > 0) {
       mostLikely.add(pq.poll().getRight());
@@ -220,12 +230,12 @@ public class DiscreteObjectFactor extends AbstractFactor {
     Collections.reverse(mostLikely);
     return mostLikely;
   }
-  
+
   @Override
   public FactorProto toProto() {
     throw new UnsupportedOperationException();
   }
-  
+
   @Override
   public String toString() {
     return "[DiscreteObjectFactor: " + probabilities.toString() + "]";

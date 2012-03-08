@@ -238,6 +238,14 @@ public interface Factor {
    * @return
    */
   public Factor product(List<Factor> others);
+  
+  /**
+   * Same as {@link #product(List)}, using an array.
+   * 
+   * @param others
+   * @return
+   */
+  public Factor product(Factor... others);
 
   /**
    * Multiplies this factor by a constant weight.

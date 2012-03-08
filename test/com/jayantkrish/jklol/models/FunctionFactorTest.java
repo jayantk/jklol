@@ -60,6 +60,55 @@ public class FunctionFactorTest extends TestCase {
     assertEquals(3.0, nonuniformFactor.getUnnormalizedProbability("betabet", "b"));
   }
   
+  public void testProductRange() {
+    Factor rangeFactor = TableFactor.pointDistribution(range, range.outcomeArrayToAssignment("b"));
+    Factor result = nonuniformFactor.product(rangeFactor);
+    
+    assertEquals(1.0, result.getUnnormalizedProbability("bobobo"));
+    assertEquals(0.0, result.getUnnormalizedProbability("ababa"));    
+  }
+  
+  public void testMarginalRange() {
+    Factor rangeMarginal = nonuniformFactor.marginalize(domain);
+    
+    assertEquals(4.0, rangeMarginal.getUnnormalizedProbability("b"));
+    assertEquals(2.0, rangeMarginal.getUnnormalizedProbability("a"));
+    assertEquals(0.0, rangeMarginal.getUnnormalizedProbability("c"));
+  }
+  
+  public void testMarginalDomain() {
+    Factor rangeMarginal = nonuniformFactor.marginalize(range);
+    
+    assertEquals(1.0, rangeMarginal.getUnnormalizedProbability("bbbb"));
+    assertEquals(3.0, rangeMarginal.getUnnormalizedProbability("betabet"));
+    assertEquals(0.0, rangeMarginal.getUnnormalizedProbability("fooo"));
+  }
+  
+  public void testProductAndMarginal() {
+    Factor domainFactor = DiscreteObjectFactor.pointDistribution(domain, domain.outcomeArrayToAssignment("abcd"),
+        domain.outcomeArrayToAssignment("bcde"), domain.outcomeArrayToAssignment("afff"));
+    Factor rangeFactor = TableFactor.pointDistribution(range, range.outcomeArrayToAssignment("a"),
+        range.outcomeArrayToAssignment("c"));
+    
+    Factor product = uniformFactor.product(domainFactor, rangeFactor);
+    
+    assertEquals(1.0, product.getUnnormalizedProbability("abcd", "a"));
+    assertEquals(1.0, product.getUnnormalizedProbability("afff", "a"));
+    assertEquals(0.0, product.getUnnormalizedProbability("abcd", "b"));
+    assertEquals(0.0, product.getUnnormalizedProbability("bcde", "b"));
+    assertEquals(0.0, product.getUnnormalizedProbability("cde", "c"));
+    
+    Factor rangeMarginal = product.marginalize(domain);
+    assertEquals(2.0, rangeMarginal.getUnnormalizedProbability("a"));
+    assertEquals(0.0, rangeMarginal.getUnnormalizedProbability("b"));
+    assertEquals(0.0, rangeMarginal.getUnnormalizedProbability("c"));
+    
+    Factor domainMarginal = product.marginalize(range);
+    assertEquals(1.0, domainMarginal.getUnnormalizedProbability("abcd"));
+    assertEquals(1.0, domainMarginal.getUnnormalizedProbability("afff"));
+    assertEquals(0.0, domainMarginal.getUnnormalizedProbability("bcde"));
+  }
+  
   public void testConditionalDomain() {
     Factor factor = uniformFactor.conditional(domain.outcomeArrayToAssignment("bebebe"));
     assertEquals(1.0, factor.getUnnormalizedProbability("b"));
@@ -76,7 +125,7 @@ public class FunctionFactorTest extends TestCase {
     assertEquals(0.0, factor.getUnnormalizedProbability("a"));
     assertEquals(0.0, factor.getUnnormalizedProbability("c"));
   }
-  
+   
   public void testConditionalRangeNoDomain() {
     Factor factor = uniformFactor.conditional(range.outcomeArrayToAssignment("a"));
     assertEquals(1.0, factor.getUnnormalizedProbability("alphabet"));

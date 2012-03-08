@@ -15,16 +15,14 @@ public class FilterFactor extends AbstractFactor {
   
   private final Factor relationFactor;
   private final Factor rangeFactor;
-  private final FactorFactory domainFactory;
   private boolean isMaxMarginal;
 
   public FilterFactor(VariableNumMap vars, Factor relationFactor, Factor rangeFactor,
-      FactorFactory domainFactory, boolean isMaxMarginal) {
+      boolean isMaxMarginal) {
     super(vars);
     Preconditions.checkArgument(vars.size() == 1);
     this.relationFactor = relationFactor;
     this.rangeFactor = rangeFactor;
-    this.domainFactory = domainFactory;
     this.isMaxMarginal = isMaxMarginal;
   }
 
@@ -53,7 +51,7 @@ public class FilterFactor extends AbstractFactor {
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
     return new FilterFactor(relabeling.apply(getVars()), relationFactor.relabelVariables(relabeling), 
-        rangeFactor, domainFactory, isMaxMarginal);
+        rangeFactor, isMaxMarginal);
   }
 
   @Override
@@ -95,7 +93,7 @@ public class FilterFactor extends AbstractFactor {
   @Override
   public Factor product(double constant) {
     return new FilterFactor(getVars(), relationFactor, rangeFactor.product(constant), 
-        domainFactory, isMaxMarginal);
+        isMaxMarginal);
   }
 
   @Override

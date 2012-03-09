@@ -17,7 +17,7 @@ import com.google.common.collect.Lists;
  * 
  * @author jayantk
  */
-public class MixturePredictor<I, O> implements Predictor<I, O> {
+public class MixturePredictor<I, O> extends AbstractPredictor<I, O> {
 
   private final ImmutableList<Predictor<I, O>> predictors;
   private final ImmutableList<Double> mixingProportions;

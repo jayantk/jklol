@@ -17,7 +17,7 @@ import com.jayantkrish.jklol.util.Converter;
  * @param <I2> inputVar type of underlying predictor
  * @param <O2> outputVar type of underlying predictor
  */
-public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
+public class ForwardingPredictor<I1, O1, I2, O2> extends AbstractPredictor<I1, O1> {
 
   private final Predictor<I2, O2> predictor;
   private final Function<I1, I2> inputConverter;

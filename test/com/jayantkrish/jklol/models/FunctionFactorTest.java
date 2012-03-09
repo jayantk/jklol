@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import junit.framework.TestCase;
@@ -96,6 +97,13 @@ public class FunctionFactorTest extends TestCase {
     assertEquals(0.0, rangeMarginal.getUnnormalizedProbability("c"));
   }
   
+  public void testMaxMarginalRange() {
+    Factor rangeMaxMarginal = nonuniformFactor.maxMarginalize(domain);
+    assertEquals(3.0, rangeMaxMarginal.getUnnormalizedProbability("b"));
+    assertEquals(2.0, rangeMaxMarginal.getUnnormalizedProbability("a"));
+    assertEquals(0.0, rangeMaxMarginal.getUnnormalizedProbability("c"));
+  }
+  
   public void testMarginalDomain() {
     Factor rangeMarginal = nonuniformFactor.marginalize(range);
     
@@ -168,4 +176,9 @@ public class FunctionFactorTest extends TestCase {
     assertEquals(0.0, factor.getUnnormalizedProbability("betabet"));
   }
 
+  public void testGetMostLikelyAssignments() {
+    List<Assignment> mostLikely = nonuniformFactor.getMostLikelyAssignments(2);
+    assertEquals(Arrays.asList("betabet", "b"), mostLikely.get(0).getValues());
+    assertEquals(Arrays.asList("alphabet", "a"), mostLikely.get(1).getValues());
+  }
 }

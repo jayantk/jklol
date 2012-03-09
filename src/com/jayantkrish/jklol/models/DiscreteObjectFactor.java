@@ -235,6 +235,12 @@ public class DiscreteObjectFactor extends AbstractFactor {
   public FactorProto toProto() {
     throw new UnsupportedOperationException();
   }
+  
+  @Override 
+  public DiscreteFactor coerceToDiscrete() {
+    TableFactorBuilder builder = TableFactorBuilder.fromMap(getVars(), probabilities);
+    return builder.build();
+  }
 
   @Override
   public String toString() {

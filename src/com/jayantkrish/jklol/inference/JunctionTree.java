@@ -33,12 +33,13 @@ public class JunctionTree implements MarginalCalculator {
 
   @Override
   public MarginalSet computeMarginals(FactorGraph factorGraph) {
-    // Efficiency override -- all variables in the factor graph have assigned values.
+    // Efficiency override -- all variables in the factor graph have assigned
+    // values.
     if (factorGraph.getVariables().size() == 0) {
-      return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(), 
+      return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(),
           factorGraph.getConditionedValues());
     }
-    
+
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
     Set<Integer> rootFactorNums = runMessagePassing(cliqueTree, true);
     return cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
@@ -46,11 +47,12 @@ public class JunctionTree implements MarginalCalculator {
 
   @Override
   public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph) {
-    // Efficiency override -- all variables in the factor graph have assigned values.
+    // Efficiency override -- all variables in the factor graph have assigned
+    // values.
     if (factorGraph.getVariables().size() == 0) {
       return new FactorMaxMarginalSet(new FactorGraph(), factorGraph.getConditionedValues());
     }
-    
+
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
     runMessagePassing(cliqueTree, false);
     return cliqueTreeToMaxMarginalSet(cliqueTree, factorGraph);
@@ -65,8 +67,10 @@ public class JunctionTree implements MarginalCalculator {
     // This performs both passes of message passing.
     boolean keepGoing = true;
     Set<Integer> rootFactors = Sets.newHashSet();
+    // The values for each key are factors which can pass messages to key.
     while (keepGoing) {
       keepGoing = false;
+
       for (int i = 0; i < cliqueTree.numFactors(); i++) {
         int factorNum = cliqueTree.getFactorEliminationOrder().get(i);
         Map<SeparatorSet, Factor> inboundMessages = cliqueTree.getInboundMessages(factorNum);
@@ -182,7 +186,7 @@ public class JunctionTree implements MarginalCalculator {
     return newMarginal;
   }
 
-  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree, 
+  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree,
       Set<Integer> rootFactorNums, FactorGraph originalFactorGraph) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
@@ -209,7 +213,7 @@ public class JunctionTree implements MarginalCalculator {
       }
     }
 
-    return new FactorMarginalSet(marginalFactors, partitionFunction, 
+    return new FactorMarginalSet(marginalFactors, partitionFunction,
         originalFactorGraph.getConditionedVariables(), originalFactorGraph.getConditionedValues());
   }
 
@@ -220,13 +224,13 @@ public class JunctionTree implements MarginalCalculator {
    * @param rootFactorNum
    * @return
    */
-  private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree, 
+  private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree,
       FactorGraph originalFactorGraph) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
       marginalFactors.add(computeMarginal(cliqueTree, i, false));
     }
-    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors), 
+    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors),
         originalFactorGraph.getConditionedValues());
   }
 
@@ -272,7 +276,7 @@ public class JunctionTree implements MarginalCalculator {
           initialEliminationOrder.put(factorGraphFactors.get(i), i);
         }
       }
- 
+
       // Store factors which contain each variable so that we can
       // eliminate factors that are subsets of others.
       Collections.sort(factorGraphFactors, new Comparator<Factor>() {
@@ -327,7 +331,7 @@ public class JunctionTree implements MarginalCalculator {
           }
         }
       }
-      
+
       // Merge any factors which are queued.
       for (Integer cliqueNum : toMerge.keySet()) {
         cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(

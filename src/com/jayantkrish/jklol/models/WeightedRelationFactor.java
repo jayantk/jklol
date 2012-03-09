@@ -190,7 +190,26 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
 
   @Override
   public Factor maxMarginalize(Collection<Integer> varNumsToEliminate) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    if (domainFactor == null) {
+      // If domainFactor is null, some marginals cannot be computed.
+      // Other marginals can only be computed lazily.
+      Preconditions.checkArgument(!varNumsToEliminate.contains(domainVariable.getOnlyVariableNum()));
+
+      if (getVars().intersection(varNumsToEliminate).size() == 0) {
+        return this;
+      } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())
+          && varNumsToEliminate.containsAll(auxiliaryVariables.getVariableNums())) {
+        return new FilterFactor(domainVariable, this, rangeFactor, true);
+      } else {
+        // We shouldn't get to this case, based on the Preconditions check above.
+        throw new UnsupportedOperationException();
+      }
+    } else {
+      // Easy case: we've received a message in the domain, so we can construct
+      // the joint distribution and everything
+      DiscreteObjectFactor thisAsDiscrete = constructJointDistribution(domainFactor, rangeFactor);
+      return thisAsDiscrete.maxMarginalize(varNumsToEliminate);
+    }
   }
 
   @Override
@@ -246,15 +265,9 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
 
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
-    throw new UnsupportedOperationException("Not implemented");
-    /*
-     * List<Assignment> domainAssignments =
-     * domainFactor.getMostLikelyAssignments(numAssignments); List<Assignment>
-     * mostLikely = Lists.newArrayListWithCapacity(domainAssignments.size());
-     * for (Assignment domainAssignment : domainAssignments) {
-     * mostLikely.add(mapDomainAssignmentToFactorAssignment(domainAssignment));
-     * } return mostLikely;
-     */
+    Preconditions.checkState(domainFactor != null);
+    return constructJointDistribution(domainFactor, rangeFactor)
+        .getMostLikelyAssignments(numAssignments);
   }
 
   @Override

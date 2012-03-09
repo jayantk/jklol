@@ -12,7 +12,7 @@ import com.google.common.collect.Maps;
 /**
  * A predictor which makes the same prediction for every inputVar.
  */
-public class ConstantPredictor<I, O> implements Predictor<I, O> {
+public class ConstantPredictor<I, O> extends AbstractPredictor<I, O> {
 
   private Map<O, Double> baseMap;
 	private TreeMap<O, Double> outputProbabilities;

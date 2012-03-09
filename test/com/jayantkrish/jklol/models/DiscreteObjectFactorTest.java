@@ -22,17 +22,19 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class DiscreteObjectFactorTest extends TestCase {
 
-  private Variable var0, var1;
-  private VariableNumMap fVars, gVars;
+  private Variable var0, var1, var2;
+  private VariableNumMap fVars, gVars, hVars;
 
   private DiscreteObjectFactor f;
   private DiscreteObjectFactor g;
+  private DiscreteObjectFactor h;
   
   private Collection<Assignment> gAssignments;
   
   public void setUp() {
     var0 = new ObjectVariable(Integer.class);
     var1 = new ObjectVariable(String.class);
+    var2 = new DiscreteVariable("foo", Arrays.asList("a", "b", "c", "d"));
     
     fVars = new VariableNumMap(Arrays.asList(0, 1), Arrays.asList("0", "1"),
         Arrays.asList(var0, var1));
@@ -52,6 +54,13 @@ public class DiscreteObjectFactorTest extends TestCase {
     gMap.put(gVars.outcomeArrayToAssignment(1), 6.0);
     gAssignments = gMap.keySet();
     g = new DiscreteObjectFactor(gVars, gMap);
+    
+    hVars = new VariableNumMap(Arrays.asList(0), Arrays.asList("0"),
+        Arrays.asList(var2));
+    Map<Assignment, Double> hMap = Maps.newHashMap();
+    hMap.put(hVars.outcomeArrayToAssignment("a"), 5.0);
+    hMap.put(hVars.outcomeArrayToAssignment("c"), 6.0);
+    h = new DiscreteObjectFactor(hVars, hMap);
   }
   
   public void testAssignments() {
@@ -120,5 +129,12 @@ public class DiscreteObjectFactorTest extends TestCase {
     assertEquals(new VariableNumMap(Arrays.asList(1, 2), Arrays.asList("x", "y"), Arrays.asList(var0, var1)),
         relabeled.getVars());
     assertEquals(4, Iterables.size(relabeled.assignments()));
+  }
+  
+  public void testCoerceToDiscrete() {
+    DiscreteFactor discrete = h.coerceToDiscrete();
+    assertEquals(5.0, discrete.getUnnormalizedProbability("a"));
+    assertEquals(6.0, discrete.getUnnormalizedProbability("c"));
+    assertEquals(0.0, discrete.getUnnormalizedProbability("b"));
   }
 }

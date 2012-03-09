@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.models;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -67,6 +68,23 @@ public class TableFactorBuilder {
     Iterator<Assignment> allAssignmentIter = new AllAssignmentIterator(variables);
     while (allAssignmentIter.hasNext()) {
       builder.setWeight(allAssignmentIter.next(), 1.0);
+    }
+    return builder;
+  }
+
+  /**
+   * Gets a {@code TableFactorBuilder} containing the same assignments and weights
+   * as {@code probabilities}.
+   * 
+   * @param variables
+   * @param probabilities
+   * @return
+   */
+  public static TableFactorBuilder fromMap(VariableNumMap variables,
+      Map<Assignment, Double> probabilities) {
+    TableFactorBuilder builder = new TableFactorBuilder(variables);
+    for (Map.Entry<Assignment, Double> outcome : probabilities.entrySet()) {
+      builder.setWeight(outcome.getKey(), outcome.getValue());
     }
     return builder;
   }

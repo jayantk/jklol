@@ -44,7 +44,7 @@ public interface Factor {
    * which are not part of this factor.
    * 
    * {@link #getUnnormalizedLogProbability} should be preferred over this method
-   * whenever possible. 
+   * whenever possible.
    * 
    * @param assignment
    * @return
@@ -66,21 +66,21 @@ public interface Factor {
    * {@link #getUnnormalizedProbability(Assignment)}.
    */
   public double getUnnormalizedProbability(Object... outcome);
-    
+
   /**
    * Gets the unnormalized log probability of a particular assignment to the
-   * variables in this factor. This method may not incur the same loss of
-   * range entailed by
-   * {@code Math.log(getUnnormalizedProbability(assignment)}, and is preferred
-   * over {@link #getUnnormalizedProbability(Assignment)} wherever possible.
+   * variables in this factor. This method may not incur the same loss of range
+   * entailed by {@code Math.log(getUnnormalizedProbability(assignment)}, and is
+   * preferred over {@link #getUnnormalizedProbability(Assignment)} wherever
+   * possible.
    * 
    * @param assignment
    * @return
    */
   public double getUnnormalizedLogProbability(Assignment assignment);
-  
+
   public double getUnnormalizedLogProbability(Object... outcome);
-  
+
   public double getUnnormalizedLogProbability(List<? extends Object> outcome);
 
   /**
@@ -238,7 +238,7 @@ public interface Factor {
    * @return
    */
   public Factor product(List<Factor> others);
-  
+
   /**
    * Same as {@link #product(List)}, using an array.
    * 
@@ -299,7 +299,7 @@ public interface Factor {
    * @return
    */
   public List<Assignment> getMostLikelyAssignments(int numAssignments);
-  
+
   /**
    * Serializes {@code this} into a protocol buffer.
    * 

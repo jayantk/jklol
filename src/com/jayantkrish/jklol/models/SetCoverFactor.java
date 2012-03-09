@@ -30,17 +30,23 @@ public class SetCoverFactor extends AbstractFactor {
     this.requiredValues = ImmutableSet.copyOf(requiredValues);
     this.impossibleValues = ImmutableSet.copyOf(impossibleValues);
     
-    // Ensure each argument factor is non-null 
-    for (Factor factor : inputVarFactors) {
-      Preconditions.checkArgument(factor != null);
-    }
     this.inputVarFactors = Lists.newArrayList(inputVarFactors);
     
-    // Precompute max-marginals.
-    this.cachedMaxMarginals = cacheMaxMarginals();
+    // Precompute max-marginals. Only necessary if we've received all child messages.
+    boolean allNonNull = true;
+    for (Factor factor : inputVarFactors) {
+      allNonNull &= factor != null;
+    }
+    
+    if (allNonNull) {
+      this.cachedMaxMarginals = cacheMaxMarginals();
+    } else {
+      this.cachedMaxMarginals = null;
+    }
   }
   
   private List<Factor> cacheMaxMarginals() {
+    System.out.println("Computing max marginals.");
     List<Factor> maxMarginals = Lists.newArrayListWithCapacity(inputVarFactors.size());
     for (int i = 0; i < inputVarFactors.size(); i++) {
       maxMarginals.add(null);
@@ -148,6 +154,10 @@ public class SetCoverFactor extends AbstractFactor {
   
   @Override
   public Factor product(List<Factor> others) {
+    if (others.size() == 0) {
+      return this;
+    }
+
     List<Factor> newInputVarFactors = Lists.<Factor>newArrayList(inputVarFactors);
     for (Factor other : others) {
       Preconditions.checkArgument(other.getVars().size() == 1);
@@ -156,7 +166,11 @@ public class SetCoverFactor extends AbstractFactor {
       int otherVarIndex = other.getVars().getVariableNums().get(0);
       int listIndex = getVars().getVariableNums().indexOf(otherVarIndex);
 
-      newInputVarFactors.set(listIndex, newInputVarFactors.get(listIndex).product(other));      
+      if (newInputVarFactors.get(listIndex) == null) {
+        newInputVarFactors.set(listIndex, other);
+      } else {
+        newInputVarFactors.set(listIndex, newInputVarFactors.get(listIndex).product(other));
+      }
     }
     return new SetCoverFactor(getVars(), requiredValues, 
         impossibleValues, newInputVarFactors);

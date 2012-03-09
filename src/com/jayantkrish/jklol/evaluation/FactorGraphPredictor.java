@@ -34,7 +34,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class FactorGraphPredictor implements Predictor<DynamicAssignment, DynamicAssignment> {
+public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, DynamicAssignment> {
 
   private final DynamicFactorGraph factorGraph;
   private final VariablePattern outputVariablePattern;
@@ -176,7 +176,7 @@ public class FactorGraphPredictor implements Predictor<DynamicAssignment, Dynami
    * 
    * @author jayantk
    */
-  public static class SimpleFactorGraphPredictor implements Predictor<Assignment, Assignment> {
+  public static class SimpleFactorGraphPredictor extends AbstractPredictor<Assignment, Assignment> {
     
     private FactorGraphPredictor predictor;
     

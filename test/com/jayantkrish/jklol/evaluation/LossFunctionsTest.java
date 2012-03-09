@@ -94,7 +94,7 @@ public class LossFunctionsTest extends TestCase {
 	/*
 	 * Memorizes a true or false prediction for each data point.
 	 */
-	private class TestPredictor<I> implements Predictor<I, Boolean> {
+	private class TestPredictor<I> extends AbstractPredictor<I, Boolean> {
 
 		private Map<I, Boolean> predictions;
 		private double probability;

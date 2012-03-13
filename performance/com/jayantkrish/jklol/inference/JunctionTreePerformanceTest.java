@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.testing.PerformanceTest;
 import com.jayantkrish.jklol.testing.PerformanceTestCase;
 import com.jayantkrish.jklol.testing.PerformanceTestRunner;
@@ -38,7 +39,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     f = f.addVariable("Var2", var);
 
     VariableNumMap vars = f.getVariables().getVariablesByName(Arrays.asList("Var0", "Var1"));
-    TableFactorBuilder tfBuilder = new TableFactorBuilder(vars);
+    TableFactorBuilder tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < numValues; i++) {
       Assignment a = new Assignment(vars.getVariableNums(), 
           Arrays.asList(new Integer[] {i, (numValues - 1) - i}));
@@ -48,7 +49,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     f = f.addFactor(factor1);
 
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1", "Var2"));
-    tfBuilder = new TableFactorBuilder(vars);
+    tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < numValues; i++) {
       Assignment a = new Assignment(vars.getVariableNums(), 
           Arrays.asList(new Integer[] {i, i}));
@@ -58,7 +59,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     f = f.addFactor(factor2);
 
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var2"));
-    tfBuilder = new TableFactorBuilder(vars);
+    tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < 1000; i++) {
       Assignment a = new Assignment(vars.getVariableNums(), 
           Arrays.asList(new Integer[] {i}));
@@ -68,7 +69,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     f = f.addFactor(factor3);
 
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1"));
-    tfBuilder = new TableFactorBuilder(vars);
+    tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < 10; i++) {
       Assignment a = new Assignment(vars.getVariableNums(), 
           Arrays.asList(new Integer[] {i * 100}));
@@ -77,7 +78,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     factor4 = tfBuilder.build();
 
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1", "Var2"));
-    tfBuilder = new TableFactorBuilder(vars);
+    tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < 500000; i++) {
       Assignment a = new Assignment(vars.getVariableNums(), 
           Arrays.asList(new Integer[] {i / 50, i % 50}));

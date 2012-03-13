@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Utility methods for manipulating collections of {@link Factor}s.
@@ -80,8 +79,6 @@ public final class FactorUtils {
    * @return
    */
   public static Factor multiplicativeIdentity() {
-    TableFactorBuilder tfBuilder = new TableFactorBuilder(VariableNumMap.emptyMap());
-    tfBuilder.setWeight(Assignment.EMPTY, 1.0);
-    return tfBuilder.build();
+    return TableFactor.unity(VariableNumMap.emptyMap());
   }
 }

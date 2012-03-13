@@ -100,7 +100,7 @@ public class SequenceModelTest extends TestCase {
   }
   
   public void testTrainLogLinear() {
-    testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 80));
+    testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 80, new DefaultLogFunction()));
   }
   
   private void testZeroTrainingError(Trainer trainer) {

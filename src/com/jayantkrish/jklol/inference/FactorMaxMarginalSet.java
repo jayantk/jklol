@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.inference;
 
 import java.util.List;
 import java.util.Set;
+import java.util.SortedSet;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
@@ -39,8 +40,19 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
       return conditionedValues;
     } else {
       // General case
-      return getBestAssignmentGiven(factorGraph, 0, Sets.<Integer> newHashSet(), Assignment.EMPTY)
-          .union(conditionedValues);
+      SortedSet<Integer> unvisited = Sets.newTreeSet();
+      for (int i = 0; i < factorGraph.getFactors().size(); i++) {
+        unvisited.add(i);
+      }
+      
+      Set<Integer> visited = Sets.newHashSet();      
+      Assignment current = Assignment.EMPTY;
+      while (unvisited.size() > 0) {
+        current = getBestAssignmentGiven(factorGraph, unvisited.first(), visited, current);
+        unvisited.removeAll(visited);
+      }
+
+      return current.union(conditionedValues);
     }
   }
 
@@ -67,7 +79,7 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
       // probability assignment.
       throw new ZeroProbabilityError();
     }
-    Assignment best = bestAssignments.get(0);
+    Assignment best = bestAssignments.get(0).union(a);
     visitedFactors.add(factorNum);
 
     for (int adjacentFactorNum : factorGraph.getAdjacentFactors(factorNum)) {

@@ -12,15 +12,19 @@ import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class FilterFactor extends AbstractFactor {
-  
+
+  private final VariableNumMap domainVar;
+  private final VariableNumMap auxiliaryVars;
   private final Factor relationFactor;
   private final Factor rangeFactor;
   private boolean isMaxMarginal;
 
-  public FilterFactor(VariableNumMap vars, Factor relationFactor, Factor rangeFactor,
-      boolean isMaxMarginal) {
-    super(vars);
-    Preconditions.checkArgument(vars.size() == 1);
+  public FilterFactor(VariableNumMap domainVar, VariableNumMap auxiliaryVars, 
+      Factor relationFactor, Factor rangeFactor, boolean isMaxMarginal) {
+    super(domainVar.union(auxiliaryVars));
+    Preconditions.checkArgument(domainVar.size() == 1);
+    this.domainVar = domainVar;
+    this.auxiliaryVars = auxiliaryVars;
     this.relationFactor = relationFactor;
     this.rangeFactor = Preconditions.checkNotNull(rangeFactor);
     this.isMaxMarginal = isMaxMarginal;
@@ -50,8 +54,8 @@ public class FilterFactor extends AbstractFactor {
 
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
-    return new FilterFactor(relabeling.apply(getVars()), relationFactor.relabelVariables(relabeling), 
-        rangeFactor, isMaxMarginal);
+    return new FilterFactor(relabeling.apply(domainVar), relabeling.apply(auxiliaryVars), 
+        relationFactor.relabelVariables(relabeling), rangeFactor, isMaxMarginal);
   }
 
   @Override
@@ -81,7 +85,7 @@ public class FilterFactor extends AbstractFactor {
 
   @Override
   public Factor product(Factor other) {
-    Preconditions.checkArgument(other.getVars().equals(getVars()));
+    Preconditions.checkArgument(other.getVars().equals(domainVar));
     Factor productFactor = relationFactor.product(other).product(rangeFactor);
     if (isMaxMarginal) {
       return productFactor.maxMarginalize(rangeFactor.getVars());
@@ -92,8 +96,8 @@ public class FilterFactor extends AbstractFactor {
 
   @Override
   public Factor product(double constant) {
-    return new FilterFactor(getVars(), relationFactor, rangeFactor.product(constant), 
-        isMaxMarginal);
+    return new FilterFactor(domainVar, auxiliaryVars, relationFactor, 
+        rangeFactor.product(constant), isMaxMarginal);
   }
 
   @Override

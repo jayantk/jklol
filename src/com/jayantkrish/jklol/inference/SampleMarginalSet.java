@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -34,7 +35,7 @@ public class SampleMarginalSet extends AbstractMarginalSet {
 	public Factor getMarginal(Collection<Integer> varNums) {
 		Preconditions.checkNotNull(varNums);
 		VariableNumMap varsToRetain = factorGraphVariables.intersection(varNums);
-		TableFactorBuilder builder = new TableFactorBuilder(varsToRetain);
+		TableFactorBuilder builder = new TableFactorBuilder(varsToRetain, SparseTensorBuilder.getFactory());
 		for (Assignment sample : samples) {
 			Assignment factorSample = sample.intersection(varNums);
 			builder.setWeight(factorSample, 

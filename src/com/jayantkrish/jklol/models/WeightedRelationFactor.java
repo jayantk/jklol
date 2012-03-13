@@ -47,7 +47,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
    */
   public WeightedRelationFactor(VariableNumMap domainVariable, VariableNumMap rangeVariable,
       VariableNumMap auxiliaryVariables, Factor domainFactor, Factor rangeFactor) {
-    super(domainVariable.union(rangeVariable));
+    super(VariableNumMap.unionAll(domainVariable, rangeVariable, auxiliaryVariables));
     this.domainVariable = Preconditions.checkNotNull(domainVariable);
     this.rangeVariable = Preconditions.checkNotNull(rangeVariable);
     this.auxiliaryVariables = Preconditions.checkNotNull(auxiliaryVariables);
@@ -173,16 +173,14 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
 
       if (getVars().intersection(varNumsToEliminate).size() == 0) {
         return this;
-      } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())
-          && varNumsToEliminate.containsAll(auxiliaryVariables.getVariableNums())) {
-        return new FilterFactor(domainVariable, this, rangeFactor, false);
+      } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
+        return new FilterFactor(domainVariable, auxiliaryVariables, this, rangeFactor, false); 
       } else {
         throw new UnsupportedOperationException();
       }
     } else {
       // Easy case: we've received a message in the domain, so we can construct
-      // the
-      // joint distribution and everything
+      // the joint distribution and everything.
       DiscreteObjectFactor thisAsDiscrete = constructJointDistribution(domainFactor, rangeFactor);
       return thisAsDiscrete.marginalize(varNumsToEliminate);
     }
@@ -197,9 +195,8 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
 
       if (getVars().intersection(varNumsToEliminate).size() == 0) {
         return this;
-      } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())
-          && varNumsToEliminate.containsAll(auxiliaryVariables.getVariableNums())) {
-        return new FilterFactor(domainVariable, this, rangeFactor, true);
+      } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
+        return new FilterFactor(domainVariable, auxiliaryVariables, this, rangeFactor, true);
       } else {
         // We shouldn't get to this case, based on the Preconditions check above.
         throw new UnsupportedOperationException();

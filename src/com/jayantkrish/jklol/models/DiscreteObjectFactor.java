@@ -241,6 +241,11 @@ public class DiscreteObjectFactor extends AbstractFactor {
     TableFactorBuilder builder = TableFactorBuilder.fromMap(getVars(), probabilities);
     return builder.build();
   }
+  
+  @Override
+  public DiscreteObjectFactor coerceToDiscreteObject() {
+    return this;
+  }
 
   @Override
   public String toString() {

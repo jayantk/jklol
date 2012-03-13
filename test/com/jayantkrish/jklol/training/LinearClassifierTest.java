@@ -81,7 +81,7 @@ public class LinearClassifierTest extends TestCase {
   }
 
   public void testTrainLogisticRegression() {
-    runTrainerTest(new StochasticGradientTrainer(new JunctionTree(), 80));
+    runTrainerTest(new StochasticGradientTrainer(new JunctionTree(), 80, new DefaultLogFunction()));
   }
 
   private void runTrainerTest(Trainer trainer) {

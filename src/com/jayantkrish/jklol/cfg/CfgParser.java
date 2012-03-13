@@ -201,6 +201,7 @@ public class CfgParser {
     }
 
     // This block of code only exists for logging purposes.
+    /*
     int numTruncatedEntries = 0;
     for (int spanSize = 0; spanSize < chart.chartSize() - 1; spanSize++) {
       for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
@@ -210,6 +211,7 @@ public class CfgParser {
       }
     }
     System.out.println("Truncated " + numTruncatedEntries + " chart entries");
+    */
 
     // Map the integer encodings of trees back to tree objects.
     List<ParseTree> trees;

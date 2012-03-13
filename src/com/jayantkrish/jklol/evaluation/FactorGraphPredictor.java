@@ -99,6 +99,42 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
       return null;
     }
   }
+  
+  public Prediction<DynamicAssignment, DynamicAssignment> getBestPredictionObject(DynamicAssignment dynamicInput,
+      DynamicAssignment dynamicOutput) {
+    if (!factorGraph.getVariables().isValidAssignment(dynamicInput)) {
+      // Cannot make predictions 
+      return Prediction.create(dynamicInput, dynamicOutput, new double[0], 
+          Collections.<DynamicAssignment>emptyList());
+    }
+    // Compute max-marginals conditioned on the input
+    Assignment input = factorGraph.getVariables().toAssignment(dynamicInput);
+
+    FactorGraph conditionalFactorGraph = factorGraph.getFactorGraph(dynamicInput).conditional(input);
+    MaxMarginalSet maxMarginals = marginalCalculator.computeMaxMarginals(conditionalFactorGraph);
+
+    List<Assignment> bestAssignments = Lists.newArrayList();
+    try {
+      bestAssignments.add(maxMarginals.getNthBestAssignment(0));
+    } catch (ZeroProbabilityError e) {
+      // Occurs if all outputs have zero probability under the given assignment.
+      // Safely ignored by setting bestAssignments to the empty list.
+    }
+
+    List<DynamicAssignment> predictedOutputs = Lists.newArrayList();
+    double[] scores = new double[bestAssignments.size()];
+    for (int i = 0; i < bestAssignments.size(); i++) {
+      Assignment bestAssignment = bestAssignments.get(i);
+      scores[i] = conditionalFactorGraph.getUnnormalizedLogProbability(bestAssignment);
+      
+      Assignment outputAssignment = bestAssignment.intersection(
+          getOutputVariables(conditionalFactorGraph, outputVariablePattern));
+      predictedOutputs.add(factorGraph.getVariables().toDynamicAssignment(outputAssignment, 
+          conditionalFactorGraph.getAllVariables()));
+    }
+    
+    return Prediction.create(dynamicInput, dynamicOutput, scores, predictedOutputs);
+  }
 
   /**
    * {@inheritDoc}
@@ -200,6 +236,17 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
         assignments.add(prediction.getFixedAssignment());
       }
       return assignments;
+    }
+    
+    public Prediction<Assignment, Assignment> getBestPredictionObject(Assignment input, Assignment output) {
+      Prediction<DynamicAssignment, DynamicAssignment> best = predictor.getBestPredictionObject(
+          DynamicAssignment.fromAssignment(input), DynamicAssignment.fromAssignment(output));
+      
+      List<Assignment> predictions = Lists.newArrayList();
+      for (DynamicAssignment dynamic : best.getPredictions()) {
+        predictions.add(dynamic.getFixedAssignment());
+      }
+      return Prediction.create(input, output, best.getScores(), predictions);
     }
 
     @Override

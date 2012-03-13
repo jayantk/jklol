@@ -65,7 +65,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a2));
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a3));
 		}
-		t = new StochasticGradientTrainer(new JunctionTree(), 10);
+		t = new StochasticGradientTrainer(new JunctionTree(), 10, new DefaultLogFunction());
 	}
 
 	public void testTrain() {

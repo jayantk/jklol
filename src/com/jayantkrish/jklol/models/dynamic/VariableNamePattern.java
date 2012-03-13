@@ -112,9 +112,6 @@ public class VariableNamePattern extends AbstractVariablePattern {
     return fixedVariables;
   }
 
-  /* (non-Javadoc)
-   * @see com.jayantkrish.jklol.models.dynamic.VariablePattern#matchVariables(com.jayantkrish.jklol.models.VariableNumMap)
-   */
   @Override
   public List<VariableMatch> matchVariables(VariableNumMap inputVariables) {
     // All of the fixed variables must be matched in order to return anything.
@@ -137,8 +134,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
       for (String variableName : inputVariables.getVariableNames()) {
         for (Integer replicationIndex : templateVariableMatchers.get(i).getMatchedIndices(variableName)) {
           if (!variableMatches.containsKey(replicationIndex)) {
-            variableMatches.put(replicationIndex,
-                new VariableMatch(fixedVariables));
+            variableMatches.put(replicationIndex, new VariableMatch(fixedVariables));
           }
           variableMatches.get(replicationIndex).addMatch(
               templateVariables.intersection(Ints.asList(templateVariableIndex)),

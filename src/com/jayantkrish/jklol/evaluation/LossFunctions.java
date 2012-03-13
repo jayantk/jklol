@@ -1,6 +1,11 @@
 package com.jayantkrish.jklol.evaluation;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 /**
  * Implementations of some common loss functions.
@@ -90,29 +95,39 @@ public class LossFunctions {
     private int falsePositives;
     private int falseNegatives;
 
+    // Store scores in order to generate precision/recall curves.
+    private List<Double> truePositiveScores;
+    private List<Double> falsePositiveScores;
+
     public PrecisionRecall() {
       truePositives = 0;
       trueNegatives = 0;
       falsePositives = 0;
       falseNegatives = 0;
+
+      truePositiveScores = Lists.newArrayList();
+      falsePositiveScores = Lists.newArrayList();
     }
-    
-    public void accumulatePrediction(Boolean prediction, Boolean actual) {
+
+    public void accumulatePrediction(Boolean prediction, Boolean actual, double score) {
       if (actual && prediction) {
         truePositives++;
+        truePositiveScores.add(score);
       } else if (actual && !prediction) {
         falseNegatives++;
       } else if (!actual && prediction) {
         falsePositives++;
+        falsePositiveScores.add(score);
       } else {
         trueNegatives++;
-      }      
+      }
     }
 
     @Override
     public void accumulateLoss(Predictor<I, Boolean> predictor, I input, Boolean actual) {
       Preconditions.checkNotNull(predictor);
-      accumulatePrediction(predictor.getBestPrediction(input), actual);
+      // TODO: use the score!
+      accumulatePrediction(predictor.getBestPrediction(input), actual, 0.0);
     }
 
     public double getPrecision() {
@@ -126,17 +141,77 @@ public class LossFunctions {
     public double getAccuracy() {
       return ((double) truePositives + trueNegatives) / (truePositives + trueNegatives + falsePositives + falseNegatives);
     }
-    
+
+    public int getNumPositivePredictions() {
+      return truePositives + falsePositives;
+    }
+
+    /**
+     * Gets the number of actual positive instances (i.e., instances with
+     * positive labels) in the test set.
+     * 
+     * @return
+     */
+    public int getNumPositiveInstances() {
+      return truePositives + falseNegatives;
+    }
+
     public int getNumInstances() {
       return truePositives + trueNegatives + falsePositives + falseNegatives;
     }
     
+    public void getPrecisionRecallCurve(List<Double> precisions, List<Double> recalls) {
+      Collections.sort(truePositiveScores, Ordering.<Double>natural().reverse());
+      Collections.sort(falsePositiveScores, Ordering.<Double>natural().reverse());
+      
+      int tpIndex = 0, fpIndex = 0;
+      int numTps = truePositiveScores.size();
+      int numFps = falsePositiveScores.size();
+      double totalPositiveInstances = getNumPositiveInstances();
+      double curTps = 0;
+      double curFps = 0;
+      while (tpIndex < numTps && fpIndex < numFps) {
+        if (truePositiveScores.get(tpIndex) > falsePositiveScores.get(fpIndex)) {
+          curTps++;
+          tpIndex++;
+        } else if (truePositiveScores.get(tpIndex) < falsePositiveScores.get(fpIndex)) {
+          curFps++;
+          fpIndex++;
+        } else {
+          // Equal.
+          curTps++;
+          curFps++;
+          tpIndex++;
+          fpIndex++;
+        }
+        
+        precisions.add(curTps / (curTps + curFps));
+        recalls.add(curTps / totalPositiveInstances);
+      }
+      
+      // Finish off whichever list remains.
+      while (tpIndex < numTps) {
+        curTps++;
+        tpIndex++;
+        
+        precisions.add(curTps / (curTps + curFps));
+        recalls.add(curTps / totalPositiveInstances);
+      }
+      
+      while (fpIndex < numFps) {
+        curFps++;
+        fpIndex++;
+        precisions.add(curTps / (curTps + curFps));
+        recalls.add(curTps / totalPositiveInstances);
+      }
+    }
+
     @Override
     public String toString() {
       int totalPositives = (truePositives + falsePositives);
       int totalGoldPositives = (truePositives + falseNegatives);
-      return "precision: " + getPrecision() + " (" + truePositives + "/" + totalPositives + 
-          "), recall: " + getRecall() + " ("+ truePositives + "/" + totalGoldPositives + ")";
+      return "precision: " + getPrecision() + " (" + truePositives + "/" + totalPositives +
+          "), recall: " + getRecall() + " (" + truePositives + "/" + totalGoldPositives + ")";
     }
   }
 
@@ -229,7 +304,7 @@ public class LossFunctions {
      * @return
      */
     public double getLoglikelihoodVarianceIgnoreZeros() {
-      return ((sumSquaredLoglikelihood  / numExamples) - Math.pow(getAverageLoglikelihoodIgnoreZeros(), 2)) / numExamples;
+      return ((sumSquaredLoglikelihood / numExamples) - Math.pow(getAverageLoglikelihoodIgnoreZeros(), 2)) / numExamples;
     }
 
     /**

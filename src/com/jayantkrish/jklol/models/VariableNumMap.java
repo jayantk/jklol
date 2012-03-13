@@ -569,8 +569,8 @@ public class VariableNumMap {
    * variable returned by getVariableNums())
    */
   public Assignment outcomeToAssignment(List<? extends Object> outcome) {
-    Preconditions.checkArgument(outcome.size() == varMap.size(), "outcome " + outcome
-        + " cannot be assigned to " + this.toString() + "(wrong number of values)");
+    Preconditions.checkArgument(outcome.size() == varMap.size(), 
+        "outcome %s cannot be assigned to %s (wrong number of values)", outcome, this);
 
     Map<Integer, Object> varValueMap = new HashMap<Integer, Object>();
     int i = 0;

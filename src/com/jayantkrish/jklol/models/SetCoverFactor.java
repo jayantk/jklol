@@ -13,6 +13,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class SetCoverFactor extends AbstractFactor {
@@ -76,7 +77,7 @@ public class SetCoverFactor extends AbstractFactor {
     for (int i = 0; i < inputVarFactors.size(); i++) {
       if (maxMarginals.get(i) == null) {
         DiscreteFactor currentFactor = inputVarFactors.get(i).coerceToDiscrete(); 
-        TableFactorBuilder builder = new TableFactorBuilder(currentFactor.getVars());
+        TableFactorBuilder builder = new TableFactorBuilder(currentFactor.getVars(), SparseTensorBuilder.getFactory());
         builder.incrementWeight(currentFactor);
         for (Object impossibleValue : impossibleValues) {
           builder.setWeight(0.0, impossibleValue);

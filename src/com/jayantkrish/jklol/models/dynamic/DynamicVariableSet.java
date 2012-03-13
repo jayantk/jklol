@@ -163,7 +163,7 @@ public class DynamicVariableSet {
 
     for (int i = 0; i < plateNames.size(); i++) {
       Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)),
-          "Cannot assign: " + assignment + " to: " + this);
+          "Cannot assign %s to %s", assignment, this); 
       List<DynamicAssignment> plateValues = assignment.getPlateValue(plateNames.get(i));
       // Allocate a fraction of the indices between startOffset and endOffset to
       // each plate.
@@ -223,7 +223,7 @@ public class DynamicVariableSet {
       Map<Integer, Object> values) {
     Assignment fixedAssignment = assignment.getFixedAssignment();
     Preconditions.checkArgument(fixedVariables.containsAll(fixedAssignment.getVariableNums()),
-        "Cannot assign: " + assignment + " to: " + this);
+        "Cannot assign %s to %s", assignment, this);
 
     for (int curVarNum : fixedVariables.getVariableNums()) {
       if (fixedAssignment.contains(curVarNum)) {
@@ -233,7 +233,7 @@ public class DynamicVariableSet {
 
     for (int i = 0; i < plateNames.size(); i++) {
       Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)),
-          "Cannot assign: " + assignment + " to: " + this);
+          "Cannot assign %s to %s", assignment, this);
       int curOffset = indexOffset + getPlateStartIndex(i);
       for (DynamicAssignment plateValue : assignment.getPlateValue(plateNames.get(i))) {
         plates.get(i).toAssignmentHelper(plateValue, curOffset, values);

@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.FactorGraphProtos.TableFactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.Tensors;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
@@ -50,7 +51,7 @@ public class TableFactor extends DiscreteFactor {
    * @return
    */
   public static TableFactor pointDistribution(VariableNumMap vars, Assignment... assignments) {
-    TableFactorBuilder builder = new TableFactorBuilder(vars);
+    TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < assignments.length; i++) {
       builder.setWeight(assignments[i], 1.0);
     }
@@ -82,7 +83,7 @@ public class TableFactor extends DiscreteFactor {
    * @return
    */
   public static TableFactor zero(VariableNumMap vars) {
-    TableFactorBuilder builder = new TableFactorBuilder(vars);
+    TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     return builder.build();
   }
 
@@ -94,7 +95,7 @@ public class TableFactor extends DiscreteFactor {
    * @return
    */
   public static TableFactor unity(VariableNumMap vars) {
-    TableFactorBuilder builder = new TableFactorBuilder(vars);
+    TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     return builder.buildInLogSpace();
   }
 

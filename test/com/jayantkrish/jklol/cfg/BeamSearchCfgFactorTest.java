@@ -26,6 +26,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.training.Trainer;
 import com.jayantkrish.jklol.util.Assignment;
@@ -144,7 +145,8 @@ public class BeamSearchCfgFactorTest extends TestCase {
   }
   
   public void testLogLinearTraining() {
-    Predictor<Assignment, Assignment> predictor = runTrainerTest(new StochasticGradientTrainer(new JunctionTree(), 5));
+    Predictor<Assignment, Assignment> predictor = runTrainerTest(new StochasticGradientTrainer(
+        new JunctionTree(), 5, new DefaultLogFunction()));
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       ParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));

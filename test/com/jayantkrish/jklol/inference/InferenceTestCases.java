@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.InferenceHint;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -42,14 +43,16 @@ public class InferenceTestCases {
     fg = fg.addVariable("Var4", threeValueVar);
     
     TableFactorBuilder factor1 = new TableFactorBuilder(fg
-        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var2", "Var3" })));
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var2", "Var3" })),
+        SparseTensorBuilder.getFactory());
     factor1.setWeightList(Arrays.asList(new String[] { "T", "T", "T" }), 1.0);
     factor1.setWeightList(Arrays.asList(new String[] { "T", "F", "F" }), 1.0);
     factor1.setWeightList(Arrays.asList(new String[] { "U", "F", "F" }), 2.0);
     fg = fg.addFactor(factor1.build());
 
     TableFactorBuilder factor2 = new TableFactorBuilder(fg
-        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var2", "Var1" })));
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var2", "Var1" })),
+        SparseTensorBuilder.getFactory());
     factor2.setWeightList(Arrays.asList(new String[] { "foo", "F" }), 2.0);
     factor2.setWeightList(Arrays.asList(new String[] { "foo", "T" }), 3.0);
     factor2.setWeightList(Arrays.asList(new String[] { "bar", "T" }), 2.0);
@@ -57,7 +60,8 @@ public class InferenceTestCases {
     fg = fg.addFactor(factor2.build());
 
     TableFactorBuilder factor3 = new TableFactorBuilder(fg
-        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var3", "Var4" })));
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var3", "Var4" })),
+        SparseTensorBuilder.getFactory());
     factor3.setWeightList(Arrays.asList(new String[] { "F", "U" }), 2.0);
     factor3.setWeightList(Arrays.asList(new String[] { "T", "U" }), 2.0);
     factor3.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
@@ -117,6 +121,16 @@ public class InferenceTestCases {
     testCase.addTest(0.0 / 18.0, new Integer[] { 0, 2 }, "U", "U");
     */
   }
+  
+  public static MaxMarginalTestCase testConditionalMaxMarginals() {
+    MaxMarginalTestCase testCase = new MaxMarginalTestCase(basicFactorGraph(), 
+        new Assignment(Arrays.asList(new Integer[] {2}), 
+            Arrays.asList(new Object[] {"F"})), 
+        new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 4}), 
+            Arrays.asList(new Object[] {"U", "foo", "F", "F", "U"})));
+    return testCase;
+  }
+
 
   /**
    * A factor graph with several discrete variables and lots of zero weights.
@@ -133,7 +147,8 @@ public class InferenceTestCases {
     fg = fg.addVariable("Var2", trueFalseVar);
 
     TableFactorBuilder tf = new TableFactorBuilder(fg
-        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var1" })));
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var1" })),
+        SparseTensorBuilder.getFactory());
     tf.setWeightList(Arrays.asList(new String[] { "F", "F" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
@@ -141,7 +156,8 @@ public class InferenceTestCases {
     fg = fg.addFactor(tf.build());
 
     tf = new TableFactorBuilder(fg
-        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var2" })));
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var2" })),
+        SparseTensorBuilder.getFactory());
     tf.setWeightList(Arrays.asList(new String[] { "F", "F" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
@@ -149,7 +165,8 @@ public class InferenceTestCases {
     fg = fg.addFactor(tf.build());
 
     tf = new TableFactorBuilder(fg
-        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0" })));
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0" })),
+        SparseTensorBuilder.getFactory());
     tf.setWeightList(Arrays.asList(new String[] { "F" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T" }), 1.0);
     fg = fg.addFactor(tf.build());

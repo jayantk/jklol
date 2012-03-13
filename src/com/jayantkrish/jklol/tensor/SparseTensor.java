@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -195,23 +193,20 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     Set<Integer> myDims = Sets.newHashSet(Ints.asList(dimensionNums));
     Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.getDimensionNumbers())));
 
-    // Permute the dimensions of this so that the dimension of other are
-    // left-aligned, multiply, then reverse the permutation.
-    BiMap<Integer, Integer> permutation = HashBiMap.create();
-    int numDimsDifferent = 0;
-    int otherInd = 0;
-    for (int i = 0; i < dimensionNums.length; i++) {
-      if (otherInd < other.getDimensionNumbers().length && other.getDimensionNumbers()[otherInd] > dimensionNums[i]) {
-        permutation.put(dimensionNums[i], Integer.MAX_VALUE - numDimsDifferent);
-        numDimsDifferent++;
-      } else {
-        permutation.put(dimensionNums[i], dimensionNums[i]);
-        otherInd++;
+    // There are two possible multiplication operations: an extremely fast 
+    // one for the case when the dimensions of other line up against the
+    // leftmost dimensions of this, and another for all other cases.
+    // The left-aligned case can be made more efficient than the other
+    // case. Check which case applies, then use the faster algorithm.
+    int[] otherDimensions = other.getDimensionNumbers();
+    for (int i = 0; i < otherDimensions.length; i++) {
+      if (otherDimensions[i] != dimensionNums[i]) {
+        // Not left aligned.
+        return elementwiseMultiplyNaive(this, other);        
       }
     }
-
-    SparseTensor result = elementwiseMultiplyLeftAligned(this.relabelDimensions(permutation), other);
-    return result.relabelDimensions(permutation.inverse());
+    // Left aligned.
+    return elementwiseMultiplyLeftAligned(this, other);
   }
 
   /**
@@ -298,6 +293,82 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       nextInd++;
     }
     return nextInd;
+  }
+
+  /**
+   * Naive elementwise multiplication: for each element of {@code big}, find a
+   * corresponding element in {@code small} and multiply them.
+   * 
+   * @param big
+   * @param small
+   * @return
+   */
+  protected static final SparseTensor elementwiseMultiplyNaive(SparseTensor big, Tensor small) {
+    // Compute a mapping from keyNums of big to keyNums of small.
+    int[] bigDimensions = big.getDimensionNumbers();
+    int[] smallDimensions = small.getDimensionNumbers();
+    int[] bigDimensionSizes = big.getDimensionSizes(); 
+    int smallDimensionInd = smallDimensions.length - 1;
+    int bigDimensionInd = bigDimensions.length - 1;
+    // divisors, modulos and multipliers store the mapping from bigKeyNum to smallKeyNum.
+    // They contain a series of division, modulo and multiplication operations 
+    // whose results are added to get a smallKeyNum. 
+    long[] divisors = new long[smallDimensions.length];
+    long[] modulos = new long[smallDimensions.length];
+    long[] multipliers = new long[smallDimensions.length];
+    int divisorInd = 0;
+    long divisor = 1;
+    long multiplier = 1;
+    long modulo = 1;
+    while (bigDimensionInd >= 0 && smallDimensionInd >= 0) {
+      while (bigDimensions[bigDimensionInd] != smallDimensions[smallDimensionInd]) {
+        divisor *= bigDimensionSizes[bigDimensionInd];
+        bigDimensionInd--;
+      }
+      divisors[divisorInd] = divisor;
+      
+      modulo = 1;
+      while (bigDimensionInd >= 0 && smallDimensionInd >= 0 &&
+          bigDimensions[bigDimensionInd] == smallDimensions[smallDimensionInd]) { 
+        divisor *= bigDimensionSizes[bigDimensionInd];
+        modulo *= bigDimensionSizes[bigDimensionInd];
+        bigDimensionInd--;
+        smallDimensionInd--;
+      }
+      modulos[divisorInd] = modulo;
+      multipliers[divisorInd] = multiplier;
+      divisorInd++;
+      multiplier *= modulo;
+    }
+    
+    // The result tensor is no larger than the larger (superset of dimensions)
+    // tensor.
+    long[] resultKeyInts = new long[big.size()];
+    double[] resultValues = new double[big.size()];
+    // How many result values have been filled so far.
+    int resultInd = 0;
+    
+    long bigKeyNum, smallKeyNum;
+    double value;
+    int numElements = big.size();
+    for (int bigInd = 0; bigInd < numElements; bigInd++) {
+      bigKeyNum = big.indexToKeyNum(bigInd);
+      // map bigKeyNum to a smallKeyNum
+      smallKeyNum = 0;
+      for (int i = 0; i < divisorInd; i++) {
+        smallKeyNum += ((bigKeyNum / divisors[i]) % modulos[i]) * multipliers[i]; 
+      }
+      value = small.get(smallKeyNum);
+      
+      if (value != 0.0) {
+        resultKeyInts[resultInd] = bigKeyNum;
+        resultValues[resultInd] = value * big.getByIndex(bigInd);
+        resultInd++;
+      }
+    }
+    
+    return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(), resultKeyInts,
+        resultValues, resultInd);
   }
 
   /**
@@ -660,12 +731,12 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     values[i] = values[j];
     values[j] = swapValue;
   }
-  
+
   @Override
   public TensorProto toProto() {
     TensorProto.Builder builder = TensorProto.newBuilder();
     builder.setType(TensorProto.TensorType.SPARSE);
-    
+
     SparseTensorProto.Builder sparseTensorBuilder = builder.getSparseTensorBuilder();
     sparseTensorBuilder.setDimensions(getDimensionProto());
     sparseTensorBuilder.addAllKeyNum(Longs.asList(keyNums));
@@ -776,7 +847,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * @return
    */
   public static SparseTensor fromProto(SparseTensorProto proto) {
-    Preconditions.checkArgument(proto.hasDimensions()); 
+    Preconditions.checkArgument(proto.hasDimensions());
     int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
     int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
     Preconditions.checkArgument(dimensionNums.length == sizes.length);

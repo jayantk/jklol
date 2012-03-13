@@ -243,6 +243,11 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteFactor coerceToDiscrete() {
     return this;
   }
+  
+  @Override
+  public DiscreteObjectFactor coerceToDiscreteObject() {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 
   @Override
   public int hashCode() {

@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.evaluation;
 import java.util.List;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 
 /**
  * A predictor wraps a prediction algorithm that can be used to predict values
@@ -60,27 +61,44 @@ public interface Predictor<I, O> extends Function<I, O> {
    * @param <I>
    * @param <O>
    */
-  /*
   public static class Prediction<I, O> {
 
     // The current training example, as an input to the classifier
     // and the correct output.
     private final I input;
     private final O output;
-    private final double outputProbability;
 
     // The classifier's predictions and their scores.
-    private final double[] probabilities;
+    private final double[] scores;
     private final List<O> predictions;
 
-    public Prediction(I input, O output, double outputProbability, double[] probabilities, List<O> predictions) {
+    public Prediction(I input, O output, double[] scores, List<O> predictions) {
       this.input = Preconditions.checkNotNull(input);
       this.output = Preconditions.checkNotNull(output);
-      this.outputProbability = outputProbability;
-      this.probabilities = Preconditions.checkNotNull(probabilities);
+      this.scores = Preconditions.checkNotNull(scores);
       this.predictions = Preconditions.checkNotNull(predictions);
-      Preconditions.checkArgument(predictions.size() == probabilities.length);
+      Preconditions.checkArgument(predictions.size() == scores.length);
+    }
+    
+    public static <I, O> Prediction<I, O> create(I input, O output, double[] scores, 
+        List<O> predictions) {
+      return new Prediction<I, O>(input, output, scores, predictions);
+    }
+
+    public I getInput() {
+      return input;
+    }
+
+    public O getOutput() {
+      return output;
+    }
+
+    public double[] getScores() {
+      return scores;
+    }
+
+    public List<O> getPredictions() {
+      return predictions;
     }
   }
-  */
 }

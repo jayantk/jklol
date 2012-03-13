@@ -316,4 +316,12 @@ public interface Factor {
    * {@link DiscreteFactor}.
    */
   public DiscreteFactor coerceToDiscrete();
+
+  /**
+   * Attempts to convert {@code this} into a {@link DiscreteObjectFactor}.
+   * 
+   * @throws CoercionError if {@code this} cannot be converted into a
+   * {@code DiscreteFactor}.
+   */
+  public DiscreteObjectFactor coerceToDiscreteObject();
 }

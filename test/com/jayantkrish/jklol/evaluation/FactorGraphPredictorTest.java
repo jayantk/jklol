@@ -5,6 +5,7 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPredictor;
+import com.jayantkrish.jklol.evaluation.Predictor.Prediction;
 import com.jayantkrish.jklol.inference.InferenceTestCases;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -21,7 +22,7 @@ public class FactorGraphPredictorTest extends TestCase {
   
   private FactorGraph factorGraph;
   private VariableNumMap inputVars, outputVars;
-  private Predictor<Assignment, Assignment> predictor;
+  private SimpleFactorGraphPredictor predictor;
   private Predictor<String, String> wrappedPredictor;
   
   private VariableNumMap densityVars; 
@@ -54,6 +55,25 @@ public class FactorGraphPredictorTest extends TestCase {
     actual = predictor.getBestPrediction(
         inputVars.outcomeToAssignment(Arrays.asList("F")));
     assertEquals(expected, actual);
+  }
+  
+  public void testGetBestPredictionObject() {
+    Prediction<Assignment, Assignment> prediction = predictor.getBestPredictionObject(
+        inputVars.outcomeArrayToAssignment("T"), outputVars.outcomeArrayToAssignment("U"));
+    
+    assertEquals(inputVars.outcomeArrayToAssignment("T"), prediction.getInput());
+    assertEquals(outputVars.outcomeArrayToAssignment("U"), prediction.getOutput());
+    assertEquals(1, prediction.getPredictions().size());
+    assertEquals(outputVars.outcomeArrayToAssignment("F"), prediction.getPredictions().get(0));
+    assertEquals(1, prediction.getScores().length);
+    assertEquals(Math.log(9.0), prediction.getScores()[0], .00001);
+    
+    prediction = predictor.getBestPredictionObject(
+        inputVars.outcomeArrayToAssignment("bashash"), outputVars.outcomeArrayToAssignment("U"));
+    assertEquals(inputVars.outcomeArrayToAssignment("bashash"), prediction.getInput());
+    assertEquals(outputVars.outcomeArrayToAssignment("U"), prediction.getOutput());
+    assertEquals(0, prediction.getPredictions().size());
+    assertEquals(0, prediction.getScores().length);
   }
   
   public void testGetProbability() {

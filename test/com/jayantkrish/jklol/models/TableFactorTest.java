@@ -288,4 +288,12 @@ public class TableFactorTest extends TestCase {
 	  outcomes = g.outcomePrefixIterator(prefix);
 	  assertFalse(outcomes.hasNext());
 	}
+	
+	public void testIterationEmpty() {
+	  TableFactor emptyFactor = TableFactorBuilder.ones(VariableNumMap.emptyMap()).build();
+	  Iterator<Outcome> iter = emptyFactor.outcomeIterator();
+	  assertTrue(iter.hasNext());
+	  assertEquals(Assignment.EMPTY, iter.next().getAssignment());
+	  assertFalse(iter.hasNext());
+	}
 }

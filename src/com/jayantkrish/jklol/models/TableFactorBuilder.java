@@ -15,6 +15,8 @@ import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
+import com.jayantkrish.jklol.tensor.TensorBuilder;
+import com.jayantkrish.jklol.tensor.TensorFactory;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -31,18 +33,40 @@ import com.jayantkrish.jklol.util.Assignment;
 public class TableFactorBuilder {
 
   private final VariableNumMap vars;
-  private final SparseTensorBuilder weightBuilder;
+  private final TensorBuilder weightBuilder;
 
   /**
    * Creates a builder which builds a {@code TableFactor} over {@code variables}
-   * .
+   * . This constructor constructs the weights as a sparse tensor.
+   * 
+   * This constructor is deprecated -- please use
+   * {@link #TableFactorBuilder(VariableNumMap, TensorFactory)} instead. Note
+   * that an equivalent effect can be given by passing
+   * {@code SparseTensorBuilder.getFactory()} as the tensor factory.
    * 
    * @param vars
    */
+  @Deprecated
   public TableFactorBuilder(VariableNumMap variables) {
     Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size());
     this.vars = variables;
     this.weightBuilder = new SparseTensorBuilder(Ints.toArray(vars.getVariableNums()),
+        vars.getVariableSizes());
+  }
+
+  /**
+   * Creates a {@code TableFactorBuilder} which builds a {@code TableFactor}
+   * over {@code variables}. {@code tensorFactory} is used to construct the
+   * underlying weight tensor, and can be used to create either sparse or dense
+   * tensors.
+   * 
+   * @param variables
+   * @param tensorFactory
+   */
+  public TableFactorBuilder(VariableNumMap variables, TensorFactory tensorFactory) {
+    Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size());
+    this.vars = variables;
+    this.weightBuilder = tensorFactory.getBuilder(Ints.toArray(vars.getVariableNums()),
         vars.getVariableSizes());
   }
 
@@ -73,8 +97,8 @@ public class TableFactorBuilder {
   }
 
   /**
-   * Gets a {@code TableFactorBuilder} containing the same assignments and weights
-   * as {@code probabilities}.
+   * Gets a {@code TableFactorBuilder} containing the same assignments and
+   * weights as {@code probabilities}.
    * 
    * @param variables
    * @param probabilities
@@ -232,7 +256,8 @@ public class TableFactorBuilder {
    * @return
    */
   public TableFactor buildWithCache() {
-    return new TableFactor(vars, CachedSparseTensor.cacheAllPermutations(weightBuilder.build()));
+    return new TableFactor(vars, CachedSparseTensor.cacheAllPermutations(
+        SparseTensorBuilder.copyOf(weightBuilder).build()));
   }
 
   /**

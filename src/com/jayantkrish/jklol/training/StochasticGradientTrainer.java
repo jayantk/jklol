@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.training;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
@@ -15,21 +16,35 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class StochasticGradientTrainer extends AbstractTrainer {
 
-  private MarginalCalculator marginalCalculator;
-  private int numIterations;
+  private final MarginalCalculator marginalCalculator;
+  private final int numIterations;
+  private final LogFunction log;
 
-  public StochasticGradientTrainer(MarginalCalculator inferenceEngine, int numIterations) {
-    this.marginalCalculator = inferenceEngine;
+  public StochasticGradientTrainer(MarginalCalculator inferenceEngine, int numIterations,
+      LogFunction log) {
+    this.marginalCalculator = Preconditions.checkNotNull(inferenceEngine);
     this.numIterations = numIterations;
+    this.log = Preconditions.checkNotNull(log);
   }
 
   public SufficientStatistics train(ParametricFactorGraph logLinearModel, SufficientStatistics initialParameters,
       Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
 
+    int iterationCount = 0;
     for (int i = 0; i < numIterations; i++) {
       for (Example<DynamicAssignment, DynamicAssignment> trainingExample : trainingData) {
+        log.notifyIterationStart(iterationCount);
+
+        log.startTimer("update_gradient");
         SufficientStatistics gradient = computeGradient(initialParameters, logLinearModel, trainingExample);
+        log.stopTimer("update_gradient");
+        
+        log.startTimer("parameter_update");
         initialParameters.increment(gradient, 1.0 / Math.sqrt(i + 2));
+        log.stopTimer("parameter_update");
+
+        log.notifyIterationEnd(iterationCount);
+        iterationCount++;
       }
     }
     return initialParameters;
@@ -47,6 +62,9 @@ public class StochasticGradientTrainer extends AbstractTrainer {
     Assignment input = dynamicFactorGraph.getVariables().toAssignment(dynamicExample.getInput());
     Assignment observed = dynamicFactorGraph.getVariables().toAssignment(
         dynamicExample.getOutput().union(dynamicExample.getInput()));
+    
+    log.log(input, factorGraph);
+    log.log(observed, factorGraph);
     
     // The gradient is the conditional expected counts minus the unconditional
     // expected counts

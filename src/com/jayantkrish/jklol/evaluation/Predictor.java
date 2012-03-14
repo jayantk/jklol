@@ -72,9 +72,13 @@ public interface Predictor<I, O> extends Function<I, O> {
     private final double[] scores;
     private final List<O> predictions;
 
+    /**
+     *
+     * {@code output} may be null, signifying that the true output is not known.
+     */
     public Prediction(I input, O output, double[] scores, List<O> predictions) {
       this.input = Preconditions.checkNotNull(input);
-      this.output = Preconditions.checkNotNull(output);
+      this.output = output;
       this.scores = Preconditions.checkNotNull(scores);
       this.predictions = Preconditions.checkNotNull(predictions);
       Preconditions.checkArgument(predictions.size() == scores.length);

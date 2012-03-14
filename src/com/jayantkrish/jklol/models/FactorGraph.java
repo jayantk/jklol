@@ -262,7 +262,8 @@ public class FactorGraph {
    * @return
    */
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()),
+        "Invalid assignment %s to factor graph on variables %s", assignment, variables);
     double probability = 1.0;
     for (Factor factor : factors) {
       double factorProb = factor.getUnnormalizedProbability(assignment);
@@ -282,7 +283,8 @@ public class FactorGraph {
    * @return
    */
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()),
+        "Invalid assignment %s to factor graph on variables %s", assignment, variables);
     double logProbability = 0.0;
     for (Factor factor : factors) {
       logProbability += factor.getUnnormalizedLogProbability(assignment);

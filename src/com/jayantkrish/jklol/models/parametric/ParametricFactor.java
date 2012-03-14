@@ -6,19 +6,19 @@ import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A set of {@link Factor}s indexed by a parameter of type {@code T}. A
+ * A family of {@link Factor}s indexed by a parameter of type {@code T}. A
  * {@code ParametricFactor} is not a {@code Factor}, but rather an entire class
- * of {@code Factor}s. This interface is typically used by a
- * {@link ParametricFamily} to construct the individual clique distributions
- * which make up the {@code FactorGraph}.
- * 
+ * of {@code Factor}s. This interface is used by a {@link ParametricFamily} to
+ * construct the individual clique distributions which make up the
+ * {@code FactorGraph}.
+ * <p>
  * This interface supports common operations on parameterized distributions,
  * including constructing {@code Factor}s from parameters and estimating
  * sufficient statistics for the parameters given a distribution. The type of
  * the sufficient statistics is equivalent to the type of parameter; the reason
  * for this equivalence is that in exponential families, both of these
  * quantities are vectors with the same dimensionality.
- * 
+ * <p>
  * For an example of a {@code ParametricFactor}, see {@link CptTableFactor}.
  * 
  * @author jayantk
@@ -27,9 +27,9 @@ import com.jayantkrish.jklol.util.Assignment;
 public interface ParametricFactor<T> {
 
   /**
-   * Gets the variables over which this {@code ParametricFactor} is defined.
-   * The returned variables are the same as the variables for the factor
-   * returned by {@link #getFactorFromParameters(Object)}.
+   * Gets the variables over which this {@code ParametricFactor} is defined. The
+   * returned variables are the same as the variables for the factor returned by
+   * {@link #getFactorFromParameters(Object)}.
    * 
    * @return
    */
@@ -38,8 +38,8 @@ public interface ParametricFactor<T> {
   /**
    * Gets a {@code Factor} from a set of {@code parameters}. This method returns
    * an element of this parametric family. Note that multiple values of
-   * {@code parameters} may return the same {@code ReplicatedFactor}, that is, there
-   * is no guarantee of uniqueness.
+   * {@code parameters} may return the same factor; that is, there is no
+   * guarantee of uniqueness.
    * 
    * @param parameters
    * @return

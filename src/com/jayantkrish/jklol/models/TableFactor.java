@@ -109,9 +109,9 @@ public class TableFactor extends DiscreteFactor {
   }
 
   /**
-   * Construct a {@code TableFactor} over {@code variables}, deserializing any
-   * other values from {@code proto}. In most cases, this method should be used
-   * indirectly via {@link FactorGraph#fromProto()}.
+   * Construct a {@code TableFactor} over {@code variables} by deserializing the
+   * factor's weights from {@code proto}. In most cases, this method should be
+   * used indirectly via {@link FactorGraph#fromProto()}.
    * 
    * @param variables
    * @param proto

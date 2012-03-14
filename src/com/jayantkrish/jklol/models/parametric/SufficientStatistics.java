@@ -1,9 +1,11 @@
 package com.jayantkrish.jklol.models.parametric;
 
 /**
- * The sufficient statistics of a {@code FactorGraph}. This class represents the
- * (expected) occurrence counts of a set of events (or outcomes) which can be
- * used to estimate a {@code FactorGraph}.
+ * The sufficient statistics of a {@code FactorGraph}. This class represents
+ * (expected) occurrence counts for a set of events which can be used to
+ * estimate a {@code FactorGraph}. {@code SufficientStatistics} may also
+ * represent the parameter vector for a graphical model, since a model family's
+ * parameters have the same dimensionality as its sufficient statistics.
  * 
  * @author jayantk
  */

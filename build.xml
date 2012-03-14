@@ -1,9 +1,11 @@
 <?xml version="1.0"?>
 <project name="jklol" default="jar">
   <property name="tst-dir" location="test" />
+  <property name="doc-dir" location="javadoc" />
   <property name="proto-dir" location="proto" />
   <property name="proto-src-dir" location="proto_src" />
   <property name="perf-dir" location="performance" />
+  <property name="src-dir" location="src" />
 
   <path id="classpath.base">
     <pathelement location="lib/guava-r09.jar" />
@@ -30,7 +32,7 @@
     <javac srcdir="${proto-src-dir}" destdir="build" debug="on">
       <classpath refid="classpath.base"/>
     </javac>
-    <javac srcdir="src" destdir="build" debug="on">
+    <javac srcdir="${src-dir}" destdir="build" debug="on">
       <classpath refid="classpath.base"/>
     </javac>
   </target>
@@ -43,6 +45,13 @@
     <javac srcdir="${perf-dir}" destdir="build" debug="on">
       <classpath refid="classpath.test"/>
     </javac>
+  </target>
+
+  <target name="javadoc" depends="compile-proto">
+    <mkdir dir="${doc-dir}" />
+    <javadoc destdir="${doc-dir}">
+       <fileset dir="${src-dir}" includes="**/*.java" />
+    </javadoc>
   </target>
 
   <target name="test" depends="compile-test">

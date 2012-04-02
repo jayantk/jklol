@@ -19,7 +19,7 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class DiscreteLogLinearFactorTest extends TestCase {
 
-  ParametricFactor<SufficientStatistics> f;
+  ParametricFactor f;
   VariableNumMap vars;
   SufficientStatistics parameters;
   

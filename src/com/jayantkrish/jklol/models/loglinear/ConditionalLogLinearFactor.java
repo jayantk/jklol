@@ -24,7 +24,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class ConditionalLogLinearFactor extends AbstractParametricFactor<SufficientStatistics> {
+public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   private final VariableNumMap inputVar;
   private final VariableNumMap outputVar;

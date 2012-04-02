@@ -24,6 +24,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -309,7 +310,8 @@ public class CfgFactor extends AbstractFactor {
 
     // Both variables eliminated, so simply return the partition function.
     ParseChart chart = getMarginalChart(useSumProduct);
-    TableFactorBuilder builder = new TableFactorBuilder(VariableNumMap.emptyMap());
+    TableFactorBuilder builder = new TableFactorBuilder(VariableNumMap.emptyMap(), 
+        SparseTensorBuilder.getFactory());
     builder.setWeight(Assignment.EMPTY, chart.getPartitionFunction());
     return builder.build();
   }

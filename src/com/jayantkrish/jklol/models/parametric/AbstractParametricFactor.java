@@ -5,10 +5,9 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 /**
  * Implementations of common {@link ParametricFactor} methods.
  * 
- * @param <T> type of parameters expected
  * @author jayantk
  */
-public abstract class AbstractParametricFactor<T> implements ParametricFactor<T> {
+public abstract class AbstractParametricFactor implements ParametricFactor {
   
   private final VariableNumMap variables;
   

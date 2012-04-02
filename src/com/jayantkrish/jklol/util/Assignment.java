@@ -31,8 +31,6 @@ public class Assignment {
    * @param values
    */
   public Assignment(List<Integer> varNums, List<? extends Object> values) {
-    // TODO: Store actual variables (VariableNumMap) and ensure that
-    // assigned values are compatible.
     Preconditions.checkNotNull(varNums);
     Preconditions.checkNotNull(values);
     Preconditions.checkArgument(varNums.size() == values.size());

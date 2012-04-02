@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStatistics> {
+public class ParametricCfgFactor extends AbstractParametricFactor {
 
   // These are the variables contained in the two parametric factors for each
   // distribution
@@ -31,8 +31,8 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
   private final VariableNumMap treeVar;
   private final VariableNumMap inputVar;
     
-  private final ParametricFactor<SufficientStatistics> nonterminalFactor;
-  private final ParametricFactor<SufficientStatistics> terminalFactor;
+  private final ParametricFactor nonterminalFactor;
+  private final ParametricFactor terminalFactor;
   
   private final Function<Object, List<Object>> terminalFunction;
   private final Predicate<? super ParseTree> validTreeFilter;
@@ -43,8 +43,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
   public ParametricCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar,
       VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
       VariableNumMap treeVar, VariableNumMap inputVar,
-      ParametricFactor<SufficientStatistics> nonterminalFactor,
-      ParametricFactor<SufficientStatistics> terminalFactor,
+      ParametricFactor nonterminalFactor, ParametricFactor terminalFactor,
       Function<Object, List<Object>> terminalFunction, Predicate<? super ParseTree> validTreeFilter,
       int beamSize, boolean canSkipTerminals) {
     super(treeVar.union(inputVar));

@@ -37,7 +37,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * factor. Each initial weight should be set to either 0 or 1, and outcomes with
  * 0 weight will retain that weight regardless of their feature values.
  */
-public class DiscreteLogLinearFactor extends AbstractParametricFactor<SufficientStatistics> {
+public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
   // This factor has one weight for each assignment to featureVariables. 
   private final VariableNumMap featureVariables;

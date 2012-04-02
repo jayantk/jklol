@@ -26,7 +26,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * unnormalized probabilities are simply child variable probabilities
  * conditioned on a parent.
  */
-public class CptTableFactor extends AbstractParametricFactor<SufficientStatistics> {
+public class CptTableFactor extends AbstractParametricFactor {
 
   // These are the parent and child variables in the CPT.
   private final VariableNumMap parentVars;

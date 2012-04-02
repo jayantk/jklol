@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics> {
+public class CptCfgFactor extends AbstractParametricFactor {
 
   private final VariableNumMap parentVar;
   private final VariableNumMap leftVar;
@@ -24,13 +24,13 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
   private final VariableNumMap rootVar;
   private final VariableNumMap childVar;
   
-  private ParametricFactor<SufficientStatistics> nonterminalFactor;
-  private ParametricFactor<SufficientStatistics> terminalFactor;
+  private ParametricFactor nonterminalFactor;
+  private ParametricFactor terminalFactor;
   
   public CptCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar, 
       VariableNumMap terminalVar, VariableNumMap ruleTypeVar, VariableNumMap rootVar, 
-      VariableNumMap childVar, ParametricFactor<SufficientStatistics> nonterminalFactor, 
-      ParametricFactor<SufficientStatistics> terminalFactor) {
+      VariableNumMap childVar, ParametricFactor nonterminalFactor, 
+      ParametricFactor terminalFactor) {
     super(rootVar.union(childVar));
     this.parentVar = parentVar;
     this.leftVar = leftVar;

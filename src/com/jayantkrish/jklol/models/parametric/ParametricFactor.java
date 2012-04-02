@@ -6,25 +6,24 @@ import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A family of {@link Factor}s indexed by a parameter of type {@code T}. A
- * {@code ParametricFactor} is not a {@code Factor}, but rather an entire class
- * of {@code Factor}s. This interface is used by a {@link ParametricFamily} to
- * construct the individual clique distributions which make up the
- * {@code FactorGraph}.
+ * A family of {@link Factor}s indexed by parameters of
+ * {@code SufficientStatistics}. A {@code ParametricFactor} is not a factor, but
+ * rather an entire class of {@code Factor}s. This interface is used by a
+ * {@link ParametricFactorGraph} to construct the individual clique
+ * distributions which make up the {@code FactorGraph}.
  * <p>
  * This interface supports common operations on parameterized distributions,
  * including constructing {@code Factor}s from parameters and estimating
- * sufficient statistics for the parameters given a distribution. The type of
- * the sufficient statistics is equivalent to the type of parameter; the reason
- * for this equivalence is that in exponential families, both of these
- * quantities are vectors with the same dimensionality.
+ * sufficient statistics given a distribution. The type of the sufficient
+ * statistics is equivalent to the type of parameter; the reason for this
+ * equivalence is that in exponential families, both of these quantities are
+ * vectors with the same dimensionality.
  * <p>
  * For an example of a {@code ParametricFactor}, see {@link CptTableFactor}.
  * 
  * @author jayantk
- * @param <T>
  */
-public interface ParametricFactor<T> {
+public interface ParametricFactor {
 
   /**
    * Gets the variables over which this {@code ParametricFactor} is defined. The
@@ -44,27 +43,26 @@ public interface ParametricFactor<T> {
    * @param parameters
    * @return
    */
-  public Factor getFactorFromParameters(T parameters);
+  public Factor getFactorFromParameters(SufficientStatistics parameters);
 
   /**
-   * Gets a human-interpretable string describing {@code parameters}. Typically,
-   * this should return several lines where each line contains a feature name
-   * and its corresponding parameter value.
+   * Gets a human-interpretable string describing {@code parameters}. This
+   * method returns one line per parameter, containing a description of the
+   * parameter and its value.
    * 
    * @param parameters
    * @return
    */
-  public String getParameterDescription(T parameters);
+  public String getParameterDescription(SufficientStatistics parameters);
 
   /**
-   * Gets a new vector of parameters for {@code this} with a reasonable default
-   * value. A typical default is the all-zero vector. The returned vector can be
-   * an argument to methods of this instance which take parameters as an
-   * argument, e.g., {@link #getFactorFromParameters()}.
+   * Gets a new all-zero vector of parameters for {@code this}. The returned
+   * vector can be an argument to methods of this instance which take parameters
+   * as an argument, e.g., {@link #getFactorFromParameters()}.
    * 
    * @return
    */
-  public T getNewSufficientStatistics();
+  public SufficientStatistics getNewSufficientStatistics();
 
   /**
    * Computes sufficient statistics for {@code this} factor based on an assumed
@@ -86,12 +84,16 @@ public interface ParametricFactor<T> {
    * {@code marginal} is a conditional distribution given
    * {@code conditionalAssignment}. The computed sufficient statistics summarize
    * the probabilities of the events of interest in {@code marginal}.
-   * 
+   * <p>
    * This method requires {@code marginal} to be a distribution over a subset of
    * {@code this.getVars()}. {@code marginal} and {@code conditionalAssignment}
    * must be define a disjoint partition of {@code this.getVars()}.
+   * {@code count} is the number of times this marginal has been observed, and
+   * {@code partitionFunction} is the normalizing constant for {@code marginal}.
    * 
+   * @param statistics
    * @param marginal
+   * @param conditionalAssignment
    * @param count
    * @param partitionFunction
    * @return

@@ -16,15 +16,18 @@ import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A {@link ParametricFactor} whose parameters are weights of log-linear feature
- * functions.
+ * A {@link ParametricFactor} whose parameters are weights of log-linear
+ * indicator features. This class is a less flexible version of
+ * {@code DiscreteLogLinearFactor}, since it only allows indicator features.
+ * However, it uses a more efficient encoding of features that enables it to
+ * work with larger feature tensors.
  * 
  * {@code IndicatorLogLinearFactor} can represent sparse factors (with 0
  * probability outcomes) through a set of initial weights for the returned
  * factor. Each initial weight should be set to either 0 or 1, and outcomes with
  * 0 weight will retain that weight regardless of their feature values.
  */
-public class IndicatorLogLinearFactor extends AbstractParametricFactor<SufficientStatistics> {
+public class IndicatorLogLinearFactor extends AbstractParametricFactor {
 
   // Contains a sparsity pattern which must be maintained by this tensor. (i.e.,
   // a set of 0 probability assignments). If null, then no sparsity pattern is
@@ -56,18 +59,18 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor<Sufficien
   @Override
   public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters).build();
-    
+
     double[] logProbs = featureWeights.getValues();
     double[] probs = new double[logProbs.length];
     for (int i = 0; i < logProbs.length; i++) {
       probs[i] = Math.exp(logProbs[i]);
     }
-    
+
     return new TableFactor(initialWeights.getVars(), initialWeights.getWeights().replaceValues(probs));
   }
-  
+
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) { 
+  public String getParameterDescription(SufficientStatistics parameters) {
     throw new UnsupportedOperationException();
   }
 
@@ -83,7 +86,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor<Sufficien
       Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
     Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
-    
+
     long keyNum = initialWeights.getWeights().dimKeyToKeyNum(
         initialWeights.getVars().assignmentToIntArray(subAssignment));
     int index = initialWeights.getWeights().keyNumToIndex(keyNum);
@@ -99,11 +102,11 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor<Sufficien
 
     VariableNumMap conditionedVars = initialWeights.getVars().intersection(
         conditionalAssignment.getVariableNums());
-    
+
     TableFactor productFactor = (TableFactor) initialWeights.product(
         TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
         .product(marginal);
-    
+
     Tensor productFactorWeights = productFactor.getWeights();
     double[] productFactorValues = productFactorWeights.getValues();
     int tensorSize = productFactorWeights.size();

@@ -70,7 +70,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
     parent = new VariableNumMap(Arrays.asList(3), Arrays.asList("parent"), Arrays.asList(parseNodeVariable));
     ruleType = new VariableNumMap(Arrays.asList(4), Arrays.asList("ruleType"), Arrays.asList(emptyVariable));
     VariableNumMap nonterminalVars = VariableNumMap.unionAll(left, right, parent, ruleType);
-    ParametricFactor<SufficientStatistics> nonterminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(nonterminalVars);
+    ParametricFactor nonterminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(nonterminalVars);
     
     List<List<String>> allTerminals = Lists.newArrayList(Iterables.transform(Arrays.asList(TERMINALS),
         new Function<String, List<String>>() {
@@ -82,7 +82,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
     Variable terminalNodeVariable = new DiscreteVariable("terminalNode", allTerminals);
     terminal = new VariableNumMap(Arrays.asList(2), Arrays.asList("terminal"), Arrays.asList(terminalNodeVariable));
     VariableNumMap terminalVars = VariableNumMap.unionAll(terminal, parent, ruleType);
-    ParametricFactor<SufficientStatistics> terminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(terminalVars);
+    ParametricFactor terminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(terminalVars);
     
     // Construct a factor graph containing the cfg grammar. 
     ObjectVariable parseTreeVariable = new ObjectVariable(ParseTree.class);

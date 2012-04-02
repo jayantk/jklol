@@ -23,7 +23,7 @@ public class ParametricFactorGraphBuilder {
   private DynamicVariableSet variables;
   private List<PlateFactor> constantFactors;
 
-  private List<ParametricFactor<SufficientStatistics>> logLinearFactors;
+  private List<ParametricFactor> logLinearFactors;
   private List<VariablePattern> factorPatterns;
 
   /**
@@ -92,7 +92,7 @@ public class ParametricFactorGraphBuilder {
    * 
    * @param factor
    */
-  public void addFactor(ParametricFactor<SufficientStatistics> factor, VariablePattern factorPattern) {
+  public void addFactor(ParametricFactor factor, VariablePattern factorPattern) {
     logLinearFactors.add(factor);
     factorPatterns.add(factorPattern);
   }
@@ -103,7 +103,7 @@ public class ParametricFactorGraphBuilder {
    * 
    * @param factor
    */
-  public void addUnreplicatedFactor(ParametricFactor<SufficientStatistics> factor) {
+  public void addUnreplicatedFactor(ParametricFactor factor) {
     logLinearFactors.add(factor);
     factorPatterns.add(new WrapperVariablePattern(factor.getVars()));
   }

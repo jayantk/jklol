@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
@@ -27,18 +28,32 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class ParametricFactorGraph extends AbstractParametricFamily<SufficientStatistics> {
+public class ParametricFactorGraph {
 
-  private List<ParametricFactor<SufficientStatistics>> parametricFactors;
+  private final DynamicFactorGraph baseFactorGraph;
+
+  private List<ParametricFactor> parametricFactors;
   private List<VariablePattern> factorPatterns;
 
-  public ParametricFactorGraph(DynamicFactorGraph factorGraph, 
-      List<ParametricFactor<SufficientStatistics>> parametricFactors, 
+  public ParametricFactorGraph(DynamicFactorGraph factorGraph,
+      List<ParametricFactor> parametricFactors,
       List<VariablePattern> factorPatterns) {
-    super(factorGraph);
     Preconditions.checkArgument(parametricFactors.size() == factorPatterns.size());
+    this.baseFactorGraph = factorGraph;
     this.parametricFactors = Lists.newArrayList(parametricFactors);
     this.factorPatterns = Lists.newArrayList(factorPatterns);
+  }
+
+  /**
+   * Gets the variables over which the distributions in this family are defined.
+   * All {@code DynamicFactorGraph}s returned by
+   * {@link #getFactorGraphFromParameters(Object)} are defined over the same
+   * variables.
+   * 
+   * @return
+   */
+  public DynamicVariableSet getVariables() {
+    return baseFactorGraph.getVariables();
   }
 
   /**
@@ -46,11 +61,18 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
    * 
    * @return
    */
-  public List<ParametricFactor<SufficientStatistics>> getParametricFactors() {
+  public List<ParametricFactor> getParametricFactors() {
     return Collections.unmodifiableList(parametricFactors);
   }
 
-  @Override
+  /**
+   * Gets a {@code DynamicFactorGraph} which is the member of this family
+   * indexed by {@code parameters}. Note that multiple values of
+   * {@code parameters} may result in the same {@code FactorGraph}.
+   * 
+   * @param parameters
+   * @return
+   */
   public DynamicFactorGraph getFactorGraphFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
@@ -60,9 +82,17 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
           parametricFactors.get(i).getFactorFromParameters(parameterList.get(i)),
           factorPatterns.get(i)));
     }
-    return getBaseFactorGraph().addPlateFactors(plateFactors);
+    return baseFactorGraph.addPlateFactors(plateFactors);
   }
-  
+
+  /**
+   * Gets a human-interpretable description of {@code parameters}. The returned
+   * string has one parameter/description pair per line, with separators for
+   * distinct factors.
+   * 
+   * @param parameters
+   * @return
+   */
   public String getParameterDescription(SufficientStatistics parameters) {
     StringBuilder builder = new StringBuilder();
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
@@ -73,28 +103,53 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     return builder.toString();
   }
 
-  @Override
+  /**
+   * Gets a new, all-zero parameter vector for {@code this} family of
+   * distributions.
+   * 
+   * @return
+   */
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> sufficientStatistics = Lists.newArrayList();
-    for (ParametricFactor<SufficientStatistics> factor : getParametricFactors()) {
+    for (ParametricFactor factor : getParametricFactors()) {
       sufficientStatistics.add(factor.getNewSufficientStatistics());
     }
     return new ListSufficientStatistics(sufficientStatistics);
   }
 
-  @Override
-  public void incrementSufficientStatistics(SufficientStatistics statistics,  
+  /**
+   * Accumulates sufficient statistics (in {@code statistics}) for estimating a
+   * model from {@code this} family based on a point distribution at
+   * {@code assignment}. {@code count} is the number of times that
+   * {@code assignment} has been observed in the training data, and acts as a
+   * multiplier for the computed statistics {@code assignment} must contain a
+   * value for all of the variables in {@code this.getVariables()}.
+   * 
+   * @param statistics
+   * @param assignment
+   * @param count
+   */
+  public void incrementSufficientStatistics(SufficientStatistics statistics,
       VariableNumMap variables, Assignment assignment, double count) {
     incrementSufficientStatistics(statistics, FactorMarginalSet.fromAssignment(
         variables, assignment), count);
   }
 
-  @Override
-  public void incrementSufficientStatistics(SufficientStatistics statistics, 
+  /**
+   * Computes a vector of sufficient statistics for {@code this} and accumulates
+   * them in {@code statistics}. The statistics are computed from the
+   * (conditional) marginal distribution {@code marginals}. {@code count} is the
+   * number of times {@code marginals} has been observed in the training data.
+   * 
+   * @param statistics
+   * @param marginals
+   * @param count
+   */ 
+  public void incrementSufficientStatistics(SufficientStatistics statistics,
       MarginalSet marginals, double count) {
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
-    
+
     for (int i = 0; i < statisticsList.size(); i++) {
       VariablePattern pattern = factorPatterns.get(i);
       List<VariableMatch> matches = pattern.matchVariables(marginals.getVariables());
@@ -102,32 +157,33 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
       for (VariableMatch match : matches) {
         VariableNumMap fixedVars = match.getMatchedVariables().intersection(marginals.getConditionedValues().getVariableNums());
         VariableNumMap marginalVars = match.getMatchedVariables().removeAll(marginals.getConditionedValues().getVariableNums());
-       
+
         Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
         Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
 
-        parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i), 
-            factorMarginal.relabelVariables(match.getMappingToTemplate()), 
+        parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i),
+            factorMarginal.relabelVariables(match.getMappingToTemplate()),
             factorAssignment.mapVariables(match.getMappingToTemplate().getVariableIndexReplacementMap()),
             count, marginals.getPartitionFunction());
       }
     }
   }
-  
+
   /**
-   * Gets some basic statistics about {@code this}.  
+   * Gets some basic statistics about {@code this}.
+   * 
    * @return
    */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("ParametricFactorGraph: ");
-    sb.append(getBaseFactorGraph().getVariables() + " variables, ");
+    sb.append(baseFactorGraph.getVariables() + " variables, ");
     sb.append(parametricFactors.size() + " parametric factors, ");
-    for (ParametricFactor<SufficientStatistics> factor : parametricFactors) {
+    for (ParametricFactor factor : parametricFactors) {
       sb.append(factor.toString());
     }
-    sb.append("base factor graph: " + getBaseFactorGraph());
+    sb.append("base factor graph: " + baseFactorGraph);
     return sb.toString();
   }
 }

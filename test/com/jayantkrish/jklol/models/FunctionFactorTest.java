@@ -137,6 +137,16 @@ public class FunctionFactorTest extends TestCase {
     assertEquals(0.0, domainMarginal.getUnnormalizedProbability("bcde"));
   }
   
+  public void testInverse() {
+    Factor rangeFactor = TableFactor.pointDistribution(range, range.outcomeArrayToAssignment("a"),
+        range.outcomeArrayToAssignment("c"));
+    
+    Factor result = uniformFactor.product(rangeFactor).marginalize(range);
+    Factor inverse = result.inverse();
+    assertEquals(1.0, inverse.getUnnormalizedProbability("abcd"));
+    assertEquals(0.0, inverse.getUnnormalizedProbability("bdede"));
+  }
+  
   public void testConditionalDomain() {
     Factor factor = uniformFactor.conditional(domain.outcomeArrayToAssignment("bebebe"));
     assertEquals(1.0, factor.getUnnormalizedProbability("b"));

@@ -17,6 +17,8 @@ public class ParseTree implements Comparable<ParseTree> {
   private final ParseTree right;
 
   private final double prob;
+  
+  public static final ParseTree EMPTY = new ParseTree(null, null, null, null, 1.0);
 
   /**
    * Create a new parse tree by composing two subtrees with the production rule
@@ -118,7 +120,9 @@ public class ParseTree implements Comparable<ParseTree> {
 
   @Override
   public String toString() {
-    if (!isTerminal()) {
+    if (this == ParseTree.EMPTY) {
+      return "ParseTree.EMPTY";
+    } else if (!isTerminal()) {
       return "(" + root + " --" + ruleType + "--> " + left.toString() + " " + right.toString() + ")";
     }
     return "(" + root + "--" + ruleType + "-->" + terminal + ")";

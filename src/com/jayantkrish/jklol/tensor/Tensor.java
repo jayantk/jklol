@@ -35,6 +35,13 @@ public interface Tensor extends TensorBase {
 
   Tensor elementwiseLog();
 
+  /**
+   * Computes e to the power of each element in this tensor. This operation
+   * applies {@code Math.exp} to every element of this and returns the result in
+   * a new tensor.
+   * 
+   * @return
+   */
   Tensor elementwiseExp();
 
   Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate);
@@ -44,6 +51,26 @@ public interface Tensor extends TensorBase {
   Tensor relabelDimensions(int[] newDimensions);
 
   Tensor relabelDimensions(Map<Integer, Integer> relabeling);
+
+  /**
+   * Replaces the array of values backing this tensor with {@code values}.
+   * Intended for advanced use only.
+   * 
+   * @param values
+   * @return
+   */
+  Tensor replaceValues(double[] values);
+
+  /**
+   * Gets the keynums of the {@code n} largest values in this tensor. If this
+   * tensor contains fewer than {@code n} nonzero values, fewer than {@code n}
+   * indexes may be returned. The keynums are returned in descending order by
+   * their corresponding value, i.e., the 0th element of the returned array
+   * points to the largest value in {@code this}.
+   * 
+   * @return
+   */
+  public long[] getLargestValues(int n);
 
   /**
    * Gets the first index in {@code this} whose corresponding keyNum is >= than

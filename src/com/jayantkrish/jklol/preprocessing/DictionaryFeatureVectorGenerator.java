@@ -81,6 +81,16 @@ public class DictionaryFeatureVectorGenerator<T, U> implements FeatureVectorGene
   }
 
   /**
+   * Gets the name of the feature which maps to {@code featureIndex}.
+   * 
+   * @param featureIndex
+   * @return
+   */
+  public U getFeatureName(int featureIndex) {
+    return featureIndexes.get(featureIndex);
+  }
+
+  /**
    * Given a feature vector, get the features which were active for it. This
    * method inverts the mapping from feature sets to feature vectors performed
    * by this class.

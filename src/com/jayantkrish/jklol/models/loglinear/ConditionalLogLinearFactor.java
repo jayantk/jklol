@@ -66,6 +66,11 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor<Suffici
     return new LinearClassifierFactor(inputVar, outputVar, 
         getWeightTensorFromStatistics(parameters).build());
   }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) { 
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {    

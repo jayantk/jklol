@@ -18,21 +18,38 @@ public class FilterFactor extends AbstractFactor {
   private final Factor relationFactor;
   private final Factor rangeFactor;
   private boolean isMaxMarginal;
+  
+  private boolean isInverse;
 
   public FilterFactor(VariableNumMap domainVar, VariableNumMap auxiliaryVars, 
-      Factor relationFactor, Factor rangeFactor, boolean isMaxMarginal) {
+      Factor relationFactor, Factor rangeFactor, boolean isMaxMarginal, boolean isInverse) {
     super(domainVar.union(auxiliaryVars));
     Preconditions.checkArgument(domainVar.size() == 1);
     this.domainVar = domainVar;
     this.auxiliaryVars = auxiliaryVars;
     this.relationFactor = relationFactor;
-    this.rangeFactor = Preconditions.checkNotNull(rangeFactor);
+    this.rangeFactor = rangeFactor;
     this.isMaxMarginal = isMaxMarginal;
+    this.isInverse = false;
+  }
+  
+  public Factor getRangeFactor() {
+    return rangeFactor;
+  }
+  
+  public Factor getRelationFactor() {
+    return relationFactor;
   }
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Factor rangeDistribution = relationFactor.conditional(assignment).product(rangeFactor);
+    Factor rangeDistribution = relationFactor.conditional(assignment.intersection(getVars()));
+    if (rangeFactor != null) {
+      rangeDistribution = rangeDistribution.product(rangeFactor);
+    }
+    if (isInverse) {
+      rangeDistribution = rangeDistribution.inverse();
+    }
     if (isMaxMarginal) {
       return rangeDistribution.maxMarginalize(rangeDistribution.getVars())
           .getUnnormalizedProbability(Assignment.EMPTY);
@@ -54,13 +71,21 @@ public class FilterFactor extends AbstractFactor {
 
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
-    return new FilterFactor(relabeling.apply(domainVar), relabeling.apply(auxiliaryVars), 
-        relationFactor.relabelVariables(relabeling), rangeFactor, isMaxMarginal);
+    VariableRelabeling extendedRelabeling = relabeling;
+    if (!relabeling.isInDomain(rangeFactor.getVars())) {
+      extendedRelabeling = relabeling.union(VariableRelabeling.identity(rangeFactor.getVars()));
+    }
+    
+    return new FilterFactor(extendedRelabeling.apply(domainVar), extendedRelabeling.apply(auxiliaryVars), 
+        relationFactor.relabelVariables(extendedRelabeling), rangeFactor.relabelVariables(extendedRelabeling), 
+        isMaxMarginal, false);
   }
 
   @Override
   public Factor conditional(Assignment assignment) {
-    throw new UnsupportedOperationException();
+    // Not actually supported.
+    Preconditions.checkArgument(!getVars().containsAny(assignment.getVariableNums()));
+    return this;
   }
 
   @Override
@@ -86,7 +111,13 @@ public class FilterFactor extends AbstractFactor {
   @Override
   public Factor product(Factor other) {
     Preconditions.checkArgument(other.getVars().equals(domainVar));
-    Factor productFactor = relationFactor.product(other).product(rangeFactor);
+    Factor productFactor = relationFactor.product(other);
+    if (rangeFactor != null) {
+      productFactor = productFactor.product(rangeFactor);
+    }
+    if (isInverse) {
+      productFactor = productFactor.inverse();
+    }
     if (isMaxMarginal) {
       return productFactor.maxMarginalize(rangeFactor.getVars());
     } else {
@@ -96,13 +127,13 @@ public class FilterFactor extends AbstractFactor {
 
   @Override
   public Factor product(double constant) {
-    return new FilterFactor(domainVar, auxiliaryVars, relationFactor, 
-        rangeFactor.product(constant), isMaxMarginal);
+    throw new UnsupportedOperationException();
   }
 
   @Override
   public Factor inverse() {
-    throw new UnsupportedOperationException();
+    return new FilterFactor(domainVar, auxiliaryVars, relationFactor, 
+        rangeFactor, isMaxMarginal, !isInverse);
   }
 
   @Override

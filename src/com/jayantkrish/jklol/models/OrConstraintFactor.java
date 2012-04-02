@@ -2,11 +2,13 @@ package com.jayantkrish.jklol.models;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -62,7 +64,7 @@ public class OrConstraintFactor extends AbstractFactor {
       VariableNumMap orVars, Map<String, Object> orValues) {
     List<Factor> inputFactors = Lists.newArrayList();
     for (int varNum : inputVars.getVariableNums()) {
-      inputFactors.add(TableFactor.unity(inputVars.intersection(Ints.asList(varNum))));
+      inputFactors.add(TableFactor.logUnity(inputVars.intersection(Ints.asList(varNum))));
     }
     
     return new OrConstraintFactor(inputVars, orVars, orValues, inputFactors);
@@ -70,13 +72,17 @@ public class OrConstraintFactor extends AbstractFactor {
     
   @Override
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages) {
-    Set<SeparatorSet> outboundMessages = Sets.newHashSet();
+    boolean haveAllInbound = true;
     for (Map.Entry<SeparatorSet, Factor> inboundMessage : inboundMessages.entrySet()) {
-      if (inboundMessage.getValue() != null) {
-        outboundMessages.add(inboundMessage.getKey());
+      if (inboundMessage.getValue() == null) {
+        haveAllInbound = false;
       }
     }
-    return outboundMessages;
+    if (haveAllInbound) {
+      return inboundMessages.keySet();
+    } else {
+      return Collections.emptySet();
+    }
   }
 
   @Override
@@ -92,7 +98,8 @@ public class OrConstraintFactor extends AbstractFactor {
     Set<Object> impossibleValues = Sets.newHashSet();
     getRequiredAndImpossibleValues(assignment, requiredValues, impossibleValues);
 
-    return (new SetCoverFactor(inputVars, requiredValues, impossibleValues, inputVarFactors))
+    return (new SetCoverFactor(inputVars, requiredValues, 
+        Predicates.not(Predicates.in(impossibleValues)), inputVarFactors))
         .getUnnormalizedLogProbability(assignment);
   }
 
@@ -108,8 +115,8 @@ public class OrConstraintFactor extends AbstractFactor {
     getRequiredAndImpossibleValues(assignment, requiredValues, impossibleValues);
   
     Assignment inputAssignment = assignment.intersection(inputVars.getVariableNums());
-    return new SetCoverFactor(inputVars, requiredValues, impossibleValues, inputVarFactors)
-    .conditional(inputAssignment);
+    return new SetCoverFactor(inputVars, requiredValues, 
+        Predicates.not(Predicates.in(impossibleValues)), inputVarFactors).conditional(inputAssignment);
   }
   
   

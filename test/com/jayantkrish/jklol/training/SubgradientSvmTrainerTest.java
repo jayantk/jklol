@@ -13,10 +13,12 @@ import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -46,8 +48,14 @@ public class SubgradientSvmTrainerTest extends TestCase {
     builder.addVariable("X1", tfVar);
     builder.addVariable("Y", tfVar);
 
+    /*
     builder.addUnreplicatedFactor(DiscreteLogLinearFactor
         .createIndicatorFactor(builder.getVariables().getVariablesByName("X0", "Y")));
+     */
+		VariableNumMap factorVariables = builder.getVariables().getVariablesByName("X0", "Y");
+		builder.addUnreplicatedFactor(new IndicatorLogLinearFactor(factorVariables,
+		    TableFactor.unity(factorVariables)));
+    
     builder.addUnreplicatedFactor(DiscreteLogLinearFactor
         .createIndicatorFactor(builder.getVariables().getVariablesByName("X1", "Y")));
     model = builder.build();

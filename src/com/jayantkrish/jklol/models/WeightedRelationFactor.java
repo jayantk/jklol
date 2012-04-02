@@ -123,7 +123,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
       }
     }
 
-    if (possibleOutbound.size() == 1 && domainFactor != null) {
+    if (possibleOutbound.size() == 1) {
       return possibleOutbound;
     } else if (possibleOutbound.size() == 0) {
       return inboundMessages.keySet();
@@ -174,7 +174,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
       if (getVars().intersection(varNumsToEliminate).size() == 0) {
         return this;
       } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-        return new FilterFactor(domainVariable, auxiliaryVariables, this, rangeFactor, false); 
+        return new FilterFactor(domainVariable, auxiliaryVariables, this, rangeFactor, false, false); 
       } else {
         throw new UnsupportedOperationException();
       }
@@ -196,7 +196,7 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
       if (getVars().intersection(varNumsToEliminate).size() == 0) {
         return this;
       } else if (varNumsToEliminate.contains(rangeVariable.getOnlyVariableNum())) {
-        return new FilterFactor(domainVariable, auxiliaryVariables, this, rangeFactor, true);
+        return new FilterFactor(domainVariable, auxiliaryVariables, this, rangeFactor, true, false);
       } else {
         // We shouldn't get to this case, based on the Preconditions check above.
         throw new UnsupportedOperationException();
@@ -239,6 +239,8 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
       }
     }
   }
+  
+  // TODO: override product with a list.
 
   @Override
   public Factor product(double constant) {

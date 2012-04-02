@@ -47,6 +47,16 @@ public interface ParametricFactor<T> {
   public Factor getFactorFromParameters(T parameters);
 
   /**
+   * Gets a human-interpretable string describing {@code parameters}. Typically,
+   * this should return several lines where each line contains a feature name
+   * and its corresponding parameter value.
+   * 
+   * @param parameters
+   * @return
+   */
+  public String getParameterDescription(T parameters);
+
+  /**
    * Gets a new vector of parameters for {@code this} with a reasonable default
    * value. A typical default is the all-zero vector. The returned vector can be
    * an argument to methods of this instance which take parameters as an

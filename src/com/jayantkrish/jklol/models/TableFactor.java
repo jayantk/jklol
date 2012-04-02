@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import java.util.Iterator;
+import java.util.List;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -13,8 +14,9 @@ import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.tensor.Tensors;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
+import com.jayantkrish.jklol.tensor.Tensors;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -89,14 +91,30 @@ public class TableFactor extends DiscreteFactor {
 
   /**
    * Gets a {@code TableFactor} over {@code vars} which assigns weight 1 to all
-   * assignments.
+   * assignments. The weights are represented in log space.
+   * 
+   * @param vars
+   * @return
+   */
+  public static TableFactor logUnity(VariableNumMap vars) {
+    TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+    return builder.buildInLogSpace();
+  }
+
+  /**
+   * Gets a {@code TableFactor} over {@code vars} which assigns weight 1 to all
+   * assignments. The weights are represented in log space.
    * 
    * @param vars
    * @return
    */
   public static TableFactor unity(VariableNumMap vars) {
     TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
-    return builder.buildInLogSpace();
+    Iterator<Assignment> iterator = new AllAssignmentIterator(vars);
+    while (iterator.hasNext()) {
+      builder.setWeight(iterator.next(), 1.0);
+    }
+    return builder.build();
   }
 
   public static FactorFactory getFactory() {
@@ -120,6 +138,35 @@ public class TableFactor extends DiscreteFactor {
   public static TableFactor fromProto(VariableNumMap variables, TableFactorProto proto) {
     Preconditions.checkArgument(proto.hasWeights());
     return new TableFactor(variables, Tensors.fromProto(proto.getWeights()));
+  }
+
+  /**
+   * Gets a {@code TableFactor} from a series of lines, each describing a single
+   * assignment. Each line is {@code delimiter}-separated, and its ith entry is the value of
+   * the ith variable in {@code variables}. The last value on each line is the
+   * weight.
+   * 
+   * @param variables
+   * @param lines
+   * @return
+   */
+  public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, Iterable<String> lines, 
+      String delimiter) {
+    int numVars = variables.size();
+    VariableNumMap allVars = VariableNumMap.unionAll(variables);
+    TableFactorBuilder builder = new TableFactorBuilder(allVars, SparseTensorBuilder.getFactory());
+    for (String line : lines) {
+      String[] parts = line.split(delimiter); 
+      Preconditions.checkState(parts.length == (numVars + 1), "\"%s\" is incorrectly formatted", line); 
+      Assignment assignment = Assignment.EMPTY;
+      for (int i = 0; i < numVars; i++) {
+        assignment = assignment.union(variables.get(i).outcomeArrayToAssignment(parts[i]));
+      }
+      Preconditions.checkState(allVars.isValidAssignment(assignment));
+      double weight = Double.parseDouble(parts[numVars]);
+      builder.setWeight(assignment, weight);
+    }
+    return builder.build();
   }
 
   // //////////////////////////////////////////////////////////////////////////////

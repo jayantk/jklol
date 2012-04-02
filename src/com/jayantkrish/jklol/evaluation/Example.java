@@ -1,6 +1,11 @@
 package com.jayantkrish.jklol.evaluation;
 
+import java.util.List;
+
 import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
 import com.jayantkrish.jklol.util.Converters;
 
@@ -107,6 +112,16 @@ public class Example<I, O> {
         return item.getOutput();
       }
     };
+  }
+  
+  public static List<Example<Assignment, Assignment>> fromAssignments(
+      List<Assignment> assignments, VariableNumMap inputVars, VariableNumMap outputVars) {
+    List<Example<Assignment, Assignment>> examples = Lists.newArrayList();
+    for (Assignment assignment : assignments) {
+      examples.add(Example.create(assignment.intersection(inputVars), 
+          assignment.intersection(outputVars)));
+    }
+    return examples;
   }
 
   /**

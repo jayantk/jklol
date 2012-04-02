@@ -100,7 +100,7 @@ public class VariableNumMap {
   public static VariableNumMap fromProto(VariableNumMapProto proto) {
     Preconditions.checkArgument(proto.getNumCount() == proto.getVariableCount());
     Preconditions.checkArgument(proto.getNumCount() == proto.getNameCount());
-    
+
     List<Integer> varNums = Lists.newArrayList();
     List<String> varNames = Lists.newArrayList();
     List<Variable> variables = Lists.newArrayList();
@@ -109,8 +109,32 @@ public class VariableNumMap {
       varNames.add(proto.getName(i));
       variables.add(Variables.fromProto(proto.getVariable(i)));
     }
-    
+
     return new VariableNumMap(varNums, varNames, variables);
+  }
+
+  /**
+   * Converts a list of outcomes into a list of assignments. Each row of
+   * {@code outcomes} is converted into an assignment by mapping the ith column
+   * of {@code outcomes[i]} to an assignment of the ith variable in
+   * {@code variables}. {@code null} entries are ignored.
+   * 
+   * @param outcomes
+   * @return
+   */
+  public static List<Assignment> outcomeTableToAssignment(Object[][] outcomes, 
+      List<VariableNumMap> variables) {
+    List<Assignment> assignments = Lists.newArrayList();
+    for (int i = 0; i < outcomes.length; i++) {
+      Assignment currentAssignment = Assignment.EMPTY;
+      for (int j = 0; j < outcomes[i].length; j++) {
+        if (outcomes[i][j] != null) {
+          currentAssignment = currentAssignment.union(variables.get(j).outcomeArrayToAssignment(outcomes[i][j]));              
+        }
+      }
+      assignments.add(currentAssignment);
+    }
+    return assignments;
   }
 
   /**
@@ -569,7 +593,7 @@ public class VariableNumMap {
    * variable returned by getVariableNums())
    */
   public Assignment outcomeToAssignment(List<? extends Object> outcome) {
-    Preconditions.checkArgument(outcome.size() == varMap.size(), 
+    Preconditions.checkArgument(outcome.size() == varMap.size(),
         "outcome %s cannot be assigned to %s (wrong number of values)", outcome, this);
 
     Map<Integer, Object> varValueMap = new HashMap<Integer, Object>();
@@ -678,7 +702,7 @@ public class VariableNumMap {
     }
     return true;
   }
-  
+
   /**
    * Serializes {@code this} into a protocol buffer.
    * 
@@ -840,6 +864,28 @@ public class VariableNumMap {
     @Override
     public VariableRelabeling inverse() {
       return new VariableRelabeling(variableIndexMap.inverse(), variableNameMap.inverse());
+    }
+
+    @Override
+    public String toString() {
+      return variableIndexMap.toString();
+    }
+
+    /**
+     * Expects {@code other} and {@code this} to contain mappings for disjoint
+     * sets of variables.
+     * 
+     * @param other
+     * @return
+     */
+    public VariableRelabeling union(VariableRelabeling other) {
+      BiMap<Integer, Integer> newVariableIndexMap = HashBiMap.create(variableIndexMap);
+      BiMap<String, String> newVariableNameMap = HashBiMap.create(variableNameMap);
+
+      newVariableIndexMap.putAll(other.variableIndexMap);
+      newVariableNameMap.putAll(other.variableNameMap);
+
+      return new VariableRelabeling(newVariableIndexMap, newVariableNameMap);
     }
 
     /**

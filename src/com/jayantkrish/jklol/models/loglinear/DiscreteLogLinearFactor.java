@@ -10,6 +10,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -23,7 +24,6 @@ import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
@@ -39,13 +39,14 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class DiscreteLogLinearFactor extends AbstractParametricFactor<SufficientStatistics> {
 
-  private final VariableNumMap featureVariable;
+  // This factor has one weight for each assignment to featureVariables. 
+  private final VariableNumMap featureVariables;
   // A features x assignments tensor.
-  private final TableFactor featureValues;
+  private final DiscreteFactor featureValues; 
   // Contains a sparsity pattern which must be maintained by this tensor. (i.e.,
   // a set of 0 probability assignments). If null, then no sparsity pattern is
   // enforced.
-  private final TableFactor initialWeights;
+  private final DiscreteFactor initialWeights;
 
   /**
    * Creates a {@code DiscreteLogLinearFactor} over {@code variables},
@@ -57,14 +58,13 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
    * @param features
    * @param featureValues
    */
-  public DiscreteLogLinearFactor(VariableNumMap variables, VariableNumMap featureVariable,
-      TableFactor featureValues) {
+  public DiscreteLogLinearFactor(VariableNumMap variables, VariableNumMap featureVariables,
+      DiscreteFactor featureValues) {
     super(variables);
-    this.featureVariable = featureVariable;
-    Preconditions.checkArgument(featureVariable.size() == 1);
+    this.featureVariables = featureVariables;
     this.featureValues = Preconditions.checkNotNull(featureValues);
     Preconditions.checkArgument(featureValues.getVars().equals(
-        variables.union(featureVariable)));
+        variables.union(featureVariables)));
     this.initialWeights = null;
   }
 
@@ -77,18 +77,17 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
    * @param vars
    * @param features
    */
-  public DiscreteLogLinearFactor(VariableNumMap variables, VariableNumMap featureVariable,
-      TableFactor featureValues, TableFactor initialWeights) {
+  public DiscreteLogLinearFactor(VariableNumMap variables, VariableNumMap featureVariables,
+      DiscreteFactor featureValues, DiscreteFactor initialWeights) {
     super(variables);
-    this.featureVariable = featureVariable;
-    Preconditions.checkArgument(featureVariable.size() == 1);
+    this.featureVariables = featureVariables;
     this.featureValues = Preconditions.checkNotNull(featureValues);
     Preconditions.checkArgument(featureValues.getVars().equals(
-        variables.union(featureVariable)));
+        variables.union(featureVariables)));
     this.initialWeights = initialWeights;
   }
 
-  public TableFactor getFeatureValues() {
+  public DiscreteFactor getFeatureValues() {
     return featureValues;
   }
 
@@ -100,30 +99,58 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
   public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters).build();
     Tensor logProbs = featureValues.getWeights().elementwiseProduct(featureWeights)
-        .sumOutDimensions(Ints.asList(featureVariable.getOnlyVariableNum()));
+        .sumOutDimensions(featureVariables.getVariableNums());
 
     // Maintain the sparsity pattern, but fast. The result is equivalent
-    // to computing
-    // initialWeights.elementwiseProduct(logProbs.elementwiseExp());
+    // to computing initialWeights.elementwiseProduct(logProbs.elementwiseExp());
     if (initialWeights != null) {
-      SparseTensorBuilder builder = SparseTensorBuilder.copyOf(initialWeights.getWeights());
-      Iterator<KeyValue> logProbIter = logProbs.keyValueIterator();
-      while (logProbIter.hasNext()) {
-        KeyValue keyValue = logProbIter.next();
-        builder.multiplyEntry(Math.exp(keyValue.getValue()), keyValue.getKey());
+      Tensor initialTensor = initialWeights.getWeights();
+      double[] initialWeightValues = initialWeights.getWeights().getValues();
+      double[] logProbValues = logProbs.getValues();
+      double[] newWeights = Arrays.copyOf(initialWeightValues, initialWeightValues.length); 
+      
+      int initialWeightIndex = 0, logProbIndex = 0;
+      long initialWeightKeyNum, logProbKeyNum;
+      while (initialWeightIndex < newWeights.length && logProbIndex < logProbValues.length) {
+        initialWeightKeyNum = initialTensor.indexToKeyNum(initialWeightIndex);
+        logProbKeyNum = logProbs.indexToKeyNum(logProbIndex);
+
+        if (initialWeightKeyNum > logProbKeyNum) {
+          logProbIndex++;
+        } else if (initialWeightKeyNum < logProbKeyNum) {
+          initialWeightIndex++;
+        } else {
+          // Equals.
+          newWeights[initialWeightIndex] *= Math.exp(logProbValues[logProbIndex]);
+
+          logProbIndex++;
+          initialWeightIndex++;
+        }
       }
-      SparseTensor factorWeights = builder.build();
-      return new TableFactor(getVars(), factorWeights);
+
+      return new TableFactor(getVars(), initialTensor.replaceValues(newWeights));
     } else {
       return new TableFactor(getVars(), logProbs.elementwiseExp());
     }
   }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) { 
+    TensorBuilder weights = getFeatureWeights(parameters);
+    TableFactor weightFactor = new TableFactor(featureVariables, weights.build());
+    Iterator<Outcome> outcomeIter = weightFactor.outcomeIterator();
+    StringBuilder sb = new StringBuilder();
+    while (outcomeIter.hasNext()) {
+      sb.append(outcomeIter.next() + "\n");
+    }
+    return sb.toString(); 
+  }
 
   @Override
-  public TensorSufficientStatistics getNewSufficientStatistics() {
+  public TensorSufficientStatistics getNewSufficientStatistics() {    
     return new TensorSufficientStatistics(Arrays.<TensorBuilder> asList(
-        new DenseTensorBuilder(new int[] { featureVariable.getOnlyVariableNum() },
-            new int[] { featureVariable.getDiscreteVariables().get(0).numValues() })));
+        new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
+            featureVariables.getVariableSizes())));
   }
 
   @Override
@@ -148,8 +175,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
     // Compute expected feature counts based on the input marginal distribution.
     DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
         .product(marginal).marginalize(marginal.getVars().getVariableNums());
-    Preconditions.checkState(expectedFeatureCounts.getVars().size() == 1
-        && expectedFeatureCounts.getVars().containsAll(featureVariable));
+    Preconditions.checkState(expectedFeatureCounts.getVars().equals(featureVariables));
 
     weights.increment(expectedFeatureCounts.getWeights().elementwiseProduct(
         SparseTensor.getScalarConstant(count / partitionFunction)));
@@ -159,15 +185,36 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.
     Preconditions.checkArgument(featureParameters.size() == 1);
-    Preconditions.checkArgument(featureParameters.get(0).getDimensionNumbers().length == 1);
-    Preconditions.checkArgument(featureParameters.get(0).getDimensionSizes()[0] ==
-        featureVariable.getDiscreteVariables().get(0).numValues());
+    Preconditions.checkArgument(Arrays.equals(featureParameters.get(0).getDimensionSizes(),
+        featureVariables.getVariableSizes()));
     return featureParameters.get(0);
   }
 
   // ////////////////////////////////////////////////////////////
   // Other methods
   // ////////////////////////////////////////////////////////////
+  
+  public static DiscreteFactor createIndicatorFeatureTensor(VariableNumMap vars, int featureVarNum,
+      TableFactorBuilder initialWeights) {
+    // The "name" of an indicator feature is the assignment that it indicates.
+    List<Assignment> features = Lists.newArrayList();
+    if (initialWeights != null) {
+      Iterators.addAll(features, initialWeights.assignmentIterator());
+    } else {
+      Iterators.addAll(features, new AllAssignmentIterator(vars));
+    }
+    DiscreteVariable featureVariable = new DiscreteVariable("indicator features", features);
+    VariableNumMap featureVarMap = VariableNumMap.singleton(featureVarNum, "features", featureVariable);
+
+    TableFactorBuilder featureValueBuilder = new TableFactorBuilder(vars.union(featureVarMap),
+        SparseTensorBuilder.getFactory());
+    for (Assignment featureAssignment : features) {
+      Assignment newAssignment = featureAssignment.union(featureVarMap
+          .outcomeArrayToAssignment(featureAssignment));
+      featureValueBuilder.setWeight(newAssignment, 1.0);
+    }
+    return featureValueBuilder.build();
+  }
 
   /**
    * Creates and returns a {@code DiscreteLogLinearFactor} over {@code vars}
@@ -188,27 +235,13 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor<Sufficient
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
 
     int featureVarNum = Collections.max(vars.getVariableNums()) + 1;
-    // The "name" of an indicator feature is the assignment that it indicates.
-    List<Assignment> features = Lists.newArrayList();
-    if (initialWeights != null) {
-      Iterators.addAll(features, initialWeights.assignmentIterator());
-    } else {
-      Iterators.addAll(features, new AllAssignmentIterator(vars));
-    }
-    DiscreteVariable featureVariable = new DiscreteVariable("indicator features", features);
-    VariableNumMap featureVarMap = VariableNumMap.singleton(featureVarNum, "features", featureVariable);
-
-    TableFactorBuilder featureValueBuilder = new TableFactorBuilder(vars.union(featureVarMap),
-        SparseTensorBuilder.getFactory());
-    for (Assignment featureAssignment : features) {
-      Assignment newAssignment = featureAssignment.union(featureVarMap
-          .outcomeArrayToAssignment(featureAssignment));
-      featureValueBuilder.setWeight(newAssignment, 1.0);
-    }
+    
+    DiscreteFactor featureValues = createIndicatorFeatureTensor(vars, featureVarNum, initialWeights);
+    VariableNumMap featureVarMap = featureValues.getVars().intersection(Arrays.asList(featureVarNum));
 
     TableFactor initialWeightFactor = (initialWeights != null) ? initialWeights.build() : null;
     return new DiscreteLogLinearFactor(vars, featureVarMap,
-        featureValueBuilder.build(), initialWeightFactor);
+        featureValues, initialWeightFactor);
   }
 
   /**

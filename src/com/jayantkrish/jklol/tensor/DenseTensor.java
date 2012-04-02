@@ -17,6 +17,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.TensorProtos.DenseTensorProto;
 import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
+import com.jayantkrish.jklol.util.HeapUtils;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
@@ -26,6 +27,8 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
  * @author jayantk
  */
 public class DenseTensor extends DenseTensorBase implements Tensor {
+  
+  private static Random random = new Random();
 
   /**
    * Creates a tensor that spans {@code dimensions}, and each dimension has the
@@ -54,7 +57,6 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   public static DenseTensor random(int[] dimensions, int[] sizes, double mean, double stddev) {
     DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes);
     Iterator<KeyValue> keyValueIter = builder.keyValueIterator();
-    Random random = new Random();
     while (keyValueIter.hasNext()) {
       builder.put(keyValueIter.next().getKey(), (random.nextGaussian() * stddev) + mean);
     }
@@ -355,6 +357,16 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
       newDimensions[i] = relabeling.get(getDimensionNumbers()[i]);
     }
     return relabelDimensions(newDimensions);
+  }
+  
+  @Override
+  public DenseTensor replaceValues(double[] newValues) {
+    return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), newValues);
+  }
+  
+  @Override
+  public long[] getLargestValues(int n) {
+    return HeapUtils.findLargestItemIndexes(values, n);
   }
   
   @Override

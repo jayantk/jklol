@@ -58,6 +58,11 @@ public class CptTableFactor extends AbstractParametricFactor<SufficientStatistic
     
     return new TableFactor(getVars(), allTensor.elementwiseProduct(parentTensor.elementwiseInverse()));
   }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) { 
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {

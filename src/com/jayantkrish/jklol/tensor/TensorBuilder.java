@@ -17,7 +17,7 @@ public interface TensorBuilder extends TensorBase {
    * @param value
    */
   void put(int[] key, double value);
-  
+
   void putByKeyNum(long keyNum, double value);
 
   void increment(TensorBase other);
@@ -35,6 +35,18 @@ public interface TensorBuilder extends TensorBase {
   void multiplyEntry(double amount, int... key);
 
   Tensor build();
+
+  /**
+   * Creates a {@code Tensor} from the keys and values stored in this builder.
+   * This method is a less safe, but faster version of {@link #build()}. Unlike
+   * {@code build()}, this method may not create a copy of the keys and values
+   * in {@code this} to store in tensor. Consequently, mutating this
+   * {@code TensorBuilder} may affect the key/value pairs stored in the returned
+   * Tensor.
+   * 
+   * @return
+   */
+  Tensor buildNoCopy();
 
   /**
    * Gets a copy of this {@code TensorBuilder}. Mutating the returned builder

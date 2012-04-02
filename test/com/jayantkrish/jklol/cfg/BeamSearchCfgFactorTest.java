@@ -6,6 +6,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -95,7 +96,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
 
     OovMapper oovMapper = new OovMapper("<OOV>", Sets.newHashSet(Arrays.asList(TERMINALS)));
     ParametricCfgFactor cfgFactor = new ParametricCfgFactor(parent, left, right, terminal, ruleType, 
-        y, x, nonterminalFactor, terminalFactor, oovMapper, 10, false);
+        y, x, nonterminalFactor, terminalFactor, oovMapper, Predicates.alwaysTrue(), 10, false);
     builder.addFactor(cfgFactor, new WrapperVariablePattern(x.union(y)));
     cfgModel = builder.build();
     
@@ -146,7 +147,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
   
   public void testLogLinearTraining() {
     Predictor<Assignment, Assignment> predictor = runTrainerTest(new StochasticGradientTrainer(
-        new JunctionTree(), 5, new DefaultLogFunction()));
+        new JunctionTree(), 5, new DefaultLogFunction(), 1.0, 0.0));
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       ParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));

@@ -6,6 +6,7 @@ import java.util.SortedSet;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
@@ -50,6 +51,10 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
       while (unvisited.size() > 0) {
         current = getBestAssignmentGiven(factorGraph, unvisited.first(), visited, current);
         unvisited.removeAll(visited);
+      }
+      
+      if (factorGraph.getUnnormalizedLogProbability(current) == Double.NEGATIVE_INFINITY) {
+        throw new ZeroProbabilityError();
       }
 
       return current.union(conditionedValues);

@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
  * Most mathematical operations on {@code LogSpaceTensorAdapter} are performed
  * in log space. If the passed-in tensor (to binary operations) is not
  * represented in log space, it is automatically converted to log space before
- * the operation. Addition operations are the only exception to this rule. 
+ * the operation. Addition operations are the only exception to this rule.
  * 
  * @author jayantk
  */
@@ -28,7 +28,7 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
     super(logWeights.getDimensionNumbers(), logWeights.getDimensionSizes());
     this.logWeights = logWeights;
   }
-  
+
   public static LogSpaceTensorAdapter fromProto(LogSpaceAdapterProto proto) {
     Preconditions.checkArgument(proto.hasLogWeights());
     return new LogSpaceTensorAdapter(DenseTensor.fromProto(proto.getLogWeights()));
@@ -43,7 +43,7 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
   public double getByIndex(int index) {
     return Math.exp(logWeights.getByIndex(index));
   }
-  
+
   @Override
   public double getLogByIndex(int index) {
     return logWeights.getByIndex(index);
@@ -96,14 +96,14 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
 
   @Override
   public Tensor elementwiseInverse() {
-    throw new UnsupportedOperationException("Not implemented.");
+    return new LogSpaceTensorAdapter(logWeights.elementwiseProduct(SparseTensor.getScalarConstant(-1.0)));
   }
 
   @Override
   public Tensor elementwiseLog() {
     return logWeights;
   }
-  
+
   @Override
   public Tensor elementwiseExp() {
     return new LogSpaceTensorAdapter(logWeights.elementwiseExp());
@@ -130,6 +130,14 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
   }
 
   @Override
+  public Tensor replaceValues(double[] values) {
+    // This method is unsupported because it's behavior will be bizarre:
+    // replacing the values of the underlying tensor means that values are
+    // interpreted as log probabilities (instead of probabilities).
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public int getNearestIndex(long keyNum) {
     return logWeights.getNearestIndex(keyNum);
   }
@@ -137,8 +145,13 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
   @Override
   public double[] getValues() {
     throw new UnsupportedOperationException("Not implemented.");
-  } 
-  
+  }
+
+  @Override
+  public long[] getLargestValues(int n) {
+    return logWeights.getLargestValues(n);
+  }
+
   @Override
   public TensorProto toProto() {
     TensorProto.Builder builder = TensorProto.newBuilder();
@@ -148,7 +161,7 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
     builder.getLogTensorBuilder().setLogWeights(logWeightProto.getDenseTensor());
     return builder.build();
   }
-  
+
   private static final class LogSpaceKeyValueIterator implements Iterator<KeyValue> {
     private final Iterator<KeyValue> logIterator;
 

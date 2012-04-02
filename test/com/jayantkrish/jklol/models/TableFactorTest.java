@@ -12,6 +12,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -36,12 +37,12 @@ public class TableFactorTest extends TestCase {
 				Arrays.asList(new String[] {"foo", "bar"}));
 
 		h = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {1, 0}),
-		    Arrays.asList("v1", "v0"),
-				Arrays.asList(new DiscreteVariable[] {v2, v}))).build();
+		    Arrays.asList("v1", "v0"), Arrays.asList(new DiscreteVariable[] {v2, v})), 
+		    SparseTensorBuilder.getFactory()).build();
 				
 		builder = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}),
-		    Arrays.asList("v0", "v1", "v3"),
-				Arrays.asList(new DiscreteVariable[] {v, v, v}))); 
+		    Arrays.asList("v0", "v1", "v3"), Arrays.asList(new DiscreteVariable[] {v, v, v})), 
+		    SparseTensorBuilder.getFactory()); 
 		builder.setWeightList(Arrays.asList(new String[] {"T", "U", "F"}), 7.0);
 		builder.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 11.0);
 		builder.setWeightList(Arrays.asList(new String[] {"F", "T", "T"}), 9.0);
@@ -49,9 +50,8 @@ public class TableFactorTest extends TestCase {
 		g = builder.build();
 		
 		builder = new TableFactorBuilder(
-		    new VariableNumMap(Arrays.asList(new Integer[] {0, 3, 2, 5}),
-		        Arrays.asList("v0", "v3", "v2", "v5"),
-				Arrays.asList(new DiscreteVariable[] {v, v, v, v})));
+		    new VariableNumMap(Arrays.asList(new Integer[] {0, 3, 2, 5}), Arrays.asList("v0", "v3", "v2", "v5"),
+				Arrays.asList(new DiscreteVariable[] {v, v, v, v})), SparseTensorBuilder.getFactory());
 		// NOTE: These insertions are to the variables in SORTED ORDER,
 		// even though the above variables are defined out-of-order.
 		builder.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T"}), 1.0);
@@ -116,15 +116,6 @@ public class TableFactorTest extends TestCase {
 	public void testSetProbabilityError2() {
 		try {
 			builder.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T", "T"}), 3.0);
-		} catch (IllegalArgumentException e) {
-			return;
-		}
-		fail("Expected IllegalArgumentException");
-	}
-
-	public void testSetProbabilityError3() {
-		try {
-			builder.setWeightList(Arrays.asList(new String[] {"T", "T", "T", "T"}), -1.0);	
 		} catch (IllegalArgumentException e) {
 			return;
 		}
@@ -222,6 +213,19 @@ public class TableFactorTest extends TestCase {
 				t.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "F", "T"})));
 	}
 	
+	public void testOuterProduct() {
+	  DiscreteFactor gMarg = g.marginalize(0, 3).coerceToDiscrete();
+	  
+	  DiscreteFactor outerProd = gMarg.outerProduct(f);
+	  assertEquals(gMarg.getVars().union(f.getVars()), outerProd.getVars());
+	  assertEquals(9.0, outerProd.size());
+	  assertEquals(20.0, outerProd.getUnnormalizedProbability("T", "U", "T", "T", "T"));
+	  assertEquals(11.0, outerProd.getUnnormalizedProbability("T", "F", "T", "T", "T"));
+	  assertEquals(60.0, outerProd.getUnnormalizedProbability("T", "U", "T", "F", "T"));
+	  assertEquals(33.0, outerProd.getUnnormalizedProbability("T", "F", "T", "F", "T"));
+	  assertEquals(0.0, outerProd.getUnnormalizedProbability("T", "F", "T", "F", "F"));
+	}
+	
 	public void testInverse() {
 	  DiscreteFactor inverse = f.inverse();
 	  
@@ -254,6 +258,27 @@ public class TableFactorTest extends TestCase {
 		
 		likely = g.getMostLikelyAssignments(5);
 		assertEquals(4, likely.size());
+	}
+	
+	public void testMostLikelyAssignmentsTied() {
+	  builder = new TableFactorBuilder(new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}),
+	      Arrays.asList("v0", "v1", "v3"), Arrays.asList(new DiscreteVariable[] {v, v, v})),
+	      SparseTensorBuilder.getFactory()); 
+	  builder.setWeightList(Arrays.asList(new String[] {"T", "U", "F"}), 2.0);
+	  builder.setWeightList(Arrays.asList(new String[] {"T", "F", "F"}), 2.0);
+	  builder.setWeightList(Arrays.asList(new String[] {"F", "T", "T"}), 1.0);
+	  TableFactor test = builder.build();
+
+	  Assignment first = test.getMostLikelyAssignments(1).get(0);
+	  
+	  // This should randomize internally in order for some learning algorithms to work.
+	  for (int i = 0; i < 100; i++) {
+	    if (!first.equals(test.getMostLikelyAssignments(1).get(0))) {
+	      // Success. Some randomization occurred.
+	      return;
+	    }
+	  }
+	  fail("getMostLikelyAssignments must randomize between equal probability assignments");
 	}
 	
 	public void testRelabelVariables() {
@@ -295,5 +320,17 @@ public class TableFactorTest extends TestCase {
 	  assertTrue(iter.hasNext());
 	  assertEquals(Assignment.EMPTY, iter.next().getAssignment());
 	  assertFalse(iter.hasNext());
+	}
+	
+	public void testFromCsvFile() {
+	  VariableNumMap firstVal = h.getVars().getVariablesByName("v1");
+	  VariableNumMap secondVal = h.getVars().getVariablesByName("v0");
+	  List<String> lines = Arrays.asList(new String[] {"foo,F,2.0", "bar,T,3.0"});
+	  TableFactor factor = TableFactor.fromDelimitedFile(Arrays.asList(firstVal, secondVal), 
+	      lines, ",");
+	  
+	  assertEquals(2.0, factor.size());
+	  assertEquals(2.0, factor.getUnnormalizedProbability("F", "foo"));
+	  assertEquals(3.0, factor.getUnnormalizedProbability("T", "bar"));
 	}
 }

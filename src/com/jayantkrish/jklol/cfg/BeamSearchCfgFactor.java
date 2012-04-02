@@ -1,5 +1,5 @@
 package com.jayantkrish.jklol.cfg;
- 
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -7,6 +7,7 @@ import java.util.Set;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -28,6 +29,8 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
   // A function mapping values of the terminal variable into lists of terminals.
   // This function is useful for handling out-of-vocabulary words, etc.
   private final Function<Object, List<Object>> terminalValueToTerminals;
+  
+  private final Predicate<? super ParseTree> validTreeFilter;
 
   /**
    * Create a {@code BeamSearchCfgFactor} which parses terminals in
@@ -43,13 +46,24 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
    * @param terminalValueToTerminals
    */
   public BeamSearchCfgFactor(VariableNumMap treeVariable, VariableNumMap terminalVariable,
-      CfgParser parser, Function<Object, List<Object>> terminalValueToTerminals) {
+      CfgParser parser, Function<Object, List<Object>> terminalValueToTerminals,
+      Predicate<? super ParseTree> validTreeFilter) {
     super(treeVariable.union(terminalVariable));
     this.treeVariable = treeVariable;
     this.terminalVariable = terminalVariable;
     this.parser = parser;
 
     this.terminalValueToTerminals = terminalValueToTerminals;
+    this.validTreeFilter = validTreeFilter;
+  }
+
+  /**
+   * Gets the context-free grammar parser used to parse sentences.
+   * 
+   * @return
+   */
+  public CfgParser getParser() {
+    return parser;
   }
 
   @Override
@@ -60,7 +74,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
     ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));
     return parser.getProbability(terminals, tree);
   }
-  
+
   @Override
   public double getUnnormalizedLogProbability(Assignment assignment) {
     return Math.log(getUnnormalizedProbability(assignment));
@@ -69,7 +83,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
     return new BeamSearchCfgFactor(relabeling.apply(treeVariable), relabeling.apply(terminalVariable),
-        parser, terminalValueToTerminals);
+        parser, terminalValueToTerminals, validTreeFilter);
   }
 
   @Override
@@ -83,7 +97,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
 
     if (conditionedVars.containsAll(treeVariable)) {
       // If we also observe the tree, generate a factor over no variables with
-      // the appropriate probability. 
+      // the appropriate probability.
       ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));
       return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(
           parser.getProbability(terminals, tree));
@@ -92,21 +106,24 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
       List<ParseTree> trees = parser.beamSearch(terminals);
       Map<Assignment, Double> treeProbabilities = Maps.newHashMap();
       for (ParseTree tree : trees) {
-        treeProbabilities.put(treeVariable.outcomeArrayToAssignment(tree), tree.getProbability());
+        if (validTreeFilter.apply(tree)) {
+          treeProbabilities.put(treeVariable.outcomeArrayToAssignment(tree), tree.getProbability());
+        }
       }
       return new DiscreteObjectFactor(treeVariable, treeProbabilities);
     }
   }
-  
-  @Override 
+
+  @Override
   public FactorProto toProto() {
     throw new UnsupportedOperationException("Not yet implemented");
     /*
-    FactorProto.Builder builder = getProtoBuilder();
-    builder.setType(FactorProto.FactorType.BEAM_SEARCH_CFG);
-    
-    BeamSearchCfgProto.Builder cfgBuilder = builder.getBeamSearchCfgFactorBuilder();
-    */
+     * FactorProto.Builder builder = getProtoBuilder();
+     * builder.setType(FactorProto.FactorType.BEAM_SEARCH_CFG);
+     * 
+     * BeamSearchCfgProto.Builder cfgBuilder =
+     * builder.getBeamSearchCfgFactorBuilder();
+     */
   }
 
   /**
@@ -131,12 +148,12 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
   public static class OovMapper implements Function<Object, List<Object>> {
     private final Object oovWord;
     private final Set<Object> recognizedWords;
-    
+
     public OovMapper(Object oovWord, Set<? extends Object> recognizedWords) {
       this.oovWord = Preconditions.checkNotNull(oovWord);
       this.recognizedWords = Sets.newHashSet(Preconditions.checkNotNull(recognizedWords));
     }
-    
+
     @Override
     public List<Object> apply(Object x) {
       Preconditions.checkArgument(x instanceof List);

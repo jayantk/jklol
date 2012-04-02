@@ -11,6 +11,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
@@ -51,6 +52,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
   public static DiscreteObjectFactor pointDistribution(VariableNumMap vars, Assignment... assignments) {
     Map<Assignment, Double> probabilities = Maps.newHashMap();
     for (int i = 0; i < assignments.length; i++) {
+      Preconditions.checkArgument(assignments[i].containsAll(vars.getVariableNums()));
       probabilities.put(assignments[i], 1.0);
     }
     return new DiscreteObjectFactor(vars, probabilities);
@@ -76,7 +78,8 @@ public class DiscreteObjectFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()), 
+        "Cannot get probability of %s . Factor variables %s", assignment, getVars());
     Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
     if (probabilities.containsKey(subAssignment)) {
       return probabilities.get(subAssignment);
@@ -214,7 +217,8 @@ public class DiscreteObjectFactor extends AbstractFactor {
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     PriorityQueue<Pair<Double, Assignment>> pq = new PriorityQueue<Pair<Double, Assignment>>(
-        numAssignments + 1, new PairComparator<Double, Assignment>());
+        numAssignments + 1, 
+        Ordering.from(new PairComparator<Double, Assignment>()).compound(Ordering.arbitrary())); 
 
     for (Assignment a : assignments()) {
       pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), new Assignment(a)));
@@ -249,6 +253,6 @@ public class DiscreteObjectFactor extends AbstractFactor {
 
   @Override
   public String toString() {
-    return "[DiscreteObjectFactor: " + probabilities.toString() + "]";
+    return "[DiscreteObjectFactor: " + getVars() + " " + probabilities.toString() + "]";
   }
 }

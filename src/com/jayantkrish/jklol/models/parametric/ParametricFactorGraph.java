@@ -62,6 +62,16 @@ public class ParametricFactorGraph extends AbstractParametricFamily<SufficientSt
     }
     return getBaseFactorGraph().addPlateFactors(plateFactors);
   }
+  
+  public String getParameterDescription(SufficientStatistics parameters) {
+    StringBuilder builder = new StringBuilder();
+    List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
+    Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
+    for (int i = 0; i < parameterList.size(); i++) {
+      builder.append(parametricFactors.get(i).getParameterDescription(parameterList.get(i)));
+    }
+    return builder.toString();
+  }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {

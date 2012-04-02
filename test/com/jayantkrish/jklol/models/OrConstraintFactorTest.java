@@ -8,6 +8,7 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -42,7 +43,8 @@ public class OrConstraintFactorTest extends TestCase {
     varValues.put("y2", "C");
     f = OrConstraintFactor.createWithoutDistributions(inputVars, orVars, varValues);
     
-    TableFactorBuilder dfBuilder = new TableFactorBuilder(factorGraph.getVariables().getVariablesByName("x3", "z3"));
+    TableFactorBuilder dfBuilder = new TableFactorBuilder(factorGraph.getVariables().getVariablesByName("x3", "z3"),
+        SparseTensorBuilder.getFactory());
     dfBuilder.setWeight(2.0, "A", "A");
     dfBuilder.setWeight(1.0, "A", "B");
     dfBuilder.setWeight(4.0, "B", "B");

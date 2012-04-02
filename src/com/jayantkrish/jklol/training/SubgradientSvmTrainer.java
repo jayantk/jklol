@@ -10,9 +10,9 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
-import com.jayantkrish.jklol.inference.MaxMarginalSet.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -108,14 +109,19 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
         FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
         Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
         Assignment observed = currentDynamicModel.getVariables().toAssignment(example.getOutput().union(example.getInput()));
+        Assignment output = observed.removeAll(input.getVariableNums());
+        VariableNumMap outputVariables = currentDynamicModel.getVariables().instantiateVariables(
+            example.getInput()).intersection(output.getVariableNums());
+
         log.log(input, currentModel);
         log.log(observed, currentModel);
         log.stopTimer("dynamic_instantiation");
 
         log.startTimer("update_subgradient");
         try {
-          double objectiveValue = updateSubgradientWithInstance(i, currentModel, input, observed, modelFamily, subgradient);
-          if (objectiveValue != 0.0) {
+          double objectiveValue = updateSubgradientWithInstance(i, currentModel, input, observed, 
+              outputVariables, modelFamily, subgradient);
+          if (objectiveValue != -1) {
             numIncorrect++;
             approximateObjectiveValue += objectiveValue / batchSize;
           }
@@ -161,8 +167,8 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
    * @return
    */
   private double updateSubgradientWithInstance(int iterationNum, FactorGraph currentModel,
-      Assignment input, Assignment observed, ParametricFactorGraph modelFamily,
-      SufficientStatistics subgradient) {
+      Assignment input, Assignment observed, VariableNumMap outputVariables, 
+      ParametricFactorGraph modelFamily, SufficientStatistics subgradient) {
     // Get the cost-augmented best prediction based on the current input.
     Assignment outputAssignment = observed.removeAll(input.getVariableNums());
 
@@ -198,9 +204,21 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     log.log(iterationNum, iterationNum, input, currentModel);
     log.log(iterationNum, iterationNum, prediction, currentModel);
     log.log(iterationNum, iterationNum, actual, currentModel);
+    
+    // TODO: delete these
+    double predictedProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction);
+    double actualProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual);
+    System.out.println("PROBS:" + predictedProb + " " + actualProb);
 
+    Assignment predictedOutputValues = prediction.intersection(outputVariables);
+    Assignment actualOutputValues = actual.intersection(outputVariables);
+    
+    System.out.println(outputVariables);
+    System.out.println(predictedOutputValues);
+    System.out.println(actualOutputValues);
+    
     // Update parameters if necessary.
-    if (!prediction.equals(actual)) {
+    if (!predictedOutputValues.equals(actualOutputValues)) {
       log.startTimer("update_subgradient/parameter_update");
       // Convert the assignments into marginal (point) distributions in order to
       // update the parameter vector.
@@ -211,15 +229,14 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
       // Return the loss, which is the amount by which the prediction is within
       // the margin.
-      double predictedProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction);
-      double actualProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual);
       double loss = predictedProb - actualProb;
       log.stopTimer("update_subgradient/parameter_update");
 
       System.out.println("PROBS:" + predictedProb + " " + actualProb);
       return loss;
     }
-    return 0.0;
+    // Special value to signify that the example was correct.
+    return -1;
   }
 
   private <P, Q> List<Example<P, Q>> getBatch(
@@ -274,7 +291,8 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       FactorGraph augmentedGraph = factorGraph;
       for (Integer varNum : outputVariables.getVariableNums()) {
         List<Integer> varNumList = Ints.asList(varNum);
-        TableFactorBuilder builder = new TableFactorBuilder(outputVariables.intersection(varNumList));
+        TableFactorBuilder builder = new TableFactorBuilder(outputVariables.intersection(varNumList),
+            SparseTensorBuilder.getFactory());
 
         Iterator<Assignment> varAssignments = new AllAssignmentIterator(outputVariables.intersection(varNumList));
         while (varAssignments.hasNext()) {

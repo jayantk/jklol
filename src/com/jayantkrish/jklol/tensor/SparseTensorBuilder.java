@@ -262,6 +262,11 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(),
         tableKeyNums, tableValues);
   }
+  
+  @Override
+  public SparseTensor buildNoCopy() {
+    return build();
+  }
 
   @Override
   public SparseTensorBuilder getCopy() {

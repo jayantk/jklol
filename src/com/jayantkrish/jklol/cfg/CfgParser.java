@@ -131,8 +131,19 @@ public class CfgParser {
     return beamSize;
   }
 
+  /**
+   * Gets a new {@code CfgParser} with different values for {@code beamSize} and
+   * {@code canSkipTerminals}.
+   * 
+   * @return
+   */
+  public CfgParser setParameters(int newBeamSize, boolean newCanSkipTerminals) {
+    return new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, binaryDistribution,
+        terminalDistribution, newBeamSize, newCanSkipTerminals);
+  }
+
   // //////////////////////////////////////////////////////////////////////
-  // The following methods are the important ones for running the parser in
+  // the following methods are the important ones for running the parser in
   // isolation.
   // //////////////////////////////////////////////////////////////////////
 
@@ -202,16 +213,13 @@ public class CfgParser {
 
     // This block of code only exists for logging purposes.
     /*
-    int numTruncatedEntries = 0;
-    for (int spanSize = 0; spanSize < chart.chartSize() - 1; spanSize++) {
-      for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
-        if (chart.getNumParseTreeKeysForSpan(spanStart, spanStart + spanSize) == beamSize) {
-          numTruncatedEntries++;
-        }
-      }
-    }
-    System.out.println("Truncated " + numTruncatedEntries + " chart entries");
-    */
+     * int numTruncatedEntries = 0; for (int spanSize = 0; spanSize <
+     * chart.chartSize() - 1; spanSize++) { for (int spanStart = 0; spanStart +
+     * spanSize < chart.chartSize(); spanStart++) { if
+     * (chart.getNumParseTreeKeysForSpan(spanStart, spanStart + spanSize) ==
+     * beamSize) { numTruncatedEntries++; } } } System.out.println("Truncated "
+     * + numTruncatedEntries + " chart entries");
+     */
 
     // Map the integer encodings of trees back to tree objects.
     List<ParseTree> trees;
@@ -231,8 +239,8 @@ public class CfgParser {
     Collections.reverse(trees);
     return trees;
   }
-  
-  private List<ParseTree> populateParseTreesFromChartSkippingTerminals(BeamSearchParseChart chart, 
+
+  private List<ParseTree> populateParseTreesFromChartSkippingTerminals(BeamSearchParseChart chart,
       long[] treeEncodingOffsets) {
     // If we can skip terminals, a parse for any subtree of the sentence
     // is a parse for the entire sentence. Identify a probability threshold
@@ -244,7 +252,7 @@ public class CfgParser {
       for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
         int numTreesInSpan = chart.getNumParseTreeKeysForSpan(spanStart, spanStart + spanSize);
         long[] spanKeys = chart.getParseTreeKeysForSpan(spanStart, spanStart + spanSize);
-        double[] spanValues = chart.getParseTreeProbsForSpan(spanStart, spanStart + spanSize);          
+        double[] spanValues = chart.getParseTreeProbsForSpan(spanStart, spanStart + spanSize);
         for (int i = 0; i < numTreesInSpan; i++) {
           HeapUtils.offer(bestKeys, bestValues, heapSize, spanKeys[i], spanValues[i]);
           heapSize++;
@@ -256,15 +264,16 @@ public class CfgParser {
         }
       }
     }
+
     // Construct the parse trees above the probability threshold.
     List<ParseTree> trees = Lists.newArrayList();
     if (heapSize > 0) {
-      double minimumProbability = bestValues[0]; 
+      double minimumProbability = bestValues[0];
       for (int spanSize = 0; spanSize < chart.chartSize() - 1; spanSize++) {
         for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
           int numTreesInSpan = chart.getNumParseTreeKeysForSpan(spanStart, spanStart + spanSize);
           long[] spanKeys = chart.getParseTreeKeysForSpan(spanStart, spanStart + spanSize);
-          double[] spanValues = chart.getParseTreeProbsForSpan(spanStart, spanStart + spanSize);          
+          double[] spanValues = chart.getParseTreeProbsForSpan(spanStart, spanStart + spanSize);
           for (int i = 0; i < numTreesInSpan; i++) {
             if (spanValues[i] >= minimumProbability) {
               trees.add(mapTreeKeyToParseTree(spanKeys[i], spanValues[i], spanStart, spanStart + spanSize,
@@ -274,6 +283,7 @@ public class CfgParser {
         }
       }
     }
+    trees.add(ParseTree.EMPTY);
     return trees;
   }
 
@@ -608,7 +618,8 @@ public class CfgParser {
     for (int i = 0; i < spanEnd - spanStart; i++) {
       for (int j = i + 1; j < (canSkipTerminals ? 1 + spanEnd - spanStart : i + 2); j++) {
 
-        // These variables store the (integer encoded) parse trees from the two subspans.  
+        // These variables store the (integer encoded) parse trees from the two
+        // subspans.
         long[] leftParseTreeKeys = chart.getParseTreeKeysForSpan(spanStart, spanStart + i);
         double[] leftParseTreeProbs = chart.getParseTreeProbsForSpan(spanStart, spanStart + i);
         int numLeftParseTrees = chart.getNumParseTreeKeysForSpan(spanStart, spanStart + i);
@@ -623,7 +634,7 @@ public class CfgParser {
           long leftIndexPartialKey = (leftIndex * treeEncodingOffsets[0]) + spanKey;
           for (int rightIndex = 0; rightIndex < numRightParseTrees; rightIndex++) {
             int rightRoot = (int) ((rightParseTreeKeys[rightIndex] % treeEncodingOffsets[3]) / treeEncodingOffsets[4]);
-            long rightIndexPartialKey = (rightIndex * treeEncodingOffsets[1]) + leftIndexPartialKey; 
+            long rightIndexPartialKey = (rightIndex * treeEncodingOffsets[1]) + leftIndexPartialKey;
 
             // Compute the tensor index containing any production rules
             // where leftRoot is the left nonterminal and rightRoot is the right
@@ -633,10 +644,11 @@ public class CfgParser {
             long endKeyNum = partialKeyNum + dimensionOffsets[1];
             long startKeyNum;
 
-            
             while (startIndex < values.length) {
               startKeyNum = binaryDistributionWeights.indexToKeyNum(startIndex);
-              if (startKeyNum >= endKeyNum) { break; }
+              if (startKeyNum >= endKeyNum) {
+                break;
+              }
               double treeProb = leftParseTreeProbs[leftIndex] * rightParseTreeProbs[rightIndex] * values[startIndex];
               long treeKeyNum = rightIndexPartialKey + startKeyNum - partialKeyNum;
               chart.addParseTreeKeyForSpan(spanStart, spanEnd, treeKeyNum, treeProb);

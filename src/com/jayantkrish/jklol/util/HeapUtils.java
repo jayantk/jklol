@@ -35,6 +35,15 @@ public final class HeapUtils {
     }
   }
 
+  /**
+   * Removes the smallest key/value pair from the heap represented by
+   * {@code heapKeys} and {@code heapValues}. After calling this method, the
+   * size of the heap shrinks by 1.
+   * 
+   * @param heapKeys
+   * @param heapValues
+   * @param heapSize
+   */
   public static final void removeMin(long[] heapKeys, double[] heapValues, int heapSize) {
     heapValues[0] = heapValues[heapSize - 1];
     heapKeys[0] = heapKeys[heapSize - 1];
@@ -60,6 +69,45 @@ public final class HeapUtils {
         curIndex = minIndex;
       }
     }
+  }
+
+  /**
+   * Finds the {@code n} largest values in {@code values}, returning their
+   * indexes in {@code values}. The returned indexes are sorted in descending
+   * order by their value, i.e., the 0th element is the index of the maximum
+   * value in {@code values}.
+   * <p>
+   * To avoid reimplementing heaps with ints, the indexes are returned as
+   * {@code long}s. They can be cast back to {@code int}s to access the elements
+   * of {@code values}.
+   * 
+   * @param keys
+   * @param values
+   * @param n
+   * @return
+   */
+  public static final long[] findLargestItemIndexes(double[] values, int n) {
+    long[] heapKeys = new long[n + 1];
+    double[] heapValues = new double[n + 1];
+    int heapSize = 0;
+
+    for (int i = 0; i < values.length; i++) {
+      offer(heapKeys, heapValues, heapSize, i, values[i]);
+      heapSize++;
+
+      if (heapSize > n) {
+        removeMin(heapKeys, heapValues, heapSize);
+        heapSize--;
+      }
+    }
+
+    long[] returnKeys = new long[heapSize];
+    while (heapSize > 0) {
+      returnKeys[heapSize - 1] = heapKeys[0];
+      removeMin(heapKeys, heapValues, heapSize);
+      heapSize--;
+    }
+    return returnKeys;
   }
 
   public static final void swap(long[] heapKeys, double[] heapValues, int ind1, int ind2) {

@@ -69,6 +69,12 @@ public class CountAccumulator<T> {
   public void increment(CountAccumulator<? extends T> amounts) {
     increment(amounts.getCountMap());
   }
+  
+  public void multiply(T item, double amount) {
+    double originalCount = counts.get(item);
+    counts.put(item, originalCount * amount);
+    totalCount += (originalCount * amount) - originalCount;
+  }
 
   /**
    * Gets the occurrence count associated with {@code item}.

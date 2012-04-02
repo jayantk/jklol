@@ -142,6 +142,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
    * 
    * @return
    */
+  @Override
   public DenseTensor buildNoCopy() {
     return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), values);
   }

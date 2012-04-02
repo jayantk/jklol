@@ -31,7 +31,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.printExecutor = Executors.newSingleThreadExecutor();
   }
   
-  private void print(String toPrint) {
+  protected void print(String toPrint) { 
     printExecutor.submit(new PrintTask(toPrint));
   }
   

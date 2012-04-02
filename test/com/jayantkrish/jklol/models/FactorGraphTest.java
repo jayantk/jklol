@@ -8,6 +8,7 @@ import junit.framework.TestCase;
 
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorGraphProto;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class FactorGraphTest extends TestCase {
@@ -30,11 +31,13 @@ public class FactorGraphTest extends TestCase {
 		f = f.addVariable("Var2", tfVar);
 		f = f.addVariable("Var3", tfVar);
 
-		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var0", "Var2", "Var3")));
+		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var0", "Var2", "Var3")),
+		    SparseTensorBuilder.getFactory());
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0, 0}), 1.0);
 		f = f.addFactor(builder.build());
 
-		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var2", "Var1")));
+		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var2", "Var1")),
+		    SparseTensorBuilder.getFactory());
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0}), 1.0);
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {1, 1}), 1.0);
 		f = f.addFactor(builder.build());

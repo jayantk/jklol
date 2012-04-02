@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteObjectFactor;
@@ -30,10 +31,11 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
   private final VariableNumMap treeVar;
   private final VariableNumMap inputVar;
     
-  private ParametricFactor<SufficientStatistics> nonterminalFactor;
-  private ParametricFactor<SufficientStatistics> terminalFactor;
+  private final ParametricFactor<SufficientStatistics> nonterminalFactor;
+  private final ParametricFactor<SufficientStatistics> terminalFactor;
   
   private final Function<Object, List<Object>> terminalFunction;
+  private final Predicate<? super ParseTree> validTreeFilter;
 
   private final int beamSize;
   private final boolean canSkipTerminals;
@@ -43,7 +45,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
       VariableNumMap treeVar, VariableNumMap inputVar,
       ParametricFactor<SufficientStatistics> nonterminalFactor,
       ParametricFactor<SufficientStatistics> terminalFactor,
-      Function<Object, List<Object>> terminalFunction,
+      Function<Object, List<Object>> terminalFunction, Predicate<? super ParseTree> validTreeFilter,
       int beamSize, boolean canSkipTerminals) {
     super(treeVar.union(inputVar));
     this.parentVar = parentVar;
@@ -60,6 +62,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
     this.beamSize = beamSize;
     this.canSkipTerminals = canSkipTerminals;
     this.terminalFunction = terminalFunction;
+    this.validTreeFilter = validTreeFilter;
   }
 
   @Override
@@ -73,7 +76,12 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
         (DiscreteFactor) nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
         (DiscreteFactor) terminalFactor.getFactorFromParameters(terminalStatistics), beamSize, canSkipTerminals);
-    return new BeamSearchCfgFactor(treeVar, inputVar, parser, terminalFunction);
+    return new BeamSearchCfgFactor(treeVar, inputVar, parser, terminalFunction, validTreeFilter);
+  }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) { 
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -130,12 +138,17 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
   private void accumulateSufficientStatistics(ParseTree tree,
       SufficientStatistics nonterminalStatistics,
       SufficientStatistics terminalStatistics, double weight) {
+    if (tree == ParseTree.EMPTY) {
+      return;
+    }
+
     if (tree.isTerminal()) {
       Assignment terminalRule = parentVar.outcomeArrayToAssignment(tree.getRoot())
           .union(terminalVar.outcomeArrayToAssignment(tree.getTerminalProductions()))
           .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       terminalFactor.incrementSufficientStatisticsFromAssignment(terminalStatistics, terminalRule,
           weight);
+      System.out.println(weight + " " + terminalRule);
     } else {
       Assignment nonterminalRule = parentVar.outcomeArrayToAssignment(tree.getRoot())
           .union(leftVar.outcomeArrayToAssignment(tree.getLeft().getRoot()))
@@ -143,6 +156,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor<SufficientStat
           .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       nonterminalFactor.incrementSufficientStatisticsFromAssignment(nonterminalStatistics,
           nonterminalRule, weight);
+      System.out.println(weight + " " + nonterminalRule);
       accumulateSufficientStatistics(tree.getLeft(), nonterminalStatistics, terminalStatistics, weight);
       accumulateSufficientStatistics(tree.getRight(), nonterminalStatistics, terminalStatistics, weight);
     }

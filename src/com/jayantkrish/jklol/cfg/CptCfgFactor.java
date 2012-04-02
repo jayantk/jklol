@@ -56,6 +56,11 @@ public class CptCfgFactor extends AbstractParametricFactor<SufficientStatistics>
         (DiscreteFactor) terminalFactor.getFactorFromParameters(terminalStatistics), 0, false);
     return new CfgFactor(rootVar, childVar, parser);
   }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) { 
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {

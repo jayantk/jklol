@@ -16,6 +16,7 @@ import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
@@ -176,6 +177,33 @@ public abstract class DiscreteFactor extends AbstractFactor {
         .elementwiseProduct(SparseTensor.getScalarConstant(constant)));
   }
 
+  /**
+   * Returns a {@code DiscreteFactor} that assigns each outcome the product of
+   * its probability in {@code this} and {@code other}. {@code other}'s variables
+   * must be disjoint from this factor's variables.
+   * 
+   * @param other
+   * @return
+   */
+  public DiscreteFactor outerProduct(Factor other) {
+    Preconditions.checkArgument(getVars().intersection(other.getVars()).size() == 0);
+    // This implementation is slow, but Tensors currently don't support outer products.
+    DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
+    TableFactorBuilder builder = new TableFactorBuilder(getVars().union(other.getVars()), 
+        SparseTensorBuilder.getFactory());
+    Iterator<Outcome> myIter = outcomeIterator();
+    while (myIter.hasNext()) {
+      Outcome myOutcome = myIter.next();
+      Iterator<Outcome> otherIter = otherAsDiscrete.outcomeIterator();
+      while (otherIter.hasNext()) {
+        Outcome otherOutcome = otherIter.next();
+        builder.setWeight(myOutcome.getAssignment().union(otherOutcome.getAssignment()),
+            myOutcome.getProbability() * otherOutcome.getProbability());
+      }
+    }
+    return builder.build();
+  }
+
   @Override
   public DiscreteFactor inverse() {
     return new TableFactor(getVars(), getWeights().elementwiseInverse());
@@ -207,7 +235,8 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     Iterator<Outcome> iter = outcomeIterator();
     PriorityQueue<Pair<Double, Assignment>> pq = new PriorityQueue<Pair<Double, Assignment>>(
-        numAssignments + 1, new PairComparator<Double, Assignment>());
+        numAssignments + 1,
+        Ordering.from(new PairComparator<Double, Assignment>()).compound(Ordering.arbitrary()));
 
     while (iter.hasNext()) {
       Outcome outcome = iter.next();
@@ -216,20 +245,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
         pq.poll();
       }
     }
-
-    // There may not be enough assignments with positive probability. Fill up
-    // pq with zero probability assignments.
-    /*
-    if (pq.size() < numAssignments) {
-      Iterator<Assignment> allAssignmentIter = new AllAssignmentIterator(getVars());
-      while (allAssignmentIter.hasNext() && pq.size() < numAssignments) {
-        Assignment a = allAssignmentIter.next();
-        if (getUnnormalizedProbability(a) == 0.0) {
-          pq.offer(new Pair<Double, Assignment>(0.0, a));
-        }
-      }
-    }
-    */
 
     List<Assignment> mostLikely = new ArrayList<Assignment>();
     while (pq.size() > 0) {
@@ -243,7 +258,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteFactor coerceToDiscrete() {
     return this;
   }
-  
+
   @Override
   public DiscreteObjectFactor coerceToDiscreteObject() {
     throw new UnsupportedOperationException("Not yet implemented");
@@ -293,7 +308,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public class Outcome {
     private Assignment assignment;
     private double probability;
-    
+
     public Outcome(Assignment assignment, double probability) {
       this.assignment = assignment;
       this.probability = probability;
@@ -314,7 +329,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     public void setProbability(double probability) {
       this.probability = probability;
     }
-    
+
     @Override
     public String toString() {
       return assignment + "=" + probability;

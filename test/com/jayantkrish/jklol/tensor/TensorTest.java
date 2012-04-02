@@ -433,6 +433,14 @@ public abstract class TensorTest extends TestCase {
     assertFalse(copyIter.hasNext());
   }
   
+  public void testGetLargestValues() {
+    long[] largestKeys = table.getLargestValues(3);
+    assertEquals(3, largestKeys.length);
+    assertTrue(Arrays.equals(new int[] {3, 4, 3}, table.keyNumToDimKey(largestKeys[0])));
+    assertEquals(5.0, table.get(largestKeys[1]));
+    assertEquals(5.0, table.get(largestKeys[2]));
+  }
+  
   /**
    * This is a simple version of the elementwise multiply algorithm which looks
    * at all pairs of keys in {@code first} and {@code second}. {@code second}

@@ -10,8 +10,8 @@ import junit.framework.TestCase;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
@@ -65,7 +65,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a2));
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a3));
 		}
-		t = new StochasticGradientTrainer(new JunctionTree(), 10, new DefaultLogFunction());
+		t = new StochasticGradientTrainer(new JunctionTree(), 10, new DefaultLogFunction(), 0.5, 0.01);
 	}
 
 	public void testTrain() {
@@ -87,13 +87,14 @@ public class StochasticGradientTrainerTest extends TestCase {
 		  DiscreteLogLinearFactor factor = (DiscreteLogLinearFactor) logLinearModel.getParametricFactors().get(i);
 		  SufficientStatistics stats = parameterList.get(i);
 		  
-		  TableFactor featureValues = factor.getFeatureValues();
+		  DiscreteFactor featureValues = factor.getFeatureValues();
 		  VariableNumMap featureVariable = featureValues.getVars().removeAll(factor.getVars());
 		  TensorBase weights = ((TensorSufficientStatistics) stats).get(0);
 		  for (int j = 0; j < weights.size(); j++) {
 		    
 		    Assignment a = featureValues.conditional(featureVariable.intArrayToAssignment(new int[] {j}))
 		        .outcomeIterator().next().getAssignment();
+		    System.out.println(weights.getByDimKey(j));
 		    if (a.getVariableNums().size() == 3) {
 		      assertTrue(clique1PositiveAssignments.contains(a) ||
 		          weights.getByDimKey(j) < 0.0);

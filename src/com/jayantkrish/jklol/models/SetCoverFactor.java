@@ -3,14 +3,17 @@ package com.jayantkrish.jklol.models;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -19,17 +22,17 @@ import com.jayantkrish.jklol.util.Assignment;
 public class SetCoverFactor extends AbstractFactor {
 
   private final ImmutableSet<Object> requiredValues;
-  private final ImmutableSet<Object> impossibleValues;
+  private final Predicate<Object> possibleValues;
   
   private final List<Factor> inputVarFactors;
   private final List<Factor> cachedMaxMarginals;
   
   public SetCoverFactor(VariableNumMap inputVars, Set<Object> requiredValues, 
-      Set<Object> impossibleValues, List<Factor> inputVarFactors) { 
+      Predicate<Object> possibleValues, List<Factor> inputVarFactors) { 
     super(inputVars);
     Preconditions.checkArgument(inputVarFactors.size() == inputVars.size());
     this.requiredValues = ImmutableSet.copyOf(requiredValues);
-    this.impossibleValues = ImmutableSet.copyOf(impossibleValues);
+    this.possibleValues = possibleValues;
     
     this.inputVarFactors = Lists.newArrayList(inputVarFactors);
     
@@ -77,12 +80,17 @@ public class SetCoverFactor extends AbstractFactor {
     for (int i = 0; i < inputVarFactors.size(); i++) {
       if (maxMarginals.get(i) == null) {
         DiscreteFactor currentFactor = inputVarFactors.get(i).coerceToDiscrete(); 
-        TableFactorBuilder builder = new TableFactorBuilder(currentFactor.getVars(), SparseTensorBuilder.getFactory());
+        TableFactorBuilder builder = new TableFactorBuilder(currentFactor.getVars(),
+            SparseTensorBuilder.getFactory());
         builder.incrementWeight(currentFactor);
-        for (Object impossibleValue : impossibleValues) {
-          builder.setWeight(0.0, impossibleValue);
+        Iterator<Outcome> iter = currentFactor.outcomeIterator();
+        while (iter.hasNext()) {
+          Assignment a = iter.next().getAssignment();
+          if (!possibleValues.apply(a.getOnlyValue())) {
+            builder.setWeight(a, 0.0);
+          }
         }
-                
+
         maxMarginals.set(i, builder.build());
       }
     }
@@ -103,7 +111,7 @@ public class SetCoverFactor extends AbstractFactor {
     
     for (int i = 0; i < inputValues.size(); i++) {
       Object inputValue = inputValues.get(i);
-      if (impossibleValues.contains(inputValue)) {
+      if (!possibleValues.apply(inputValue)) {
 
         // If any value is in the set of impossible values, then this assignment
         // has zero probability.
@@ -174,7 +182,7 @@ public class SetCoverFactor extends AbstractFactor {
       }
     }
     return new SetCoverFactor(getVars(), requiredValues, 
-        impossibleValues, newInputVarFactors);
+        possibleValues, newInputVarFactors);
   }
   
   @Override
@@ -199,7 +207,7 @@ public class SetCoverFactor extends AbstractFactor {
         Object value = assignment.getValue(varNum);
         newRequiredValues.remove(value);
         
-        if (impossibleValues.contains(value)) {
+        if (!possibleValues.apply(value)) {
           // Can't possibly satisfy the constraints anymore.
           return TableFactor.zero(myVars.removeAll(assignment.getVariableNums()));
         }
@@ -214,7 +222,7 @@ public class SetCoverFactor extends AbstractFactor {
     }
     
     return new SetCoverFactor(myVars.removeAll(assignment.getVariableNums()), 
-        newRequiredValues, impossibleValues, newFactors);
+        newRequiredValues, possibleValues, newFactors);
   }
 
   @Override

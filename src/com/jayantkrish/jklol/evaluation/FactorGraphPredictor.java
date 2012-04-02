@@ -7,9 +7,9 @@ import java.util.Map;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
-import com.jayantkrish.jklol.inference.MaxMarginalSet.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -190,8 +190,14 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
     }
 
     FactorGraph conditionalFactorGraph = factorGraph.conditional(input.union(output));
-    MarginalSet inputOutputMarginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
-    return inputOutputMarginals.getPartitionFunction() / inputPartitionFunction;
+    double partitionFunction = 0.0;
+    try {
+      MarginalSet inputOutputMarginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
+      partitionFunction = inputOutputMarginals.getPartitionFunction();
+    } catch (ZeroProbabilityError e) {
+      // Safe to ignore.
+    }
+    return partitionFunction / inputPartitionFunction;
   }
 
   private static VariableNumMap getOutputVariables(FactorGraph conditionalFactorGraph,

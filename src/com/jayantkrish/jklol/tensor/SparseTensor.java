@@ -16,6 +16,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.tensor.TensorProtos.SparseTensorProto;
 import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
+import com.jayantkrish.jklol.util.HeapUtils;
 
 /**
  * A SparseTensor sparsely stores a mapping from int[] to double. This class
@@ -33,6 +34,8 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     super(dimensionNums, dimensionSizes);
     Preconditions.checkArgument(Ordering.natural().isOrdered(Ints.asList(dimensionNums)));
     Preconditions.checkArgument(keyNums.length == values.length);
+    Preconditions.checkArgument(keyNums.length == 0 || keyNums[0] >= 0,
+        "Tried creating a tensor with negative keyNums.");
 
     this.keyNums = Preconditions.checkNotNull(keyNums);
     this.values = Preconditions.checkNotNull(values);
@@ -193,7 +196,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     Set<Integer> myDims = Sets.newHashSet(Ints.asList(dimensionNums));
     Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.getDimensionNumbers())));
 
-    // There are two possible multiplication operations: an extremely fast 
+    // There are two possible multiplication operations: an extremely fast
     // one for the case when the dimensions of other line up against the
     // leftmost dimensions of this, and another for all other cases.
     // The left-aligned case can be made more efficient than the other
@@ -202,7 +205,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     for (int i = 0; i < otherDimensions.length; i++) {
       if (otherDimensions[i] != dimensionNums[i]) {
         // Not left aligned.
-        return elementwiseMultiplyNaive(this, other);        
+        return elementwiseMultiplyNaive(this, other);
       }
     }
     // Left aligned.
@@ -307,12 +310,13 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     // Compute a mapping from keyNums of big to keyNums of small.
     int[] bigDimensions = big.getDimensionNumbers();
     int[] smallDimensions = small.getDimensionNumbers();
-    int[] bigDimensionSizes = big.getDimensionSizes(); 
+    int[] bigDimensionSizes = big.getDimensionSizes();
     int smallDimensionInd = smallDimensions.length - 1;
     int bigDimensionInd = bigDimensions.length - 1;
-    // divisors, modulos and multipliers store the mapping from bigKeyNum to smallKeyNum.
-    // They contain a series of division, modulo and multiplication operations 
-    // whose results are added to get a smallKeyNum. 
+    // divisors, modulos and multipliers store the mapping from bigKeyNum to
+    // smallKeyNum.
+    // They contain a series of division, modulo and multiplication operations
+    // whose results are added to get a smallKeyNum.
     long[] divisors = new long[smallDimensions.length];
     long[] modulos = new long[smallDimensions.length];
     long[] multipliers = new long[smallDimensions.length];
@@ -326,10 +330,10 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
         bigDimensionInd--;
       }
       divisors[divisorInd] = divisor;
-      
+
       modulo = 1;
       while (bigDimensionInd >= 0 && smallDimensionInd >= 0 &&
-          bigDimensions[bigDimensionInd] == smallDimensions[smallDimensionInd]) { 
+          bigDimensions[bigDimensionInd] == smallDimensions[smallDimensionInd]) {
         divisor *= bigDimensionSizes[bigDimensionInd];
         modulo *= bigDimensionSizes[bigDimensionInd];
         bigDimensionInd--;
@@ -340,14 +344,14 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       divisorInd++;
       multiplier *= modulo;
     }
-    
+
     // The result tensor is no larger than the larger (superset of dimensions)
     // tensor.
     long[] resultKeyInts = new long[big.size()];
     double[] resultValues = new double[big.size()];
     // How many result values have been filled so far.
     int resultInd = 0;
-    
+
     long bigKeyNum, smallKeyNum;
     double value;
     int numElements = big.size();
@@ -356,17 +360,17 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       // map bigKeyNum to a smallKeyNum
       smallKeyNum = 0;
       for (int i = 0; i < divisorInd; i++) {
-        smallKeyNum += ((bigKeyNum / divisors[i]) % modulos[i]) * multipliers[i]; 
+        smallKeyNum += ((bigKeyNum / divisors[i]) % modulos[i]) * multipliers[i];
       }
       value = small.get(smallKeyNum);
-      
+
       if (value != 0.0) {
         resultKeyInts[resultInd] = bigKeyNum;
         resultValues[resultInd] = value * big.getByIndex(bigInd);
         resultInd++;
       }
     }
-    
+
     return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(), resultKeyInts,
         resultValues, resultInd);
   }
@@ -497,6 +501,22 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       builder.putByKeyNum(keyNums[i], Math.exp(values[i]));
     }
     return builder.buildNoCopy();
+  }
+
+  /**
+   * Sparsely computes e to the power of each element in this tensor. For keys
+   * which are present in this {@code SparseTensor}, this operation is identical
+   * to {@link #elementwiseExp()}. Keys which are not present in this tensor are
+   * also not present in the result (and therefore have value 0).
+   *
+   * @return
+   */
+  public SparseTensor elementwiseExpSparse() {
+    double[] newValues = new double[values.length];
+    for (int i = 0; i < values.length; i++) {
+      newValues[i] = Math.exp(values[i]);
+    }
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 
   /**
@@ -679,6 +699,11 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     sortOutcomeTable(resultKeyInts, resultValues, 0, values.length);
     return new SparseTensor(sortedDims, sortedSizes, resultKeyInts, resultValues);
   }
+  
+  @Override
+  public SparseTensor replaceValues(double[] newValues) {
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
+  }
 
   /**
    * Quicksorts the section of {@code keyNums} from {@code startInd} (inclusive)
@@ -730,6 +755,16 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     double swapValue = values[i];
     values[i] = values[j];
     values[j] = swapValue;
+  }
+
+  @Override
+  public long[] getLargestValues(int n) {
+    long[] largestKeyIndexes = HeapUtils.findLargestItemIndexes(values, n);
+    long[] largestKeyNums = new long[largestKeyIndexes.length];
+    for (int i = 0; i < largestKeyIndexes.length; i++) {
+      largestKeyNums[i] = keyNums[(int) largestKeyIndexes[i]];
+    }
+    return largestKeyNums;
   }
 
   @Override

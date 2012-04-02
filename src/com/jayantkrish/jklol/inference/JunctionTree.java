@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
@@ -75,7 +76,7 @@ public class JunctionTree implements MarginalCalculator {
         int factorNum = cliqueTree.getFactorEliminationOrder().get(i);
         Map<SeparatorSet, Factor> inboundMessages = cliqueTree.getInboundMessages(factorNum);
         Set<SeparatorSet> possibleOutboundMessages = cliqueTree.getFactor(factorNum).getComputableOutboundMessages(inboundMessages);
-
+            
         // Pass any messages which we haven't already computed.
         Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
         for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
@@ -153,7 +154,6 @@ public class JunctionTree implements MarginalCalculator {
     if (cliqueTree.getFactorsInMarginal(startFactor).contains(destFactor)) {
       messageFactor = messageFactor.product(cliqueTree.getMessage(destFactor, startFactor).inverse());
     }
-
     cliqueTree.addMessage(startFactor, destFactor, messageFactor);
   }
 
@@ -176,9 +176,12 @@ public class JunctionTree implements MarginalCalculator {
 
     List<Factor> factorsToCombine = Lists.newArrayList();
     for (int adjacentFactorNum : factorNumsToCombine) {
-      factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, factorNum));
+      Factor message = cliqueTree.getMessage(adjacentFactorNum, factorNum);
+      Preconditions.checkState(message != null, "Invalid message passing order! Trying to pass %s -> %s",
+          adjacentFactorNum, factorNum);
+      factorsToCombine.add(message);
     }
-
+    
     Factor newMarginal = cliqueTree.getMarginal(factorNum).product(factorsToCombine);
     cliqueTree.setMarginal(factorNum, newMarginal);
     cliqueTree.addFactorsToMarginal(factorNum, factorNumsToCombine);
@@ -199,6 +202,10 @@ public class JunctionTree implements MarginalCalculator {
       Factor rootFactor = marginalFactors.get(rootFactorNum);
       partitionFunction *= rootFactor.marginalize(rootFactor.getVars().getVariableNums())
           .getUnnormalizedProbability(Assignment.EMPTY);
+    }
+    
+    if (partitionFunction == 0.0) {
+      throw new ZeroProbabilityError();
     }
 
     if (rootFactorNums.size() > 1) {

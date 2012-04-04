@@ -5,8 +5,11 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.models.VariableProtos.VariablePatternProto;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A pattern of variables which serves the role of {@link VariableNumMap}s for
@@ -47,6 +50,14 @@ public interface VariablePattern {
    */
   VariableNumMap getAllMatchingVariables(VariableNumMap inputVariables);
 
+  /**
+   * Gets a serialized representation of this.
+   * 
+   * @param variableTypeIndex
+   * @return
+   */
+  VariablePatternProto toProto(IndexedList<Variable> variableTypeIndex);
+  
   /**
    * Represents a match of a variable pattern against a {@code VariableNumMap}.
    * This class maps each matched variable to a variable in a template

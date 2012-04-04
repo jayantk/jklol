@@ -1,45 +1,10 @@
 package jklol.models;
 
 import "Tensor.proto";
+import "Variable.proto";
 
 option java_package = "com.jayantkrish.jklol.models";
 option java_outer_classname = "FactorGraphProtos";
-
-message VariableProto {
-  enum VariableType {
-     UNKNOWN = 0;
-     DISCRETE = 1;
-     DISCRETE_OBJECT = 2;
-  }
-
-  // Mandatory fields for any type of variable.
-  optional VariableType type = 1 [default = UNKNOWN];
-
-  // Fields conditionally filled out based on the value
-  // of type.
-  optional DiscreteVariableProto discrete_variable = 2;
-  optional DiscreteObjectVariableProto discrete_object_variable = 3;
-}
-
-message DiscreteVariableProto {
-  // Name indicating the type of the variable.
-  optional string name = 1;
-
-  // List of values, stored as objects serialized using the
-  // Java serialization API.
-  repeated bytes serialized_value = 2;
-}
-
-message DiscreteObjectVariableProto {
-  // This variable takes as a value any object of the named Java class
-  optional string java_class_name = 1;
-}
-
-message VariableNumMapProto {
-  repeated int32 num = 1;
-  repeated VariableProto variable = 2;
-  repeated string name = 3;
-}
 
 message FactorProto {
   enum FactorType {
@@ -50,13 +15,14 @@ message FactorProto {
   }
 
   // Mandatory definition of the variable numbers in this factor.
-  repeated int32 variable_num = 1;
+  optional VariableNumMapProto variables = 1;
+
   optional FactorType type = 2;
 
-  // Conditionally required, depending on 
-  optional TableFactorProto table_factor = 3;
-  optional LinearClassifierProto linear_classifier_factor = 4;
-  optional BeamSearchCfgProto beam_search_cfg_factor = 5;
+  // Conditionally required, depending on type.
+  optional TableFactorProto table_factor = 4;
+  optional LinearClassifierProto linear_classifier_factor = 5;
+  optional BeamSearchCfgProto beam_search_cfg_factor = 6;
 }
 
 message TableFactorProto {
@@ -89,7 +55,13 @@ message CfgParserProto {
 }
 
 message FactorGraphProto {
-  // The variables contained in this FactorGraph (and their numbers).
+  // The distinct types of variables in this factor graph. 
+  // Each variable type may occur more than once in the graph,
+  // assigned to distinct variable numbers.
+  repeated VariableProto variable_type = 5;
+
+  // The variables contained in this FactorGraph, their unique numbering, and
+  // their names.
   optional VariableNumMapProto variables = 1;
 
   // optional VariableNumMapProto conditioned_variables = 2;

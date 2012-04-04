@@ -10,6 +10,7 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class FilterFactor extends AbstractFactor {
 
@@ -152,7 +153,7 @@ public class FilterFactor extends AbstractFactor {
   }
 
   @Override
-  public FactorProto toProto() {
+  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
     throw new UnsupportedOperationException();
   }
 }

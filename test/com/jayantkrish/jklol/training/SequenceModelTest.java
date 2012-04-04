@@ -103,6 +103,12 @@ public class SequenceModelTest extends TestCase {
     testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 80, new DefaultLogFunction(), 1.0, 0.0));
   }
   
+  public void testSerialization() {
+    ParametricFactorGraph copy = ParametricFactorGraph.fromProto(sequenceModel.toProto());
+    
+    assertEquals(sequenceModel.getVariables(), copy.getVariables());
+  }
+  
   private void testZeroTrainingError(Trainer trainer) {
     SufficientStatistics parameters = trainer.train(sequenceModel, sequenceModel.getNewSufficientStatistics(), trainingData); 
     DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);

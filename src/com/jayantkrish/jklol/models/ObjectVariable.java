@@ -1,8 +1,8 @@
 package com.jayantkrish.jklol.models;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.models.FactorGraphProtos.DiscreteObjectVariableProto;
-import com.jayantkrish.jklol.models.FactorGraphProtos.VariableProto;
+import com.jayantkrish.jklol.models.VariableProtos.DiscreteObjectVariableProto;
+import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 
 /**
  * A {@link Variable} which can take any value of a given type.

@@ -16,9 +16,11 @@ import com.jayantkrish.jklol.models.DiscreteObjectFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class BeamSearchCfgFactor extends AbstractConditionalFactor {
 
@@ -115,7 +117,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
   }
 
   @Override
-  public FactorProto toProto() {
+  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
     throw new UnsupportedOperationException("Not yet implemented");
     /*
      * FactorProto.Builder builder = getProtoBuilder();

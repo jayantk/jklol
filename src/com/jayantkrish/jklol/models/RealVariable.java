@@ -1,7 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.models.FactorGraphProtos.VariableProto;
+import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 
 /**

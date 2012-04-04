@@ -6,8 +6,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
+import com.jayantkrish.jklol.models.Variables;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphProtos.DynamicFactorGraphProto;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphProtos.PlateFactorProto;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Represents a family of conditional {@link FactorGraph}s whose structure
@@ -70,5 +76,52 @@ public class DynamicFactorGraph {
     List<PlateFactor> allFactors = Lists.newArrayList(plateFactors);
     allFactors.addAll(factors);
     return new DynamicFactorGraph(getVariables(), allFactors);
+  }
+  
+  // Serialization methods.
+  
+  public DynamicFactorGraphProto toProto() {
+    IndexedList<Variable> variableTypeIndex = IndexedList.create(); 
+
+    DynamicFactorGraphProto.Builder builder = toProtoBuilder(variableTypeIndex);
+    
+    for (Variable variable : variableTypeIndex.items()) {
+      builder.addVariableType(variable.toProto());
+    }
+    
+    return builder.build();
+  }
+  
+  public DynamicFactorGraphProto.Builder toProtoBuilder(
+      IndexedList<Variable> variableTypeIndex) {
+    DynamicFactorGraphProto.Builder builder = DynamicFactorGraphProto.newBuilder();
+    builder.setVariables(variables.toProto(variableTypeIndex));
+
+    for (PlateFactor plateFactor : plateFactors) {
+      builder.addFactor(plateFactor.toProto(variableTypeIndex));
+    }
+
+    return builder;
+  }
+  
+  public static DynamicFactorGraph fromProto(DynamicFactorGraphProto proto) {
+    IndexedList<Variable> variableTypeIndex = IndexedList.create();
+    for (VariableProto variableProto : proto.getVariableTypeList()) {
+      variableTypeIndex.add(Variables.fromProto(variableProto));
+    }
+    
+    return fromProtoWithVariables(proto, variableTypeIndex);
+  }
+  
+  public static DynamicFactorGraph fromProtoWithVariables(DynamicFactorGraphProto proto,
+      IndexedList<Variable> variableTypeIndex) {
+    DynamicVariableSet variableSet = DynamicVariableSet.fromProto(proto.getVariables(), variableTypeIndex);
+
+    List<PlateFactor> plateFactors = Lists.newArrayList();
+    for (PlateFactorProto factorProto : proto.getFactorList()) {
+      plateFactors.add(PlateFactors.fromProto(factorProto, variableTypeIndex));
+    }
+
+    return new DynamicFactorGraph(variableSet, plateFactors);
   }
 }

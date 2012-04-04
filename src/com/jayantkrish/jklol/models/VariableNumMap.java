@@ -18,9 +18,10 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.FactorGraphProtos.VariableNumMapProto;
+import com.jayantkrish.jklol.models.VariableProtos.VariableNumMapProto;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A {@code VariableNumMap} represents a set of variables in a graphical model.
@@ -92,13 +93,17 @@ public class VariableNumMap {
 
   /**
    * Creates a {@code VariableNumMap} from its serialization as a protocol
-   * buffer.
+   * buffer. {@code variables} is a mapping from integers to variable types that
+   * was created during serialization and is required in order to restore the correct
+   * variable types during construction.
    * 
    * @param proto
+   * @param variableTypeIndex
    * @return
    */
-  public static VariableNumMap fromProto(VariableNumMapProto proto) {
-    Preconditions.checkArgument(proto.getNumCount() == proto.getVariableCount());
+  public static VariableNumMap fromProto(VariableNumMapProto proto, 
+      IndexedList<Variable> variableTypeIndex) {
+    Preconditions.checkArgument(proto.getNumCount() == proto.getVariableTypeIndexCount());
     Preconditions.checkArgument(proto.getNumCount() == proto.getNameCount());
 
     List<Integer> varNums = Lists.newArrayList();
@@ -107,7 +112,7 @@ public class VariableNumMap {
     for (int i = 0; i < proto.getNumCount(); i++) {
       varNums.add(proto.getNum(i));
       varNames.add(proto.getName(i));
-      variables.add(Variables.fromProto(proto.getVariable(i)));
+      variables.add(variableTypeIndex.get(proto.getVariableTypeIndex(i)));
     }
 
     return new VariableNumMap(varNums, varNames, variables);
@@ -122,14 +127,14 @@ public class VariableNumMap {
    * @param outcomes
    * @return
    */
-  public static List<Assignment> outcomeTableToAssignment(Object[][] outcomes, 
+  public static List<Assignment> outcomeTableToAssignment(Object[][] outcomes,
       List<VariableNumMap> variables) {
     List<Assignment> assignments = Lists.newArrayList();
     for (int i = 0; i < outcomes.length; i++) {
       Assignment currentAssignment = Assignment.EMPTY;
       for (int j = 0; j < outcomes[i].length; j++) {
         if (outcomes[i][j] != null) {
-          currentAssignment = currentAssignment.union(variables.get(j).outcomeArrayToAssignment(outcomes[i][j]));              
+          currentAssignment = currentAssignment.union(variables.get(j).outcomeArrayToAssignment(outcomes[i][j]));
         }
       }
       assignments.add(currentAssignment);
@@ -704,16 +709,23 @@ public class VariableNumMap {
   }
 
   /**
-   * Serializes {@code this} into a protocol buffer.
+   * Serializes {@code this} into a protocol buffer. {@code variableTypeIndex}
+   * is a list of variable types which must be independently serialized and
+   * restored in order to deserialize the returned protocol buffer.
    * 
    * @return
    */
-  public VariableNumMapProto toProto() {
+  public VariableNumMapProto toProto(IndexedList<Variable> variableTypeIndex) {
     VariableNumMapProto.Builder builder = VariableNumMapProto.newBuilder();
     for (Integer variableNum : varMap.keySet()) {
       builder.addNum(variableNum);
       builder.addName(names.get(variableNum));
-      builder.addVariable(varMap.get(variableNum).toProto());
+
+      Variable currentVariable = varMap.get(variableNum);
+      if (!variableTypeIndex.contains(currentVariable)) {
+        variableTypeIndex.add(currentVariable);
+      }
+      builder.addVariableTypeIndex(variableTypeIndex.getIndex(currentVariable));
     }
     return builder.build();
   }

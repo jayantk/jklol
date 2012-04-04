@@ -17,6 +17,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorGraphProto;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
+import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -452,39 +453,42 @@ public class FactorGraph {
   public FactorGraphProto toProto() {
     Preconditions.checkState(conditionedValues.size() == 0);
     Preconditions.checkState(conditionedVariables.size() == 0);
+    // Create a global set of variable types, so that each
+    // variable type is only serialized once. 
+    IndexedList<Variable> variableIndex = IndexedList.create();
     
     FactorGraphProto.Builder builder = FactorGraphProto.newBuilder();
-    builder.setVariables(variables.toProto());
+    builder.setVariables(variables.toProto(variableIndex));
     
     for (Factor factor : factors) {
-      builder.addFactor(factor.toProto());
+      builder.addFactor(factor.toProto(variableIndex));
     }
-
+    
+    // Serialize the variable type registry.
+    for (Variable variable : variableIndex) {
+      builder.addVariableType(variable.toProto());
+    }
+    
     return builder.build();
   }
   
   public static FactorGraph fromProto(FactorGraphProto factorGraphProto) {
     Preconditions.checkArgument(factorGraphProto.hasVariables());
-    VariableNumMap variables = VariableNumMap.fromProto(factorGraphProto.getVariables());
+    // Reconstruct the global variable type registry.
+    IndexedList<Variable> variableTypeIndex = IndexedList.create();
+    for (VariableProto variableProto : factorGraphProto.getVariableTypeList()) {
+      variableTypeIndex.add(Variables.fromProto(variableProto));
+    }
+    
+    VariableNumMap variables = VariableNumMap.fromProto(factorGraphProto.getVariables(),
+        variableTypeIndex);
  
     // Deserialize the factors in the factor graph.
     List<Factor> factors = Lists.newArrayList();
     for (FactorProto factorProto : factorGraphProto.getFactorList()) {
-      Preconditions.checkArgument(variables.containsAll(factorProto.getVariableNumList()));
-      VariableNumMap factorVariables = variables.intersection(factorProto.getVariableNumList());
-      factors.add(FactorGraph.factorFromProto(factorVariables, factorProto));
+      factors.add(FactorUtils.fromProto(factorProto, variableTypeIndex));
     }
     
     return new FactorGraph(variables, factors, VariableNumMap.emptyMap(), Assignment.EMPTY);
-  }
-  
-  private static Factor factorFromProto(VariableNumMap variables, FactorProto factorProto) {
-    switch (factorProto.getType().getNumber()) { 
-    case FactorProto.FactorType.TABLE_VALUE:
-      Preconditions.checkArgument(factorProto.hasTableFactor());
-      return TableFactor.fromProto(variables, factorProto.getTableFactor());
-    default:
-      throw new IllegalArgumentException("Invalid factor type: " + factorProto.getType());
-    }
   }
 }

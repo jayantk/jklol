@@ -41,6 +41,10 @@ public class IndexedList<T> implements Iterable<T> {
 		this.items = new ArrayList<T>(other.items);
 		this.itemIndex = new HashMap<T, Integer>(other.itemIndex);
 	}
+	
+	public static <T> IndexedList<T> create() {
+	  return new IndexedList<T>();
+	}
 
 	/**
 	 * Add a new element to this set. Note that there can only be a single

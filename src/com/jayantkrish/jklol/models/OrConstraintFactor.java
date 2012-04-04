@@ -15,6 +15,7 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Represents a set of deterministic OR constraints over a set of variables.
@@ -254,7 +255,7 @@ public class OrConstraintFactor extends AbstractFactor {
   }
   
   @Override
-  public FactorProto toProto() {
+  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
     throw new UnsupportedOperationException();
   }
   

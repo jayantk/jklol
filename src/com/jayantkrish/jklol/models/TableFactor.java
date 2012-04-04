@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.Tensors;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A TableFactor is a representation of a factor where each weight is set
@@ -135,9 +136,14 @@ public class TableFactor extends DiscreteFactor {
    * @param proto
    * @return
    */
-  public static TableFactor fromProto(VariableNumMap variables, TableFactorProto proto) {
-    Preconditions.checkArgument(proto.hasWeights());
-    return new TableFactor(variables, Tensors.fromProto(proto.getWeights()));
+  public static TableFactor fromProto(FactorProto proto, IndexedList<Variable> variableTypeIndex) {
+    Preconditions.checkArgument(proto.hasVariables());
+    Preconditions.checkArgument(proto.getType().equals(FactorProto.FactorType.TABLE));
+    Preconditions.checkArgument(proto.hasTableFactor());
+    Preconditions.checkArgument(proto.getTableFactor().hasWeights());
+    
+    VariableNumMap variables = VariableNumMap.fromProto(proto.getVariables(), variableTypeIndex);
+    return new TableFactor(variables, Tensors.fromProto(proto.getTableFactor().getWeights()));
   }
 
   /**
@@ -230,8 +236,8 @@ public class TableFactor extends DiscreteFactor {
   }
 
   @Override
-  public FactorProto toProto() {
-    FactorProto.Builder builder = getProtoBuilder();
+  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
+    FactorProto.Builder builder = getProtoBuilder(variableTypeIndex);
     builder.setType(FactorProto.FactorType.TABLE);
 
     TableFactorProto.Builder tableBuilder = builder.getTableFactorBuilder();

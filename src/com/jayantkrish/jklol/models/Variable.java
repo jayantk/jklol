@@ -1,6 +1,6 @@
 package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.models.FactorGraphProtos.VariableProto;
+import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 
 /**
  * A Variable represents a random variable which can take on some set of Object values.

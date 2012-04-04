@@ -1,0 +1,56 @@
+package jklol.models;
+
+import "Tensor.proto";
+import "Variable.proto";
+import "FactorGraph.proto";
+import "DynamicFactorGraph.proto"; 
+
+option java_package = "com.jayantkrish.jklol.models.parametric";
+option java_outer_classname = "ParametricFactorGraphProtos";
+
+message ParametricFactorProto {
+  enum Type {
+    UNKNOWN = 0;
+    DISCRETE_LOG_LINEAR = 1;
+    CONDITIONAL_LOG_LINEAR = 2;
+  }
+  // The variables over which this factor is defined.
+  optional VariableNumMapProto variables = 1;
+
+  // Mandatory type determining which factor field below
+  // must be provided.
+  optional Type type = 2;
+  
+  optional DiscreteLogLinearFactorProto discrete_log_linear_factor = 3;
+  optional ConditionalLogLinearFactorProto conditional_log_linear_factor = 4;
+}
+
+message DiscreteLogLinearFactorProto {
+  optional VariableNumMapProto feature_variables = 1;
+  optional FactorProto feature_values = 2;
+  optional FactorProto initial_weights = 3;
+}
+
+message ConditionalLogLinearFactorProto {
+  optional VariableNumMapProto input_variable = 1;
+  optional VariableNumMapProto output_variable = 2;
+
+  optional int32 feature_vector_dimensionality = 3;
+
+  optional bool dense_tensor_factory = 4;
+}
+
+message ParametricFactorGraphProto {
+  // The distinct types of variables in this factor graph. 
+  // Each variable type may occur more than once in the graph,
+  // assigned to distinct variable numbers.
+  repeated VariableProto variable_type = 1;
+
+  // Mandatory field containing the unparameterized factors 
+  optional DynamicFactorGraphProto base_factor_graph = 2;
+
+  // The parametric factors contained in this graph
+  repeated ParametricFactorProto parametric_factor = 3;
+
+  repeated VariablePatternProto factor_pattern = 4;
+}

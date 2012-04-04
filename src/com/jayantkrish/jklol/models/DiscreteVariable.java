@@ -12,8 +12,8 @@ import java.util.NoSuchElementException;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-import com.jayantkrish.jklol.models.FactorGraphProtos.DiscreteVariableProto;
-import com.jayantkrish.jklol.models.FactorGraphProtos.VariableProto;
+import com.jayantkrish.jklol.models.VariableProtos.DiscreteVariableProto;
+import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -141,7 +141,9 @@ public class DiscreteVariable implements Variable {
 
   @Override
   public boolean equals(Object o) {
-    if (o instanceof DiscreteVariable) {
+    if (this == o) {
+      return true;
+    } else if (o instanceof DiscreteVariable) {
       DiscreteVariable v = (DiscreteVariable) o;
       return name.equals(v.name) && values.equals(v.values);
     }

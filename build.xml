@@ -23,7 +23,10 @@
       <arg value="-I=${proto-dir}" />
       <arg value="--java_out=${proto-src-dir}" />
       <arg value="${proto-dir}/Tensor.proto" />
+      <arg value="${proto-dir}/Variable.proto" />
       <arg value="${proto-dir}/FactorGraph.proto" />
+      <arg value="${proto-dir}/DynamicFactorGraph.proto" />
+      <arg value="${proto-dir}/ParametricFactorGraph.proto" />
     </exec>
   </target>
 

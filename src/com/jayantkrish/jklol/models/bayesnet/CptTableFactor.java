@@ -11,8 +11,10 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -20,6 +22,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A CptTableFactor is the typical factor you expect in a Bayesian Network. Its
@@ -113,6 +116,11 @@ public class CptTableFactor extends AbstractParametricFactor {
     
       tensorStats.get(0).incrementEntry(incrementAmount, combinedIndex);
     }
+  }
+  
+  @Override
+  public ParametricFactorProto toProto(IndexedList<Variable> variableTypeIndex) {
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   // ///////////////////////////////////////////////////////////////////

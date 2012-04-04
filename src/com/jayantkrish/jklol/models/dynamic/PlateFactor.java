@@ -3,7 +3,10 @@ package com.jayantkrish.jklol.models.dynamic;
 import java.util.List;
 
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphProtos.PlateFactorProto;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * {@code PlateFactor} is a generalization of a {@code Factor} that represents a
@@ -29,4 +32,12 @@ public interface PlateFactor {
    */
   public List<Factor> instantiateFactors(VariableNumMap factorGraphVariables);
 
+  
+  /**
+   * Gets a serialized representation of this factor.
+   * 
+   * @param variableTypeIndex
+   * @return
+   */
+  public PlateFactorProto toProto(IndexedList<Variable> variableTypeIndex);
 }

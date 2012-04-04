@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A {@code LinearClassifierFactor} represents a conditional distribution over a
@@ -148,8 +149,8 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
   }
 
   @Override
-  public FactorProto toProto() {
-    FactorProto.Builder builder = getProtoBuilder();
+  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
+    FactorProto.Builder builder = getProtoBuilder(variableTypeIndex);
     builder.setType(FactorProto.FactorType.LINEAR_CLASSIFIER);
 
     LinearClassifierProto.Builder linearBuilder = builder.getLinearClassifierFactorBuilder();

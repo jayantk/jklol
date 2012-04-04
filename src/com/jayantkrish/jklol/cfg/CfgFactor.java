@@ -22,10 +22,12 @@ import com.jayantkrish.jklol.models.FactorUtils;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
+import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A CfgFactor embeds a context-free grammar in a Bayes Net. The factor defines
@@ -362,7 +364,7 @@ public class CfgFactor extends AbstractFactor {
   }
   
   @Override
-  public FactorProto toProto() {
+  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
     throw new UnsupportedOperationException();
   }
 }

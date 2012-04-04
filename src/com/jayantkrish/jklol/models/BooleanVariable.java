@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.models.FactorGraphProtos.VariableProto;
+import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
+
 
 public class BooleanVariable implements Variable {
 

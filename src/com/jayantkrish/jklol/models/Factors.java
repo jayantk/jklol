@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayant
  */
-public final class FactorUtils {
+public final class Factors {
 
   /**
    * Applies {@link Factor.coerceToDiscrete} to every {@code Factor} in

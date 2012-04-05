@@ -19,26 +19,26 @@ public class BaselinesTest extends TestCase {
 	public void testMostFrequentLabel() {
 	  PredictorTrainer<String, String> trainer = Baselines.mostFrequentLabel();
 	  Predictor<String, String> predictor = trainer.train(ExampleUtils.exampleArrayToList(training));
-	  assertEquals(0.6, predictor.getProbability("1", "true"));
-	  assertEquals(0.6, predictor.getProbability("foo", "true"));
-	  assertEquals(0.4, predictor.getProbability("5", "false"));
-	  assertEquals(0.0, predictor.getProbability("5", "NOTANOUTPUT"));
+	  assertEquals(Math.log(0.6), predictor.getScore("1", "true"), .00001);
+	  assertEquals(Math.log(0.6), predictor.getScore("foo", "true"), .00001);
+	  assertEquals(Math.log(0.4), predictor.getScore("5", "false"), .00001);
+	  assertEquals(Math.log(0.0), predictor.getScore("5", "NOTANOUTPUT"), .00001);
 	  
-	  assertEquals("true", predictor.getBestPrediction("1"));
-	  assertEquals("true", predictor.getBestPrediction("foo"));
-	  assertEquals("true", predictor.getBestPrediction("2"));
+	  assertEquals("true", predictor.getBestPrediction("1").getBestPrediction());
+	  assertEquals("true", predictor.getBestPrediction("foo").getBestPrediction());
+	  assertEquals("true", predictor.getBestPrediction("2").getBestPrediction());
 	  
-	  assertEquals("false", predictor.getBestPredictions("1", 2).get(1));
-	  assertEquals("false", predictor.getBestPredictions("foo", 2).get(1));
-	  assertEquals("false", predictor.getBestPredictions("2", 2).get(1));
+	  assertEquals("false", predictor.getBestPredictions("1", null, 2).getPredictions().get(1));
+	  assertEquals("false", predictor.getBestPredictions("foo", null, 2).getPredictions().get(1));
+	  assertEquals("false", predictor.getBestPredictions("2", null, 2).getPredictions().get(1));
 	}
 	
 	public void testUniform() {
 	  PredictorTrainer<String, String> trainer = Baselines.uniform();
 	  Predictor<String, String> predictor = trainer.train(ExampleUtils.exampleArrayToList(training));
-	  assertEquals(0.5, predictor.getProbability("1", "true"));
-	  assertEquals(0.5, predictor.getProbability("foo", "true"));
-	  assertEquals(0.5, predictor.getProbability("5", "false"));
-	  assertEquals(0.0, predictor.getProbability("5", "NOTANOUTPUT"));
+	  assertEquals(Math.log(0.5), predictor.getScore("1", "true"), .00001);  
+	  assertEquals(Math.log(0.5), predictor.getScore("foo", "true"), .00001);
+	  assertEquals(Math.log(0.5), predictor.getScore("5", "false"), .00001);
+	  assertEquals(Math.log(0.0), predictor.getScore("5", "NOTANOUTPUT"), .00001);
 	}
 }

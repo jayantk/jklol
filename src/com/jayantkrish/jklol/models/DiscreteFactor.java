@@ -152,7 +152,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor product(List<Factor> factors) {
-    List<DiscreteFactor> discreteFactors = FactorUtils.coerceToDiscrete(factors);
+    List<DiscreteFactor> discreteFactors = Factors.coerceToDiscrete(factors);
 
     // Multiply the factors in order from smallest to largest to keep
     // the intermediate results as sparse as possible.

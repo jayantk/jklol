@@ -70,6 +70,7 @@ public class DynamicAssignment {
   }
   
   public DynamicAssignment union(DynamicAssignment other) {
+    Preconditions.checkNotNull(other);
     Map<String, List<DynamicAssignment>> newPlateAssignments = Maps.newHashMap(other.plateAssignments);
     for (String plateName : plateAssignments.keySet()) {
       if (other.plateAssignments.containsKey(plateName)) {

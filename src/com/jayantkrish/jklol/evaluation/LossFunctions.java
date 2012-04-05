@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.jayantkrish.jklol.evaluation.Predictor.Prediction;
 
 /**
  * Implementations of some common loss functions.
@@ -50,8 +51,8 @@ public class LossFunctions {
   }
 
   /**
-   * Accuracy is 1 - (Zero one loss), which assigns a "loss" of 1 when the
-   * prediction is .equals to the actual, and 0 otherwise.
+   * Accuracy is the zero-one loss, which assigns a "loss" of 1 when the
+   * prediction is {@code equals()} to the actual, and 0 otherwise.
    * 
    * @param O - the type of the prediction
    */
@@ -66,14 +67,15 @@ public class LossFunctions {
     }
 
     @Override
-    public void accumulateLoss(Predictor<I, O> predictor, I input, O actual) {
-      Preconditions.checkNotNull(predictor);
-      Preconditions.checkNotNull(input);
-      Preconditions.checkNotNull(actual);
+    public void accumulateLoss(Prediction<I, O> prediction) {
+      Preconditions.checkNotNull(prediction);
+      Preconditions.checkNotNull(prediction.getOutput());
 
-      O prediction = predictor.getBestPrediction(input);
-      correct += actual.equals(prediction) ? 1.0 : 0.0;
       total += 1;
+      if (prediction.getPredictions().size() > 0) {
+        O predictedOutput = prediction.getPredictions().get(0);
+        correct += prediction.getOutput().equals(predictedOutput) ? 1.0 : 0.0;
+      }
     }
 
     public double getAccuracy() {
@@ -110,6 +112,11 @@ public class LossFunctions {
     }
 
     public void accumulatePrediction(Boolean prediction, Boolean actual, double score) {
+      if (prediction == null) {
+        // No prediction was made. Count the prediction as incorrect.
+        prediction = !actual;
+      }
+
       if (actual && prediction) {
         truePositives++;
         truePositiveScores.add(score);
@@ -124,10 +131,16 @@ public class LossFunctions {
     }
 
     @Override
-    public void accumulateLoss(Predictor<I, Boolean> predictor, I input, Boolean actual) {
-      Preconditions.checkNotNull(predictor);
-      // TODO: use the score!
-      accumulatePrediction(predictor.getBestPrediction(input), actual, 0.0);
+    public void accumulateLoss(Prediction<I, Boolean> prediction) {
+      Preconditions.checkNotNull(prediction);
+      Preconditions.checkNotNull(prediction.getOutput());
+
+      if (prediction.getPredictions().size() > 0) {
+        accumulatePrediction(prediction.getPredictions().get(0), prediction.getOutput(),
+            prediction.getScores()[0]);
+      } else {
+        accumulatePrediction(null, prediction.getOutput(), Double.NEGATIVE_INFINITY);
+      }
     }
 
     public double getPrecision() {
@@ -159,11 +172,11 @@ public class LossFunctions {
     public int getNumInstances() {
       return truePositives + trueNegatives + falsePositives + falseNegatives;
     }
-    
+
     public void getPrecisionRecallCurve(List<Double> precisions, List<Double> recalls) {
-      Collections.sort(truePositiveScores, Ordering.<Double>natural().reverse());
-      Collections.sort(falsePositiveScores, Ordering.<Double>natural().reverse());
-      
+      Collections.sort(truePositiveScores, Ordering.<Double> natural().reverse());
+      Collections.sort(falsePositiveScores, Ordering.<Double> natural().reverse());
+
       int tpIndex = 0, fpIndex = 0;
       int numTps = truePositiveScores.size();
       int numFps = falsePositiveScores.size();
@@ -184,20 +197,20 @@ public class LossFunctions {
           tpIndex++;
           fpIndex++;
         }
-        
+
         precisions.add(curTps / (curTps + curFps));
         recalls.add(curTps / totalPositiveInstances);
       }
-      
+
       // Finish off whichever list remains.
       while (tpIndex < numTps) {
         curTps++;
         tpIndex++;
-        
+
         precisions.add(curTps / (curTps + curFps));
         recalls.add(curTps / totalPositiveInstances);
       }
-      
+
       while (fpIndex < numFps) {
         curFps++;
         fpIndex++;
@@ -241,13 +254,14 @@ public class LossFunctions {
     }
 
     @Override
-    public void accumulateLoss(Predictor<I, O> predictor, I input, O actual) {
-      Preconditions.checkNotNull(predictor);
+    public void accumulateLoss(Prediction<I, O> prediction) {
+      Preconditions.checkNotNull(prediction);
+      Preconditions.checkNotNull(prediction.getOutput());
 
-      double prob = predictor.getProbability(input, actual);
-      if (prob > 0.0) {
-        loglikelihood += Math.log(prob);
-        sumSquaredLoglikelihood += Math.log(prob) * Math.log(prob);
+      double logProb = prediction.getOutputScore();
+      if (logProb != Double.NEGATIVE_INFINITY) {
+        loglikelihood += logProb;
+        sumSquaredLoglikelihood += logProb * logProb;
         numExamples += 1;
       } else {
         numZeroProbabilityExamples++;

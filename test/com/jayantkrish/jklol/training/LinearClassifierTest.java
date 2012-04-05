@@ -97,7 +97,7 @@ public class LinearClassifierTest extends TestCase {
     SimpleFactorGraphPredictor predictor = new SimpleFactorGraphPredictor(
         trainedModel, y, new JunctionTree());
     for (Example<Assignment, Assignment> trainingDatum : trainingData) {
-      Assignment prediction = predictor.getBestPrediction(trainingDatum.getInput());
+      Assignment prediction = predictor.getBestPrediction(trainingDatum.getInput()).getBestPrediction();
       assertEquals(trainingDatum.getOutput(), prediction);
     }
   }

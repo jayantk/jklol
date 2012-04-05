@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.evaluation;
 import java.util.List;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.Converter;
 
@@ -43,23 +42,18 @@ public class ForwardingPredictor<I1, O1, I2, O2> extends AbstractPredictor<I1, O
       Converter<O1, O2> outputConverter) {
     return new ForwardingPredictor<I1, O1, I2, O2>(predictor, inputConverter, outputConverter);
   }
-
-  @Override
-  public O1 getBestPrediction(I1 input) {
-    return outputConverter.invert(
-        predictor.getBestPrediction(inputConverter.apply(input)));
-  }
-
-  @Override
-  public List<O1> getBestPredictions(I1 input, int numBest) {
-    List<O2> predictions = predictor.getBestPredictions(inputConverter.apply(input), numBest);
-    return Lists.newArrayList(Collections2.transform(predictions, outputConverter.inverse()));
-  }
-
-  @Override
-  public double getProbability(I1 input, O1 output) {
-    return predictor.getProbability(inputConverter.apply(input),
-        outputConverter.apply(output));
+  
+  public Prediction<I1, O1> getBestPredictions(I1 input, O1 output, int numPredictions) {
+    Prediction<I2, O2> prediction = predictor.getBestPredictions(inputConverter.apply(input), 
+        outputConverter.apply(output), numPredictions);
+    
+    List<O1> convertedPredictions = Lists.newArrayList();
+    for (O2 outputPrediction : prediction.getPredictions()) {
+      convertedPredictions.add(outputConverter.invert(outputPrediction));
+    }
+    
+    return Prediction.create(input, output, prediction.getOutputScore(), 
+        prediction.getScores(), convertedPredictions);
   }
 
   /**

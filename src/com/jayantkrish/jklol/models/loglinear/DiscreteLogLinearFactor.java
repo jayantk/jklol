@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.FactorUtils;
+import com.jayantkrish.jklol.models.Factors;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.Variable;
@@ -212,11 +212,11 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
     VariableNumMap vars = VariableNumMap.fromProto(proto.getVariables(), variableTypeIndex);
     VariableNumMap featureVars = VariableNumMap.fromProto(llProto.getFeatureVariables(), 
         variableTypeIndex);
-    DiscreteFactor featureValues = FactorUtils.fromProto(llProto.getFeatureValues(), 
+    DiscreteFactor featureValues = Factors.fromProto(llProto.getFeatureValues(), 
         variableTypeIndex).coerceToDiscrete();
     DiscreteFactor initialWeights = null;
     if (llProto.hasInitialWeights()) {
-      initialWeights = FactorUtils.fromProto(llProto.getInitialWeights(),
+      initialWeights = Factors.fromProto(llProto.getInitialWeights(),
             variableTypeIndex).coerceToDiscrete();
     }
     return new DiscreteLogLinearFactor(vars, featureVars, featureValues, initialWeights);

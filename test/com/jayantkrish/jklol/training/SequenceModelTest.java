@@ -117,7 +117,7 @@ public class SequenceModelTest extends TestCase {
     FactorGraphPredictor predictor = new FactorGraphPredictor(trainedModel, 
         VariableNamePattern.fromTemplateVariables(y, VariableNumMap.emptyMap()), new JunctionTree());
     for (Example<DynamicAssignment, DynamicAssignment> trainingDatum : trainingData) {
-      DynamicAssignment prediction = predictor.getBestPrediction(trainingDatum.getInput());
+      DynamicAssignment prediction = predictor.getBestPrediction(trainingDatum.getInput()).getBestPrediction();
       assertEquals(trainingDatum.getOutput(), prediction);
     }
   }

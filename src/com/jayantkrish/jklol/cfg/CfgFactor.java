@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
-import com.jayantkrish.jklol.models.FactorUtils;
+import com.jayantkrish.jklol.models.Factors;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -162,10 +162,10 @@ public class CfgFactor extends AbstractFactor {
     DiscreteFactor newParentMessage = null;
     DiscreteFactor newChildMessage = null;
     if (parentFactors.size() > 0) {
-      newParentMessage = FactorUtils.product(parentFactors).coerceToDiscrete();
+      newParentMessage = Factors.product(parentFactors).coerceToDiscrete();
     }
     if (childFactors.size() > 0) {
-      newChildMessage = FactorUtils.product(childFactors).coerceToDiscrete();
+      newChildMessage = Factors.product(childFactors).coerceToDiscrete();
     }
 
     return new CfgFactor(parent, child, parser, newParentMessage, newChildMessage);

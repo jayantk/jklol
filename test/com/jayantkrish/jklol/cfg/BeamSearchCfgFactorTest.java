@@ -152,7 +152,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
     for (int i = 0; i < TEST_DATA.length; i++) {
       ParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));
       Assignment actual = predictor.getBestPrediction(x.outcomeArrayToAssignment(
-          parseTreeFromString(TEST_DATA[i]).getTerminalProductions()));
+          parseTreeFromString(TEST_DATA[i]).getTerminalProductions())).getBestPrediction();
       assertEquals(expected, actual.getOnlyValue());
     }
   }

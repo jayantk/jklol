@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Predictor.Prediction;
 
 /**
  * TestSetEvaluation evaluates a predictor by training on one data set and
@@ -39,8 +40,9 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
    */
   public void evaluateLoss(Predictor<I, O> predictor, List<LossFunction<I, O>> lossFunctions) {
     for (Example<I, O> testDatum : testData) {
+      Prediction<I, O> prediction = predictor.getBestPrediction(testDatum);
       for (LossFunction<I, O> lossFunction : lossFunctions) {
-        lossFunction.accumulateLoss(predictor, testDatum.getInput(), testDatum.getOutput());
+        lossFunction.accumulateLoss(prediction);
       }
     }
   }

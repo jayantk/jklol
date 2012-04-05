@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.evaluation;
 
+import com.jayantkrish.jklol.evaluation.Predictor.Prediction;
+
 /**
  * A LossFunction measures the quality of a Predictor's predictions.
  *
@@ -8,7 +10,8 @@ package com.jayantkrish.jklol.evaluation;
  */
 public interface LossFunction<I, O> {
 
-    public void accumulateLoss(Predictor<I, O> predictor, I input, O actual);
-
+  // LossFunction<I, O> emptyCopy();
+  
+  void accumulateLoss(Prediction<I, O> prediction);
 }
 

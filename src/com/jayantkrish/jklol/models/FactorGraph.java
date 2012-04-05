@@ -387,7 +387,7 @@ public class FactorGraph {
 
       if (factorsToMultiply.size() > 0) {
         // If the variable is present, eliminate it!
-        Factor productFactor = FactorUtils.product(factorsToMultiply);
+        Factor productFactor = Factors.product(factorsToMultiply);
         nextFactorGraph = nextFactorGraph.addFactor(
             productFactor.marginalize(eliminatedVariableIndex));
       }
@@ -486,7 +486,7 @@ public class FactorGraph {
     // Deserialize the factors in the factor graph.
     List<Factor> factors = Lists.newArrayList();
     for (FactorProto factorProto : factorGraphProto.getFactorList()) {
-      factors.add(FactorUtils.fromProto(factorProto, variableTypeIndex));
+      factors.add(Factors.fromProto(factorProto, variableTypeIndex));
     }
     
     return new FactorGraph(variables, factors, VariableNumMap.emptyMap(), Assignment.EMPTY);

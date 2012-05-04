@@ -49,8 +49,9 @@ message ParametricFactorGraphProto {
   // Mandatory field containing the unparameterized factors 
   optional DynamicFactorGraphProto base_factor_graph = 2;
 
-  // The parametric factors contained in this graph
+  // The parametric factors contained in this graph, and the
+  // places where they go.
   repeated ParametricFactorProto parametric_factor = 3;
-
   repeated VariablePatternProto factor_pattern = 4;
+  repeated string factor_name = 5;
 }

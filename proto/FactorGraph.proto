@@ -55,6 +55,8 @@ message CfgParserProto {
 }
 
 message FactorGraphProto {
+// Next available index: 7.
+
   // The distinct types of variables in this factor graph. 
   // Each variable type may occur more than once in the graph,
   // assigned to distinct variable numbers.
@@ -68,4 +70,5 @@ message FactorGraphProto {
   // optional AssignmentProto conditioned_values = 3;
 
   repeated FactorProto factor = 4;
+  repeated string factor_name = 6;
 }

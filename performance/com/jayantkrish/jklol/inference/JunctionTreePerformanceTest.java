@@ -46,7 +46,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
       tfBuilder.setWeight(a, 1.0);
     }
     factor1 = tfBuilder.build();
-    f = f.addFactor(factor1);
+    f = f.addFactor("factor1", factor1);
 
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1", "Var2"));
     tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
@@ -56,7 +56,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
       tfBuilder.setWeight(a, 1.0);
     }
     factor2 = tfBuilder.build();
-    f = f.addFactor(factor2);
+    f = f.addFactor("factor2", factor2);
 
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var2"));
     tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
@@ -66,7 +66,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
       tfBuilder.setWeight(a, 1.0);
     }
     factor3 = tfBuilder.build();
-    f = f.addFactor(factor3);
+    f = f.addFactor("factor3", factor3);
 
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1"));
     tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());

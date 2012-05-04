@@ -22,9 +22,11 @@ public class ParametricFactorGraphBuilder {
 
   private DynamicVariableSet variables;
   private List<PlateFactor> constantFactors;
+  private List<String> constantFactorNames;
 
-  private List<ParametricFactor> logLinearFactors;
+  private List<ParametricFactor> parametricFactors;
   private List<VariablePattern> factorPatterns;
+  private List<String> parametricFactorNames;
 
   /**
    * Create an empty log-linear model builder
@@ -32,9 +34,11 @@ public class ParametricFactorGraphBuilder {
   public ParametricFactorGraphBuilder() {
     super();
     variables = DynamicVariableSet.EMPTY;
-    constantFactors = Lists.newArrayList();
-    logLinearFactors = Lists.newArrayList();
+    constantFactors = Lists.newArrayList(); 
+    constantFactorNames = Lists.newArrayList();
+    parametricFactors = Lists.newArrayList();
     factorPatterns = Lists.newArrayList();
+    parametricFactorNames = Lists.newArrayList();
   }
 
   /**
@@ -52,8 +56,8 @@ public class ParametricFactorGraphBuilder {
    * @return
    */
   public ParametricFactorGraph build() {
-    return new ParametricFactorGraph(new DynamicFactorGraph(variables, constantFactors),
-        logLinearFactors, factorPatterns);
+    return new ParametricFactorGraph(new DynamicFactorGraph(variables, constantFactors, constantFactorNames),
+        parametricFactors, factorPatterns, parametricFactorNames); 
   }
 
   public void addVariable(String name, Variable variable) {
@@ -73,8 +77,9 @@ public class ParametricFactorGraphBuilder {
    * 
    * @param factor
    */
-  public void addConstantFactor(Factor factor) {
+  public void addConstantFactor(String factorName, Factor factor) {
     constantFactors.add(ReplicatedFactor.fromFactor(factor));
+    constantFactorNames.add(factorName);
   }
 
   /**
@@ -83,8 +88,9 @@ public class ParametricFactorGraphBuilder {
    * 
    * @param factor
    */
-  public void addConstantFactor(PlateFactor factor) {
+  public void addConstantFactor(String factorName, PlateFactor factor) {
     constantFactors.add(factor);
+    constantFactorNames.add(factorName);
   }
 
   /**
@@ -92,9 +98,10 @@ public class ParametricFactorGraphBuilder {
    * 
    * @param factor
    */
-  public void addFactor(ParametricFactor factor, VariablePattern factorPattern) {
-    logLinearFactors.add(factor);
+  public void addFactor(String factorName, ParametricFactor factor, VariablePattern factorPattern) {
+    parametricFactors.add(factor);
     factorPatterns.add(factorPattern);
+    parametricFactorNames.add(factorName);
   }
 
   /**
@@ -103,8 +110,9 @@ public class ParametricFactorGraphBuilder {
    * 
    * @param factor
    */
-  public void addUnreplicatedFactor(ParametricFactor factor) {
-    logLinearFactors.add(factor);
+  public void addUnreplicatedFactor(String factorName, ParametricFactor factor) {
+    parametricFactors.add(factor);
     factorPatterns.add(new WrapperVariablePattern(factor.getVars()));
+    parametricFactorNames.add(factorName);
   }
 }

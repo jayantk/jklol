@@ -300,7 +300,7 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
         }
         builder.multiplyWeight(trueLabel.intersection(varNumList), Math.exp(-1.0));
 
-        augmentedGraph = augmentedGraph.addFactor(builder.build());
+        augmentedGraph = augmentedGraph.addFactor("hamming_cost_factor-" + varNum, builder.build());
       }
       return augmentedGraph;
     }

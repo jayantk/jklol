@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalSet;
@@ -42,14 +43,16 @@ public class ParametricFactorGraph {
 
   private List<ParametricFactor> parametricFactors;
   private List<VariablePattern> factorPatterns;
+  private List<String> factorNames;
 
   public ParametricFactorGraph(DynamicFactorGraph factorGraph,
-      List<ParametricFactor> parametricFactors,
-      List<VariablePattern> factorPatterns) {
+      List<ParametricFactor> parametricFactors, List<VariablePattern> factorPatterns,
+      List<String> factorNames) {
     Preconditions.checkArgument(parametricFactors.size() == factorPatterns.size());
     this.baseFactorGraph = factorGraph;
-    this.parametricFactors = Lists.newArrayList(parametricFactors);
-    this.factorPatterns = Lists.newArrayList(factorPatterns);
+    this.parametricFactors = ImmutableList.copyOf(parametricFactors);
+    this.factorPatterns = ImmutableList.copyOf(factorPatterns);
+    this.factorNames = ImmutableList.copyOf(factorNames);
   }
 
   /**
@@ -90,7 +93,7 @@ public class ParametricFactorGraph {
           parametricFactors.get(i).getFactorFromParameters(parameterList.get(i)),
           factorPatterns.get(i)));
     }
-    return baseFactorGraph.addPlateFactors(plateFactors);
+    return baseFactorGraph.addPlateFactors(plateFactors, factorNames);
   }
 
   /**
@@ -195,12 +198,14 @@ public class ParametricFactorGraph {
       builder.addVariableType(variable.toProto());
     }
     
+    builder.addAllFactorName(factorNames);
     return builder.build();
   }
   
   public static ParametricFactorGraph fromProto(ParametricFactorGraphProto proto) {
     Preconditions.checkArgument(proto.hasBaseFactorGraph());
     Preconditions.checkArgument(proto.getParametricFactorCount() == proto.getFactorPatternCount());
+    Preconditions.checkArgument(proto.getParametricFactorCount() == proto.getFactorNameCount());
     
     IndexedList<Variable> variableTypeIndex = IndexedList.create();
     for (VariableProto variableProto : proto.getVariableTypeList()) {
@@ -219,7 +224,8 @@ public class ParametricFactorGraph {
       variablePatterns.add(VariablePatterns.fromProto(patternProto, variableTypeIndex));
     }
     
-    return new ParametricFactorGraph(baseFactorGraph, parametricFactors, variablePatterns);
+    return new ParametricFactorGraph(baseFactorGraph, parametricFactors, variablePatterns, 
+        proto.getFactorNameList());
   }
 
   /**

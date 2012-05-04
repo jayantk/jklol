@@ -39,4 +39,5 @@ message DynamicFactorGraphProto {
 
   // The (replicated) factors in the graph.
   repeated PlateFactorProto factor = 3;
+  repeated string factor_name = 4;
 }

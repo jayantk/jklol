@@ -53,10 +53,10 @@ public class SubgradientSvmTrainerTest extends TestCase {
         .createIndicatorFactor(builder.getVariables().getVariablesByName("X0", "Y")));
      */
 		VariableNumMap factorVariables = builder.getVariables().getVariablesByName("X0", "Y");
-		builder.addUnreplicatedFactor(new IndicatorLogLinearFactor(factorVariables,
+		builder.addUnreplicatedFactor("f0", new IndicatorLogLinearFactor(factorVariables,
 		    TableFactor.unity(factorVariables)));
     
-    builder.addUnreplicatedFactor(DiscreteLogLinearFactor
+    builder.addUnreplicatedFactor("f1", DiscreteLogLinearFactor
         .createIndicatorFactor(builder.getVariables().getVariablesByName("X1", "Y")));
     model = builder.build();
 

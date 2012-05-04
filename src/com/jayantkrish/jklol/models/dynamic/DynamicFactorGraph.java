@@ -33,10 +33,13 @@ public class DynamicFactorGraph {
   // Plates represent graphical model structure which is replicated in a
   // data-dependent fashion.
   private final ImmutableList<PlateFactor> plateFactors;
+  private final ImmutableList<String> factorNames;
 
-  public DynamicFactorGraph(DynamicVariableSet variables, List<PlateFactor> plateFactors) {
+  public DynamicFactorGraph(DynamicVariableSet variables, List<PlateFactor> plateFactors,
+      List<String> factorNames) {
     this.variables = variables;
     this.plateFactors = ImmutableList.copyOf(plateFactors);
+    this.factorNames = ImmutableList.copyOf(factorNames);
   }
 
   public DynamicVariableSet getVariables() {
@@ -50,7 +53,7 @@ public class DynamicFactorGraph {
     for (Factor factor : factorGraph.getFactors()) {
       plateFactors.add(ReplicatedFactor.fromFactor(factor));
     }
-    return new DynamicFactorGraph(variables, plateFactors);
+    return new DynamicFactorGraph(variables, plateFactors, factorGraph.getFactorNames());
   }
 
   public FactorGraph conditional(DynamicAssignment assignment) {
@@ -64,18 +67,27 @@ public class DynamicFactorGraph {
 
     // Instantiate factors.
     List<Factor> factors = Lists.newArrayList();
-    for (PlateFactor plateFactor : plateFactors) {
-      factors.addAll(plateFactor.instantiateFactors(factorGraphVariables));
+    List<String> instantiatedNames = Lists.newArrayList();
+    for (int i = 0; i < plateFactors.size(); i++) {
+      PlateFactor plateFactor = plateFactors.get(i);
+      List<Factor> replications = plateFactor.instantiateFactors(factorGraphVariables);
+      factors.addAll(replications);
+      
+      for (int j = 0; j < replications.size(); j++) {
+        instantiatedNames.add(factorNames.get(i) + "-" + j);
+      }
     }
 
-    return new FactorGraph(factorGraphVariables, factors,
+    return new FactorGraph(factorGraphVariables, factors, instantiatedNames,
         VariableNumMap.emptyMap(), Assignment.EMPTY);
   }
 
-  public DynamicFactorGraph addPlateFactors(List<PlateFactor> factors) {
+  public DynamicFactorGraph addPlateFactors(List<PlateFactor> factors, List<String> newFactorNames) {
     List<PlateFactor> allFactors = Lists.newArrayList(plateFactors);
     allFactors.addAll(factors);
-    return new DynamicFactorGraph(getVariables(), allFactors);
+    List<String> allNames = Lists.newArrayList(factorNames);
+    allNames.addAll(newFactorNames);
+    return new DynamicFactorGraph(getVariables(), allFactors, allNames);
   }
   
   // Serialization methods.
@@ -100,6 +112,8 @@ public class DynamicFactorGraph {
     for (PlateFactor plateFactor : plateFactors) {
       builder.addFactor(plateFactor.toProto(variableTypeIndex));
     }
+    
+    builder.addAllFactorName(factorNames);
 
     return builder;
   }
@@ -122,6 +136,6 @@ public class DynamicFactorGraph {
       plateFactors.add(PlateFactors.fromProto(factorProto, variableTypeIndex));
     }
 
-    return new DynamicFactorGraph(variableSet, plateFactors);
+    return new DynamicFactorGraph(variableSet, plateFactors, proto.getFactorNameList());
   }
 }

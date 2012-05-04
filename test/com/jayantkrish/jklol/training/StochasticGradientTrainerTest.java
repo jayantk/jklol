@@ -45,11 +45,11 @@ public class StochasticGradientTrainerTest extends TestCase {
 		allVariables = builder.getVariables();
 
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
-		builder.addUnreplicatedFactor(DiscreteLogLinearFactor
+		builder.addUnreplicatedFactor("f0", DiscreteLogLinearFactor
 		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)));
 		
 		clique2Names = Arrays.asList("Var2", "Var3");
-		builder.addUnreplicatedFactor(DiscreteLogLinearFactor
+		builder.addUnreplicatedFactor("f1", DiscreteLogLinearFactor
 		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)));
 
 		logLinearModel = builder.build();

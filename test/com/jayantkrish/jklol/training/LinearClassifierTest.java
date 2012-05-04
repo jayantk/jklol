@@ -51,7 +51,7 @@ public class LinearClassifierTest extends TestCase {
     y = builder.getVariables().getVariablesByName("y");
     all = x.union(y);
 
-    builder.addFactor(new ConditionalLogLinearFactor(x, y, 4, SparseTensorBuilder.getFactory()),
+    builder.addFactor("classifier", new ConditionalLogLinearFactor(x, y, 4, SparseTensorBuilder.getFactory()),
         new WrapperVariablePattern(x.union(y)));
 
     linearClassifier = builder.build();

@@ -53,12 +53,12 @@ public class SequenceModelTest extends TestCase {
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
     ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, 4, DenseTensorBuilder.getFactory());
-    builder.addFactor(f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+    builder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
-    builder.addFactor(DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
+    builder.addFactor("adjacent", DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
         VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
 
     sequenceModel = builder.build();

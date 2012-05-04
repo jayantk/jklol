@@ -80,7 +80,6 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
    */
   protected abstract DiscreteObjectFactor constructJointDistribution(Factor domainFactor,
       Factor rangeFactor);
-
   
   protected abstract Factor replaceFactors(VariableRelabeling variableRelabeling,
       Factor newDomainFactor, Factor newRangeFactor);

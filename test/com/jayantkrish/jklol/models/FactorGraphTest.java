@@ -34,13 +34,13 @@ public class FactorGraphTest extends TestCase {
 		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var0", "Var2", "Var3")),
 		    SparseTensorBuilder.getFactory());
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0, 0}), 1.0);
-		f = f.addFactor(builder.build());
+		f = f.addFactor("f1", builder.build());
 
 		builder = new TableFactorBuilder(f.getVariables().getVariablesByName(Arrays.asList("Var2", "Var1")),
 		    SparseTensorBuilder.getFactory());
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0}), 1.0);
 		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {1, 1}), 1.0);
-		f = f.addFactor(builder.build());
+		f = f.addFactor("f2", builder.build());
 	}
 
 	public void testGetFactorsWithVariable() {

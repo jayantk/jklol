@@ -12,6 +12,7 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 
 public class CfgParserTest extends TestCase {
 
@@ -36,9 +37,9 @@ public class CfgParserTest extends TestCase {
 	  ruleVar = new VariableNumMap(Ints.asList(4), Arrays.asList("v4"), Arrays.asList(ruleTypes));
 	  
 	  VariableNumMap binaryFactorVars = VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleVar);
-	  TableFactorBuilder binaryBuilder = new TableFactorBuilder(binaryFactorVars);
+	  TableFactorBuilder binaryBuilder = new TableFactorBuilder(binaryFactorVars, SparseTensorBuilder.getFactory());
 	  VariableNumMap terminalFactorVars = VariableNumMap.unionAll(parentVar, termVar, ruleVar);
-	  TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalFactorVars);
+	  TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalFactorVars, SparseTensorBuilder.getFactory());
 	    
 		addTerminal(terminalBuilder, "N", "gretzky", "rule1", 0.25);
 		addTerminal(terminalBuilder, "N", "ice hockey", "rule1", 0.25);

@@ -48,7 +48,7 @@ public class InferenceTestCases {
     factor1.setWeightList(Arrays.asList(new String[] { "T", "T", "T" }), 1.0);
     factor1.setWeightList(Arrays.asList(new String[] { "T", "F", "F" }), 1.0);
     factor1.setWeightList(Arrays.asList(new String[] { "U", "F", "F" }), 2.0);
-    fg = fg.addFactor(factor1.build());
+    fg = fg.addFactor("factor1", factor1.build());
 
     TableFactorBuilder factor2 = new TableFactorBuilder(fg
         .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var2", "Var1" })),
@@ -57,7 +57,7 @@ public class InferenceTestCases {
     factor2.setWeightList(Arrays.asList(new String[] { "foo", "T" }), 3.0);
     factor2.setWeightList(Arrays.asList(new String[] { "bar", "T" }), 2.0);
     factor2.setWeightList(Arrays.asList(new String[] { "bar", "F" }), 1.0);
-    fg = fg.addFactor(factor2.build());
+    fg = fg.addFactor("factor2", factor2.build());
 
     TableFactorBuilder factor3 = new TableFactorBuilder(fg
         .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var3", "Var4" })),
@@ -65,7 +65,7 @@ public class InferenceTestCases {
     factor3.setWeightList(Arrays.asList(new String[] { "F", "U" }), 2.0);
     factor3.setWeightList(Arrays.asList(new String[] { "T", "U" }), 2.0);
     factor3.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
-    fg = fg.addFactor(factor3.build());
+    fg = fg.addFactor("factor3", factor3.build());
 
     fg = fg.addInferenceHint(new InferenceHint(new int[] {3, 1, 2}));
     return fg;
@@ -153,7 +153,7 @@ public class InferenceTestCases {
     tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "T" }), 4.0);
-    fg = fg.addFactor(tf.build());
+    fg = fg.addFactor("tf1", tf.build());
 
     tf = new TableFactorBuilder(fg
         .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var2" })),
@@ -162,14 +162,14 @@ public class InferenceTestCases {
     tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 3.0);
     tf.setWeightList(Arrays.asList(new String[] { "T", "T" }), 1.0);
-    fg = fg.addFactor(tf.build());
+    fg = fg.addFactor("tf2", tf.build());
 
     tf = new TableFactorBuilder(fg
         .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0" })),
         SparseTensorBuilder.getFactory());
     tf.setWeightList(Arrays.asList(new String[] { "F" }), 2.0);
     tf.setWeightList(Arrays.asList(new String[] { "T" }), 1.0);
-    fg = fg.addFactor(tf.build());
+    fg = fg.addFactor("tf3", tf.build());
 
     return fg;
   }

@@ -39,7 +39,8 @@ public class FactorGraph {
 
   private HashMultimap<Integer, Integer> variableFactorMap;
   private HashMultimap<Integer, Integer> factorVariableMap;
-  private IndexedList<Factor> factors;
+  private List<Factor> factors;
+  private IndexedList<String> factorNames;
 
   // Store any conditioning information that lead to this particular
   // distribution.
@@ -57,16 +58,21 @@ public class FactorGraph {
     variables = VariableNumMap.emptyMap();
     variableFactorMap = HashMultimap.create();
     factorVariableMap = HashMultimap.create();
-    factors = new IndexedList<Factor>();
+    factors = Lists.newArrayList();
+    factorNames = IndexedList.create();
     conditionedVariables = VariableNumMap.emptyMap();
     conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
 
-  public FactorGraph(VariableNumMap variables, List<Factor> factors,
+  public FactorGraph(VariableNumMap variables, List<Factor> factors, List<String> factorNames,
       VariableNumMap conditionedVariables, Assignment conditionedAssignment) {
     this.variables = variables;
-    this.factors = new IndexedList<Factor>(factors);
+    this.factors = Lists.newArrayList(factors);
+    this.factorNames = new IndexedList<String>(factorNames);
+    Preconditions.checkArgument(this.factors.size() == this.factorNames.size(), 
+        "%s names for %s", this.factorNames, this.factors);
+
     // Initialize variable -> factor mapping
     variableFactorMap = HashMultimap.create();
     factorVariableMap = HashMultimap.create();
@@ -93,7 +99,8 @@ public class FactorGraph {
     this.variables = factorGraph.variables;
     this.variableFactorMap = HashMultimap.create(factorGraph.variableFactorMap);
     this.factorVariableMap = HashMultimap.create(factorGraph.factorVariableMap);
-    this.factors = new IndexedList<Factor>(factorGraph.factors);
+    this.factors = Lists.newArrayList(factorGraph.factors);
+    this.factorNames = new IndexedList<String>(factorGraph.factorNames);
     this.conditionedVariables = factorGraph.conditionedVariables;
     this.conditionedValues = factorGraph.conditionedValues;
     this.inferenceHint = factorGraph.inferenceHint;
@@ -112,7 +119,13 @@ public class FactorGraph {
       VariableNumMap factorVars = factors.get(i).getVars();
       allVars = allVars.union(factorVars);
     }
-    return new FactorGraph(allVars, factors, VariableNumMap.emptyMap(), Assignment.EMPTY);
+
+    List<String> factorNames = Lists.newArrayList();
+    for (int i = 0; i < factors.size(); i++) {
+      factorNames.add("factor-" + i);
+    }
+    return new FactorGraph(allVars, factors, factorNames, VariableNumMap.emptyMap(),
+        Assignment.EMPTY);
   }
 
   /**
@@ -148,7 +161,17 @@ public class FactorGraph {
    * Get all factors.
    */
   public List<Factor> getFactors() {
-    return factors.items();
+    return factors;
+  }
+
+  /**
+   * Gets the names of the factors in {@code this}. The ith returned entry is
+   * the name of the ith factor returned by {@link #getFactors()}.
+   * 
+   * @return
+   */
+  public List<String> getFactorNames() {
+    return factorNames.items();
   }
 
   /**
@@ -326,12 +349,13 @@ public class FactorGraph {
    * additional factor. {@code factor} must be defined over variables which are
    * already in {@code this} graph.
    */
-  public FactorGraph addFactor(Factor factor) {
+  public FactorGraph addFactor(String factorName, Factor factor) {
     Preconditions.checkArgument(getVariables().containsAll(factor.getVars()));
 
     FactorGraph factorGraph = new FactorGraph(this);
     int factorNum = factorGraph.factors.size();
     factorGraph.factors.add(factor);
+    factorGraph.factorNames.add(factorName);
 
     for (Integer i : factor.getVars().getVariableNums()) {
       factorGraph.variableFactorMap.put(i, factorNum);
@@ -375,20 +399,25 @@ public class FactorGraph {
       // multiplied together. All other factors can be immediately copied into
       // the next factor graph.
       List<Factor> factorsToMultiply = Lists.newArrayList();
-      for (Factor factor : currentFactorGraph.getFactors()) {
+      String mulName = null;
+      List<Factor> currentFactors = currentFactorGraph.getFactors(); 
+      List<String> currentFactorNames = currentFactorGraph.getFactorNames();
+      for (int i = 0; i < currentFactors.size(); i++) {
+        Factor factor = currentFactors.get(i);
         if (factor.getVars().contains(eliminatedVariableIndex)) {
           factorsToMultiply.add(factor);
+          mulName = currentFactorNames.get(i);
         } else {
           // No variable in factor is being eliminated, so we don't have to
           // modify it.
-          nextFactorGraph = nextFactorGraph.addFactor(factor);
+          nextFactorGraph = nextFactorGraph.addFactor(currentFactorNames.get(i), factor);
         }
       }
 
       if (factorsToMultiply.size() > 0) {
         // If the variable is present, eliminate it!
         Factor productFactor = Factors.product(factorsToMultiply);
-        nextFactorGraph = nextFactorGraph.addFactor(
+        nextFactorGraph = nextFactorGraph.addFactor(mulName,
             productFactor.marginalize(eliminatedVariableIndex));
       }
 
@@ -429,7 +458,8 @@ public class FactorGraph {
       newFactors.add(factor.conditional(assignment));
     }
 
-    return new FactorGraph(newVariables, newFactors, newConditionedVariables, newConditionedValues);
+    return new FactorGraph(newVariables, newFactors, factorNames.items(), newConditionedVariables,
+        newConditionedValues);
   }
 
   /**
@@ -454,24 +484,26 @@ public class FactorGraph {
     Preconditions.checkState(conditionedValues.size() == 0);
     Preconditions.checkState(conditionedVariables.size() == 0);
     // Create a global set of variable types, so that each
-    // variable type is only serialized once. 
+    // variable type is only serialized once.
     IndexedList<Variable> variableIndex = IndexedList.create();
-    
+
     FactorGraphProto.Builder builder = FactorGraphProto.newBuilder();
     builder.setVariables(variables.toProto(variableIndex));
-    
+
     for (Factor factor : factors) {
       builder.addFactor(factor.toProto(variableIndex));
     }
-    
+
+    builder.addAllFactorName(factorNames.items());
+
     // Serialize the variable type registry.
     for (Variable variable : variableIndex) {
       builder.addVariableType(variable.toProto());
     }
-    
+
     return builder.build();
   }
-  
+
   public static FactorGraph fromProto(FactorGraphProto factorGraphProto) {
     Preconditions.checkArgument(factorGraphProto.hasVariables());
     // Reconstruct the global variable type registry.
@@ -479,16 +511,17 @@ public class FactorGraph {
     for (VariableProto variableProto : factorGraphProto.getVariableTypeList()) {
       variableTypeIndex.add(Variables.fromProto(variableProto));
     }
-    
+
     VariableNumMap variables = VariableNumMap.fromProto(factorGraphProto.getVariables(),
         variableTypeIndex);
- 
+
     // Deserialize the factors in the factor graph.
     List<Factor> factors = Lists.newArrayList();
     for (FactorProto factorProto : factorGraphProto.getFactorList()) {
       factors.add(Factors.fromProto(factorProto, variableTypeIndex));
     }
-    
-    return new FactorGraph(variables, factors, VariableNumMap.emptyMap(), Assignment.EMPTY);
+
+    return new FactorGraph(variables, factors, factorGraphProto.getFactorNameList(),
+        VariableNumMap.emptyMap(), Assignment.EMPTY);
   }
 }

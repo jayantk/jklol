@@ -29,6 +29,8 @@ message DiscreteLogLinearFactorProto {
   optional VariableNumMapProto feature_variables = 1;
   optional FactorProto feature_values = 2;
   optional FactorProto initial_weights = 3;
+
+  optional VariableNumMapProto conditional_variables = 4;
 }
 
 message ConditionalLogLinearFactorProto {

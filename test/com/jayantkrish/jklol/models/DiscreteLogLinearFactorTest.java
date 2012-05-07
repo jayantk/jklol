@@ -23,7 +23,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   VariableNumMap vars;
   SufficientStatistics parameters;
   
-  DiscreteLogLinearFactor g;
+  DiscreteLogLinearFactor g, normed;
   
   public void setUp() {
     DiscreteVariable v = new DiscreteVariable("Two values",
@@ -32,8 +32,10 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     vars = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList("v2", "v3"), Arrays.asList(v, v));
     TableFactorBuilder initialWeights = TableFactorBuilder.ones(vars);
     initialWeights.setWeight(0.0, "F", "F");
-    f = DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights);
-    //f = new IndicatorLogLinearFactor(vars, initialWeights.build());
+    f = DiscreteLogLinearFactor.createIndicatorFactor(vars, VariableNumMap.emptyMap(), initialWeights);
+    // f = new IndicatorLogLinearFactor(vars, initialWeights.build());
+    normed = DiscreteLogLinearFactor.createIndicatorFactor(vars, vars.getVariablesByName("v3"), 
+        initialWeights);
     
     parameters = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "F"),
@@ -63,6 +65,14 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     TableFactor factor = (TableFactor) f.getFactorFromParameters(parameters);
     assertEquals(Math.E, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T")), .00001);
     assertEquals(Math.E, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "F")), .00001);
+    assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
+    assertEquals(0.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F")), .00001);
+  }
+  
+  public void testGetFactorFromParametersNormed() {
+    TableFactor factor = (TableFactor) normed.getFactorFromParameters(parameters);
+    assertEquals(0.5, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T")), .00001);
+    assertEquals(0.5, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "F")), .00001);
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
     assertEquals(0.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F")), .00001);
   }

@@ -358,24 +358,49 @@ public class DynamicVariableSet {
 
   @Override
   public int hashCode() {
-    return fixedVariables.hashCode() * 7238123 + plateNames.hashCode() * 783 + plates.hashCode();
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + fixedVariableMaxInd;
+    result = prime * result + ((fixedVariables == null) ? 0 : fixedVariables.hashCode());
+    result = prime * result + Arrays.hashCode(maximumReplications);
+    result = prime * result + ((plateNames == null) ? 0 : plateNames.hashCode());
+    result = prime * result + ((plates == null) ? 0 : plates.hashCode());
+    return result;
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (other == this) {
+  public boolean equals(Object obj) {
+    if (this == obj)
       return true;
-    } else if (other instanceof DynamicVariableSet) {
-      DynamicVariableSet otherVariables = (DynamicVariableSet) other;
-      return otherVariables.fixedVariables.equals(this.fixedVariables) &&
-          otherVariables.plateNames.equals(this.plateNames) &&
-          otherVariables.plates.equals(this.plates);
-    }
-    return false;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    DynamicVariableSet other = (DynamicVariableSet) obj;
+    if (fixedVariableMaxInd != other.fixedVariableMaxInd)
+      return false;
+    if (fixedVariables == null) {
+      if (other.fixedVariables != null)
+        return false;
+    } else if (!fixedVariables.equals(other.fixedVariables))
+      return false;
+    if (!Arrays.equals(maximumReplications, other.maximumReplications))
+      return false;
+    if (plateNames == null) {
+      if (other.plateNames != null)
+        return false;
+    } else if (!plateNames.equals(other.plateNames))
+      return false;
+    if (plates == null) {
+      if (other.plates != null)
+        return false;
+    } else if (!plates.equals(other.plates))
+      return false;
+    return true;
   }
-
+  
   @Override
   public String toString() {
-    return "(" + fixedVariables.toString() + " plates: " + plateNames.toString() + ")";
+    return "(" + fixedVariables.toString() + " plates: " + plateNames.toString() + " " + plates.toString() + ")";
   }
 }

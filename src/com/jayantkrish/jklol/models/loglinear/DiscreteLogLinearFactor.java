@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -238,11 +237,11 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   public static DiscreteFactor createIndicatorFeatureTensor(VariableNumMap vars, int featureVarNum,
       TableFactorBuilder initialWeights) {
     // The "name" of an indicator feature is the assignment that it indicates.
-    List<Assignment> features = Lists.newArrayList();
-    if (initialWeights != null) {
-      Iterators.addAll(features, initialWeights.assignmentIterator());
-    } else {
-      Iterators.addAll(features, new AllAssignmentIterator(vars));
+    List<List<Object>> features = Lists.newArrayList();
+    Iterator<Assignment> assignmentIterator = initialWeights != null ? 
+        initialWeights.assignmentIterator() : new AllAssignmentIterator(vars);
+    while (assignmentIterator.hasNext()) {
+      features.add(assignmentIterator.next().getValues());
     }
     DiscreteVariable featureVariable = new DiscreteVariable("indicator features", features);
     VariableNumMap featureVarMap = VariableNumMap.singleton(featureVarNum, "features-" + featureVarNum, 
@@ -250,9 +249,9 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
     TableFactorBuilder featureValueBuilder = new TableFactorBuilder(vars.union(featureVarMap),
         SparseTensorBuilder.getFactory());
-    for (Assignment featureAssignment : features) {
-      Assignment newAssignment = featureAssignment.union(featureVarMap
-          .outcomeArrayToAssignment(featureAssignment));
+    for (List<Object> featureValues : features) {
+      Assignment newAssignment = vars.outcomeToAssignment(featureValues)
+          .union(featureVarMap.outcomeArrayToAssignment(featureValues));
       featureValueBuilder.setWeight(newAssignment, 1.0);
     }
     return featureValueBuilder.build();

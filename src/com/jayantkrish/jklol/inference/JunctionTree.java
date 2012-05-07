@@ -1,9 +1,8 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -12,12 +11,9 @@ import java.util.Set;
 import java.util.SortedMap;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -26,9 +22,17 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Implements the junction tree algorithm for computing exact marginal
- * distributions. Currently assumes that the provided factor graph already has a
- * tree structure, and will explode if this is not true.
+ * Implementation of the junction tree algorithm for computing exact marginal
+ * distributions. This class supports both marginals and max-marginals. This
+ * algorithm is suitable for use in graphical models with low tree-width, for
+ * example, tree structured graphs with small factors.
+ * <p>
+ * This implementation assumes that input factor graphs are "easily simplified"
+ * into a junction tree. "Easily simplified" factor graphs are those where
+ * variable elimination can be performed without introducing additional cliques
+ * to the original model. Essentially all graphical models where inference is
+ * tractable should fall into this class. If an input factor graph cannot be
+ * simplified, the marginal computation will throw an exception.
  */
 public class JunctionTree implements MarginalCalculator {
 
@@ -76,7 +80,7 @@ public class JunctionTree implements MarginalCalculator {
         int factorNum = cliqueTree.getFactorEliminationOrder().get(i);
         Map<SeparatorSet, Factor> inboundMessages = cliqueTree.getInboundMessages(factorNum);
         Set<SeparatorSet> possibleOutboundMessages = cliqueTree.getFactor(factorNum).getComputableOutboundMessages(inboundMessages);
-            
+
         // Pass any messages which we haven't already computed.
         Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
         for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
@@ -181,7 +185,7 @@ public class JunctionTree implements MarginalCalculator {
           adjacentFactorNum, factorNum);
       factorsToCombine.add(message);
     }
-    
+
     Factor newMarginal = cliqueTree.getMarginal(factorNum).product(factorsToCombine);
     cliqueTree.setMarginal(factorNum, newMarginal);
     cliqueTree.addFactorsToMarginal(factorNum, factorNumsToCombine);
@@ -203,7 +207,7 @@ public class JunctionTree implements MarginalCalculator {
       partitionFunction *= rootFactor.marginalize(rootFactor.getVars().getVariableNums())
           .getUnnormalizedProbability(Assignment.EMPTY);
     }
-    
+
     if (partitionFunction == 0.0) {
       throw new ZeroProbabilityError();
     }
@@ -251,139 +255,122 @@ public class JunctionTree implements MarginalCalculator {
     private List<Map<Integer, Factor>> messages;
 
     // As message passing progresses, we will multiply together the factors
-    // necessary to compute marginals on each node. marginals contains the 
-    // current factor that is approaching the marginal, and factorsInMarginals 
+    // necessary to compute marginals on each node. marginals contains the
+    // current factor that is approaching the marginal, and factorsInMarginals
     // tracks the factors whose messages have been combined into marginals.
     private List<Factor> marginals;
     private List<Set<Integer>> factorsInMarginals;
 
-    private HashMultimap<Integer, Integer> varCliqueFactorMap;
     private List<Integer> cliqueEliminationOrder;
 
     public CliqueTree(FactorGraph factorGraph) {
-      cliqueFactors = new ArrayList<Factor>();
-
+      cliqueFactors = new ArrayList<Factor>(factorGraph.getFactors());
       factorEdges = HashMultimap.create();
       separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
       messages = new ArrayList<Map<Integer, Factor>>();
 
-      List<Factor> factorGraphFactors = new ArrayList<Factor>(factorGraph.getFactors());
-
-      Map<Factor, Integer> initialEliminationOrder = Maps.newHashMap();
-      if (factorGraph.getInferenceHint() != null) {
-        for (int i = 0; i < factorGraphFactors.size(); i++) {
-          initialEliminationOrder.put(factorGraphFactors.get(i),
-              factorGraph.getInferenceHint().getFactorEliminationOrder()[i]);
-        }
-      } else {
-        for (int i = 0; i < factorGraphFactors.size(); i++) {
-          // TODO: Use a heuristic to select a good order.
-          initialEliminationOrder.put(factorGraphFactors.get(i), i);
-        }
-      }
-
       // Store factors which contain each variable so that we can
-      // eliminate factors that are subsets of others.
-      Collections.sort(factorGraphFactors, new Comparator<Factor>() {
-        public int compare(Factor f1, Factor f2) {
-          return f2.getVars().size() - f1.getVars().size();
-        }
-      });
-
-      Map<Factor, Integer> factorCliqueMap = Maps.newHashMap();
-      Multimap<Integer, Factor> toMerge = HashMultimap.create();
+      // perform variable elimination.
       HashMultimap<Integer, Factor> varFactorMap = HashMultimap.create();
-      varCliqueFactorMap = HashMultimap.create();
-      BiMap<Integer, Integer> cliquePriorityMap = HashBiMap.create();
-      for (Factor f : factorGraphFactors) {
-        Set<Factor> mergeableFactors = new HashSet<Factor>(factorGraphFactors);
+      Map<Factor, Integer> factorIndexMap = Maps.newHashMap();
+      int index = 0;
+      for (Factor f : cliqueFactors) {
         for (Integer varNum : f.getVars().getVariableNums()) {
-          mergeableFactors.retainAll(varFactorMap.get(varNum));
           varFactorMap.put(varNum, f);
         }
-        // We can only merge this factor with factors that have already been
-        // processed.
-        mergeableFactors.retainAll(factorCliqueMap.keySet());
+        factorIndexMap.put(f, index);
+        index++;
+      }
 
-        if (mergeableFactors.size() > 0) {
-          // Choose the sparsest factor to merge this factor into.
-          Iterator<Factor> mergeableIterator = mergeableFactors.iterator();
-          Factor superset = mergeableIterator.next();
-          while (mergeableIterator.hasNext()) {
-            Factor next = mergeableIterator.next();
-            if (next.size() < superset.size()) {
-              superset = next;
+      // Try eliminating the factors with the most variables first.
+      /*
+       * Collections.sort(cliqueFactors, new Comparator<Factor>() { public int
+       * compare(Factor f1, Factor f2) { return f1.getVars().size() -
+       * f2.getVars().size(); } });
+       */
+
+      Set<Factor> remainingFactors = Sets.newHashSet(cliqueFactors);
+      while (remainingFactors.size() > 1) {
+        // Each iteration eliminates one factor from the factor graph.
+        Factor justEliminated = null;
+
+        for (Factor f : remainingFactors) {
+          Set<Integer> variablesToEliminate = Sets.newHashSet();
+          Collection<Integer> factorVariables = f.getVars().getVariableNums();
+          for (Integer variableNum : factorVariables) {
+            if (varFactorMap.get(variableNum).size() == 1) {
+              // The factor f is the only factor containing variableNum,
+              // so it can be eliminated.
+              variablesToEliminate.add(variableNum);
             }
           }
-          int cliqueNum = factorCliqueMap.get(superset);
 
-          // System.out.println("Merging " + f.getVars() + " into " +
-          // cliqueFactors.get(cliqueNum).getVars());
+          Set<Integer> variablesToRetain = Sets.newHashSet(factorVariables);
+          variablesToRetain.removeAll(variablesToEliminate);
 
-          toMerge.put(cliqueNum, f);
-          cliquePriorityMap.put(cliqueNum,
-              Math.max(cliquePriorityMap.get(cliqueNum), initialEliminationOrder.get(f)));
-          factorCliqueMap.put(f, cliqueNum);
-        } else {
-          int chosenNum = cliqueFactors.size();
-          factorCliqueMap.put(f, chosenNum);
-          cliqueFactors.add(f);
-          cliquePriorityMap.put(chosenNum, initialEliminationOrder.get(f));
-          messages.add(new HashMap<Integer, Factor>());
+          // Merge f with a factor containing all of the variables
+          // which are not being eliminated.
+          Set<Factor> mergeableFactors = new HashSet<Factor>(remainingFactors);
+          mergeableFactors.remove(f);
+          for (Integer variableNum : variablesToRetain) {
+            mergeableFactors.retainAll(varFactorMap.get(variableNum));
+          }
 
-          for (Integer varNum : f.getVars().getVariableNums()) {
-            varCliqueFactorMap.put(varNum, chosenNum);
+          if (mergeableFactors.size() > 0) {
+            // Choose the sparsest factor to merge this factor into.
+            Iterator<Factor> mergeableIterator = mergeableFactors.iterator();
+            Factor superset = mergeableIterator.next();
+            while (mergeableIterator.hasNext()) {
+              Factor next = mergeableIterator.next();
+              if (next.size() < superset.size()) {
+                superset = next;
+              }
+            }
+
+            // Add an undirected edge in the clique tree from f to superset.
+            int curFactorIndex = factorIndexMap.get(f);
+            int destFactorIndex = factorIndexMap.get(superset);
+            factorEdges.put(curFactorIndex, destFactorIndex);
+            factorEdges.put(destFactorIndex, curFactorIndex);
+
+            justEliminated = f;
+            break;
           }
         }
-      }
 
-      // Merge any factors which are queued.
-      for (Integer cliqueNum : toMerge.keySet()) {
-        cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(
-            Lists.newArrayList(toMerge.get(cliqueNum))));
-      }
-
-      // At this point, we have a minimal set of factors, but the factors may not be
-      // organized into a tree. Construct a junction tree by performing variable
-      // elimination.
-      CountAccumulator<Integer> varNumCounts = CountAccumulator.create();
-      for (int i = 0; i < cliqueFactors.size(); i++) {
-        for (Integer varNum : c.getVars().getVariableNums()) {
-          varNumCounts.increment(varNum, 1.0);
-        }
-      }
-      
-      for (Integer varNum : varNumOrder) {
-        Set<Integer> cliquesWithVar = varCliqueFactorMap.get(varNum);
-        for (Integer cliqueNum : cliquesWithVar) {
-
-        }
-      }
-      
-
-      for (int i = 0; i < cliqueFactors.size(); i++) {
-        Factor c = cliqueFactors.get(i);
-        for (Integer varNum : c.getVars().getVariableNums()) {
-          factorEdges.putAll(i, varCliqueFactorMap.get(varNum));
-          factorEdges.remove(i, i);
-        }
+        Preconditions.checkState(justEliminated != null,
+            "Could not convert %s into a clique tree", factorGraph);
+        remainingFactors.remove(justEliminated);
       }
 
       for (int i = 0; i < cliqueFactors.size(); i++) {
         separatorSets.add(Maps.<Integer, SeparatorSet> newHashMap());
+        messages.add(Maps.<Integer, Factor> newHashMap());
+
         for (Integer adjacentFactor : factorEdges.get(i)) {
           separatorSets.get(i).put(adjacentFactor, new SeparatorSet(i, adjacentFactor,
               cliqueFactors.get(i).getVars().intersection(cliqueFactors.get(adjacentFactor).getVars())));
         }
       }
 
-      // Find the best elimination order.
-      SortedMap<Integer, Integer> bestEliminationOrder = Maps.newTreeMap();
-      bestEliminationOrder.putAll(cliquePriorityMap.inverse());
+      // Select an elimination order.
+      SortedMap<Integer, Factor> bestEliminationOrder = Maps.newTreeMap();
+      if (factorGraph.getInferenceHint() != null) {
+        for (int i = 0; i < cliqueFactors.size(); i++) {
+          bestEliminationOrder.put(factorGraph.getInferenceHint().getFactorEliminationOrder()[i],
+              cliqueFactors.get(i));
+        }
+      } else {
+        for (int i = 0; i < cliqueFactors.size(); i++) {
+          // TODO: Use a heuristic to select a good order.
+          bestEliminationOrder.put(i, cliqueFactors.get(i));
+        }
+      }
+
       cliqueEliminationOrder = new ArrayList<Integer>();
       // System.out.println("Elimination Order:");
       for (Integer position : bestEliminationOrder.keySet()) {
-        cliqueEliminationOrder.add(bestEliminationOrder.get(position));
+        cliqueEliminationOrder.add(factorIndexMap.get(bestEliminationOrder.get(position)));
         // System.out.println("  " + cliqueEliminationOrder.size() + " " +
         // cliqueFactors.get(bestEliminationOrder.get(position)).getVars());
       }

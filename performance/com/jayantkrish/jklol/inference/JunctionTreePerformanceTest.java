@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -164,9 +165,13 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
 
   @PerformanceTest
   public void testConditionalMarginals() {
-    FactorGraph c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2}),
-        Arrays.asList(new Object[] {0,0})));
-    t.computeMarginals(c);
+    try {
+      FactorGraph c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0}),
+          Arrays.asList(new Object[] {0})));
+      t.computeMarginals(c);
+    } catch (ZeroProbabilityError e) {
+      // This exception should be thrown.
+    }
   }
   
   @PerformanceTest(3)

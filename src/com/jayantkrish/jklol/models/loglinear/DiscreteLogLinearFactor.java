@@ -245,7 +245,8 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
       Iterators.addAll(features, new AllAssignmentIterator(vars));
     }
     DiscreteVariable featureVariable = new DiscreteVariable("indicator features", features);
-    VariableNumMap featureVarMap = VariableNumMap.singleton(featureVarNum, "features", featureVariable);
+    VariableNumMap featureVarMap = VariableNumMap.singleton(featureVarNum, "features-" + featureVarNum, 
+        featureVariable);
 
     TableFactorBuilder featureValueBuilder = new TableFactorBuilder(vars.union(featureVarMap),
         SparseTensorBuilder.getFactory());

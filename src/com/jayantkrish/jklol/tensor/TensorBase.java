@@ -127,11 +127,18 @@ public interface TensorBase {
 
   /**
    * Gets the Frobenius norm of this tensor, which is the square root of the sum
-   * of each value squares of all values.
+   * of the squares of all values.
    * 
    * @return
    */
   double getL2Norm();
+  
+  /**
+   * Gets the trace, or sum of all entries.
+   * 
+   * @return
+   */
+  double getTrace();
 
   /**
    * The key of a tensor and its corresponding value. For efficiency reasons,

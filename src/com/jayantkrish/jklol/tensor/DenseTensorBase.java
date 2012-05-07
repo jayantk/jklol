@@ -111,6 +111,15 @@ public class DenseTensorBase extends AbstractTensorBase {
     }
     return Math.sqrt(sumSquares);
   }
+  
+  @Override
+  public double getTrace() {
+    double sum = 0.0;
+    for (int i = 0; i < values.length; i++) {
+      sum += values[i];
+    }
+    return sum;
+  }
 
   protected int[] getDimensionMapping(int[] otherDimensionNums) {
     int[] mapping = new int[otherDimensionNums.length];

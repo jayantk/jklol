@@ -70,7 +70,7 @@ public class FactorGraph {
     this.variables = variables;
     this.factors = Lists.newArrayList(factors);
     this.factorNames = new IndexedList<String>(factorNames);
-    Preconditions.checkArgument(this.factors.size() == this.factorNames.size(), 
+    Preconditions.checkArgument(this.factors.size() == this.factorNames.size(),
         "%s names for %s", this.factorNames, this.factors);
 
     // Initialize variable -> factor mapping
@@ -175,7 +175,9 @@ public class FactorGraph {
   }
 
   /**
-   * Get the variables that this factor graph is defined over.
+   * Get the variables that this factor graph is defined over. This method only
+   * returns variables with probability distributions over them, i.e., variables
+   * that have not been conditioned on.
    * 
    * @return
    */
@@ -400,7 +402,7 @@ public class FactorGraph {
       // the next factor graph.
       List<Factor> factorsToMultiply = Lists.newArrayList();
       String mulName = null;
-      List<Factor> currentFactors = currentFactorGraph.getFactors(); 
+      List<Factor> currentFactors = currentFactorGraph.getFactors();
       List<String> currentFactorNames = currentFactorGraph.getFactorNames();
       for (int i = 0; i < currentFactors.size(); i++) {
         Factor factor = currentFactors.get(i);

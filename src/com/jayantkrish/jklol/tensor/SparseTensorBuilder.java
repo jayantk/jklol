@@ -160,6 +160,15 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     }
     return Math.sqrt(sumSquared);
   }
+  
+  @Override
+  public double getTrace() {
+    double sum = 0.0;
+    for (double value : outcomes.values()) {
+      sum += value;
+    }
+    return sum;
+  }
 
   // /////////////////////////////////////////////////////////////
   // TensorBuilder methods
@@ -191,8 +200,8 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void increment(double amount) {
     // Invoking this method on a sparse tensor is a bad idea, because it
     // destroys the sparsity. Use a dense tensor instead.
-    for (int i = 0; i < getMaxKeyNum(); i++) {
-      incrementEntryByKeyInt(amount, i);
+    for (long keyNum = 0; keyNum < getMaxKeyNum(); keyNum++) {
+      incrementEntryByKeyNum(amount, keyNum);
     }
   }
 
@@ -213,7 +222,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     put(key, getByDimKey(key) + amount);
   }
 
-  public void incrementEntryByKeyInt(double amount, long keyNum) {
+  public void incrementEntryByKeyNum(double amount, long keyNum) {
     putByKeyNum(keyNum, get(keyNum) + amount);
   }
 
@@ -241,6 +250,13 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   @Override
   public void multiplyEntry(double amount, int... key) {
     put(key, getByDimKey(key) * amount);
+  }
+  
+  @Override
+  public void exp() {
+    for (long keyNum = 0; keyNum < getMaxKeyNum(); keyNum++) {
+      putByKeyNum(keyNum, Math.exp(get(keyNum)));
+    }
   }
 
   /**

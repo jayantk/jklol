@@ -76,7 +76,8 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     }
 
     if (relevantFactors.size() == 0) {
-      throw new RuntimeException("Graph does not contain a factor with all variables: " + varNums);
+      // This case requires a more advanced algorithm.
+      return computeMarginalFromMultipleFactors(varNums);
     }
 
     // Pick an arbitrary factor to use for the marginal
@@ -86,6 +87,10 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());
     allVarNums.removeAll(varNums);
     return marginal.marginalize(allVarNums);
+  }
+  
+  private Factor computeMarginalFromMultipleFactors(Collection<Integer> varNums) {
+    throw new RuntimeException("Graph does not contain a factor with all variables: " + varNums);
   }
 
   @Override

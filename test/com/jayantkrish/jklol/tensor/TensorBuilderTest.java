@@ -188,6 +188,14 @@ public abstract class TensorBuilderTest extends TestCase {
     }
   }
   
+  public void testExp() {
+    builder.exp();
+    assertEquals(1.0, builder.getByDimKey(KEY0), 0.0001);
+    assertEquals(Math.exp(1.0), builder.getByDimKey(KEY1), 0.0001);
+    assertEquals(Math.exp(2.0), builder.getByDimKey(KEY2), 0.0001);
+    assertEquals(1.0, builder.getByDimKey(KEY3), 0.0001);    
+  }
+  
   public void testBuild() {
     Tensor tensor = builder.build();
     assertEquals(0.0, tensor.getByDimKey(KEY0));
@@ -197,5 +205,9 @@ public abstract class TensorBuilderTest extends TestCase {
   
   public void testGetL2Norm() {
     assertEquals(Math.sqrt(5.0), builder.getL2Norm(), 0.0001); 
+  }
+  
+  public void testGetTrace() {
+    assertEquals(3.0, builder.getTrace(), 0.0001);
   }
 }

@@ -1,13 +1,16 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.Arrays;
+import java.util.Iterator;
 
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.InferenceHint;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -180,5 +183,114 @@ public class InferenceTestCases {
     testCase.addTest(32.0 / 60.0, new String[] { "Var0" }, "F");
 
     return testCase;
+  }
+  
+  public static FactorGraph productFactorGraph() {
+    FactorGraph fg = new FactorGraph();
+
+    fg = fg.addVariable("Var0", trueFalseVar);
+    fg = fg.addVariable("Var1", trueFalseVar);
+    fg = fg.addVariable("Var2", trueFalseVar);
+
+    TableFactorBuilder tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0" })),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "F" }), 2.0);
+    tf.setWeightList(Arrays.asList(new String[] { "T" }), 1.0);
+    fg = fg.addFactor("tf0", tf.build());
+
+    tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var1" })),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "F" }), 3.0);
+    tf.setWeightList(Arrays.asList(new String[] { "T" }), 2.0);
+    fg = fg.addFactor("tf1", tf.build());
+    
+    tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var2" })),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "F" }), 1.0);
+    tf.setWeightList(Arrays.asList(new String[] { "T" }), 1.0);
+    fg = fg.addFactor("tf2", tf.build());
+    
+    return fg;
+  }
+  
+  public static MarginalTestCase testProductFactorGraphUnconditional() {
+    MarginalTestCase testCase = new MarginalTestCase(productFactorGraph(), Assignment.EMPTY);
+    testCase.addTest(1.0 / 3.0, new String[] { "Var0" }, "T");
+    testCase.addTest(2.0 / 3.0, new String[] { "Var0" }, "F");
+    
+    testCase.addTest(2.0 / 5.0, new String[] { "Var1" }, "T");
+    testCase.addTest(3.0 / 5.0, new String[] { "Var1" }, "F");
+    
+    testCase.addTest(1.0 / 2.0, new String[] { "Var2" }, "T");
+    testCase.addTest(1.0 / 2.0, new String[] { "Var2" }, "F");
+
+    return testCase;
+  }
+
+  public static FactorGraph softConstraintFactorGraph() {
+    FactorGraph fg = new FactorGraph();
+
+    fg = fg.addVariable("Var0", trueFalseVar);
+    fg = fg.addVariable("Var1", trueFalseVar);
+    fg = fg.addVariable("Var2", trueFalseVar);
+
+    TableFactorBuilder tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0" })),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "T" }), 9.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F" }), 1.0);
+    fg = fg.addFactor("tf0", tf.build());
+
+    tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var1" })),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "T" }), 9.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F" }), 1.0);
+    fg = fg.addFactor("tf1", tf.build());
+    
+    tf = softAndFactor(fg.getVariables().getVariablesByName("Var0", "Var1"),
+        fg.getVariables().getVariablesByName("Var2"), -2.0);
+    fg = fg.addFactor("tf2", tf.build());    
+    return fg;
+  }
+  
+  public static MarginalTestCase testSoftConstraintFactorGraph() {
+    MarginalTestCase testCase = new MarginalTestCase(softConstraintFactorGraph(), Assignment.EMPTY);
+    testCase.addTest(1.0 / 2.0, new String[] { "Var0" }, "T");
+    testCase.addTest(1.0 / 2.0, new String[] { "Var0" }, "F");
+    
+    testCase.addTest(1.0 / 4.0, new String[] { "Var1" }, "T");
+    testCase.addTest(3.0 / 4.0, new String[] { "Var1" }, "F");
+    
+    testCase.addTest(1.0 / 8.0, new String[] { "Var2" }, "T");
+    testCase.addTest(7.0 / 8.0, new String[] { "Var2" }, "F");
+
+    return testCase;
+  }
+  
+  private static TableFactorBuilder softAndFactor(VariableNumMap inputs, VariableNumMap output,
+      double violationLogWeight) {
+    TableFactorBuilder tf = new TableFactorBuilder(inputs.union(output),
+        SparseTensorBuilder.getFactory());
+    Iterator<Assignment> iter = new AllAssignmentIterator(tf.getVars());
+    
+    double denom = 1.0 + Math.exp(violationLogWeight);
+    double satisfiedWeight = 1.0 / denom;
+    double violatedWeight = Math.exp(violationLogWeight) / denom;
+    while (iter.hasNext()) {
+      Assignment a = iter.next();
+      
+      boolean expectedTruthVal = !a.intersection(inputs).getValues().contains("F");
+      boolean actualTruthVal = a.intersection(output).getValues().contains("T");
+      boolean satisfied = expectedTruthVal == actualTruthVal;
+      double weight = satisfied ? satisfiedWeight : violatedWeight; 
+      
+      System.out.println(a + " " + weight);
+      tf.setWeight(a, weight);
+    }
+    return tf;
   }
 }

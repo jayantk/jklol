@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import junit.framework.Assert;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
@@ -56,6 +58,20 @@ public class MarginalTestCase {
 	    VariableNumMap variables = marginals.getVariables().getVariablesByName(testCase.getKey());
 	    DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(variables.getVariableNums());
 	    testCase.getValue().runTests(marginal, marginals.getPartitionFunction(), tolerance);
+	  }
+	}
+	
+	public void printMarginals(MarginalCalculator inference) {
+	  FactorGraph conditionedFactorGraph = factorGraph.conditional(condition);
+	  MarginalSet marginals = inference.computeMarginals(conditionedFactorGraph);
+	  
+	  for (int varNum : marginals.getVariables().getVariableNums()) {
+	    DiscreteFactor marginal = marginals.getMarginal(Arrays.asList(varNum)).coerceToDiscrete();
+	    
+	    Iterator<Outcome> outcomes = marginal.outcomeIterator();
+	    while (outcomes.hasNext()) {
+	      System.out.println(outcomes.next());
+	    }
 	  }
 	}
 		

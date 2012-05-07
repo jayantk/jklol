@@ -104,7 +104,7 @@ public class TableFactor extends DiscreteFactor {
 
   /**
    * Gets a {@code TableFactor} over {@code vars} which assigns weight 1 to all
-   * assignments. The weights are represented in log space.
+   * assignments.
    * 
    * @param vars
    * @return

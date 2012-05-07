@@ -131,6 +131,15 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     }
     return Math.sqrt(sumSquared);
   }
+  
+  @Override
+  public double getTrace() {
+    double sum = 0.0;
+    for (int i = 0; i < size(); i++) {
+      sum += values[i];
+    }
+    return sum;
+  }
 
   // /////////////////////////////////////////////////////////////////
   // Inherited from Tensor

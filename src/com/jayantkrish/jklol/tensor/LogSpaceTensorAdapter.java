@@ -73,6 +73,11 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
   public double getL2Norm() {
     throw new UnsupportedOperationException("Not implemented");
   }
+  
+  @Override
+  public double getTrace() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   @Override
   public Tensor slice(int[] dimensionNumbers, int[] keys) {

@@ -41,20 +41,6 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
         Arrays.copyOf(builder.values, builder.values.length));
   }
 
-  /**
-   * Gets a {@code TensorFactory} which creates {@code DenseTensorBuilder}s.
-   * 
-   * @return
-   */
-  public static TensorFactory getFactory() {
-    return new TensorFactory() {
-      @Override
-      public TensorBuilder getBuilder(int[] dimNums, int[] dimSizes) {
-        return new DenseTensorBuilder(dimNums, dimSizes);
-      }
-    };
-  }
-
   @Override
   public void put(int[] key, double value) {
     values[dimKeyToIndex(key)] = value;
@@ -129,6 +115,13 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   public void multiplyEntry(double amount, int... key) {
     values[dimKeyToIndex(key)] *= amount;
   }
+  
+  @Override
+  public void exp() {
+    for (int i = 0; i < values.length; i++) {
+      values[i] = Math.exp(values[i]);
+    }
+  }
 
   @Override
   public DenseTensor build() {
@@ -156,4 +149,22 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   public String toString() {
     return Arrays.toString(values);
   }
+  
+  /////////////////////////////////////////////////////////////////////
+  // Static Methods
+  /////////////////////////////////////////////////////////////////////
+  
+  /**
+   * Gets a {@code TensorFactory} which creates {@code DenseTensorBuilder}s.
+   * 
+   * @return
+   */
+  public static TensorFactory getFactory() {
+    return new TensorFactory() {
+      @Override
+      public TensorBuilder getBuilder(int[] dimNums, int[] dimSizes) {
+        return new DenseTensorBuilder(dimNums, dimSizes);
+      }
+    };
+  } 
 }

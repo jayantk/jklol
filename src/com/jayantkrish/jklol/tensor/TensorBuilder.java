@@ -34,6 +34,12 @@ public interface TensorBuilder extends TensorBase {
 
   void multiplyEntry(double amount, int... key);
 
+  /**
+   * Exponentiates the values in this tensor, setting every value to {@code e ^
+   * (current value)}. This method will destroy sparsity.
+   */
+  void exp();
+
   Tensor build();
 
   /**

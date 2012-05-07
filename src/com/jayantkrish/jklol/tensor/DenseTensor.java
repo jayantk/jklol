@@ -43,63 +43,6 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     super(dimensions, sizes, values);
   }
 
-  /**
-   * Constructs a random tensor spanning {@code dimensions} each with size
-   * {@code sizes}. Each entry of the tensor is drawn independently at random
-   * from a gaussian with {@code mean} and standard deviation {@code stddev}.
-   * 
-   * @param dimensions
-   * @param sizes
-   * @param mean
-   * @param stddev
-   * @return
-   */
-  public static DenseTensor random(int[] dimensions, int[] sizes, double mean, double stddev) {
-    DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes);
-    Iterator<KeyValue> keyValueIter = builder.keyValueIterator();
-    while (keyValueIter.hasNext()) {
-      builder.put(keyValueIter.next().getKey(), (random.nextGaussian() * stddev) + mean);
-    }
-    return builder.buildNoCopy();
-  }
-
-  /**
-   * Gets a dense copy of {@code tensor}.
-   * 
-   * @param tensor
-   * @return
-   */
-  public static DenseTensor copyOf(Tensor tensor) {
-    if (tensor instanceof DenseTensor) {
-      // Tensors are immutable, so there's no reason to copy the input.
-      return (DenseTensor) tensor;
-    } else {
-      DenseTensorBuilder builder = new DenseTensorBuilder(tensor.getDimensionNumbers(),
-          tensor.getDimensionSizes());
-      double[] otherValues = tensor.getValues();
-      for (int i = 0; i < otherValues.length; i++) {
-        builder.putByKeyNum(tensor.indexToKeyNum(i), otherValues[i]);
-      }
-      return builder.buildNoCopy();
-    }
-  }
-
-  /**
-   * Creates a {@code DenseTensor} from its serialization as a protocol buffer.
-   * 
-   * @param proto
-   * @return
-   */
-  public static DenseTensor fromProto(DenseTensorProto proto) {
-    Preconditions.checkArgument(proto.hasDimensions());
-    int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
-    int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
-    Preconditions.checkArgument(dimensionNums.length == sizes.length);
-    
-    double[] values = Doubles.toArray(proto.getValueList());
-    return new DenseTensor(dimensionNums, sizes, values);
-  }
-
   @Override
   public int getNearestIndex(long keyNum) {
     // Dense tensors contain values for all keyNums.
@@ -415,5 +358,78 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     sb.append("]");
     return sb.toString();
+  }
+  
+  ///////////////////////////////////////////////////////////////////////
+  // Static methods
+  ///////////////////////////////////////////////////////////////////////
+  
+  /**
+   * Constructs a random tensor spanning {@code dimensions} each with size
+   * {@code sizes}. Each entry of the tensor is drawn independently at random
+   * from a gaussian with {@code mean} and standard deviation {@code stddev}.
+   * 
+   * @param dimensions
+   * @param sizes
+   * @param mean
+   * @param stddev
+   * @return
+   */
+  public static DenseTensor random(int[] dimensions, int[] sizes, double mean, double stddev) {
+    DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes);
+    Iterator<KeyValue> keyValueIter = builder.keyValueIterator();
+    while (keyValueIter.hasNext()) {
+      builder.put(keyValueIter.next().getKey(), (random.nextGaussian() * stddev) + mean);
+    }
+    return builder.buildNoCopy();
+  }
+  
+  /**
+   * Gets a tensor where each key has {@code weight}.
+   *  
+   * @param dimensions
+   * @param sizes
+   * @return
+   */
+  public static DenseTensor constant(int[] dimensions, int[] sizes, double weight) {
+    DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes, weight); 
+    return builder.buildNoCopy();
+  }
+
+  /**
+   * Gets a dense copy of {@code tensor}.
+   * 
+   * @param tensor
+   * @return
+   */
+  public static DenseTensor copyOf(Tensor tensor) {
+    if (tensor instanceof DenseTensor) {
+      // Tensors are immutable, so there's no reason to copy the input.
+      return (DenseTensor) tensor;
+    } else {
+      DenseTensorBuilder builder = new DenseTensorBuilder(tensor.getDimensionNumbers(),
+          tensor.getDimensionSizes());
+      double[] otherValues = tensor.getValues();
+      for (int i = 0; i < otherValues.length; i++) {
+        builder.putByKeyNum(tensor.indexToKeyNum(i), otherValues[i]);
+      }
+      return builder.buildNoCopy();
+    }
+  }
+
+  /**
+   * Creates a {@code DenseTensor} from its serialization as a protocol buffer.
+   * 
+   * @param proto
+   * @return
+   */
+  public static DenseTensor fromProto(DenseTensorProto proto) {
+    Preconditions.checkArgument(proto.hasDimensions());
+    int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
+    int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
+    Preconditions.checkArgument(dimensionNums.length == sizes.length);
+    
+    double[] values = Doubles.toArray(proto.getValueList());
+    return new DenseTensor(dimensionNums, sizes, values);
   }
 }

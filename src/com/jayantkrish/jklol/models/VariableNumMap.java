@@ -94,14 +94,14 @@ public class VariableNumMap {
   /**
    * Creates a {@code VariableNumMap} from its serialization as a protocol
    * buffer. {@code variables} is a mapping from integers to variable types that
-   * was created during serialization and is required in order to restore the correct
-   * variable types during construction.
+   * was created during serialization and is required in order to restore the
+   * correct variable types during construction.
    * 
    * @param proto
    * @param variableTypeIndex
    * @return
    */
-  public static VariableNumMap fromProto(VariableNumMapProto proto, 
+  public static VariableNumMap fromProto(VariableNumMapProto proto,
       IndexedList<Variable> variableTypeIndex) {
     Preconditions.checkArgument(proto.getNumCount() == proto.getVariableTypeIndexCount());
     Preconditions.checkArgument(proto.getNumCount() == proto.getNameCount());
@@ -484,6 +484,18 @@ public class VariableNumMap {
       }
     }
     return new VariableNumMap(newVarMap, newNames);
+  }
+
+  /**
+   * Returns a {@code VariableNumMap} containing only the variable with number
+   * {@code varNumToKeep}. If this map does not contain such a variable, returns
+   * an empty map.
+   * 
+   * @param varNumToKeep
+   * @return
+   */
+  public VariableNumMap intersection(int varNumToKeep) {
+    return intersection(Arrays.asList(varNumToKeep));
   }
 
   /**

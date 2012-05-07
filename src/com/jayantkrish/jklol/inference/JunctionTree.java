@@ -251,11 +251,9 @@ public class JunctionTree implements MarginalCalculator {
     private List<Map<Integer, Factor>> messages;
 
     // As message passing progresses, we will multiply together the factors
-    // necessary to compute marginals
-    // on each node. marginals contains the current factor that is approaching
-    // the marginal, and
-    // factorsInMarginals tracks the factors whose messages have been combined
-    // into marginals.
+    // necessary to compute marginals on each node. marginals contains the 
+    // current factor that is approaching the marginal, and factorsInMarginals 
+    // tracks the factors whose messages have been combined into marginals.
     private List<Factor> marginals;
     private List<Set<Integer>> factorsInMarginals;
 
@@ -344,6 +342,24 @@ public class JunctionTree implements MarginalCalculator {
         cliqueFactors.set(cliqueNum, cliqueFactors.get(cliqueNum).product(
             Lists.newArrayList(toMerge.get(cliqueNum))));
       }
+
+      // At this point, we have a minimal set of factors, but the factors may not be
+      // organized into a tree. Construct a junction tree by performing variable
+      // elimination.
+      CountAccumulator<Integer> varNumCounts = CountAccumulator.create();
+      for (int i = 0; i < cliqueFactors.size(); i++) {
+        for (Integer varNum : c.getVars().getVariableNums()) {
+          varNumCounts.increment(varNum, 1.0);
+        }
+      }
+      
+      for (Integer varNum : varNumOrder) {
+        Set<Integer> cliquesWithVar = varCliqueFactorMap.get(varNum);
+        for (Integer cliqueNum : cliquesWithVar) {
+
+        }
+      }
+      
 
       for (int i = 0; i < cliqueFactors.size(); i++) {
         Factor c = cliqueFactors.get(i);

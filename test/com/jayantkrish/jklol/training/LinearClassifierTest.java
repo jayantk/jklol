@@ -79,13 +79,13 @@ public class LinearClassifierTest extends TestCase {
   }
 
   public void testTrainSvm() {
-    runTrainerTest(new SubgradientSvmTrainer(80, 1, 0.1, new JunctionTree(),
-        new SubgradientSvmTrainer.HammingCost(), new DefaultLogFunction()));
+    runTrainerTest(new SubgradientSvmTrainer(new JunctionTree(),
+        new SubgradientSvmTrainer.HammingCost(), 80, 1, 1.0, true, 0.1, new DefaultLogFunction()));
   }
 
   public void testTrainLogisticRegression() {
     runTrainerTest(new StochasticGradientTrainer(
-        new JunctionTree(), 80, 1, new DefaultLogFunction(), 1.0, 0.0)); 
+        new JunctionTree(), 80, 1, 1.0, true, 0.0, new DefaultLogFunction())); 
   }
 
   private void runTrainerTest(Trainer<ParametricFactorGraph> trainer) {

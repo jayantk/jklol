@@ -26,10 +26,11 @@ public abstract class AbstractStochasticGradientTrainer<T, U> extends AbstractTr
   protected final LogFunction log;
 
   private final double stepSize;
+  private final boolean decayStepSize;
   private final double l2Regularization;
 
   public AbstractStochasticGradientTrainer(int numIterations, int batchSize,
-      LogFunction log, double stepSize, double l2Regularization) {
+      double stepSize, boolean decayStepSize, double l2Regularization, LogFunction log) { 
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.log = (log != null) ? log : new NullLogFunction();
@@ -41,6 +42,7 @@ public abstract class AbstractStochasticGradientTrainer<T, U> extends AbstractTr
     // a while before converging.
     Preconditions.checkArgument(l2Regularization * stepSize <= 1); 
     this.stepSize = stepSize;
+    this.decayStepSize = decayStepSize;
     this.l2Regularization = l2Regularization;
   }
 
@@ -84,7 +86,8 @@ public abstract class AbstractStochasticGradientTrainer<T, U> extends AbstractTr
       gradientL2 = gradient.getL2Norm();
 
       log.startTimer("parameter_update");
-      double currentStepSize = stepSize / Math.sqrt(i + 2);
+      double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
+        
       // System.out.println(currentStepSize);
       // Apply L2 regularization.
       initialParameters.multiply(1.0 - (currentStepSize * l2Regularization));

@@ -95,13 +95,14 @@ public class SequenceModelTest extends TestCase {
   
   public void testTrainSvm() {
     DefaultLogFunction logFn = new DefaultLogFunction();
-    testZeroTrainingError(new SubgradientSvmTrainer(80, 1, 0.1, new JunctionTree(),
-        new SubgradientSvmTrainer.HammingCost(), logFn));
+    testZeroTrainingError(new SubgradientSvmTrainer( new JunctionTree(),
+        new SubgradientSvmTrainer.HammingCost(), 80, 1, 1.0, true, 0.1, logFn));
     logFn.printTimeStatistics();
   }
   
   public void testTrainLogLinear() {
-    testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 80, 1, new DefaultLogFunction(), 1.0, 0.0));
+    testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 
+        80, 1, 1.0, true, 0.0, new DefaultLogFunction()));
   }
   
   public void testSerialization() {

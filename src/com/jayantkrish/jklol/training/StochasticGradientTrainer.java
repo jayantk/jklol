@@ -21,13 +21,15 @@ public class StochasticGradientTrainer extends AbstractStochasticGradientTrainer
   /**
    * @param inferenceEngine
    * @param numIterations
-   * @param log
+   * @param batchSize
    * @param stepSize
+   * @param decayStepSize
    * @param l2Regularization valid only if {@code 0 <= l2Regularization < 1.0}.
+   * @param log
    */
   public StochasticGradientTrainer(MarginalCalculator inferenceEngine, int numIterations,
-      int batchSize, LogFunction log, double stepSize, double l2Regularization) {
-    super(numIterations, batchSize, log, stepSize, l2Regularization);
+      int batchSize, double stepSize, boolean decayStepSize, double l2Regularization, LogFunction log) {
+    super(numIterations, batchSize, stepSize, decayStepSize, l2Regularization, log);
     this.marginalCalculator = Preconditions.checkNotNull(inferenceEngine);
   }
   

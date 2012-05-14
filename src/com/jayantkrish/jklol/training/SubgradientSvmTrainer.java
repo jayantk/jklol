@@ -35,20 +35,23 @@ public class SubgradientSvmTrainer extends
   private final CostFunction costFunction;
 
   /**
-   * If {@code regularizationConstant == 0}, the update rule is equivalent to a
-   * structured perceptron.
+   * If {@code regularizationConstant = 0}, {@code decayStepSize = false} and
+   * the cost function is {@code ZeroCost}, then the structured SVM update rule
+   * is equivalent to the structured perceptron.
    * 
-   * @param numIterations
-   * @param batchSize
-   * @param regularizationConstant
    * @param marginalCalculator
    * @param costFunction
+   * @param numIterations
+   * @param batchSize
+   * @param stepSize
+   * @param decayStepSize
+   * @param regularizationConstant
    * @param log
    */
-  public SubgradientSvmTrainer(int numIterations, int batchSize,
-      double regularizationConstant, MarginalCalculator marginalCalculator,
-      CostFunction costFunction, LogFunction log) {
-    super(numIterations, batchSize, log, 1.0, regularizationConstant);
+  public SubgradientSvmTrainer(MarginalCalculator marginalCalculator, CostFunction costFunction,
+      int numIterations, int batchSize, double stepSize, boolean decayStepSize,
+      double regularizationConstant, LogFunction log) {
+    super(numIterations, batchSize, stepSize, decayStepSize, regularizationConstant, log);
 
     this.marginalCalculator = marginalCalculator;
     this.costFunction = costFunction;

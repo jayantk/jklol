@@ -65,8 +65,8 @@ public class SubgradientSvmTrainerTest extends TestCase {
     trainingData.add(makeExample("F", "T", "F"));
     trainingData.add(makeExample("T", "T", "F"));
 
-    t = new SubgradientSvmTrainer(100, 4, 1.0, new JunctionTree(), 
-        new SubgradientSvmTrainer.HammingCost(), null);
+    t = new SubgradientSvmTrainer(new JunctionTree(), 
+        new SubgradientSvmTrainer.HammingCost(), 100, 4, 1.0, true, 1.0, null);
   }
 
   public void testTrain() {

@@ -147,7 +147,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
   
   public void testLogLinearTraining() {
     Predictor<Assignment, Assignment> predictor = runTrainerTest(new StochasticGradientTrainer(
-        new JunctionTree(), 5, TRAINING_DATA.length, new DefaultLogFunction(), 1.0, 0.0));
+        new JunctionTree(), 5, TRAINING_DATA.length, 1.0, true, 0.0, new DefaultLogFunction()));
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       ParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));

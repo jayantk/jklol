@@ -23,10 +23,11 @@ import com.jayantkrish.jklol.util.Converter;
  */
 public abstract class FactorGraphPredictorTrainer<I, O> implements PredictorTrainer<I, O> {
   
-  private final Trainer trainer;
+  private final Trainer<ParametricFactorGraph> trainer;
   private final double parameterPerturbation;
   
-  public FactorGraphPredictorTrainer(Trainer trainer, double parameterPerturbation) {
+  public FactorGraphPredictorTrainer(Trainer<ParametricFactorGraph> trainer, 
+      double parameterPerturbation) {
     this.trainer = Preconditions.checkNotNull(trainer);
     this.parameterPerturbation = parameterPerturbation;
   }

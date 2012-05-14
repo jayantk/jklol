@@ -26,6 +26,8 @@ public interface Tensor extends TensorBase {
   Tensor slice(int[] dimensionNumbers, int[] keys);
 
   Tensor elementwiseProduct(Tensor other);
+  
+  Tensor outerProduct(Tensor other);
 
   Tensor elementwiseAddition(Tensor other);
 

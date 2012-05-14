@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.preprocessing;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
@@ -78,6 +79,10 @@ public class DictionaryFeatureVectorGenerator<T, U> implements FeatureVectorGene
   @Override
   public int getNumberOfFeatures() {
     return featureIndexes.size();
+  }
+  
+  public List<U> getFeatures() {
+    return featureIndexes.items();
   }
 
   /**

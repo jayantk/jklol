@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
  * 
  * @author jayantk
  */
-public class EMTrainer extends AbstractTrainer {
+public class EMTrainer extends AbstractTrainer<ParametricFactorGraph> {
 
   private final int numIterations;
   private final MarginalCalculator marginalCalculator;

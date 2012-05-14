@@ -383,6 +383,54 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(), resultKeyInts,
         resultValues, resultInd);
   }
+  
+  @Override
+  public SparseTensor outerProduct(Tensor other) {
+    int[] dimensionNums = getDimensionNumbers();
+    int[] otherDimensionNums = other.getDimensionNumbers();
+    if (otherDimensionNums.length == 0) {
+      // The two products coincide in this case.
+      return elementwiseProduct(other); 
+    }
+    
+    Preconditions.checkArgument(dimensionNums[dimensionNums.length - 1] 
+        < otherDimensionNums[otherDimensionNums.length - 1]);
+    
+    long multiplier = other.getMaxKeyNum();
+    int mySize = size();
+    int otherSize = other.size();
+    long[] resultKeyNums = new long[mySize * otherSize];
+    double[] resultValues = new double[mySize * otherSize];
+    int resultInd = 0;
+    for (int i = 0; i < mySize; i++) {
+      long keyNumOffset = keyNums[i] * multiplier;
+      double myValue = values[i];
+      for (int j = 0; j < otherSize; j++) {
+        double otherValue = other.getByIndex(j);
+        if (otherValue != 0.0) {
+          resultKeyNums[resultInd] = keyNumOffset + other.indexToKeyNum(j);
+          resultValues[resultInd] = myValue * otherValue;
+          resultInd++;
+        }
+      }
+    }
+    
+    int[] dimensionSizes = getDimensionSizes();
+    int[] otherDimensionSizes = other.getDimensionSizes();
+    int[] resultDims = new int[dimensionNums.length + otherDimensionNums.length];
+    int[] resultSizes = new int[dimensionNums.length + otherDimensionNums.length];
+    for (int i = 0; i < dimensionNums.length; i++) {
+      resultDims[i] = dimensionNums[i];
+      resultSizes[i] = dimensionSizes[i];
+    }
+
+    for (int i = 0; i < otherDimensionNums.length; i++) {
+      resultDims[i + dimensionNums.length] = otherDimensionNums[i];
+      resultSizes[i + dimensionNums.length] = otherDimensionSizes[i];
+    }
+    
+    return resizeIntoTable(resultDims, resultSizes, resultKeyNums, resultValues, resultInd);
+  }
 
   /**
    * Performs elementwise addition of {@code this} and {@code other} and returns
@@ -419,7 +467,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * of equivalent outcomes; otherwise, it takes the maximum of the two
    * outcomes.
    */
-  private SparseTensor doElementwise(Tensor other, boolean useSum) {
+  private final SparseTensor doElementwise(Tensor other, boolean useSum) {
     // TODO(jayantk): This method could be generalized by taking a Function
     // instead of a boolean flag. However, it's unclear how this change
     // affects performance.
@@ -431,14 +479,18 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     int myInd = 0;
     int otherInd = 0;
 
-    while (myInd < size() && otherInd < other.size()) {
-      if (keyNums[myInd] < other.indexToKeyNum(otherInd)) {
+    int mySize = size();
+    int otherSize = other.size();
+    long otherKeyNum = 1;
+    while (myInd < mySize && otherInd < otherSize) {
+      otherKeyNum = other.indexToKeyNum(otherInd);
+      if (keyNums[myInd] < otherKeyNum) {
         resultKeyInts[resultInd] = keyNums[myInd];
         resultValues[resultInd] = values[myInd];
         resultInd++;
         myInd++;
-      } else if (keyNums[myInd] > other.indexToKeyNum(otherInd)) {
-        resultKeyInts[resultInd] = other.indexToKeyNum(otherInd);
+      } else if (keyNums[myInd] > otherKeyNum) {
+        resultKeyInts[resultInd] = otherKeyNum;
         resultValues[resultInd] = other.getByIndex(otherInd);
         resultInd++;
         otherInd++;
@@ -589,8 +641,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       }
     }
     // If none of the dimensions being eliminated are actually part of this
-    // tensor,
-    // then there's no need to do any more work.
+    // tensor, then there's no need to do any more work.
     if (numEliminated == 0) {
       return this;
     }
@@ -614,7 +665,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
           resultValues[resultInd - 1] += relabeled.values[i];
         } else {
           resultValues[resultInd - 1] = Math.max(resultValues[resultInd - 1],
-              relabeled.values[i]);
+              relabeled.values[i]);              
         }
       } else {
         resultKeyInts[resultInd] = relabeled.keyNums[i] / keyNumDenominator;

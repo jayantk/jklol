@@ -10,6 +10,11 @@ package com.jayantkrish.jklol.evaluation;
 public abstract class AbstractPredictor<I, O> implements Predictor<I, O> {
 
   @Override
+  public O apply(I input) {
+    return getBestPrediction(input).getBestPrediction();
+  }
+  
+  @Override
   public Prediction<I, O> getBestPredictions(Example<? extends I, ? extends O> example, 
       int numPredictions) {
     return getBestPredictions(example.getInput(), example.getOutput(), numPredictions);

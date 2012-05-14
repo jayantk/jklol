@@ -5,6 +5,7 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
+import com.jayantkrish.jklol.models.parametric.NormalizedFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
@@ -23,7 +24,8 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   VariableNumMap vars;
   SufficientStatistics parameters;
   
-  DiscreteLogLinearFactor g, normed;
+  DiscreteLogLinearFactor g;
+  NormalizedFactor normed;
   
   public void setUp() {
     DiscreteVariable v = new DiscreteVariable("Two values",
@@ -32,10 +34,10 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     vars = new VariableNumMap(Arrays.asList(2, 3), Arrays.asList("v2", "v3"), Arrays.asList(v, v));
     TableFactorBuilder initialWeights = TableFactorBuilder.ones(vars);
     initialWeights.setWeight(0.0, "F", "F");
-    f = DiscreteLogLinearFactor.createIndicatorFactor(vars, VariableNumMap.emptyMap(), initialWeights);
+    f = DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights);
     // f = new IndicatorLogLinearFactor(vars, initialWeights.build());
-    normed = DiscreteLogLinearFactor.createIndicatorFactor(vars, vars.getVariablesByName("v3"), 
-        initialWeights);
+    normed = new NormalizedFactor(DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights), 
+        vars.getVariablesByName("v3"));
     
     parameters = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "F"),

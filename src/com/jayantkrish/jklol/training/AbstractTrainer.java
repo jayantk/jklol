@@ -8,14 +8,13 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
-public abstract class AbstractTrainer implements Trainer {
+public abstract class AbstractTrainer<T> implements Trainer<T> {
 
   @Override
-  public SufficientStatistics trainFixed(ParametricFactorGraph modelFamily,
+  public SufficientStatistics trainFixed(T modelFamily,
       SufficientStatistics initialParameters,
       Iterable<Example<Assignment, Assignment>> trainingData) {
 

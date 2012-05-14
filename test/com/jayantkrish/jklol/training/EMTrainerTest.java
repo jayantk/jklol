@@ -95,7 +95,7 @@ public class EMTrainerTest extends TestCase {
     assertEquals(12.0 / 16.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
   }
   
-  private Factor trainBayesNet(Trainer trainer) {
+  private Factor trainBayesNet(Trainer<ParametricFactorGraph> trainer) {
     SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
     initialParameters.increment(1.0);
     SufficientStatistics trainedParameters = trainer.trainFixed(bn, 
@@ -123,7 +123,7 @@ public class EMTrainerTest extends TestCase {
     assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
   }
       
-  private Factor trainBayesNetSparse(Trainer trainer) {
+  private Factor trainBayesNetSparse(Trainer<ParametricFactorGraph> trainer) {
     //  If parameters are initialized sparsely, the sparsity should be retained throughout all algorithms.
     Assignment probAssignment = allVars.outcomeArrayToAssignment("F", "F");
     SufficientStatistics initialParameters = bn.getNewSufficientStatistics();

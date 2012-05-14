@@ -100,6 +100,11 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   
   @Override
   public String toString() {
-    return allFactors.toString();
+    StringBuilder sb = new StringBuilder();
+    for (Factor factor : allFactors) {
+      sb.append(factor.getParameterDescription());
+    }
+    sb.append("partition function=" + partitionFunction);
+    return sb.toString();
   }
 }

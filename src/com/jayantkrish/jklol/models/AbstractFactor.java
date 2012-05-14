@@ -36,12 +36,12 @@ public abstract class AbstractFactor implements Factor {
     Assignment a = getVars().outcomeToAssignment(outcome);
     return getUnnormalizedProbability(a);
   }
-  
+
   @Override
   public double getUnnormalizedProbability(Object... outcome) {
     return getUnnormalizedProbability(Arrays.asList(outcome));
   }
-  
+
   @Override
   public double getUnnormalizedLogProbability(List<? extends Object> outcome) {
     Preconditions.checkNotNull(outcome);
@@ -50,17 +50,22 @@ public abstract class AbstractFactor implements Factor {
     Assignment a = getVars().outcomeToAssignment(outcome);
     return getUnnormalizedLogProbability(a);
   }
-  
+
   @Override
   public double getUnnormalizedLogProbability(Object... outcome) {
     return getUnnormalizedLogProbability(Arrays.asList(outcome));
   }
   
   @Override
+  public double getTotalUnnormalizedProbability() {
+    return marginalize(getVars()).getUnnormalizedProbability(Assignment.EMPTY);
+  }
+
+  @Override
   public Factor marginalize(Integer... varNums) {
     return marginalize(Arrays.asList(varNums));
   }
-  
+
   @Override
   public Factor marginalize(VariableNumMap vars) {
     return marginalize(vars.getVariableNums());
@@ -70,7 +75,7 @@ public abstract class AbstractFactor implements Factor {
   public Factor maxMarginalize(Integer... varNums) {
     return maxMarginalize(Arrays.asList(varNums));
   }
-  
+
   @Override
   public Factor maxMarginalize(VariableNumMap vars) {
     return maxMarginalize(vars.getVariableNums());
@@ -86,7 +91,7 @@ public abstract class AbstractFactor implements Factor {
     }
     return current;
   }
-  
+
   @Override
   public Factor maximum(List<Factor> others) {
     Preconditions.checkNotNull(others);
@@ -106,15 +111,15 @@ public abstract class AbstractFactor implements Factor {
     }
     return current;
   }
-  
+
   @Override
   public Factor product(Factor... others) {
     return product(Arrays.asList(others));
   }
-  
+
   /**
-   * Initializes a protocol buffer builder for {@code this} with the
-   * variables it contains. 
+   * Initializes a protocol buffer builder for {@code this} with the variables
+   * it contains.
    */
   protected FactorProto.Builder getProtoBuilder(IndexedList<Variable> variableTypeIndex) {
     FactorProto.Builder builder = FactorProto.newBuilder();
@@ -125,24 +130,30 @@ public abstract class AbstractFactor implements Factor {
   /**
    * {@inheritDoc}
    * 
-   * This default implementation always throws {@code CoercionError}.
-   * Subclasses which support this operation should override this
-   * implementation.
+   * This default implementation always throws {@code CoercionError}. Subclasses
+   * which support this operation should override this implementation.
    */
   @Override
   public DiscreteFactor coerceToDiscrete() {
     throw new CoercionError("Cannot coerce this factor into a DiscreteFactor.");
   }
-  
+
   /**
    * {@inheritDoc}
    * 
-   * This default implementation always throws {@code CoercionError}.
-   * Subclasses which support this operation should override this
-   * implementation.
+   * This default implementation always throws {@code CoercionError}. Subclasses
+   * which support this operation should override this implementation.
    */
   @Override
   public DiscreteObjectFactor coerceToDiscreteObject() {
     throw new CoercionError("Cannot coerce this factor into a DiscreteObjectFactor.");
+  }
+
+  @Override
+  public String getParameterDescription() {
+    // This implementation will probably not be detailed enough.
+    // Subclasses should override this method with a
+    // correct implementation.
+    return toString();
   }
 }

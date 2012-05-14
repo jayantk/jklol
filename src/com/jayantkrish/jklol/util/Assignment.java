@@ -151,6 +151,22 @@ public class Assignment {
   }
 
   /**
+   * Returns true if any variables in {@code varNums} are assigned values in
+   * {@code this}.
+   * 
+   * @param varNums
+   * @return
+   */
+  public boolean containsAny(Collection<Integer> varNums) {
+    for (Integer varNum : varNums) {
+      if (varValueMap.containsKey(varNum)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * If varNums is a subset of the variables in this assignment, this method
    * returns the value assigned to each variable in varNums. Puts the return
    * value into "returnValue" if it is non-null, otherwise allocates and returns

@@ -57,7 +57,8 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, 4, SparseTensorBuilder.getFactory());
+    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.emptyMap(), 
+        DiscreteVariable.sequence("foo", 4), SparseTensorBuilder.getFactory()); 
     builder.addFactor("f1", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
     platePattern = VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap());
 

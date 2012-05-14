@@ -61,6 +61,21 @@ public class DiscreteVariable implements Variable {
     return new DiscreteVariable(proto.getName(), values);
   }
 
+  /**
+   * Creates a discrete variable whose values are {@code 0} to
+   * {@code size - 1}.
+   * 
+   * @param maxNum
+   * @return
+   */
+  public static DiscreteVariable sequence(String name, int size) {
+    List<Integer> values = Lists.newArrayList();
+    for (int i = 0; i < size; i++) {
+      values.add(i);
+    }
+    return new DiscreteVariable(name, values);
+  }
+
   @Override
   public Object getArbitraryValue() {
     return values.get(0);
@@ -111,15 +126,15 @@ public class DiscreteVariable implements Variable {
     }
     return values.getIndex(value);
   }
-  
+
   @Override
-	public VariableProto toProto() {
+  public VariableProto toProto() {
     VariableProto.Builder builder = VariableProto.newBuilder();
     builder.setType(VariableProto.VariableType.DISCRETE);
-    
+
     DiscreteVariableProto.Builder discreteBuilder = builder.getDiscreteVariableBuilder();
     discreteBuilder.setName(name);
-    
+
     for (Object value : values.items()) {
       try {
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
@@ -132,7 +147,7 @@ public class DiscreteVariable implements Variable {
       }
     }
     return builder.build();
-	}
+  }
 
   @Override
   public String toString() {

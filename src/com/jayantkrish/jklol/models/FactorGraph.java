@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -12,7 +13,9 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.FactorGraphProtos.FactorGraphProto;
@@ -162,6 +165,47 @@ public class FactorGraph {
    */
   public List<Factor> getFactors() {
     return factors;
+  }
+
+  /**
+   * Gets a list of factors in this. This method is similar to
+   * {@link #getFactors()}, except that it merges together factors defined over
+   * the same variables. Hence, no factor in the returned list will be defined
+   * over a subset of the variables in another factor. The returned factors
+   * define the same probability distribution as this.
+   * 
+   * @return
+   */
+  public List<Factor> getMinimalFactors() {
+    // Sort factors in descending order of size.
+    List<Factor> sortedFactors = Lists.newArrayList(factors);
+    Collections.sort(sortedFactors, new Comparator<Factor>() {
+      public int compare(Factor f1, Factor f2) { 
+        return f2.getVars().size() - f1.getVars().size(); 
+      } 
+    });
+    
+    List<Factor> finalFactors = Lists.newArrayList();
+    Set<Integer> factorNums = Sets.newHashSet();
+    Multimap<Integer, Integer> varFactorIndex = HashMultimap.create();
+    for (Factor f : sortedFactors) {
+      Set<Integer> mergeableFactors = Sets.newHashSet(factorNums);
+      for (Integer varNum : f.getVars().getVariableNums()) {
+        mergeableFactors.retainAll(varFactorIndex.get(varNum));
+      }
+
+      if (mergeableFactors.size() > 0) {
+        int factorIndex = Iterables.getFirst(mergeableFactors, -1);
+        finalFactors.set(factorIndex, finalFactors.get(factorIndex).product(f));
+      } else {
+        for (Integer varNum : f.getVars().getVariableNums()) {
+          varFactorIndex.put(varNum, finalFactors.size());
+        }
+        factorNums.add(finalFactors.size());
+        finalFactors.add(f);
+      }
+    }
+    return finalFactors;
   }
 
   /**
@@ -316,6 +360,14 @@ public class FactorGraph {
       logProbability += factor.getUnnormalizedLogProbability(assignment);
     }
     return logProbability;
+  }
+
+  public String getParameterDescription() {
+    StringBuilder sb = new StringBuilder();
+    for (Factor factor : factors) {
+      sb.append(factor.getParameterDescription());
+    }
+    return sb.toString();
   }
 
   @Override

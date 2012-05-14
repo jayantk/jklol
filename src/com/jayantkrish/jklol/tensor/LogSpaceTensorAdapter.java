@@ -88,6 +88,11 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
   public Tensor elementwiseProduct(Tensor other) {
     return new LogSpaceTensorAdapter(logWeights.elementwiseAddition(other.elementwiseLog()));
   }
+  
+  @Override
+  public Tensor outerProduct(Tensor other) {
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
 
   @Override
   public Tensor elementwiseAddition(Tensor other) {

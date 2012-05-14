@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.evaluation;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 
 /**
@@ -11,7 +12,7 @@ import com.google.common.base.Preconditions;
  * @param I the type of the inputVar that the prediction is based on.
  * @param O the type of the outputVar prediction.
  */
-public interface Predictor<I, O> {
+public interface Predictor<I, O> extends Function<I, O> {
 
   /**
    * Gets the {@code numPredictions} best predictions of this predictor on

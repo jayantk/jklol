@@ -263,6 +263,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteObjectFactor coerceToDiscreteObject() {
     throw new UnsupportedOperationException("Not yet implemented");
   }
+  
+  @Override
+  public String getParameterDescription() {
+    StringBuilder sb = new StringBuilder();
+    Iterator<Outcome> iter = outcomeIterator();
+    while (iter.hasNext()) {
+      Outcome outcome = iter.next();
+      sb.append(outcome.toString());
+      sb.append("\n");
+    }
+    return sb.toString();
+  }
 
   @Override
   public int hashCode() {

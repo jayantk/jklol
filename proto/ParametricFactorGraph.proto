@@ -29,17 +29,16 @@ message DiscreteLogLinearFactorProto {
   optional VariableNumMapProto feature_variables = 1;
   optional FactorProto feature_values = 2;
   optional FactorProto initial_weights = 3;
-
-  optional VariableNumMapProto conditional_variables = 4;
 }
 
 message ConditionalLogLinearFactorProto {
   optional VariableNumMapProto input_variable = 1;
   optional VariableNumMapProto output_variable = 2;
 
-  optional int32 feature_vector_dimensionality = 3;
-
+  optional VariableProto feature_dictionary = 3;
   optional bool dense_tensor_factory = 4;
+
+  optional VariableNumMapProto conditional_variable = 5;
 }
 
 message ParametricFactorGraphProto {

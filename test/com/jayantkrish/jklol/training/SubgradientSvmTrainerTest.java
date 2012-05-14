@@ -48,10 +48,6 @@ public class SubgradientSvmTrainerTest extends TestCase {
     builder.addVariable("X1", tfVar);
     builder.addVariable("Y", tfVar);
 
-    /*
-    builder.addUnreplicatedFactor(DiscreteLogLinearFactor
-        .createIndicatorFactor(builder.getVariables().getVariablesByName("X0", "Y")));
-     */
 		VariableNumMap factorVariables = builder.getVariables().getVariablesByName("X0", "Y");
 		builder.addUnreplicatedFactor("f0", new IndicatorLogLinearFactor(factorVariables,
 		    TableFactor.unity(factorVariables)));
@@ -69,7 +65,7 @@ public class SubgradientSvmTrainerTest extends TestCase {
     trainingData.add(makeExample("F", "T", "F"));
     trainingData.add(makeExample("T", "T", "F"));
 
-    t = new SubgradientSvmTrainer(10, 4, 1.0, new JunctionTree(), 
+    t = new SubgradientSvmTrainer(100, 4, 1.0, new JunctionTree(), 
         new SubgradientSvmTrainer.HammingCost(), null);
   }
 

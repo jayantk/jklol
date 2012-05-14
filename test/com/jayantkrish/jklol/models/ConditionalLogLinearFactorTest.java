@@ -12,6 +12,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Unit tests for {@link ConditionalLogLinearFactor}.
@@ -36,11 +37,12 @@ public class ConditionalLogLinearFactorTest extends TestCase {
         Arrays.<Variable>asList(discreteVar));
     both = input.union(output);
     
-    factor = new ConditionalLogLinearFactor(input, output, 5, SparseTensorBuilder.getFactory());
+    factor = new ConditionalLogLinearFactor(input, output, VariableNumMap.emptyMap(), 
+        DiscreteVariable.sequence("foo", 5), SparseTensorBuilder.getFactory());
     
     featureVectors = Lists.newArrayList();
-    featureVectors.add(SparseTensor.vector(0, 4, new double[] {1, 2, 0, 0, 0}));
-    featureVectors.add(SparseTensor.vector(0, 4, new double[] {0, 1, 2, 0, 0}));
+    featureVectors.add(SparseTensor.vector(0, 5, new double[] {1, 2, 0, 0, 0}));
+    featureVectors.add(SparseTensor.vector(0, 5, new double[] {0, 1, 2, 0, 0}));
   }
   
   public void testGetFactorFromParameters() {
@@ -51,10 +53,27 @@ public class ConditionalLogLinearFactorTest extends TestCase {
         both.outcomeArrayToAssignment(featureVectors.get(1), "B"), 1.0);
     
     Factor classifier = factor.getFactorFromParameters(stats);
-    Factor conditional = classifier.conditional(input.outcomeArrayToAssignment(featureVectors.get(0)));
+    Assignment inputAssignment = input.outcomeArrayToAssignment(featureVectors.get(0));
+    Factor conditional = classifier.conditional(inputAssignment);
 
     assertEquals(Math.exp(2.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("B")), 0.001);
     assertEquals(Math.exp(5.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("A")), 0.001);
     assertEquals(Math.exp(0.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("C")), 0.001);
+    
+    
+    // Try incrementing the sufficient statistics with a marginal distribution.
+    double partitionFunction = conditional.getTotalUnnormalizedProbability();
+    factor.incrementSufficientStatisticsFromMarginal(stats, conditional, inputAssignment, 1.0, partitionFunction);
+    
+    classifier = factor.getFactorFromParameters(stats);
+    conditional = classifier.conditional(inputAssignment);
+
+    // partitionFunction = 157.8022
+    // e^5 / partitionFunction = .9405
+    // e^2 / partitionFunction = .0468
+    // e^0 / partitionFunction = .0063
+    assertEquals(2.0 + (.0468 * 5.0), conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("B")), 0.001);
+    assertEquals(1.9405 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("A")), 0.001);
+    assertEquals(0.0063 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("C")), 0.001);
   }
 }

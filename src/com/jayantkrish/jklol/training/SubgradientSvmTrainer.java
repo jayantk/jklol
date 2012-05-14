@@ -3,14 +3,10 @@ package com.jayantkrish.jklol.training;
 import java.util.Iterator;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
-import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -32,14 +28,11 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class SubgradientSvmTrainer extends AbstractTrainer {
+public class SubgradientSvmTrainer extends
+    AbstractStochasticGradientTrainer<ParametricFactorGraph, DynamicFactorGraph> {
 
-  private final int numIterations;
-  private final int batchSize;
-  private final double regularization;
   private final MarginalCalculator marginalCalculator;
   private final CostFunction costFunction;
-  private final LogFunction log;
 
   /**
    * If {@code regularizationConstant == 0}, the update rule is equivalent to a
@@ -55,120 +48,44 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
   public SubgradientSvmTrainer(int numIterations, int batchSize,
       double regularizationConstant, MarginalCalculator marginalCalculator,
       CostFunction costFunction, LogFunction log) {
-    Preconditions.checkArgument(regularizationConstant >= 0);
+    super(numIterations, batchSize, log, 1.0, regularizationConstant);
 
-    this.numIterations = numIterations;
-    this.batchSize = batchSize;
-    this.regularization = regularizationConstant;
     this.marginalCalculator = marginalCalculator;
     this.costFunction = costFunction;
-    this.log = (log != null) ? log : new NullLogFunction();
+  }
+
+  protected SufficientStatistics initializeGradient(ParametricFactorGraph modelFamily) {
+    return modelFamily.getNewSufficientStatistics();
+  }
+
+  protected DynamicFactorGraph instantiateModel(ParametricFactorGraph modelFamily,
+      SufficientStatistics parameters) {
+    return modelFamily.getFactorGraphFromParameters(parameters);
   }
 
   /**
    * {@inheritDoc}
-   * 
-   * {@code modelFamily} is presumed to be a loglinear model.
-   * {@code trainingData} contains the inputVar/outputVar pairs for training.
-   * The inputVar and outputVar of each training example should be over disjoint
-   * sets of variables, and the union of these sets should contain all of the
-   * variables in {@code modelFamily}.
-   * 
-   * @param modelFamily
-   * @param trainingData
-   * @return
+   * <p>
+   * The structured SVM subgradient compares the unnormalized probability of the
+   * output with the cost-augmented unnormalized probability of the best
+   * prediction.
    */
-  public SufficientStatistics train(ParametricFactorGraph modelFamily,
-      SufficientStatistics initialParameters,
-      Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
-    SufficientStatistics parameters = initialParameters;
+  @Override
+  protected void accumulateGradient(SufficientStatistics subgradient, DynamicFactorGraph currentDynamicModel,
+      ParametricFactorGraph modelFamily, Example<DynamicAssignment, DynamicAssignment> example) {
 
-    // cycledTrainingData loops indefinitely over the elements of trainingData.
-    // This is desirable because we want batchSize examples but don't
-    // particularly care where in trainingData they come from.
-    Iterator<Example<DynamicAssignment, DynamicAssignment>> cycledTrainingData =
-        Iterators.cycle(trainingData);
+    log.startTimer("dynamic_instantiation");
+    FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
+    Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
+    Assignment observed = currentDynamicModel.getVariables().toAssignment(
+        example.getOutput().union(example.getInput()));
+    Assignment output = observed.removeAll(input.getVariableNums());
+    VariableNumMap outputVariables = currentDynamicModel.getVariables().instantiateVariables(
+        example.getInput()).intersection(output.getVariableNums());
+    log.log(input, currentModel);
+    log.log(observed, currentModel);
+    log.stopTimer("dynamic_instantiation");
 
-    // Each iteration processes a single batch of batchSize training examples.
-    for (int i = 0; i < numIterations; i++) {
-      log.notifyIterationStart(i);
-      // Get the examples for this batch. Ideally, this would be a random
-      // sample; however, deterministically iterating over the examples may be
-      // more efficient and is fairly close if the examples are provided in
-      // random order.
-      log.startTimer("factor_graph_from_parameters");
-      List<Example<DynamicAssignment, DynamicAssignment>> batchData = getBatch(cycledTrainingData, batchSize);
-      DynamicFactorGraph currentDynamicModel = modelFamily.getFactorGraphFromParameters(parameters);
-      SufficientStatistics subgradient = modelFamily.getNewSufficientStatistics();
-      log.stopTimer("factor_graph_from_parameters");
-      int numIncorrect = 0;
-      double approximateObjectiveValue = regularization * Math.pow(parameters.getL2Norm(), 2) / 2;
-      int searchErrors = 0;
-      for (Example<DynamicAssignment, DynamicAssignment> example : batchData) {
-        log.startTimer("dynamic_instantiation");
-        FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
-        Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
-        Assignment observed = currentDynamicModel.getVariables().toAssignment(example.getOutput().union(example.getInput()));
-        Assignment output = observed.removeAll(input.getVariableNums());
-        VariableNumMap outputVariables = currentDynamicModel.getVariables().instantiateVariables(
-            example.getInput()).intersection(output.getVariableNums());
-
-        log.log(input, currentModel);
-        log.log(observed, currentModel);
-        log.stopTimer("dynamic_instantiation");
-
-        log.startTimer("update_subgradient");
-        try {
-          double objectiveValue = updateSubgradientWithInstance(i, currentModel, input, observed, 
-              outputVariables, modelFamily, subgradient);
-          if (objectiveValue != -1) {
-            numIncorrect++;
-            approximateObjectiveValue += objectiveValue / batchSize;
-          }
-        } catch (ZeroProbabilityError e) {
-          // Search error -- could not find positive probability assignments to
-          // the graphical model.
-          searchErrors++;
-        }
-        log.stopTimer("update_subgradient");
-      }
-
-      // TODO: Can we use the Pegasos projection step?
-      // If so, the step size should decay as 1/i, not 1/sqrt(i).
-      log.startTimer("parameter_update");
-      double stepSize;
-      if (regularization > 0) {
-        stepSize = 1.0 / (regularization * Math.sqrt(i + 2));
-        parameters.multiply(1.0 - (stepSize * regularization));
-      } else {
-        stepSize = 1.0;
-      }
-      parameters.increment(subgradient, stepSize / batchSize);
-      log.stopTimer("parameter_update");
-
-      log.logStatistic(i, "number of examples within margin", Integer.toString(numIncorrect));
-      log.logStatistic(i, "approximate objective value", Double.toString(approximateObjectiveValue));
-      log.logStatistic(i, "search errors", Integer.toString(searchErrors));
-      log.notifyIterationEnd(i);
-    }
-    return parameters;
-  }
-
-  /**
-   * Computes the subgradient of the given training example ({@code input} and
-   * {@code output}) and adds it to {@code subgradient}. Returns the structured
-   * hinge loss of the prediction vs. the actual output.
-   * 
-   * @param currentModel
-   * @param input
-   * @param output
-   * @param modelFamily
-   * @param subgradient
-   * @return
-   */
-  private double updateSubgradientWithInstance(int iterationNum, FactorGraph currentModel,
-      Assignment input, Assignment observed, VariableNumMap outputVariables, 
-      ParametricFactorGraph modelFamily, SufficientStatistics subgradient) {
     // Get the cost-augmented best prediction based on the current input.
     Assignment outputAssignment = observed.removeAll(input.getVariableNums());
 
@@ -201,10 +118,12 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
     Assignment actual = actualMarginals.getNthBestAssignment(0);
     log.stopTimer("update_subgradient/inference");
 
-    log.log(iterationNum, iterationNum, input, currentModel);
-    log.log(iterationNum, iterationNum, prediction, currentModel);
-    log.log(iterationNum, iterationNum, actual, currentModel);
-    
+    /*
+     * log.log(iterationNum, iterationNum, input, currentModel);
+     * log.log(iterationNum, iterationNum, prediction, currentModel);
+     * log.log(iterationNum, iterationNum, actual, currentModel);
+     */
+
     // TODO: delete these
     double predictedProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction);
     double actualProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual);
@@ -212,11 +131,11 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
 
     Assignment predictedOutputValues = prediction.intersection(outputVariables);
     Assignment actualOutputValues = actual.intersection(outputVariables);
-    
+
     System.out.println(outputVariables);
     System.out.println(predictedOutputValues);
     System.out.println(actualOutputValues);
-    
+
     // Update parameters if necessary.
     if (!predictedOutputValues.equals(actualOutputValues)) {
       log.startTimer("update_subgradient/parameter_update");
@@ -227,25 +146,20 @@ public class SubgradientSvmTrainer extends AbstractTrainer {
       // Update the parameter vector
       modelFamily.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
       modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
+      // System.out.println(modelFamily.getParameterDescription(subgradient));
+
       // Return the loss, which is the amount by which the prediction is within
       // the margin.
-      double loss = predictedProb - actualProb;
-      log.stopTimer("update_subgradient/parameter_update");
-
-      System.out.println("PROBS:" + predictedProb + " " + actualProb);
-      return loss;
+      /*
+       * double loss = predictedProb - actualProb;
+       * log.stopTimer("update_subgradient/parameter_update");
+       * 
+       * System.out.println("PROBS:" + predictedProb + " " + actualProb); return
+       * loss;
+       */
     }
     // Special value to signify that the example was correct.
-    return -1;
-  }
-
-  private <P, Q> List<Example<P, Q>> getBatch(
-      Iterator<Example<P, Q>> trainingData, int batchSize) {
-    List<Example<P, Q>> batchData = Lists.newArrayListWithCapacity(batchSize);
-    for (int i = 0; i < batchSize && trainingData.hasNext(); i++) {
-      batchData.add(trainingData.next());
-    }
-    return batchData;
+    // return -1;
   }
 
   /**

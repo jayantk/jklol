@@ -51,8 +51,11 @@ public class LinearClassifierTest extends TestCase {
     y = builder.getVariables().getVariablesByName("y");
     all = x.union(y);
 
-    builder.addFactor("classifier", new ConditionalLogLinearFactor(x, y, 4, SparseTensorBuilder.getFactory()),
-        new WrapperVariablePattern(x.union(y)));
+    DiscreteVariable featureVar = new DiscreteVariable("features", 
+        Arrays.asList("f1", "f2", "f3", "f4"));
+    
+    builder.addFactor("classifier", new ConditionalLogLinearFactor(x, y, y, 
+        featureVar, SparseTensorBuilder.getFactory()), new WrapperVariablePattern(x.union(y)));
 
     linearClassifier = builder.build();
 
@@ -76,16 +79,16 @@ public class LinearClassifierTest extends TestCase {
   }
 
   public void testTrainSvm() {
-    runTrainerTest(new SubgradientSvmTrainer(80, 1, 1.0, new JunctionTree(),
+    runTrainerTest(new SubgradientSvmTrainer(80, 1, 0.1, new JunctionTree(),
         new SubgradientSvmTrainer.HammingCost(), new DefaultLogFunction()));
   }
 
   public void testTrainLogisticRegression() {
     runTrainerTest(new StochasticGradientTrainer(
-        new JunctionTree(), 80, new DefaultLogFunction(), 1.0, 0.0)); 
+        new JunctionTree(), 80, 1, new DefaultLogFunction(), 1.0, 0.0)); 
   }
 
-  private void runTrainerTest(Trainer trainer) {
+  private void runTrainerTest(Trainer<ParametricFactorGraph> trainer) {
     SufficientStatistics parameters = trainer.trainFixed(linearClassifier,
         linearClassifier.getNewSufficientStatistics(), trainingData);
     FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)

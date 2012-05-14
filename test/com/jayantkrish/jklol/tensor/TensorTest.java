@@ -32,7 +32,7 @@ public abstract class TensorTest extends TestCase {
   protected Tensor table, emptyInputTable;
   
   protected List<Tensor> smallTables, missingMiddles, missingFirsts,
-      missingLasts, emptyTables, addTables;
+      missingLasts, emptyTables, addTables, disjointTables;
 
   protected int[] a1, a2;
   
@@ -85,6 +85,7 @@ public abstract class TensorTest extends TestCase {
 
     smallTables = Lists.newArrayList();
     addTables = Lists.newArrayList();
+    disjointTables = Lists.newArrayList();
     missingFirsts = Lists.newArrayList();
     missingMiddles = Lists.newArrayList();
     missingLasts = Lists.newArrayList();
@@ -126,6 +127,12 @@ public abstract class TensorTest extends TestCase {
       builder = otherFactory.getBuilder(new int[] {}, new int[] {});
       builder.put(new int[] {}, 5.0);
       emptyTables.add(builder.build());
+      
+      builder = otherFactory.getBuilder(new int[] {5, 7}, new int[] {2, 3});
+      builder.put(new int[] {0, 0}, 1.0);
+      builder.put(new int[] {1, 1}, 2.0);
+      builder.put(new int[] {1, 2}, 3.0);
+      disjointTables.add(builder.build());
     }
   }
 
@@ -301,6 +308,25 @@ public abstract class TensorTest extends TestCase {
       Tensor actual = table.elementwiseProduct(missingLast);
 
       assertEquals(expected, actual);
+    }
+  }
+  
+  public void testOuterProduct() {
+    for (Tensor disjoint : disjointTables) {
+      Tensor result = table.outerProduct(disjoint);
+      assertEquals(5.0, result.getByDimKey(4, 1, 0, 0, 0));
+      assertEquals(0.0, result.getByDimKey(4, 1, 0, 1, 0));
+      assertEquals(10.0, result.getByDimKey(4, 1, 0, 1, 1));
+      assertEquals(15.0, result.getByDimKey(4, 1, 0, 1, 2));
+      assertEquals(0.0, result.getByDimKey(3, 1, 1, 1, 2));
+      assertEquals(0.0, result.getByDimKey(3, 1, 1, 1, 0));
+      assertEquals(3.0, result.getByDimKey(0, 0, 3, 0, 0));
+      
+      assertTrue(Arrays.equals(new int[] {1, 3, 4, 5, 7}, result.getDimensionNumbers()));
+      assertTrue(Arrays.equals(new int[] {6, 5, 4, 2, 3}, result.getDimensionSizes()));
+      
+      // The size is different depending on whether the tensor is sparse or dense.
+      assertTrue(result.size() == (17 * 3) || result.size() == (120 * 6));
     }
   }
  

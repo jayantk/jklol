@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.training;
 
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -11,7 +10,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public interface Trainer {
+public interface Trainer<T> {
 
   /**
    * Estimates parameters for {@code modelFamily} using {@code trainingData}.
@@ -32,7 +31,7 @@ public interface Trainer {
    * @param trainingData
    * @return
    */
-  public SufficientStatistics train(ParametricFactorGraph modelFamily,
+  public SufficientStatistics train(T modelFamily,
       SufficientStatistics initialParameters,
       Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData);
 
@@ -46,7 +45,7 @@ public interface Trainer {
    * @param trainingData
    * @return
    */
-  public SufficientStatistics trainFixed(ParametricFactorGraph modelFamily,
+  public SufficientStatistics trainFixed(T modelFamily, 
       SufficientStatistics initialParameters,
       Iterable<Example<Assignment, Assignment>> trainingData);
 

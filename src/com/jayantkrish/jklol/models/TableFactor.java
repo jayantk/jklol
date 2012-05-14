@@ -39,7 +39,8 @@ public class TableFactor extends DiscreteFactor {
   public TableFactor(VariableNumMap vars, Tensor weights) {
     super(vars);
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
-    Preconditions.checkArgument(vars.size() == weights.getDimensionNumbers().length);
+    Preconditions.checkArgument(vars.getVariableNums().equals(
+        Ints.asList(weights.getDimensionNumbers())));
     this.weights = weights;
   }
 
@@ -245,7 +246,7 @@ public class TableFactor extends DiscreteFactor {
 
     return builder.build();
   }
-
+  
   @Override
   public String toString() {
     return "TableFactor(" + getVars() + ")(" + weights.size() + " weights)";

@@ -52,7 +52,8 @@ public class SequenceModelTest extends TestCase {
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, 4, DenseTensorBuilder.getFactory());
+    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.emptyMap(), 
+        DiscreteVariable.sequence("foo", 4), DenseTensorBuilder.getFactory());
     builder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
 
     // Factor connecting adjacent y's
@@ -94,13 +95,13 @@ public class SequenceModelTest extends TestCase {
   
   public void testTrainSvm() {
     DefaultLogFunction logFn = new DefaultLogFunction();
-    testZeroTrainingError(new SubgradientSvmTrainer(80, 1, 1.0, new JunctionTree(),
+    testZeroTrainingError(new SubgradientSvmTrainer(80, 1, 0.1, new JunctionTree(),
         new SubgradientSvmTrainer.HammingCost(), logFn));
     logFn.printTimeStatistics();
   }
   
   public void testTrainLogLinear() {
-    testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 80, new DefaultLogFunction(), 1.0, 0.0));
+    testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 80, 1, new DefaultLogFunction(), 1.0, 0.0));
   }
   
   public void testSerialization() {
@@ -109,7 +110,7 @@ public class SequenceModelTest extends TestCase {
     assertEquals(sequenceModel.getVariables(), copy.getVariables());
   }
   
-  private void testZeroTrainingError(Trainer trainer) {
+  private void testZeroTrainingError(Trainer<ParametricFactorGraph> trainer) {
     SufficientStatistics parameters = trainer.train(sequenceModel, sequenceModel.getNewSufficientStatistics(), trainingData); 
     DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);
     

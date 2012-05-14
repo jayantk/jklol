@@ -264,7 +264,8 @@ public class JunctionTree implements MarginalCalculator {
     private List<Integer> cliqueEliminationOrder;
 
     public CliqueTree(FactorGraph factorGraph) {
-      cliqueFactors = new ArrayList<Factor>(factorGraph.getFactors());
+      // Initialize cliqueFactors with minimal cliques from the factor graph.
+      cliqueFactors = new ArrayList<Factor>(factorGraph.getMinimalFactors());
       factorEdges = HashMultimap.create();
       separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
       messages = new ArrayList<Map<Integer, Factor>>();
@@ -281,13 +282,6 @@ public class JunctionTree implements MarginalCalculator {
         factorIndexMap.put(f, index);
         index++;
       }
-
-      // Try eliminating the factors with the most variables first.
-      /*
-       * Collections.sort(cliqueFactors, new Comparator<Factor>() { public int
-       * compare(Factor f1, Factor f2) { return f1.getVars().size() -
-       * f2.getVars().size(); } });
-       */
 
       Set<Factor> remainingFactors = Sets.newHashSet(cliqueFactors);
       while (remainingFactors.size() > 1) {
@@ -337,12 +331,11 @@ public class JunctionTree implements MarginalCalculator {
             break;
           }
         }
-
         Preconditions.checkState(justEliminated != null,
             "Could not convert %s into a clique tree", factorGraph);
         remainingFactors.remove(justEliminated);
       }
-
+      
       for (int i = 0; i < cliqueFactors.size(); i++) {
         separatorSets.add(Maps.<Integer, SeparatorSet> newHashMap());
         messages.add(Maps.<Integer, Factor> newHashMap());

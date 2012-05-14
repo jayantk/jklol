@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.util;
 
 import java.util.Iterator;
 
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
@@ -20,6 +21,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   
   double[][] assignmentNums;
   double[] firstTestArray,secondTestArray;
+  long[] firstArrayKeys,secondArrayKeys;
   
   Tensor table012, table01, table12;
   int[] varNums;
@@ -49,11 +51,15 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
     }
     table12 = builder.build();
     
-    firstTestArray = new double[100000];
-    secondTestArray = new double[100000];
+    firstTestArray = new double[1000000];
+    secondTestArray = new double[1000000];
+    firstArrayKeys = new long[1000000];
+    secondArrayKeys = new long[1000000];
     for (int i = 0; i < 100000; i++) {
       firstTestArray[i] = i;
       secondTestArray[i] = i + 1;
+      firstArrayKeys[i] = i;
+      secondArrayKeys[i] = i;
     }
   }
   
@@ -73,10 +79,40 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   }
   
   @PerformanceTest(3)
+  public void testSumRightAligned() {
+    table012.sumOutDimensions(Ints.asList(2));
+  }
+  
+  @PerformanceTest(3)
+  public void testElementwiseExp() {
+    table012.elementwiseExp();
+  }
+  
+  @PerformanceTest(3)
+  public void testElementwiseInverse() {
+    table012.elementwiseInverse();
+  }
+  
+  @PerformanceTest(3)
+  public void testElementwiseLog() {
+    table012.elementwiseLog();
+  }
+  
+  @PerformanceTest(3)
   public void testProductDense() {
     double[] output = new double[firstTestArray.length];
-    for (int i = 0; i < firstTestArray.length; i++) {
+    long[] outputKeys = new long[firstTestArray.length];
+    for (int i = 0; i < firstTestArray.length && i < secondTestArray.length; i++) {
       output[i] = firstTestArray[i] * secondTestArray[i];
+      outputKeys[i] = firstArrayKeys[i];
+    }
+  }
+  
+  @PerformanceTest(3)
+  public void testMarginalDense() {
+    double[] output = new double[100];
+    for (int i = 0; i < firstTestArray.length; i++) {
+      output[i % 100] += firstTestArray[i];
     }
   }
 

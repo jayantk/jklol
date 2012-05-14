@@ -77,6 +77,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   public DenseTensor elementwiseProduct(Tensor other) {
     return doElementwise(other, Operation.PRODUCT);
   }
+  
+  @Override
+  public DenseTensor outerProduct(Tensor other) {
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
 
   @Override
   public DenseTensor elementwiseAddition(Tensor other) {

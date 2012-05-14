@@ -18,7 +18,7 @@ public class LinearClassifierFactorTest extends TestCase {
 
   VariableNumMap inputVar,outputVar;
   SparseTensor weights, input;
-  LinearClassifierFactor factor;
+  LinearClassifierFactor factor, normedFactor;
   
   public void setUp() {
     DiscreteVariable outputVariable = new DiscreteVariable("foo", 
@@ -36,6 +36,7 @@ public class LinearClassifierFactorTest extends TestCase {
     }
     
     factor = new LinearClassifierFactor(inputVar, outputVar, weightBuilder.build());
+    normedFactor = new LinearClassifierFactor(inputVar, outputVar, outputVar, weightBuilder.build());
     
     SparseTensorBuilder inputBuilder = new SparseTensorBuilder(new int[] {1}, new int[] {3});
     inputBuilder.put(new int[] {0}, 1);
@@ -65,12 +66,26 @@ public class LinearClassifierFactorTest extends TestCase {
     Assignment a = new Assignment(Ints.asList(1), Arrays.asList(input));
     Factor output = factor.conditional(a);
     assertEquals(8.0, Math.log(output.getUnnormalizedProbability("A")), 0.001);
+    assertEquals(11.0, Math.log(output.getUnnormalizedProbability("B")), 0.001);
     assertEquals(14.0, Math.log(output.getUnnormalizedProbability("C")), 0.001);
+    assertEquals(17.0, Math.log(output.getUnnormalizedProbability("D")), 0.001);
         
     a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "A"));
     output = factor.conditional(a);
     assertEquals(0, output.getVars().size());
     assertEquals(8.0, Math.log(output.getUnnormalizedProbability(Assignment.EMPTY)), 0.001);
+  }
+  
+  public void testConditionalNormed() {
+    Assignment a = new Assignment(Ints.asList(1), Arrays.asList(input));
+    Factor output = normedFactor.conditional(a);
+    assertEquals(-0.051, Math.log(output.getUnnormalizedProbability("D")), 0.001);
+    assertEquals(1.0, output.getTotalUnnormalizedProbability(), .001);
+        
+    a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "D"));
+    output = normedFactor.conditional(a);
+    assertEquals(0, output.getVars().size());
+    assertEquals(-0.051, Math.log(output.getUnnormalizedProbability(Assignment.EMPTY)), 0.001);
   }
   
   public void testConditionalInvalid() {

@@ -85,6 +85,15 @@ public interface Factor {
   public double getUnnormalizedLogProbability(List<? extends Object> outcome);
 
   /**
+   * Gets the total amount of unnormalized probability mass assigned by this
+   * factor to any assignment. This is the integral of this factor's
+   * unnormalized probability density over all assignments.
+   * 
+   * @return
+   */
+  public double getTotalUnnormalizedProbability();
+
+  /**
    * Gets the set of possible outbound messages which can be computed when this
    * {@code Factor} has received {@code inboundMessages} from other factors. The
    * keys of {@code inboundMessages} are all of the separator sets connecting
@@ -312,6 +321,14 @@ public interface Factor {
    * @return
    */
   public FactorProto toProto(IndexedList<Variable> variableTypeIndex);
+
+  /**
+   * Gets a detailed human-readable description of this factor. This description
+   * should contain all parameters of this factor, each on its own line.
+   * 
+   * @return
+   */
+  public String getParameterDescription();
 
   // Coercion methods
 

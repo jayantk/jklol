@@ -17,8 +17,6 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.TensorProtos.DenseTensorProto;
 import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
-import com.jayantkrish.jklol.util.HeapUtils;
-import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
  * Immutable tensor, represented densely. The dense representation is faster
@@ -75,7 +73,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
 
   @Override
   public DenseTensor elementwiseProduct(Tensor other) {
-    return doElementwise(other, Operation.PRODUCT);
+    DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    result.incrementWithMultiplier(other, 1);
+    result.multiply(this);
+    return result.buildNoCopy();
   }
   
   @Override
@@ -85,80 +87,20 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
 
   @Override
   public DenseTensor elementwiseAddition(Tensor other) {
-    return doElementwise(other, Operation.SUM);
+    DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    result.incrementWithMultiplier(other, 1);
+    result.increment(this);
+    return result.buildNoCopy();
   }
 
   @Override
   public DenseTensor elementwiseMaximum(Tensor other) {
-    return doElementwise(other, Operation.MAX);
-  }
-
-  private enum Operation {
-    PRODUCT, SUM, MAX
-  };
-
-  /**
-   * Performs elementwise operations, like products, sums and maxes.
-   * 
-   * @param other
-   * @param op
-   * @return
-   */
-  private DenseTensor doElementwise(Tensor other, Operation op) {
-    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+    DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
-    if (op != Operation.PRODUCT) {
-      outputBuilder.increment(this);
-    }
-
-    // Maps a key of other into a partial key of this.
-    int[] dimensionMapping = getDimensionMapping(other.getDimensionNumbers());
-    int[] partialKey = Arrays.copyOf(getDimensionSizes(), getDimensionSizes().length);
-    for (int i = 0; i < dimensionMapping.length; i++) {
-      partialKey[dimensionMapping[i]] = 1;
-    }
-
-    int numValues = 1;
-    for (int i = 0; i < partialKey.length; i++) {
-      numValues *= partialKey[i];
-    }
-    int[] keyOffsets = new int[numValues];
-    Iterator<int[]> myKeyIterator = new IntegerArrayIterator(partialKey, new int[0]);
-    int ind = 0;
-    while (myKeyIterator.hasNext()) {
-      keyOffsets[ind] = dimKeyToIndex(myKeyIterator.next());
-      ind++;
-    }
-    Preconditions.checkState(ind == keyOffsets.length);
-
-    Iterator<KeyValue> otherKeyValues = other.keyValueIterator();
-    while (otherKeyValues.hasNext()) {
-      KeyValue otherKeyValue = otherKeyValues.next();
-      int baseOffset = 0;
-      for (int i = 0; i < otherKeyValue.getKey().length; i++) {
-        baseOffset += otherKeyValue.getKey()[i] * indexOffsets[dimensionMapping[i]];
-      }
-
-      for (int i = 0; i < keyOffsets.length; i++) {
-        switch (op) {
-        case PRODUCT:
-          outputBuilder.values[baseOffset + keyOffsets[i]] = otherKeyValue.getValue();
-          break;
-        case SUM:
-          outputBuilder.values[baseOffset + keyOffsets[i]] += otherKeyValue.getValue();
-          break;
-        case MAX:
-          outputBuilder.values[baseOffset + keyOffsets[i]] = Math.max(otherKeyValue.getValue(),
-              outputBuilder.values[baseOffset + keyOffsets[i]]);
-          break;
-        }
-      }
-    }
-
-    if (op == Operation.PRODUCT) {
-      outputBuilder.multiply(this);
-    }
-    return outputBuilder.buildNoCopy();
+    result.incrementWithMultiplier(other, 1);
+    result.maximum(this);
+    return result.buildNoCopy();
   }
 
   @Override
@@ -310,11 +252,6 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
   @Override
   public DenseTensor replaceValues(double[] newValues) {
     return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), newValues);
-  }
-  
-  @Override
-  public long[] getLargestValues(int n) {
-    return HeapUtils.findLargestItemIndexes(values, n);
   }
   
   @Override

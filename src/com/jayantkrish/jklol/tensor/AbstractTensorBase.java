@@ -32,8 +32,26 @@ public abstract class AbstractTensorBase implements TensorBase {
     this.sizes = Arrays.copyOf(sizes, sizes.length);
 
     // Create the data structure for converting dimension keys to integers.
-    indexOffsets = new long[sizes.length];
-    initializeIndexOffsets(sizes);
+    indexOffsets = computeIndexOffsets(sizes);
+  }
+
+  /**
+   * Computes an array of index offsets (multipliers) from a set of dimension
+   * sizes. The returned array is used to convert int[] tensor keys to longs
+   * (and vice versa).
+   * 
+   * @param sizes
+   */
+  protected static final long[] computeIndexOffsets(int[] sizes) {
+    long[] indexOffsets = new long[sizes.length];
+    for (int i = sizes.length - 1; i >= 0; i--) {
+      if (i == sizes.length - 1) {
+        indexOffsets[i] = 1;
+      } else {
+        indexOffsets[i] = indexOffsets[i + 1] * ((long) sizes[i + 1]);
+      }
+    }
+    return indexOffsets;
   }
 
   /**
@@ -62,22 +80,6 @@ public abstract class AbstractTensorBase implements TensorBase {
       sizes[i] = proto.getSize(i);
     }
     return sizes;
-  }
-
-  /**
-   * Initializes {@code this.indexOffsets} array based on the known dimension
-   * sizes.
-   * 
-   * @param sizes
-   */
-  private void initializeIndexOffsets(int[] sizes) {
-    for (int i = sizes.length - 1; i >= 0; i--) {
-      if (i == sizes.length - 1) {
-        indexOffsets[i] = 1;
-      } else {
-        indexOffsets[i] = indexOffsets[i + 1] * ((long) sizes[i + 1]);
-      }
-    }
   }
 
   @Override
@@ -137,7 +139,10 @@ public abstract class AbstractTensorBase implements TensorBase {
 
   @Override
   public long dimKeyPrefixToKeyNum(int[] keyPrefix) {
-    int[] sizes = getDimensionSizes();
+    return dimKeyPrefixToKeyNum(keyPrefix, getDimensionSizes(), indexOffsets);
+  }
+
+  protected static final long dimKeyPrefixToKeyNum(int[] keyPrefix, int[] sizes, long[] indexOffsets) {
     long keyNum = 0;
     for (int i = 0; i < keyPrefix.length; i++) {
       Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i],

@@ -139,6 +139,17 @@ public interface TensorBase {
    * @return
    */
   double getTrace();
+    
+  /**
+   * Gets the keynums of the {@code n} largest values in this tensor. If this
+   * tensor contains fewer than {@code n} nonzero values, fewer than {@code n}
+   * indexes may be returned. The keynums are returned in descending order by
+   * their corresponding value, i.e., the 0th element of the returned array
+   * points to the largest value in {@code this}.
+   * 
+   * @return
+   */
+  public long[] getLargestValues(int n);
 
   /**
    * The key of a tensor and its corresponding value. For efficiency reasons,

@@ -182,10 +182,10 @@ public class FactorGraph {
     Collections.sort(sortedFactors, new Comparator<Factor>() {
       public int compare(Factor f1, Factor f2) { 
         return f2.getVars().size() - f1.getVars().size(); 
-      } 
+      }
     });
     
-    List<Factor> finalFactors = Lists.newArrayList();
+    List<List<Factor>> factorsToMerge = Lists.newArrayList();
     Set<Integer> factorNums = Sets.newHashSet();
     Multimap<Integer, Integer> varFactorIndex = HashMultimap.create();
     for (Factor f : sortedFactors) {
@@ -196,14 +196,26 @@ public class FactorGraph {
 
       if (mergeableFactors.size() > 0) {
         int factorIndex = Iterables.getFirst(mergeableFactors, -1);
-        finalFactors.set(factorIndex, finalFactors.get(factorIndex).product(f));
+        factorsToMerge.get(factorIndex).add(f);
       } else {
         for (Integer varNum : f.getVars().getVariableNums()) {
-          varFactorIndex.put(varNum, finalFactors.size());
+          varFactorIndex.put(varNum, factorsToMerge.size());
         }
-        factorNums.add(finalFactors.size());
-        finalFactors.add(f);
+        factorNums.add(factorsToMerge.size());
+        factorsToMerge.add(Lists.newArrayList(f));
       }
+    }
+    
+    // Merge factors using size as a guideline
+    List<Factor> finalFactors = Lists.newArrayListWithCapacity(factorsToMerge.size());
+    for (List<Factor> toMerge : factorsToMerge) {
+      // Sort the factors by their .size() attribute, sparsest factors first.
+      Collections.sort(toMerge, new Comparator<Factor>() {
+        public int compare(Factor f1, Factor f2) { 
+          return (int) (f1.size() - f2.size()); 
+        }
+      });
+      finalFactors.add(Factors.product(toMerge));
     }
     return finalFactors;
   }

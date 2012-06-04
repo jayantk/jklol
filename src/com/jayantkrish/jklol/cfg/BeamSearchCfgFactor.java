@@ -14,10 +14,10 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.AbstractConditionalFactor;
 import com.jayantkrish.jklol.models.DiscreteObjectFactor;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -66,6 +66,14 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor {
    */
   public CfgParser getParser() {
     return parser;
+  }
+  
+  public VariableNumMap getTreeVariable() {
+    return treeVariable;
+  }
+  
+  public VariableNumMap getTerminalVariable() {
+    return terminalVariable;
   }
 
   @Override

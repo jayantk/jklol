@@ -62,18 +62,7 @@ public interface Tensor extends TensorBase {
    * @return
    */
   Tensor replaceValues(double[] values);
-
-  /**
-   * Gets the keynums of the {@code n} largest values in this tensor. If this
-   * tensor contains fewer than {@code n} nonzero values, fewer than {@code n}
-   * indexes may be returned. The keynums are returned in descending order by
-   * their corresponding value, i.e., the 0th element of the returned array
-   * points to the largest value in {@code this}.
-   * 
-   * @return
-   */
-  public long[] getLargestValues(int n);
-
+  
   /**
    * Gets the first index in {@code this} whose corresponding keyNum is >= than
    * {@code keyNum}. This method is intended for advanced use only.

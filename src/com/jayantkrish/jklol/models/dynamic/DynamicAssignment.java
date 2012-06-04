@@ -65,6 +65,14 @@ public class DynamicAssignment {
     return plateAssignments.get(plateName);
   }
   
+  public List<Assignment> getPlateFixedAssignments(String plateName) {
+    List<Assignment> assignments = Lists.newArrayList();
+    for (DynamicAssignment dynamic : getPlateValue(plateName)) {
+      assignments.add(dynamic.getFixedAssignment());
+    }
+    return assignments;
+  }
+  
   public Assignment getFixedAssignment() {
     return assignment;
   }
@@ -76,7 +84,8 @@ public class DynamicAssignment {
       if (other.plateAssignments.containsKey(plateName)) {
         List<DynamicAssignment> myValue = plateAssignments.get(plateName);
         List<DynamicAssignment> otherValue = other.plateAssignments.get(plateName);
-        Preconditions.checkArgument(myValue.size() == otherValue.size());
+        Preconditions.checkArgument(myValue.size() == otherValue.size(), 
+            "Plate values not equal: %s and %s", myValue, otherValue);
         
         List<DynamicAssignment> newValue = Lists.newArrayListWithCapacity(myValue.size());
         for (int i = 0; i < myValue.size(); i++) {

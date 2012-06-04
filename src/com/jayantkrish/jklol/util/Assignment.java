@@ -241,7 +241,7 @@ public class Assignment {
         mergedVals.add(myVals.get(j));
         j++;
       } else {
-        throw new RuntimeException("Cannot combine non-disjoint assignments");
+        Preconditions.checkState(false, "Cannot combine non-disjoint assignments: %s with %s", this, other);
       }
     }
     // One list might still have elements in it.

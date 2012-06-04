@@ -1,12 +1,12 @@
 package com.jayantkrish.jklol.util;
 
-import java.util.Iterator;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 /**
@@ -25,8 +25,8 @@ public class IndexedList<T> implements Iterable<T> {
 	}
 
 	public IndexedList(Collection<? extends T> toInsert) {
-		items = new ArrayList<T>();
-		itemIndex = new HashMap<T, Integer>();
+		items = new ArrayList<T>(toInsert.size());
+		itemIndex = new HashMap<T, Integer>(toInsert.size());
 
 		for (T item : toInsert) {
 			this.add(item);

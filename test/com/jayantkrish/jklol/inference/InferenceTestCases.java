@@ -108,29 +108,37 @@ public class InferenceTestCases {
   }
 
   public static MaxMarginalTestCase testBasicMaxMarginals() {
-    MaxMarginalTestCase testCase = new MaxMarginalTestCase(basicFactorGraph(), Assignment.EMPTY, 
+    FactorGraph f = basicFactorGraph();
+    MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, Assignment.EMPTY, 
         new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 4}), 
-            Arrays.asList(new Object[] {"T", "foo", "T", "T", "F"})));
+            Arrays.asList(new Object[] {"T", "foo", "T", "T", "F"})),
+            f.getVariables().intersection(Arrays.asList(0, 2)));
+    testCase.addTest(new String[] {"T", "T"}, 9.0);
+    testCase.addTest(new String[] {"T", "F"}, 4.0);
+    testCase.addTest(new String[] {"U", "F"}, 8.0);
+    testCase.addTest(new String[] {"U", "U"}, 0.0);
     return testCase;
 
     // These are the actual max marginals, in case I ever want to test them.
     /*
     testCase.addTest(6.0 / 18.0, new Integer[] { 1 }, "bar");
     testCase.addTest(9.0 / 18.0, new Integer[] { 1 }, "foo");
-
-    testCase.addTest(9.0 / 18.0, new Integer[] { 0, 2 }, "T", "T");
-    testCase.addTest(4.0 / 18.0, new Integer[] { 0, 2 }, "T", "F");
-    testCase.addTest(8.0 / 18.0, new Integer[] { 0, 2 }, "U", "F");
-    testCase.addTest(0.0 / 18.0, new Integer[] { 0, 2 }, "U", "U");
     */
   }
   
   public static MaxMarginalTestCase testConditionalMaxMarginals() {
-    MaxMarginalTestCase testCase = new MaxMarginalTestCase(basicFactorGraph(), 
+    FactorGraph f = basicFactorGraph();
+    MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, 
         new Assignment(Arrays.asList(new Integer[] {2}), 
             Arrays.asList(new Object[] {"F"})), 
         new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 4}), 
-            Arrays.asList(new Object[] {"U", "foo", "F", "F", "U"})));
+            Arrays.asList(new Object[] {"U", "foo", "F", "F", "U"})),
+            f.getVariables().intersection(Arrays.asList(3, 4)));
+    
+    testCase.addTest(new String[] {"F", "U"}, 8.0);
+    testCase.addTest(new String[] {"T", "U"}, 0.0);
+    testCase.addTest(new String[] {"F", "F"}, 0.0);
+    testCase.addTest(new String[] {"T", "T"}, 0.0);
     return testCase;
   }
 

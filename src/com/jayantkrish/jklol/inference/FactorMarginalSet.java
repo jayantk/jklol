@@ -46,6 +46,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
         variableFactorMap.put(variableNum, factor);
       }
     }
+
     this.allFactors = ImmutableList.copyOf(factors);
   }
   

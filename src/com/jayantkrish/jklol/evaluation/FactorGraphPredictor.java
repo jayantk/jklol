@@ -98,8 +98,16 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
     }
 
     // Need marginals in order to compute the true partition function.
-    MarginalSet marginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
-    double partitionFunction = marginals.getPartitionFunction();
+    double partitionFunction = 0.0;
+    try {
+      MarginalSet marginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
+      partitionFunction = marginals.getPartitionFunction();
+    } catch (ZeroProbabilityError e) {
+      // If this occurs, the factor graph assigns zero probability 
+      // to everything given dynamicInput.
+      return Prediction.create(dynamicInput, dynamicOutput, Double.NEGATIVE_INFINITY, 
+          new double[0], Collections.<DynamicAssignment>emptyList());
+    }
     
     List<DynamicAssignment> predictedOutputs = Lists.newArrayList();
     double[] scores = new double[bestAssignments.size()];

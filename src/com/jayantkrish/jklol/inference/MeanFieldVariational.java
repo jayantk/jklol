@@ -17,15 +17,19 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * 
- * - Be careful about factors with 0 weights - Only applicable to discrete
- * factors + discrete variables.
+ * Implementation of mean field variational inference. This is an approximate
+ * inference algorithm suitable for computing (approximate) marginal
+ * distributions for discrete-valued factor graphs.
+ * <p>
+ * Note that factors with 0 unnormalized probability assignments are not
+ * supported by this algorithm.
  * 
  * @author jayantk
  */
 public class MeanFieldVariational implements MarginalCalculator {
-  
-  private static final double CONVERGENCE_DELTA = 0.00000001;
+
+  private static final double CONVERGENCE_DELTA = 0.00000001; 
+  // private static final double CONVERGENCE_DELTA = 0.01;
 
   @Override
   public MarginalSet computeMarginals(FactorGraph factorGraph) {
@@ -34,6 +38,8 @@ public class MeanFieldVariational implements MarginalCalculator {
 
     // Initialize the mean field distribution to the uniform distribution over
     // all variables.
+    long curTime = System.currentTimeMillis();
+    System.out.println("init: " + (System.currentTimeMillis() - curTime)); 
     int numVars = variables.size();
     IndexedList<Integer> variableNums = new IndexedList<Integer>(variables.getVariableNums());
     List<DiscreteVariable> variableTypes = variables.getDiscreteVariables();
@@ -43,14 +49,16 @@ public class MeanFieldVariational implements MarginalCalculator {
       int[] sizes = new int[] { variableTypes.get(i).numValues() };
       variableMarginals.add(DenseTensor.constant(dimensions, sizes, 1.0 / sizes[0]));
     }
-
+    System.out.println("logweights: "  + (System.currentTimeMillis() - curTime));
     // Get the log weights for each factor in the original factor graph.
     List<Tensor> logWeights = Lists.newArrayList();
     for (Factor factor : factorGraph.getFactors()) {
       logWeights.add(factor.coerceToDiscrete().getWeights().elementwiseLog());
     }
+    System.out.println("done: " +  + (System.currentTimeMillis() - curTime)); 
 
     double updateL2 = Double.POSITIVE_INFINITY;
+    int numIterations = 0;
     while (updateL2 > CONVERGENCE_DELTA) {
       updateL2 = 0.0;
       for (int i = 0; i < numVars; i++) {
@@ -63,8 +71,10 @@ public class MeanFieldVariational implements MarginalCalculator {
         for (int factorIndex : factorIndexes) {
           Tensor factorMessage = getFactorMessage(curVarNum, logWeights.get(factorIndex),
               variableMarginals, variableNums);
-          // System.out.println("factorMessage: " + Arrays.toString(factorMessage.getDimensionNumbers()));
-          // System.out.println("messageAccumulator: " + Arrays.toString(messageAccumulator.getDimensionNumbers()));
+          // System.out.println("factorMessage: " +
+          // Arrays.toString(factorMessage.getDimensionNumbers()));
+          // System.out.println("messageAccumulator: " +
+          // Arrays.toString(messageAccumulator.getDimensionNumbers()));
           messageAccumulator.increment(factorMessage);
         }
 
@@ -79,12 +89,14 @@ public class MeanFieldVariational implements MarginalCalculator {
         Tensor delta = newMarginal.elementwiseAddition(
             variableMarginals.get(i).elementwiseProduct(SparseTensor.getScalarConstant(-1.0)));
         updateL2 += delta.getL2Norm();
-        
+
         variableMarginals.set(i, newMarginal);
       }
-      // System.out.println("update L2: " + updateL2);
+      numIterations++;
+      System.out.println("update L2: " + updateL2);
     }
-
+    
+    System.out.println("iterations:" + numIterations);
     // Format output as factors.
     List<Factor> marginals = Lists.newArrayList();
     for (int i = 0; i < numVars; i++) {
@@ -92,6 +104,7 @@ public class MeanFieldVariational implements MarginalCalculator {
           variableMarginals.get(i)));
     }
 
+    System.out.println("really done: " +  + (System.currentTimeMillis() - curTime));
     return new FactorMarginalSet(marginals, 1.0, factorGraph.getConditionedVariables(),
         factorGraph.getConditionedValues());
   }
@@ -110,8 +123,7 @@ public class MeanFieldVariational implements MarginalCalculator {
       List<Tensor> variableMarginals, IndexedList<Integer> variableNums) {
     Tensor factorMessage = logFactorWeights;
     // Each message is the outer product of all variable marginals, except
-    // variable i,
-    // elementwise multiplied by the log factor weights.
+    // variable i, elementwise multiplied by the log factor weights.
     int[] weightVariableNums = factorMessage.getDimensionNumbers();
     List<Integer> variablesToMarginalize = Lists.newArrayList();
     for (int j = 0; j < weightVariableNums.length; j++) {

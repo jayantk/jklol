@@ -66,9 +66,13 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     this.terminalFunction = terminalFunction;
     this.validTreeFilter = validTreeFilter;
   }
+  
+  public VariableNumMap getTreeVar() {
+    return treeVar;
+  }
 
   @Override
-  public Factor getFactorFromParameters(SufficientStatistics parameters) {
+  public BeamSearchCfgFactor getFactorFromParameters(SufficientStatistics parameters) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);

@@ -139,7 +139,7 @@ public class FilterFactor extends AbstractFactor {
 
   @Override
   public double size() {
-    return rangeFactor.size();
+    return Double.POSITIVE_INFINITY;
   }
 
   @Override

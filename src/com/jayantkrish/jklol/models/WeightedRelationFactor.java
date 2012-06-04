@@ -254,7 +254,8 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
 
   @Override
   public double size() {
-    return domainFactor != null ? domainFactor.size() : 0;
+    return Double.POSITIVE_INFINITY;
+    // return domainFactor != null ? domainFactor.size() : 0;
   }
 
   @Override

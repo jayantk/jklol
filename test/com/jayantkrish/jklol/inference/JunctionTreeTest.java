@@ -41,11 +41,11 @@ public class JunctionTreeTest extends TestCase {
 	}
 
 	public void testMaxMarginals() {
-		InferenceTestCases.testBasicMaxMarginals().runTest(new JunctionTree());
+		InferenceTestCases.testBasicMaxMarginals().runTest(new JunctionTree(), 0.0);
 	}
 	
 	public void testConditionalMaxMarginals() {
-		InferenceTestCases.testConditionalMaxMarginals().runTest(new JunctionTree());
+		InferenceTestCases.testConditionalMaxMarginals().runTest(new JunctionTree(), 0.0);
 	}
 }
 

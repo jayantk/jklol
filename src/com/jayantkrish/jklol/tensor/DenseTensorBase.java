@@ -1,17 +1,19 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.util.HeapUtils;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
  * Dense tensors only support tensors with up to {@code Integer.MAX_VALUE}
  * entries, which is the maximum array size addressable in Java. As a result,
- * {@code keyNum}s for dense tensors are representable using integers. 
+ * {@code keyNum}s for dense tensors are representable using integers.
  * 
  * @author jayantk
  */
@@ -66,7 +68,7 @@ public class DenseTensorBase extends AbstractTensorBase {
   public double getByIndex(int index) {
     return values[index];
   }
-  
+
   @Override
   public double getLogByIndex(int index) {
     return Math.log(values[index]);
@@ -81,17 +83,17 @@ public class DenseTensorBase extends AbstractTensorBase {
   public int keyNumToIndex(long keyNum) {
     return (int) keyNum;
   }
-  
+
   public int dimKeyToIndex(int[] dimKey) {
     return (int) dimKeyToKeyNum(dimKey);
   }
 
   @Override
-  public Iterator<KeyValue> keyValueIterator() { 
-    return new KeyToKeyValueIterator(new IntegerArrayIterator(getDimensionSizes(), new int[0]), 
+  public Iterator<KeyValue> keyValueIterator() {
+    return new KeyToKeyValueIterator(new IntegerArrayIterator(getDimensionSizes(), new int[0]),
         this);
   }
-  
+
   @Override
   public Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix) {
     int[] dimSizes = getDimensionSizes();
@@ -111,7 +113,7 @@ public class DenseTensorBase extends AbstractTensorBase {
     }
     return Math.sqrt(sumSquares);
   }
-  
+
   @Override
   public double getTrace() {
     double sum = 0.0;
@@ -119,6 +121,11 @@ public class DenseTensorBase extends AbstractTensorBase {
       sum += values[i];
     }
     return sum;
+  }
+
+  @Override
+  public long[] getLargestValues(int n) {
+    return HeapUtils.findLargestItemIndexes(values, n);
   }
 
   protected int[] getDimensionMapping(int[] otherDimensionNums) {
@@ -160,7 +167,7 @@ public class DenseTensorBase extends AbstractTensorBase {
     }
 
     @Override
-    public boolean hasNext() { 
+    public boolean hasNext() {
       return variableDimensionIterator.hasNext();
     }
 
@@ -178,18 +185,18 @@ public class DenseTensorBase extends AbstractTensorBase {
       throw new UnsupportedOperationException();
     }
   }
-  
+
   protected class KeyToKeyValueIterator implements Iterator<KeyValue> {
-    
+
     private final Iterator<int[]> keyIterator;
     private final TensorBase tensor;
-    
+
     private final KeyValue keyValue;
-    
+
     public KeyToKeyValueIterator(Iterator<int[]> keyIterator, TensorBase tensor) {
       this.keyIterator = Preconditions.checkNotNull(keyIterator);
       this.tensor = Preconditions.checkNotNull(tensor);
-      
+
       this.keyValue = new KeyValue(null, 0.0);
     }
 

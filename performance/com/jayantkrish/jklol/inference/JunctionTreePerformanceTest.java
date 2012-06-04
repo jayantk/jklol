@@ -1,8 +1,6 @@
 package com.jayantkrish.jklol.inference;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -27,12 +25,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
   int numValues = 10000;
 
   public void setUp() {
-    List<Integer> varValues = new ArrayList<Integer>();
-    for (int i =0 ; i < numValues; i++) {
-      varValues.add(i);
-    }
-
-    DiscreteVariable var = new DiscreteVariable("int var", varValues);
+    DiscreteVariable var = DiscreteVariable.sequence("int var", numValues);
 
     f = new FactorGraph();
     f = f.addVariable("Var0", var);

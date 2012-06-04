@@ -934,6 +934,17 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     return resizeIntoTable(new int[] { dimensionNumber }, new int[] { dimensionSize },
         keyNums, outcomeValues, numEntries);
   }
+  
+  public static SparseTensor singleElement(int[] dimensionNumbers, int[] dimensionSizes, int[] dimKey, double value) {
+    long[] keyNums = new long[1]; 
+    double[] values = new double[1];
+    
+    keyNums[0] = AbstractTensorBase.dimKeyPrefixToKeyNum(dimKey, dimensionSizes, 
+        AbstractTensorBase.computeIndexOffsets(dimensionSizes));
+    values[0] = value;
+    
+    return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
+  }
 
   /**
    * Creates a {@code SparseTensor} from its serialization as a protocol buffer.

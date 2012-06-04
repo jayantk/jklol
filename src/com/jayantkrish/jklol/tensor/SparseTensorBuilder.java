@@ -169,6 +169,11 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     }
     return sum;
   }
+  
+  @Override
+  public long[] getLargestValues(int n) {
+    return build().getLargestValues(n);
+  }
 
   // /////////////////////////////////////////////////////////////
   // TensorBuilder methods

@@ -99,7 +99,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   }
   
   @PerformanceTest(3)
-  public void testProductDense() {
+  public void testSparseProductLowerBound() {
     double[] output = new double[firstTestArray.length];
     long[] outputKeys = new long[firstTestArray.length];
     for (int i = 0; i < firstTestArray.length && i < secondTestArray.length; i++) {
@@ -109,7 +109,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   }
   
   @PerformanceTest(3)
-  public void testMarginalDense() {
+  public void testMarginalLowerBound() {
     double[] output = new double[100];
     for (int i = 0; i < firstTestArray.length; i++) {
       output[i % 100] += firstTestArray[i];

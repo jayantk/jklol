@@ -20,7 +20,7 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
  * 
  * @author jayantk
  */
-public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor {
+public class LogSpaceTensorAdapter extends AbstractTensor {
 
   private final DenseTensor logWeights;
 
@@ -127,6 +127,11 @@ public class LogSpaceTensorAdapter extends AbstractTensorBase implements Tensor 
   @Override
   public Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {
     return new LogSpaceTensorAdapter(logWeights.maxOutDimensions(dimensionsToEliminate));
+  }
+  
+  @Override
+  public Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate, Backpointers backpointers) {
+    return new LogSpaceTensorAdapter(logWeights.maxOutDimensions(dimensionsToEliminate, backpointers));
   }
 
   @Override

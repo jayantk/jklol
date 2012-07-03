@@ -282,7 +282,7 @@ public class JunctionTree implements MarginalCalculator {
         factorIndexMap.put(f, index);
         index++;
       }
-
+      
       Set<Factor> remainingFactors = Sets.newHashSet(cliqueFactors);
       while (remainingFactors.size() > 1) {
         // Each iteration eliminates one factor from the factor graph.
@@ -320,6 +320,11 @@ public class JunctionTree implements MarginalCalculator {
                 superset = next;
               }
             }
+            
+            // Remove the factor from the map containing variable counts.
+            for (Integer variableNum : f.getVars().getVariableNums()) {
+              varFactorMap.remove(variableNum, f);
+            }
 
             // Add an undirected edge in the clique tree from f to superset.
             int curFactorIndex = factorIndexMap.get(f);
@@ -332,7 +337,7 @@ public class JunctionTree implements MarginalCalculator {
           }
         }
         Preconditions.checkState(justEliminated != null,
-            "Could not convert %s into a clique tree", factorGraph);
+            "Could not convert %s into a clique tree. Remaining factors: %s", factorGraph, remainingFactors);
         remainingFactors.remove(justEliminated);
       }
       

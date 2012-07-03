@@ -169,7 +169,7 @@ public class TableFactor extends DiscreteFactor {
       for (int i = 0; i < numVars; i++) {
         assignment = assignment.union(variables.get(i).outcomeArrayToAssignment(parts[i]));
       }
-      Preconditions.checkState(allVars.isValidAssignment(assignment));
+      Preconditions.checkState(allVars.isValidAssignment(assignment), "%s", assignment);
       double weight = Double.parseDouble(parts[numVars]);
       builder.setWeight(assignment, weight);
     }

@@ -26,13 +26,43 @@ public interface Tensor extends TensorBase {
   Tensor slice(int[] dimensionNumbers, int[] keys);
 
   Tensor elementwiseProduct(Tensor other);
-  
+
+  Tensor elementwiseProduct(Collection<Tensor> others);
+
+  Tensor elementwiseProduct(double value);
+
   Tensor outerProduct(Tensor other);
 
+  /**
+   * Performs elementwise addition of {@code this} and {@code other} and returns
+   * a new {@code SparseTensor} containing the result. The value of key {code k}
+   * in the returned table is {@code this.get(k) + other.get(k)}. Requires
+   * {@code other} and {@code this} to contain the same dimensions.
+   * 
+   * @param other
+   * @return
+   */
   Tensor elementwiseAddition(Tensor other);
 
+  /**
+   * Computes the elementwise maximum of {@code this} and {@code other},
+   * returning a new {@code SparseTensor} containing the result. The value of
+   * key {code k} in the returned table is
+   * {@code Math.max(this.get(k), other.get(k))} . Requires {@code other} and
+   * {@code this} to contain the same dimensions.
+   * 
+   * @param other
+   * @return
+   */
   Tensor elementwiseMaximum(Tensor other);
 
+  /**
+   * Returns the elementwise multiplicative inverse of {@code this}. For all
+   * keys {@code k} in {@code this}, {@code inverse.get(k) * this.get(k) == 1}.
+   * For all keys not in {@code this}, {@code inverse.get(k) == 0}.
+   * 
+   * @return
+   */
   Tensor elementwiseInverse();
 
   Tensor elementwiseLog();
@@ -46,9 +76,57 @@ public interface Tensor extends TensorBase {
    */
   Tensor elementwiseExp();
 
+  /**
+   * Applies {@code op} to the value of each key in {@code this}, including keys
+   * with zero values.
+   * 
+   * @param op
+   * @return
+   */
+  // Tensor elementwiseOp(Function<Double, Double> op);
+
+  /**
+   * Applies {@code op} to the value of each key in {@code this}, ignoring any
+   * keys with zero values.
+   * 
+   * @param op
+   * @return
+   */
+  // Tensor sparseElementwiseOp(Function<Double, Double> op);
+
+  /**
+   * Sums out {@code dimensionsToEliminate}, returning a lower-dimensional
+   * tensor containing the remaining dimensions. The value of key {@code k} in
+   * the returned tensor is the sum over all keys in {@code this} which are
+   * supersets of {@code k}.
+   * 
+   * @param dimensionsToEliminate
+   * @return
+   */
   Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate);
 
+  /**
+   * Maximizes out {@code dimensionsToEliminate}, returning a lower-dimensional
+   * tensor containing the remaining dimensions. The value of key {@code k} in
+   * the returned tensor is the maximum over all keys in {@code this} which are
+   * supersets of {@code k}.
+   * 
+   * @param dimensionsToEliminate
+   * @return
+   */
   Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate);
+
+  /**
+   * Same as {@link #maxOutDimensions(Collection)}, except additionally returns
+   * the {@code keyNums} which were used in the construction of the returned
+   * tensor. These are returned in {@code backpointers}, which acts like a map
+   * from keys in the returned tensor to keys in {@code this}.
+   * 
+   * @param dimensionsToEliminate
+   * @param backpointers
+   * @return
+   */
+  Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate, Backpointers backpointers);
 
   Tensor relabelDimensions(int[] newDimensions);
 
@@ -62,7 +140,7 @@ public interface Tensor extends TensorBase {
    * @return
    */
   Tensor replaceValues(double[] values);
-  
+
   /**
    * Gets the first index in {@code this} whose corresponding keyNum is >= than
    * {@code keyNum}. This method is intended for advanced use only.

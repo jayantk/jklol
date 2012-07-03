@@ -17,6 +17,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
+import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
  * Implementation-independent test cases for tensor operations.
@@ -62,9 +63,9 @@ public abstract class TensorTest extends TestCase {
     builder.put(new int[] { 0, 0, 3 }, 3.0);
     builder.put(new int[] { 0, 1, 3 }, 4.0);
     builder.put(new int[] { 1, 0, 3 }, 5.0);
-    builder.put(new int[] { 0, 3, 0 }, 3.0);
+    builder.put(new int[] { 0, 3, 0 }, -3.0);
     builder.put(new int[] { 0, 3, 1 }, 4.0);
-    builder.put(new int[] { 1, 3, 0 }, 5.0);
+    builder.put(new int[] { 1, 3, 0 }, -5.0);
     builder.put(new int[] { 3, 0, 0 }, 3.0);
     builder.put(new int[] { 3, 0, 1 }, 4.0);
     builder.put(new int[] { 3, 1, 0 }, 5.0);
@@ -222,7 +223,7 @@ public abstract class TensorTest extends TestCase {
     assertTrue(Arrays.equals(new int[]{3,4}, slice.getDimensionNumbers()));
     assertEquals(5.0, slice.getByDimKey(0, 3));
     assertEquals(0.0, slice.getByDimKey(1, 3));
-    assertEquals(5.0, slice.getByDimKey(3, 0));
+    assertEquals(-5.0, slice.getByDimKey(3, 0));
     assertEquals(0.0, slice.getByDimKey(3, 1));
     assertEquals(0.0, slice.getByDimKey(4, 3));
     assertTrue(2 == slice.size() || 20 == slice.size());    
@@ -309,6 +310,22 @@ public abstract class TensorTest extends TestCase {
 
       assertEquals(expected, actual);
     }
+  }
+  
+  public void testElementwiseProductConstant() {
+    Tensor actual = table.elementwiseProduct(2.0);
+    Tensor expected = simpleMultiply(table, SparseTensor.getScalarConstant(2.0));
+
+    assertEquals(expected, actual);
+  }
+  
+  public void testElementwiseProductList() {
+    Tensor actual = table.elementwiseProduct(missingLasts);
+    Tensor expected = table;
+    for (Tensor missingLast : missingLasts) {
+      expected = simpleMultiply(expected, missingLast);
+    }
+    assertEquals(expected, actual);
   }
   
   public void testOuterProduct() {
@@ -516,16 +533,29 @@ public abstract class TensorTest extends TestCase {
     Tensor expected = simpleReduce(table, dimsToEliminate, true);
     Tensor actual = table.sumOutDimensions(dimsToEliminate);
     assertEquals(expected, actual);
+    Backpointers actualBackpointers = new Backpointers();
     expected = simpleReduce(table, dimsToEliminate, false);
-    actual = table.maxOutDimensions(dimsToEliminate);
+    actual = table.maxOutDimensions(dimsToEliminate, actualBackpointers);
+    System.out.println(expected);
+    System.out.println(actual);
     assertEquals(expected, actual);
+    
+    // Test that the returned backpointers point to keys with the correct values.
+    Tensor indicator = actualBackpointers.getOldKeyIndicatorTensor();
+    Iterator<KeyValue> iter = actual.keyValueIterator();
+    while (iter.hasNext()) {
+      KeyValue k = iter.next();
+      long oldKeyNum = actualBackpointers.getBackpointer(actual.dimKeyToKeyNum(k.getKey()));
+      assertEquals(actual.getByDimKey(k.getKey()), table.get(oldKeyNum));
+      assertEquals(1.0, indicator.get(oldKeyNum));
+      assertEquals(1.0, indicator.getByDimKey(table.keyNumToDimKey(oldKeyNum)));
+    }
   }
   
   /**
    * This is a simple version of sum/max out dimensions algorithm. 
    */
-  private Tensor simpleReduce(Tensor first, Set<Integer> dimsToEliminate,
-      boolean useSum) {
+  private Tensor simpleReduce(Tensor first, Set<Integer> dimsToEliminate, boolean useSum) {
     int[] currentDims = first.getDimensionNumbers();
     int[] currentSizes = first.getDimensionSizes();
     int[] newDimNums = new int[currentDims.length];
@@ -542,20 +572,28 @@ public abstract class TensorTest extends TestCase {
     TensorBuilder builder = tensorFactory.getBuilder(
         Arrays.copyOf(newDimNums, newDimIndices.size()),
         Arrays.copyOf(newDimSizes, newDimIndices.size()));
-    Iterator<KeyValue> keyValueIter = first.keyValueIterator();
-    while (keyValueIter.hasNext()) {
-      KeyValue curKeyValue = keyValueIter.next();
+    if (!useSum) {
+      builder.increment(Double.NEGATIVE_INFINITY);
+    }
+    
+    Iterator<int[]> allKeyIter = new IntegerArrayIterator(first.getDimensionSizes(), new int[0]);
+    while (allKeyIter.hasNext()) {
+      int[] key = allKeyIter.next();
+      double value = first.getByDimKey(key);
       int[] newKey = new int[newDimIndices.size()];
       for (Map.Entry<Integer, Integer> entry : newDimIndices.entrySet()) {
-        newKey[entry.getValue()] = curKeyValue.getKey()[entry.getKey()];
+        newKey[entry.getValue()] = key[entry.getKey()];
       }
       
       if (useSum) {
-        builder.put(newKey, builder.getByDimKey(newKey) + curKeyValue.getValue());
+        builder.put(newKey, builder.getByDimKey(newKey) + value);
       } else {
-        builder.put(newKey, Math.max(builder.getByDimKey(newKey), curKeyValue.getValue()));
+        if (value >= builder.getByDimKey(newKey)) { 
+          builder.put(newKey, value);
+        }
       }
     }
+    
     return builder.build();
   }
 }

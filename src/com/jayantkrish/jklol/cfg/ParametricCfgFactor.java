@@ -67,6 +67,10 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     this.validTreeFilter = validTreeFilter;
   }
   
+  public VariableNumMap getInputVar() {
+    return inputVar;
+  }
+  
   public VariableNumMap getTreeVar() {
     return treeVar;
   }
@@ -86,8 +90,19 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   }
   
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) { 
-    throw new UnsupportedOperationException();
+  public String getParameterDescription(SufficientStatistics parameters) {
+    Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
+    ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
+    Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
+    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
+    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
+    
+    StringBuilder sb = new StringBuilder();
+    sb.append("nonterminal distribution: \n");
+    sb.append(nonterminalFactor.getParameterDescription(nonterminalStatistics));
+    sb.append("terminal distribution: \n");
+    sb.append(terminalFactor.getParameterDescription(terminalStatistics));
+    return sb.toString();
   }
 
   @Override

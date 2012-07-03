@@ -32,19 +32,21 @@ public interface TensorBase {
    * Gets an estimate of the size of this tensor, which corresponds to the
    * amount of work required to perform operations with it. For sparse tensors,
    * this is the number of nonzero values; for dense tensors, this is the total
-   * number of values.
+   * number of values. Indexes from {@code 0} to {@code size() - 1} are valid
+   * for methods like {@link #getByIndex(int)}.
    * 
    * @return
    */
   int size();
-  
+
   /**
-   * A keyNum {@code k} is valid for {@code this} if and only if {@code 0 <= k < this.maxKeyNum()}.
-   *  
+   * A keyNum {@code k} is valid for {@code this} if and only if
+   * {@code 0 <= k < this.maxKeyNum()}.
+   * 
    * @return
    */
   public long getMaxKeyNum();
-  
+
   /**
    * Gets the value associated with {@code keyNum}, which is interpreted as a
    * key by successively mod'ing it by the size of each dimension of
@@ -65,7 +67,7 @@ public interface TensorBase {
    * @return
    */
   double getByDimKey(int... key);
-  
+
   double getByIndex(int index);
 
   /**
@@ -77,7 +79,7 @@ public interface TensorBase {
   double getLog(long keyNum);
 
   double getLogByDimKey(int... key);
-  
+
   double getLogByIndex(int index);
 
   int[] keyNumToDimKey(long keyNum);
@@ -132,14 +134,14 @@ public interface TensorBase {
    * @return
    */
   double getL2Norm();
-  
+
   /**
    * Gets the trace, or sum of all entries.
    * 
    * @return
    */
   double getTrace();
-    
+
   /**
    * Gets the keynums of the {@code n} largest values in this tensor. If this
    * tensor contains fewer than {@code n} nonzero values, fewer than {@code n}

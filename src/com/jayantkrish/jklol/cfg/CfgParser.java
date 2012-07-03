@@ -179,6 +179,7 @@ public class CfgParser {
    */
   @SuppressWarnings("unchecked")
   public List<ParseTree> beamSearch(List<?> terminals) {
+    System.out.println(terminals);
     BeamSearchParseChart chart = new BeamSearchParseChart((List<Object>) terminals, beamSize);
 
     // Construct an encoding for mapping partial parse trees to longs. Using an

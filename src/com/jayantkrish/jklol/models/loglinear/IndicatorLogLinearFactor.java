@@ -74,7 +74,11 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters) {
-    throw new UnsupportedOperationException();
+    Tensor featureWeights = getFeatureWeights(parameters).build();
+    
+    TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
+        initialWeights.getWeights().replaceValues(featureWeights.getValues()));
+    return featureValues.getParameterDescription();
   }
 
   @Override

@@ -161,6 +161,16 @@ public class VariableNumMap {
   }
 
   /**
+   * Get the numbers of the variables in this map as an array, in ascending
+   * sorted order.
+   * 
+   * @return
+   */
+  public int[] getVariableNumsArray() {
+    return Ints.toArray(varMap.keySet());
+  }
+
+  /**
    * Gets the number of the sole variable contained in {@code this}. Requires
    * {@code this.size() == 1}.
    * 
@@ -491,11 +501,11 @@ public class VariableNumMap {
    * {@code varNumToKeep}. If this map does not contain such a variable, returns
    * an empty map.
    * 
-   * @param varNumToKeep
+   * @param varNumsToKeep
    * @return
    */
-  public VariableNumMap intersection(int varNumToKeep) {
-    return intersection(Arrays.asList(varNumToKeep));
+  public VariableNumMap intersection(int... varNumsToKeep) {
+    return intersection(Ints.asList(varNumsToKeep));
   }
 
   /**

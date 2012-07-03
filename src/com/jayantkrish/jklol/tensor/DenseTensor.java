@@ -25,7 +25,7 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
  * @author jayantk
  */
 public class DenseTensor extends DenseTensorBase implements Tensor {
-  
+
   private static Random random = new Random();
 
   /**
@@ -79,10 +79,43 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     result.multiply(this);
     return result.buildNoCopy();
   }
-  
+
+  @Override
+  public DenseTensor elementwiseProduct(Collection<Tensor> others) {
+    DenseTensor result = this;
+    for (Tensor other : others) {
+      result = result.elementwiseProduct(other);
+    }
+    return result;
+  }
+
+  @Override
+  public DenseTensor elementwiseProduct(double constant) {
+    DenseTensorBuilder builder = new DenseTensorBuilder(getDimensionNumbers(), getDimensionSizes());
+    builder.increment(constant);
+    builder.multiply(this);
+    return builder.build();
+  }
+
   @Override
   public DenseTensor outerProduct(Tensor other) {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    int[] otherDims = other.getDimensionNumbers();
+    int[] myDims = getDimensionNumbers();
+    
+    if (otherDims.length == 0) {
+      // Both tensor products coincide when the other tensor has no dimensions (is a scalar).
+      return elementwiseProduct(other);
+    }
+    // All dimensions of this tensor must be smaller than the dimensions
+    // of the other tensor.
+    Preconditions.checkArgument(myDims[myDims.length - 1] < otherDims[0]);
+    
+    int[] newDims = Ints.concat(myDims, otherDims);
+    int[] newSizes = Ints.concat(getDimensionSizes(), other.getDimensionSizes());
+    DenseTensorBuilder builder = new DenseTensorBuilder(newDims, newSizes);
+    builder.increment(this);
+
+    return builder.buildNoCopy().elementwiseProduct(other);
   }
 
   @Override
@@ -135,12 +168,18 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
 
   @Override
   public DenseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
-    return reduceDimensions(dimensionsToEliminate, true);
+    return reduceDimensions(dimensionsToEliminate, true, null);
   }
 
   @Override
   public DenseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {
-    return reduceDimensions(dimensionsToEliminate, false);
+    return reduceDimensions(dimensionsToEliminate, false, null);
+  }
+
+  @Override
+  public DenseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate,
+      Backpointers backpointers) {
+    return reduceDimensions(dimensionsToEliminate, false, backpointers);
   }
 
   /**
@@ -151,7 +190,8 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
    * @param useSum
    * @return
    */
-  private DenseTensor reduceDimensions(Collection<Integer> dimensionsToEliminate, boolean useSum) {
+  private DenseTensor reduceDimensions(Collection<Integer> dimensionsToEliminate,
+      boolean useSum, Backpointers backpointers) {
     SortedSet<Integer> dimensionsToKeep = Sets.newTreeSet(Ints.asList(getDimensionNumbers()));
     dimensionsToKeep.removeAll(dimensionsToEliminate);
 
@@ -173,12 +213,22 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
 
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(Ints.toArray(dimensionNumsToKeep),
         Ints.toArray(dimensionSizesToKeep));
+    // Optionally return the list of keynums which determined the values
+    // in the returned tensor.
+    long[] newBackpointerNums = null;
+    long[] oldBackpointerNums = null;
+    if (backpointers != null) {
+      newBackpointerNums = new long[outputBuilder.values.length];
+      oldBackpointerNums = new long[outputBuilder.values.length];
+    }
 
     // Maps a key of the reduced tensor into a partial key of this.
     int[] dimensionMapping = getDimensionMapping(outputBuilder.getDimensionNumbers());
     int[] partialKey = new int[getDimensionNumbers().length];
     Arrays.fill(partialKey, -1);
     Iterator<KeyValue> otherKeyValues = outputBuilder.keyValueIterator();
+
+    int backpointerIndex = 0;
     while (otherKeyValues.hasNext()) {
       KeyValue otherKeyValue = otherKeyValues.next();
       for (int i = 0; i < otherKeyValue.getKey().length; i++) {
@@ -187,15 +237,32 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
 
       Iterator<int[]> myKeyIterator = new SliceIndexIterator(getDimensionSizes(), partialKey);
       double resultVal = (useSum) ? 0.0 : Double.NEGATIVE_INFINITY;
+      long backpointerKeyNum = -1;
       while (myKeyIterator.hasNext()) {
         if (useSum) {
           resultVal += getByDimKey(myKeyIterator.next());
         } else {
-          resultVal = Math.max(resultVal, getByDimKey(myKeyIterator.next()));
+          int[] nextKey = myKeyIterator.next();
+          double keyVal = getByDimKey(nextKey);
+          if (keyVal > resultVal) {
+            resultVal = keyVal;
+            backpointerKeyNum = dimKeyToKeyNum(nextKey);
+          }
         }
       }
       outputBuilder.put(otherKeyValue.getKey(), resultVal);
+
+      if (backpointers != null) {
+        newBackpointerNums[backpointerIndex] = outputBuilder.dimKeyToKeyNum(otherKeyValue.getKey());
+        oldBackpointerNums[backpointerIndex] = backpointerKeyNum;
+        backpointerIndex++;
+      }
     }
+
+    if (backpointers != null) {
+      backpointers.setBackpointers(newBackpointerNums, oldBackpointerNums, backpointerIndex, this);
+    }
+
     return outputBuilder.buildNoCopy();
   }
 
@@ -248,17 +315,17 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     return relabelDimensions(newDimensions);
   }
-  
+
   @Override
   public DenseTensor replaceValues(double[] newValues) {
     return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), newValues);
   }
-  
+
   @Override
   public TensorProto toProto() {
     TensorProto.Builder builder = TensorProto.newBuilder();
     builder.setType(TensorProto.TensorType.DENSE);
-    
+
     DenseTensorProto.Builder denseTensorBuilder = builder.getDenseTensorBuilder();
     denseTensorBuilder.setDimensions(getDimensionProto());
     denseTensorBuilder.addAllValue(Doubles.asList(values));
@@ -301,11 +368,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     sb.append("]");
     return sb.toString();
   }
-  
-  ///////////////////////////////////////////////////////////////////////
+
+  // /////////////////////////////////////////////////////////////////////
   // Static methods
-  ///////////////////////////////////////////////////////////////////////
-  
+  // /////////////////////////////////////////////////////////////////////
+
   /**
    * Constructs a random tensor spanning {@code dimensions} each with size
    * {@code sizes}. Each entry of the tensor is drawn independently at random
@@ -325,16 +392,16 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     }
     return builder.buildNoCopy();
   }
-  
+
   /**
    * Gets a tensor where each key has {@code weight}.
-   *  
+   * 
    * @param dimensions
    * @param sizes
    * @return
    */
   public static DenseTensor constant(int[] dimensions, int[] sizes, double weight) {
-    DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes, weight); 
+    DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes, weight);
     return builder.buildNoCopy();
   }
 
@@ -370,7 +437,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor {
     int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
     int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
     Preconditions.checkArgument(dimensionNums.length == sizes.length);
-    
+
     double[] values = Doubles.toArray(proto.getValueList());
     return new DenseTensor(dimensionNums, sizes, values);
   }

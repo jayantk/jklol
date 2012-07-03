@@ -25,7 +25,7 @@ import com.jayantkrish.jklol.util.HeapUtils;
  * 
  * SparseTensors are immutable.
  */
-public class SparseTensor extends AbstractTensorBase implements Tensor {
+public class SparseTensor extends AbstractTensor {
 
   protected final long[] keyNums;
   protected final double[] values;
@@ -131,7 +131,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     }
     return Math.sqrt(sumSquared);
   }
-  
+
   @Override
   public double getTrace() {
     double sum = 0.0;
@@ -383,19 +383,19 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(), resultKeyInts,
         resultValues, resultInd);
   }
-  
+
   @Override
   public SparseTensor outerProduct(Tensor other) {
     int[] dimensionNums = getDimensionNumbers();
     int[] otherDimensionNums = other.getDimensionNumbers();
     if (otherDimensionNums.length == 0) {
       // The two products coincide in this case.
-      return elementwiseProduct(other); 
+      return elementwiseProduct(other);
     }
-    
-    Preconditions.checkArgument(dimensionNums[dimensionNums.length - 1] 
+
+    Preconditions.checkArgument(dimensionNums[dimensionNums.length - 1]
         < otherDimensionNums[otherDimensionNums.length - 1]);
-    
+
     long multiplier = other.getMaxKeyNum();
     int mySize = size();
     int otherSize = other.size();
@@ -414,7 +414,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
         }
       }
     }
-    
+
     int[] dimensionSizes = getDimensionSizes();
     int[] otherDimensionSizes = other.getDimensionSizes();
     int[] resultDims = new int[dimensionNums.length + otherDimensionNums.length];
@@ -428,34 +428,15 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       resultDims[i + dimensionNums.length] = otherDimensionNums[i];
       resultSizes[i + dimensionNums.length] = otherDimensionSizes[i];
     }
-    
+
     return resizeIntoTable(resultDims, resultSizes, resultKeyNums, resultValues, resultInd);
   }
 
-  /**
-   * Performs elementwise addition of {@code this} and {@code other} and returns
-   * a new {@code SparseTensor} containing the result. The value of key {code k}
-   * in the returned table is {@code this.get(k) + other.get(k)}. Requires
-   * {@code other} and {@code this} to contain the same dimensions.
-   * 
-   * @param other
-   * @return
-   */
   @Override
   public SparseTensor elementwiseAddition(Tensor otherTensor) {
     return doElementwise(otherTensor, true);
   }
 
-  /**
-   * Computes the elementwise maximum of {@code this} and {@code other},
-   * returning a new {@code SparseTensor} containing the result. The value of
-   * key {code k} in the returned table is
-   * {@code Math.max(this.get(k), other.get(k))} . Requires {@code other} and
-   * {@code this} to contain the same dimensions.
-   * 
-   * @param other
-   * @return
-   */
   @Override
   public SparseTensor elementwiseMaximum(Tensor otherTensor) {
     return doElementwise(otherTensor, false);
@@ -524,13 +505,6 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     return resizeIntoTable(getDimensionNumbers(), getDimensionSizes(), resultKeyInts, resultValues, resultInd);
   }
 
-  /**
-   * Returns the elementwise multiplicative inverse of {@code this}. For all
-   * keys {@code k} in {@code this}, {@code inverse.get(k) * this.get(k) == 1}.
-   * For all keys not in {@code this}, {@code inverse.get(k) == 0}.
-   * 
-   * @return
-   */
   @Override
   public SparseTensor elementwiseInverse() {
     double[] newValues = new double[size()];
@@ -569,7 +543,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * which are present in this {@code SparseTensor}, this operation is identical
    * to {@link #elementwiseExp()}. Keys which are not present in this tensor are
    * also not present in the result (and therefore have value 0).
-   *
+   * 
    * @return
    */
   public SparseTensor elementwiseExpSparse() {
@@ -580,32 +554,20 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 
-  /**
-   * Sums out {@code dimensionsToEliminate}, returning a lower-dimensional
-   * tensor containing the remaining dimensions. The value of key {@code k} in
-   * the returned tensor is the sum over all keys in {@code this} which are
-   * supersets of {@code k}.
-   * 
-   * @param dimensionsToEliminate
-   * @return
-   */
   @Override
   public SparseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
-    return reduceDimensions(Sets.newHashSet(dimensionsToEliminate), true);
+    return reduceDimensions(Sets.newHashSet(dimensionsToEliminate), true, null);
   }
 
-  /**
-   * Maximizes out {@code dimensionsToEliminate}, returning a lower-dimensional
-   * tensor containing the remaining dimensions. The value of key {@code k} in
-   * the returned tensor is the maximum over all keys in {@code this} which are
-   * supersets of {@code k}.
-   * 
-   * @param dimensionsToEliminate
-   * @return
-   */
   @Override
   public SparseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {
-    return reduceDimensions(Sets.newHashSet(dimensionsToEliminate), false);
+    return reduceDimensions(Sets.newHashSet(dimensionsToEliminate), false, null);
+  }
+
+  @Override
+  public SparseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate,
+      Backpointers backpointers) {
+    return reduceDimensions(Sets.newHashSet(dimensionsToEliminate), false, backpointers);
   }
 
   /**
@@ -616,7 +578,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
    * @return
    */
   private SparseTensor reduceDimensions(Set<Integer> dimensionsToEliminate,
-      boolean useSum) {
+      boolean useSum, Backpointers backpointers) {
     // TODO(jayantk): This method can be generalized to support a generic reduce
     // operation (as a function), but it's unclear what the effect on
     // performance will be.
@@ -624,6 +586,7 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     // Rotate all of the dimensions which are being eliminated to the
     // end of the keyNums array.
     int[] newLabels = new int[numDimensions()];
+    int[] inversionPermutation = new int[numDimensions()];
     int[] newDimensions = new int[numDimensions()];
     int[] newDimensionSizes = new int[numDimensions()];
     int numEliminated = 0;
@@ -633,9 +596,11 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       if (dimensionsToEliminate.contains(dimensionNums[i])) {
         // Dimension labels must be unique, hence numEliminated.
         newLabels[i] = Integer.MAX_VALUE - numEliminated;
+        inversionPermutation[dimensionNums.length - (numEliminated + 1)] = i;
         numEliminated++;
       } else {
         newLabels[i] = dimensionNums[i];
+        inversionPermutation[i - numEliminated] = i;
         newDimensions[i - numEliminated] = dimensionNums[i];
         newDimensionSizes[i - numEliminated] = dimensionSizes[i];
       }
@@ -643,6 +608,9 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     // If none of the dimensions being eliminated are actually part of this
     // tensor, then there's no need to do any more work.
     if (numEliminated == 0) {
+      if (backpointers != null) {
+        backpointers.setBackpointers(keyNums, keyNums, keyNums.length, this);
+      }
       return this;
     }
 
@@ -655,23 +623,64 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
         relabeled.indexOffsets[0] * relabeled.getDimensionSizes()[0];
 
     long[] resultKeyInts = new long[relabeled.values.length];
+    long[] backpointerKeyInts = new long[relabeled.values.length];
     double[] resultValues = new double[relabeled.values.length];
+
     int resultInd = 0;
     for (int i = 0; i < relabeled.values.length; i++) {
-      if (i != 0 &&
-          (relabeled.keyNums[i - 1] / keyNumDenominator) == (relabeled.keyNums[i] / keyNumDenominator)) {
+      if (i != 0 && resultInd > 0 &&
+          (relabeled.keyNums[i] / keyNumDenominator) == resultKeyInts[resultInd - 1]) {
         // This key maps to the same entry as the previous key.
         if (useSum) {
           resultValues[resultInd - 1] += relabeled.values[i];
         } else {
-          resultValues[resultInd - 1] = Math.max(resultValues[resultInd - 1],
-              relabeled.values[i]);              
+          double resultVal = resultValues[resultInd - 1];
+          double relabeledVal = relabeled.values[i];
+          if (relabeledVal > resultVal) {
+            resultValues[resultInd - 1] = relabeledVal;
+            backpointerKeyInts[resultInd - 1] = relabeled.keyNums[i];
+          }
         }
       } else {
+        if (resultInd > 0 && resultValues[resultInd - 1] == 0.0) {
+          // Make sure the result tensor contains no zero-valued entries.
+          resultInd--;
+        }
+
         resultKeyInts[resultInd] = relabeled.keyNums[i] / keyNumDenominator;
+        backpointerKeyInts[resultInd] = relabeled.keyNums[i];
         resultValues[resultInd] = relabeled.values[i];
         resultInd++;
       }
+      
+      int prevIndex = resultInd - 1;
+      if (!useSum && resultValues[prevIndex] < 0.0) {
+        // Ensure that, if values is negative, we include missing keys in the
+        // maximization.
+        long prevKeyNum = relabeled.keyNums[i] - 1;
+        long nextKeyNum = relabeled.keyNums[i] + 1;
+
+        if (i > 0 && relabeled.keyNums[i - 1] != prevKeyNum 
+            && prevKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
+          // prevKeyNum is not in relabeled, but has a higher value than the current key.
+          resultValues[prevIndex] = 0.0;
+          backpointerKeyInts[prevIndex] = prevKeyNum;
+        } else if (i + 1 < relabeled.keyNums.length && relabeled.keyNums[i + 1] != nextKeyNum 
+            && nextKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
+          // nextKeyNum is not in relabeled, but has a higher value than the current key.
+          // Delete the current key from the tensor.
+          resultValues[prevIndex] = 0.0;
+          backpointerKeyInts[prevIndex] = nextKeyNum;
+        }
+      }
+    }
+
+    if (backpointers != null) {
+      // backpointerKeyInts needs to have the inverse dimension relabeling
+      // applied to it.
+      long[] transformedBackpointers = transformKeyNums(backpointerKeyInts, relabeled.indexOffsets,
+          this.indexOffsets, inversionPermutation);
+      backpointers.setBackpointers(resultKeyInts, transformedBackpointers, resultInd, this);
     }
 
     return resizeIntoTable(Arrays.copyOf(newDimensions, resultNumDimensions),
@@ -744,6 +753,14 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
 
     double[] resultValues = Arrays.copyOf(values, values.length);
     // Map each key of this into a key of the relabeled tensor.
+    long[] resultKeyInts = transformKeyNums(keyNums, indexOffsets, sortedIndexOffsets, newOrder);
+
+    sortOutcomeTable(resultKeyInts, resultValues, 0, values.length);
+    return new SparseTensor(sortedDims, sortedSizes, resultKeyInts, resultValues);
+  }
+
+  private long[] transformKeyNums(long[] keyNums, long[] indexOffsets, long[] newIndexOffsets,
+      int[] newOrder) {
     long[] resultKeyInts = new long[values.length];
     for (int i = 0; i < keyNums.length; i++) {
       long curKey = keyNums[i];
@@ -751,15 +768,13 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
       for (int j = 0; j < numDimensions(); j++) {
         long dimensionValue = curKey / indexOffsets[j];
         curKey -= dimensionValue * indexOffsets[j];
-        newKey += dimensionValue * sortedIndexOffsets[newOrder[j]];
+        newKey += dimensionValue * newIndexOffsets[newOrder[j]];
       }
       resultKeyInts[i] = newKey;
     }
-
-    sortOutcomeTable(resultKeyInts, resultValues, 0, values.length);
-    return new SparseTensor(sortedDims, sortedSizes, resultKeyInts, resultValues);
+    return resultKeyInts;
   }
-  
+
   @Override
   public SparseTensor replaceValues(double[] newValues) {
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
@@ -844,11 +859,13 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     StringBuilder sb = new StringBuilder();
     sb.append("<");
     for (int i = 0; i < values.length; i++) {
-      sb.append(Arrays.toString(keyNumToDimKey(keyNums[i])));
-      sb.append(" : ");
-      sb.append(values[i]);
-      if (i != values.length - 1) {
-        sb.append(", ");
+      if (values[i] != 0.0) {
+        sb.append(Arrays.toString(keyNumToDimKey(keyNums[i])));
+        sb.append(" : ");
+        sb.append(values[i]);
+        if (i != values.length - 1) {
+          sb.append(", ");
+        }
       }
     }
     sb.append(">");
@@ -934,15 +951,34 @@ public class SparseTensor extends AbstractTensorBase implements Tensor {
     return resizeIntoTable(new int[] { dimensionNumber }, new int[] { dimensionSize },
         keyNums, outcomeValues, numEntries);
   }
-  
+
+  /**
+   * Similar to the constructor, except does not require {@code keyNums} to
+   * occur in ascending order.
+   * 
+   * @param dimensionNumbers
+   * @param dimensionSizes
+   * @param keyNums
+   * @param values
+   * @return
+   */
+  public static SparseTensor fromUnorderedKeyValues(int[] dimensionNumbers, int[] dimensionSizes,
+      long[] keyNums, double[] values) {
+    long[] keyNumsCopy = Arrays.copyOf(keyNums, keyNums.length);
+    double[] valuesCopy = Arrays.copyOf(values, values.length);
+    sortOutcomeTable(keyNumsCopy, valuesCopy, 0, keyNums.length);
+
+    return new SparseTensor(dimensionNumbers, dimensionSizes, keyNumsCopy, valuesCopy);
+  }
+
   public static SparseTensor singleElement(int[] dimensionNumbers, int[] dimensionSizes, int[] dimKey, double value) {
-    long[] keyNums = new long[1]; 
+    long[] keyNums = new long[1];
     double[] values = new double[1];
-    
-    keyNums[0] = AbstractTensorBase.dimKeyPrefixToKeyNum(dimKey, dimensionSizes, 
+
+    keyNums[0] = AbstractTensorBase.dimKeyPrefixToKeyNum(dimKey, dimensionSizes,
         AbstractTensorBase.computeIndexOffsets(dimensionSizes));
     values[0] = value;
-    
+
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
   }
 

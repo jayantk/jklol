@@ -238,7 +238,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   // ////////////////////////////////////////////////////////////
-  // Other methods
+  // Static methods for constructing DiscreteLogLinearFactors
   // ////////////////////////////////////////////////////////////
 
   public static DiscreteFactor createIndicatorFeatureTensor(VariableNumMap vars, int featureVarNum,

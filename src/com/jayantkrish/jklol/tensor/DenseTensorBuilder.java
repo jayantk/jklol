@@ -37,7 +37,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
    * 
    * @param builder
    */
-  public DenseTensorBuilder(DenseTensorBuilder builder) {
+  public DenseTensorBuilder(DenseTensorBase builder) {
     super(builder.getDimensionNumbers(), builder.getDimensionSizes(),
         Arrays.copyOf(builder.values, builder.values.length));
   }

@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.models.parametric;
 
+import java.io.Serializable;
+
 /**
  * The sufficient statistics of a {@code FactorGraph}. This class represents
  * (expected) occurrence counts for a set of events which can be used to
@@ -9,7 +11,7 @@ package com.jayantkrish.jklol.models.parametric;
  * 
  * @author jayantk
  */
-public interface SufficientStatistics {
+public interface SufficientStatistics extends Serializable{
 
   /**
    * Adds the event counts of {@code other} to {@code this}. Equivalent to

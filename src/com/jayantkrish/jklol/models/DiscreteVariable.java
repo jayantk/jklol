@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -22,7 +23,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayant
  */
-public class DiscreteVariable implements Variable {
+public class DiscreteVariable implements Variable, Serializable {
 
   private String name;
   private IndexedList<Object> values;

@@ -96,7 +96,11 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   public DiscreteFactor getFeatureValues() {
-    return featureValues;
+	    return featureValues;
+	  }
+  
+  public VariableNumMap getFeatureVariables() {
+	    return featureVariables;
   }
 
   // ///////////////////////////////////////////////////////////
@@ -154,6 +158,18 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
     StringBuilder sb = new StringBuilder();
     while (outcomeIter.hasNext()) {
       sb.append(outcomeIter.next() + "\n");
+    }
+    return sb.toString();
+  }
+  
+  @Override
+  public String getParameterDescriptionXML(SufficientStatistics parameters) {
+    TensorBuilder weights = getFeatureWeights(parameters);
+    TableFactor weightFactor = new TableFactor(featureVariables, weights.build());
+    Iterator<Outcome> outcomeIter = weightFactor.outcomeIterator();
+    StringBuilder sb = new StringBuilder();
+    while (outcomeIter.hasNext()) {
+      sb.append("<outcome>\n"+outcomeIter.next().toXML() + "</outcome>\n");
     }
     return sb.toString();
   }

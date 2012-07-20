@@ -80,6 +80,15 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
         initialWeights.getWeights().replaceValues(featureWeights.getValues()));
     return featureValues.getParameterDescription();
   }
+  
+  @Override
+  public String getParameterDescriptionXML(SufficientStatistics parameters) {
+    Tensor featureWeights = getFeatureWeights(parameters).build();
+    
+    TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
+        initialWeights.getWeights().replaceValues(featureWeights.getValues()));
+    return featureValues.getParameterDescriptionXML();
+  }
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {

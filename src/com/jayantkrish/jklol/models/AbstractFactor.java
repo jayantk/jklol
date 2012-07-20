@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,7 +15,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * @author jayant
  * 
  */
-public abstract class AbstractFactor implements Factor {
+public abstract class AbstractFactor implements Factor, Serializable {
 
   private VariableNumMap vars;
 
@@ -155,5 +156,13 @@ public abstract class AbstractFactor implements Factor {
     // Subclasses should override this method with a
     // correct implementation.
     return toString();
+  }
+  
+  @Override
+  public String getParameterDescriptionXML() {
+    // This implementation will probably not be detailed enough.
+    // Subclasses should override this method with a
+    // correct implementation.
+    return "<parameter>"+toString()+"</parameter>";
   }
 }

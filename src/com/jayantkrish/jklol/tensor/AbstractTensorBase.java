@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
@@ -11,7 +12,7 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorDimensionProto;
  * 
  * @author jayantk
  */
-public abstract class AbstractTensorBase implements TensorBase {
+public abstract class AbstractTensorBase implements TensorBase, Serializable {
 
   // The dimensions spanned by this tensor, and the size in each dimension.
   private final int[] dimensions;

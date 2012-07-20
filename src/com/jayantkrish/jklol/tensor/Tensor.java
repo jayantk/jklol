@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 
@@ -11,7 +12,7 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
  * 
  * @author jayant
  */
-public interface Tensor extends TensorBase {
+public interface Tensor extends TensorBase, Serializable {
 
   /**
    * Selects a lower-dimensional subset of {@code this} by fixing the

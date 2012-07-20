@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cfg;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +23,7 @@ import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
-public class BeamSearchCfgFactor extends AbstractConditionalFactor {
+public class BeamSearchCfgFactor extends AbstractConditionalFactor implements Serializable {
 
   private final VariableNumMap treeVariable;
   private final VariableNumMap terminalVariable;

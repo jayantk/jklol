@@ -275,6 +275,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
     return sb.toString();
   }
+  
+  @Override
+  public String getParameterDescriptionXML() {
+    StringBuilder sb = new StringBuilder();
+    Iterator<Outcome> iter = outcomeIterator();
+    while (iter.hasNext()) {
+      Outcome outcome = iter.next();
+      sb.append("<outcome>\n"+outcome.toXML()+"</outcome>\n");
+    }
+    return sb.toString();
+  }
+
 
   @Override
   public int hashCode() {
@@ -345,6 +357,10 @@ public abstract class DiscreteFactor extends AbstractFactor {
     @Override
     public String toString() {
       return assignment + "=" + probability;
+    }
+    
+    public String toXML() {
+      return assignment.toXML() + "<probability>"+probability+"</probability>\n";
     }
   }
 }

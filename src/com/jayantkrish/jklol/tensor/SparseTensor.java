@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -25,7 +26,7 @@ import com.jayantkrish.jklol.util.HeapUtils;
  * 
  * SparseTensors are immutable.
  */
-public class SparseTensor extends AbstractTensor {
+public class SparseTensor extends AbstractTensor implements Serializable{
 
   protected final long[] keyNums;
   protected final double[] values;

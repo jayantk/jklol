@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -24,9 +25,14 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
  * 
  * @author jayantk
  */
-public class DenseTensor extends DenseTensorBase implements Tensor {
+public class DenseTensor extends DenseTensorBase implements Tensor, Serializable {
 
-  private static Random random = new Random();
+  /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+private static Random random = new Random();
 
   /**
    * Creates a tensor that spans {@code dimensions}, and each dimension has the

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cfg;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -24,7 +25,7 @@ import com.jayantkrish.jklol.util.HeapUtils;
  * A CKY-style parser for probabilistic context free grammars in Chomsky normal
  * form (with a multi-terminal production extension).
  */
-public class CfgParser {
+public class CfgParser implements Serializable {
 
   // The root nonterminal symbol in binary and terminal production rules
   private final VariableNumMap parentVar;

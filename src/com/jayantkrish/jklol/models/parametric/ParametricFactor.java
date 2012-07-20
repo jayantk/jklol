@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.models.parametric;
 
+import java.io.Serializable;
+
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -26,7 +28,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayantk
  */
-public interface ParametricFactor {
+public interface ParametricFactor extends Serializable {
 
   /**
    * Gets the variables over which this {@code ParametricFactor} is defined. The
@@ -57,6 +59,15 @@ public interface ParametricFactor {
    * @return
    */
   public String getParameterDescription(SufficientStatistics parameters);
+  
+  
+  /**
+   * Gets a human-interpretable XML description {@code parameters}. 
+   * 
+   * @param parameters
+   * @return
+   */
+  public String getParameterDescriptionXML(SufficientStatistics parameters);
 
   /**
    * Gets a new all-zero vector of parameters for {@code this}. The returned

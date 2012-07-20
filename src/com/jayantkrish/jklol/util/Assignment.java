@@ -310,6 +310,17 @@ public class Assignment {
   public String toString() {
     return varValueMap.keySet().toString() + "=" + varValueMap.values().toString();
   }
+  
+  
+  public String toXML() {
+	  
+	  String s = "";
+	  for(Integer k : varValueMap.keySet()){
+		  s+= "<key>"+k+"</key>\n" + "<value>" + varValueMap.get(k) + "</value>\n";
+	  }
+	  
+	  return s;
+  }
 
   /**
    * Computes the union of {@code assignments}. Equivalent to computing the

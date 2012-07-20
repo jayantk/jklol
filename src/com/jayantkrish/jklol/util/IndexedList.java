@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.util;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -14,7 +15,7 @@ import java.util.NoSuchElementException;
  * where each element has a unique numerical index and element lookups
  * can be performed in expected constant time.
  */ 
-public class IndexedList<T> implements Iterable<T> {
+public class IndexedList<T> implements Iterable<T>, Serializable {
 
 	private List<T> items;
 	private Map<T, Integer> itemIndex;

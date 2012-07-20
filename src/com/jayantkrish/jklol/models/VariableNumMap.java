@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.io.Serializable;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -31,7 +32,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayant
  */
-public class VariableNumMap {
+public class VariableNumMap implements Serializable{
 
   private final SortedMap<Integer, Variable> varMap;
   private final BiMap<Integer, String> names;
@@ -846,7 +847,7 @@ public class VariableNumMap {
    * 
    * @author jayantk
    */
-  public static class VariableRelabeling extends Converter<VariableNumMap, VariableNumMap> {
+  public static class VariableRelabeling extends Converter<VariableNumMap, VariableNumMap> implements Serializable {
 
     private final BiMap<Integer, Integer> variableIndexMap;
     private final BiMap<String, String> variableNameMap;

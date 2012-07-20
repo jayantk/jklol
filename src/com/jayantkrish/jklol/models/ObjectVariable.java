@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.models;
 
+import java.io.Serializable;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.VariableProtos.DiscreteObjectVariableProto;
 import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
@@ -9,7 +11,7 @@ import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
  *  
  * @author jayantk
  */
-public class ObjectVariable implements Variable {
+public class ObjectVariable implements Variable, Serializable {
   
   private final Class<?> type;
   

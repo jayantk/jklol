@@ -1,11 +1,13 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.io.Serializable;
+
 /**
  * Mutable tensors.
  * 
  * @author jayant
  */
-public interface TensorBuilder extends TensorBase {
+public interface TensorBuilder extends TensorBase, Serializable {
 
   /**
    * Sets a value in this tensor, essentially performing

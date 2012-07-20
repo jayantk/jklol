@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -11,7 +12,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.io.Serializable;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
@@ -180,6 +180,11 @@ public class VariableNumMap implements Serializable{
   public int getOnlyVariableNum() {
     Preconditions.checkState(varMap.size() == 1);
     return varMap.keySet().iterator().next();
+  }
+  
+  public String getOnlyVariableName() {
+    Preconditions.checkState(names.size() == 1);
+    return names.values().iterator().next();
   }
 
   /**

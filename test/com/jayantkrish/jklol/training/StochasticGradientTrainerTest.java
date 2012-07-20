@@ -90,7 +90,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		  
 		  DiscreteFactor featureValues = factor.getFeatureValues();
 		  VariableNumMap featureVariable = featureValues.getVars().removeAll(factor.getVars());
-		  TensorBase weights = ((TensorSufficientStatistics) stats).get(0);
+		  TensorBase weights = ((TensorSufficientStatistics) stats).get();
 		  for (int j = 0; j < weights.size(); j++) {
 		    
 		    Assignment a = featureValues.conditional(featureVariable.intArrayToAssignment(new int[] {j}))

@@ -11,17 +11,29 @@ import java.io.Serializable;
  * 
  * @author jayantk
  */
-public interface SufficientStatistics extends Serializable{
+public interface SufficientStatistics extends Serializable {
 
   /**
    * Adds the event counts of {@code other} to {@code this}. Equivalent to
    * {@code this = this + (multiplier * other)} for each event in {@code this}.
-   * .
    * 
    * @param other
    * @param multiplier
    */
   public void increment(SufficientStatistics other, double multiplier);
+  
+  /**
+   * Increments the statistic/parameter values by their corresponding amounts in
+   * {@code other}. This increment uses feature names to determine the
+   * correspondence, meaning this method can be used to transfer parameters from
+   * one model to another, provided that the parameters have the same names in
+   * both models.
+   * <p>
+   * Parameters which are present in only one model are not incremented.
+   * 
+   * @param other
+   */
+  public void transferParameters(SufficientStatistics other);
 
   /**
    * Adds a constant to each event count. This method is useful for performing

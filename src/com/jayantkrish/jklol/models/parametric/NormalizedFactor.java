@@ -48,6 +48,11 @@ public class NormalizedFactor extends AbstractParametricFactor {
   }
 
   @Override
+  public String getParameterDescriptionXML(SufficientStatistics parameters) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public SufficientStatistics getNewSufficientStatistics() {
     return wrappedFactor.getNewSufficientStatistics();
   }

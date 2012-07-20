@@ -59,6 +59,19 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
+  public void transferParameters(SufficientStatistics other) {
+    Preconditions.checkNotNull(other);
+    Preconditions.checkArgument(other instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics otherList = (ListSufficientStatistics) other;
+    Preconditions.checkArgument(otherList.statistics.size() == statistics.size());
+    
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).transferParameters(otherList.statistics.get(i));
+    }
+  }
+  
+  @Override
   public void multiply(double amount) {
     for (int i = 0; i < statistics.size(); i++) {
       statistics.get(i).multiply(amount);

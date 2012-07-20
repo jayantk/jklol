@@ -61,6 +61,7 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     Preconditions.checkArgument(inputVar.union(outputVars).containsAll(
         Ints.asList(logWeights.getDimensionNumbers())));
     Preconditions.checkArgument(outputVars.getDiscreteVariables().size() == outputVars.size());
+    Preconditions.checkArgument(outputVars.containsAll(conditionalVars));
 
     this.inputVar = Preconditions.checkNotNull(inputVar);
     this.inputVarNums = new int[] { inputVar.getOnlyVariableNum() };

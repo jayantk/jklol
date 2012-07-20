@@ -176,9 +176,9 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {
-    return new TensorSufficientStatistics(Arrays.<TensorBuilder> asList(
+    return new TensorSufficientStatistics(featureVariables, 
         new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
-            featureVariables.getVariableSizes())));
+            featureVariables.getVariableSizes()));
   }
 
   @Override
@@ -247,10 +247,9 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   private TensorBuilder getFeatureWeights(SufficientStatistics parameters) {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.
-    Preconditions.checkArgument(featureParameters.size() == 1);
-    Preconditions.checkArgument(Arrays.equals(featureParameters.get(0).getDimensionSizes(),
+    Preconditions.checkArgument(Arrays.equals(featureParameters.get().getDimensionSizes(),
         featureVariables.getVariableSizes()));
-    return featureParameters.get(0);
+    return featureParameters.get();
   }
 
   // ////////////////////////////////////////////////////////////

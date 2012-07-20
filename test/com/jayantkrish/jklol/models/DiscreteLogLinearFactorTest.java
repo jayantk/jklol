@@ -84,7 +84,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
-    TensorBase weights = ((TensorSufficientStatistics) s).get(0);
+    TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(3, weights.getDimensionSizes()[0]);
     assertEquals(0.0, weights.getByDimKey(0));
@@ -99,7 +99,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
-    TensorBase weights = ((TensorSufficientStatistics) s).get(0);
+    TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(3, weights.getDimensionSizes()[0]);
     assertEquals(0.0, weights.getByDimKey(0));
@@ -113,7 +113,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromMarginal(s, factor, Assignment.EMPTY, 1.0, partitionFunction);
     
-    TensorBase weights = ((TensorSufficientStatistics) s).get(0);
+    TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(3, weights.getDimensionSizes()[0]);
     assertEquals((Math.E / partitionFunction), weights.getByDimKey(0), .00001);
@@ -123,7 +123,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   
   public void testNonIndicatorFeatures() {
     TensorSufficientStatistics gParams = g.getNewSufficientStatistics();
-    assertEquals(6, gParams.get(0).size());
+    assertEquals(6, gParams.get().size());
     
     g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("T", "T"), 1.0);
     g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("F", "F"), 1.0);

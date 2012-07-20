@@ -10,6 +10,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
@@ -252,6 +253,22 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
     Collections.reverse(mostLikely);
     return mostLikely;
+  }
+  
+  /**
+   * Gets all assignments to this factor which have non-zero weight. 
+   * @return
+   */
+  public List<Assignment> getNonzeroAssignments() {
+    Iterator<Outcome> outcomeIter = outcomeIterator();
+    List<Assignment> assignments = Lists.newArrayList();
+    while (outcomeIter.hasNext()) {
+      Outcome outcome = outcomeIter.next();
+      if (outcome.getProbability() != 0.0) {
+        assignments.add(outcome.getAssignment());
+      }
+    }
+    return assignments;
   }
 
   @Override

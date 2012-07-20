@@ -1,8 +1,9 @@
 package com.jayantkrish.jklol.models.loglinear;
 
-import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
@@ -32,10 +33,11 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class IndicatorLogLinearFactor extends AbstractParametricFactor {
 
-  // Contains a sparsity pattern which must be maintained by this tensor. (i.e.,
-  // a set of 0 probability assignments). If null, then no sparsity pattern is
-  // enforced.
+  // The outcomes which are given indicator features.
   private final TableFactor initialWeights;
+  
+  // Names for the features in the sufficient statistics.
+  private VariableNumMap featureVars;
 
   /**
    * Creates a {@code IndicatorLogLinearFactor} over {@code variables},
@@ -49,6 +51,10 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   public IndicatorLogLinearFactor(VariableNumMap variables, TableFactor initialWeights) {
     super(variables);
     this.initialWeights = Preconditions.checkNotNull(initialWeights);
+    
+    List<Assignment> assignments = initialWeights.getNonzeroAssignments();    
+    DiscreteVariable featureNameDictionary = new DiscreteVariable("indicator features", assignments);
+    this.featureVars = VariableNumMap.singleton(0, "features", featureNameDictionary);  
   }
 
   public TableFactor getFeatureValues() {
@@ -92,9 +98,8 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {
-    return new TensorSufficientStatistics(Arrays.<TensorBuilder> asList(
-        new DenseTensorBuilder(new int[] { 0 },
-            new int[] { initialWeights.getWeights().getValues().length })));
+    return new TensorSufficientStatistics(featureVars, new DenseTensorBuilder(new int[] { 0 },
+            new int[] { initialWeights.getWeights().getValues().length }));
   }
 
   @Override
@@ -141,10 +146,9 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   private TensorBuilder getFeatureWeights(SufficientStatistics parameters) {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.
-    Preconditions.checkArgument(featureParameters.size() == 1);
-    Preconditions.checkArgument(featureParameters.get(0).getDimensionNumbers().length == 1);
-    Preconditions.checkArgument(featureParameters.get(0).getDimensionSizes()[0] ==
+    Preconditions.checkArgument(featureParameters.get().getDimensionNumbers().length == 1);
+    Preconditions.checkArgument(featureParameters.get().getDimensionSizes()[0] ==
         initialWeights.getWeights().getValues().length);
-    return featureParameters.get(0);
+    return featureParameters.get();
   }
 }

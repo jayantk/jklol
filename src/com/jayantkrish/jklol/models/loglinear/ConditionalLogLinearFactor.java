@@ -48,6 +48,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   // Size parameters for the sufficient statistics tensor. 
   private final int[] dimensionNums;
   private final int[] dimensionSizes;
+  private final VariableNumMap sufficientStatisticVars;
   
   // Constructs the type of tensor to use.
   private final TensorFactory tensorFactory;
@@ -82,6 +83,10 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     for (int i = 0; i < outputSizes.length; i++) {
       dimensionSizes[i + 1] = outputSizes[i];
     }
+    
+    VariableNumMap featureVar = VariableNumMap.singleton(inputVar.getOnlyVariableNum(), 
+        inputVar.getOnlyVariableName(), featureDictionary);
+    this.sufficientStatisticVars = featureVar.union(outputVars);
     this.tensorFactory = Preconditions.checkNotNull(tensorFactory);
   }
 
@@ -100,11 +105,16 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
         weightTensor.build());
     return parameterFactor.getParameterDescription();
   }
+  
+  @Override
+  public String getParameterDescriptionXML(SufficientStatistics parameters) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {    
-    return new TensorSufficientStatistics(Arrays.<TensorBuilder>asList(
-        tensorFactory.getBuilder(dimensionNums, dimensionSizes)));
+    return new TensorSufficientStatistics(sufficientStatisticVars, 
+        tensorFactory.getBuilder(dimensionNums, dimensionSizes));
   }
 
   @Override
@@ -184,7 +194,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   }
   
   private TensorBuilder getWeightTensorFromStatistics(SufficientStatistics stats) {
-    TensorBuilder weightTensor = ((TensorSufficientStatistics) stats).get(0);
+    TensorBuilder weightTensor = ((TensorSufficientStatistics) stats).get();
     Preconditions.checkArgument(Arrays.equals(dimensionNums, weightTensor.getDimensionNumbers()),
         "Wrong parameter dimensions. Expected %s, got %s", Arrays.toString(dimensionNums), 
         Arrays.toString(weightTensor.getDimensionNumbers()));

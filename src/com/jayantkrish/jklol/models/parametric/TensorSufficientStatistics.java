@@ -1,11 +1,17 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import java.util.List;
+import java.util.Iterator;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.CoercionError;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Stores sufficient statistics in one or more tensors. This implementation of
@@ -16,79 +22,114 @@ import com.jayantkrish.jklol.tensor.TensorBuilder;
  */
 public class TensorSufficientStatistics implements SufficientStatistics {
 
-  private final List<TensorBuilder> statistics;
+  private static final long serialVersionUID = -888818836179147365L;
 
-  public TensorSufficientStatistics(List<TensorBuilder> statistics) {
+  private final VariableNumMap statisticNames;
+  private final TensorBuilder statistics;
+
+  /**
+   * 
+   * @param statisticNames maps the
+   * @param statistics
+   */
+  public TensorSufficientStatistics(VariableNumMap statisticNames,
+      TensorBuilder statistics) {
+    Preconditions.checkArgument(statisticNames.getDiscreteVariables().size() == statisticNames.size());
+    Preconditions.checkArgument(Ints.asList(statistics.getDimensionNumbers()).equals(statisticNames.getVariableNums()));
+
+    this.statisticNames = statisticNames;
     this.statistics = statistics;
   }
 
   /**
-   * Returns the number of tensors stored in {@code this}.
+   * Gets the tensor in {@code this}.
    * 
    * @return
    */
-  public int size() {
-    return statistics.size();
+  public TensorBuilder get() {
+    return statistics;
   }
 
   /**
-   * Gets the {@code i}th tensor in {@code this}. Requires
-   * {@code 0 <= i < this.size()}.
+   * Gets the tensor in {@code this}, wrapped in a factor that provides names
+   * for the statistics/parameters. The returned factor provides an immutable
+   * snapshot of the current values of the parameters, and will not reflect
+   * future modifications.
    * 
-   * @param i
    * @return
    */
-  public TensorBuilder get(int i) {
-    return statistics.get(i);
+  public DiscreteFactor getFactor() {
+    return new TableFactor(statisticNames, statistics.build());
+  }
+
+  /**
+   * Gets the mapping from statistic/parameter names to tensor indexes.
+   * 
+   * @return
+   */
+  public VariableNumMap getStatisticNames() {
+    return statisticNames;
   }
 
   @Override
   public void increment(SufficientStatistics other, double multiplier) {
     Preconditions.checkArgument(other instanceof TensorSufficientStatistics);
     TensorSufficientStatistics otherStats = (TensorSufficientStatistics) other;
-    Preconditions.checkArgument(otherStats.statistics.size() == statistics.size());
-    for (int i = 0; i < statistics.size(); i++) {
-      statistics.get(i).incrementWithMultiplier(otherStats.statistics.get(i), multiplier);
+    statistics.incrementWithMultiplier(otherStats.statistics, multiplier);
+  }
+
+  /**
+   * Increments the element of that corresponds to the statistic/parameter
+   * featureAssignment.
+   * 
+   * @param featureAssignment
+   * @param amount
+   */
+  public void incrementFeature(Assignment featureAssignment, double amount) {
+    statistics.incrementEntry(amount, statisticNames.assignmentToIntArray(featureAssignment));
+  }
+
+  @Override
+  public void transferParameters(SufficientStatistics other) {
+    DiscreteFactor otherFactor = ((TensorSufficientStatistics) other).getFactor();
+    
+    Iterator<Outcome> outcomeIter = otherFactor.outcomeIterator();
+    while (outcomeIter.hasNext()) {
+      Outcome outcome = outcomeIter.next();
+      
+      Assignment assignment = outcome.getAssignment();
+      if (statisticNames.isValidAssignment(assignment)) {
+        incrementFeature(assignment, outcome.getProbability());
+      }
     }
   }
 
   @Override
   public void increment(double amount) {
-    for (int i = 0; i < statistics.size(); i++) {
-      statistics.get(i).increment(amount);
-    }
+    statistics.increment(amount);
   }
 
   @Override
   public void multiply(double amount) {
-    for (int i = 0; i < statistics.size(); i++) {
-      statistics.get(i).multiply(amount);
-    }
+    statistics.multiply(amount);
   }
-  
+
   @Override
   public void perturb(double stddev) {
-    for (TensorBuilder statistic : statistics) {
-      statistic.increment(DenseTensor.random(
-          statistic.getDimensionNumbers(), statistic.getDimensionSizes(), 0.0, stddev));
-    }
+    statistics.increment(DenseTensor.random(
+        statistics.getDimensionNumbers(), statistics.getDimensionSizes(), 0.0, stddev));
   }
 
   @Override
   public double getL2Norm() {
-    double sumSquares = 0.0;
-    for (int i = 0; i < statistics.size(); i++) {
-      double norm = statistics.get(i).getL2Norm();
-      sumSquares += norm * norm;
-    }
-    return Math.sqrt(sumSquares);
+    return statistics.getL2Norm();
   }
 
   @Override
   public ListSufficientStatistics coerceToList() {
     throw new CoercionError("Cannot coerce TensorSufficientStatistics instance into ListSufficientStatistics.");
   }
-  
+
   @Override
   public String toString() {
     return statistics.toString();

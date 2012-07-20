@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.models.bayesnet;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -56,7 +55,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   @Override
   public DiscreteFactor getFactorFromParameters(SufficientStatistics parameters) {
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) parameters;
-    Tensor allTensor = tensorStats.get(0).build();
+    Tensor allTensor = tensorStats.get().build();
     Tensor parentTensor = allTensor.sumOutDimensions(childVars.getVariableNums());
     
     return new TableFactor(getVars(), allTensor.elementwiseProduct(parentTensor.elementwiseInverse()));
@@ -66,11 +65,16 @@ public class CptTableFactor extends AbstractParametricFactor {
   public String getParameterDescription(SufficientStatistics parameters) { 
     throw new UnsupportedOperationException();
   }
+  
+  @Override
+  public String getParameterDescriptionXML(SufficientStatistics parameters) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {
     TensorBuilder combinedTensor = getTensorFromVariables(getVars());
-    return new TensorSufficientStatistics(Arrays.asList(combinedTensor));
+    return new TensorSufficientStatistics(getVars(), combinedTensor);
   }
 
   /**
@@ -97,7 +101,7 @@ public class CptTableFactor extends AbstractParametricFactor {
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
 
     int[] combinedIndex = getVars().assignmentToIntArray(a);
-    tensorStats.get(0).incrementEntry(count, combinedIndex);
+    tensorStats.get().incrementEntry(count, combinedIndex);
   }
 
   @Override
@@ -114,7 +118,7 @@ public class CptTableFactor extends AbstractParametricFactor {
       
       int[] combinedIndex = getVars().assignmentToIntArray(a);
     
-      tensorStats.get(0).incrementEntry(incrementAmount, combinedIndex);
+      tensorStats.get().incrementEntry(incrementAmount, combinedIndex);
     }
   }
   

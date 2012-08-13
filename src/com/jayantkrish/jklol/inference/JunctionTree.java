@@ -48,20 +48,20 @@ public class JunctionTree implements MarginalCalculator {
           factorGraph.getConditionedValues());
     }
 
-    long time = System.nanoTime();
+    // long time = System.nanoTime();
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
-    long delta = (System.nanoTime() - time) / 1000000;
-    System.out.println("building clique tree: " + delta);
+    // long delta = (System.nanoTime() - time) / 1000000;
+    // System.out.println("building clique tree: " + delta);
     
-    time = System.nanoTime();
+    // time = System.nanoTime();
     Set<Integer> rootFactorNums = runMessagePassing(cliqueTree, true);
-    delta = (System.nanoTime() - time) / 1000000;
-    System.out.println("Running message passing: " + delta);
+    // delta = (System.nanoTime() - time) / 1000000;
+    // System.out.println("Running message passing: " + delta);
 
-    time = System.nanoTime();
+    // time = System.nanoTime();
     MarginalSet marginals = cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
-    delta = (System.nanoTime() - time) / 1000000;
-    System.out.println("marginals: " + delta);
+    // delta = (System.nanoTime() - time) / 1000000;
+    // System.out.println("marginals: " + delta);
 
     return marginals;
   }

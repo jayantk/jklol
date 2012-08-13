@@ -389,13 +389,14 @@ public class JunctionTree implements MarginalCalculator {
         Set<Factor> remainingFactors) {
       Set<Integer> variablesToEliminate = Sets.newHashSet();
       Collection<Integer> factorVariables = f.getVars().getVariableNums();
+      Set<Factor> mergeableFactors = new HashSet<Factor>();
       for (Integer variableNum : factorVariables) {
         if (varFactorMap.get(variableNum).size() == 1) {
           // The factor f is the only factor containing variableNum,
           // so it can be eliminated.
           variablesToEliminate.add(variableNum);
         }
-        // mergeableFactors.addAll(varFactorMap.get(variableNum));
+        mergeableFactors.addAll(varFactorMap.get(variableNum));
       }
       
       Set<Integer> variablesToRetain = Sets.newHashSet(factorVariables);
@@ -403,7 +404,6 @@ public class JunctionTree implements MarginalCalculator {
       
       // Merge f with a factor containing all of the variables
       // which are not being eliminated.
-      Set<Factor> mergeableFactors = new HashSet<Factor>(remainingFactors);
       mergeableFactors.remove(f);
       for (Integer variableNum : variablesToRetain) {
         mergeableFactors.retainAll(varFactorMap.get(variableNum));
@@ -411,12 +411,18 @@ public class JunctionTree implements MarginalCalculator {
       
       // It's possible that variablesToRetain is divided amongst two factors,
       // which means this factor cannot currently be eliminated.
-      if (mergeableFactors.size() == 0) {
+      if (mergeableFactors.size() == 0 && variablesToRetain.size() > 0) {
         return null;
       }
 
       Factor superset = null;
-
+      if (variablesToRetain.size() == 0) {
+        // We can merge this factor into any existing factor, except itself.
+        superset = Iterables.get(remainingFactors, 0);
+        if (superset == f) {
+          superset = Iterables.get(remainingFactors, 1);
+        }
+      } else {
         // Merge this factor with the sparsest factor among the valid choices.
         Iterator<Factor> mergeableIterator = mergeableFactors.iterator();
         superset = mergeableIterator.next();
@@ -426,7 +432,7 @@ public class JunctionTree implements MarginalCalculator {
             superset = next;
           }
         }
-
+      }
 
       // Remove the factor from the map containing variable counts.
       for (Integer variableNum : f.getVars().getVariableNums()) {

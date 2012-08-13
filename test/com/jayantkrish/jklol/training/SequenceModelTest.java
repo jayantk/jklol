@@ -111,7 +111,8 @@ public class SequenceModelTest extends TestCase {
     assertEquals(sequenceModel.getVariables(), copy.getVariables());
   }
   
-  private void testZeroTrainingError(Trainer<ParametricFactorGraph> trainer) {
+  private void testZeroTrainingError(
+      Trainer<ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> trainer) {
     SufficientStatistics parameters = trainer.train(sequenceModel, sequenceModel.getNewSufficientStatistics(), trainingData); 
     DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);
     

@@ -132,6 +132,6 @@ public class TensorSufficientStatistics implements SufficientStatistics {
 
   @Override
   public String toString() {
-    return statistics.toString();
+    return getFactor().toString();
   }
 }

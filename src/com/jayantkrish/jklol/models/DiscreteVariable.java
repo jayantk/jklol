@@ -30,7 +30,7 @@ public class DiscreteVariable implements Variable, Serializable {
 
   public DiscreteVariable(String name, Collection<? extends Object> values) {
     this.name = name;
-    this.values = new IndexedList<Object>(values);
+    this.values = IndexedList.create(values);
   }
 
   /**

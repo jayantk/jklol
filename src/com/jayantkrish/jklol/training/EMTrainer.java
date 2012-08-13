@@ -16,7 +16,8 @@ import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
  * 
  * @author jayantk
  */
-public class EMTrainer extends AbstractTrainer<ParametricFactorGraph> {
+public class EMTrainer extends AbstractTrainer
+    <ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private final int numIterations;
   private final MarginalCalculator marginalCalculator;
@@ -49,10 +50,21 @@ public class EMTrainer extends AbstractTrainer<ParametricFactorGraph> {
   public SufficientStatistics train(ParametricFactorGraph bn,
       SufficientStatistics initialParameters,
       Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
-    // This class always performs joint estimation, which corresponds to the
-    // outputs of trainingData.
-    List<DynamicAssignment> trainingDataList = getOutputAssignments(trainingData, true);
+    return train(bn, initialParameters, getOutputAssignments(trainingData, true));
+  }
 
+  /**
+   * Trains {@code bn} by maximizing the marginal loglikelihood of
+   * {@code trainingData}. Equivalent to calling {@code train} with examples
+   * that only contain outputs.
+   * 
+   * @param bn
+   * @param initialParameters
+   * @param trainingData
+   * @return
+   */
+  public SufficientStatistics train(ParametricFactorGraph bn,
+      SufficientStatistics initialParameters, List<DynamicAssignment> trainingData) {
     SufficientStatistics oldStatistics = null;
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
@@ -60,7 +72,7 @@ public class EMTrainer extends AbstractTrainer<ParametricFactorGraph> {
       // current set of parameters.
       DynamicFactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
       SufficientStatisticsBatch batchStatistics = MapReduceConfiguration.getMapReduceExecutor()
-          .mapReduce(trainingDataList,
+          .mapReduce(trainingData,
               new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
               new SufficientStatisticsReducer(bn));
       SufficientStatistics statistics = batchStatistics.getStatistics();

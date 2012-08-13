@@ -32,11 +32,20 @@ public class SufficientStatisticsMapper extends Mapper<DynamicAssignment, Margin
 
   @Override
   public MarginalSet map(DynamicAssignment item) {
+    logFn.startTimer("sufficientStatistics/getFactorGraph");
     FactorGraph factorGraph = dynamicFactorGraph.getFactorGraph(item);
-    Assignment assignment = dynamicFactorGraph.getVariables().toAssignment(item);
-    logFn.log(assignment, factorGraph);
+    logFn.stopTimer("sufficientStatistics/getFactorGraph");
 
+    Assignment assignment = dynamicFactorGraph.getVariables().toAssignment(item);
+    // logFn.log(assignment, factorGraph);
+
+    logFn.startTimer("sufficientStatistics/condition");
     FactorGraph conditionalFactorGraph = factorGraph.conditional(assignment);
-    return marginalCalculator.computeMarginals(conditionalFactorGraph);
+    logFn.stopTimer("sufficientStatistics/condition");
+
+    logFn.startTimer("sufficientStatistics/marginals");
+    MarginalSet marginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
+    logFn.stopTimer("sufficientStatistics/marginals");
+    return marginals;
   }
 }

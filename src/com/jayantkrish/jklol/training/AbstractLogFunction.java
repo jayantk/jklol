@@ -14,28 +14,34 @@ import com.google.common.collect.Maps;
  */
 public abstract class AbstractLogFunction implements LogFunction {
   
-  private final Map<String, Long> activeTimers;
+  // Each thread has its own collection of timers.
+  private final Map<Long, Map<String, Long>> activeTimers;
   private final Map<String, Long> timerSumTimes;
   private final Map<String, Long> timerInvocations;
   
   private final long TIME_DENOMINATOR = 1000000;
   
   public AbstractLogFunction() {
-    activeTimers = Collections.synchronizedMap(Maps.<String, Long>newHashMap());
+    activeTimers = Collections.synchronizedMap(Maps.<Long, Map<String, Long>>newHashMap());
     timerSumTimes = Collections.synchronizedMap(Maps.<String, Long>newHashMap());
     timerInvocations = Collections.synchronizedMap(Maps.<String, Long>newHashMap());
   }
 
   @Override
   public void startTimer(String timerName) {
-    activeTimers.put(timerName, System.nanoTime());
+    Long threadId = Thread.currentThread().getId();
+    if (!activeTimers.containsKey(threadId)) {
+      activeTimers.put(threadId, Maps.<String, Long>newHashMap());
+    }
+    activeTimers.get(threadId).put(timerName, System.nanoTime());
   }
 
   @Override
   public long stopTimer(String timerName) {
-    Preconditions.checkArgument(activeTimers.containsKey(timerName));
+    Long threadId = Thread.currentThread().getId();
+    Preconditions.checkArgument(activeTimers.get(threadId).containsKey(timerName));
     long end = System.nanoTime();
-    long start = activeTimers.remove(timerName);
+    long start = activeTimers.get(threadId).remove(timerName);
     
     if (!timerSumTimes.containsKey(timerName)) {
       timerSumTimes.put(timerName, 0L);

@@ -22,7 +22,6 @@ import com.jayantkrish.jklol.util.Assignment;
 public class EMTrainerTest extends TestCase {
 
   ParametricFactorGraph bn;
-  IncrementalEMTrainer t;
   List<Example<Assignment, Assignment>> trainingData;
 
   CptTableFactor f0;
@@ -31,8 +30,7 @@ public class EMTrainerTest extends TestCase {
   Assignment a1,a2,a3,a4,testAssignment1,testAssignment2, zeroProbAssignment;
   VariableNumMap allVars;
 
-  StepwiseEMTrainer s;
-  EMTrainer e;
+  Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> t, s, e;
 
   public void setUp() {
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
@@ -66,9 +64,9 @@ public class EMTrainerTest extends TestCase {
     trainingData.add(Example.create(Assignment.EMPTY, a2));
     trainingData.add(Example.create(Assignment.EMPTY, a3));
 
-    t = new IncrementalEMTrainer(10, new JunctionTree());
-    s = new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), null);
-    e = new EMTrainer(20, new JunctionTree(), null);
+    t = TrainerAdapter.createAssignmentAdapter(new IncrementalEMTrainer(10, new JunctionTree()));
+    s = TrainerAdapter.createAssignmentAdapter(new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), null));
+    e = TrainerAdapter.createAssignmentAdapter(new EMTrainer(20, new JunctionTree(), null));
 
     testAssignment1 = allVars.outcomeArrayToAssignment("T", "T");
     testAssignment2 = allVars.outcomeArrayToAssignment("F", "F");
@@ -95,13 +93,14 @@ public class EMTrainerTest extends TestCase {
     assertEquals(12.0 / 16.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
   }
   
-  private Factor trainBayesNet(Trainer<ParametricFactorGraph> trainer) {
+  private Factor trainBayesNet(
+      Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> trainer) {
     SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
     initialParameters.increment(1.0);
-    SufficientStatistics trainedParameters = trainer.trainFixed(bn, 
-        initialParameters, trainingData);
+    SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
 
-    FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters).getFactorGraph(DynamicAssignment.EMPTY);		
+    FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters)
+        .getFactorGraph(DynamicAssignment.EMPTY);		
     return factorGraph.getFactors().get(1);
   }
 
@@ -123,7 +122,7 @@ public class EMTrainerTest extends TestCase {
     assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
   }
       
-  private Factor trainBayesNetSparse(Trainer<ParametricFactorGraph> trainer) {
+  private Factor trainBayesNetSparse(Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> trainer) {
     //  If parameters are initialized sparsely, the sparsity should be retained throughout all algorithms.
     Assignment probAssignment = allVars.outcomeArrayToAssignment("F", "F");
     SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
@@ -131,7 +130,7 @@ public class EMTrainerTest extends TestCase {
     bn.incrementSufficientStatistics(initialParameters, allVars, zeroProbAssignment, -1.0);
     bn.incrementSufficientStatistics(initialParameters, allVars, probAssignment, 1.0);
 
-    SufficientStatistics trainedParameters = trainer.trainFixed(bn, initialParameters, trainingData);
+    SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
     FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
     return factorGraph.getFactors().get(1);

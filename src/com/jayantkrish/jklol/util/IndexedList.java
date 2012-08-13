@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+
 /**
  * An indexed list is a way of maintaining an ordered set of elements
  * where each element has a unique numerical index and element lookups
@@ -17,7 +20,9 @@ import java.util.NoSuchElementException;
  */ 
 public class IndexedList<T> implements Iterable<T>, Serializable {
 
-	private List<T> items;
+  private static final long serialVersionUID = -6977660130834159257L;
+  
+  private List<T> items;
 	private Map<T, Integer> itemIndex;
 
 	public IndexedList() {
@@ -26,8 +31,9 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 	}
 
 	public IndexedList(Collection<? extends T> toInsert) {
-		items = new ArrayList<T>(toInsert.size());
-		itemIndex = new HashMap<T, Integer>(toInsert.size());
+	  int size = Iterables.size(toInsert);
+		items = new ArrayList<T>(size);
+		itemIndex = new HashMap<T, Integer>(size);
 
 		for (T item : toInsert) {
 			this.add(item);
@@ -45,6 +51,10 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 	
 	public static <T> IndexedList<T> create() {
 	  return new IndexedList<T>();
+	}
+	
+	public static <T> IndexedList<T> create(Iterable<? extends T> items) {
+	  return new IndexedList<T>(Lists.newArrayList(items));
 	}
 
 	/**

@@ -14,7 +14,8 @@ import com.jayantkrish.jklol.util.Assignment;
 /**
  * Trains the weights of a factor graph using stochastic gradient descent.
  */
-public class StochasticGradientTrainer extends AbstractStochasticGradientTrainer<ParametricFactorGraph, DynamicFactorGraph> {
+public class StochasticGradientTrainer extends AbstractStochasticGradientTrainer
+<ParametricFactorGraph, DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private final MarginalCalculator marginalCalculator;
 

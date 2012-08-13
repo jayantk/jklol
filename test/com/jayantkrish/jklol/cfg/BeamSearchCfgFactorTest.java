@@ -30,6 +30,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.training.Trainer;
+import com.jayantkrish.jklol.training.TrainerAdapter;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -157,8 +158,12 @@ public class BeamSearchCfgFactorTest extends TestCase {
     }
   }
   
-  private Predictor<Assignment, Assignment> runTrainerTest(Trainer<ParametricFactorGraph> trainer) {
-    SufficientStatistics parameters = trainer.trainFixed(cfgModel,
+  private Predictor<Assignment, Assignment> runTrainerTest(
+      Trainer<ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> trainer) {
+    Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> adaptedTrainer = 
+        TrainerAdapter.createAssignmentAdapter(trainer);
+
+    SufficientStatistics parameters = adaptedTrainer.train(cfgModel,
         cfgModel.getNewSufficientStatistics(), trainingData);
     FactorGraph trainedModel = cfgModel.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);

@@ -131,14 +131,14 @@ public abstract class AbstractStochasticGradientTrainer<T, U, E> extends Abstrac
 
     @Override
     public SufficientStatistics map(E item) {
-      log.startTimer("update_gradient");
+      log.startTimer("compute_gradient");
       SufficientStatistics gradient = initializeGradient(modelFamily);
       try {
         accumulateGradient(gradient, instantiatedModel, modelFamily, item);
       } catch (ZeroProbabilityError e) {
         // Ignore the example, returning the zero vector.
       }
-      log.stopTimer("update_gradient");
+      log.stopTimer("compute_gradient");
       return gradient;
     }
   }
@@ -163,7 +163,9 @@ public abstract class AbstractStochasticGradientTrainer<T, U, E> extends Abstrac
 
     @Override
     public SufficientStatistics reduce(SufficientStatistics item, SufficientStatistics accumulated) {
+      log.startTimer("accumulate_gradient");
       accumulated.increment(item, 1.0);
+      log.stopTimer("accumulate_gradient");
       return accumulated;
     }
   }

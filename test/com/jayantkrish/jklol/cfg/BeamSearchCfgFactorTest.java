@@ -21,6 +21,7 @@ import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.WrapperVariablePattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -28,9 +29,10 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.LoglikelihoodOracle;
+import com.jayantkrish.jklol.training.OracleAdapter;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
-import com.jayantkrish.jklol.training.Trainer;
-import com.jayantkrish.jklol.training.TrainerAdapter;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -147,8 +149,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
   }
   
   public void testLogLinearTraining() {
-    Predictor<Assignment, Assignment> predictor = runTrainerTest(new StochasticGradientTrainer(
-        new JunctionTree(), 5, TRAINING_DATA.length, 1.0, true, 0.0, new DefaultLogFunction()));
+    Predictor<Assignment, Assignment> predictor = runTrainerTest(new LoglikelihoodOracle(cfgModel, new JunctionTree()));
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       ParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));
@@ -159,12 +160,15 @@ public class BeamSearchCfgFactorTest extends TestCase {
   }
   
   private Predictor<Assignment, Assignment> runTrainerTest(
-      Trainer<ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> trainer) {
-    Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> adaptedTrainer = 
-        TrainerAdapter.createAssignmentAdapter(trainer);
+      GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
+    GradientOracle<DynamicFactorGraph, Example<Assignment, Assignment>> adaptedOracle = 
+        OracleAdapter.createAssignmentAdapter(oracle);
 
-    SufficientStatistics parameters = adaptedTrainer.train(cfgModel,
-        cfgModel.getNewSufficientStatistics(), trainingData);
+    StochasticGradientTrainer trainer = new StochasticGradientTrainer(5, 
+        TRAINING_DATA.length, 1.0, true, 0.0, new DefaultLogFunction());
+
+    SufficientStatistics parameters = trainer.train(adaptedOracle,
+        adaptedOracle.initializeGradient(), trainingData);
     FactorGraph trainedModel = cfgModel.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
     SimpleFactorGraphPredictor predictor = new SimpleFactorGraphPredictor(

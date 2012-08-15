@@ -49,6 +49,7 @@ public class ParametricFactorGraph {
       List<ParametricFactor> parametricFactors, List<VariablePattern> factorPatterns,
       List<String> factorNames) {
     Preconditions.checkArgument(parametricFactors.size() == factorPatterns.size());
+    Preconditions.checkArgument(parametricFactors.size() == factorNames.size());
     this.baseFactorGraph = factorGraph;
     this.parametricFactors = ImmutableList.copyOf(parametricFactors);
     this.factorPatterns = ImmutableList.copyOf(factorPatterns);
@@ -116,16 +117,17 @@ public class ParametricFactorGraph {
 
   /**
    * Gets a new, all-zero parameter vector for {@code this} family of
-   * distributions.
+   * distributions. The returned statistics have names corresponding to 
+   * the parametric factors in this.
    * 
    * @return
    */
-  public SufficientStatistics getNewSufficientStatistics() {
+  public ListSufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> sufficientStatistics = Lists.newArrayList();
     for (ParametricFactor factor : getParametricFactors()) {
       sufficientStatistics.add(factor.getNewSufficientStatistics());
     }
-    return new ListSufficientStatistics(sufficientStatistics);
+    return new ListSufficientStatistics(factorNames, sufficientStatistics);
   }
 
   /**

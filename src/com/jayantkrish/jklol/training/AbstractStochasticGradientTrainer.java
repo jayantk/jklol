@@ -60,6 +60,9 @@ public abstract class AbstractStochasticGradientTrainer<T, U, E> extends Abstrac
 
     int searchErrors = 0;
     double gradientL2 = 0.0;
+    // This is an attempt at estimating how much the parameters are still changing.
+    // When it drops below some threshold, we'll say the algorithm has converged.
+    double exponentiallyWeightedUpdateNorm = stepSize;
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
       searchErrors = 0;
@@ -73,12 +76,13 @@ public abstract class AbstractStochasticGradientTrainer<T, U, E> extends Abstrac
       U currentModel = instantiateModel(modelFamily, initialParameters);
       log.stopTimer("factor_graph_from_parameters");
       
+      log.startTimer("compute_gradient_(serial)");
       SufficientStatistics gradient = executor.mapReduce(batchData, 
           new GradientMapper(currentModel, modelFamily), new GradientReducer(modelFamily));
-
-      gradientL2 = gradient.getL2Norm();
+      log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");
+      
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
 
       // System.out.println(currentStepSize);
@@ -87,9 +91,16 @@ public abstract class AbstractStochasticGradientTrainer<T, U, E> extends Abstrac
       initialParameters.increment(gradient, currentStepSize);
       // System.out.println(initialParameters);
       log.stopTimer("parameter_update");
+      
+      log.startTimer("compute_statistics");
+      gradientL2 = gradient.getL2Norm();
+      exponentiallyWeightedUpdateNorm = (0.2) * gradientL2 * currentStepSize + (0.8 * exponentiallyWeightedUpdateNorm);
+      log.stopTimer("compute_statistics");
 
-      log.logStatistic(i, "search errors", Integer.toString(searchErrors));
-      log.logStatistic(i, "gradient l2 norm", Double.toString(gradientL2));
+      log.logStatistic(i, "search errors", searchErrors);
+      log.logStatistic(i, "gradient l2 norm", gradientL2); 
+      log.logStatistic(i, "step size", currentStepSize);
+      log.logStatistic(i, "exponentially weighted update norm", exponentiallyWeightedUpdateNorm);
       log.notifyIterationEnd(i);
     }
     return initialParameters;
@@ -107,11 +118,6 @@ public abstract class AbstractStochasticGradientTrainer<T, U, E> extends Abstrac
 
   protected abstract U instantiateModel(T model, SufficientStatistics parameters);
 
-  /**
-   * Computes and returns an estimate of the gradient of {@code modelFamily} at
-   * {@code instantiatedModel} based on {@code example}. {@code gradient} should
-   * be incremented with the resulting value.
-   */
   protected abstract void accumulateGradient(SufficientStatistics gradient,
       U instantiatedModel, T modelFamily, E example);
 
@@ -131,14 +137,14 @@ public abstract class AbstractStochasticGradientTrainer<T, U, E> extends Abstrac
 
     @Override
     public SufficientStatistics map(E item) {
-      log.startTimer("compute_gradient");
+      log.startTimer("compute_gradient_(parallel)");
       SufficientStatistics gradient = initializeGradient(modelFamily);
       try {
         accumulateGradient(gradient, instantiatedModel, modelFamily, item);
       } catch (ZeroProbabilityError e) {
         // Ignore the example, returning the zero vector.
       }
-      log.stopTimer("compute_gradient");
+      log.stopTimer("compute_gradient_(parallel)");
       return gradient;
     }
   }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Represents a collection of {@code SufficientStatistics}, typically from
@@ -13,19 +14,50 @@ import com.google.common.collect.ImmutableList;
  */
 public class ListSufficientStatistics implements SufficientStatistics {
 
+  // Names for the statistics.
+  private final IndexedList<String> names;
+
   // Note that the statistics in the list are mutable, but elements
   // cannot be added or removed from the list.
   private final ImmutableList<SufficientStatistics> statistics;
 
   /**
    * Creates a collection of sufficient statistics containing all of the
-   * outcomes in {@code statistics}.
+   * outcomes in {@code statistics}. Each statistic is given the 
+   * correpsonding name from {@code names}.
    * 
+   * @param names
    * @param statistics
    */
-  public ListSufficientStatistics(List<SufficientStatistics> statistics) {
+  public ListSufficientStatistics(List<String> names, List<SufficientStatistics> statistics) {
     Preconditions.checkNotNull(statistics);
+    Preconditions.checkArgument(names.size() == statistics.size());
+    this.names = IndexedList.create(names);
     this.statistics = ImmutableList.copyOf(statistics);
+  }
+
+  /**
+   * Gets the names of the statistics in {@code this}.
+   *
+   * @return
+   */
+  public IndexedList<String> getStatisticNames() {
+    return names;
+  }
+  
+  /**
+   * Gets a particular set of sufficient statistics from this vector. 
+   * The returned statistics are a reference to statistics in {@code this}, 
+   * and therefore may be mutated to affect the value of {@code this}. 
+   * Returns {@code null} if no statistics exist with {@code name}.
+   *
+   * @return
+   */
+  public SufficientStatistics getStatisticByName(String name) {
+    if (names.contains(name)) {
+      return statistics.get(names.getIndex(name));
+    }
+    return null;
   }
       
   /**

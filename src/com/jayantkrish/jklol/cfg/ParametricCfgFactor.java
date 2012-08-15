@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cfg;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Function;
@@ -42,6 +43,8 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
 
   private final int beamSize;
   private final boolean canSkipTerminals;
+
+  private static final List<String> STATISTIC_NAMES = Arrays.asList("nonterminals", "terminals");
 
   public ParametricCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar,
       VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
@@ -128,7 +131,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     List<SufficientStatistics> statisticsList = Lists.newArrayList();
     statisticsList.add(nonterminalFactor.getNewSufficientStatistics());
     statisticsList.add(terminalFactor.getNewSufficientStatistics());
-    return new ListSufficientStatistics(statisticsList);
+    return new ListSufficientStatistics(STATISTIC_NAMES, statisticsList);
   }
 
   @Override

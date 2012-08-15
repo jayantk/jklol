@@ -69,7 +69,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 
   @Override
-  public void logStatistic(int iteration, String statisticName, String value) {
+  public void logStatistic(int iteration, String statisticName, Object value) {
     if (iteration % logInterval == 0) {
       print(iteration + ": " + statisticName + "=" + value);
     }

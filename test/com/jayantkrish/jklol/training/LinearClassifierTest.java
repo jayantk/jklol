@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.WrapperVariablePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -79,20 +80,20 @@ public class LinearClassifierTest extends TestCase {
   }
 
   public void testTrainSvm() {
-    runTrainerTest(new SubgradientSvmTrainer(new JunctionTree(),
-        new SubgradientSvmTrainer.HammingCost(), 80, 1, 1.0, true, 0.1, new DefaultLogFunction()));
+    runTrainerTest(new MaxMarginOracle(linearClassifier, new MaxMarginOracle.HammingCost(), new JunctionTree()));
   }
 
   public void testTrainLogisticRegression() {
-    runTrainerTest(new StochasticGradientTrainer(
-        new JunctionTree(), 80, 1, 1.0, true, 0.0, new DefaultLogFunction())); 
+    runTrainerTest(new LoglikelihoodOracle(linearClassifier, new JunctionTree()));
   }
 
-  private void runTrainerTest(Trainer<ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> trainer) {
-    Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> adaptedTrainer = 
-        TrainerAdapter.createAssignmentAdapter(trainer);
+  private void runTrainerTest(GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
+    GradientOracle<DynamicFactorGraph, Example<Assignment, Assignment>> adaptedOracle = 
+        OracleAdapter.createAssignmentAdapter(oracle);
     
-    SufficientStatistics parameters = adaptedTrainer.train(linearClassifier,
+    StochasticGradientTrainer trainer = new StochasticGradientTrainer(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
+    
+    SufficientStatistics parameters = trainer.train(adaptedOracle,
         linearClassifier.getNewSufficientStatistics(), trainingData);
     FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cfg;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -29,6 +30,8 @@ public class CptCfgFactor extends AbstractParametricFactor {
   
   private ParametricFactor nonterminalFactor;
   private ParametricFactor terminalFactor;
+
+  private static final List<String> STATISTIC_NAMES = Arrays.asList("nonterminals", "terminals");
   
   public CptCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar, 
       VariableNumMap terminalVar, VariableNumMap ruleTypeVar, VariableNumMap rootVar, 
@@ -75,7 +78,7 @@ public class CptCfgFactor extends AbstractParametricFactor {
     List<SufficientStatistics> statisticsList = Lists.newArrayList();
     statisticsList.add(nonterminalFactor.getNewSufficientStatistics());
     statisticsList.add(terminalFactor.getNewSufficientStatistics());
-    return new ListSufficientStatistics(statisticsList);
+    return new ListSufficientStatistics(STATISTIC_NAMES, statisticsList);
   }
 
   @Override

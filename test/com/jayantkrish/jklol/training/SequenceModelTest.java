@@ -37,6 +37,7 @@ public class SequenceModelTest extends TestCase {
   VariableNumMap x, y, all;
   List<Example<DynamicAssignment, DynamicAssignment>> trainingData;
 
+  @SuppressWarnings("unchecked")
   public void setUp() {
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
 
@@ -94,15 +95,11 @@ public class SequenceModelTest extends TestCase {
   }
   
   public void testTrainSvm() {
-    DefaultLogFunction logFn = new DefaultLogFunction();
-    testZeroTrainingError(new SubgradientSvmTrainer( new JunctionTree(),
-        new SubgradientSvmTrainer.HammingCost(), 80, 1, 1.0, true, 0.1, logFn));
-    logFn.printTimeStatistics();
+    testZeroTrainingError(new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree()));
   }
   
   public void testTrainLogLinear() {
-    testZeroTrainingError(new StochasticGradientTrainer(new JunctionTree(), 
-        80, 1, 1.0, true, 0.0, new DefaultLogFunction()));
+    testZeroTrainingError(new LoglikelihoodOracle(sequenceModel, new JunctionTree()));
   }
   
   public void testSerialization() {
@@ -112,8 +109,11 @@ public class SequenceModelTest extends TestCase {
   }
   
   private void testZeroTrainingError(
-      Trainer<ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> trainer) {
-    SufficientStatistics parameters = trainer.train(sequenceModel, sequenceModel.getNewSufficientStatistics(), trainingData); 
+      GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
+
+    StochasticGradientTrainer trainer = new StochasticGradientTrainer(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
+    
+    SufficientStatistics parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData); 
     DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);
     
     // Should be able to get 0 training error.

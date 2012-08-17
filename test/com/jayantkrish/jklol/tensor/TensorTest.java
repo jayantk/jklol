@@ -360,6 +360,17 @@ public abstract class TensorTest extends TestCase {
     }
   }
   
+  public void testElementwiseAddition2() {
+    Tensor actual = table.elementwiseAddition(2.0);
+
+    assertEquals(3.0, actual.getByDimKey(a1));
+    assertEquals(4.0, actual.getByDimKey(a2));
+    assertEquals(2.0, actual.getByDimKey(new int[] {4, 0, 0}));
+    assertEquals(7.0, actual.getByDimKey(new int[] {1, 0, 3}));
+    assertEquals(2.0, actual.getByDimKey(new int[] {5, 1, 0}));
+    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
+  }
+  
   public void testElementwiseMaximum() {
     for (Tensor addTable : addTables) {
       Tensor actual = table.elementwiseMaximum(addTable);

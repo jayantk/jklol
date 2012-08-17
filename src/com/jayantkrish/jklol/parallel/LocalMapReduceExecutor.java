@@ -37,12 +37,15 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
     ImmutableList<A> itemsAsList = ImmutableList.copyOf(items);
     List<MapReduceBatch<A, B, C>> batches = Lists.newArrayList();
     int batchSize = (int) Math.ceil(((double) items.size()) / (numThreads * batchesPerThread));
-    for (int i = 0; i < numThreads * batchesPerThread; i++) {
+    
+    // If batchSize is 1, then there are potentially more batches than items.
+    int numBatches = (int) Math.ceil(((double) items.size()) / batchSize); 
+    for (int i = 0; i < numBatches; i++) {
       ImmutableList<A> batchItems = itemsAsList.subList(
           Math.min(i * batchSize, items.size()), Math.min((i + 1) * batchSize, items.size()));
       batches.add(new MapReduceBatch<A, B, C>(batchItems, mapper, reducer));
     }
-    
+
     // Run the tasks in parallel, aggregating (reducing) their results as 
     // they become available.
     C accumulator = reducer.getInitialValue();

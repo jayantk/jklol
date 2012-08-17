@@ -98,6 +98,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public Tensor elementwiseAddition(Tensor other) {
     return logWeights.elementwiseExp().elementwiseAddition(other);
   }
+  
+  @Override
+  public Tensor elementwiseAddition(double value) {
+    return logWeights.elementwiseExp().elementwiseAddition(value);
+  }
 
   @Override
   public Tensor elementwiseMaximum(Tensor other) {

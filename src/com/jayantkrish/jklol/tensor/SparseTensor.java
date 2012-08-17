@@ -437,6 +437,17 @@ public class SparseTensor extends AbstractTensor implements Serializable{
   public SparseTensor elementwiseAddition(Tensor otherTensor) {
     return doElementwise(otherTensor, true);
   }
+  
+  @Override
+  public Tensor elementwiseAddition(double value) {
+    // This kind of addition is going to destroy sparsity, 
+    // so may as well use a dense tensor.
+    DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    result.increment(this);
+    result.increment(value);
+    return result.buildNoCopy();
+  }
 
   @Override
   public SparseTensor elementwiseMaximum(Tensor otherTensor) {

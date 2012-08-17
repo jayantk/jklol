@@ -27,12 +27,9 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
  */
 public class DenseTensor extends DenseTensorBase implements Tensor, Serializable {
 
-  /**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 	
-private static Random random = new Random();
+	private static Random random = new Random();
 
   /**
    * Creates a tensor that spans {@code dimensions}, and each dimension has the
@@ -130,6 +127,15 @@ private static Random random = new Random();
         getDimensionSizes());
     result.incrementWithMultiplier(other, 1);
     result.increment(this);
+    return result.buildNoCopy();
+  }
+  
+  @Override
+  public DenseTensor elementwiseAddition(double value) {
+    DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    result.increment(this);
+    result.increment(value);
     return result.buildNoCopy();
   }
 

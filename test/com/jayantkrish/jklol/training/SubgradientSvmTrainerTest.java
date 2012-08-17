@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.training.SubgradientSvmTrainer.HammingCost;
+import com.jayantkrish.jklol.training.MaxMarginOracle.HammingCost;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -33,7 +33,8 @@ import com.jayantkrish.jklol.util.Assignment;
 public class SubgradientSvmTrainerTest extends TestCase {
 
   ParametricFactorGraph model;
-  SubgradientSvmTrainer t;    
+  StochasticGradientTrainer t;
+  MaxMarginOracle o;
 
   VariableNumMap inputVars, outputVars;
 
@@ -65,12 +66,12 @@ public class SubgradientSvmTrainerTest extends TestCase {
     trainingData.add(makeExample("F", "T", "F"));
     trainingData.add(makeExample("T", "T", "F"));
 
-    t = new SubgradientSvmTrainer(new JunctionTree(), 
-        new SubgradientSvmTrainer.HammingCost(), 100, 4, 1.0, true, 1.0, null);
+    o = new MaxMarginOracle(model, new MaxMarginOracle.HammingCost(), new JunctionTree());
+    t = new StochasticGradientTrainer(100, 4, 1.0, true, 1.0, null);
   }
 
   public void testTrain() {
-    SufficientStatistics parameters = t.train(model, model.getNewSufficientStatistics(), trainingData);
+    SufficientStatistics parameters = t.train(o, o.initializeGradient(), trainingData);
     assertEquals(1.0, parameters.getL2Norm(), .01);
 
     DynamicFactorGraph dynamicFactorGraph = model.getFactorGraphFromParameters(parameters);

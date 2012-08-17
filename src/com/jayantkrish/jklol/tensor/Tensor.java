@@ -44,6 +44,14 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor elementwiseAddition(Tensor other);
+  
+  /**
+   * Adds {@code value} to every value in {@code this} and returns the result.
+   *  
+   * @param value
+   * @return
+   */
+  Tensor elementwiseAddition(double value);
 
   /**
    * Computes the elementwise maximum of {@code this} and {@code other},

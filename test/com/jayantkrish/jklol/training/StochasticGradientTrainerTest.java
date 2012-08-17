@@ -65,8 +65,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a2));
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a3));
 		}
-		t = new StochasticGradientTrainer(new JunctionTree(), 10, 1, 0.5, 
-		    true, 0.01, new DefaultLogFunction());
+		t = new StochasticGradientTrainer(10, 1, 0.5, true, 0.01, new DefaultLogFunction());
 	}
 
 	public void testTrain() {
@@ -81,7 +80,8 @@ public class StochasticGradientTrainerTest extends TestCase {
 		clique2NegativeAssignments.add(allVariables.getVariablesByName(clique2Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
-		SufficientStatistics parameters = t.train(logLinearModel, logLinearModel.getNewSufficientStatistics(), trainingData);
+		LoglikelihoodOracle oracle = new LoglikelihoodOracle(logLinearModel, new JunctionTree());
+		SufficientStatistics parameters = t.train(oracle, oracle.initializeGradient(), trainingData);
 
 		List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 		for (int i = 0; i < parameterList.size(); i++) {

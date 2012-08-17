@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.training;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
@@ -20,62 +21,33 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
-/**
- * Trains a {@link ParametricFactorGraph} as a structured SVM. The training
- * procedure performs (stochastic) subgradient descent on the structured SVM
- * objective function using a user-specified cost function and L2
- * regularization.
- * 
- * @author jayantk
- */
-public class SubgradientSvmTrainer extends AbstractStochasticGradientTrainer
-<ParametricFactorGraph, DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
+public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph, 
+Example<DynamicAssignment, DynamicAssignment>> {
 
-  private final MarginalCalculator marginalCalculator;
+  private final ParametricFactorGraph family;
   private final CostFunction costFunction;
+  private final MarginalCalculator marginalCalculator;
 
-  /**
-   * If {@code regularizationConstant = 0}, {@code decayStepSize = false} and
-   * the cost function is {@code ZeroCost}, then the structured SVM update rule
-   * is equivalent to the structured perceptron.
-   * 
-   * @param marginalCalculator
-   * @param costFunction
-   * @param numIterations
-   * @param batchSize
-   * @param stepSize
-   * @param decayStepSize
-   * @param regularizationConstant
-   * @param log
-   */
-  public SubgradientSvmTrainer(MarginalCalculator marginalCalculator, CostFunction costFunction,
-      int numIterations, int batchSize, double stepSize, boolean decayStepSize,
-      double regularizationConstant, LogFunction log) {
-    super(numIterations, batchSize, stepSize, decayStepSize, regularizationConstant, log);
-
-    this.marginalCalculator = marginalCalculator;
-    this.costFunction = costFunction;
+  public MaxMarginOracle(ParametricFactorGraph family, CostFunction costFunction, 
+      MarginalCalculator marginalCalculator) {
+    this.family = Preconditions.checkNotNull(family);
+    this.costFunction = Preconditions.checkNotNull(costFunction);
+    this.marginalCalculator = Preconditions.checkNotNull(marginalCalculator);
   }
 
-  protected SufficientStatistics initializeGradient(ParametricFactorGraph modelFamily) {
-    return modelFamily.getNewSufficientStatistics();
-  }
-
-  protected DynamicFactorGraph instantiateModel(ParametricFactorGraph modelFamily,
-      SufficientStatistics parameters) {
-    return modelFamily.getFactorGraphFromParameters(parameters);
-  }
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * The structured SVM subgradient compares the unnormalized probability of the
-   * output with the cost-augmented unnormalized probability of the best
-   * prediction.
-   */
   @Override
-  protected void accumulateGradient(SufficientStatistics subgradient, DynamicFactorGraph currentDynamicModel,
-      ParametricFactorGraph modelFamily, Example<DynamicAssignment, DynamicAssignment> example) {
+  public SufficientStatistics initializeGradient() {
+    return family.getNewSufficientStatistics();
+  }
+  
+  @Override
+  public DynamicFactorGraph instantiateModel(SufficientStatistics parameters) {
+    return family.getFactorGraphFromParameters(parameters);
+  }
+
+  @Override
+  public void accumulateGradient(SufficientStatistics subgradient, DynamicFactorGraph currentDynamicModel,
+      Example<DynamicAssignment, DynamicAssignment> example, LogFunction log) {
 
     log.startTimer("dynamic_instantiation");
     FactorGraph currentModel = currentDynamicModel.getFactorGraph(example.getInput());
@@ -147,8 +119,8 @@ public class SubgradientSvmTrainer extends AbstractStochasticGradientTrainer
       MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionalOutputModel.getAllVariables(), actual);
       MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionalCostAugmentedModel.getAllVariables(), prediction);
       // Update the parameter vector
-      modelFamily.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
-      modelFamily.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
+      family.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
+      family.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
       // System.out.println(modelFamily.getParameterDescription(subgradient));
 
       // Return the loss, which is the amount by which the prediction is within

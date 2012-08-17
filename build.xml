@@ -58,28 +58,20 @@
   </target>
 
   <target name="test" depends="compile-test">
-    <junit fork="no">
+    <junit fork="no" outputtoformatters="false">
       <classpath refid="classpath.test" />
-      <formatter type="brief" usefile="false" />
-      <test name="com.jayantkrish.jklol.inference.JunctionTreeTest" />
-<!--
-      <test name="com.jayantkrish.jklol.cfg.CfgFactorTest" />
-      <test name="com.jayantkrish.jklol.cfg.CfgParserTest" />
-      <test name="com.jayantkrish.jklol.cfg.GrammarTest" />
-      <test name="com.jayantkrish.jklol.evaluation.LossFunctionsTest" />
-      <test name="com.jayantkrish.jklol.inference.GibbsSamplerTest" />
-      <test name="com.jayantkrish.jklol.models.CptTest" />
-      <test name="com.jayantkrish.jklol.models.DiscreteVariableTest" />
-      <test name="com.jayantkrish.jklol.models.FactorGraphTest" />
-      <test name="com.jayantkrish.jklol.models.MixtureFactorTest" />
-      <test name="com.jayantkrish.jklol.models.TableFactorTest" />
-      <test name="com.jayantkrish.jklol.models.VariableNumMapTest" />
-      <test name="com.jayantkrish.jklol.training.BNCountTrainerTest" />
-      <test name="com.jayantkrish.jklol.training.EMTrainerTest" />
-      <test name="com.jayantkrish.jklol.training.StochasticGradientTrainerTest" />
-      <test name="com.jayantkrish.jklol.util.AssignmentTest" />
-      <test name="com.jayantkrish.jklol.util.IndexedListTest" />
--->
+      <formatter type="brief" usefile="false"/>
+      <batchtest>
+        <fileset dir="${tst-dir}" includes="**/*.java">
+          <include name="**/*.java" />
+          <!-- Tests inherit from these classes, but they are not tests -->
+          <exclude name="**/TensorTest.java" />
+          <exclude name="**/TensorBuilderTest.java" />
+          <exclude name="**/MarginalTestCase.java" />
+          <exclude name="**/MaxMarginalTestCase.java" />
+          <exclude name="**/InferenceTestCases.java" />
+        </fileset>
+      </batchtest>
     </junit>
   </target>
 

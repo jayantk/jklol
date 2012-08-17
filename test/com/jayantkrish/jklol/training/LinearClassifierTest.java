@@ -88,8 +88,11 @@ public class LinearClassifierTest extends TestCase {
         new JunctionTree(), 80, 1, 1.0, true, 0.0, new DefaultLogFunction())); 
   }
 
-  private void runTrainerTest(Trainer<ParametricFactorGraph> trainer) {
-    SufficientStatistics parameters = trainer.trainFixed(linearClassifier,
+  private void runTrainerTest(Trainer<ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> trainer) {
+    Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> adaptedTrainer = 
+        TrainerAdapter.createAssignmentAdapter(trainer);
+    
+    SufficientStatistics parameters = adaptedTrainer.train(linearClassifier,
         linearClassifier.getNewSufficientStatistics(), trainingData);
     FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);

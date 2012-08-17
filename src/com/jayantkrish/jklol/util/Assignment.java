@@ -17,8 +17,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * An Assignment represents a set of values assigned to a set of variables,
  * possibly nested within plates. Assignments are immutable.
  */
-public class Assignment implements Serializable{
 
+public class Assignment implements Serializable{
   private static final long serialVersionUID = 1842533988072075012L;
 
   public static final Assignment EMPTY = new Assignment(Arrays.asList(new Integer[] {}),

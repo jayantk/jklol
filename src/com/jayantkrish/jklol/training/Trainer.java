@@ -1,16 +1,13 @@
 package com.jayantkrish.jklol.training;
 
-import com.jayantkrish.jklol.evaluation.Example;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Interface for parameter estimation (i.e., training).
  * 
  * @author jayantk
  */
-public interface Trainer<T> {
+public interface Trainer<T, E> {
 
   /**
    * Estimates parameters for {@code modelFamily} using {@code trainingData}.
@@ -33,20 +30,5 @@ public interface Trainer<T> {
    */
   public SufficientStatistics train(T modelFamily,
       SufficientStatistics initialParameters,
-      Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData);
-
-  /**
-   * Identical to {@link #train}, assuming that {@code modelFamily} is a
-   * non-dynamic factor graph. As a result, {@code DynamicAssignment}s are
-   * unnecessary.
-   * 
-   * @param modelFamily
-   * @param initialParameters
-   * @param trainingData
-   * @return
-   */
-  public SufficientStatistics trainFixed(T modelFamily, 
-      SufficientStatistics initialParameters,
-      Iterable<Example<Assignment, Assignment>> trainingData);
-
+      Iterable<E> trainingData);
 }

@@ -125,6 +125,22 @@ public interface VariablePattern {
     }
 
     @Override
+    public int hashCode() {
+      return allVariables.hashCode() * variableNameMap.hashCode() * variableIndexMap.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (other instanceof VariableMatch) {
+        VariableMatch m = (VariableMatch) other;
+
+        return allVariables.equals(m.allVariables) && variableIndexMap.equals(m.variableIndexMap)
+            && variableNameMap.equals(m.variableNameMap);
+      }
+      return false;
+    }
+
+    @Override
     public String toString() {
       return allVariables.toString() + " " + variableIndexMap.toString()
           + " " + variableNameMap.toString();

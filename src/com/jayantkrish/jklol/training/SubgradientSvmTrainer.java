@@ -28,8 +28,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class SubgradientSvmTrainer extends
-    AbstractStochasticGradientTrainer<ParametricFactorGraph, DynamicFactorGraph> {
+public class SubgradientSvmTrainer extends AbstractStochasticGradientTrainer
+<ParametricFactorGraph, DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private final MarginalCalculator marginalCalculator;
   private final CostFunction costFunction;

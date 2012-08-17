@@ -7,7 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * Static utility methods for manipulating {@link Map}s.
@@ -45,6 +47,23 @@ public class MapUtils {
     List<Map.Entry<A, B>> list = Lists.newArrayList(map.entrySet());
     Collections.reverse(list);
     return listToMap(list);
+  }
+
+  /**
+   * Returns a map where the ith element of keys maps to the ith element of
+   * values.
+   * 
+   * @param keys
+   * @param values
+   * @return
+   */
+  public static <A, B> Map<A, B> fromLists(List<A> keys, List<B> values) {
+    Preconditions.checkArgument(keys.size() == values.size());
+    Map<A, B> map = Maps.newHashMap();
+    for (int i = 0; i < keys.size(); i++) {
+      map.put(keys.get(i), values.get(i));
+    }
+    return map;
   }
 
   /**

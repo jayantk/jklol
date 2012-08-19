@@ -169,10 +169,19 @@ public class TableFactor extends DiscreteFactor {
       for (int i = 0; i < numVars; i++) {
         assignment = assignment.union(variables.get(i).outcomeArrayToAssignment(parts[i]));
       }
-      Preconditions.checkState(allVars.isValidAssignment(assignment), "%s", assignment);
+
+      
+      //check if the assignment is valid, if its not, then don't add it to the feature set
+      //Preconditions.checkState(allVars.isValidAssignment(assignment), "%s", assignment);
+      if(! allVars.isValidAssignment(assignment)){          
+        continue;
+      }
+      
       double weight = Double.parseDouble(parts[numVars]);
       builder.setWeight(assignment, weight);
     }
+    
+    
     return builder.build();
   }
 

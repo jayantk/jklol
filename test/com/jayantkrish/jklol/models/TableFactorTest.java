@@ -327,7 +327,7 @@ public class TableFactorTest extends TestCase {
 	  VariableNumMap secondVal = h.getVars().getVariablesByName("v0");
 	  List<String> lines = Arrays.asList(new String[] {"foo,F,2.0", "bar,T,3.0"});
 	  TableFactor factor = TableFactor.fromDelimitedFile(Arrays.asList(firstVal, secondVal), 
-	      lines, ",");
+	      lines, ",", false);
 	  
 	  assertEquals(2.0, factor.size());
 	  assertEquals(2.0, factor.getUnnormalizedProbability("F", "foo"));

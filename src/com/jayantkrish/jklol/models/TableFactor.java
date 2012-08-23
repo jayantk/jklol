@@ -142,46 +142,50 @@ public class TableFactor extends DiscreteFactor {
     Preconditions.checkArgument(proto.getType().equals(FactorProto.FactorType.TABLE));
     Preconditions.checkArgument(proto.hasTableFactor());
     Preconditions.checkArgument(proto.getTableFactor().hasWeights());
-    
+
     VariableNumMap variables = VariableNumMap.fromProto(proto.getVariables(), variableTypeIndex);
     return new TableFactor(variables, Tensors.fromProto(proto.getTableFactor().getWeights()));
   }
 
   /**
    * Gets a {@code TableFactor} from a series of lines, each describing a single
-   * assignment. Each line is {@code delimiter}-separated, and its ith entry is the value of
-   * the ith variable in {@code variables}. The last value on each line is the
-   * weight.
+   * assignment. Each line is {@code delimiter}-separated, and its ith entry is
+   * the value of the ith variable in {@code variables}. The last value on each
+   * line is the weight.
    * 
    * @param variables
    * @param lines
+   * @param delimiter
+   * @param ignoreInvalidAssignments if {@code true}, lines representing invalid
+   * assignments to {@code variables} are skipped. If {@code false}, an error is
+   * thrown.
    * @return
    */
-  public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, Iterable<String> lines, 
-      String delimiter) {
+  public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, Iterable<String> lines,
+      String delimiter, boolean ignoreInvalidAssignments) {
     int numVars = variables.size();
     VariableNumMap allVars = VariableNumMap.unionAll(variables);
     TableFactorBuilder builder = new TableFactorBuilder(allVars, SparseTensorBuilder.getFactory());
     for (String line : lines) {
-      String[] parts = line.split(delimiter); 
-      Preconditions.checkState(parts.length == (numVars + 1), "\"%s\" is incorrectly formatted", line); 
+      String[] parts = line.split(delimiter);
+      Preconditions.checkState(parts.length == (numVars + 1), "\"%s\" is incorrectly formatted", line);
       Assignment assignment = Assignment.EMPTY;
       for (int i = 0; i < numVars; i++) {
         assignment = assignment.union(variables.get(i).outcomeArrayToAssignment(parts[i]));
       }
 
-      
-      //check if the assignment is valid, if its not, then don't add it to the feature set
-      //Preconditions.checkState(allVars.isValidAssignment(assignment), "%s", assignment);
-      if(! allVars.isValidAssignment(assignment)){          
+      // Check if the assignment is valid, if its not, then don't add it to the
+      // feature set
+      Preconditions.checkState(ignoreInvalidAssignments || allVars.isValidAssignment(assignment),
+          "Invalid assignment: %s", assignment);
+      if (!allVars.isValidAssignment(assignment)) {
         continue;
       }
-      
+
       double weight = Double.parseDouble(parts[numVars]);
       builder.setWeight(assignment, weight);
     }
-    
-    
+
     return builder.build();
   }
 
@@ -255,7 +259,7 @@ public class TableFactor extends DiscreteFactor {
 
     return builder.build();
   }
-  
+
   @Override
   public String toString() {
     return "TableFactor(" + getVars() + ")(" + weights.size() + " weights)";

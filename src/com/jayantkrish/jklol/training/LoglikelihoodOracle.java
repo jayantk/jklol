@@ -43,7 +43,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
   }
 
   @Override
-  public void accumulateGradient(SufficientStatistics gradient, DynamicFactorGraph dynamicFactorGraph,
+  public double accumulateGradient(SufficientStatistics gradient, DynamicFactorGraph dynamicFactorGraph,
       Example<DynamicAssignment, DynamicAssignment> dynamicExample, LogFunction log) {
     // Instantiate any replicated factors, etc.
     log.startTimer("update_gradient/get_factor_graph_from_parameters");
@@ -87,5 +87,8 @@ Example<DynamicAssignment, DynamicAssignment>> {
     // System.out.println("=== output marginals ===");
     // System.out.println(outputMarginals);
     log.stopTimer("update_gradient/increment");
+
+    return Math.log(outputMarginals.getPartitionFunction()) - 
+        Math.log(inputMarginals.getPartitionFunction());
   }
 }

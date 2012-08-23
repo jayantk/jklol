@@ -35,6 +35,16 @@ public interface TensorBuilder extends TensorBase, Serializable {
   void multiply(double amount);
 
   void multiplyEntry(double amount, int... key);
+  
+  /**
+   * Gets the sum of the elementwise product of {@code this} and {@code other}.
+   * Requires {@code this} and {@code other} to have identical dimension numbers
+   * and sizes.
+   * 
+   * @param other
+   * @return
+   */
+  double innerProduct(TensorBase other);
 
   /**
    * Exponentiates the values in this tensor, setting every value to {@code e ^

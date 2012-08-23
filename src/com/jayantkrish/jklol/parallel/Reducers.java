@@ -1,9 +1,11 @@
 package com.jayantkrish.jklol.parallel;
 
 import java.util.Collection;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 
 /**
  * Utilities for manipulating {@code Reducer}s and creating common
@@ -23,6 +25,15 @@ public class Reducers {
   public static <T, C extends Collection<T>> Reducer<T, C> getAggregatingReducer(
       Supplier<C> supplier) {
     return new AggregatingReducer<T, C>(supplier);
+  }
+  
+  public static <T> Reducer<T, List<T>> getAggregatingListReducer() {
+    return getAggregatingReducer(new Supplier<List<T>>() {
+      @Override
+      public List<T> get() {
+        return Lists.newArrayList();
+      }
+    });
   }
 
   /**

@@ -50,8 +50,9 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     this.allFactors = ImmutableList.copyOf(factors);
   }
   
-  public static FactorMarginalSet fromAssignment(VariableNumMap conditionedVariables, Assignment conditionedValues) {
-    return new FactorMarginalSet(Collections.<Factor>emptyList(), 1.0, conditionedVariables, conditionedValues);
+  public static FactorMarginalSet fromAssignment(VariableNumMap conditionedVariables, Assignment conditionedValues,
+      double partitionFunction) {
+    return new FactorMarginalSet(Collections.<Factor>emptyList(), partitionFunction, conditionedVariables, conditionedValues);
   }
   
   private static VariableNumMap getVariablesFromFactors(Collection<Factor> factors) { 

@@ -171,6 +171,13 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   }
   
   @Override
+  public double innerProduct(TensorBase other) {
+    TensorBuilder product = getCopy();
+    product.multiply(other);
+    return product.getTrace();
+  }
+  
+  @Override
   public long[] getLargestValues(int n) {
     return build().getLargestValues(n);
   }

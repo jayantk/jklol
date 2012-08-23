@@ -188,6 +188,14 @@ public abstract class TensorBuilderTest extends TestCase {
     }
   }
   
+  public void testInnerProduct() {
+    for (int i = 0; i < otherBuilders.size(); i++) {
+      assertEquals(3.0, builder.innerProduct(otherBuilders.get(i)));
+    }
+    
+    assertEquals(builder.getL2Norm() * builder.getL2Norm(), builder.innerProduct(builder), 0.00000001); 
+  }
+  
   public void testExp() {
     builder.exp();
     assertEquals(1.0, builder.getByDimKey(KEY0), 0.0001);

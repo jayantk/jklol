@@ -14,7 +14,7 @@ import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Stores sufficient statistics in one or more tensors. This implementation of
+ * Stores sufficient statistics in a tensors. This implementation of
  * {@link SufficientStatistic} should be sufficient for most
  * {@link ParametricFactor}s.
  * 
@@ -29,7 +29,7 @@ public class TensorSufficientStatistics implements SufficientStatistics {
 
   /**
    * 
-   * @param statisticNames maps the
+   * @param statisticNames assigns names to the entries of {@code statistics}.
    * @param statistics
    */
   public TensorSufficientStatistics(VariableNumMap statisticNames,
@@ -92,11 +92,11 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   @Override
   public void transferParameters(SufficientStatistics other) {
     DiscreteFactor otherFactor = ((TensorSufficientStatistics) other).getFactor();
-    
+
     Iterator<Outcome> outcomeIter = otherFactor.outcomeIterator();
     while (outcomeIter.hasNext()) {
       Outcome outcome = outcomeIter.next();
-      
+
       Assignment assignment = outcome.getAssignment();
       if (statisticNames.isValidAssignment(assignment)) {
         incrementFeature(assignment, outcome.getProbability());
@@ -118,6 +118,18 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   public void perturb(double stddev) {
     statistics.increment(DenseTensor.random(
         statistics.getDimensionNumbers(), statistics.getDimensionSizes(), 0.0, stddev));
+  }
+
+  @Override
+  public TensorSufficientStatistics duplicate() {
+    return new TensorSufficientStatistics(statisticNames, statistics.getCopy());
+  }
+
+  @Override
+  public double innerProduct(SufficientStatistics other) {
+    Preconditions.checkArgument(other instanceof TensorSufficientStatistics);
+    TensorBuilder otherStatistics = ((TensorSufficientStatistics) other).statistics;
+    return statistics.innerProduct(otherStatistics);
   }
 
   @Override

@@ -207,6 +207,31 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       }
     }
   }
+      
+  @Override
+  public double innerProduct(TensorBase other) {
+    Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
+    if (other instanceof DenseTensorBase) {
+      DenseTensorBase otherTensor = (DenseTensorBase) other;
+      Preconditions.checkArgument(otherTensor.values.length == values.length);
+      double total = 0.0;
+      for (int i = 0; i < values.length; i++) {
+        total += otherTensor.values[i] * values[i];
+      }
+      return total;
+    } else {
+      double total = 0.0;
+      
+      Iterator<KeyValue> keyValueIter = keyValueIterator();
+      while (keyValueIter.hasNext()) {
+        KeyValue keyValue = keyValueIter.next();
+        int index = dimKeyToIndex(keyValue.getKey());
+        
+        total += values[index] * other.getByDimKey(keyValue.getKey());
+      }
+      return total;
+    }
+  }
 
   @Override
   public void exp() {

@@ -27,7 +27,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   // in the cfg parser.
   private final VariableNumMap parentVar;
   private final VariableNumMap leftVar;
-  private final VariableNumMap rightVar;
+  private final VariableNumMap rightVar; 
   private final VariableNumMap terminalVar;
   private final VariableNumMap ruleTypeVar;
 

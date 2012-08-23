@@ -145,7 +145,7 @@ public class ParametricFactorGraph {
   public void incrementSufficientStatistics(SufficientStatistics statistics,
       VariableNumMap variables, Assignment assignment, double count) {
     incrementSufficientStatistics(statistics, FactorMarginalSet.fromAssignment(
-        variables, assignment), count);
+        variables, assignment, 1.0), count);
   }
 
   /**

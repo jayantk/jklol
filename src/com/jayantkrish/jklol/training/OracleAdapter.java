@@ -50,9 +50,9 @@ public class OracleAdapter<E> implements GradientOracle<DynamicFactorGraph, E> {
   }
 
   @Override
-  public void accumulateGradient(SufficientStatistics gradient, DynamicFactorGraph instantiatedModel, 
+  public double accumulateGradient(SufficientStatistics gradient, DynamicFactorGraph instantiatedModel, 
       E example, LogFunction log) {
-    oracle.accumulateGradient(gradient, instantiatedModel, converter.apply(example), log);
+    return oracle.accumulateGradient(gradient, instantiatedModel, converter.apply(example), log);
   }
   
   /**

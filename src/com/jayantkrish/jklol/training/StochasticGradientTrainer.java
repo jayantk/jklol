@@ -6,25 +6,22 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
-import com.jayantkrish.jklol.parallel.Mapper;
-import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
+import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
 
 /**
  * An implementation of stochastic (sub)gradient ascent that can optimize any
  * function given by a {@link GradientOracle}.
  * 
  * @author jayantk
- * @param <T>
  */
 public class StochasticGradientTrainer {
 
   private final int numIterations;
   private final int batchSize;
-  protected final LogFunction log;
+  private final LogFunction log;
 
   private final double stepSize;
   private final boolean decayStepSize;
@@ -78,8 +75,9 @@ public class StochasticGradientTrainer {
       log.stopTimer("factor_graph_from_parameters");
 
       log.startTimer("compute_gradient_(serial)");
-      SufficientStatistics gradient = executor.mapReduce(batchData,
-          new GradientMapper<M, E>(currentModel, oracle), new GradientReducer<M, E>(oracle));
+      GradientEvaluation oracleResult = executor.mapReduce(batchData,
+          new GradientMapper<M, E>(currentModel, oracle, log), new GradientReducer<M, E>(oracle, log));
+      SufficientStatistics gradient = oracleResult.getGradient();
       log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");
@@ -101,6 +99,7 @@ public class StochasticGradientTrainer {
       log.logStatistic(i, "search errors", searchErrors);
       log.logStatistic(i, "gradient l2 norm", gradientL2);
       log.logStatistic(i, "step size", currentStepSize);
+      log.logStatistic(i, "objective value", oracleResult.getObjectiveValue());
       log.logStatistic(i, "exponentially weighted update norm", exponentiallyWeightedUpdateNorm);
       log.notifyIterationEnd(i);
     }
@@ -113,60 +112,5 @@ public class StochasticGradientTrainer {
       batchData.add(trainingData.next());
     }
     return batchData;
-  }
-
-  /**
-   * Mapper for parallelizing gradient computation for multiple examples.
-   * 
-   * @author jayantk
-   */
-  private class GradientMapper<M, E> extends Mapper<E, SufficientStatistics> {
-    private final M instantiatedModel;
-    private final GradientOracle<M, E> oracle;
-
-    public GradientMapper(M instantiatedModel, GradientOracle<M, E> oracle) {
-      this.instantiatedModel = instantiatedModel;
-      this.oracle = oracle;
-    }
-
-    @Override
-    public SufficientStatistics map(E item) {
-      log.startTimer("compute_gradient_(parallel)");
-      SufficientStatistics gradient = oracle.initializeGradient();
-      try {
-        oracle.accumulateGradient(gradient, instantiatedModel, item, log);
-      } catch (ZeroProbabilityError e) {
-        // Ignore the example, returning the zero vector.
-      }
-      log.stopTimer("compute_gradient_(parallel)");
-      return gradient;
-    }
-  }
-
-  /**
-   * Reducer for accumulating gradients from multiple examples.
-   * 
-   * @author jayantk
-   */
-  private class GradientReducer<M, E> extends SimpleReducer<SufficientStatistics> {
-
-    private final GradientOracle<M, E> oracle;
-
-    public GradientReducer(GradientOracle<M, E> oracle) {
-      this.oracle = oracle;
-    }
-
-    @Override
-    public SufficientStatistics getInitialValue() {
-      return oracle.initializeGradient();
-    }
-
-    @Override
-    public SufficientStatistics reduce(SufficientStatistics item, SufficientStatistics accumulated) {
-      log.startTimer("accumulate_gradient");
-      accumulated.increment(item, 1.0);
-      log.stopTimer("accumulate_gradient");
-      return accumulated;
-    }
   }
 }

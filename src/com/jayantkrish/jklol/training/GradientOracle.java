@@ -45,13 +45,15 @@ public interface GradientOracle<M, E> {
    * Computes the an estimate of the objective's gradient at (the
    * parameters corresponding to) {@code instantiatedModel}. The gradient
    * estimate is derived from the portion of objective that depends on
-   * {@code example}. {@code gradient} is incremented with the computed value.
+   * {@code example}. {@code gradient} is incremented with the computed 
+   * value, and the method returns the current objective value.
    *
    * @param gradient
    * @param instantiatedModel
    * @param example
    * @param log stores time statistics, etc., about the optimization  
+   * @return objective value evaluated at {@code example}.
    */
-  public void accumulateGradient(SufficientStatistics gradient,
+  public double accumulateGradient(SufficientStatistics gradient,
       M instantiatedModel, E example, LogFunction log);
 }

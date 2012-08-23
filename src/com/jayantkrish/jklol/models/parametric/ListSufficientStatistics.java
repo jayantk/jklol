@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -115,6 +116,29 @@ public class ListSufficientStatistics implements SufficientStatistics {
     for (int i = 0; i < statistics.size(); i++) {
       statistics.get(i).perturb(stddev);
     }
+  }
+  
+  @Override
+  public ListSufficientStatistics duplicate() {
+    List<SufficientStatistics> newStatistics = Lists.newArrayList();
+    for (SufficientStatistics statistic : statistics) {
+      newStatistics.add(statistic.duplicate());
+    }
+    return new ListSufficientStatistics(names.items(), newStatistics);
+  }
+  
+  @Override
+  public double innerProduct(SufficientStatistics other) {
+    Preconditions.checkArgument(other instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics otherList = (ListSufficientStatistics) other;
+    Preconditions.checkArgument(otherList.statistics.size() == statistics.size());
+    
+    double value = 0.0;
+    for (int i = 0; i < statistics.size(); i++) {
+      value += statistics.get(i).innerProduct(otherList.statistics.get(i));
+    }
+    return value;
   }
   
   @Override

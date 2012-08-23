@@ -44,8 +44,10 @@ public class JunctionTree implements MarginalCalculator {
     // Efficiency override -- all variables in the factor graph have assigned
     // values.
     if (factorGraph.getVariables().size() == 0) {
+      // Some applications require an accurate estimate of the partition function.
       return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(),
-          factorGraph.getConditionedValues());
+          factorGraph.getConditionedValues(), 
+          factorGraph.getUnnormalizedProbability(Assignment.EMPTY));
     }
 
     // long time = System.nanoTime();

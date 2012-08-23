@@ -46,7 +46,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
   }
 
   @Override
-  public void accumulateGradient(SufficientStatistics subgradient, DynamicFactorGraph currentDynamicModel,
+  public double accumulateGradient(SufficientStatistics subgradient, DynamicFactorGraph currentDynamicModel,
       Example<DynamicAssignment, DynamicAssignment> example, LogFunction log) {
 
     log.startTimer("dynamic_instantiation");
@@ -99,42 +99,31 @@ Example<DynamicAssignment, DynamicAssignment>> {
      * log.log(iterationNum, iterationNum, actual, currentModel);
      */
 
-    // TODO: delete these
     double predictedProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction);
     double actualProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual);
-    System.out.println("PROBS:" + predictedProb + " " + actualProb);
 
     Assignment predictedOutputValues = prediction.intersection(outputVariables);
     Assignment actualOutputValues = actual.intersection(outputVariables);
 
-    System.out.println(outputVariables);
-    System.out.println(predictedOutputValues);
-    System.out.println(actualOutputValues);
-
     // Update parameters if necessary.
     if (!predictedOutputValues.equals(actualOutputValues)) {
-      log.startTimer("update_subgradient/parameter_update");
+      log.startTimer("update_subgradient/increment_subgradient");
       // Convert the assignments into marginal (point) distributions in order to
       // update the parameter vector.
-      MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionalOutputModel.getAllVariables(), actual);
-      MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionalCostAugmentedModel.getAllVariables(), prediction);
+      MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionalOutputModel.getAllVariables(), actual, 1.0);
+      MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionalCostAugmentedModel.getAllVariables(), prediction, 1.0);
       // Update the parameter vector
       family.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
       family.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
-      // System.out.println(modelFamily.getParameterDescription(subgradient));
 
+      log.stopTimer("update_subgradient/increment_subgradient");
+      
       // Return the loss, which is the amount by which the prediction is within
       // the margin.
-      /*
-       * double loss = predictedProb - actualProb;
-       * log.stopTimer("update_subgradient/parameter_update");
-       * 
-       * System.out.println("PROBS:" + predictedProb + " " + actualProb); return
-       * loss;
-       */
+       return predictedProb - actualProb;
     }
     // Special value to signify that the example was correct.
-    // return -1;
+    return 0;
   }
 
   /**

@@ -21,7 +21,7 @@ public interface SufficientStatistics extends Serializable {
    * @param multiplier
    */
   public void increment(SufficientStatistics other, double multiplier);
-  
+
   /**
    * Increments the statistic/parameter values by their corresponding amounts in
    * {@code other}. This increment uses feature names to determine the
@@ -58,6 +58,23 @@ public interface SufficientStatistics extends Serializable {
    * @param variance
    */
   public void perturb(double stddev);
+
+  /**
+   * Returns a deep copy of this vector of sufficient statistics. Mutating this
+   * object will not affect the values in the returned object, and vice versa.
+   * 
+   * @return
+   */
+  public SufficientStatistics duplicate();
+
+  /**
+   * Computes the standard inner (dot) product between this vector and
+   * {@code other}.
+   * 
+   * @param other
+   * @return
+   */
+  public double innerProduct(SufficientStatistics other);
 
   /**
    * Gets the L2 norm of {@code this}, treating {@code this} as a vector. In

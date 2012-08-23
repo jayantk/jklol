@@ -30,8 +30,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
   }
 
   @Override
-  public <A, B, C> C mapReduce(Collection<A> items,
-      Mapper<A, B> mapper, Reducer<B, C> reducer) {
+  public <A, B, C> C mapReduce(Collection<A> items, Mapper<A, B> mapper, Reducer<B, C> reducer) {
 
     // Set up the item batches for the executor service. 
     ImmutableList<A> itemsAsList = ImmutableList.copyOf(items);

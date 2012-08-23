@@ -103,6 +103,14 @@ public class TensorSufficientStatistics implements SufficientStatistics {
       }
     }
   }
+  
+  
+  public void getFeatureNames() {
+    
+    System.out.println("**** feature names *****" + this.statisticNames.getVariables().get(0).toString());
+  }
+  
+  
 
   @Override
   public void increment(double amount) {

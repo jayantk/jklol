@@ -248,7 +248,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.
     Preconditions.checkArgument(Arrays.equals(featureParameters.get().getDimensionSizes(),
-        featureVariables.getVariableSizes()));
+        featureVariables.getVariableSizes()), "DiscreteLogLinearFactor: Parameters don't have the right dimensionality.");
     return featureParameters.get();
   }
 

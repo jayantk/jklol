@@ -33,6 +33,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class IndicatorLogLinearFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = 40981380830895221L;
+
   // The outcomes which are given indicator features.
   private final TableFactor initialWeights;
   

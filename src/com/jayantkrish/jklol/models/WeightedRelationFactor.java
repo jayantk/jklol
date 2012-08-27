@@ -28,6 +28,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public abstract class WeightedRelationFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = 3811881796880868419L;
+  
   private final VariableNumMap domainVariable;
   private final VariableNumMap rangeVariable;
   private final VariableNumMap auxiliaryVariables;

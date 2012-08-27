@@ -17,6 +17,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public abstract class AbstractFactor implements Factor, Serializable {
 
+  private static final long serialVersionUID = -5261363608555889520L;
+  
   private VariableNumMap vars;
 
   public AbstractFactor(VariableNumMap vars) {

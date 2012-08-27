@@ -34,6 +34,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class VariableNumMap implements Serializable{
 
+  private static final long serialVersionUID = 4365097309859003264L;
+  
   private final SortedMap<Integer, Variable> varMap;
   private final BiMap<Integer, String> names;
 
@@ -854,6 +856,8 @@ public class VariableNumMap implements Serializable{
    */
   public static class VariableRelabeling extends Converter<VariableNumMap, VariableNumMap> implements Serializable {
 
+    private static final long serialVersionUID = -2598135542480496918L;
+    
     private final BiMap<Integer, Integer> variableIndexMap;
     private final BiMap<String, String> variableNameMap;
 

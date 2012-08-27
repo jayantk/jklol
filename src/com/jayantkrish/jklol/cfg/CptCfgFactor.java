@@ -19,6 +19,8 @@ import com.jayantkrish.jklol.util.IndexedList;
 
 public class CptCfgFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = -5397930556826721650L;
+  
   private final VariableNumMap parentVar;
   private final VariableNumMap leftVar;
   private final VariableNumMap rightVar;

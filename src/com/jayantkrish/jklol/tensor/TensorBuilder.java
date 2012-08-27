@@ -37,6 +37,22 @@ public interface TensorBuilder extends TensorBase, Serializable {
   void multiplyEntry(double amount, int... key);
   
   /**
+   * Applies the soft threshold operator to each element in this. The soft
+   * threshold operator {@code f} applied to an element {@code x} is defined as:
+   * 
+   * <ul>
+   * <li>{@code f(x) = 0} if {@code |x| <= threshold}.
+   * <li>{@code f(x) = x - (sign(x) * threshold)} if {@code |x| >= threshold}
+   * </ul>
+   * 
+   * In words, this operator zeros out elements that are within
+   * {@code threshold} of zero, then shrinks all other elements toward zero.
+   * 
+   * @param threshold
+   */
+  void softThreshold(double threshold);
+
+  /**
    * Gets the sum of the elementwise product of {@code this} and {@code other}.
    * Requires {@code this} and {@code other} to have identical dimension numbers
    * and sizes.

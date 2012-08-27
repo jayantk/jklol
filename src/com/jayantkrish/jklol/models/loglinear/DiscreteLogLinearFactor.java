@@ -44,6 +44,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = 7327454945090137844L;
+  
   // This factor has one weight for each assignment to featureVariables.
   private final VariableNumMap featureVariables;
   // A features x assignments tensor.

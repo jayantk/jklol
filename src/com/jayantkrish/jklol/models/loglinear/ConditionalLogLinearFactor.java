@@ -38,6 +38,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = 4826599917564978754L;
+  
   private final VariableNumMap inputVar;
   private final VariableNumMap outputVars;
   private final VariableNumMap conditionalVars;

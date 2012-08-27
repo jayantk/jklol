@@ -28,6 +28,8 @@ import com.jayantkrish.jklol.util.HeapUtils;
  */
 public class SparseTensor extends AbstractTensor implements Serializable{
 
+  private static final long serialVersionUID = 4502341777401127137L;
+
   protected final long[] keyNums;
   protected final double[] values;
 

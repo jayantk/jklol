@@ -60,6 +60,22 @@ public interface SufficientStatistics extends Serializable {
   public void perturb(double stddev);
 
   /**
+   * Applies the soft threshold operator to each element in this. The soft
+   * threshold operator {@code f} applied to an element {@code x} is defined as:
+   * 
+   * <ul>
+   * <li>{@code f(x) = 0} if {@code |x| <= threshold}.
+   * <li>{@code f(x) = x - (sign(x) * threshold)} if {@code |x| >= threshold}
+   * </ul>
+   * 
+   * In words, this operator zeros out elements that are within
+   * {@code threshold} of zero, then shrinks all other elements toward zero.
+   * 
+   * @param threshold
+   */
+  public void softThreshold(double threshold);
+
+  /**
    * Returns a deep copy of this vector of sufficient statistics. Mutating this
    * object will not affect the values in the returned object, and vice versa.
    * 

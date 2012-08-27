@@ -5,6 +5,8 @@ import java.util.Collection;
 
 public abstract class AbstractTensor extends AbstractTensorBase implements Tensor {
 
+  private static final long serialVersionUID = -2075571922466993976L;
+
   public AbstractTensor(int[] dimensions, int[] sizes) {
     super(dimensions, sizes);
   }

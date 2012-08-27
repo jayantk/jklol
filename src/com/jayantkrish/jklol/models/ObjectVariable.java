@@ -13,6 +13,8 @@ import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
  */
 public class ObjectVariable implements Variable, Serializable {
   
+  private static final long serialVersionUID = 2881212128913134802L;
+  
   private final Class<?> type;
   
   public ObjectVariable(Class<?> type) {

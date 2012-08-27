@@ -25,7 +25,6 @@ import com.jayantkrish.jklol.util.Assignment;
 public class StochasticGradientTrainerTest extends TestCase {
 
 	ParametricFactorGraph logLinearModel;
-	StochasticGradientTrainer t;    
 	List<String> clique1Names;
 	List<String> clique2Names;
 	VariableNumMap allVariables;
@@ -65,11 +64,22 @@ public class StochasticGradientTrainerTest extends TestCase {
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a2));
 			trainingData.add(Example.create(DynamicAssignment.EMPTY, a3));
 		}
-		t = new StochasticGradientTrainer(100, 3, 0.01, true, 0.00, new DefaultLogFunction());
+	}
+	
+	public void testTrainUnregularized() {
+	  runTest(new StochasticGradientTrainer(100, 3, 0.01, true, new DefaultLogFunction()));
 	}
 
-	public void testTrain() {
-		// These assignments should have positive weight for clique 1
+	public void testTrainL2() {
+	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 0.01, true, 1, new DefaultLogFunction()));
+	}
+	
+	public void testTrainL1() {
+	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, 0.1, new DefaultLogFunction()));
+	}
+	
+	private void runTest(StochasticGradientTrainer trainer) {
+	  		// These assignments should have positive weight for clique 1
 		Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
 		clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)
 		    .outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T"})));
@@ -81,7 +91,9 @@ public class StochasticGradientTrainerTest extends TestCase {
 		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
 		LoglikelihoodOracle oracle = new LoglikelihoodOracle(logLinearModel, new JunctionTree());
-		SufficientStatistics parameters = t.train(oracle, oracle.initializeGradient(), trainingData);
+		SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingData);
+		
+		System.out.println(logLinearModel.getParameterDescription(parameters));
 
 		List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 		for (int i = 0; i < parameterList.size(); i++) {
@@ -95,7 +107,6 @@ public class StochasticGradientTrainerTest extends TestCase {
 		    
 		    Assignment a = featureValues.conditional(featureVariable.intArrayToAssignment(new int[] {j}))
 		        .outcomeIterator().next().getAssignment();
-		    System.out.println(weights.getByDimKey(j));
 		    if (a.getVariableNums().size() == 3) {
 		      assertTrue(clique1PositiveAssignments.contains(a) ||
 		          weights.getByDimKey(j) < 0.0);

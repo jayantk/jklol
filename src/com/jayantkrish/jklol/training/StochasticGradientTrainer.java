@@ -25,26 +25,60 @@ public class StochasticGradientTrainer {
 
   private final double stepSize;
   private final boolean decayStepSize;
-  private final double l2Regularization;
-
+  private final Regularizer regularizer;
+  
+  /**
+   * Unregularized stochastic gradient descent. 
+   *
+   * @param numIterations
+   * @param batchSize
+   * @param stepSize
+   * @param decayStepSize
+   * @param log
+   */
   public StochasticGradientTrainer(int numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, double l2Regularization, LogFunction log) {
+      double stepSize, boolean decayStepSize, LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.log = (log != null) ? log : new NullLogFunction();
 
-    Preconditions.checkArgument(l2Regularization >= 0.0);
-    // High regularization parameters mean the gradient's magnitude may be
-    // larger than the parameter vector's magnitude, causing the training to
-    // bounce back and forth between positive and negative parameter values for
-    // a while before converging.
-    Preconditions.checkArgument(l2Regularization * stepSize <= 1);
     this.stepSize = stepSize;
     this.decayStepSize = decayStepSize;
-    this.l2Regularization = l2Regularization;
+    this.regularizer = new L2Regularizer(0.0);
   }
 
-  public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle, 
+  /**
+   * Regularized stochastic gradient descent, using {@code regularizer}.
+   * 
+   * @param numIterations
+   * @param batchSize
+   * @param stepSize
+   * @param decayStepSize
+   * @param regularizer
+   * @param log
+   */
+  public StochasticGradientTrainer(int numIterations, int batchSize,
+      double stepSize, boolean decayStepSize, Regularizer regularizer, LogFunction log) {
+    this.numIterations = numIterations;
+    this.batchSize = batchSize;
+    this.log = (log != null) ? log : new NullLogFunction();
+
+    this.stepSize = stepSize;
+    this.decayStepSize = decayStepSize;
+    this.regularizer = regularizer;
+  }
+  
+  public static StochasticGradientTrainer createWithL2Regularization(int numIterations, int batchSize,
+      double stepSize, boolean decayStepSize, double l2Penalty, LogFunction log) {
+    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L2Regularizer(l2Penalty), log);
+  }
+  
+  public static StochasticGradientTrainer createWithL1Regularization(int numIterations, int batchSize,
+      double stepSize, boolean decayStepSize, double l1Penalty, LogFunction log) {
+    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L1Regularizer(l1Penalty), log);
+  }
+
+  public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
       SufficientStatistics initialParameters, Iterable<E> trainingData) {
 
     // cycledTrainingData loops indefinitely over the elements of trainingData.
@@ -83,11 +117,12 @@ public class StochasticGradientTrainer {
 
       log.startTimer("parameter_update");
 
-      double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
-
       // System.out.println(currentStepSize);
-      // Apply L2 regularization.
-      initialParameters.multiply(1.0 - (currentStepSize * l2Regularization));
+      // Apply regularization.
+      regularizer.apply(gradient, initialParameters);
+
+      // Update gradient.
+      double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
       initialParameters.increment(gradient, currentStepSize);
       // System.out.println(initialParameters);
       log.stopTimer("parameter_update");
@@ -113,5 +148,69 @@ public class StochasticGradientTrainer {
       batchData.add(trainingData.next());
     }
     return batchData;
+  }
+
+  /**
+   * A regularization penalty applicable to gradients during gradient descent.
+   * 
+   * @author jayantk
+   */
+  public static interface Regularizer {
+    /**
+     * Mutates {@code gradient}, applying a regularization penalty to its
+     * current value.
+     * 
+     * @param gradient
+     * @param currentParameters
+     */
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters);
+  }
+
+  /**
+   * An L2 regularization penalty, i.e., a penalty on the sum of the squares of
+   * the parameter weights.
+   * 
+   * @author jayantk
+   */
+  public static class L2Regularizer implements Regularizer {
+    private final double l2Penalty;
+
+    /**
+     * Note that {@code l2Penalty} times the initial gradient step size should
+     * be less than 1.0. If this value is greater than one, the gradient's
+     * magnitude will be larger than the current parameter vector's magnitude,
+     * causing training to bounce back and forth between positive and negative
+     * parameter values for a while before converging.
+     * 
+     * @param l2Penalty
+     */
+    public L2Regularizer(double l2Penalty) {
+      Preconditions.checkArgument(l2Penalty >= 0.0);
+      this.l2Penalty = l2Penalty;
+    }
+
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters) {
+      gradient.increment(currentParameters, -1.0 * l2Penalty);
+    }
+  }
+
+  /**
+   * An L1 regularization penalty, i.e., a penalty on the sum of absolute values
+   * of the weights.
+   * 
+   * @author jayantk
+   */
+  public static class L1Regularizer implements Regularizer {
+    private final double l1Penalty;
+
+    public L1Regularizer(double l1Penalty) {
+      Preconditions.checkArgument(l1Penalty >= 0.0);
+      this.l1Penalty = l1Penalty;
+    }
+
+    @Override
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters) {
+      gradient.softThreshold(l1Penalty);
+    }
   }
 }

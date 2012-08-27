@@ -111,7 +111,7 @@ public class SequenceModelTest extends TestCase {
   private void testZeroTrainingError(
       GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
 
-    StochasticGradientTrainer trainer = new StochasticGradientTrainer(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
     
     SufficientStatistics parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData); 
     DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);

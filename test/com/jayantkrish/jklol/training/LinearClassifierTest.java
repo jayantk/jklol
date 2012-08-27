@@ -91,7 +91,7 @@ public class LinearClassifierTest extends TestCase {
     GradientOracle<DynamicFactorGraph, Example<Assignment, Assignment>> adaptedOracle = 
         OracleAdapter.createAssignmentAdapter(oracle);
     
-    StochasticGradientTrainer trainer = new StochasticGradientTrainer(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
     
     SufficientStatistics parameters = trainer.train(adaptedOracle,
         linearClassifier.getNewSufficientStatistics(), trainingData);

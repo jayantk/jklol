@@ -22,6 +22,8 @@ import com.jayantkrish.jklol.util.IndexedList;
 
 public class ParametricCfgFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = 3097649352185648543L;
+  
   // These are the variables contained in the two parametric factors for each
   // distribution
   // in the cfg parser.

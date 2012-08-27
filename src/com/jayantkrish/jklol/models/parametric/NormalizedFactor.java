@@ -17,6 +17,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class NormalizedFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = -7699484615570829044L;
+  
   private final ParametricFactor wrappedFactor;
   // This factor defines a conditional distribution over these variables,
   // given the values of all other variables.

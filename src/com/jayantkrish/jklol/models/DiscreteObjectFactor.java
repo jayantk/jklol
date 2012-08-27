@@ -35,6 +35,8 @@ import com.jayantkrish.jklol.util.PairComparator;
  */
 public class DiscreteObjectFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = 381347565850707679L;
+  
   private final Map<Assignment, Double> probabilities;
 
   public DiscreteObjectFactor(VariableNumMap vars, Map<Assignment, Double> probabilities) {

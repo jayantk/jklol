@@ -20,6 +20,8 @@ import com.jayantkrish.jklol.util.PermutationIterator;
  */
 public class CachedSparseTensor extends SparseTensor {
 
+  private static final long serialVersionUID = 8039031224458210634L;
+
   private final Map<List<Integer>, SparseTensor> tensorCache;
 
   /**
@@ -101,6 +103,8 @@ public class CachedSparseTensor extends SparseTensor {
    * @author jayantk
    */
   private static class CachedSparseTensorBuilder extends SparseTensorBuilder {
+    private static final long serialVersionUID = 2735943253861954626L;
+
     public CachedSparseTensorBuilder(int[] dimensionNums, int[] dimensionSizes) {
       super(dimensionNums, dimensionSizes);
     }

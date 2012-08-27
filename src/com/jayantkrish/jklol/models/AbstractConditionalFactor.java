@@ -20,6 +20,8 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public abstract class AbstractConditionalFactor extends AbstractFactor {
   
+  private static final long serialVersionUID = 389192415388880283L;
+
   public AbstractConditionalFactor(VariableNumMap vars) {
     super(vars);
   }

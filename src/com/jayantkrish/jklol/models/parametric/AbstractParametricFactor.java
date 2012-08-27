@@ -8,6 +8,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * @author jayantk
  */
 public abstract class AbstractParametricFactor implements ParametricFactor {
+
+  private static final long serialVersionUID = -8462665505472931247L;
   
   private final VariableNumMap variables;
   

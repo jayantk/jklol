@@ -32,6 +32,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class LinearClassifierFactor extends AbstractConditionalFactor {
 
+  private static final long serialVersionUID = 7300787304056125779L;
+  
   private final VariableNumMap inputVar;
   private final int[] inputVarNums;
   private final VariableNumMap outputVars;

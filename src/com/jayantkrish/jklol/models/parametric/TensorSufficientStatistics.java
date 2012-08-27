@@ -103,14 +103,6 @@ public class TensorSufficientStatistics implements SufficientStatistics {
       }
     }
   }
-  
-  
-  public void getFeatureNames() {
-    
-    System.out.println("**** feature names *****" + this.statisticNames.getVariables().get(0).toString());
-  }
-  
-  
 
   @Override
   public void increment(double amount) {
@@ -120,6 +112,11 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   @Override
   public void multiply(double amount) {
     statistics.multiply(amount);
+  }
+  
+  @Override
+  public void softThreshold(double threshold) {
+    statistics.softThreshold(threshold);
   }
 
   @Override
@@ -148,6 +145,10 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   @Override
   public ListSufficientStatistics coerceToList() {
     throw new CoercionError("Cannot coerce TensorSufficientStatistics instance into ListSufficientStatistics.");
+  }
+  
+  public void getFeatureNames() {
+    System.out.println("**** feature names *****" + this.statisticNames.getVariables().get(0).toString());
   }
 
   @Override

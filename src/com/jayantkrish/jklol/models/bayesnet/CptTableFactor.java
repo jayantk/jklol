@@ -30,6 +30,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class CptTableFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = 2120605287432496097L;
+  
   // These are the parent and child variables in the CPT.
   private final VariableNumMap parentVars;
   private final VariableNumMap childVars;

@@ -38,6 +38,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class CfgFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = 2274031154557548175L;
+  
   // Information about the parent (root of the parse tree) variable.
   private final VariableNumMap parent;
   private final int parentVarNum;

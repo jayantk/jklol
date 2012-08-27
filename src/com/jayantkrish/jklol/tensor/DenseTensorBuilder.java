@@ -8,6 +8,8 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder {
 
+  private static final long serialVersionUID = 1707937213062867772L;
+
   /**
    * Creates a {@code DenseTensorBuilder} with all values initialized to 0.
    * 
@@ -182,6 +184,20 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   @Override
   public void multiplyEntry(double amount, int... key) {
     values[dimKeyToIndex(key)] *= amount;
+  }
+  
+  @Override
+  public void softThreshold(double threshold) {
+    double negativeThreshold = -1.0 * threshold;
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] > threshold) {
+        values[i] -= threshold;
+      } else if (values[i] < negativeThreshold) {
+        values[i] += threshold;
+      } else {
+        values[i] = 0.0;
+      }
+    }
   }
 
   /**

@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
  */
 public class DenseTensorBase extends AbstractTensorBase {
 
+  private static final long serialVersionUID = -4643174623400921192L;
   // Stores the values of each key in this. Accessible to subclasses for
   // fast mathematical operations.
   protected final double[] values;

@@ -22,6 +22,8 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
  */
 public class LogSpaceTensorAdapter extends AbstractTensor {
 
+  private static final long serialVersionUID = 8713086123218790186L;
+  
   private final DenseTensor logWeights;
 
   public LogSpaceTensorAdapter(DenseTensor logWeights) {

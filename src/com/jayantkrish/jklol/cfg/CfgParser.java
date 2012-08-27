@@ -27,6 +27,8 @@ import com.jayantkrish.jklol.util.HeapUtils;
  */
 public class CfgParser implements Serializable {
 
+  private static final long serialVersionUID = 8780756461990735127L;
+  
   // The root nonterminal symbol in binary and terminal production rules
   private final VariableNumMap parentVar;
   // The left and right components of a production rule.

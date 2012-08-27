@@ -24,6 +24,8 @@ import com.google.common.primitives.Longs;
  */
 public class SparseTensorBuilder extends AbstractTensorBase implements TensorBuilder {
 
+  private static final long serialVersionUID = 6115742485230128674L;
+
   private SortedMap<Long, Double> outcomes;
 
   // The tensor interface forces us to assign each value in {@code this} a
@@ -262,6 +264,22 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   @Override
   public void multiplyEntry(double amount, int... key) {
     put(key, getByDimKey(key) * amount);
+  }
+  
+  @Override
+  public void softThreshold(double threshold) {
+    double negativeThreshold = -1.0 * threshold;
+    for (long keyNum : outcomes.keySet()) {
+      double value = outcomes.get(keyNum);
+      if (value > threshold) {
+        value -= threshold;
+      } else if (value < negativeThreshold) {
+        value += threshold;
+      } else {
+        value = 0.0;
+      }
+      outcomes.put(keyNum, value);
+    }
   }
   
   @Override

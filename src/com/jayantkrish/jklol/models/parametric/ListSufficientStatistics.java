@@ -15,6 +15,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class ListSufficientStatistics implements SufficientStatistics {
 
+  private static final long serialVersionUID = -2707053902775908672L;
+
   // Names for the statistics.
   private final IndexedList<String> names;
 
@@ -115,6 +117,13 @@ public class ListSufficientStatistics implements SufficientStatistics {
   public void perturb(double stddev) {
     for (int i = 0; i < statistics.size(); i++) {
       statistics.get(i).perturb(stddev);
+    }
+  }
+  
+  @Override
+  public void softThreshold(double regularizer) {
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).softThreshold(regularizer);
     }
   }
   

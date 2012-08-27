@@ -25,6 +25,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class DiscreteVariable implements Variable, Serializable {
 
+  private static final long serialVersionUID = 2948903432256540126L;
+  
   private String name;
   private IndexedList<Object> values;
 

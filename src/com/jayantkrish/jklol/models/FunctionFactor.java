@@ -22,6 +22,8 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class FunctionFactor extends WeightedRelationFactor {
 
+  private static final long serialVersionUID = -5882067103650944714L;
+  
   private final VariableNumMap domainVariable;
   private final VariableNumMap rangeVariable;
 

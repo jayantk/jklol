@@ -26,6 +26,8 @@ import com.jayantkrish.jklol.util.IndexedList;
 
 public class BeamSearchCfgFactor extends AbstractConditionalFactor implements Serializable {
 
+  private static final long serialVersionUID = -2461311545241226111L;
+  
   private final VariableNumMap treeVariable;
   private final VariableNumMap terminalVariable;
   private final CfgParser parser;

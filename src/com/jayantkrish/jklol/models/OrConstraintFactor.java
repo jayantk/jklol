@@ -24,6 +24,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class OrConstraintFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = 4493291411547813806L;
+  
   private final VariableNumMap inputVars;
   private final List<Factor> inputVarFactors;
 

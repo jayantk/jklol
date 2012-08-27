@@ -14,6 +14,8 @@ import com.jayantkrish.jklol.util.IndexedList;
 
 public class FilterFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = -6253160804905309329L;
+  
   private final VariableNumMap domainVar;
   private final VariableNumMap auxiliaryVars;
   private final Factor relationFactor;

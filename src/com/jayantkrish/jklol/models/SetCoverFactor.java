@@ -22,6 +22,8 @@ import com.jayantkrish.jklol.util.IndexedList;
 
 public class SetCoverFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = -684267665747322900L;
+  
   private final ImmutableSet<Object> requiredValues;
   private final Predicate<Object> possibleValues;
   

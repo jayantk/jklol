@@ -29,6 +29,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class TableFactor extends DiscreteFactor {
 
+  private static final long serialVersionUID = -3529693448358225350L;
+  
   private final Tensor weights;
 
   /**

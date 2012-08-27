@@ -29,6 +29,8 @@ import com.jayantkrish.jklol.util.PairComparator;
  */
 public abstract class DiscreteFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = 6493003710183669273L;
+  
   private double partitionFunction;
 
   /**

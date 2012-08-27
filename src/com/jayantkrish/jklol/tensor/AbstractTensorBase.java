@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.tensor.TensorProtos.TensorDimensionProto;
  */
 public abstract class AbstractTensorBase implements TensorBase, Serializable {
 
+  private static final long serialVersionUID = 251634505015766912L;
   // The dimensions spanned by this tensor, and the size in each dimension.
   private final int[] dimensions;
   private final int[] sizes;

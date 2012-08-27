@@ -33,6 +33,7 @@ public abstract class TensorBuilderTest extends TestCase {
   private static final int[] KEY1 = new int[] { 0, 1, 2 };
   private static final int[] KEY2 = new int[] { 1, 2, 0 };
   private static final int[] KEY3 = new int[] { 2, 2, 3 };
+  private static final int[] KEY4 = new int[] { 3, 2, 3 };
 
   public TensorBuilderTest(TensorFactory tensorFactory) {
     this.tensorFactory = tensorFactory;
@@ -186,6 +187,18 @@ public abstract class TensorBuilderTest extends TestCase {
       }
       fail("Expected IllegalArgumentException");
     }
+  }
+  
+  public void testSoftThreshold() {
+    builder.put(KEY0, -1.0);
+    builder.put(KEY3, -3.0);
+    builder.softThreshold(1.5);
+
+    assertEquals(0.0, builder.getByDimKey(KEY0));
+    assertEquals(0.0, builder.getByDimKey(KEY1));
+    assertEquals(0.5, builder.getByDimKey(KEY2));
+    assertEquals(-1.5, builder.getByDimKey(KEY3));
+    assertEquals(0.0, builder.getByDimKey(KEY4));
   }
   
   public void testInnerProduct() {

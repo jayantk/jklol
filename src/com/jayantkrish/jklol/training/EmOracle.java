@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.training;
 
 import java.util.List;
 
-import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 /**
@@ -46,6 +45,6 @@ public interface EmOracle<M, E, O> {
    * @param currentParameters
    * @return
    */
-  public SufficientStatistics maximizeParameters(List<Example<E, O>> expectations,
+  public SufficientStatistics maximizeParameters(List<O> expectations,
       SufficientStatistics currentParameters, LogFunction log);
 }

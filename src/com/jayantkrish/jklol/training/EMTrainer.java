@@ -5,10 +5,8 @@ import java.util.List;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 
 /**
  * Estimates the parameters of a {@link ParametricFactorGraph} using expectation
@@ -65,32 +63,10 @@ public class EMTrainer extends AbstractTrainer
    */
   public SufficientStatistics train(ParametricFactorGraph bn,
       SufficientStatistics initialParameters, List<DynamicAssignment> trainingData) {
-    SufficientStatistics oldStatistics = null;
-    for (int i = 0; i < numIterations; i++) {
-      log.notifyIterationStart(i);
-      // E-step: compute the expected values of the hidden variables given the
-      // current set of parameters.
-      DynamicFactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
-      SufficientStatisticsBatch batchStatistics = MapReduceConfiguration.getMapReduceExecutor()
-          .mapReduce(trainingData,
-              new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
-              new SufficientStatisticsReducer(bn));
-      SufficientStatistics statistics = batchStatistics.getStatistics();
-      log.logStatistic(i, "average loglikelihood",
-          Double.toString(batchStatistics.getLoglikelihood() / batchStatistics.getNumExamples()));
-
-      // M-step: maximize the parameters.
-      // Due to a poor design decision I made in an experiment using this class,
-      // initialParameters must always contain the current parameters of the
-      // model.
-      if (oldStatistics != null) {
-        initialParameters.increment(oldStatistics, -1.0);
-      }
-      initialParameters.increment(statistics, 1.0);
-      oldStatistics = statistics;
-
-      log.notifyIterationEnd(i);
-    }
-    return initialParameters;
+    
+    ExpectationMaximization em = new ExpectationMaximization(numIterations, log);
+    
+    EmFactorGraphOracle oracle = new EmFactorGraphOracle(bn, marginalCalculator, initialParameters);
+    return em.train(oracle, initialParameters, trainingData);
   }
 }

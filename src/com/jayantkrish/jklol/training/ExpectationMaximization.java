@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
@@ -32,8 +31,8 @@ public class ExpectationMaximization {
       log.notifyIterationStart(i);
 
       M model = oracle.instantiateModel(parameters);
-      List<Example<E, O>> expectations = executor.mapReduce(trainingDataList, 
-          new ExpectationMapper<M, E, O>(model, oracle, log), Reducers.<Example<E, O>>getAggregatingListReducer());
+      List<O> expectations = executor.mapReduce(trainingDataList, 
+          new ExpectationMapper<M, E, O>(model, oracle, log), Reducers.<O>getAggregatingListReducer());
 
       parameters = oracle.maximizeParameters(expectations, parameters, log);
       
@@ -51,7 +50,7 @@ public class ExpectationMaximization {
    * @param <E> example (input) type
    * @param <O> expectation (output) type
    */
-  private static class ExpectationMapper<M, E, O> extends Mapper<E, Example<E, O>> {
+  private static class ExpectationMapper<M, E, O> extends Mapper<E, O> {
 
     private final M model;
     private final EmOracle<M, E, O> oracle;
@@ -64,8 +63,8 @@ public class ExpectationMaximization {
     }
     
     @Override
-    public Example<E, O> map(E input) {
-      return Example.create(input, oracle.computeExpectations(model, input, log));
+    public O map(E input) {
+      return oracle.computeExpectations(model, input, log);
     }
   }
 }

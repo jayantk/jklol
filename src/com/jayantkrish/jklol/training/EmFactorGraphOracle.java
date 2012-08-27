@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.training;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -63,14 +62,13 @@ public class EmFactorGraphOracle implements EmOracle<DynamicFactorGraph,
 
   @Override
   public SufficientStatistics maximizeParameters(
-      List<Example<DynamicAssignment, SufficientStatistics>> expectations, 
-      SufficientStatistics currentParameters, LogFunction log) {
+      List<SufficientStatistics> expectations, SufficientStatistics currentParameters, LogFunction log) {
 
     SufficientStatistics aggregate = parametricModel.getNewSufficientStatistics();
     aggregate.increment(smoothing, 1.0);
     
-    for (Example<DynamicAssignment, SufficientStatistics> expectation : expectations) {
-      aggregate.increment(expectation.getOutput(), 1.0);
+    for (SufficientStatistics expectation : expectations) {
+      aggregate.increment(expectation, 1.0);
     }
     
     return aggregate;

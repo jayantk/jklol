@@ -78,6 +78,7 @@ public class StochasticGradientTrainer {
       GradientEvaluation oracleResult = executor.mapReduce(batchData,
           new GradientMapper<M, E>(currentModel, oracle, log), new GradientReducer<M, E>(oracle, log));
       SufficientStatistics gradient = oracleResult.getGradient();
+      gradient.multiply(1.0 / batchSize);
       log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");

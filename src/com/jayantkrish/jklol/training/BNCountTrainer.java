@@ -13,7 +13,6 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Trains a {@link #ParametricFactorGraph} using empirical outcome counts from a data set.
@@ -60,7 +59,7 @@ public class BNCountTrainer {
     public MarginalSet computeMarginals(FactorGraph factorGraph) {
       Preconditions.checkArgument(factorGraph.getVariables().size() == 0);
       return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(), 
-          factorGraph.getConditionedValues(), factorGraph.getUnnormalizedProbability(Assignment.EMPTY));
+          factorGraph.getConditionedValues(), 1.0);
     }
     
     @Override

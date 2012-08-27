@@ -67,7 +67,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   public Factor getMarginal(Collection<Integer> varNums) {
     // Special case if the inputVar factor graph has no unassigned variables. 
     if (varNums.size() == 0 && allFactors.size() == 0) {
-      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY);
+      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(partitionFunction);
     }
     
     // Find a factor among the given factors that includes all of the given

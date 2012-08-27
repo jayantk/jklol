@@ -16,7 +16,6 @@ import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
@@ -63,7 +62,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   }
   
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) { 
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     throw new UnsupportedOperationException();
   }
   

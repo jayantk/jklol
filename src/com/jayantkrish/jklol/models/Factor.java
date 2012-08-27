@@ -300,10 +300,13 @@ public interface Factor {
    * likely {@code Assignment}, but all factors support retrieving one
    * assignment. For example, factors with continuous probability distributions
    * only support retrieving a single maximum probability assignment.
-   * 
+   * <p>
    * All returned assignments have positive probability. If an insufficient
    * number of positive-probability assignments exist, then the returned list
    * may contain fewer than {@code numAssignments} assignments.
+   * <p>
+   * If {@code numAssignments} is negative, the factor returns as many
+   * assignments as possible.
    * 
    * @param numAssignments
    * @return
@@ -330,15 +333,15 @@ public interface Factor {
    */
   public String getParameterDescription();
 
-  
   /**
-   * Gets a detailed human-readable XML description of this factor. This description
-   * should contain all parameters of this factor, each on its own line.
+   * Gets a detailed human-readable XML description of this factor. This
+   * description should contain all parameters of this factor, each on its own
+   * line.
    * 
    * @return
    */
   public String getParameterDescriptionXML();
-  
+
   // Coercion methods
 
   /**

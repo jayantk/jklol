@@ -151,17 +151,14 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) {
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     TensorBuilder weights = getFeatureWeights(parameters);
     TableFactor weightFactor = new TableFactor(featureVariables, weights.build());
-    Iterator<Outcome> outcomeIter = weightFactor.outcomeIterator();
-    StringBuilder sb = new StringBuilder();
-    while (outcomeIter.hasNext()) {
-      sb.append(outcomeIter.next() + "\n");
-    }
-    return sb.toString();
+    
+    List<Assignment> assignments = weightFactor.product(weightFactor).getMostLikelyAssignments(numFeatures);
+    return weightFactor.describeAssignments(assignments);
   }
-  
+
   @Override
   public String getParameterDescriptionXML(SufficientStatistics parameters) {
     TensorBuilder weights = getFeatureWeights(parameters);

@@ -43,8 +43,8 @@ public class NormalizedFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) {
-    return wrappedFactor.getParameterDescription(parameters);
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
+    return wrappedFactor.getParameterDescription(parameters, numFeatures);
   }
 
   @Override

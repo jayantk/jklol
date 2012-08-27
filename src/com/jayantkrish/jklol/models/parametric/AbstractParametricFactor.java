@@ -19,4 +19,9 @@ public abstract class AbstractParametricFactor implements ParametricFactor {
   public VariableNumMap getVars() {
     return variables;
   }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics statistics) {
+    return getParameterDescription(statistics, -1);
+  }
 }

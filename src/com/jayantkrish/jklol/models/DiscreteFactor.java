@@ -180,17 +180,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   /**
    * Returns a {@code DiscreteFactor} that assigns each outcome the product of
-   * its probability in {@code this} and {@code other}. {@code other}'s variables
-   * must be disjoint from this factor's variables.
+   * its probability in {@code this} and {@code other}. {@code other}'s
+   * variables must be disjoint from this factor's variables.
    * 
    * @param other
    * @return
    */
   public DiscreteFactor outerProduct(Factor other) {
     Preconditions.checkArgument(getVars().intersection(other.getVars()).size() == 0);
-    // This implementation is slow, but Tensors currently don't support outer products.
+    // This implementation is slow, but Tensors currently don't support outer
+    // products.
     DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
-    TableFactorBuilder builder = new TableFactorBuilder(getVars().union(other.getVars()), 
+    TableFactorBuilder builder = new TableFactorBuilder(getVars().union(other.getVars()),
         SparseTensorBuilder.getFactory());
     Iterator<Outcome> myIter = outcomeIterator();
     while (myIter.hasNext()) {
@@ -236,13 +237,14 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     Iterator<Outcome> iter = outcomeIterator();
     PriorityQueue<Pair<Double, Assignment>> pq = new PriorityQueue<Pair<Double, Assignment>>(
-        numAssignments + 1,
+        (numAssignments > 0) ? numAssignments + 1 : 10,
         Ordering.from(new PairComparator<Double, Assignment>()).compound(Ordering.arbitrary()));
 
     while (iter.hasNext()) {
       Outcome outcome = iter.next();
       pq.offer(new Pair<Double, Assignment>(outcome.getProbability(), outcome.getAssignment()));
-      if (pq.size() > numAssignments) {
+      // Negative numAssignments requires us to sort all of the assignments. 
+      if (numAssignments >= 0 && pq.size() > numAssignments) {
         pq.poll();
       }
     }
@@ -254,9 +256,10 @@ public abstract class DiscreteFactor extends AbstractFactor {
     Collections.reverse(mostLikely);
     return mostLikely;
   }
-  
+
   /**
-   * Gets all assignments to this factor which have non-zero weight. 
+   * Gets all assignments to this factor which have non-zero weight.
+   * 
    * @return
    */
   public List<Assignment> getNonzeroAssignments() {
@@ -280,30 +283,38 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteObjectFactor coerceToDiscreteObject() {
     throw new UnsupportedOperationException("Not yet implemented");
   }
-  
+
   @Override
   public String getParameterDescription() {
+    return describeAssignments(getNonzeroAssignments());
+  }
+
+  /**
+   * Gets a string description of {@code assignments} and their weights in {@code this}.
+   * 
+   * @param assignments
+   * @return
+   */
+  public String describeAssignments(List<Assignment> assignments) {
     StringBuilder sb = new StringBuilder();
-    Iterator<Outcome> iter = outcomeIterator();
-    while (iter.hasNext()) {
-      Outcome outcome = iter.next();
+    for (Assignment assignment : assignments) {
+      Outcome outcome = new Outcome(assignment, getUnnormalizedProbability(assignment));
       sb.append(outcome.toString());
       sb.append("\n");
     }
     return sb.toString();
   }
-  
+
   @Override
   public String getParameterDescriptionXML() {
     StringBuilder sb = new StringBuilder();
     Iterator<Outcome> iter = outcomeIterator();
     while (iter.hasNext()) {
       Outcome outcome = iter.next();
-      sb.append("<outcome>\n"+outcome.toXML()+"</outcome>\n");
+      sb.append("<outcome>\n" + outcome.toXML() + "</outcome>\n");
     }
     return sb.toString();
   }
-
 
   @Override
   public int hashCode() {
@@ -375,9 +386,9 @@ public abstract class DiscreteFactor extends AbstractFactor {
     public String toString() {
       return assignment + "=" + probability;
     }
-    
+
     public String toXML() {
-      return assignment.toXML() + "<probability>"+probability+"</probability>\n";
+      return assignment.toXML() + "<probability>" + probability + "</probability>\n";
     }
   }
 }

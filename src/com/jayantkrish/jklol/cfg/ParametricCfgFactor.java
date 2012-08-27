@@ -93,7 +93,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   }
   
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) {
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
@@ -102,9 +102,9 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     
     StringBuilder sb = new StringBuilder();
     sb.append("nonterminal distribution: \n");
-    sb.append(nonterminalFactor.getParameterDescription(nonterminalStatistics));
+    sb.append(nonterminalFactor.getParameterDescription(nonterminalStatistics, numFeatures));
     sb.append("terminal distribution: \n");
-    sb.append(terminalFactor.getParameterDescription(terminalStatistics));
+    sb.append(terminalFactor.getParameterDescription(terminalStatistics, numFeatures));
     return sb.toString();
   }
   

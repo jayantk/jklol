@@ -64,7 +64,7 @@ public class CptCfgFactor extends AbstractParametricFactor {
   }
   
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) { 
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     throw new UnsupportedOperationException();
   }
   

@@ -53,16 +53,32 @@ public interface ParametricFactor extends Serializable {
   /**
    * Gets a human-interpretable string describing {@code parameters}. This
    * method returns one line per parameter, containing a description of the
-   * parameter and its value.
+   * parameter and its value. Equivalent to
+   * {@link #getParameterDescription(SufficientStatistics, int)} with a negative
+   * {@code numFeatures} value.
    * 
    * @param parameters
    * @return
    */
   public String getParameterDescription(SufficientStatistics parameters);
-  
-  
+
   /**
-   * Gets a human-interpretable XML description {@code parameters}. 
+   * Gets a human-interpretable string describing {@code parameters}. This
+   * method returns one line per parameter, containing a description of the
+   * parameter and its value.
+   * <p>
+   * If {@code numFeatures >= 0}, this method returns a string describing the
+   * {@code numFeatures} features with the largest weights. If
+   * {@code numFeatures} is negative, all features are included.
+   * 
+   * @param parameters
+   * @param numFeatures
+   * @return
+   */
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures);
+
+  /**
+   * Gets a human-interpretable XML description {@code parameters}.
    * 
    * @param parameters
    * @return

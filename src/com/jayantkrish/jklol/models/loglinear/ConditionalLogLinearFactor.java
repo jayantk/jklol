@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
@@ -97,13 +98,16 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   }
   
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) { 
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     TensorBuilder weightTensor = getWeightTensorFromStatistics(parameters);
     VariableNumMap featureVariable = VariableNumMap.singleton(inputVar.getOnlyVariableNum(), 
         inputVar.getVariableNames().get(0) + "_features", featureDictionary);
     TableFactor parameterFactor = new TableFactor(featureVariable.union(outputVars), 
         weightTensor.build());
-    return parameterFactor.getParameterDescription();
+    
+    List<Assignment> assignments = parameterFactor.product(parameterFactor)
+        .getMostLikelyAssignments(numFeatures);
+    return parameterFactor.describeAssignments(assignments);
   }
   
   @Override

@@ -79,12 +79,15 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) {
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     Tensor featureWeights = getFeatureWeights(parameters).build();
     
     TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
         initialWeights.getWeights().replaceValues(featureWeights.getValues()));
-    return featureValues.getParameterDescription();
+    
+    List<Assignment> biggestAssignments = featureValues.product(featureValues)
+        .getMostLikelyAssignments(numFeatures);
+    return featureValues.describeAssignments(biggestAssignments);
   }
   
   @Override

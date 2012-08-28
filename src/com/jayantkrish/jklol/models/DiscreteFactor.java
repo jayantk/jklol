@@ -134,9 +134,17 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor add(Factor other) {
-    Preconditions.checkArgument(other.getVars().equals(getVars()));
+    VariableNumMap varsNotInOther = getVars().removeAll(other.getVars());
+    
+    DiscreteFactor toAdd = other.coerceToDiscrete();
+    if (varsNotInOther.size() > 0) {
+      // Note that this process may fail for sparse tensors,
+      // which only support some kinds of outer products.
+      toAdd = TableFactor.unity(varsNotInOther).outerProduct(other);      
+    } 
+    
     return new TableFactor(getVars(), getWeights()
-        .elementwiseAddition(other.coerceToDiscrete().getWeights()));
+        .elementwiseAddition(toAdd.coerceToDiscrete().getWeights()));
   }
 
   @Override

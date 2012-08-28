@@ -26,10 +26,10 @@ public class StochasticGradientTrainer {
   private final double stepSize;
   private final boolean decayStepSize;
   private final Regularizer regularizer;
-  
+
   /**
-   * Unregularized stochastic gradient descent. 
-   *
+   * Unregularized stochastic gradient descent.
+   * 
    * @param numIterations
    * @param batchSize
    * @param stepSize
@@ -67,12 +67,12 @@ public class StochasticGradientTrainer {
     this.decayStepSize = decayStepSize;
     this.regularizer = regularizer;
   }
-  
+
   public static StochasticGradientTrainer createWithL2Regularization(int numIterations, int batchSize,
       double stepSize, boolean decayStepSize, double l2Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L2Regularizer(l2Penalty), log);
   }
-  
+
   public static StochasticGradientTrainer createWithL1Regularization(int numIterations, int batchSize,
       double stepSize, boolean decayStepSize, double l1Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L1Regularizer(l1Penalty), log);
@@ -118,12 +118,10 @@ public class StochasticGradientTrainer {
       log.startTimer("parameter_update");
 
       // System.out.println(currentStepSize);
-      // Apply regularization.
-      regularizer.apply(gradient, initialParameters);
-
-      // Update gradient.
+      // Apply regularization and take a gradient step.
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
-      initialParameters.increment(gradient, currentStepSize);
+      regularizer.apply(gradient, initialParameters, currentStepSize);
+
       // System.out.println(initialParameters);
       log.stopTimer("parameter_update");
 
@@ -157,13 +155,17 @@ public class StochasticGradientTrainer {
    */
   public static interface Regularizer {
     /**
-     * Mutates {@code gradient}, applying a regularization penalty to its
-     * current value.
+     * Updates {@code currentParameters} with the result of taking a gradient
+     * step in the direction of {@code gradient} and applying a regularization
+     * penalty. May mutate {@code gradient}, and will mutate
+     * {@code currentParameters}.
      * 
      * @param gradient
      * @param currentParameters
+     * @param currentStepSize
      */
-    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters);
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+        double currentStepSize);
   }
 
   /**
@@ -189,14 +191,20 @@ public class StochasticGradientTrainer {
       this.l2Penalty = l2Penalty;
     }
 
-    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters) {
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+        double currentStepSize) {
       gradient.increment(currentParameters, -1.0 * l2Penalty);
+      currentParameters.increment(gradient, currentStepSize);
     }
   }
 
   /**
    * An L1 regularization penalty, i.e., a penalty on the sum of absolute values
-   * of the weights.
+   * of the weights. This regularizer implements the truncated gradient method
+   * described in:
+   * <p> 
+   * Sparse online learning via truncated gradient. John Langford, Lihong Li,
+   * and Tong Zhang. Journal of Machine Learning Research 10 (2009).
    * 
    * @author jayantk
    */
@@ -209,8 +217,10 @@ public class StochasticGradientTrainer {
     }
 
     @Override
-    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters) {
-      gradient.softThreshold(l1Penalty);
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+        double currentStepSize) {
+      currentParameters.increment(gradient, currentStepSize);
+      currentParameters.softThreshold(currentStepSize * l1Penalty); 
     }
   }
 }

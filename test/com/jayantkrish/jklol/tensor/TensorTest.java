@@ -392,6 +392,15 @@ public abstract class TensorTest extends TestCase {
     assertEquals(0.0, actual.getByDimKey(new int[] {5, 1, 0}));
     assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
   }
+  
+  public void testElementwiseSqrt() {
+    Tensor actual = table.elementwiseSqrt();
+    
+    assertEquals(1.0, actual.getByDimKey(a1));
+    assertEquals(Math.sqrt(2.0), actual.getByDimKey(a2));
+    assertEquals(0.0, actual.getByDimKey(new int[] {5, 1, 0}));
+    assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
+  }
     
   public void testElementwiseLog() {
     Tensor actual = table.elementwiseLog();

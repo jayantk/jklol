@@ -523,7 +523,18 @@ public class SparseTensor extends AbstractTensor implements Serializable{
   public SparseTensor elementwiseInverse() {
     double[] newValues = new double[size()];
     for (int i = 0; i < size(); i++) {
-      newValues[i] = 1.0 / values[i];
+      newValues[i] = (values[i] == 0) ? 0.0 : 1.0 / values[i];
+    }
+    // We don't have to copy outcomes because this class is immutable, and it
+    // treats both outcomes and values as immutable.
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
+  }
+  
+  @Override
+  public SparseTensor elementwiseSqrt() {
+    double[] newValues = new double[size()];
+    for (int i = 0; i < size(); i++) {
+      newValues[i] = Math.sqrt(values[i]);
     }
     // We don't have to copy outcomes because this class is immutable, and it
     // treats both outcomes and values as immutable.
@@ -873,13 +884,11 @@ public class SparseTensor extends AbstractTensor implements Serializable{
     StringBuilder sb = new StringBuilder();
     sb.append("<");
     for (int i = 0; i < values.length; i++) {
-      if (values[i] != 0.0) {
-        sb.append(Arrays.toString(keyNumToDimKey(keyNums[i])));
-        sb.append(" : ");
-        sb.append(values[i]);
-        if (i != values.length - 1) {
-          sb.append(", ");
-        }
+      sb.append(Arrays.toString(keyNumToDimKey(keyNums[i])));
+      sb.append(" : ");
+      sb.append(values[i]);
+      if (i != values.length - 1) {
+        sb.append(", ");
       }
     }
     sb.append(">");

@@ -32,10 +32,10 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayant
  */
-public class VariableNumMap implements Serializable{
+public class VariableNumMap implements Serializable {
 
   private static final long serialVersionUID = 4365097309859003264L;
-  
+
   private final SortedMap<Integer, Variable> varMap;
   private final BiMap<Integer, String> names;
 
@@ -183,7 +183,7 @@ public class VariableNumMap implements Serializable{
     Preconditions.checkState(varMap.size() == 1);
     return varMap.keySet().iterator().next();
   }
-  
+
   public String getOnlyVariableName() {
     Preconditions.checkState(names.size() == 1);
     return names.values().iterator().next();
@@ -260,6 +260,22 @@ public class VariableNumMap implements Serializable{
       sizes[i] = varTypes.get(i).numValues();
     }
     return sizes;
+  }
+
+  /**
+   * Gets an array containing the number of possible joint assignments to the
+   * variables in {@code this}. Requires all {@code Variable}s in this to be
+   * {@code DiscreteVariable}s.
+   * 
+   * @return
+   */
+  public int getNumberOfPossibleAssignments() {
+    int[] sizes = getVariableSizes();
+    int numAssignments = 1;
+    for (int i = 0; i < sizes.length; i++) {
+      numAssignments *= sizes[i];
+    }
+    return numAssignments;
   }
 
   /**
@@ -514,6 +530,16 @@ public class VariableNumMap implements Serializable{
    */
   public VariableNumMap intersection(int... varNumsToKeep) {
     return intersection(Ints.asList(varNumsToKeep));
+  }
+
+  /**
+   * Removes {@code variableNum} from {@code this}.
+   * 
+   * @param variableNum
+   * @return
+   */
+  public VariableNumMap remove(int variableNum) {
+    return removeAll(Ints.asList(variableNum));
   }
 
   /**
@@ -857,7 +883,7 @@ public class VariableNumMap implements Serializable{
   public static class VariableRelabeling extends Converter<VariableNumMap, VariableNumMap> implements Serializable {
 
     private static final long serialVersionUID = -2598135542480496918L;
-    
+
     private final BiMap<Integer, Integer> variableIndexMap;
     private final BiMap<String, String> variableNameMap;
 

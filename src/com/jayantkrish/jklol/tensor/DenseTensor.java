@@ -153,7 +153,17 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
     for (int i = 0; i < values.length; i++) {
-      outputBuilder.values[i] = (values[i] == 0) ? 0 : 1.0 / values[i];
+      outputBuilder.values[i] = (values[i] == 0.0) ? 0 : 1.0 / values[i];
+    }
+    return outputBuilder.buildNoCopy();
+  }
+  
+  @Override
+  public DenseTensor elementwiseSqrt() {
+    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    for (int i = 0; i < values.length; i++) {
+      outputBuilder.values[i] = Math.sqrt(values[i]);
     }
     return outputBuilder.buildNoCopy();
   }

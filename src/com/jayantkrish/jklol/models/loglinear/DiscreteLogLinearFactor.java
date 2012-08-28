@@ -98,11 +98,11 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   public DiscreteFactor getFeatureValues() {
-	    return featureValues;
-	  }
+    return featureValues;
+  }
   
   public VariableNumMap getFeatureVariables() {
-	    return featureVariables;
+    return featureVariables;
   }
 
   // ///////////////////////////////////////////////////////////

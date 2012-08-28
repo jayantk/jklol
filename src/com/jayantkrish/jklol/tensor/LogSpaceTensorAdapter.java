@@ -113,7 +113,12 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public Tensor elementwiseInverse() {
-    return new LogSpaceTensorAdapter(logWeights.elementwiseProduct(SparseTensor.getScalarConstant(-1.0)));
+    return new LogSpaceTensorAdapter(logWeights.elementwiseProduct(-1.0));
+  }
+  
+  @Override
+  public Tensor elementwiseSqrt() {
+    return new LogSpaceTensorAdapter(logWeights.elementwiseProduct(0.5));
   }
 
   @Override

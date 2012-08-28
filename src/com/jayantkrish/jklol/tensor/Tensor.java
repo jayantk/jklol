@@ -44,10 +44,10 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor elementwiseAddition(Tensor other);
-  
+
   /**
    * Adds {@code value} to every value in {@code this} and returns the result.
-   *  
+   * 
    * @param value
    * @return
    */
@@ -69,10 +69,20 @@ public interface Tensor extends TensorBase, Serializable {
    * Returns the elementwise multiplicative inverse of {@code this}. For all
    * keys {@code k} in {@code this}, {@code inverse.get(k) * this.get(k) == 1}.
    * For all keys not in {@code this}, {@code inverse.get(k) == 0}.
+   * <p>
+   * The multiplicative inverse of 0 is also 0.
    * 
    * @return
    */
   Tensor elementwiseInverse();
+
+  /**
+   * Takes the square root of all elements in this. Note that negative valued
+   * elements will be mapped to NaN.
+   * 
+   * @return
+   */
+  Tensor elementwiseSqrt();
 
   Tensor elementwiseLog();
 

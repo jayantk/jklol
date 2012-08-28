@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -30,7 +31,7 @@ import com.jayantkrish.jklol.util.PairComparator;
 public abstract class DiscreteFactor extends AbstractFactor {
 
   private static final long serialVersionUID = 6493003710183669273L;
-  
+
   private double partitionFunction;
 
   /**
@@ -135,14 +136,14 @@ public abstract class DiscreteFactor extends AbstractFactor {
   @Override
   public DiscreteFactor add(Factor other) {
     VariableNumMap varsNotInOther = getVars().removeAll(other.getVars());
-    
+
     DiscreteFactor toAdd = other.coerceToDiscrete();
     if (varsNotInOther.size() > 0) {
       // Note that this process may fail for sparse tensors,
       // which only support some kinds of outer products.
-      toAdd = TableFactor.unity(varsNotInOther).outerProduct(other);      
-    } 
-    
+      toAdd = TableFactor.unity(varsNotInOther).outerProduct(other);
+    }
+
     return new TableFactor(getVars(), getWeights()
         .elementwiseAddition(toAdd.coerceToDiscrete().getWeights()));
   }
@@ -253,7 +254,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     while (iter.hasNext()) {
       Outcome outcome = iter.next();
       pq.offer(new Pair<Double, Assignment>(outcome.getProbability(), outcome.getAssignment()));
-      // Negative numAssignments requires us to sort all of the assignments. 
+      // Negative numAssignments requires us to sort all of the assignments.
       if (numAssignments >= 0 && pq.size() > numAssignments) {
         pq.poll();
       }
@@ -293,6 +294,23 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteObjectFactor coerceToDiscreteObject() {
     throw new UnsupportedOperationException("Not yet implemented");
   }
+  
+  /**
+   * Prints out this factor as a comma-separated values file, suitable for
+   * reading using {@link TableFactor#fromDelimitedFile}.
+   * 
+   * @return
+   */
+  public String toCsv() {
+    StringBuilder sb = new StringBuilder();
+    Iterator<Outcome> iter = outcomeIterator();
+    while (iter.hasNext()) {
+      Outcome outcome = iter.next();
+      sb.append(outcome.toCsv());
+      sb.append("\n");
+    }
+    return sb.toString();
+  }
 
   @Override
   public String getParameterDescription() {
@@ -300,7 +318,8 @@ public abstract class DiscreteFactor extends AbstractFactor {
   }
 
   /**
-   * Gets a string description of {@code assignments} and their weights in {@code this}.
+   * Gets a string description of {@code assignments} and their weights in
+   * {@code this}.
    * 
    * @param assignments
    * @return
@@ -395,6 +414,10 @@ public abstract class DiscreteFactor extends AbstractFactor {
     @Override
     public String toString() {
       return assignment + "=" + probability;
+    }
+    
+    public String toCsv() {
+      return Joiner.on(",").join(assignment.getValues()) + "," + probability;
     }
 
     public String toXML() {

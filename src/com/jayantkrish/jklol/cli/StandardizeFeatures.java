@@ -62,6 +62,6 @@ public class StandardizeFeatures {
     FeatureStandardizer standardizer = FeatureStandardizer.estimateFrom(factor, columnIndex, Assignment.EMPTY);
     DiscreteFactor standardizedFeatures = standardizer.apply(factor);
 
-    System.out.println(standardizedFeatures.getParameterDescription());
+    System.out.println(standardizedFeatures.toCsv());
   }
 }

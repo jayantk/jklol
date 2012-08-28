@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -313,7 +314,6 @@ public class Assignment implements Serializable{
   public String toString() {
     return varValueMap.keySet().toString() + "=" + varValueMap.values().toString();
   }
-  
   
   public String toXML() {
 	  

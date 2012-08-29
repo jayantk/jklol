@@ -3,11 +3,14 @@ package com.jayantkrish.jklol.models.parametric;
 import java.io.Serializable;
 
 /**
- * The sufficient statistics of a {@code FactorGraph}. This class represents
+ * Sufficient statistics or parameters of a {@code FactorGraph}. This class represents
  * (expected) occurrence counts for a set of events which can be used to
  * estimate a {@code FactorGraph}. {@code SufficientStatistics} may also
  * represent the parameter vector for a graphical model, since a model family's
  * parameters have the same dimensionality as its sufficient statistics.
+ *
+ * <p> {@code SufficientStatistics} are mutable, since parameter vectors 
+ * are updated frequently during parameter estimation.
  * 
  * @author jayantk
  */

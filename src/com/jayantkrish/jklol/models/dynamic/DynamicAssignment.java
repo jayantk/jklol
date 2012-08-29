@@ -10,6 +10,20 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * An assignment of values to the variables and plates in a dynamic factor
+ * graph. This class determines how many times replications of each plate are
+ * constructed in the dynamic graph, as well as assigning values to
+ * variables. This class is a generalization of {@code Assignment} for dynamic
+ * factor graphs.
+ *
+ * <p> {@code DynamicAssignment}s have recursive structure in order to support
+ * models with nested plates. Each plate takes a list of {@code
+ * DynamicAssignment} values, and the size of this list determines how many
+ * times the variables in the plate are replicated.
+ *
+ * @author jayantk
+ */
 public class DynamicAssignment {
 
   public static final DynamicAssignment EMPTY = new DynamicAssignment(Assignment.EMPTY, 
@@ -18,6 +32,16 @@ public class DynamicAssignment {
   private final Assignment assignment;
   private final Map<String, List<DynamicAssignment>> plateAssignments;
   
+  /**
+   * Create a dynamic assignment that assigns {@code assignment} to any
+   * unreplicated variables, and assigns {@code plateValues} to the plates named
+   * {@code plateNames}.
+   *
+   * @param assignment
+   * @param plateNames
+   * @param plateValues
+   * @return
+   */
   public DynamicAssignment(Assignment assignment, List<String> plateNames, 
       List<List<DynamicAssignment>> plateValues) {
     Preconditions.checkArgument(plateValues.size() == plateNames.size());

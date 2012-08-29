@@ -3,7 +3,7 @@ package com.jayantkrish.jklol.tensor;
 import java.io.Serializable;
 
 /**
- * Mutable tensors.
+ * Interface for constructing tensors that behaves like a mutable tensor.
  * 
  * @author jayant
  */

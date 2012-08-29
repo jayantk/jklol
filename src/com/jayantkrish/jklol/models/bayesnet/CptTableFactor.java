@@ -24,9 +24,9 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A CptTableFactor is the typical factor you expect in a Bayesian Network. Its
- * unnormalized probabilities are simply child variable probabilities
- * conditioned on a parent.
+ * A conditional probability table representing a probability distribution over
+ * a child variable given its parents. This is the typical kind of factor you
+ * expect to find in a Bayesian Network.
  */
 public class CptTableFactor extends AbstractParametricFactor {
 
@@ -37,10 +37,9 @@ public class CptTableFactor extends AbstractParametricFactor {
   private final VariableNumMap childVars;
 
   /**
-   * childrenNums are the variable numbers of the "child" nodes. The CptFactor
-   * defines a probability distribution P(children | parents) over *sets* of
-   * child variables. (In the Bayes Net DAG, there is an edge from every parent
-   * to every child, and internally the children are a directed clique.)
+   * Construct a conditional probability distribution over {@code childVars}
+   * given {@code parentVars}. This describes a v-structure pointing from each
+   * variable in {@code parentVars} to {@code childVars}.
    */
   public CptTableFactor(VariableNumMap parentVars, VariableNumMap childVars) {
     super(parentVars.union(childVars));

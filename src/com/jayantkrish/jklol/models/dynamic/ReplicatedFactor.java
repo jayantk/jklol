@@ -15,8 +15,8 @@ import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * {@code ReplicatedFactor} uses a {@code VariableNamePattern} to identify
- * replicated sets of variables, then duplicates a given {@code Factor} across
+ * {@code ReplicatedFactor} uses a {@code VariablePattern} to identify
+ * replicated sets of variables, then duplicates a given {@code Factor} for
  * each replication.
  * 
  * @author jayantk

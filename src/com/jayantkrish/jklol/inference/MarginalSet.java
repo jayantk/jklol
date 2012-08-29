@@ -7,11 +7,13 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A set of (possibly approximate) conditional marginal distributions over a set
- * of variables. The distribution is conditioned the assignment given by
- * {@link #getConditionedValues()}. {@code MarginalSet} is immutable.
+ * A set of (possibly approximate) marginal distributions over a set of
+ * variables. Some variables may be conditioned on; their values are given by
+ * {@link #getConditionedValues()}. 
+ * <p>
+ * {@code MarginalSet} is immutable.
  * 
- * @author jayant
+ * @author jayantk
  */
 public interface MarginalSet {
 

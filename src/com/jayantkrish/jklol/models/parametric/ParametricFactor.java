@@ -11,7 +11,7 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A family of {@link Factor}s indexed by parameters of
+ * A family of {@link Factor}s indexed by parameters represented as
  * {@code SufficientStatistics}. A {@code ParametricFactor} is not a factor, but
  * rather an entire class of {@code Factor}s. This interface is used by a
  * {@link ParametricFactorGraph} to construct the individual clique

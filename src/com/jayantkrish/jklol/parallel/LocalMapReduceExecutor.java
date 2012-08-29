@@ -12,8 +12,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 /**
- * An parallelized, single-machine implementation of map-reduce pipelines. This
- * executor batches the inputVar objects and executes them on multiple local CPUs.
+ * A parallelized, single-machine implementation of map-reduce pipelines. This
+ * executor batches the input items and executes them on multiple local CPUs.
  * 
  * @author jayantk
  */
@@ -22,7 +22,16 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
   private final int batchesPerThread;
   private final int numThreads;
   private final ExecutorService executor;
-
+  
+  /**
+   * Constructs an executor that processes batches of items using a fixed number
+   * of local threads. {@code numThreads} threads are created, and items are
+   * batched so that each thread processes at most {@code batchesPerThread}
+   * batches.
+   *
+   * @param numThreads
+   * @param batchesPerThread
+   */
   public LocalMapReduceExecutor(int numThreads, int batchesPerThread) {
     this.numThreads = numThreads;
     this.batchesPerThread = batchesPerThread;

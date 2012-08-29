@@ -3,13 +3,9 @@ package com.jayantkrish.jklol.models;
 import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 
 /**
- * A Variable represents a random variable which can take on some set of Object values.
- * Typing in Java doesn't handle dynamically-generated lists of types particularly well,
- * so Variables always operate on Objects. However, it is good practice to check that 
- * an Object is within the domain of a Variable by using the canTakeValue() method. 
+ * A random variable that takes on some set of Object values.
  * 
  * @author jayant
- *
  */
 public interface Variable {
 

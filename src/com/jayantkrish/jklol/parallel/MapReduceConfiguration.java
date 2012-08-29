@@ -1,7 +1,7 @@
 package com.jayantkrish.jklol.parallel;
 
 /**
- * Stores global mapreduce configuration information for the executing program.
+ * Stores global map-reduce configuration information for the executing program.
  * Used to retrieve a configured {@code MapReduceExecutor} for running portions
  * of a program.
  * 
@@ -12,7 +12,7 @@ public class MapReduceConfiguration {
   private static MapReduceExecutor executor = null;
 
   /**
-   * Sets the global mapreduce executor to the {@code newExecutor}.
+   * Sets the global map-reduce executor to the {@code newExecutor}.
    * 
    * @param newExecutor
    */
@@ -21,7 +21,7 @@ public class MapReduceConfiguration {
   }
 
   /**
-   * Gets the global mapreduce executor.
+   * Gets the global map-reduce executor.
    * 
    * @return
    */

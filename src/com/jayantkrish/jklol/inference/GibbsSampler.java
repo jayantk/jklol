@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * An implementation of Gibbs sampling for computing approximate marginals.
- * 
+ * <p>
  * Does not work on FactorGraphs with 0 probability outcomes! 
  */
 public class GibbsSampler implements MarginalCalculator {

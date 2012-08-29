@@ -10,7 +10,11 @@ import com.jayantkrish.jklol.util.HeapUtils;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
- * Dense tensors only support tensors with up to {@code Integer.MAX_VALUE}
+ * Common implementation of a dense tensor representation. The tensor is
+ * represented as a single array, indexed by a combination of the dimensions of
+ * the tensor key.
+ * 
+ * <p> Dense tensors only support tensors with up to {@code Integer.MAX_VALUE}
  * entries, which is the maximum array size addressable in Java. As a result,
  * {@code keyNum}s for dense tensors are representable using integers.
  * 

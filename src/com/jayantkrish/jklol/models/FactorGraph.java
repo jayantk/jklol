@@ -25,16 +25,20 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A {@code FactorGraph} represents a graphical model as a set of variables and
- * a set of factors defined over variable cliques. The graphical model may
- * represent a conditional distribution, which must have some fixed values
- * before it becomes a probability distribution. {@code FactorGraph}s and the
- * {@link Factor}s they contain are immutable. Therefore, each
- * {@code FactorGraph} instance defines a particular probability distribution
- * which cannot be changed. {@code FactorGraph}s can be constructed
- * incrementally using methods such as {@link #addVariable(String, Variable)}.
- * These construction methods return new instances of this class with certain
- * fields modified.
+ * A graphical model represented as a set of factors over a set of
+ * variables. Both {@code FactorGraph}s and the {@link Factor}s they contain are
+ * immutable.
+ * 
+ * <p> This class may represent a conditional probability distribution, where
+ * some variables' values are provided as an {@code Assignment}. Conversely,
+ * factor graphs may require some variables to be conditioned on before they
+ * represent a legitimate probability distribution.
+ *
+ * <p> {@code FactorGraph}s can be constructed incrementally using methods such
+ * as {@link #addVariable(String, Variable)}.  These construction methods return
+ * new instances of this class with certain fields modified.
+ *
+ * @author jayantk
  */
 public class FactorGraph {
 
@@ -53,9 +57,9 @@ public class FactorGraph {
   private InferenceHint inferenceHint;
 
   /**
-   * Create an empty factor graph, which does not contain any {@code Variable}s
-   * or {@code Factor}s. The factor graph can be incrementally constructed from
-   * this point using methods like {@link #addVariable(String, Variable)}.
+   * Create an empty factor graph, without any variables or factors. The factor
+   * graph can be incrementally constructed from this point using methods like
+   * {@link #addVariable(String, Variable)}.
    */
   public FactorGraph() {
     variables = VariableNumMap.emptyMap();

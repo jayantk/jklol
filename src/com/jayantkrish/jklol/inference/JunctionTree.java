@@ -30,8 +30,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * algorithm is suitable for use in graphical models with low tree-width, for
  * example, tree structured graphs with small factors.
  * <p>
- * This implementation assumes that input factor graphs are "easily simplified"
- * into a junction tree. "Easily simplified" factor graphs are those where
+ * This implementation assumes that input factor graphs are easily simplified
+ * into a junction tree. Easily simplified factor graphs are those where
  * variable elimination can be performed without introducing additional cliques
  * to the original model. Essentially all graphical models where inference is
  * tractable should fall into this class. If an input factor graph cannot be
@@ -268,7 +268,12 @@ public class JunctionTree implements MarginalCalculator {
     return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors),
         originalFactorGraph.getConditionedValues());
   }
-
+  
+  /**
+   * Clique tree data structure used to implement the junction tree
+   * algorithm. Represents factors over cliques of variables in the graphical
+   * model with edges (separator sets) between factors that share variables.
+   */
   public static class CliqueTree {
 
     private List<Factor> cliqueFactors;

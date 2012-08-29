@@ -21,11 +21,11 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A TableFactor is a representation of a factor where each weight is set
- * beforehand. The internal representation is sparse, making it appropriate for
- * factors where many weight settings are 0.
- * 
- * TableFactors are immutable.
+ * A discrete probability distibution whose unnormalized probabilities are given in a table,
+ * represeted as a {@code Tensor}. This factor is the most common type of factor used to represent
+ * discrete factor graphs.
+ *
+ * @author jayantk
  */
 public class TableFactor extends DiscreteFactor {
 

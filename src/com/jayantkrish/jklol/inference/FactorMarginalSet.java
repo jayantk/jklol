@@ -15,11 +15,10 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Stores a set of {@link Factor}s representing marginal distributions and uses
- * them to answer queries for marginals.
+ * Stores a set of marginal distributions as {@link Factor}s. Additionally, some
+ * variables may take on single values, given by an {@code Assignment}.
  * 
  * @author jayant
- * 
  */
 public class FactorMarginalSet extends AbstractMarginalSet {
 
@@ -50,6 +49,16 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     this.allFactors = ImmutableList.copyOf(factors);
   }
   
+  /**
+   * Constructs a marginal distribution over {@code conditionedVariables} that
+   * assigns all of its weight to {@code conditionedValues}. {@code
+   * partitionFunction} should be set to the unnormalized probability of {@code
+   * conditionedValues}.
+   *
+   * @param conditionedVariables
+   * @param conditionedValues
+   * @param partitionFunction
+   */
   public static FactorMarginalSet fromAssignment(VariableNumMap conditionedVariables, Assignment conditionedValues,
       double partitionFunction) {
     return new FactorMarginalSet(Collections.<Factor>emptyList(), partitionFunction, conditionedVariables, conditionedValues);

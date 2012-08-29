@@ -15,9 +15,9 @@ import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * Dual decomposition is an approximate inference technique for computing the
- * MAP (highest weight) assignment to a graphical model. This marginal
- * calculator only supports computing max-marginals.
+ * Approximate inference technique for computing the MAP (highest weight)
+ * assignment to a graphical model. This marginal calculator only supports
+ * computing max-marginals.
  * 
  * @author jayantk
  */

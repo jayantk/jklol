@@ -10,7 +10,7 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * AbstractFactor provides a partial implementation of Factor.
+ * {@code AbstractFactor} provides a partial implementation of {@code Factor}.
  * 
  * @author jayant
  * 

@@ -7,7 +7,12 @@ import java.util.Map;
 import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
 
 /**
- * Tensors are immutable. All operations on {@code Tensor}s return new objects,
+ * Tensors are generalizations of matrices that have any number of key
+ * dimensions. This interface represents mappings from multidimensional keys
+ * (represented as {@code int[]}) to values. Tensors support mathematical
+ * operations, such as addition and multiplication.
+ * 
+ * <p> Tensors are immutable. All operations on {@code Tensor}s return new objects,
  * leaving the originals unchanged.
  * 
  * @author jayant

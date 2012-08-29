@@ -6,8 +6,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Simplistic set of "max marginals" consisting of the single
- * maximum-probability assignment.
+ * Simple set of "max-marginals" consisting of a single maximum-probability 
+ * assignment.
  * 
  * @author jayantk
  */

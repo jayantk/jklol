@@ -25,6 +25,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  * be defined for certain subsets of the variables (which are the valid
  * separator sets for the factor). Limitations on these methods should be
  * clearly documented when they exist.
+ * <p>
+ * All {@code Factor}s are immutable.
  * 
  * @author jayant
  */

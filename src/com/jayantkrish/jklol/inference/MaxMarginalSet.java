@@ -5,7 +5,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Max marginals, or maximal probability assignments, for a graphical model.
+ * Max-marginals, or maximal probability assignments, for a graphical model.
  * This class supports retrieving the top-{@code #beamSize()} maximal
  * probability assignments, in order of probability.
  * 

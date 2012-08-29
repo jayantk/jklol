@@ -6,6 +6,11 @@ import java.util.Iterator;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
+/**
+ * Builder for incrementally constructing dense tensors.
+ *
+ * @author jayantk
+ */
 public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder {
 
   private static final long serialVersionUID = 1707937213062867772L;

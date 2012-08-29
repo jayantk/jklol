@@ -16,9 +16,10 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 /**
- * Helper class for constructing {@link SparseTensor}s when the ordering of the
- * keys traversed is unknown. This will be less efficient than the constructor,
- * but often times more convenient.
+ * Builder for incrementally constructing sparse tensors. 
+ *
+ * <p> This implementation is quite inefficient, and should not be used in
+ * performance-sensitive code.
  * 
  * @author jayantk
  */

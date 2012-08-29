@@ -4,6 +4,11 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * Common implementations of some {@code MarginalSet} methods.
+ *
+ * @author jayantk
+ */
 public abstract class AbstractMarginalSet implements MarginalSet {
 
   // Marginal sets are defined over two types of variables. marginalVariables have

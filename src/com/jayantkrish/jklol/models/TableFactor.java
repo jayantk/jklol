@@ -169,6 +169,11 @@ public class TableFactor extends DiscreteFactor {
     VariableNumMap allVars = VariableNumMap.unionAll(variables);
     TableFactorBuilder builder = new TableFactorBuilder(allVars, SparseTensorBuilder.getFactory());
     for (String line : lines) {
+      // Ignore blank lines.
+      if (line.trim().length() == 0) {
+        continue;
+      }
+      
       String[] parts = line.split(delimiter);
       Preconditions.checkState(parts.length == (numVars + 1), "\"%s\" is incorrectly formatted", line);
       Assignment assignment = Assignment.EMPTY;

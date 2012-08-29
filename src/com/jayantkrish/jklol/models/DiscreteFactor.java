@@ -307,7 +307,9 @@ public abstract class DiscreteFactor extends AbstractFactor {
     while (iter.hasNext()) {
       Outcome outcome = iter.next();
       sb.append(outcome.toCsv());
-      sb.append("\n");
+      if (iter.hasNext()) {
+        sb.append("\n");
+      }
     }
     return sb.toString();
   }

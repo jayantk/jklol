@@ -43,7 +43,7 @@ public class ParametricFactorGraph {
 
   private List<ParametricFactor> parametricFactors;
   private List<VariablePattern> factorPatterns;
-  private List<String> factorNames;
+  private IndexedList<String> factorNames;
 
   public ParametricFactorGraph(DynamicFactorGraph factorGraph,
       List<ParametricFactor> parametricFactors, List<VariablePattern> factorPatterns,
@@ -53,7 +53,7 @@ public class ParametricFactorGraph {
     this.baseFactorGraph = factorGraph;
     this.parametricFactors = ImmutableList.copyOf(parametricFactors);
     this.factorPatterns = ImmutableList.copyOf(factorPatterns);
-    this.factorNames = ImmutableList.copyOf(factorNames);
+    this.factorNames = IndexedList.create(factorNames);
   }
 
   /**
@@ -77,6 +77,14 @@ public class ParametricFactorGraph {
     return Collections.unmodifiableList(parametricFactors);
   }
 
+  public ParametricFactor getParametricFactorByName(String name) {
+    if (!factorNames.contains(name)) {
+      return null;
+    }
+    int index = factorNames.getIndex(name);
+    return parametricFactors.get(index);
+  }
+
   /**
    * Gets a {@code DynamicFactorGraph} which is the member of this family
    * indexed by {@code parameters}. Note that multiple values of
@@ -94,7 +102,7 @@ public class ParametricFactorGraph {
           parametricFactors.get(i).getFactorFromParameters(parameterList.get(i)),
           factorPatterns.get(i)));
     }
-    return baseFactorGraph.addPlateFactors(plateFactors, factorNames);
+    return baseFactorGraph.addPlateFactors(plateFactors, factorNames.items());
   }
 
   /**
@@ -127,7 +135,7 @@ public class ParametricFactorGraph {
     for (ParametricFactor factor : getParametricFactors()) {
       sufficientStatistics.add(factor.getNewSufficientStatistics());
     }
-    return new ListSufficientStatistics(factorNames, sufficientStatistics);
+    return new ListSufficientStatistics(factorNames.items(), sufficientStatistics);
   }
 
   /**
@@ -200,7 +208,7 @@ public class ParametricFactorGraph {
       builder.addVariableType(variable.toProto());
     }
     
-    builder.addAllFactorName(factorNames);
+    builder.addAllFactorName(factorNames.items());
     return builder.build();
   }
   

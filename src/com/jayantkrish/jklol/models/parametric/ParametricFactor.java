@@ -109,6 +109,20 @@ public interface ParametricFactor extends Serializable {
       Assignment assignment, double count);
 
   /**
+   * Increments {@code statistics} by {@code count} for each assignment to {@code this} that is a
+   * superset of {@code partialAssignment}. If {@code partialAssignment} contains all of the
+   * variables in {@code this}, then this method is equivalent to {@link
+   * #incrementSufficientStatisticsFromAssignment}.
+   * 
+   * @param statistics
+   * @param partialAssignment
+   * @param count
+   * @return
+   */  
+  public void incrementSufficientStatisticsFromPartialAssignment(SufficientStatistics statistics, 
+      Assignment partialAssignment, double count);
+
+  /**
    * Computes sufficient statistics for {@code this} factor from the marginal
    * distribution {@code marginal} and accumulates them in {@code statistics}.
    * {@code marginal} is a conditional distribution given

@@ -1,6 +1,10 @@
 package com.jayantkrish.jklol.models.parametric;
 
+import java.util.Iterator;
+
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.util.AllAssignmentIterator;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Implementations of common {@link ParametricFactor} methods.
@@ -25,5 +29,15 @@ public abstract class AbstractParametricFactor implements ParametricFactor {
   @Override
   public String getParameterDescription(SufficientStatistics statistics) {
     return getParameterDescription(statistics, -1);
+  }
+
+  @Override
+  public void incrementSufficientStatisticsFromPartialAssignment(
+      SufficientStatistics statistics, Assignment a, double count) {
+    VariableNumMap notInAssignment = getVars().removeAll(a.getVariableNums());
+    Iterator<Assignment> iter = new AllAssignmentIterator(notInAssignment);
+    while (iter.hasNext()) {
+      incrementSufficientStatisticsFromAssignment(statistics, iter.next().union(a), count);
+    }
   }
 }

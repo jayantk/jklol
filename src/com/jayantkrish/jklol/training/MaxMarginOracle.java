@@ -21,14 +21,14 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph, 
-Example<DynamicAssignment, DynamicAssignment>> {
+public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
+    Example<DynamicAssignment, DynamicAssignment>> {
 
   private final ParametricFactorGraph family;
   private final CostFunction costFunction;
   private final MarginalCalculator marginalCalculator;
 
-  public MaxMarginOracle(ParametricFactorGraph family, CostFunction costFunction, 
+  public MaxMarginOracle(ParametricFactorGraph family, CostFunction costFunction,
       MarginalCalculator marginalCalculator) {
     this.family = Preconditions.checkNotNull(family);
     this.costFunction = Preconditions.checkNotNull(costFunction);
@@ -39,7 +39,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
   public SufficientStatistics initializeGradient() {
     return family.getNewSufficientStatistics();
   }
-  
+
   @Override
   public DynamicFactorGraph instantiateModel(SufficientStatistics parameters) {
     return family.getFactorGraphFromParameters(parameters);
@@ -102,11 +102,8 @@ Example<DynamicAssignment, DynamicAssignment>> {
     double predictedProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(prediction);
     double actualProb = conditionalCostAugmentedModel.getUnnormalizedLogProbability(actual);
 
-    Assignment predictedOutputValues = prediction.intersection(outputVariables);
-    Assignment actualOutputValues = actual.intersection(outputVariables);
-
     // Update parameters if necessary.
-    if (!predictedOutputValues.equals(actualOutputValues)) {
+    if (!actual.equals(prediction)) {
       log.startTimer("update_subgradient/increment_subgradient");
       // Convert the assignments into marginal (point) distributions in order to
       // update the parameter vector.
@@ -115,15 +112,14 @@ Example<DynamicAssignment, DynamicAssignment>> {
       // Update the parameter vector
       family.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
       family.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
-
-      log.stopTimer("update_subgradient/increment_subgradient");
       
-      // Return the loss, which is the amount by which the prediction is within
-      // the margin.
-       return predictedProb - actualProb;
+      log.stopTimer("update_subgradient/increment_subgradient");
     }
-    // Special value to signify that the example was correct.
-    return 0;
+
+    // Return the negative hinge loss, which is the amount by which the
+    // prediction is within the margin. (Negated, because GradientOracles
+    // represent maximization problems).
+    return Math.min(0.0, actualProb - predictedProb);
   }
 
   /**
@@ -176,6 +172,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
         while (varAssignments.hasNext()) {
           builder.incrementWeight(varAssignments.next(), Math.E);
         }
+        // Set the cost of the true label to 0. (It was multiplied by e in the loop.)
         builder.multiplyWeight(trueLabel.intersection(varNumList), Math.exp(-1.0));
 
         augmentedGraph = augmentedGraph.addFactor("hamming_cost_factor-" + varNum, builder.build());

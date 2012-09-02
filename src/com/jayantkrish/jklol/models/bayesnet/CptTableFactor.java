@@ -64,7 +64,12 @@ public class CptTableFactor extends AbstractParametricFactor {
   
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
-    throw new UnsupportedOperationException();
+    DiscreteFactor factor = getFactorFromParameters(parameters);
+    if (numFeatures >= 0) {
+      return factor.describeAssignments(factor.getMostLikelyAssignments(numFeatures));
+    } else {
+      return factor.getParameterDescription();
+    }
   }
   
   @Override

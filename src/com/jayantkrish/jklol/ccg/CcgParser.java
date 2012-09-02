@@ -15,6 +15,13 @@ import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * A chart parser for probabilistic Combinatory Categorial Grammar (CCG).
+ * 
+ * A CCG is defined by a lexicon, which  
+ * 
+ * @author jayantk
+ */
 public class CcgParser {
 
   private final int beamSize;
@@ -22,11 +29,11 @@ public class CcgParser {
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;
-  
+
   private final VariableNumMap dependencyHeadVar;
   private final VariableNumMap dependencyArgNumVar;
   private final VariableNumMap dependencyArgVar;
-  private final DiscreteFactor dependencyDistribution; 
+  private final DiscreteFactor dependencyDistribution;
 
   public CcgParser(int beamSize, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar, VariableNumMap dependencyArgNumVar,
@@ -36,7 +43,7 @@ public class CcgParser {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
-    
+
     this.dependencyHeadVar = Preconditions.checkNotNull(dependencyHeadVar);
     this.dependencyArgNumVar = Preconditions.checkNotNull(dependencyArgNumVar);
     this.dependencyArgVar = Preconditions.checkNotNull(dependencyArgVar);
@@ -45,7 +52,7 @@ public class CcgParser {
 
   public List<CcgParse> beamSearch(List<? extends Object> terminals) {
     CcgChart chart = new CcgChart(terminals, beamSize);
-    
+
     initializeChart(terminals, chart);
 
     // Construct a tree from the nonterminals.
@@ -55,16 +62,16 @@ public class CcgParser {
         calculateInsideBeam(spanStart, spanEnd, chart);
       }
     }
-      
+
     int numParses = Math.min(beamSize, chart.getNumParseTreesForSpan(0, chart.size() - 1));
-    
+
     List<CcgParse> parses = Lists.newArrayListWithCapacity(numParses);
     for (int i = numParses - 1; i >= 0; i--) {
       parses.add(chart.decodeParseFromSpan(0, chart.size() - 1, i));
     }
     return parses;
   }
-  
+
   public void initializeChart(List<? extends Object> terminals, CcgChart chart) {
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
@@ -77,7 +84,7 @@ public class CcgParser {
           while (iterator.hasNext()) {
             Outcome bestOutcome = iterator.next();
             CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
-            
+
             chart.addParseTreeForTerminalSpan(category, bestOutcome.getProbability(), i, j);
             System.out.println(i + "." + j + " : " + category + " " + bestOutcome.getProbability());
           }
@@ -105,8 +112,8 @@ public class CcgParser {
             CcgCategory rightRoot = rightTrees[rightIndex];
             double rightProb = rightProbs[rightIndex];
 
-            populateChartEntry(leftRoot, spanStart, spanStart + i, leftIndex, 
-                rightRoot, spanStart + j, spanEnd, rightIndex, 
+            populateChartEntry(leftRoot, spanStart, spanStart + i, leftIndex,
+                rightRoot, spanStart + j, spanEnd, rightIndex,
                 chart, leftProb * rightProb, spanStart, spanEnd);
           }
         }
@@ -123,7 +130,7 @@ public class CcgParser {
     results.add(rightRoot.apply(leftRoot, Direction.LEFT));
     results.add(leftRoot.compose(rightRoot, Direction.RIGHT));
     results.add(rightRoot.compose(leftRoot, Direction.LEFT));
-    
+
     for (CcgCombinationResult result : results) {
       if (result != null) {
         // Get the probabilities of the generated dependencies.
@@ -132,14 +139,14 @@ public class CcgParser {
           Assignment assignment = dependencyHeadVar.outcomeArrayToAssignment(dep.getHead())
               .union(dependencyArgNumVar.outcomeArrayToAssignment(dep.getArgIndex()))
               .union(dependencyArgVar.outcomeArrayToAssignment(dep.getObject()));
-          
+
           depProb *= dependencyDistribution.getUnnormalizedProbability(assignment);
         }
-        
-        chart.addParseTreeForSpan(result.getCategory(), result.getDependencies(), leftRightProb * depProb, 
-            leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart, rightSpanEnd, rightIndex, 
+
+        chart.addParseTreeForSpan(result.getCategory(), result.getDependencies(), leftRightProb * depProb,
+            leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart, rightSpanEnd, rightIndex,
             rootSpanStart, rootSpanEnd);
-        System.out.println(rootSpanStart + "." + rootSpanEnd + " " + result.getCategory() + " " + result.getDependencies() + " " + (depProb * leftRightProb)); 
+        System.out.println(rootSpanStart + "." + rootSpanEnd + " " + result.getCategory() + " " + result.getDependencies() + " " + (depProb * leftRightProb));
       }
     }
   }

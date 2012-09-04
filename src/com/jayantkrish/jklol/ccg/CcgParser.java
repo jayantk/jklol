@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 
@@ -19,8 +20,10 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class CcgParser {
+public class CcgParser implements Serializable {
 
+  private static final long serialVersionUID = 1L;
+  
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;

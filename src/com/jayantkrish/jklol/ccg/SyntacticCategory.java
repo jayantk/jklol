@@ -10,11 +10,9 @@ public class SyntacticCategory {
     LEFT("\\"), RIGHT("/");
 
     private final String slash;
-
-    private Direction(final String slash) { 
+    private Direction(final String slash) {
       this.slash = slash;
     }
-
     @Override
     public String toString() {
       return slash;
@@ -25,11 +23,9 @@ public class SyntacticCategory {
     ARGUMENT(">"), RETURN("");
     
     private final String str;
-
     private HeadValue(final String str) {
       this.str = str;
     }
-
     @Override
     public String toString() {
       return str;
@@ -45,6 +41,8 @@ public class SyntacticCategory {
   private final HeadValue head;
   private final SyntacticCategory returnType;
   private final SyntacticCategory argumentType;
+  
+  // NOTE: remember to update .equals() and .hashCode() if the members change.
 
   public SyntacticCategory(String value, Direction direction, HeadValue head,
       SyntacticCategory returnType, SyntacticCategory argumentType) {
@@ -150,21 +148,6 @@ public class SyntacticCategory {
     return direction != null && this.direction == direction;
   }
 
-  /*
-   * public Set<String> getAllAtomicSyntacticTypes() { return
-   * Sets.newHashSet(extract(getTerminalsLeftToRight(),
-   * on(LexicalVariable.class).getType())); }
-   * 
-   * public Set<LexicalVariable> getAllVariablesWithSyntacticType(String type) {
-   * return Sets.newHashSet( with(getTerminalsLeftToRight()).retain(
-   * having(on(LexicalVariable.class).getType(), Matchers.equalTo(type)))); }
-   * 
-   * public Set<LexicalVariable> getAllNounLikeVariables() { return
-   * Sets.newHashSet( with(getTerminalsLeftToRight()).retain(
-   * having(on(LexicalVariable.class).isNounLike(),
-   * Matchers.is(Boolean.TRUE)))); }
-   */
-
   /**
    * Gets the sequence of arguments that this category accepts. Note that the
    * returned arguments themselves may be functional types.
@@ -202,17 +185,50 @@ public class SyntacticCategory {
     return false;
   }
 
-  /*
-   * public List<LexicalVariable> getTerminalsLeftToRight() {
-   * List<LexicalVariable> values = Lists.newArrayList();
-   * getTerminalsPreorderHelper(values); return values; }
-   * 
-   * private void getTerminalsPreorderHelper(List<LexicalVariable> toAppend) {
-   * if (isLeaf()) { toAppend.add(value); } else {
-   * returnType.getTerminalsPreorderHelper(toAppend);
-   * argumentType.getTerminalsPreorderHelper(toAppend); } }
-   */
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((argumentType == null) ? 0 : argumentType.hashCode());
+    result = prime * result + ((direction == null) ? 0 : direction.hashCode());
+    result = prime * result + ((head == null) ? 0 : head.hashCode());
+    result = prime * result + ((returnType == null) ? 0 : returnType.hashCode());
+    result = prime * result + ((value == null) ? 0 : value.hashCode());
+    return result;
+  }
 
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    SyntacticCategory other = (SyntacticCategory) obj;
+    if (argumentType == null) {
+      if (other.argumentType != null)
+        return false;
+    } else if (!argumentType.equals(other.argumentType))
+      return false;
+    if (direction != other.direction)
+      return false;
+    if (head != other.head)
+      return false;
+    if (returnType == null) {
+      if (other.returnType != null)
+        return false;
+    } else if (!returnType.equals(other.returnType))
+      return false;
+    if (value == null) {
+      if (other.value != null)
+        return false;
+    } else if (!value.equals(other.value))
+      return false;
+    return true;
+  }
+
+  @Override
   public String toString() {
     if (isAtomic()) {
       return value.toString();

@@ -97,7 +97,6 @@ public class StochasticGradientTrainer {
     double exponentiallyWeightedUpdateNorm = stepSize;
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
-      searchErrors = 0;
 
       // Get the examples for this batch. Ideally, this would be a random
       // sample; however, deterministically iterating over the examples is
@@ -130,7 +129,7 @@ public class StochasticGradientTrainer {
       exponentiallyWeightedUpdateNorm = (0.2) * gradientL2 * currentStepSize + (0.8 * exponentiallyWeightedUpdateNorm);
       log.stopTimer("compute_statistics");
 
-      log.logStatistic(i, "search errors", searchErrors);
+      log.logStatistic(i, "search errors", oracleResult.getSearchErrors());
       log.logStatistic(i, "gradient l2 norm", gradientL2);
       log.logStatistic(i, "step size", currentStepSize);
       log.logStatistic(i, "objective value", oracleResult.getObjectiveValue());

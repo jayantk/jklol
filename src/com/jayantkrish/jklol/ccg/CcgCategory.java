@@ -13,6 +13,8 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 
 public class CcgCategory {
 
+  // NOTE: Remember to change .equals() and .hashCode() if these members 
+  // are modified.
   private final SyntacticCategory syntax;
   private final Set<String> heads;
   
@@ -136,6 +138,43 @@ public class CcgCategory {
   }
   
   @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((heads == null) ? 0 : heads.hashCode());
+    result = prime * result + ((syntax == null) ? 0 : syntax.hashCode());
+    result = prime * result + ((unfilledDependencies == null) ? 0 : unfilledDependencies.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CcgCategory other = (CcgCategory) obj;
+    if (heads == null) {
+      if (other.heads != null)
+        return false;
+    } else if (!heads.equals(other.heads))
+      return false;
+    if (syntax == null) {
+      if (other.syntax != null)
+        return false;
+    } else if (!syntax.equals(other.syntax))
+      return false;
+    if (unfilledDependencies == null) {
+      if (other.unfilledDependencies != null)
+        return false;
+    } else if (!unfilledDependencies.equals(other.unfilledDependencies))
+      return false;
+    return true;
+  }
+
+  @Override
   public String toString() {
     return heads.toString() + " : " + syntax.toString();
   }
@@ -158,41 +197,13 @@ public class CcgCategory {
     }
   }
 
-  public static class DependencyStructure {
-    private final String head;
-    private final int headArgIndex;
-    private final String object;
-    
-    public DependencyStructure(String head, int headArgIndex, String object) {
-      this.head = head;
-      this.headArgIndex = headArgIndex;
-      this.object = object;
-    }
-    
-    public String getHead() {
-      return head;
-    }
-    
-    public int getArgIndex() {
-      return headArgIndex;
-    }
-    
-    public String getObject() {
-      return object;
-    }
-    
-    public String toString() {
-      return "(" + head + "," + headArgIndex + "," + object + ")";
-    }
-  }
-  
   public static class UnfilledDependency {
     // Subject is the word(s) projecting the dependency. Null if subjects is unfilled. 
     private final Set<String> subjects;
     // Subject may be unfilled. If so, then this variable 
     // is the index of the argument which fills the subject role. 
     private final int subjectFunctionVarIndex;
-    // If subject is variable, then it is a function. This index
+    // If subject is a variable, then it is a function. This index
     // tracks which argument of the subject function is filled by the object role.
     // (i.e., which dependencies inherited from the subject are filled by the object.)
     private final int subjectArgIndex;
@@ -249,6 +260,46 @@ public class CcgCategory {
     
     public int getArgumentIndex() {
       return subjectArgIndex;
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + objectArgumentIndex;
+      result = prime * result + ((objects == null) ? 0 : objects.hashCode());
+      result = prime * result + subjectArgIndex;
+      result = prime * result + subjectFunctionVarIndex;
+      result = prime * result + ((subjects == null) ? 0 : subjects.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      UnfilledDependency other = (UnfilledDependency) obj;
+      if (objectArgumentIndex != other.objectArgumentIndex)
+        return false;
+      if (objects == null) {
+        if (other.objects != null)
+          return false;
+      } else if (!objects.equals(other.objects))
+        return false;
+      if (subjectArgIndex != other.subjectArgIndex)
+        return false;
+      if (subjectFunctionVarIndex != other.subjectFunctionVarIndex)
+        return false;
+      if (subjects == null) {
+        if (other.subjects != null)
+          return false;
+      } else if (!subjects.equals(other.subjects))
+        return false;
+      return true;
     }
   }
 }

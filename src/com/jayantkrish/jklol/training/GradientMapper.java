@@ -26,39 +26,46 @@ public class GradientMapper<M, E> extends Mapper<E, GradientEvaluation> {
   public GradientEvaluation map(E item) {
     log.startTimer("compute_gradient_(parallel)");
     double objective = 0.0;
+    int searchErrors = 0;
     SufficientStatistics gradient = oracle.initializeGradient();
     try {
       objective += oracle.accumulateGradient(gradient, instantiatedModel, item, log);
     } catch (ZeroProbabilityError e) {
       // Ignore the example, returning the zero vector.
+      searchErrors = 1;
     }
     log.stopTimer("compute_gradient_(parallel)");
-    return new GradientEvaluation(gradient, objective);
+    return new GradientEvaluation(gradient, objective, searchErrors);
   }
 
   public static class GradientEvaluation {
     private SufficientStatistics gradient;
     private double objectiveValue;
+    private int searchErrors;
 
-    public GradientEvaluation(SufficientStatistics gradient, double objectiveValue) {
+    public GradientEvaluation(SufficientStatistics gradient, double objectiveValue, 
+        int searchErrors) {
       this.gradient = gradient;
       this.objectiveValue = objectiveValue;
+      this.searchErrors = searchErrors;
     }
 
     public SufficientStatistics getGradient() {
       return gradient;
     }
-    
-    public void incrementGradient(SufficientStatistics other) {
-      gradient.increment(other, 1.0);
-    }
-
+        
     public double getObjectiveValue() {
       return objectiveValue;
     }
+
+    public int getSearchErrors() {
+      return searchErrors;
+    }
     
-    public void incrementObjectiveValue(double amount) {
-      objectiveValue += amount;
+    public void increment(GradientEvaluation other){
+      gradient.increment(other.gradient, 1.0);
+      objectiveValue += other.objectiveValue;
+      searchErrors += other.searchErrors;
     }
   }
 }

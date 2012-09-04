@@ -7,7 +7,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory.CcgCombinationResult;
-import com.jayantkrish.jklol.ccg.CcgCategory.DependencyStructure;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -16,15 +15,11 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A chart parser for probabilistic Combinatory Categorial Grammar (CCG).
- * 
- * A CCG is defined by a lexicon, which  
+ * A chart parser for Combinatory Categorial Grammar (CCG).
  * 
  * @author jayantk
  */
 public class CcgParser {
-
-  private final int beamSize;
 
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
@@ -35,11 +30,9 @@ public class CcgParser {
   private final VariableNumMap dependencyArgVar;
   private final DiscreteFactor dependencyDistribution;
 
-  public CcgParser(int beamSize, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
+  public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar, VariableNumMap dependencyArgNumVar,
       VariableNumMap dependencyArgVar, DiscreteFactor dependencyDistribution) {
-    this.beamSize = beamSize;
-
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -50,7 +43,7 @@ public class CcgParser {
     this.dependencyDistribution = Preconditions.checkNotNull(dependencyDistribution);
   }
 
-  public List<CcgParse> beamSearch(List<? extends Object> terminals) {
+  public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
     CcgChart chart = new CcgChart(terminals, beamSize);
 
     initializeChart(terminals, chart);
@@ -71,8 +64,8 @@ public class CcgParser {
     }
     return parses;
   }
-
-  public void initializeChart(List<? extends Object> terminals, CcgChart chart) {
+  
+  public void initializeChart(List<String> terminals, CcgChart chart) {
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
     int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
@@ -86,7 +79,7 @@ public class CcgParser {
             CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
 
             chart.addParseTreeForTerminalSpan(category, bestOutcome.getProbability(), i, j);
-            System.out.println(i + "." + j + " : " + category + " " + bestOutcome.getProbability());
+            // System.out.println(i + "." + j + " : " + category + " " + bestOutcome.getProbability());
           }
         }
       }
@@ -146,7 +139,7 @@ public class CcgParser {
         chart.addParseTreeForSpan(result.getCategory(), result.getDependencies(), leftRightProb * depProb,
             leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart, rightSpanEnd, rightIndex,
             rootSpanStart, rootSpanEnd);
-        System.out.println(rootSpanStart + "." + rootSpanEnd + " " + result.getCategory() + " " + result.getDependencies() + " " + (depProb * leftRightProb));
+        // System.out.println(rootSpanStart + "." + rootSpanEnd + " " + result.getCategory() + " " + result.getDependencies() + " " + (depProb * leftRightProb)); 
       }
     }
   }

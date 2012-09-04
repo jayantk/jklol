@@ -25,8 +25,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   private static final long serialVersionUID = 3097649352185648543L;
   
   // These are the variables contained in the two parametric factors for each
-  // distribution
-  // in the cfg parser.
+  // distribution in the cfg parser.
   private final VariableNumMap parentVar;
   private final VariableNumMap leftVar;
   private final VariableNumMap rightVar; 

@@ -5,19 +5,23 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.jayantkrish.jklol.ccg.CcgCategory.DependencyStructure;
 import com.jayantkrish.jklol.util.HeapUtils;
 
+/**
+ * Data structure for performing beam search inference with a CCG.
+ * 
+ * @author jayant
+ */
 public class CcgChart {
 
-  private final List<Object> terminals;
+  private final List<String> terminals;
   private final int beamSize;
 
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
   private final int[] chartSizes;
 
-  public CcgChart(List<? extends Object> terminals, int beamSize) {
+  public CcgChart(List<String> terminals, int beamSize) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.beamSize = beamSize;
 
@@ -31,12 +35,22 @@ public class CcgChart {
   public int size() {
     return terminals.size();
   }
-  
+
+  /**
+   * Decodes the CCG parse which is the {@code rootBeamIndex}'th best parse in 
+   * the beam for the given span. 
+   * 
+   * @param spanStart
+   * @param spanEnd
+   * @param rootBeamIndex
+   * @return
+   */
   public CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int rootBeamIndex) {
     ChartEntry entry = chart[spanStart][spanEnd][rootBeamIndex];
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(entry.getCategory(), probabilities[spanStart][spanEnd][rootBeamIndex]);
+      return CcgParse.forTerminal(entry.getCategory(), terminals.subList(spanStart, spanEnd + 1), 
+          probabilities[spanStart][spanEnd][rootBeamIndex]);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(), entry.getLeftChartIndex());
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(), entry.getRightChartIndex());

@@ -20,14 +20,13 @@ public class GradientReducer<M, E> extends SimpleReducer<GradientEvaluation> {
   
   @Override
   public GradientEvaluation getInitialValue() {
-    return new GradientEvaluation(oracle.initializeGradient(), 0.0);
+    return new GradientEvaluation(oracle.initializeGradient(), 0.0, 0);
   }
   
   @Override
   public GradientEvaluation reduce(GradientEvaluation item, GradientEvaluation accumulated) {
     log.startTimer("accumulate_gradient");
-    accumulated.incrementGradient(item.getGradient());
-    accumulated.incrementObjectiveValue(item.getObjectiveValue());
+    accumulated.increment(item);
     log.stopTimer("accumulate_gradient");
     return accumulated;
   }

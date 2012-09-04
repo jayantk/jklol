@@ -42,7 +42,8 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testParse() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 10);
     
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
@@ -68,7 +69,8 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testParse2() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"));
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 10);
     
     assertEquals(3, parses.size());
 
@@ -131,7 +133,7 @@ public class CcgParserTest extends TestCase {
             categories.get(i)), weights[i]);
       }
     }
-        
+
     // Build the dependency distribution.
     DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates);
     DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(1, 2, 3));
@@ -147,7 +149,7 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("quickly", 1, "eat"), 3.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
     
-    return new CcgParser(10, terminalVar, ccgCategoryVar, terminalBuilder.build(),
+    return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build());
   }
 }

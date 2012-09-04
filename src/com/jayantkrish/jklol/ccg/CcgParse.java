@@ -5,11 +5,13 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgCategory.DependencyStructure;
 
 public class CcgParse {
 
   private final CcgCategory head;
+  // The words spanned by this portion of the parse tree. 
+  // Non-null only when this is a terminal.
+  private final List<String> spannedWords;
 
   private final List<DependencyStructure> dependencies;
 
@@ -30,9 +32,11 @@ public class CcgParse {
    * @param left
    * @param right
    */
-  private CcgParse(CcgCategory head, List<DependencyStructure> dependencies, double probability,
+  private CcgParse(CcgCategory head, List<String> spannedWords, 
+      List<DependencyStructure> dependencies, double probability,
       CcgParse left, CcgParse right) {
     this.head = Preconditions.checkNotNull(head);
+    this.spannedWords = spannedWords;
     this.dependencies = Preconditions.checkNotNull(dependencies);
 
     this.probability = probability;
@@ -48,20 +52,38 @@ public class CcgParse {
     } else {
       this.subtreeProbability = probability;
     }
-
   }
 
-  public static CcgParse forTerminal(CcgCategory head, double lexicalProbability) {
-    return new CcgParse(head, Collections.<DependencyStructure> emptyList(), lexicalProbability, null, null);
+  public static CcgParse forTerminal(CcgCategory head, List<String> spannedWords, double lexicalProbability) {
+    return new CcgParse(head, spannedWords, Collections.<DependencyStructure> emptyList(), 
+        lexicalProbability, null, null);
   }
 
   public static CcgParse forNonterminal(CcgCategory head, List<DependencyStructure> dependencies,
       double dependencyProbability, CcgParse left, CcgParse right) {
-    return new CcgParse(head, dependencies, dependencyProbability, left, right);
+    return new CcgParse(head, null, dependencies, dependencyProbability, left, right);
   }
 
   public boolean isTerminal() {
     return left == null && right == null;
+  }
+  
+  /**
+   * Gets the CCG category (both syntactic and semantic category) of this parse tree.
+   * 
+   * @return
+   */
+  public CcgCategory getCcgCategory() {
+    return head;
+  }
+  
+  /**
+   * The result is null unless this is a terminal in the parse tree.
+   *  
+   * @return
+   */
+  public List<String> getSpannedWords() {
+    return spannedWords;
   }
   
   public CcgParse getLeft() {

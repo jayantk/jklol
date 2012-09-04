@@ -11,7 +11,7 @@ public class SyntacticCategory {
 
     private final String slash;
 
-    private Direction(final String slash) {
+    private Direction(final String slash) { 
       this.slash = slash;
     }
 
@@ -21,7 +21,6 @@ public class SyntacticCategory {
     }
   };
 
-  //
   public enum HeadValue {
     ARGUMENT(">"), RETURN("");
     

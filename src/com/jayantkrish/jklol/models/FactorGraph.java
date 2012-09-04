@@ -18,9 +18,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorGraphProto;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
-import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -542,56 +539,5 @@ public class FactorGraph {
     FactorGraph factorGraph = new FactorGraph(this);
     factorGraph.inferenceHint = inferenceHint;
     return factorGraph;
-  }
-
-  /**
-   * Serializes {@code this} into a protocol buffer. The returned proto can be
-   * parsed back into an identical object using {@link FactorGraph#fromProto()}.
-   * 
-   * @return
-   */
-  public FactorGraphProto toProto() {
-    Preconditions.checkState(conditionedValues.size() == 0);
-    Preconditions.checkState(conditionedVariables.size() == 0);
-    // Create a global set of variable types, so that each
-    // variable type is only serialized once.
-    IndexedList<Variable> variableIndex = IndexedList.create();
-
-    FactorGraphProto.Builder builder = FactorGraphProto.newBuilder();
-    builder.setVariables(variables.toProto(variableIndex));
-
-    for (Factor factor : factors) {
-      builder.addFactor(factor.toProto(variableIndex));
-    }
-
-    builder.addAllFactorName(factorNames.items());
-
-    // Serialize the variable type registry.
-    for (Variable variable : variableIndex) {
-      builder.addVariableType(variable.toProto());
-    }
-
-    return builder.build();
-  }
-
-  public static FactorGraph fromProto(FactorGraphProto factorGraphProto) {
-    Preconditions.checkArgument(factorGraphProto.hasVariables());
-    // Reconstruct the global variable type registry.
-    IndexedList<Variable> variableTypeIndex = IndexedList.create();
-    for (VariableProto variableProto : factorGraphProto.getVariableTypeList()) {
-      variableTypeIndex.add(Variables.fromProto(variableProto));
-    }
-
-    VariableNumMap variables = VariableNumMap.fromProto(factorGraphProto.getVariables(),
-        variableTypeIndex);
-
-    // Deserialize the factors in the factor graph.
-    List<Factor> factors = Lists.newArrayList();
-    for (FactorProto factorProto : factorGraphProto.getFactorList()) {
-      factors.add(Factors.fromProto(factorProto, variableTypeIndex));
-    }
-
-    return new FactorGraph(variables, factors, factorGraphProto.getFactorNameList(),
-        VariableNumMap.emptyMap(), Assignment.EMPTY);
   }
 }

@@ -11,23 +11,15 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.LinearClassifierFactor;
 import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.Variables;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ConditionalLogLinearFactorProto;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto.Type;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
-import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorFactory;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A log-linear factor where one of the variables is always conditioned on. The
@@ -166,37 +158,6 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     TensorBuilder weightTensor = getWeightTensorFromStatistics(statistics);
     Tensor foo = inputTensor.outerProduct(outputMarginal.getWeights());
     weightTensor.incrementWithMultiplier(foo, count / partitionFunction);
-  }
-  
-  @Override
-  public ParametricFactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    ParametricFactorProto.Builder builder = ParametricFactorProto.newBuilder();
-    builder.setType(Type.CONDITIONAL_LOG_LINEAR);
-    builder.setVariables(getVars().toProto(variableTypeIndex));
-    
-    ConditionalLogLinearFactorProto.Builder subBuilder = builder.getConditionalLogLinearFactorBuilder();
-    subBuilder.setInputVariable(inputVar.toProto(variableTypeIndex));
-    subBuilder.setOutputVariable(outputVars.toProto(variableTypeIndex));
-    subBuilder.setFeatureDictionary(featureDictionary.toProto());
-    // TODO: fix this.
-    subBuilder.setDenseTensorFactory(true);
-    
-    return builder.build();
-  }
-  
-  public static ConditionalLogLinearFactor fromProto(ParametricFactorProto proto, 
-      IndexedList<Variable> variableTypeIndex) {
-    Preconditions.checkArgument(proto.getType().equals(Type.CONDITIONAL_LOG_LINEAR));
-    Preconditions.checkArgument(proto.hasConditionalLogLinearFactor());
-    
-    ConditionalLogLinearFactorProto subProto = proto.getConditionalLogLinearFactor();
-    VariableNumMap inputVar = VariableNumMap.fromProto(subProto.getInputVariable(), variableTypeIndex);
-    VariableNumMap outputVar = VariableNumMap.fromProto(subProto.getOutputVariable(), variableTypeIndex);
-    VariableNumMap conditionalVars = VariableNumMap.fromProto(subProto.getConditionalVariable(), variableTypeIndex);
-    DiscreteVariable featureDictionary = (DiscreteVariable) Variables.fromProto(subProto.getFeatureDictionary());
-    TensorFactory factory = subProto.getDenseTensorFactory() ? DenseTensorBuilder.getFactory() 
-        : SparseTensorBuilder.getFactory();
-    return new ConditionalLogLinearFactor(inputVar, outputVar, conditionalVars, featureDictionary, factory);
   }
   
   private TensorBuilder getWeightTensorFromStatistics(SufficientStatistics stats) {

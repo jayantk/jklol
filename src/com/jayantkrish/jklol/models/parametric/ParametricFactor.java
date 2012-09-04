@@ -3,12 +3,9 @@ package com.jayantkrish.jklol.models.parametric;
 import java.io.Serializable;
 
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A family of {@link Factor}s indexed by parameters represented as
@@ -144,18 +141,4 @@ public interface ParametricFactor extends Serializable {
    */
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction);
-
-  /**
-   * Gets a serialized version of this {@code ParametricFactor}. Typically, this
-   * method should be invoked via {@link ParametricFactorGraph#toProto}.
-   * <p>
-   * {@code variableTypeIndex} is a mapping from variables to unique integer
-   * indexes that must be serialized independently and is required to
-   * deserialize the returned protocol buffer. This method may add variables to
-   * {@code variableTypeIndex}, but may not alter the list in any other way.
-   * 
-   * @param variableTypeIndex
-   * @return
-   */
-  public ParametricFactorProto toProto(IndexedList<Variable> variableTypeIndex);
 }

@@ -7,15 +7,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 public class CptCfgFactor extends AbstractParametricFactor {
 
@@ -108,10 +105,5 @@ public class CptCfgFactor extends AbstractParametricFactor {
         nonterminalMarginal, Assignment.EMPTY, count, partitionFunction);
     terminalFactor.incrementSufficientStatisticsFromMarginal(terminalStatistics, 
         terminalMarginal, Assignment.EMPTY, count, partitionFunction);
-  }
-  
-  @Override
-  public ParametricFactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    throw new UnsupportedOperationException("Not yet implemented.");
   }
 }

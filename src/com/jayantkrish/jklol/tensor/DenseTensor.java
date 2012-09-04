@@ -14,10 +14,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.tensor.TensorProtos.DenseTensorProto;
-import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
 
 /**
  * Immutable tensor, represented densely. The dense representation is faster
@@ -344,17 +341,6 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
 
   @Override
-  public TensorProto toProto() {
-    TensorProto.Builder builder = TensorProto.newBuilder();
-    builder.setType(TensorProto.TensorType.DENSE);
-
-    DenseTensorProto.Builder denseTensorBuilder = builder.getDenseTensorBuilder();
-    denseTensorBuilder.setDimensions(getDimensionProto());
-    denseTensorBuilder.addAllValue(Doubles.asList(values));
-    return builder.build();
-  }
-
-  @Override
   public boolean equals(Object other) {
     if (this == other) {
       return true;
@@ -446,21 +432,5 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       }
       return builder.buildNoCopy();
     }
-  }
-
-  /**
-   * Creates a {@code DenseTensor} from its serialization as a protocol buffer.
-   * 
-   * @param proto
-   * @return
-   */
-  public static DenseTensor fromProto(DenseTensorProto proto) {
-    Preconditions.checkArgument(proto.hasDimensions());
-    int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
-    int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
-    Preconditions.checkArgument(dimensionNums.length == sizes.length);
-
-    double[] values = Doubles.toArray(proto.getValueList());
-    return new DenseTensor(dimensionNums, sizes, values);
   }
 }

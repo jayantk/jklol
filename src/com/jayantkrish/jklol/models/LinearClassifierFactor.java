@@ -5,14 +5,11 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
-import com.jayantkrish.jklol.models.FactorGraphProtos.LinearClassifierProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A {@code LinearClassifierFactor} represents a conditional distribution over a
@@ -166,18 +163,5 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     // Note that the assignment may contain more than just the input variable, hence
     // the additional call to condition.
     return outputFactor.conditional(assignment);
-  }
-
-  @Override
-  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    FactorProto.Builder builder = getProtoBuilder(variableTypeIndex);
-    builder.setType(FactorProto.FactorType.LINEAR_CLASSIFIER);
-
-    LinearClassifierProto.Builder linearBuilder = builder.getLinearClassifierFactorBuilder();
-    linearBuilder.setInputVariableNum(inputVar.getOnlyVariableNum());
-    linearBuilder.setOutputVariableNum(outputVars.getOnlyVariableNum());
-    linearBuilder.setWeights(logWeights.toProto());
-
-    return builder.build();
   }
 }

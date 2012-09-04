@@ -8,12 +8,9 @@ import java.util.Map;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.VariableProtos.DynamicVariableSetProto;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * The variables for a dynamic factor graph, where the number of variables in
@@ -320,40 +317,6 @@ public class DynamicVariableSet {
     int[] newReplications = Arrays.copyOf(maximumReplications, maximumReplications.length + 1);
     newReplications[maximumReplications.length] = plateMaxReplications;
     return new DynamicVariableSet(fixedVariables, newPlateNames, newPlates, newReplications);
-  }
-  
-  // Serialization / deserialization methods. 
-  
-  public DynamicVariableSetProto toProto(IndexedList<Variable> variableTypeIndex) {
-    DynamicVariableSetProto.Builder builder = DynamicVariableSetProto.newBuilder();
-    builder.setFixedVariables(fixedVariables.toProto(variableTypeIndex));
-    
-    for (int i = 0; i < plateNames.size(); i++) {
-      builder.addPlateName(plateNames.get(i));
-      builder.addMaxReplication(maximumReplications[i]);
-      builder.addPlate(plates.get(i).toProto(variableTypeIndex));
-    }
-    
-    return builder.build();
-  }
-  
-  public static DynamicVariableSet fromProto(DynamicVariableSetProto proto, 
-      IndexedList<Variable> variableTypeIndex) {
-    Preconditions.checkArgument(proto.hasFixedVariables());
-    Preconditions.checkArgument(proto.getPlateCount() == proto.getPlateNameCount());
-    Preconditions.checkArgument(proto.getPlateCount() == proto.getMaxReplicationCount());
-    
-    VariableNumMap fixedVariables = VariableNumMap.fromProto(proto.getFixedVariables(), variableTypeIndex);
-    
-    List<String> plateNames = Lists.newArrayList(proto.getPlateNameList());
-    int[] maxReplications = Ints.toArray(proto.getMaxReplicationList());
-
-    List<DynamicVariableSet> plates = Lists.newArrayList();
-    for (DynamicVariableSetProto plateProto : proto.getPlateList()) {
-      plates.add(DynamicVariableSet.fromProto(plateProto, variableTypeIndex));
-    }
-
-    return new DynamicVariableSet(fixedVariables, plateNames, plates, maxReplications);
   }
 
   @Override

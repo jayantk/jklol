@@ -2,10 +2,6 @@ package com.jayantkrish.jklol.models;
 
 import java.io.Serializable;
 
-import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.models.VariableProtos.DiscreteObjectVariableProto;
-import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
-
 /**
  * A {@link Variable} which can take any value of a given type.
  *  
@@ -19,16 +15,6 @@ public class ObjectVariable implements Variable, Serializable {
   
   public ObjectVariable(Class<?> type) {
     this.type = type;
-  }
-  
-  public static ObjectVariable fromProto(DiscreteObjectVariableProto proto) {
-    Preconditions.checkArgument(proto.hasJavaClassName());
-    try {
-      return new ObjectVariable(Class.forName(proto.getJavaClassName()));
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException(
-          "Could not deserialized DiscreteObjectVariableProto. Invalid java class name.", e);
-    }
   }
 
   @Override
@@ -44,15 +30,6 @@ public class ObjectVariable implements Variable, Serializable {
   public Class<?> getObjectType() {
     return type;
   }
-  
-  @Override
-  public VariableProto toProto() {
-    VariableProto.Builder builder = VariableProto.newBuilder();
-    builder.setType(VariableProto.VariableType.DISCRETE_OBJECT);
-    builder.getDiscreteObjectVariableBuilder().setJavaClassName(type.getName());
-    return builder.build(); 
-  }
-  
   
   @Override
   public String toString() {

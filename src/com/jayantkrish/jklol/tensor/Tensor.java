@@ -4,8 +4,6 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 
-import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
-
 /**
  * Tensors are generalizations of matrices that have any number of key
  * dimensions. This interface represents mappings from multidimensional keys
@@ -185,13 +183,4 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   double[] getValues();
-
-  /**
-   * Serializes {@code this} tensor into a protocol buffer. The returned
-   * protocol buffer can be deserialized (to reconstruct a copy of this) using
-   * {@link Tensors#fromProto()}.
-   * 
-   * @return
-   */
-  TensorProto toProto();
 }

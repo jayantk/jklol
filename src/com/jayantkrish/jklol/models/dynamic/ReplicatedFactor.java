@@ -5,14 +5,8 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.Factors;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphProtos.PlateFactorProto;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphProtos.PlateFactorProto.Type;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphProtos.ReplicatedFactorProto;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * {@code ReplicatedFactor} uses a {@code VariablePattern} to identify
@@ -50,26 +44,5 @@ public class ReplicatedFactor implements PlateFactor {
       instantiatedFactors.add(factorToReplicate.relabelVariables(match.getMappingToTemplate().inverse()));
     }
     return instantiatedFactors;
-  }
-  
-  @Override
-  public PlateFactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    PlateFactorProto.Builder builder = PlateFactorProto.newBuilder();
-    builder.setType(PlateFactorProto.Type.REPLICATED);
-    
-    builder.getReplicatedFactorBuilder().setFactor(factorToReplicate.toProto(variableTypeIndex))
-      .setPattern(variablePattern.toProto(variableTypeIndex));
-    
-    return builder.build();
-  }
-  
-  public static ReplicatedFactor fromProto(PlateFactorProto proto,
-      IndexedList<Variable> variableTypeIndex) {
-    Preconditions.checkArgument(proto.getType().equals(Type.REPLICATED));
-    ReplicatedFactorProto replicatedProto = proto.getReplicatedFactor();
-    Preconditions.checkArgument(replicatedProto.hasFactor());
-    Preconditions.checkArgument(replicatedProto.hasPattern());
-    return new ReplicatedFactor(Factors.fromProto(replicatedProto.getFactor(), variableTypeIndex),
-        VariablePatterns.fromProto(replicatedProto.getPattern(), variableTypeIndex));
   }
 }

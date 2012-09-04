@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 
 /**
  * A random variable that takes on some set of Object values.
@@ -19,11 +18,4 @@ public interface Variable {
 	 * Returns true if value can be legitimately assigned to this variable.
 	 */
 	public boolean canTakeValue(Object value);
-	
-	/**
-	 * Serializes {@code this} into a protocol buffer.
-	 *  
-	 * @return
-	 */
-	public VariableProto toProto();
 }

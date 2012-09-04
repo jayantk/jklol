@@ -5,8 +5,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Utility methods for manipulating collections of {@link Factor}s.
@@ -82,15 +80,5 @@ public final class Factors {
    */
   public static Factor multiplicativeIdentity() {
     return TableFactor.unity(VariableNumMap.emptyMap());
-  }
-  
-  public static Factor fromProto(FactorProto factorProto, IndexedList<Variable> variableTypeIndex) {
-    switch (factorProto.getType().getNumber()) { 
-    case FactorProto.FactorType.TABLE_VALUE:
-      Preconditions.checkArgument(factorProto.hasTableFactor());
-      return TableFactor.fromProto(factorProto, variableTypeIndex);
-    default:
-      throw new IllegalArgumentException("Invalid factor type: " + factorProto.getType());
-    }
   }
 }

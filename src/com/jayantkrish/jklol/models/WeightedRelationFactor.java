@@ -8,10 +8,8 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A factor representing a relationship between an {@code ObjectVariable} and
@@ -270,11 +268,6 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
     Preconditions.checkState(domainFactor != null);
     return constructJointDistribution(domainFactor, rangeFactor)
         .getMostLikelyAssignments(numAssignments);
-  }
-
-  @Override
-  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override

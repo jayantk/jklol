@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.models;
 
-import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 
 
 public class BooleanVariable implements Variable {
@@ -18,10 +17,5 @@ public class BooleanVariable implements Variable {
   @Override
   public String toString() {
     return "BooleanVariable";
-  }
-  
-  @Override
-	public VariableProto toProto() {
-    throw new UnsupportedOperationException("Not yet implemented.");
   }
 }

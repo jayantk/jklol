@@ -5,10 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * An unnormalized probability density over a set of variables. Factors support
@@ -314,18 +312,6 @@ public interface Factor {
    * @return
    */
   public List<Assignment> getMostLikelyAssignments(int numAssignments);
-
-  /**
-   * Serializes {@code this} into a protocol buffer. {@code variableTypeIndex}
-   * is a mapping from variables to integers which must be serialized and
-   * restored independently in order to reconstruct this factor from the
-   * returned protocol buffer. This method may add variables to
-   * {@code variableTypeIndex}.
-   * 
-   * @param variableTypeIndex
-   * @return
-   */
-  public FactorProto toProto(IndexedList<Variable> variableTypeIndex);
 
   /**
    * Gets a detailed human-readable description of this factor. This description

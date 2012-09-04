@@ -14,11 +14,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 public class SetCoverFactor extends AbstractFactor {
 
@@ -271,10 +269,5 @@ public class SetCoverFactor extends AbstractFactor {
     } else {
       return Collections.emptyList();
     }
-  }
-  
-  @Override
-  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    throw new UnsupportedOperationException();
   }
 }

@@ -5,7 +5,6 @@ import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.tensor.TensorProtos.TensorDimensionProto;
 
 /**
  * Common implementations of basic {@link TensorBase} methods.
@@ -54,34 +53,6 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
       }
     }
     return indexOffsets;
-  }
-
-  /**
-   * Gets the tensor dimensions from their serialized representation. Used by
-   * subclasses of this to deserialize themselves.
-   * 
-   * @return
-   */
-  protected static int[] parseDimensionsFromProto(TensorDimensionProto proto) {
-    int[] dimensionNums = new int[proto.getDimensionCount()];
-    for (int i = 0; i < dimensionNums.length; i++) {
-      dimensionNums[i] = proto.getDimension(i);
-    }
-    return dimensionNums;
-  }
-
-  /**
-   * Gets the tensor dimension sizes from their serialized representation. Used
-   * by subclasses of this to deserialize themselves.
-   * 
-   * @return
-   */
-  protected static int[] parseSizesFromProto(TensorDimensionProto proto) {
-    int[] sizes = new int[proto.getSizeCount()];
-    for (int i = 0; i < sizes.length; i++) {
-      sizes[i] = proto.getSize(i);
-    }
-    return sizes;
   }
 
   @Override
@@ -181,18 +152,5 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
       }
     }
     return -1;
-  }
-
-  /**
-   * Serializes the dimensions and dimension sizes of {@code this} into a
-   * protocol buffer.
-   * 
-   * @return
-   */
-  protected TensorDimensionProto getDimensionProto() {
-    TensorDimensionProto.Builder builder = TensorDimensionProto.newBuilder();
-    builder.addAllDimension(Ints.asList(dimensions));
-    builder.addAllSize(Ints.asList(sizes));
-    return builder.build();
   }
 }

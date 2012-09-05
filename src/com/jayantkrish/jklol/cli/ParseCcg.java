@@ -47,5 +47,7 @@ public class ParseCcg {
     if (parses.size() > 0) {
       System.out.println(parses.get(0).getAllDependencies());
     }
+
+    System.exit(0);
   }
 }

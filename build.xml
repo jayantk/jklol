@@ -4,6 +4,7 @@
   <property name="doc-dir" location="javadoc" />
   <property name="perf-dir" location="performance" />
   <property name="src-dir" location="src" />
+  <property name="object-dir" location="obj" />
 
   <path id="classpath.base">
     <pathelement location="lib/guava-r09.jar" />
@@ -70,8 +71,13 @@
     <jar destfile="jklol.jar" basedir="build" />
   </target>
 
+  <target name="native" depends="compile">
+    <mkdir dir="
+  </target>
+
   <target name="clean">
     <delete dir="build" />
+    <delete dir="${object-dir}" />
     <delete file="jklol.jar" />
   </target>
   

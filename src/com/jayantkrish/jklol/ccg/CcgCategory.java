@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -11,8 +12,9 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 
-public class CcgCategory {
-
+public class CcgCategory implements Serializable {
+  private static final long serialVersionUID = 1L;
+  
   // NOTE: Remember to change .equals() and .hashCode() if these members 
   // are modified.
   private final SyntacticCategory syntax;
@@ -70,7 +72,7 @@ public class CcgCategory {
 
   public CcgCombinationResult apply(CcgCategory other, Direction direction) {
     if (syntax.isAtomic() || !syntax.acceptsArgumentOn(direction) || 
-        !syntax.getArgument().hasSameSyntacticType(other.getSyntax())) {
+        !syntax.getArgument().isUnifiableWith(other.getSyntax())) {
       return null;
     }
     
@@ -197,7 +199,9 @@ public class CcgCategory {
     }
   }
 
-  public static class UnfilledDependency {
+  public static class UnfilledDependency implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     // Subject is the word(s) projecting the dependency. Null if subjects is unfilled. 
     private final Set<String> subjects;
     // Subject may be unfilled. If so, then this variable 

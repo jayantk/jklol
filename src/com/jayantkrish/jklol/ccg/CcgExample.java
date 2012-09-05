@@ -50,4 +50,9 @@ public class CcgExample {
   public Set<DependencyStructure> getDependencies() {
     return dependencies;
   }
+  
+  @Override
+  public String toString() {
+    return words + " " + dependencies;
+  }
 }

@@ -9,6 +9,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -79,8 +80,10 @@ public class ParametricCcgParser {
       categories.add(line.getRight());
       
       // Create the heads of the dependencies
-      for (String head : line.getRight().getHeads()) {
-        semanticPredicates.addAll(Arrays.asList(head.split(" ")));
+      for (Argument head : line.getRight().getHeads()) {
+        if (head.hasPredicate()) {
+          semanticPredicates.add(head.getPredicate());
+        }
       }
     }
     
@@ -184,7 +187,7 @@ public class ParametricCcgParser {
     if (parse.isTerminal()) {
       Assignment assignment = Assignment.unionAll(
           terminalVar.outcomeArrayToAssignment(parse.getSpannedWords()),
-          ccgCategoryVar.outcomeArrayToAssignment(parse.getCcgCategory()));
+          ccgCategoryVar.outcomeArrayToAssignment(parse.getLexiconEntry()));
       terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient, assignment, count);
     } else {
       updateTerminalGradient(terminalGradient, parse.getLeft(), count);

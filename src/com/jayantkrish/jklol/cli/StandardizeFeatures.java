@@ -29,7 +29,6 @@ public class StandardizeFeatures {
 
   public static void main(String[] args) {
     OptionParser parser = new OptionParser();
-    OptionSpec<String> normalizationFile = parser.accepts("normalizationOutput").withOptionalArg().ofType(String.class);
     OptionSpec<String> inputFile = parser.accepts("input").withRequiredArg().ofType(String.class).required();
     OptionSpec<String> delimiterOption = parser.accepts("delimiter").withOptionalArg().ofType(String.class).defaultsTo(",");
     OptionSpec<Integer> featureColumn = parser.accepts("featureColumn").withOptionalArg().ofType(Integer.class).defaultsTo(-1);

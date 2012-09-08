@@ -8,7 +8,11 @@ import com.google.common.collect.Lists;
 
 public class CcgParse {
 
-  private final CcgCategory head;
+  private final SyntacticCategory syntax;
+  
+  // The lexicon entry used to create this parse.
+  // Non-null only when this is a terminal.
+  private final CcgCategory lexiconEntry;
   // The words spanned by this portion of the parse tree. 
   // Non-null only when this is a terminal.
   private final List<String> spannedWords;
@@ -32,10 +36,11 @@ public class CcgParse {
    * @param left
    * @param right
    */
-  private CcgParse(CcgCategory head, List<String> spannedWords, 
+  private CcgParse(SyntacticCategory syntax, CcgCategory lexiconEntry, List<String> spannedWords, 
       List<DependencyStructure> dependencies, double probability,
       CcgParse left, CcgParse right) {
-    this.head = Preconditions.checkNotNull(head);
+    this.syntax = Preconditions.checkNotNull(syntax);
+    this.lexiconEntry = lexiconEntry;
     this.spannedWords = spannedWords;
     this.dependencies = Preconditions.checkNotNull(dependencies);
 
@@ -54,27 +59,44 @@ public class CcgParse {
     }
   }
 
-  public static CcgParse forTerminal(CcgCategory head, List<String> spannedWords, double lexicalProbability) {
-    return new CcgParse(head, spannedWords, Collections.<DependencyStructure> emptyList(), 
-        lexicalProbability, null, null);
+  /**
+   * Create a CCG parse for a terminal of the CCG parse tree. This terminal 
+   * parse represents using {@code lexiconEntry} as the initial CCG category for
+   * {@code spannedWords}.
+   *    
+   * @param lexiconEntry
+   * @param spannedWords
+   * @param lexicalProbability
+   * @return
+   */
+  public static CcgParse forTerminal(CcgCategory lexiconEntry, List<String> spannedWords, 
+      double lexicalProbability) {
+    return new CcgParse(lexiconEntry.getSyntax(), lexiconEntry, spannedWords, 
+        Collections.<DependencyStructure> emptyList(), lexicalProbability, null, null);
   }
 
-  public static CcgParse forNonterminal(CcgCategory head, List<DependencyStructure> dependencies,
+  public static CcgParse forNonterminal(SyntacticCategory syntax, List<DependencyStructure> dependencies,
       double dependencyProbability, CcgParse left, CcgParse right) {
-    return new CcgParse(head, null, dependencies, dependencyProbability, left, right);
+    return new CcgParse(syntax, null, null, dependencies, dependencyProbability, left, right);
   }
 
+  /**
+   * Returns {@code true} if this parse represents a terminal in the
+   * parse tree, i.e., a lexicon entry.
+   * 
+   * @return
+   */
   public boolean isTerminal() {
     return left == null && right == null;
   }
   
   /**
-   * Gets the CCG category (both syntactic and semantic category) of this parse tree.
+   * Gets the CCG syntactic category at the root of the parse tree.
    * 
    * @return
    */
-  public CcgCategory getCcgCategory() {
-    return head;
+  public SyntacticCategory getSyntacticCategory() {
+    return syntax;
   }
   
   /**
@@ -86,10 +108,29 @@ public class CcgParse {
     return spannedWords;
   }
   
+  /**
+   * The result is null unless this is a terminal in the parse tree.
+   *  
+   * @return
+   */
+  public CcgCategory getLexiconEntry() {
+    return lexiconEntry;
+  }
+
+  /**
+   * Gets the left subtree of this parse.
+   * 
+   * @return
+   */
   public CcgParse getLeft() {
     return left;
   }
-  
+
+  /**
+   * Gets the right subtree of this parse.
+   * 
+   * @return
+   */
   public CcgParse getRight() {
     return right;
   }
@@ -142,9 +183,9 @@ public class CcgParse {
   @Override
   public String toString() {
     if (left != null && right != null) {
-      return "(" + head + ", " + left + ", " + right + ")";
+      return "(" + syntax + ", " + left + ", " + right + ")";
     } else {
-      return "(" + head + ")";
+      return "(" + syntax + ")";
     }
   }
 }

@@ -37,7 +37,8 @@ public class CcgExample {
     String[] dependencyParts = parts[1].split("#");
     for (int i = 0; i < dependencyParts.length; i++) {
       String[] dep = dependencyParts[i].split("\\s+");
-      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[2]));
+      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3], 
+          Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
     }
     
     return new CcgExample(words, dependencies);

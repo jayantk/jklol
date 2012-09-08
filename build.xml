@@ -25,6 +25,11 @@
     <pathelement location="build/" />
     <path refid="classpath.base" />
   </path>
+  <path id="classpath.gcj">
+    <pathelement location="/usr/share/java/junit.jar" />
+    <pathelement location="lib/gnu-crypto.jar" />
+    <path refid="classpath.base" />
+  </path>
 
   <!-- delete all output from compilation -->
 
@@ -101,9 +106,11 @@
   <!-- targets for compiling jklol to a native application using gcj -->
 
   <target name="gcj-jklol" depends="jar" unless="jklol.o.noBuild">
+    <mkdir dir="${object-dir}" />
+    <echo message="Building library jklol.o" />
     <exec executable="gcj">
       <arg value="--classpath" />
-      <arg value="${toString:classpath.test}" />
+      <arg value="${toString:classpath.gcj}" />
       <arg value="-c" />
       <arg value="-g" />
       <arg value="-O" />
@@ -115,7 +122,7 @@
 
   <target name="gcj-libraries" depends="jar" unless="libraries.o.noBuild">
     <pathconvert property="classpath-space" pathsep=" ">
-      <path refid="classpath.test" />
+      <path refid="classpath.gcj" />
     </pathconvert>
     <echo message="Building libraries from: ${classpath-space}" />
 

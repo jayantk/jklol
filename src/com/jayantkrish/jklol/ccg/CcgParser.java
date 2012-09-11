@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -212,14 +211,12 @@ public class CcgParser implements Serializable {
           }
         }
       } else if (unfilled.getSubjectIndex() == argNum) {
-        Collection<UnfilledDependency> inheritedDeps = other.getUnfilledDependencies().get(unfilled.getArgumentIndex());
-        if (unfilled.hasObjects()) { 
-          for (IndexedPredicate object : unfilled.getObjects()) {
-            for (UnfilledDependency inheritedDep : inheritedDeps) {
-              for (IndexedPredicate subject : inheritedDep.getSubjects()) {
-                filledDeps.add(new DependencyStructure(subject.getHead(), subject.getHeadIndex(), 
-                    object.getHead(), object.getHeadIndex(), inheritedDep.getArgumentIndex()));
-              }
+        Set<IndexedPredicate> subjects = other.getHeads();
+        if (unfilled.hasObjects()) {
+          for (IndexedPredicate subject : subjects) {
+            for (IndexedPredicate object : unfilled.getObjects()) {
+              filledDeps.add(new DependencyStructure(subject.getHead(), subject.getHeadIndex(), 
+                  object.getHead(), object.getHeadIndex(), unfilled.getArgumentIndex()));
             }
           }
         } else {
@@ -228,9 +225,9 @@ public class CcgParser implements Serializable {
           int objectIndex = unfilled.getObjectIndex();
           newDeps.remove(objectIndex, unfilled);
           
-          for (UnfilledDependency inheritedDep : inheritedDeps) {
-            newDeps.put(objectIndex, new UnfilledDependency(inheritedDep.getSubjects(), inheritedDep.getSubjectIndex(), 
-                inheritedDep.getArgumentIndex(), null, objectIndex)); 
+          for (IndexedPredicate subject : subjects) {
+            newDeps.put(objectIndex, UnfilledDependency.createWithKnownSubject(subject.getHead(),
+                subject.getHeadIndex(), unfilled.getArgumentIndex(), objectIndex)); 
           }
         }
       }

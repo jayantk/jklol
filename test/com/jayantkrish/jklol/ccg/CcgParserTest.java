@@ -27,12 +27,14 @@ public class CcgParserTest extends TestCase {
     "quickly,quickly,((S\\N)/N)/>((S\\N)/N),quickly 1 ?3#?3 1 ?1#?3 2 ?2", "in,in,(N\\>N)/N,in 1 ?1#in 2 ?2",
     "amazingly,amazingly,(N/>N)/>(N/>N),amazingly 1 ?2#?2 1 ?1", "tasty,tasty,(N/>N),tasty 1 ?1",
     "in,in,((S\\N)\\>(S\\N))/N,in 1 ?2#in 2 ?3#?2 3 ?3#?2 1 ?1",
-    "and,?1#?2,(N\\N)/N", "almost,almost,((N\\>N)/N)/>((N\\>N)/N),almost 1 ?3#?3 1 ?1#?3 2 ?2"};
+    "and,?1#?2,(N\\N)/N", "almost,almost,((N\\>N)/N)/>((N\\>N)/N),almost 1 ?3#?3 1 ?1#?3 2 ?2",
+    "is,is,(S\\N)/N,?1 1 ?2"};
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
     1.0, 1.0,
     1.0, 1.0,
-    0.5, 1.0, 2.0};
+    0.5, 1.0, 2.0,
+    0.25};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -146,6 +148,22 @@ public class CcgParserTest extends TestCase {
     
     CcgParse parse = parses.get(0);
     System.out.println(parse.getAllDependencies());
+  }
+  
+  public void testSubjectPatterns() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "is", "houses"), 10);
+    
+    assertEquals(1, parses.size());
+    
+    CcgParse parse = parses.get(0);
+    List<DependencyStructure> deps = parse.getAllDependencies();
+    assertEquals(1, deps.size());
+    assertEquals("people", deps.get(0).getHead());
+    assertEquals(0, deps.get(0).getHeadWordIndex());
+    assertEquals("houses", deps.get(0).getObject());
+    assertEquals(2, deps.get(0).getObjectWordIndex());
+    assertEquals(1, deps.get(0).getArgIndex());
   }
   
   private CcgParser parseLexicon(String[] lexicon, double[] weights) {

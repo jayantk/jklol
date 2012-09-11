@@ -2,12 +2,11 @@ package com.jayantkrish.jklol.ccg;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -21,6 +20,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.Pair;
 
 /**
@@ -70,26 +70,26 @@ public class ParametricCcgParser {
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> lexiconLines) {
     // Parse out all of the categories, words, and semanticPredicates from the lexicon.
-    Set<CcgCategory> categories = Sets.newHashSet();
-    Set<List<String>> words = Sets.newHashSet();
-    Set<String> semanticPredicates = Sets.newHashSet();
+    IndexedList<CcgCategory> categories = IndexedList.create();
+    IndexedList<List<String>> words = IndexedList.create();
+    IndexedList<String> semanticPredicates = IndexedList.create();
     for (String lexiconLine : lexiconLines) {
       // Create the CCG category.
       Pair<ArrayList<String>, CcgCategory> line = parseLexiconLine(lexiconLine);
       words.add(line.getLeft());
       categories.add(line.getRight());
       
-      // Create the heads of the dependencies
-      for (Argument head : line.getRight().getHeads()) {
-        if (head.hasPredicate()) {
-          semanticPredicates.add(head.getPredicate());
-        }
-      }
+      // Store the heads of the dependencies as semantic predicates.
+      addArgumentsToPredicateList(line.getRight().getHeads(), semanticPredicates);
+      // Store any predicates from the subjects of the dependency structures.
+      addArgumentsToPredicateList(line.getRight().getSubjects(), semanticPredicates);
+      // Store any predicates from the objects of the dependency structures.
+      addArgumentsToPredicateList(line.getRight().getObjects(), semanticPredicates);
     }
     
     // Build the terminal distribution.
-    DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories);
-    DiscreteVariable wordType = new DiscreteVariable("words", words);
+    DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories.items());
+    DiscreteVariable wordType = new DiscreteVariable("words", words.items());
     
     VariableNumMap terminalVar = VariableNumMap.singleton(0, "words", wordType);
     VariableNumMap ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
@@ -103,7 +103,7 @@ public class ParametricCcgParser {
     ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(vars, terminalBuilder.build());
         
     // Build the dependency distribution.
-    DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates);
+    DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates.items());
     DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(1, 2, 3));
 
     VariableNumMap semanticHeadVar = VariableNumMap.singleton(0, "semanticHead", semanticPredicateType);
@@ -124,7 +124,15 @@ public class ParametricCcgParser {
     return Pair.of(Lists.newArrayList(wordPart.split(" ")),
         CcgCategory.parseFrom(lexiconLine.substring(commaIndex + 1)));
   }
-
+  
+  private static void addArgumentsToPredicateList(Collection<Argument> arguments, 
+      IndexedList<String> semanticPredicates) {
+    for (Argument arg : arguments) {
+      if (arg.hasPredicate()) {
+        semanticPredicates.add(arg.getPredicate());
+      }
+    }
+  }
 
   /**
    * Gets a new all-zero parameter vector.
@@ -195,13 +203,19 @@ public class ParametricCcgParser {
     }
   }
   
-  /*
+
   public String getParameterDescription(SufficientStatistics parameters) {
-    
+    return getParameterDescription(parameters, -1);
   }
   
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
+    ListSufficientStatistics parameterList = parameters.coerceToList();
     
+    StringBuilder sb = new StringBuilder();
+    sb.append(terminalFamily.getParameterDescription(
+        parameterList.getStatisticByName(TERMINAL_PARAMETERS), numFeatures));
+    sb.append(dependencyFamily.getParameterDescription(
+        parameterList.getStatisticByName(DEPENDENCY_PARAMETERS), numFeatures));
+    return sb.toString();
   }
-  */
 }

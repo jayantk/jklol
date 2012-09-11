@@ -45,7 +45,8 @@ public class ParseCcg {
     List<String> sentenceToParse = options.nonOptionArguments();
     List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, 10);
     if (parses.size() > 0) {
-      System.out.println(parses.get(0).getAllDependencies());
+      System.out.println("HEAD: " + parses.get(0).getSemanticHeads());
+      System.out.println("DEPS: " + parses.get(0).getAllDependencies());
     }
 
     System.exit(0);

@@ -41,7 +41,7 @@ public class CcgCategory implements Serializable {
   // The category's semantic heads.
   private final Set<Argument> heads;
   
-  // The unfilled semantic dependencies of this category.
+  // The semantic dependencies of this category, both filled and unfilled.
   private final List<Argument> subjects;
   private final List<Argument> objects;
   private final List<Integer> argumentNumbers;
@@ -94,15 +94,38 @@ public class CcgCategory implements Serializable {
     return new CcgCategory(syntax, heads, subjects, objects, argumentNumbers);
   }
 
+  /**
+   * Gets the syntactic type of this category.
+   *  
+   * @return
+   */
   public SyntacticCategory getSyntax() {
     return syntax;
   }
   
+  /**
+   * Gets the head semantic type of this category.
+   * 
+   * @return
+   */
   public Set<Argument> getHeads() {
     return heads;
   }
   
-  public Multimap<Integer, UnfilledDependency> createUnfilledDependencies(int wordIndex) {
+  public List<Argument> getSubjects() {
+    return subjects;
+  }
+  
+  public List<Argument> getObjects() {
+    return subjects;
+  }
+  
+  public List<Integer> getArgumentNumbers() {
+    return argumentNumbers;
+  }
+  
+  public Multimap<Integer, UnfilledDependency> createUnfilledDependencies(int wordIndex,
+      List<DependencyStructure> appendDependencies) {
     Multimap<Integer, UnfilledDependency> map = HashMultimap.create();
     for (int i = 0; i < subjects.size(); i++) {
       Set<IndexedPredicate> subject = null;
@@ -129,20 +152,16 @@ public class CcgCategory implements Serializable {
       if (!dep.hasObjects()) {
         map.put(dep.getObjectIndex(), dep);
       }
+      if (dep.hasSubjects() && dep.hasObjects()) {
+        for (IndexedPredicate subj : dep.getSubjects()) {
+          for (IndexedPredicate obj : dep.getObjects()) {
+            appendDependencies.add(new DependencyStructure(subj.getHead(), subj.getHeadIndex(),
+                obj.getHead(), obj.getHeadIndex(), argumentNumbers.get(i)));
+          }
+        }
+      }
     }
     return map;
-  }
-
-  public List<Argument> getSubjects() {
-    return subjects;
-  }
-  
-  public List<Argument> getObjects() {
-    return subjects;
-  }
-  
-  public List<Integer> getArgumentNumbers() {
-    return argumentNumbers;
   }
   
   @Override
@@ -199,7 +218,9 @@ public class CcgCategory implements Serializable {
     return heads.toString() + " : " + syntax.toString();
   }
   
-  public static final class Argument {
+  public static final class Argument implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final int argumentNumber;
     private final String predicate;
 

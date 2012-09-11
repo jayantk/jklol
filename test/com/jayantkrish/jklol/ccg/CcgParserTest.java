@@ -7,10 +7,12 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
+import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -67,7 +69,9 @@ public class CcgParserTest extends TestCase {
     assertEquals("quickly", parse.getRight().getLeft().getAllDependencies().get(0).getHead());
     assertEquals(1, parse.getRight().getLeft().getAllDependencies().get(0).getArgIndex());
     assertEquals("eat", parse.getRight().getLeft().getAllDependencies().get(0).getObject());
-
+    
+    assertEquals("eat", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
+    assertEquals("I", Iterables.getOnlyElement(parse.getLeft().getSemanticHeads()).getHead());
   }
   
   public void testParse2() {
@@ -89,6 +93,7 @@ public class CcgParserTest extends TestCase {
     assertEquals(1, parse.getNodeDependencies().get(0).getArgIndex());
     assertEquals("people", parse.getNodeDependencies().get(0).getObject());
     assertEquals(0.3 * 4 * 2 * 2, parse.getSubtreeProbability());
+    assertEquals("people", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
 
     parse = parses.get(1);
     assertEquals(2, parse.getNodeDependencies().size());
@@ -97,6 +102,7 @@ public class CcgParserTest extends TestCase {
     assertEquals("people", parse.getNodeDependencies().get(0).getObject());
     assertEquals(1, parse.getNodeDependencies().get(1).getArgIndex());
     assertEquals("people", parse.getNodeDependencies().get(1).getObject());
+    assertEquals("people", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
 
     Set<String> heads = Sets.newHashSet(parse.getNodeDependencies().get(0).getHead(), 
         parse.getNodeDependencies().get(1).getHead());
@@ -122,6 +128,14 @@ public class CcgParserTest extends TestCase {
     assertTrue(object.equals("people") || object.equals("houses"));
     assertEquals(2, parse.getRight().getNodeDependencies().size());
     assertEquals("berries", parse.getRight().getNodeDependencies().get(0).getObject());
+    
+    assertEquals("eat", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
+    
+    Set<String> heads = Sets.newHashSet();
+    for (IndexedPredicate predicate : parse.getLeft().getSemanticHeads()) {
+      heads.add(predicate.getHead());
+    }
+    assertEquals(Sets.newHashSet("people", "houses"), heads); 
   }
   
   public void testPrepositionalModifier() {

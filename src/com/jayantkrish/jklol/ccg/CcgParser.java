@@ -51,6 +51,16 @@ public class CcgParser implements Serializable {
     this.dependencyDistribution = Preconditions.checkNotNull(dependencyDistribution);
   }
 
+  /**
+   * Performs a beam search to find the best CCG parses of {@code terminals}.
+   * Note that this is an approximate inference strategy, and the returned
+   * parses may not be the best parses if at any point during the search
+   * more than {@code beamSize} parse trees exist for a span of the sentence.
+   * 
+   * @param terminals
+   * @param beamSize
+   * @return {@code beamSize} best parses for {@code terminals}.
+   */
   public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
     CcgChart chart = new CcgChart(terminals, beamSize);
 
@@ -73,7 +83,13 @@ public class CcgParser implements Serializable {
     return parses;
   }
   
-  public void initializeChart(List<String> terminals, CcgChart chart) {
+  /**
+   * Initializes the parse chart with entries from the CCG lexicon for {@code terminals}.
+   * 
+   * @param terminals
+   * @param chart
+   */
+  private void initializeChart(List<String> terminals, CcgChart chart) {
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
     int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
@@ -94,7 +110,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart) {
+  private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart) {
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j is for forward compatibility for skipping terminal symbols.
       for (int j = i + 1; j < i + 2; j++) {

@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
@@ -58,15 +59,15 @@ public class CcgChart {
     ChartEntry entry = chart[spanStart][spanEnd][beamIndex];
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(entry.getLexiconEntry(), terminals.subList(spanStart, spanEnd + 1), 
-          probabilities[spanStart][spanEnd][beamIndex]);
+      return CcgParse.forTerminal(entry.getLexiconEntry(), entry.getHeads(), entry.getDependencies(), 
+          terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex]);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(), entry.getLeftChartIndex());
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(), entry.getRightChartIndex());
 
       double nodeProb = probabilities[spanStart][spanEnd][beamIndex] / (left.getSubtreeProbability() * right.getSubtreeProbability());
       
-      return CcgParse.forNonterminal(entry.getSyntax(), entry.getDependencies(), nodeProb, left, right);
+      return CcgParse.forNonterminal(entry.getSyntax(), entry.getHeads(), entry.getDependencies(), nodeProb, left, right);
     }
   }
 
@@ -134,8 +135,11 @@ public class CcgChart {
         headArgumentNumbers.add(head.getArgumentNumber());
       }
     }
+    List<DependencyStructure> deps = Lists.newArrayList();
+    Multimap<Integer, UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, deps);
+    
     ChartEntry entry = new ChartEntry(result, heads, headArgumentNumbers,
-        result.createUnfilledDependencies(spanEnd), spanStart, spanEnd);
+        unfilledDeps, deps, spanStart, spanEnd);
     
     offerEntry(entry, probability, spanStart, spanEnd);
   }
@@ -229,14 +233,14 @@ public class CcgChart {
      */
     public ChartEntry(CcgCategory lexiconEntry, Set<IndexedPredicate> heads, 
         Set<Integer> headArguments, Multimap<Integer, UnfilledDependency> unfilledDependencies, 
-        int spanStart, int spanEnd) {
+        List<DependencyStructure> deps, int spanStart, int spanEnd) {
       this.syntax = Preconditions.checkNotNull(lexiconEntry.getSyntax());
       this.heads = Preconditions.checkNotNull(heads);
       this.headArguments = Preconditions.checkNotNull(headArguments);
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
       
       this.lexiconEntry = lexiconEntry;  
-      this.deps = null;
+      this.deps = ImmutableList.copyOf(deps);
 
       isTerminal = true;
 
@@ -312,10 +316,10 @@ public class CcgChart {
    * @author jayant
    */
   public static class IndexedPredicate {
-    // Head is a predicate.
+    // The name of the predicate.
     private final String predicate;
     
-    // The word index that created head.
+    // The word index that created predicate.
     private final int wordIndex;
     
     public IndexedPredicate(String head, int wordIndex) {
@@ -329,6 +333,11 @@ public class CcgChart {
     
     public int getHeadIndex() {
       return wordIndex;
+    }
+    
+    @Override
+    public String toString() {
+      return predicate + ":" + wordIndex;
     }
   }
 }

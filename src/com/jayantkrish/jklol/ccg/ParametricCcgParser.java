@@ -68,12 +68,21 @@ public class ParametricCcgParser {
    * @param lexiconLines
    * @return
    */
-  public static ParametricCcgParser parseFromLexicon(Iterable<String> lexiconLines) {
+  public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines) {
+    // Remove comments, which are lines that begin with "#".
+    List<String> lexiconLines = Lists.newArrayList();
+    for (String line : unfilteredLexiconLines) {
+      if (!line.startsWith("#")) {
+        lexiconLines.add(line);
+      }
+    }
+    
     // Parse out all of the categories, words, and semanticPredicates from the lexicon.
     IndexedList<CcgCategory> categories = IndexedList.create();
     IndexedList<List<String>> words = IndexedList.create();
     IndexedList<String> semanticPredicates = IndexedList.create();
     for (String lexiconLine : lexiconLines) {
+      
       // Create the CCG category.
       Pair<ArrayList<String>, CcgCategory> line = parseLexiconLine(lexiconLine);
       words.add(line.getLeft());

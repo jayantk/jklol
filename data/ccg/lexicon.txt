@@ -1,0 +1,30 @@
+# Verbs.
+get,get,S/N,get 1 ?1
+sort,sortFunc,S/N,sortFunc 1 ?1
+sort,sortFunc,(S/PP)/N,sortFunc 1 ?2#sortFunc 2 ?1
+sort,sortFunc,(S/N)/PP,sortFunc 2 ?2#sortFunc 1 ?1
+reverse,reverseFunc,S/N,reverseFunc 1 ?1
+
+# Nouns.
+lines,getLines,N/PP,getLines 1 ?1
+file,file,N
+order,naturalOrder,N
+numeric order,numericOrder,N
+this,this,N
+them,them,N
+
+# Adjectives
+reverse,reverseOrdering,N/N,reverseOrdering 1 ?1
+
+# Prepositions that build prepositional phrases.
+of,of,PP/>N
+in,in,PP/>N
+
+# Conjunctions
+and,doSequentially,(S\S)/S,doSequentially 1 ?1#doSequentially 2 ?2
+and,and,(N\N)/N,doSequentially 1 ?1#doSequentially 2 ?2
+
+# Determiners.
+# These entries tell the system to ignore these words
+the,the,N/>N
+this,this,N/>N

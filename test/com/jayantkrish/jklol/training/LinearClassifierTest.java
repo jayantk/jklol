@@ -83,8 +83,9 @@ public class LinearClassifierTest extends TestCase {
       values[1] = ((i / 2) % 2) * 2 - 1;
       values[2] = ((i / 4) % 2) * 2 - 1;
       values[3] = 1;
+      
       Assignment inputValue = x.outcomeArrayToAssignment(SparseTensor.vector(0, 4, values));
-
+      
       // Output is "T" if the sum of the (non-bias) features is > 0.
       double sum = 0;
       for (int j = 0; j < 3; j++) {

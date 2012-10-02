@@ -13,12 +13,10 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.DefaultHashMap;
-import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
 
@@ -238,11 +236,6 @@ public class DiscreteObjectFactor extends AbstractFactor {
     return mostLikely;
   }
 
-  @Override
-  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    throw new UnsupportedOperationException();
-  }
-  
   @Override 
   public DiscreteFactor coerceToDiscrete() {
     TableFactorBuilder builder = TableFactorBuilder.fromMap(getVars(), probabilities);

@@ -5,9 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * {@code AbstractFactor} provides a partial implementation of {@code Factor}.
@@ -118,16 +116,6 @@ public abstract class AbstractFactor implements Factor, Serializable {
   @Override
   public Factor product(Factor... others) {
     return product(Arrays.asList(others));
-  }
-
-  /**
-   * Initializes a protocol buffer builder for {@code this} with the variables
-   * it contains.
-   */
-  protected FactorProto.Builder getProtoBuilder(IndexedList<Variable> variableTypeIndex) {
-    FactorProto.Builder builder = FactorProto.newBuilder();
-    builder.setVariables(getVars().toProto(variableTypeIndex));
-    return builder;
   }
 
   /**

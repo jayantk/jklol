@@ -1,20 +1,11 @@
 package com.jayantkrish.jklol.models;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-import com.jayantkrish.jklol.models.VariableProtos.DiscreteVariableProto;
-import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -33,35 +24,6 @@ public class DiscreteVariable implements Variable, Serializable {
   public DiscreteVariable(String name, Collection<? extends Object> values) {
     this.name = name;
     this.values = IndexedList.create(values);
-  }
-
-  /**
-   * Creates a {@code DiscreteVariable} from its serialization as a protocol
-   * buffer.
-   * 
-   * @param proto
-   * @return
-   */
-  public static DiscreteVariable fromProto(DiscreteVariableProto proto) {
-    Preconditions.checkArgument(proto.hasName());
-
-    // This combination of java serialization with protocol buffers is
-    // somewhat hacky, but is the only reasonable way to guarantee
-    // interoperation with a wide set of value types.
-    List<Object> values = Lists.newArrayList();
-    for (ByteString serializedValue : proto.getSerializedValueList()) {
-      try {
-        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(serializedValue.toByteArray()));
-        values.add(ois.readObject());
-        ois.close();
-      } catch (IOException e) {
-        throw new RuntimeException("Invalid serialized object.", e);
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException("Could not find class of serialized objects.", e);
-      }
-    }
-
-    return new DiscreteVariable(proto.getName(), values);
   }
 
   /**
@@ -128,28 +90,6 @@ public class DiscreteVariable implements Variable, Serializable {
           + "\" of variable " + name);
     }
     return values.getIndex(value);
-  }
-
-  @Override
-  public VariableProto toProto() {
-    VariableProto.Builder builder = VariableProto.newBuilder();
-    builder.setType(VariableProto.VariableType.DISCRETE);
-
-    DiscreteVariableProto.Builder discreteBuilder = builder.getDiscreteVariableBuilder();
-    discreteBuilder.setName(name);
-
-    for (Object value : values.items()) {
-      try {
-        ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-        ObjectOutputStream objectOut = new ObjectOutputStream(byteOut);
-        objectOut.writeObject(value);
-        objectOut.close();
-        discreteBuilder.addSerializedValue(ByteString.copyFrom(byteOut.toByteArray()));
-      } catch (IOException e) {
-        throw new RuntimeException("Could not serialize " + this.toString(), e);
-      }
-    }
-    return builder.build();
   }
 
   @Override

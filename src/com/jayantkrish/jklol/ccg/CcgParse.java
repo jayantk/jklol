@@ -1,18 +1,26 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
 public class CcgParse {
 
-  private final CcgCategory head;
+  private final SyntacticCategory syntax;
+  
+  // The lexicon entry used to create this parse.
+  // Non-null only when this is a terminal.
+  private final CcgCategory lexiconEntry;
   // The words spanned by this portion of the parse tree. 
   // Non-null only when this is a terminal.
   private final List<String> spannedWords;
 
+  // The semantic heads of this part.
+  private final Set<IndexedPredicate> heads;
+  // The semantic dependencies instantiated at this node in the parse.
   private final List<DependencyStructure> dependencies;
 
   // Probability represents the probability of the lexical entry if this is a
@@ -32,11 +40,13 @@ public class CcgParse {
    * @param left
    * @param right
    */
-  private CcgParse(CcgCategory head, List<String> spannedWords, 
-      List<DependencyStructure> dependencies, double probability,
+  private CcgParse(SyntacticCategory syntax, CcgCategory lexiconEntry, List<String> spannedWords, 
+      Set<IndexedPredicate> heads, List<DependencyStructure> dependencies, double probability,
       CcgParse left, CcgParse right) {
-    this.head = Preconditions.checkNotNull(head);
+    this.syntax = Preconditions.checkNotNull(syntax);
+    this.lexiconEntry = lexiconEntry;
     this.spannedWords = spannedWords;
+    this.heads = Preconditions.checkNotNull(heads);
     this.dependencies = Preconditions.checkNotNull(dependencies);
 
     this.probability = probability;
@@ -54,27 +64,44 @@ public class CcgParse {
     }
   }
 
-  public static CcgParse forTerminal(CcgCategory head, List<String> spannedWords, double lexicalProbability) {
-    return new CcgParse(head, spannedWords, Collections.<DependencyStructure> emptyList(), 
-        lexicalProbability, null, null);
+  /**
+   * Create a CCG parse for a terminal of the CCG parse tree. This terminal 
+   * parse represents using {@code lexiconEntry} as the initial CCG category for
+   * {@code spannedWords}.
+   *    
+   * @param lexiconEntry
+   * @param spannedWords
+   * @param lexicalProbability
+   * @return
+   */
+  public static CcgParse forTerminal(CcgCategory lexiconEntry, Set<IndexedPredicate> heads,
+      List<DependencyStructure> deps, List<String> spannedWords, double lexicalProbability) {
+    return new CcgParse(lexiconEntry.getSyntax(), lexiconEntry, spannedWords, 
+        heads, deps, lexicalProbability, null, null);
   }
 
-  public static CcgParse forNonterminal(CcgCategory head, List<DependencyStructure> dependencies,
-      double dependencyProbability, CcgParse left, CcgParse right) {
-    return new CcgParse(head, null, dependencies, dependencyProbability, left, right);
+  public static CcgParse forNonterminal(SyntacticCategory syntax, Set<IndexedPredicate> heads,
+      List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left, CcgParse right) {
+    return new CcgParse(syntax, null, null, heads, dependencies, dependencyProbability, left, right);
   }
 
+  /**
+   * Returns {@code true} if this parse represents a terminal in the
+   * parse tree, i.e., a lexicon entry.
+   * 
+   * @return
+   */
   public boolean isTerminal() {
     return left == null && right == null;
   }
   
   /**
-   * Gets the CCG category (both syntactic and semantic category) of this parse tree.
+   * Gets the CCG syntactic category at the root of the parse tree.
    * 
    * @return
    */
-  public CcgCategory getCcgCategory() {
-    return head;
+  public SyntacticCategory getSyntacticCategory() {
+    return syntax;
   }
   
   /**
@@ -86,10 +113,29 @@ public class CcgParse {
     return spannedWords;
   }
   
+  /**
+   * The result is null unless this is a terminal in the parse tree.
+   *  
+   * @return
+   */
+  public CcgCategory getLexiconEntry() {
+    return lexiconEntry;
+  }
+
+  /**
+   * Gets the left subtree of this parse.
+   * 
+   * @return
+   */
   public CcgParse getLeft() {
     return left;
   }
-  
+
+  /**
+   * Gets the right subtree of this parse.
+   * 
+   * @return
+   */
   public CcgParse getRight() {
     return right;
   }
@@ -112,6 +158,15 @@ public class CcgParse {
    */
   public double getNodeProbability() {
     return probability;
+  }
+
+  /**
+   * Gets the semantic heads of this parse.
+   * 
+   * @return
+   */
+  public Set<IndexedPredicate> getSemanticHeads() {
+    return heads;
   }
 
   /**
@@ -142,9 +197,9 @@ public class CcgParse {
   @Override
   public String toString() {
     if (left != null && right != null) {
-      return "(" + head + ", " + left + ", " + right + ")";
+      return "(" + syntax + ", " + left + ", " + right + ")";
     } else {
-      return "(" + head + ")";
+      return "(" + syntax + ")";
     }
   }
 }

@@ -7,7 +7,6 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -21,18 +20,24 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
  */
 public class CcgTrainingTest extends TestCase {
 
-  private static final String[] lexicon = {"block,pred:block,N", "object,pred:object,N", 
+  private static final String[] lexicon = {
+    "block,pred:block,N", "object,pred:object,N", 
     "red,pred:red,N/>N,pred:red 1 ?1","green,pred:green,N/>N,pred:green 1 ?1",
     "the,the,N/>N","a,the,N/>N",
-    "near,pred:near,(N\\>N)/N,pred:near 1 ?1#pred:near 2 ?2", 
+    "near,pred:near,(N\\>N)/N,pred:near 1 ?1#pred:near 2 ?2",
+    "near,pred:near,(S/(S\\N))/N,pred:near 2 ?2#pred:near 1 pred:block#?1 1 pred:block",
     "near,pred:close,(N\\>N)/N,pred:close 1 ?1#pred:close 2 ?2", "near,pred:near,PP/>N,",
-    "kinda,pred:almost,(N/>N)/>(N/>N),pred:almost 1 ?2#?2 1 ?1"};
+    "kinda,pred:almost,(N/>N)/>(N/>N),pred:almost 1 ?2#?2 1 ?1",
+    "is,pred:equals,(S\\N)/N,pred:equals 1 ?1#pred:equals 2 ?2"
+  };
 
   private static final String[] trainingData = {
-    "red block###pred:red 1 pred:block",
-    "red green block###pred:red 1 pred:block#pred:green 1 pred:block",
-    "red object near the green block###pred:red 1 pred:object#pred:green 1 pred:block#pred:near 1 pred:object#pred:near 2 pred:block",
-    "the kinda red block###pred:red 1 pred:block#pred:almost 1 pred:red"
+    "red block###pred:red 0 1 pred:block 1",
+    "red green block###pred:red 0 1 pred:block 2#pred:green 1 1 pred:block 2",
+    "red object near the green block###pred:red 0 1 pred:object 1#pred:green 4 1 pred:block 5#pred:near 2 1 pred:object 1#pred:near 2 2 pred:block 5",
+    "red block near the green block###pred:red 0 1 pred:block 1#pred:green 4 1 pred:block 5#pred:near 2 1 pred:block 1#pred:near 2 2 pred:block 5",
+    "the kinda red block###pred:red 2 1 pred:block 3#pred:almost 1 1 pred:red 2",
+    "near the object is the red block###pred:near 0 2 pred:object 2#pred:near 0 1 pred:block 0#pred:equals 3 1 pred:block 0#pred:equals 3 2 pred:block 6#pred:red 5 1 pred:block 6"
   };
 
   private ParametricCcgParser family;
@@ -53,7 +58,7 @@ public class CcgTrainingTest extends TestCase {
     assertEquals(1, parses.size());
     
     parses = parser.beamSearch(Arrays.asList("near"), 10);
-    assertEquals(3, parses.size());
+    assertEquals(4, parses.size());
     System.out.println(parses);
   }
 
@@ -64,6 +69,7 @@ public class CcgTrainingTest extends TestCase {
     
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingExamples);
     CcgParser parser = family.getParserFromParameters(parameters);
+    System.out.println(family.getParameterDescription(parameters));
 
     // Test that zero training error is achieved.
     for (CcgExample example : trainingExamples) {

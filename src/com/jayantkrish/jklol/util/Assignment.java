@@ -9,19 +9,20 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
- * An Assignment represents a set of values assigned to a set of variables,
- * possibly nested within plates. Assignments are immutable.
+ * An Assignment represents a set of values assigned to a set of variables.
+ * Assignments are immutable.
  */
-
 public class Assignment implements Serializable{
   private static final long serialVersionUID = 1842533988072075012L;
 
+  /**
+   * The empty assignment, assigning no values to no variables.
+   */
   public static final Assignment EMPTY = new Assignment(Arrays.asList(new Integer[] {}),
       Arrays.asList(new Object[] {}));
 
@@ -44,6 +45,12 @@ public class Assignment implements Serializable{
     }
   }
 
+  /**
+   * Creates an assignment to one variable.
+   * 
+   * @param varNum
+   * @param value
+   */
   public Assignment(int varNum, Object value) {
     varValueMap = new TreeMap<Integer, Object>();
     varValueMap.put(varNum, value);

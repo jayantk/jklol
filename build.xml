@@ -1,41 +1,49 @@
 <?xml version="1.0"?>
 <project name="jklol" default="jar">
-  <property name="tst-dir" location="test" />
-  <property name="doc-dir" location="javadoc" />
-  <property name="proto-dir" location="proto" />
-  <property name="proto-src-dir" location="proto_src" />
-  <property name="perf-dir" location="performance" />
   <property name="src-dir" location="src" />
+  <property name="tst-dir" location="test" />
+  <property name="perf-dir" location="performance" />
+  <property name="doc-dir" location="javadoc" />
+  <!-- locations for natively compiled files -->
+  <property name="object-dir" location="obj" />
+  <property name="bin-dir" location="bin" />
+
+  <uptodate property="jklol.o.noBuild" targetfile="${object-dir}/jklol.o">
+    <srcfiles file="jklol.jar" />
+  </uptodate>
+
+  <uptodate property="libraries.o.noBuild" targetfile="${object-dir}/libraries.o">
+    <srcfiles dir="lib/" file="*.jar" />
+  </uptodate>
 
   <path id="classpath.base">
     <pathelement location="lib/guava-r09.jar" />
     <pathelement location="lib/jopt-simple-4.3.jar" />
-    <pathelement location="lib/protobuf-java-2.4.1.jar" />
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />
     <pathelement location="build/" />
     <path refid="classpath.base" />
   </path>
+  <path id="classpath.gcj">
+    <pathelement location="/usr/share/java/junit.jar" />
+    <pathelement location="lib/gnu-crypto.jar" />
+    <path refid="classpath.base" />
+  </path>
 
-  <target name="compile-proto">
-    <mkdir dir="${proto-src-dir}" />
-    <exec executable="protoc">
-      <arg value="-I=${proto-dir}" />
-      <arg value="--java_out=${proto-src-dir}" />
-      <arg value="${proto-dir}/Tensor.proto" />
-      <arg value="${proto-dir}/Variable.proto" />
-      <arg value="${proto-dir}/FactorGraph.proto" />
-      <arg value="${proto-dir}/DynamicFactorGraph.proto" />
-      <arg value="${proto-dir}/ParametricFactorGraph.proto" />
-    </exec>
+  <!-- delete all output from compilation -->
+
+  <target name="clean">
+    <delete dir="build" />
+    <delete dir="${object-dir}" />
+    <delete dir="${bin-dir}" />
+    <delete file="jklol.jar" />
   </target>
-
-  <target name="compile" depends="compile-proto">
+  
+  <!-- compilation targets -->
+  
+  <target name="compile">
     <mkdir dir="build" />
-    <javac srcdir="${proto-src-dir}" destdir="build" debug="on">
-      <classpath refid="classpath.base"/>
-    </javac>
     <javac srcdir="${src-dir}" destdir="build" debug="on">
       <classpath refid="classpath.base"/>
     </javac>
@@ -51,12 +59,7 @@
     </javac>
   </target>
 
-  <target name="javadoc" depends="compile-proto">
-    <mkdir dir="${doc-dir}" />
-    <javadoc destdir="${doc-dir}">
-       <fileset dir="${src-dir}" includes="**/*.java" />
-    </javadoc>
-  </target>
+  <!-- testing targets -->
 
   <target name="test" depends="compile-test">
     <junit fork="no" outputtoformatters="false">
@@ -85,16 +88,85 @@
     </junit>
   </target>
 
-  <target name="proto" depends="compile-proto">
+  <!-- documentation -->
+
+  <target name="javadoc">
+    <mkdir dir="${doc-dir}" />
+    <javadoc destdir="${doc-dir}">
+       <fileset dir="${src-dir}" includes="**/*.java" />
+    </javadoc>
   </target>
+
+  <!-- create a jar file -->
 
   <target name="jar" depends="compile">
     <jar destfile="jklol.jar" basedir="build" />
   </target>
 
-  <target name="clean">
-    <delete dir="build" />
-    <delete file="jklol.jar" />
+  <!-- targets for compiling jklol to a native application using gcj -->
+
+  <target name="gcj-jklol" depends="jar" unless="jklol.o.noBuild">
+    <mkdir dir="${object-dir}" />
+    <echo message="Building library jklol.o" />
+    <exec executable="gcj">
+      <arg value="--classpath" />
+      <arg value="${toString:classpath.gcj}" />
+      <arg value="-c" />
+      <arg value="-g" />
+      <arg value="-O" />
+      <arg value="-o" />
+      <arg value="${object-dir}/jklol.o" />
+      <arg value="jklol.jar" />
+    </exec>
   </target>
-  
+
+  <target name="gcj-libraries" depends="jar" unless="libraries.o.noBuild">
+    <pathconvert property="classpath-space" pathsep=" ">
+      <path refid="classpath.gcj" />
+    </pathconvert>
+    <echo message="Building libraries from: ${classpath-space}" />
+
+    <exec executable="gcj">
+      <arg value="-c" />
+      <arg value="-g" />
+      <arg value="-O" />
+      <arg value="-o" />
+      <arg value="${object-dir}/libraries.o" />
+      <arg line="${classpath-space}" />
+    </exec>
+  </target>
+
+  <target name="gcj-base" depends="gcj-jklol,gcj-libraries">
+    <!-- set up objectfiles.path with the compiled .o files -->
+    <path id="objectfiles.classpath">
+      <fileset dir="${object-dir}" includes="*.o" />
+    </path>
+
+    <pathconvert property="objectfiles.path" pathsep=" ">
+      <path refid="objectfiles.classpath" />
+    </pathconvert>
+  </target>
+
+  <target name="train_ccg" depends="gcj-base">
+    <mkdir dir="${bin-dir}" />
+    <exec executable="gcj">
+      <arg value="--main=com.jayantkrish.jklol.cli.TrainCcg" />
+      <arg value="-o" />
+      <arg value="${bin-dir}/train_ccg" />
+      <arg line="${objectfiles.path}" />
+    </exec>
+  </target>
+
+  <target name="parse_ccg" depends="gcj-base">
+    <mkdir dir="${bin-dir}" />
+    <exec executable="gcj">
+      <arg value="--main=com.jayantkrish.jklol.cli.ParseCcg" />
+      <arg value="-o" />
+      <arg value="${bin-dir}/parse_ccg" />
+      <arg line="${objectfiles.path}" />
+    </exec>
+  </target>
+
+  <target name="gcj" depends="train_ccg,parse_ccg"/>
+
 </project>

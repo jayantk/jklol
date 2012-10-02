@@ -12,11 +12,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
-import com.jayantkrish.jklol.tensor.TensorProtos.SparseTensorProto;
-import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
 import com.jayantkrish.jklol.util.HeapUtils;
 
 /**
@@ -868,18 +864,6 @@ public class SparseTensor extends AbstractTensor implements Serializable{
   }
 
   @Override
-  public TensorProto toProto() {
-    TensorProto.Builder builder = TensorProto.newBuilder();
-    builder.setType(TensorProto.TensorType.SPARSE);
-
-    SparseTensorProto.Builder sparseTensorBuilder = builder.getSparseTensorBuilder();
-    sparseTensorBuilder.setDimensions(getDimensionProto());
-    sparseTensorBuilder.addAllKeyNum(Longs.asList(keyNums));
-    sparseTensorBuilder.addAllValue(Doubles.asList(values));
-    return builder.build();
-  }
-
-  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("<");
@@ -1003,23 +987,6 @@ public class SparseTensor extends AbstractTensor implements Serializable{
     values[0] = value;
 
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
-  }
-
-  /**
-   * Creates a {@code SparseTensor} from its serialization as a protocol buffer.
-   * 
-   * @param proto
-   * @return
-   */
-  public static SparseTensor fromProto(SparseTensorProto proto) {
-    Preconditions.checkArgument(proto.hasDimensions());
-    int[] dimensionNums = AbstractTensorBase.parseDimensionsFromProto(proto.getDimensions());
-    int[] sizes = AbstractTensorBase.parseSizesFromProto(proto.getDimensions());
-    Preconditions.checkArgument(dimensionNums.length == sizes.length);
-
-    long[] keyNums = Longs.toArray(proto.getKeyNumList());
-    double[] values = Doubles.toArray(proto.getValueList());
-    return new SparseTensor(dimensionNums, sizes, keyNums, values);
   }
 
   // ///////////////////////////////////////////////////////////////////////////////

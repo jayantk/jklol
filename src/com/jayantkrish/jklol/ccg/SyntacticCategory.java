@@ -1,10 +1,20 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.google.common.collect.Lists;
 
-public class SyntacticCategory {
+/**
+ * A syntactic category for a CCG, such as N/N. In addition to 
+ * representing function/argument information, these categories 
+ * contain head rules for deciding, after a function is applied,
+ * what the head word of the resulting category is.
+ *  
+ * @author jayant
+ */
+public class SyntacticCategory implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   public enum Direction {
     LEFT("\\"), RIGHT("/");
@@ -126,10 +136,21 @@ public class SyntacticCategory {
     }
   }
 
+  /**
+   * Returns true if this category is not a functional category.
+   * 
+   * @return
+   */
   public boolean isAtomic() {
     return value != null;
   }
 
+  /**
+   * Returns the atomic syntactic type of this. Returns null if 
+   * {@code isAtomic() != true}.
+   * 
+   * @return
+   */
   public String getValue() {
     return value;
   }
@@ -167,22 +188,38 @@ public class SyntacticCategory {
     }
   }
 
+  /**
+   * If this is a functional category, this gets the type of the 
+   * return value. Returns {@code null} if this is an atomic
+   * category. 
+   * 
+   * @return
+   */
   public SyntacticCategory getReturn() {
     return returnType;
   }
 
+  /**
+   * If this is a functional category, this gets the expected type 
+   * of the function's argument. Returns {@code null} if this is 
+   * an atomic category. 
+   * 
+   * @return
+   */
   public SyntacticCategory getArgument() {
     return argumentType;
   }
 
-  public boolean hasSameSyntacticType(SyntacticCategory other) {
-    if (isAtomic() && other.isAtomic()) {
-      return value.equals(other.value);
-    } else if (!isAtomic() && !other.isAtomic() && direction.equals(other.direction) && head.equals(other.head)) {
-      return returnType.hasSameSyntacticType(other.getReturn()) &&
-          argumentType.hasSameSyntacticType(other.getArgument());
-    }
-    return false;
+  /**
+   * Returns {@code true} if this category is unifiable with {@code other}.
+   * This method exists mostly for forward compatibility -- it currently
+   * checks exact equality. 
+   * 
+   * @param other
+   * @return
+   */
+  public boolean isUnifiableWith(SyntacticCategory other) {
+    return equals(other);
   }
 
   @Override

@@ -5,8 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.tensor.TensorProtos.LogSpaceAdapterProto;
-import com.jayantkrish.jklol.tensor.TensorProtos.TensorProto;
 
 /**
  * A tensor which stores all weights in logarithmic space. This transformation
@@ -29,11 +27,6 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public LogSpaceTensorAdapter(DenseTensor logWeights) {
     super(logWeights.getDimensionNumbers(), logWeights.getDimensionSizes());
     this.logWeights = logWeights;
-  }
-
-  public static LogSpaceTensorAdapter fromProto(LogSpaceAdapterProto proto) {
-    Preconditions.checkArgument(proto.hasLogWeights());
-    return new LogSpaceTensorAdapter(DenseTensor.fromProto(proto.getLogWeights()));
   }
 
   @Override
@@ -177,16 +170,6 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   @Override
   public long[] getLargestValues(int n) {
     return logWeights.getLargestValues(n);
-  }
-
-  @Override
-  public TensorProto toProto() {
-    TensorProto.Builder builder = TensorProto.newBuilder();
-    builder.setType(TensorProto.TensorType.LOG_ADAPTER);
-    TensorProto logWeightProto = logWeights.toProto();
-    Preconditions.checkState(logWeightProto.hasDenseTensor());
-    builder.getLogTensorBuilder().setLogWeights(logWeightProto.getDenseTensor());
-    return builder.build();
   }
 
   private static final class LogSpaceKeyValueIterator implements Iterator<KeyValue> {

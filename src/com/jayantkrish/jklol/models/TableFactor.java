@@ -7,18 +7,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorProto;
-import com.jayantkrish.jklol.models.FactorGraphProtos.TableFactorProto;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
-import com.jayantkrish.jklol.tensor.Tensors;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A discrete probability distibution whose unnormalized probabilities are given in a table,
@@ -131,25 +127,6 @@ public class TableFactor extends DiscreteFactor {
   }
 
   /**
-   * Construct a {@code TableFactor} over {@code variables} by deserializing the
-   * factor's weights from {@code proto}. In most cases, this method should be
-   * used indirectly via {@link FactorGraph#fromProto()}.
-   * 
-   * @param variables
-   * @param proto
-   * @return
-   */
-  public static TableFactor fromProto(FactorProto proto, IndexedList<Variable> variableTypeIndex) {
-    Preconditions.checkArgument(proto.hasVariables());
-    Preconditions.checkArgument(proto.getType().equals(FactorProto.FactorType.TABLE));
-    Preconditions.checkArgument(proto.hasTableFactor());
-    Preconditions.checkArgument(proto.getTableFactor().hasWeights());
-
-    VariableNumMap variables = VariableNumMap.fromProto(proto.getVariables(), variableTypeIndex);
-    return new TableFactor(variables, Tensors.fromProto(proto.getTableFactor().getWeights()));
-  }
-
-  /**
    * Gets a {@code TableFactor} from a series of lines, each describing a single
    * assignment. Each line is {@code delimiter}-separated, and its ith entry is
    * the value of the ith variable in {@code variables}. The last value on each
@@ -254,17 +231,6 @@ public class TableFactor extends DiscreteFactor {
   public TableFactor relabelVariables(VariableRelabeling relabeling) {
     return new TableFactor(relabeling.apply(getVars()),
         weights.relabelDimensions(relabeling.getVariableIndexReplacementMap()));
-  }
-
-  @Override
-  public FactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    FactorProto.Builder builder = getProtoBuilder(variableTypeIndex);
-    builder.setType(FactorProto.FactorType.TABLE);
-
-    TableFactorProto.Builder tableBuilder = builder.getTableFactorBuilder();
-    tableBuilder.setWeights(weights.toProto());
-
-    return builder.build();
   }
 
   @Override

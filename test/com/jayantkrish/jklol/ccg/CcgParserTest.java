@@ -7,9 +7,12 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
+import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -19,16 +22,19 @@ public class CcgParserTest extends TestCase {
 
   CcgParser parser;
   
-  private static final String[] lexicon = {"I,N,", "people,N,", "berries,N", "houses,N", 
-    "eat,(S\\N)/N,eat 1 ?1#eat 2 ?2", "that,(N\\>N)/(S\\N),that 1 ?1#?2 1 ?1#that 2 ?2", 
-    "quickly,((S\\N)/N)/>((S\\N)/N),quickly 1 ?3#?3 1 ?1#?3 2 ?2", "in,(N\\>N)/N,in 1 ?1#in 2 ?2",
-    "amazingly,(N/>N)/>(N/>N),amazingly 1 ?2#?2 1 ?1", "tasty,(N/>N),tasty 1 ?1",
-    "in,((S\\N)\\>(S\\N))/N,in 1 ?2#in 2 ?3#?2 3 ?3#?2 1 ?1"};
+  private static final String[] lexicon = {"I,I,N,", "people,people,N,", "berries,berries,N", "houses,houses,N", 
+    "eat,eat,(S\\N)/N,eat 1 ?1#eat 2 ?2", "that,that,(N\\>N)/(S\\N),that 1 ?1#?2 1 ?1#that 2 ?2", 
+    "quickly,quickly,((S\\N)/N)/>((S\\N)/N),quickly 1 ?3#?3 1 ?1#?3 2 ?2", "in,in,(N\\>N)/N,in 1 ?1#in 2 ?2",
+    "amazingly,amazingly,(N/>N)/>(N/>N),amazingly 1 ?2#?2 1 ?1", "tasty,tasty,(N/>N),tasty 1 ?1",
+    "in,in,((S\\N)\\>(S\\N))/N,in 1 ?2#in 2 ?3#?2 3 ?3#?2 1 ?1",
+    "and,?1#?2,(N\\N)/N", "almost,almost,((N\\>N)/N)/>((N\\>N)/N),almost 1 ?3#?3 1 ?1#?3 2 ?2",
+    "is,is,(S\\N)/N,?1 1 ?2"};
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
     1.0, 1.0,
     1.0, 1.0,
-    0.5};
+    0.5, 1.0, 2.0,
+    0.25};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -65,7 +71,9 @@ public class CcgParserTest extends TestCase {
     assertEquals("quickly", parse.getRight().getLeft().getAllDependencies().get(0).getHead());
     assertEquals(1, parse.getRight().getLeft().getAllDependencies().get(0).getArgIndex());
     assertEquals("eat", parse.getRight().getLeft().getAllDependencies().get(0).getObject());
-
+    
+    assertEquals("eat", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
+    assertEquals("I", Iterables.getOnlyElement(parse.getLeft().getSemanticHeads()).getHead());
   }
   
   public void testParse2() {
@@ -87,6 +95,7 @@ public class CcgParserTest extends TestCase {
     assertEquals(1, parse.getNodeDependencies().get(0).getArgIndex());
     assertEquals("people", parse.getNodeDependencies().get(0).getObject());
     assertEquals(0.3 * 4 * 2 * 2, parse.getSubtreeProbability());
+    assertEquals("people", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
 
     parse = parses.get(1);
     assertEquals(2, parse.getNodeDependencies().size());
@@ -95,6 +104,7 @@ public class CcgParserTest extends TestCase {
     assertEquals("people", parse.getNodeDependencies().get(0).getObject());
     assertEquals(1, parse.getNodeDependencies().get(1).getArgIndex());
     assertEquals("people", parse.getNodeDependencies().get(1).getObject());
+    assertEquals("people", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
 
     Set<String> heads = Sets.newHashSet(parse.getNodeDependencies().get(0).getHead(), 
         parse.getNodeDependencies().get(1).getHead());
@@ -103,7 +113,58 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(0.3 * 4 * 2, parse.getSubtreeProbability());
   }
+  
+  public void testParseHeadUnification() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "and", "houses", "eat", "berries", "and", "berries"), 10);
+    
+    assertEquals(1, parses.size());
 
+    // Both parses should have the same probability and dependencies.
+    CcgParse parse = parses.get(0);
+    System.out.println(parse.getAllDependencies());
+    assertEquals(0.3 * 2 * 2, parse.getSubtreeProbability());
+    assertEquals(2, parse.getNodeDependencies().size());
+    assertEquals("eat", parse.getNodeDependencies().get(0).getHead());
+    String object = parse.getNodeDependencies().get(0).getObject(); 
+    assertTrue(object.equals("people") || object.equals("houses"));
+    assertEquals(2, parse.getRight().getNodeDependencies().size());
+    assertEquals("berries", parse.getRight().getNodeDependencies().get(0).getObject());
+    
+    assertEquals("eat", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
+    
+    Set<String> heads = Sets.newHashSet();
+    for (IndexedPredicate predicate : parse.getLeft().getSemanticHeads()) {
+      heads.add(predicate.getHead());
+    }
+    assertEquals(Sets.newHashSet("people", "houses"), heads); 
+  }
+  
+  public void testPrepositionalModifier() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "almost", "in", "houses"), 10);
+    
+    assertEquals(1, parses.size());
+    
+    CcgParse parse = parses.get(0);
+    System.out.println(parse.getAllDependencies());
+  }
+  
+  public void testSubjectPatterns() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "is", "houses"), 10);
+    
+    assertEquals(1, parses.size());
+    
+    CcgParse parse = parses.get(0);
+    List<DependencyStructure> deps = parse.getAllDependencies();
+    assertEquals(1, deps.size());
+    assertEquals("people", deps.get(0).getHead());
+    assertEquals(0, deps.get(0).getHeadWordIndex());
+    assertEquals("houses", deps.get(0).getObject());
+    assertEquals(2, deps.get(0).getObjectWordIndex());
+    assertEquals(1, deps.get(0).getArgIndex());
+  }
   
   private CcgParser parseLexicon(String[] lexicon, double[] weights) {
     Preconditions.checkArgument(lexicon.length == weights.length);
@@ -111,11 +172,15 @@ public class CcgParserTest extends TestCase {
     Set<List<String>> words = Sets.newHashSet();
     Set<String> semanticPredicates = Sets.newHashSet();
     for (int i = 0; i < lexicon.length; i++) {
-      CcgCategory category = CcgCategory.parseFrom(lexicon[i]);
+      int commaInd = lexicon[i].indexOf(",");
+      words.add(Arrays.asList(lexicon[i].substring(0, commaInd)));
+
+      CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       categories.add(category);
-      for (String head : category.getHeads()) {
-        words.add(Lists.newArrayList(head.split(" ")));
-        semanticPredicates.addAll(Arrays.asList(head.split(" ")));
+      for (Argument head : category.getHeads()) {
+        if (head.hasPredicate()) {
+          semanticPredicates.addAll(Arrays.asList(head.getPredicate()));
+        }
       }
     }
     
@@ -128,10 +193,10 @@ public class CcgParserTest extends TestCase {
     VariableNumMap vars = terminalVar.union(ccgCategoryVar);
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < categories.size(); i++) {
-      for (String head : categories.get(i).getHeads()) {
-        terminalBuilder.setWeight(vars.outcomeArrayToAssignment(Arrays.asList(head.split(" ")), 
-            categories.get(i)), weights[i]);
-      }
+      int commaInd = lexicon[i].indexOf(",");
+      List<String> wordList = Arrays.asList(lexicon[i].substring(0, commaInd));
+      CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
+      terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, category), weights[i]);
     }
 
     // Build the dependency distribution.

@@ -7,7 +7,6 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.FactorGraphProtos.FactorGraphProto;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -117,22 +116,5 @@ public class FactorGraphTest extends TestCase {
 
 	  assertEquals(0, c.getVariables().size());
 	  assertEquals(1.0, c.getUnnormalizedProbability(Assignment.EMPTY));
-	}
-	
-	public void testSerialization() {
-	  FactorGraphProto proto = f.toProto();
-	  FactorGraph copy = FactorGraph.fromProto(proto);
-	  
-	  assertEquals(f.getVariables(), copy.getVariables());
-	  
-	  Factor copy1 = copy.getFactor(0);
-	  assertEquals(1.0, copy1.getUnnormalizedProbability("T", "T", "T"));
-	  assertTrue(copy1 instanceof TableFactor);
-	  assertEquals(1.0, copy1.size());
-	  
-	  Factor copy2 = copy.getFactor(1);
-	  assertEquals(1.0, copy2.getUnnormalizedProbability("foo", "T"));
-	  assertEquals(1.0, copy2.getUnnormalizedProbability("bar", "F"));
-	  assertEquals(2.0, copy2.size());
 	}
 }

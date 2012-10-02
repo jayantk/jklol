@@ -9,20 +9,13 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.VariableProtos.VariablePatternProto;
-import com.jayantkrish.jklol.models.VariableProtos.VariableProto;
-import com.jayantkrish.jklol.models.Variables;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
-import com.jayantkrish.jklol.models.dynamic.VariablePatterns;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorGraphProto;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -188,54 +181,6 @@ public class ParametricFactorGraph {
             count, marginals.getPartitionFunction());
       }
     }
-  }
-  
-  public ParametricFactorGraphProto toProto() {
-    ParametricFactorGraphProto.Builder builder = ParametricFactorGraphProto.newBuilder();
-
-    IndexedList<Variable> variableTypeIndex = IndexedList.create();
-    builder.setBaseFactorGraph(baseFactorGraph.toProtoBuilder(variableTypeIndex).build());
-    
-    for (ParametricFactor parametricFactor : parametricFactors) {
-      builder.addParametricFactor(parametricFactor.toProto(variableTypeIndex));
-    }
-
-    for (VariablePattern pattern : factorPatterns) {
-      builder.addFactorPattern(pattern.toProto(variableTypeIndex));
-    }
-    
-    for (Variable variable : variableTypeIndex.items()) {
-      builder.addVariableType(variable.toProto());
-    }
-    
-    builder.addAllFactorName(factorNames.items());
-    return builder.build();
-  }
-  
-  public static ParametricFactorGraph fromProto(ParametricFactorGraphProto proto) {
-    Preconditions.checkArgument(proto.hasBaseFactorGraph());
-    Preconditions.checkArgument(proto.getParametricFactorCount() == proto.getFactorPatternCount());
-    Preconditions.checkArgument(proto.getParametricFactorCount() == proto.getFactorNameCount());
-    
-    IndexedList<Variable> variableTypeIndex = IndexedList.create();
-    for (VariableProto variableProto : proto.getVariableTypeList()) {
-      variableTypeIndex.add(Variables.fromProto(variableProto));
-    }
-    DynamicFactorGraph baseFactorGraph = DynamicFactorGraph.fromProtoWithVariables(
-        proto.getBaseFactorGraph(), variableTypeIndex);
-    
-    List<ParametricFactor> parametricFactors = Lists.newArrayList();
-    for (ParametricFactorProto factorProto : proto.getParametricFactorList()) {
-      parametricFactors.add(ParametricFactors.fromProto(factorProto, variableTypeIndex));
-    }
-    
-    List<VariablePattern> variablePatterns = Lists.newArrayList();
-    for (VariablePatternProto patternProto : proto.getFactorPatternList()) {
-      variablePatterns.add(VariablePatterns.fromProto(patternProto, variableTypeIndex));
-    }
-    
-    return new ParametricFactorGraph(baseFactorGraph, parametricFactors, variablePatterns, 
-        proto.getFactorNameList());
   }
 
   /**

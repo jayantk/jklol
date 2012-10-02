@@ -13,12 +13,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.VariableProtos.VariableNamePatternProto;
-import com.jayantkrish.jklol.models.VariableProtos.VariablePatternProto;
-import com.jayantkrish.jklol.models.VariableProtos.VariablePatternProto.Type;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A pattern of variable names which serves the role of {@link VariableNumMap}s
@@ -160,42 +155,6 @@ public class VariableNamePattern extends AbstractVariablePattern {
     return validMatches;
   }
   
-  @Override
-  public VariablePatternProto toProto(IndexedList<Variable> variableTypeIndex) {
-    VariablePatternProto.Builder parentBuilder = VariablePatternProto.newBuilder();
-    parentBuilder.setType(Type.NAME);
-    VariableNamePatternProto.Builder builder = parentBuilder.getNameProtoBuilder();
-    builder.setFixedVariables(fixedVariables.toProto(variableTypeIndex));
-    builder.setTemplateVariables(templateVariables.toProto(variableTypeIndex));
-    
-    for (VariableNameMatcher matcher : templateVariableMatchers) {
-      builder.addPattern(matcher.getPattern());
-      builder.addOffset(matcher.getOffset());
-    }
-    
-    return parentBuilder.build();
-  }
-  
-  public static VariableNamePattern fromProto(VariablePatternProto proto, 
-      IndexedList<Variable> variableTypeIndex) {
-    Preconditions.checkArgument(proto.getType().equals(Type.NAME));
-    Preconditions.checkArgument(proto.hasNameProto());
-        
-    VariableNamePatternProto nameProto = proto.getNameProto();
-    Preconditions.checkArgument(nameProto.hasFixedVariables());
-    Preconditions.checkArgument(nameProto.hasTemplateVariables());
-    Preconditions.checkArgument(nameProto.getOffsetCount() == nameProto.getPatternCount());
-    
-    List<VariableNameMatcher> matchers = Lists.newArrayList();
-    for (int i = 0; i < nameProto.getOffsetCount(); i++) {
-      matchers.add(new VariableNameMatcher(nameProto.getPattern(i), nameProto.getOffset(i)));
-    }
-    
-    return new VariableNamePattern(matchers, 
-        VariableNumMap.fromProto(nameProto.getTemplateVariables(), variableTypeIndex),
-        VariableNumMap.fromProto(nameProto.getFixedVariables(), variableTypeIndex));
-  }
-
   public static class VariableNameMatcher {
 
     private final Pattern pattern;

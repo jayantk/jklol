@@ -102,12 +102,6 @@ public class SequenceModelTest extends TestCase {
     testZeroTrainingError(new LoglikelihoodOracle(sequenceModel, new JunctionTree()));
   }
   
-  public void testSerialization() {
-    ParametricFactorGraph copy = ParametricFactorGraph.fromProto(sequenceModel.toProto());
-    
-    assertEquals(sequenceModel.getVariables(), copy.getVariables());
-  }
-  
   private void testZeroTrainingError(
       GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
 

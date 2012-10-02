@@ -1,149 +1,178 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Collection;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
+import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
-public class CcgCategory {
-
+/**
+ * A CCG category composed of both a syntactic and semantic type. 
+ * Syntax is represented using a {@code SyntacticCategory}, while 
+ * the semantics are contained within this class itself.
+ * <p>
+ * CCG semantics are represented in the dependency format. Each
+ * category contains a number of unfilled dependencies, represented
+ * as a (subject, argument number, object) tuples. Both subject and
+ * object may be variables that represent yet-unfilled arguments to
+ * this category. Such variables are the typically case for objects,
+ * and may be used for subjects to project long-range dependencies.
+ * <p>
+ * Each CCG category also has zero or more semantic heads. When this
+ * category is consumed by another category, these heads are used to 
+ * fill the object dependencies in the consuming category.
+ * 
+ * @author jayant
+ */
+public class CcgCategory implements Serializable {
+  private static final long serialVersionUID = 1L;
+  
   // NOTE: Remember to change .equals() and .hashCode() if these members 
   // are modified.
+  
+  // The syntactic type of this category
   private final SyntacticCategory syntax;
-  private final Set<String> heads;
+  // The category's semantic heads.
+  private final Set<Argument> heads;
   
-  private final Multimap<Integer, UnfilledDependency> unfilledDependencies;
+  // The semantic dependencies of this category, both filled and unfilled.
+  private final List<Argument> subjects;
+  private final List<Argument> objects;
+  private final List<Integer> argumentNumbers;
   
-  public CcgCategory(SyntacticCategory syntax, Set<String> heads,  
-      Multimap<Integer, UnfilledDependency> unfilledDependencies) {
+  public CcgCategory(SyntacticCategory syntax, Set<Argument> heads,  
+      List<Argument> subjects, List<Argument> objects, List<Integer> argumentNumbers) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.heads = Preconditions.checkNotNull(heads);
     
-    this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
+    this.subjects = ImmutableList.copyOf(subjects);
+    this.objects = ImmutableList.copyOf(objects);
+    this.argumentNumbers = ImmutableList.copyOf(argumentNumbers);
   }
-  
+
+  /**
+   * Parses a CCG category from a string. The format is:
+   * <p>
+   * (#-separated head word list),(syntactic type),(#-separated dependency list).
+   * <p>
+   * For example, the category for "in" is: "in,(N\N)/N,in 1 ?1, in 2 ?2".
+   *  
+   * @param categoryString
+   * @return
+   */
   public static CcgCategory parseFrom(String categoryString) {
     String[] parts = categoryString.split(",");
-    Set<String> heads = Sets.newHashSet(parts[0].split("#"));
+    List<String> headStrings = Lists.newArrayList(parts[0].split("#"));
+    Set<Argument> heads = Sets.newHashSet(); 
+    for (String headString : headStrings) {
+      heads.add(Argument.parseFromString(headString));
+    }
     
     SyntacticCategory syntax = SyntacticCategory.parseFrom(parts[1]);
 
     // Parse the semantic dependencies.
-    Multimap<Integer, UnfilledDependency> dependencies = HashMultimap.create();
+    List<Argument> subjects = Lists.newArrayList();
+    List<Argument> objects = Lists.newArrayList();
+    List<Integer> argumentNumbers = Lists.newArrayList();
     if (parts.length > 2) {
       String[] depStrings = parts[2].split("#");
       for (int i = 0; i < depStrings.length; i++) {
         String[] depParts = depStrings[i].split(" ");
 
-        Integer argInd = Integer.parseInt(depParts[1]);
-        Integer objectInd = Integer.parseInt(depParts[2].substring(1));
-
-        UnfilledDependency dep;
-        if (!depParts[0].startsWith("?")) {
-          dep = UnfilledDependency.createWithKnownSubject(depParts[0], argInd, objectInd);
-          dependencies.put(objectInd, dep);
-        } else {
-          Integer subjectInd = Integer.parseInt(depParts[0].substring(1));
-          dep = UnfilledDependency.createWithFunctionSubject(subjectInd, argInd, objectInd);
-          dependencies.put(objectInd, dep);
-          dependencies.put(subjectInd, dep);
-        }
+        argumentNumbers.add(Integer.parseInt(depParts[1]));
+        subjects.add(Argument.parseFromString(depParts[0]));
+        objects.add(Argument.parseFromString(depParts[2]));
       }
     }
     
-    return new CcgCategory(syntax, heads, dependencies);
+    return new CcgCategory(syntax, heads, subjects, objects, argumentNumbers);
   }
- 
-  public Set<String> getHeads() {
-    return heads;
-  }
-  
+
+  /**
+   * Gets the syntactic type of this category.
+   *  
+   * @return
+   */
   public SyntacticCategory getSyntax() {
     return syntax;
   }
-
-  public CcgCombinationResult apply(CcgCategory other, Direction direction) {
-    if (syntax.isAtomic() || !syntax.acceptsArgumentOn(direction) || 
-        !syntax.getArgument().hasSameSyntacticType(other.getSyntax())) {
-      return null;
-    }
-    
-    Set<String> newHeads = (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) ? other.getHeads() : heads;
-    
-    // Resolve semantic dependencies. Fill all dependency slots which require this argument.
-    // Return any fully-filled dependencies, while saving partially-filled dependencies for later.
-    int argNum = syntax.getArgumentList().size(); 
-    Multimap<Integer, UnfilledDependency> newDeps = HashMultimap.create(unfilledDependencies);
-    newDeps.removeAll(argNum);
-    
-    List<DependencyStructure> filledDeps = Lists.newArrayList();
-    for (UnfilledDependency unfilled : unfilledDependencies.get(argNum)) {
+  
+  /**
+   * Gets the head semantic type of this category.
+   * 
+   * @return
+   */
+  public Set<Argument> getHeads() {
+    return heads;
+  }
+  
+  public List<Argument> getSubjects() {
+    return subjects;
+  }
+  
+  public List<Argument> getObjects() {
+    return subjects;
+  }
+  
+  public List<Integer> getArgumentNumbers() {
+    return argumentNumbers;
+  }
+  
+  public Multimap<Integer, UnfilledDependency> createUnfilledDependencies(int wordIndex,
+      List<DependencyStructure> appendDependencies) {
+    Multimap<Integer, UnfilledDependency> map = HashMultimap.create();
+    for (int i = 0; i < subjects.size(); i++) {
+      Set<IndexedPredicate> subject = null;
+      int subjectIndex = -1;
+      if (subjects.get(i).hasPredicate()) {
+        subject = Sets.newHashSet(new IndexedPredicate(subjects.get(i).getPredicate(), wordIndex));
+      } else {
+        subjectIndex = subjects.get(i).getArgumentNumber();
+      }
       
-      if (unfilled.getObjectIndex() == argNum) {
-        Set<String> objects = other.getHeads();
-        if (unfilled.hasSubjects()) { 
-          for (String head : unfilled.getSubjects()) {
-            for (String object : objects) {
-              filledDeps.add(new DependencyStructure(head, unfilled.getArgumentIndex(), object));
-            }
-          }
-        } else {
-          // Part of the dependency remains unresolved. Fill what's possible, then propagate
-          // the unfilled portions.
-          int subjectIndex = unfilled.getSubjectIndex();
-          int argIndex = unfilled.getArgumentIndex();
-          
-          newDeps.remove(subjectIndex, unfilled);
-          for (String object : objects) {
-            newDeps.put(subjectIndex, UnfilledDependency.createWithKnownObject(subjectIndex, argIndex, object));
-          }
-        }
-      } else if (unfilled.getSubjectIndex() == argNum) {
-        Collection<UnfilledDependency> inheritedDeps = other.unfilledDependencies.get(unfilled.getArgumentIndex());
-        if (unfilled.hasObjects()) { 
-          for (String object : unfilled.getObjects()) {
-            for (UnfilledDependency inheritedDep : inheritedDeps) {
-              for (String subject : inheritedDep.getSubjects()) {
-                filledDeps.add(new DependencyStructure(subject, inheritedDep.getArgumentIndex(), object));
-              }
-            }
-          }
-        } else {
-          // Part of the dependency remains unresolved. Fill what's possible, then propagate
-          // the unfilled portions.
-          int objectIndex = unfilled.getObjectIndex();
-          newDeps.remove(objectIndex, unfilled);
-          
-          for (UnfilledDependency inheritedDep : inheritedDeps) {
-            newDeps.put(objectIndex, new UnfilledDependency(inheritedDep.getSubjects(), inheritedDep.getSubjectIndex(), 
-                inheritedDep.getArgumentIndex(), null, objectIndex)); 
+      Set<IndexedPredicate> object = null;
+      int objectIndex = -1;
+      if (objects.get(i).hasPredicate()) {
+        object = Sets.newHashSet(new IndexedPredicate(objects.get(i).getPredicate(), wordIndex));
+      } else {
+        objectIndex = objects.get(i).getArgumentNumber();
+      }
+
+      UnfilledDependency dep = new UnfilledDependency(subject, subjectIndex, 
+          argumentNumbers.get(i), object, objectIndex);
+      if (!dep.hasSubjects()) {
+        map.put(dep.getSubjectIndex(), dep);
+      }
+      if (!dep.hasObjects()) {
+        map.put(dep.getObjectIndex(), dep);
+      }
+      if (dep.hasSubjects() && dep.hasObjects()) {
+        for (IndexedPredicate subj : dep.getSubjects()) {
+          for (IndexedPredicate obj : dep.getObjects()) {
+            appendDependencies.add(new DependencyStructure(subj.getHead(), subj.getHeadIndex(),
+                obj.getHead(), obj.getHeadIndex(), argumentNumbers.get(i)));
           }
         }
       }
     }
-    
-    CcgCategory category = new CcgCategory(syntax.getReturn(), newHeads, newDeps); 
-    
-    return new CcgCombinationResult(category, filledDeps);
-  }
-
-  public CcgCombinationResult compose(CcgCategory other, Direction direction) {
-    return null;
+    return map;
   }
   
   @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
+    result = prime * result + ((argumentNumbers == null) ? 0 : argumentNumbers.hashCode());
     result = prime * result + ((heads == null) ? 0 : heads.hashCode());
+    result = prime * result + ((objects == null) ? 0 : objects.hashCode());
+    result = prime * result + ((subjects == null) ? 0 : subjects.hashCode());
     result = prime * result + ((syntax == null) ? 0 : syntax.hashCode());
-    result = prime * result + ((unfilledDependencies == null) ? 0 : unfilledDependencies.hashCode());
     return result;
   }
 
@@ -156,20 +185,30 @@ public class CcgCategory {
     if (getClass() != obj.getClass())
       return false;
     CcgCategory other = (CcgCategory) obj;
+    if (argumentNumbers == null) {
+      if (other.argumentNumbers != null)
+        return false;
+    } else if (!argumentNumbers.equals(other.argumentNumbers))
+      return false;
     if (heads == null) {
       if (other.heads != null)
         return false;
     } else if (!heads.equals(other.heads))
       return false;
+    if (objects == null) {
+      if (other.objects != null)
+        return false;
+    } else if (!objects.equals(other.objects))
+      return false;
+    if (subjects == null) {
+      if (other.subjects != null)
+        return false;
+    } else if (!subjects.equals(other.subjects))
+      return false;
     if (syntax == null) {
       if (other.syntax != null)
         return false;
     } else if (!syntax.equals(other.syntax))
-      return false;
-    if (unfilledDependencies == null) {
-      if (other.unfilledDependencies != null)
-        return false;
-    } else if (!unfilledDependencies.equals(other.unfilledDependencies))
       return false;
     return true;
   }
@@ -178,99 +217,53 @@ public class CcgCategory {
   public String toString() {
     return heads.toString() + " : " + syntax.toString();
   }
+  
+  public static final class Argument implements Serializable {
+    private static final long serialVersionUID = 1L;
 
-  public static class CcgCombinationResult {
-    private CcgCategory category;
-    private List<DependencyStructure> dependencies;
+    private final int argumentNumber;
+    private final String predicate;
 
-    public CcgCombinationResult(CcgCategory category, List<DependencyStructure> dependencies) {
-      this.category = Preconditions.checkNotNull(category);
-      this.dependencies = Preconditions.checkNotNull(dependencies);
-    }
-
-    public CcgCategory getCategory() {
-      return category;
-    }
-
-    public List<DependencyStructure> getDependencies() {
-      return dependencies;
-    }
-  }
-
-  public static class UnfilledDependency {
-    // Subject is the word(s) projecting the dependency. Null if subjects is unfilled. 
-    private final Set<String> subjects;
-    // Subject may be unfilled. If so, then this variable 
-    // is the index of the argument which fills the subject role. 
-    private final int subjectFunctionVarIndex;
-    // If subject is a variable, then it is a function. This index
-    // tracks which argument of the subject function is filled by the object role.
-    // (i.e., which dependencies inherited from the subject are filled by the object.)
-    private final int subjectArgIndex;
-    
-    // Objects are the arguments of the projected dependency. Null if objects is unfilled. 
-    private final Set<String> objects;
-    private final int objectArgumentIndex;
-
-    public UnfilledDependency(Set<String> subjects, int subjectFunctionVarIndex, 
-        int subjectArgIndex, Set<String> objects, int objectIndex) {
-      this.subjects = subjects;
-      this.subjectFunctionVarIndex = subjectFunctionVarIndex;
-      this.subjectArgIndex = subjectArgIndex;
-      this.objects = objects;
-      this.objectArgumentIndex = objectIndex;
+    private Argument(int argumentNumber, String predicate) {
+      this.argumentNumber = argumentNumber;
+      this.predicate = predicate;
     }
     
-    public static UnfilledDependency createWithKnownSubject(String subject, int subjectArgIndex, int objectIndex) {
-      return new UnfilledDependency(Sets.newHashSet(subject), -1, subjectArgIndex, null, objectIndex);
+    public static Argument parseFromString(String argString) {
+      if (!argString.startsWith("?")) {
+        return Argument.createFromPredicate(argString);
+      } else {
+        Integer argInd = Integer.parseInt(argString.substring(1));
+        return Argument.createFromArgumentNumber(argInd);
+      }
     }
     
-    public static UnfilledDependency createWithFunctionSubject(int subjectIndex, int subjectArgIndex, 
-        int objectIndex) {
-      return new UnfilledDependency(null, subjectIndex, subjectArgIndex, null, objectIndex);
+    public static Argument createFromPredicate(String predicate) {
+      return new Argument(-1, predicate);
     }
     
-    public static UnfilledDependency createWithKnownObject(int subjectIndex, int subjectArgIndex, String object) {
-      return new UnfilledDependency(null, subjectIndex, subjectArgIndex, Sets.newHashSet(object), -1);
+    public static Argument createFromArgumentNumber(int argumentNumber) {
+      return new Argument(argumentNumber, null);
     }
     
-    public Set<String> getSubjects() {
-      return subjects;
+    public boolean hasPredicate() {
+      return predicate != null;
     }
     
-    public boolean hasSubjects() {
-      return subjects != null;
+    public int getArgumentNumber() {
+      return argumentNumber;
     }
     
-    public int getSubjectIndex() {
-      return subjectFunctionVarIndex;
+    public String getPredicate() {
+      return predicate;
     }
     
-    public Set<String> getObjects() {
-      return objects;
-    }
-    
-    public boolean hasObjects() {
-      return objects != null;
-    }
-    
-    public int getObjectIndex() {
-      return objectArgumentIndex;
-    }
-    
-    public int getArgumentIndex() {
-      return subjectArgIndex;
-    }
-
     @Override
     public int hashCode() {
       final int prime = 31;
       int result = 1;
-      result = prime * result + objectArgumentIndex;
-      result = prime * result + ((objects == null) ? 0 : objects.hashCode());
-      result = prime * result + subjectArgIndex;
-      result = prime * result + subjectFunctionVarIndex;
-      result = prime * result + ((subjects == null) ? 0 : subjects.hashCode());
+      result = prime * result + argumentNumber;
+      result = prime * result + ((predicate == null) ? 0 : predicate.hashCode());
       return result;
     }
 
@@ -282,24 +275,20 @@ public class CcgCategory {
         return false;
       if (getClass() != obj.getClass())
         return false;
-      UnfilledDependency other = (UnfilledDependency) obj;
-      if (objectArgumentIndex != other.objectArgumentIndex)
+      Argument other = (Argument) obj;
+      if (argumentNumber != other.argumentNumber)
         return false;
-      if (objects == null) {
-        if (other.objects != null)
+      if (predicate == null) {
+        if (other.predicate != null)
           return false;
-      } else if (!objects.equals(other.objects))
-        return false;
-      if (subjectArgIndex != other.subjectArgIndex)
-        return false;
-      if (subjectFunctionVarIndex != other.subjectFunctionVarIndex)
-        return false;
-      if (subjects == null) {
-        if (other.subjects != null)
-          return false;
-      } else if (!subjects.equals(other.subjects))
+      } else if (!predicate.equals(other.predicate))
         return false;
       return true;
+    }
+    
+    @Override
+    public String toString() {
+      return (predicate != null) ? predicate : ("?" + argumentNumber); 
     }
   }
 }

@@ -2,11 +2,8 @@ package com.jayantkrish.jklol.models.parametric;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphProtos.ParametricFactorProto;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Locally normalizes the probability distribution defined by a wrapped
@@ -70,10 +67,5 @@ public class NormalizedFactor extends AbstractParametricFactor {
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     wrappedFactor.incrementSufficientStatisticsFromMarginal(statistics, marginal, 
         conditionalAssignment, count, partitionFunction);
-  }
-
-  @Override
-  public ParametricFactorProto toProto(IndexedList<Variable> variableTypeIndex) {
-    throw new UnsupportedOperationException("Not implemented");
   }
 }

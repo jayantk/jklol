@@ -22,7 +22,10 @@ public class IoUtils {
       BufferedReader in = new BufferedReader(new FileReader(filename));
       String line;
       while ((line = in.readLine()) != null) {
-        lines.add(line);
+        // Ignore blank lines.
+        if (line.trim().length() > 0) {
+          lines.add(line);
+        }
       }
       in.close();
     } catch (IOException e) {

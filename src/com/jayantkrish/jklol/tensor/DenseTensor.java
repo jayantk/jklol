@@ -104,9 +104,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       // Both products coincide in this case. 
       return elementwiseProduct(other);
     }
-    
-    return elementwiseProduct(other).sumOutDimensions(otherDims);
-    /*
+
     // Check if the dimensions of other are either left- or right-aligned 
     // with this tensor's dimensions, in which case we can use a faster
     // inner product algorithm.
@@ -130,7 +128,6 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       // Slow, default inner product.
       return elementwiseProduct(other).sumOutDimensions(otherDims);
     }
-    */
   }
 
   /**

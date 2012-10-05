@@ -22,19 +22,20 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A graphical model represented as a set of factors over a set of
- * variables. Both {@code FactorGraph}s and the {@link Factor}s they contain are
- * immutable.
+ * A graphical model represented as a set of factors over a set of variables.
+ * Both {@code FactorGraph}s and the {@link Factor}s they contain are immutable.
  * 
- * <p> This class may represent a conditional probability distribution, where
- * some variables' values are provided as an {@code Assignment}. Conversely,
- * factor graphs may require some variables to be conditioned on before they
- * represent a legitimate probability distribution.
- *
- * <p> {@code FactorGraph}s can be constructed incrementally using methods such
- * as {@link #addVariable(String, Variable)}.  These construction methods return
- * new instances of this class with certain fields modified.
- *
+ * <p>
+ * This class may represent a conditional probability distribution, where some
+ * variables' values are provided as an {@code Assignment}. Conversely, factor
+ * graphs may require some variables to be conditioned on before they represent
+ * a legitimate probability distribution.
+ * 
+ * <p>
+ * {@code FactorGraph}s can be constructed incrementally using methods such as
+ * {@link #addVariable(String, Variable)}. These construction methods return new
+ * instances of this class with certain fields modified.
+ * 
  * @author jayantk
  */
 public class FactorGraph {
@@ -169,6 +170,21 @@ public class FactorGraph {
   }
 
   /**
+   * Gets the factor in this named {@code name}. Returns {@code null} if no such
+   * factor exists.
+   * 
+   * @param name
+   * @return
+   */
+  public Factor getFactorByName(String name) {
+    if (!factorNames.contains(name)) {
+      return null;
+    }
+    int index = factorNames.getIndex(name);
+    return factors.get(index);
+  }
+
+  /**
    * Gets a list of factors in this. This method is similar to
    * {@link #getFactors()}, except that it merges together factors defined over
    * the same variables. Hence, no factor in the returned list will be defined
@@ -181,11 +197,11 @@ public class FactorGraph {
     // Sort factors in descending order of size.
     List<Factor> sortedFactors = Lists.newArrayList(factors);
     Collections.sort(sortedFactors, new Comparator<Factor>() {
-      public int compare(Factor f1, Factor f2) { 
-        return f2.getVars().size() - f1.getVars().size(); 
+      public int compare(Factor f1, Factor f2) {
+        return f2.getVars().size() - f1.getVars().size();
       }
     });
-    
+
     List<List<Factor>> factorsToMerge = Lists.newArrayList();
     Set<Integer> factorNums = Sets.newHashSet();
     Multimap<Integer, Integer> varFactorIndex = HashMultimap.create();
@@ -206,14 +222,14 @@ public class FactorGraph {
         factorsToMerge.add(Lists.newArrayList(f));
       }
     }
-    
+
     // Merge factors using size as a guideline
     List<Factor> finalFactors = Lists.newArrayListWithCapacity(factorsToMerge.size());
     for (List<Factor> toMerge : factorsToMerge) {
       // Sort the factors by their .size() attribute, sparsest factors first.
       Collections.sort(toMerge, new Comparator<Factor>() {
-        public int compare(Factor f1, Factor f2) { 
-          return (int) (f1.size() - f2.size()); 
+        public int compare(Factor f1, Factor f2) {
+          return (int) (f1.size() - f2.size());
         }
       });
       finalFactors.add(Factors.product(toMerge));

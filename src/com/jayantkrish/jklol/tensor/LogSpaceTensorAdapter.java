@@ -85,6 +85,12 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   }
   
   @Override
+  public Tensor innerProduct(Tensor other) {
+    DenseTensor product = logWeights.elementwiseAddition(other.elementwiseLog());
+    return (new LogSpaceTensorAdapter(product)).sumOutDimensions(other.getDimensionNumbers());
+  }
+  
+  @Override
   public Tensor outerProduct(Tensor other) {
     throw new UnsupportedOperationException("Not yet implemented.");
   }

@@ -28,3 +28,14 @@ and,and,(N\N)/N,doSequentially 1 ?1#doSequentially 2 ?2
 # These entries tell the system to ignore these words
 the,the,N/>N
 this,this,N/>N
+
+
+# Stuff for testing multiargument relation extraction
+directed,concept:directedBy,(S\N)/N,concept:directedBy 2 ?1#concept:directedBy 1 ?2
+in,onDate,((S\N)\>(S\N))/N,onDate 1 ?2#onDate 2 ?3
+in,onDate,((S\N)/>(S\N))/N,onDate 1 ?2#onDate 2 ?3
+quentin tarantino,concept:quentin_tarantino,N
+pulp fiction,concept:pulp_fiction,N
+1993,1993,N
+
+

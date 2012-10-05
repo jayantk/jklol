@@ -96,6 +96,70 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     builder.multiply(this);
     return builder.build();
   }
+  
+  @Override
+  public DenseTensor innerProduct(Tensor other) {
+    int[] otherDims = other.getDimensionNumbers();
+    if (otherDims.length == 0) {
+      // Both products coincide in this case. 
+      return elementwiseProduct(other);
+    }
+    
+    return elementwiseProduct(other).sumOutDimensions(otherDims);
+    /*
+    // Check if the dimensions of other are either left- or right-aligned 
+    // with this tensor's dimensions, in which case we can use a faster
+    // inner product algorithm.
+    int[] myDims = getDimensionNumbers();
+    if (areDimensionsRightAligned(otherDims)) {
+      int maxDimIndex = myDims.length - (otherDims.length + 1);
+      int[] newDims = Arrays.copyOf(myDims, maxDimIndex + 1);
+      int[] newSizes = Arrays.copyOf(getDimensionSizes(), maxDimIndex + 1);
+      long maxKeyNum = getMaxKeyNum();
+      long keyNumIncrement = (maxDimIndex < 0) ? maxKeyNum : getDimensionOffsets()[maxDimIndex];
+      
+      return fastInnerProduct(other, maxKeyNum, keyNumIncrement, 1, newDims, newSizes);
+    } else if (areDimensionsLeftAligned(otherDims)) {
+      int minDimIndex = otherDims.length;
+      int[] newDims = Arrays.copyOfRange(myDims, minDimIndex, myDims.length);
+      int[] newSizes = Arrays.copyOfRange(getDimensionSizes(), minDimIndex, myDims.length);
+      long maxKeyNum = (minDimIndex == 0) ? getMaxKeyNum() : getDimensionOffsets()[minDimIndex - 1];
+
+      return fastInnerProduct(other, maxKeyNum, 1, maxKeyNum, newDims, newSizes);
+    } else {
+      // Slow, default inner product.
+      return elementwiseProduct(other).sumOutDimensions(otherDims);
+    }
+    */
+  }
+
+  /**
+   * Fast implementation of inner product that takes advantage of potential 
+   * sparsity in {@code other}. Requires alignment between the dimensions of 
+   * {@code this} and {@code other}. 
+   * 
+   * @param other
+   * @return
+   */
+  private DenseTensor fastInnerProduct(Tensor other, long maxKeyNum, long keyNumIncrement, 
+      long otherKeyNumMultiplier, int[] newDims, int[] newSizes) {        
+    DenseTensorBuilder resultBuilder = new DenseTensorBuilder(newDims, newSizes);
+    int otherSize = other.size();
+    // Iterate over the keys of this, then (hopefully sparsely) iterate over the 
+    // keys of {@code other},  
+    for (long myKeyNum = 0; myKeyNum < maxKeyNum; myKeyNum += keyNumIncrement) {
+      double innerProd = 0.0;
+      for (int otherIndex = 0; otherIndex < otherSize; otherIndex++) {
+        long otherKeyNum = other.indexToKeyNum(otherIndex);
+        double otherValue = other.getByIndex(otherIndex);
+        
+        innerProd += get(myKeyNum + (otherKeyNum * otherKeyNumMultiplier)) * otherValue;
+      }      
+      resultBuilder.putByKeyNum(myKeyNum / keyNumIncrement, innerProd);
+    }
+    
+    return resultBuilder.build();
+  }
 
   @Override
   public DenseTensor outerProduct(Tensor other) {
@@ -189,10 +253,20 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public DenseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
     return reduceDimensions(dimensionsToEliminate, true, null);
   }
+   
+  @Override
+  public DenseTensor sumOutDimensions(int[] dimensionsToEliminate) {
+    return sumOutDimensions(Ints.asList(dimensionsToEliminate));
+  }
 
   @Override
   public DenseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {
     return reduceDimensions(dimensionsToEliminate, false, null);
+  }
+  
+  @Override
+  public DenseTensor maxOutDimensions(int[] dimensionsToEliminate) {
+    return maxOutDimensions(Ints.asList(dimensionsToEliminate));
   }
 
   @Override

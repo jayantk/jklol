@@ -382,6 +382,11 @@ public class SparseTensor extends AbstractTensor implements Serializable{
     return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(), resultKeyInts,
         resultValues, resultInd);
   }
+  
+  @Override
+  public SparseTensor innerProduct(Tensor other) {
+    return elementwiseProduct(other).sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
+  }
 
   @Override
   public SparseTensor outerProduct(Tensor other) {

@@ -153,4 +153,36 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     }
     return -1;
   }
+  
+  /**
+   * Returns {@code true} if the dimensions in {@code otherDims} occur
+   * occur at the very end of this tensor's dimension array.
+   *    
+   * @param otherDims
+   * @return
+   */
+  public boolean areDimensionsRightAligned(int[] otherDims) {
+    for (int i = 1; i < otherDims.length + 1; i++) {
+      if (otherDims[otherDims.length - i] != dimensions[dimensions.length - i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+    /**
+   * Returns {@code true} if the dimensions in {@code otherDims} occur
+   * occur at the very beginning of this tensor's dimension array.
+   *    
+   * @param otherDims
+   * @return
+   */
+  public boolean areDimensionsLeftAligned(int[] otherDims) {
+    for (int i = 0; i < otherDims.length; i++) {
+      if (otherDims[i] != dimensions[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

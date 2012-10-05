@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.tensor;
 
 import java.util.Collection;
 
+import com.google.common.primitives.Ints;
+
 /**
  * Common implementations of {@code Tensor} methods.
  *
@@ -27,5 +29,15 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
   @Override
   public Tensor elementwiseProduct(double value) {
     return elementwiseProduct(SparseTensor.getScalarConstant(value));
+  }
+  
+  @Override
+  public Tensor sumOutDimensions(int[] dimensionsToEliminate) {
+    return sumOutDimensions(Ints.asList(dimensionsToEliminate));
+  }
+  
+  @Override
+  public Tensor maxOutDimensions(int[] dimensionsToEliminate) {
+    return maxOutDimensions(Ints.asList(dimensionsToEliminate));
   }
 }

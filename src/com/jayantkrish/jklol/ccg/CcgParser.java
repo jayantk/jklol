@@ -200,8 +200,7 @@ public class CcgParser implements Serializable {
             }
           }
         } else {
-          // Part of the dependency remains unresolved. Fill what's possible, then propagate
-          // the unfilled portions.
+          // The subject of this dependency has not been filled.
           int subjectIndex = unfilled.getSubjectIndex();
           int argIndex = unfilled.getArgumentIndex();
           
@@ -231,6 +230,10 @@ public class CcgParser implements Serializable {
           }
         }
       }
+    }
+    
+    if (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) {
+      newDeps.putAll(other.getUnfilledDependencies());
     }
     
     // Handle any unfilled head arguments.

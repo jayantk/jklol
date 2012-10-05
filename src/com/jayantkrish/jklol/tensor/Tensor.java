@@ -10,7 +10,8 @@ import java.util.Map;
  * (represented as {@code int[]}) to values. Tensors support mathematical
  * operations, such as addition and multiplication.
  * 
- * <p> Tensors are immutable. All operations on {@code Tensor}s return new objects,
+ * <p>
+ * Tensors are immutable. All operations on {@code Tensor}s return new objects,
  * leaving the originals unchanged.
  * 
  * @author jayant
@@ -29,12 +30,39 @@ public interface Tensor extends TensorBase, Serializable {
    */
   Tensor slice(int[] dimensionNumbers, int[] keys);
 
+  /**
+   * Returns the elementwise product of this with {@code other}. {@code other}
+   * must contain a subset of the dimensions of {@code this}, and the returned
+   * tensor will have the same dimensions as {@code this}. Each key in the
+   * returned tensor's value will be equal to {@code this.get(k) * other.get(k)}
+   * .
+   * 
+   * @param other
+   * @return
+   */
   Tensor elementwiseProduct(Tensor other);
 
   Tensor elementwiseProduct(Collection<Tensor> others);
 
   Tensor elementwiseProduct(double value);
 
+  /**
+   * The tensor inner product, which is analogous to the standard matrix
+   * product. This method elementwise multiplies {@code this} and {@code other},
+   * then sums out all dimensions in {@code other}. The returned tensor has the
+   * dimensions of {@code this} minus the dimensions of {@code other}.
+   * 
+   * @param other
+   * @return
+   */
+  Tensor innerProduct(Tensor other);
+
+  /**
+   * The outer product. {@code other} and {@code this} must have disjoint sets
+   * of dimensions, and the returned tensor will have the union of both sets of
+   * dimensions. The value of key {@code k} in the returned tensor is equal to
+   * {@code this.get(k) * other.get(k)}.
+   */
   Tensor outerProduct(Tensor other);
 
   /**
@@ -126,6 +154,8 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate);
+  
+  Tensor sumOutDimensions(int[] dimensionsToEliminate);
 
   /**
    * Maximizes out {@code dimensionsToEliminate}, returning a lower-dimensional
@@ -137,6 +167,8 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate);
+  
+  Tensor maxOutDimensions(int[] dimensionsToEliminate);
 
   /**
    * Same as {@link #maxOutDimensions(Collection)}, except additionally returns

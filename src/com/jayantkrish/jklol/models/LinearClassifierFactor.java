@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.models;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensor;
@@ -106,8 +105,7 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
   }
   
   private Tensor getOutputLogProbTensor(Tensor inputFeatureVector) {
-    Tensor multiplied = logWeights.elementwiseProduct(inputFeatureVector.relabelDimensions(inputVarNums));
-    Tensor logProbs = multiplied.sumOutDimensions(Sets.newHashSet(Ints.asList(inputVarNums)));
+    Tensor logProbs = logWeights.innerProduct(inputFeatureVector.relabelDimensions(inputVarNums));
 
     if (conditionalVars.size() > 0) {
       Tensor probs = logProbs.elementwiseExp();

@@ -327,6 +327,43 @@ public abstract class TensorTest extends TestCase {
     assertEquals(expected, actual);
   }
   
+  public void testInnerProductRightAligned() {
+    for (Tensor missingFirst : missingFirsts) {
+      Tensor actual = table.innerProduct(missingFirst);
+      Tensor expected = simpleReduce(simpleMultiply(table, missingFirst), 
+          Sets.newHashSet(Ints.asList(missingFirst.getDimensionNumbers())), true);
+      
+      System.out.println(actual);
+      System.out.println(expected);
+      
+      assertEquals(expected, actual);
+    }
+  }
+  
+  public void testInnerProductLeftAligned() {
+    for (Tensor missingLast : missingLasts) {
+      Tensor actual = table.innerProduct(missingLast);
+      Tensor expected = simpleReduce(simpleMultiply(table, missingLast), 
+          Sets.newHashSet(Ints.asList(missingLast.getDimensionNumbers())), true);
+      
+      System.out.println(actual);
+      System.out.println(expected);
+      
+      assertEquals(expected, actual);
+    }
+  }
+  
+  public void testInnerProductAllDims() {
+    Tensor actual = table.innerProduct(table);
+    Tensor expected = simpleReduce(simpleMultiply(table, table), 
+          Sets.newHashSet(Ints.asList(table.getDimensionNumbers())), true);
+      
+    System.out.println(actual);
+    System.out.println(expected);
+    
+    assertEquals(expected, actual);
+  }
+
   public void testOuterProduct() {
     for (Tensor disjoint : disjointTables) {
       Tensor result = table.outerProduct(disjoint);

@@ -29,11 +29,11 @@ public interface TensorBase {
   int numDimensions();
 
   /**
-   * Gets an estimate of the size of this tensor, which corresponds to the
-   * amount of work required to perform operations with it. For sparse tensors,
-   * this is the number of nonzero values; for dense tensors, this is the total
-   * number of values. Indexes from {@code 0} to {@code size() - 1} are valid
-   * for methods like {@link #getByIndex(int)}.
+   * Gets the size of this tensor, which corresponds to the amount of work
+   * required to perform operations with it. For sparse tensors, this is the
+   * number of nonzero values; for dense tensors, this is the total number of
+   * values. Indexes from {@code 0} to {@code size() - 1} are valid for methods
+   * like {@link #getByIndex(int)}.
    * 
    * @return
    */

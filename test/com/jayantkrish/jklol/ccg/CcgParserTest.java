@@ -24,10 +24,10 @@ public class CcgParserTest extends TestCase {
   
   private static final String[] lexicon = {"I,I,N,", "people,people,N,", "berries,berries,N", "houses,houses,N", 
     "eat,eat,(S\\N)/N,eat 1 ?1#eat 2 ?2", "that,that,(N\\>N)/(S\\N),that 1 ?1#?2 1 ?1#that 2 ?2", 
-    "quickly,quickly,((S\\N)/N)/>((S\\N)/N),quickly 1 ?3#?3 1 ?1#?3 2 ?2", "in,in,(N\\>N)/N,in 1 ?1#in 2 ?2",
-    "amazingly,amazingly,(N/>N)/>(N/>N),amazingly 1 ?2#?2 1 ?1", "tasty,tasty,(N/>N),tasty 1 ?1",
-    "in,in,((S\\N)\\>(S\\N))/N,in 1 ?2#in 2 ?3#?2 3 ?3#?2 1 ?1",
-    "and,?1#?2,(N\\N)/N", "almost,almost,((N\\>N)/N)/>((N\\>N)/N),almost 1 ?3#?3 1 ?1#?3 2 ?2",
+    "quickly,quickly,((S\\N)/N)/>((S\\N)/N),quickly 1 ?3", "in,in,(N\\>N)/N,in 1 ?1#in 2 ?2",
+    "amazingly,amazingly,(N/>N)/>(N/>N),amazingly 1 ?2", "tasty,tasty,(N/>N),tasty 1 ?1",
+    "in,in,((S\\N)\\>(S\\N))/N,in 1 ?2#in 2 ?3",
+    "and,?1#?2,(N\\N)/N", "almost,almost,((N\\>N)/N)/>((N\\>N)/N),almost 1 ?3",
     "is,is,(S\\N)/N,?1 1 ?2"};
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 

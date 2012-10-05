@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPr
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.LinearClassifierFactor;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
@@ -36,6 +37,8 @@ public class LinearClassifierTest extends TestCase {
   VariableNumMap x, y, all;
 
   List<Example<Assignment, Assignment>> trainingData;
+  
+  private static final int NUM_DIMS=100000;
 
   public void setUp() {
     // A linear classifier is represented as a parametric factor graph with
@@ -58,12 +61,11 @@ public class LinearClassifierTest extends TestCase {
     all = x.union(y);
 
     // Define the names of the features used in the classifier. Our classifier
-    // will expect input vectors of dimension 4. This DiscreteVariable maps each
+    // will expect input vectors of dimension NUM_DIMS. This DiscreteVariable maps each
     // feature name to an index in the feature vector; it can also be used to
     // construct the input
     // vectors.
-    DiscreteVariable featureVar = new DiscreteVariable("features",
-        Arrays.asList("f1", "f2", "f3", "f4"));
+    DiscreteVariable featureVar = DiscreteVariable.sequence("features", NUM_DIMS);
 
     // A ConditionalLogLinearFactor represents a trainable linear classifier
     // (yes, the name is terrible). Just copy this definition, replacing x, y
@@ -78,13 +80,13 @@ public class LinearClassifierTest extends TestCase {
     // feature names, consider using TableFactor.fromDelimitedFile
     trainingData = Lists.newArrayList();
     for (int i = 0; i < 8; i++) {
-      double[] values = new double[4];
+      double[] values = new double[NUM_DIMS];
       values[0] = (i % 2) * 2 - 1;
       values[1] = ((i / 2) % 2) * 2 - 1;
       values[2] = ((i / 4) % 2) * 2 - 1;
       values[3] = 1;
       
-      Assignment inputValue = x.outcomeArrayToAssignment(SparseTensor.vector(0, 4, values));
+      Assignment inputValue = x.outcomeArrayToAssignment(SparseTensor.vector(0, NUM_DIMS, values));
       
       // Output is "T" if the sum of the (non-bias) features is > 0.
       double sum = 0;
@@ -124,7 +126,7 @@ public class LinearClassifierTest extends TestCase {
 
     // Instantiate the optimization algorithm, in this case stochastic gradient
     // with l2 regularization.
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(1000, 1, 1.0, true, 0.1, new DefaultLogFunction());
     // Estimate classifier parameters.
     SufficientStatistics parameters = trainer.train(adaptedOracle,
         linearClassifier.getNewSufficientStatistics(), trainingData);
@@ -132,8 +134,13 @@ public class LinearClassifierTest extends TestCase {
     // "getFactorGraph()" part again exists to support dynamic factor graphs.
     FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
-
-    System.out.println(parameters);
+            
+    LinearClassifierFactor classifierFactor = (LinearClassifierFactor) trainedModel.getFactors().get(0);
+    Tensor falseWeights = classifierFactor.getFeatureWeightsForClass(y.outcomeArrayToAssignment("F"));
+    Tensor trueWeights = classifierFactor.getFeatureWeightsForClass(y.outcomeArrayToAssignment("T"));
+    Tensor deltas = trueWeights.elementwiseAddition(falseWeights.elementwiseProduct(-1.0));
+    System.out.println("DELTAS: " + deltas);
+    System.out.println(Arrays.toString(deltas.getDimensionSizes()));
 
     // Should be able to get 0 training error. This uses a simple wrapper around
     // the factor graph. Another option is to use

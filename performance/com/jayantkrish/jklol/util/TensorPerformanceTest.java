@@ -115,6 +115,14 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
       output[i % 100] += firstTestArray[i];
     }
   }
+  
+  @PerformanceTest(3)
+  public void testIterationLowerBound() {
+    double foo[] = new double[firstTestArray.length];
+    for (int i = 0; i < foo.length; i++) {
+      foo[i] += 1;
+    }
+  }
 
   @PerformanceTest
   public void testRelabelDims() {

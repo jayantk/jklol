@@ -108,15 +108,16 @@ public class StochasticGradientTrainer {
       log.stopTimer("factor_graph_from_parameters");
 
       log.startTimer("compute_gradient_(serial)");
+      int iterSearchErrors = 0;
       GradientEvaluation oracleResult = executor.mapReduce(batchData,
           new GradientMapper<M, E>(currentModel, oracle, log), new GradientReducer<M, E>(oracle, log));
+
+      iterSearchErrors = oracleResult.getSearchErrors();
       SufficientStatistics gradient = oracleResult.getGradient();
       gradient.multiply(1.0 / batchSize);
       log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");
-
-      // System.out.println(currentStepSize);
       // Apply regularization and take a gradient step.
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
       regularizer.apply(gradient, initialParameters, currentStepSize);
@@ -129,7 +130,7 @@ public class StochasticGradientTrainer {
       exponentiallyWeightedUpdateNorm = (0.2) * gradientL2 * currentStepSize + (0.8 * exponentiallyWeightedUpdateNorm);
       log.stopTimer("compute_statistics");
 
-      log.logStatistic(i, "search errors", oracleResult.getSearchErrors());
+      log.logStatistic(i, "search errors", iterSearchErrors);
       log.logStatistic(i, "gradient l2 norm", gradientL2);
       log.logStatistic(i, "step size", currentStepSize);
       log.logStatistic(i, "objective value", oracleResult.getObjectiveValue());

@@ -109,10 +109,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
         values[i] += otherTensor.values[i] * multiplier;
       }
     } else {
-      Iterator<KeyValue> otherKeyValueIterator = other.keyValueIterator();
-      while (otherKeyValueIterator.hasNext()) {
-        KeyValue otherKeyValue = otherKeyValueIterator.next();
-        values[dimKeyToIndex(otherKeyValue.getKey())] += otherKeyValue.getValue() * multiplier;
+      int otherSize = other.size();
+      for (int i = 0; i < otherSize; i++) {
+        long keyNum = other.indexToKeyNum(i);
+        double value = other.getByIndex(i);
+        values[keyNumToIndex(keyNum)] += value * multiplier;
       }
     }
   }

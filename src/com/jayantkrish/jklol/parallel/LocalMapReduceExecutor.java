@@ -40,6 +40,15 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
 
   @Override
   public <A, B, C> C mapReduce(Collection<A> items, Mapper<A, B> mapper, Reducer<B, C> reducer) {
+    if (items.size() == 1) {
+      // Run all computation in this thread, which is faster given only a small number of items.
+      C accumulator = reducer.getInitialValue();
+      for (A item : items) {
+        B mappedItem = mapper.map(item);
+        accumulator = reducer.reduce(mappedItem, accumulator);
+      }
+      return accumulator;
+    }
 
     // Set up the item batches for the executor service. 
     ImmutableList<A> itemsAsList = ImmutableList.copyOf(items);

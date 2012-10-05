@@ -38,7 +38,7 @@ public class LinearClassifierTest extends TestCase {
 
   List<Example<Assignment, Assignment>> trainingData;
   
-  private static final int NUM_DIMS=10000;
+  private static final int NUM_DIMS=100000;
 
   public void setUp() {
     // A linear classifier is represented as a parametric factor graph with

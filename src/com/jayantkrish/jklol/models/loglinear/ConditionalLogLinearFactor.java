@@ -156,8 +156,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
         .relabelDimensions(Ints.toArray(inputVar.getVariableNums()));
     
     TensorBuilder weightTensor = getWeightTensorFromStatistics(statistics);
-    Tensor foo = inputTensor.outerProduct(outputMarginal.getWeights());
-    weightTensor.incrementWithMultiplier(foo, count / partitionFunction);
+    Tensor expectedCounts = inputTensor.outerProduct(outputMarginal.getWeights());
+    weightTensor.incrementWithMultiplier(expectedCounts, count / partitionFunction);
   }
   
   private TensorBuilder getWeightTensorFromStatistics(SufficientStatistics stats) {

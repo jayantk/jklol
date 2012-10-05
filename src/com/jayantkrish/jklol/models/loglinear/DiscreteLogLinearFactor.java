@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -168,8 +168,8 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public TensorSufficientStatistics getNewSufficientStatistics() {
-    return new TensorSufficientStatistics(featureVariables, 
+  public TensorBuilderSufficientStatistics getNewSufficientStatistics() {
+    return new TensorBuilderSufficientStatistics(featureVariables, 
         new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
             featureVariables.getVariableSizes()));
   }
@@ -203,7 +203,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   private TensorBuilder getFeatureWeights(SufficientStatistics parameters) {
-    TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
+    TensorBuilderSufficientStatistics featureParameters = (TensorBuilderSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.
     Preconditions.checkArgument(Arrays.equals(featureParameters.get().getDimensionSizes(),
         featureVariables.getVariableSizes()), "DiscreteLogLinearFactor: Parameters don't have the right dimensionality.");

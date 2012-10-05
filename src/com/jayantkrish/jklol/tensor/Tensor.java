@@ -125,6 +125,22 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor elementwiseExp();
+  
+  /**
+   * Applies the soft threshold operator to each element in this. The soft
+   * threshold operator {@code f} applied to an element {@code x} is defined as:
+   * 
+   * <ul>
+   * <li>{@code f(x) = 0} if {@code |x| <= threshold}.
+   * <li>{@code f(x) = x - (sign(x) * threshold)} if {@code |x| >= threshold}
+   * </ul>
+   * 
+   * In words, this operator zeros out elements that are within
+   * {@code threshold} of zero, then shrinks all other elements toward zero.
+   * 
+   * @param threshold
+   */
+  Tensor softThreshold(double threshold);
 
   /**
    * Applies {@code op} to the value of each key in {@code this}, including keys

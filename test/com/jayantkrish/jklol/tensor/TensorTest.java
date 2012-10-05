@@ -447,6 +447,17 @@ public abstract class TensorTest extends TestCase {
     assertTrue(Arrays.equals(varSizes, actual.getDimensionSizes()));
   }
   
+  public void testSoftThreshold() {
+    Tensor actual = table.softThreshold(4.0);
+    
+    assertEquals(0.0, actual.getByDimKey(0, 0, 1));
+    assertEquals(0.0, actual.getByDimKey(0, 0, 3));
+    assertEquals(0.0, actual.getByDimKey(0, 1, 3));
+    assertEquals(1.0, actual.getByDimKey(1, 0, 3));
+    assertEquals(-1.0, actual.getByDimKey(1, 3, 0));
+    assertEquals(3.0, actual.getByDimKey(3, 4, 3));
+  }
+  
   public void testReduceDimensionsNone() {
     runReduceTest(table, Sets.<Integer>newHashSet());
   }

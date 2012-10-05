@@ -15,7 +15,7 @@ import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
@@ -83,8 +83,8 @@ public class TrainCcg {
     }
     
     List<SufficientStatistics> list = parameters.coerceToList().getStatistics();
-    TensorSufficientStatistics t0 = (TensorSufficientStatistics) list.get(0);
-    TensorSufficientStatistics t1 = (TensorSufficientStatistics) list.get(1);
+    TensorBuilderSufficientStatistics t0 = (TensorBuilderSufficientStatistics) list.get(0);
+    TensorBuilderSufficientStatistics t1 = (TensorBuilderSufficientStatistics) list.get(1);
     System.out.println(t0.get());
     System.out.println(t1.get());
     

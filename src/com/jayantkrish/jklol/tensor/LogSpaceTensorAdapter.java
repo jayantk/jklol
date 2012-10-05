@@ -129,6 +129,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public Tensor elementwiseExp() {
     return new LogSpaceTensorAdapter(logWeights.elementwiseExp());
   }
+  
+  @Override
+  public Tensor softThreshold(double threshold) {
+    throw new UnsupportedOperationException("Not yet implemented.");
+  }
 
   @Override
   public Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {

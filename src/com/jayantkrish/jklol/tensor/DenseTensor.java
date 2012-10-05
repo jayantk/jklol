@@ -245,6 +245,13 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     }
     return outputBuilder.buildNoCopy();
   }
+  
+  @Override
+  public DenseTensor softThreshold(double threshold) {
+    DenseTensorBuilder builder = DenseTensorBuilder.copyOf(this);
+    builder.softThreshold(threshold);
+    return builder.build();
+  }
 
   @Override
   public DenseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {

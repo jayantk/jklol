@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
@@ -52,7 +52,7 @@ public class CptTableFactor extends AbstractParametricFactor {
 
   @Override
   public DiscreteFactor getFactorFromParameters(SufficientStatistics parameters) {
-    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) parameters;
+    TensorBuilderSufficientStatistics tensorStats = (TensorBuilderSufficientStatistics) parameters;
     Tensor allTensor = tensorStats.get().build();
     Tensor parentTensor = allTensor.sumOutDimensions(childVars.getVariableNums());
     
@@ -75,9 +75,9 @@ public class CptTableFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public TensorSufficientStatistics getNewSufficientStatistics() {
+  public TensorBuilderSufficientStatistics getNewSufficientStatistics() {
     TensorBuilder combinedTensor = getTensorFromVariables(getVars());
-    return new TensorSufficientStatistics(getVars(), combinedTensor);
+    return new TensorBuilderSufficientStatistics(getVars(), combinedTensor);
   }
 
   /**
@@ -101,7 +101,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
       Assignment a, double count) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
-    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
+    TensorBuilderSufficientStatistics tensorStats = (TensorBuilderSufficientStatistics) statistics;
 
     int[] combinedIndex = getVars().assignmentToIntArray(a);
     tensorStats.get().incrementEntry(count, combinedIndex);
@@ -112,7 +112,7 @@ public class CptTableFactor extends AbstractParametricFactor {
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     Assignment conditionalSubAssignment = conditionalAssignment.intersection(getVars());
 
-    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
+    TensorBuilderSufficientStatistics tensorStats = (TensorBuilderSufficientStatistics) statistics;
     Iterator<Outcome> outcomeIter = marginal.coerceToDiscrete().outcomeIterator();
     while (outcomeIter.hasNext()) {
       Outcome outcome = outcomeIter.next();

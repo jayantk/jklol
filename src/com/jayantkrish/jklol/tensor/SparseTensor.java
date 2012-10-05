@@ -563,6 +563,32 @@ public class SparseTensor extends AbstractTensor implements Serializable{
     }
     return builder.buildNoCopy();
   }
+  
+  public SparseTensor softThreshold(double threshold) {
+    double[] newValues = new double[values.length];
+    long[] newKeyNums = new long[values.length];
+    
+    int curIndex = 0;
+    int length = values.length;
+    double negThreshold = -1.0 * threshold;
+    for (int i = 0; i < length; i++) {
+      if (values[i] > threshold) {
+        newKeyNums[curIndex] = keyNums[i]; 
+        newValues[curIndex] = values[i] - threshold;
+        curIndex++;
+      } else if (values[i] < negThreshold) {
+        newKeyNums[curIndex] = keyNums[i];
+        newValues[curIndex] = values[i] + threshold;
+        curIndex++;
+      }
+    }
+
+    int[] dimensionNums = getDimensionNumbers();
+    int[] dimensionSizes = getDimensionSizes();
+    return resizeIntoTable(Arrays.copyOf(dimensionNums, dimensionNums.length),
+        Arrays.copyOf(dimensionSizes, dimensionSizes.length),
+        newKeyNums, newValues, curIndex);
+  }
 
   /**
    * Sparsely computes e to the power of each element in this tensor. For keys

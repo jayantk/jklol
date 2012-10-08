@@ -28,13 +28,13 @@ public class CcgParserTest extends TestCase {
     "amazingly,amazingly,(N/>N)/>(N/>N),amazingly 1 ?2", "tasty,tasty,(N/>N),tasty 1 ?1",
     "in,in,((S\\N)\\>(S\\N))/N,in 1 ?2#in 2 ?3",
     "and,?1#?2,(N\\N)/N", "almost,almost,((N\\>N)/N)/>((N\\>N)/N),almost 1 ?3",
-    "is,is,(S\\N)/N,?1 1 ?2"};
+    "is,is,(S\\N)/N,is 1 ?1, is 2 ?2", "directed,directed,(S\\N)/N,directed 1 ?2#directed 2 ?1"};
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
     1.0, 1.0,
     1.0, 1.0,
     0.5, 1.0, 2.0,
-    0.25};
+    0.25, 1.0};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -113,7 +113,7 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(0.3 * 4 * 2, parse.getSubtreeProbability());
   }
-  
+
   public void testParseHeadUnification() {
     List<CcgParse> parses = parser.beamSearch(
         Arrays.asList("people", "and", "houses", "eat", "berries", "and", "berries"), 10);
@@ -152,18 +152,25 @@ public class CcgParserTest extends TestCase {
   
   public void testSubjectPatterns() {
     List<CcgParse> parses = parser.beamSearch(
-        Arrays.asList("people", "is", "houses"), 10);
+        Arrays.asList("people", "that", "directed", "berries"), 10);
     
     assertEquals(1, parses.size());
     
-    CcgParse parse = parses.get(0);
-    List<DependencyStructure> deps = parse.getAllDependencies();
-    assertEquals(1, deps.size());
-    assertEquals("people", deps.get(0).getHead());
-    assertEquals(0, deps.get(0).getHeadWordIndex());
-    assertEquals("houses", deps.get(0).getObject());
-    assertEquals(2, deps.get(0).getObjectWordIndex());
-    assertEquals(1, deps.get(0).getArgIndex());
+    CcgParse parse = parses.get(0);    
+    System.out.println(parse.getAllDependencies());
+    
+    // Make sure that the 2nd argument dependency of directed
+    // gets mapped to people via the category of "that".
+    assertEquals(2, parse.getNodeDependencies().size());    
+    for (DependencyStructure dep : parse.getNodeDependencies()) {
+      if (dep.getHead().equals("directed")) {
+        assertEquals(2, dep.getArgIndex());
+        assertEquals("people", dep.getObject());
+      } else if (dep.getHead().equals("that")) {
+        assertEquals(1, dep.getArgIndex());
+        assertEquals("people", dep.getObject());
+      }
+    }
   }
   
   private CcgParser parseLexicon(String[] lexicon, double[] weights) {

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -10,6 +11,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
@@ -184,6 +186,7 @@ public class CcgParser implements Serializable {
     // Return any fully-filled dependencies, while saving partially-filled dependencies for later.
     int argNum = syntax.getArgumentList().size(); 
     Multimap<Integer, UnfilledDependency> unfilledDependencies = first.getUnfilledDependencies();
+    Multimap<Integer, UnfilledDependency> otherUnfilledDeps = other.getUnfilledDependencies();
     Multimap<Integer, UnfilledDependency> newDeps = HashMultimap.create(unfilledDependencies);
     newDeps.removeAll(argNum);
 
@@ -210,23 +213,23 @@ public class CcgParser implements Serializable {
           }
         }
       } else if (unfilled.getSubjectIndex() == argNum) {
-        Set<IndexedPredicate> subjects = other.getHeads();
+        int otherArgNum = unfilled.getArgumentIndex();
+        Collection<UnfilledDependency> otherDeps = otherUnfilledDeps.get(otherArgNum);
+        
         if (unfilled.hasObjects()) {
-          for (IndexedPredicate subject : subjects) {
-            for (IndexedPredicate object : unfilled.getObjects()) {
-              filledDeps.add(new DependencyStructure(subject.getHead(), subject.getHeadIndex(), 
-                  object.getHead(), object.getHeadIndex(), unfilled.getArgumentIndex()));
+          for (IndexedPredicate object : unfilled.getObjects()) {
+            for (UnfilledDependency otherDep : otherDeps) {
+              substituteDependencyVariable(otherArgNum, otherDep, object, filledDeps);
             }
           }
         } else {
           // Part of the dependency remains unresolved. Fill what's possible, then propagate
           // the unfilled portions.
-          int objectIndex = unfilled.getObjectIndex();
-          newDeps.remove(objectIndex, unfilled);
+          int replacementIndex = unfilled.getObjectIndex();
+          newDeps.remove(replacementIndex, unfilled);
           
-          for (IndexedPredicate subject : subjects) {
-            newDeps.put(objectIndex, UnfilledDependency.createWithKnownSubject(subject.getHead(),
-                subject.getHeadIndex(), unfilled.getArgumentIndex(), objectIndex)); 
+          for (UnfilledDependency otherDep : otherDeps) {
+            substituteDependencyVariable(otherArgNum, otherDep, replacementIndex, newDeps);
           }
         }
       }
@@ -243,6 +246,63 @@ public class CcgParser implements Serializable {
     
     return new ChartEntry(syntax.getReturn(), newHeads, newHeadArgumentNums, newDeps, filledDeps, 
         leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart, rightSpanEnd, rightIndex);
+  }
+
+  /**
+   * Replaces all instances of {@code dependencyVariableNum} in {@code dep} 
+   * with the variable given by {@code replacementVariableNum}. 
+   * 
+   * @param dependencyVariableNum
+   * @param dep
+   * @param replacementVariableNum
+   * @param unfilledDepsAccumulator
+   */
+  private void substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
+      int replacementVariableNum, Multimap<Integer, UnfilledDependency> unfilledDepsAccumulator) {
+    UnfilledDependency newDep = dep;
+    if (dep.getSubjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceSubject(replacementVariableNum);
+    } else {
+      Preconditions.checkState(dep.hasSubjects());
+    }
+    
+    if (dep.getObjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceObject(replacementVariableNum);
+    } else {
+      Preconditions.checkState(dep.hasObjects());
+    }
+    
+    unfilledDepsAccumulator.put(replacementVariableNum, newDep);
+  }
+  
+  /**
+   * Replaces all instances of {@code dependencyVariableNum} in {@code dep} 
+   * with {@code value}, which is a defined predicate. 
+   *  
+   * @param dependencyVariableNum
+   * @param dep
+   * @param value
+   * @param filledDepsAccumulator
+   */
+  private void substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
+      IndexedPredicate value, List<DependencyStructure> filledDepsAccumulator) {
+    UnfilledDependency newDep = dep;
+    Set<IndexedPredicate> values = Sets.newHashSet(value);
+    if (dep.getSubjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceSubject(values);
+    }
+    
+    if (dep.getObjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceObject(values);
+    }
+    
+    Preconditions.checkState(newDep.hasObjects() && newDep.hasSubjects());
+    for (IndexedPredicate head : newDep.getSubjects()) {
+      for (IndexedPredicate object : newDep.getObjects()) {
+        filledDepsAccumulator.add(new DependencyStructure(head.getHead(), head.getHeadIndex(), 
+            object.getHead(), object.getHeadIndex(), newDep.getArgumentIndex()));
+      }
+    }
   }
 
   private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {

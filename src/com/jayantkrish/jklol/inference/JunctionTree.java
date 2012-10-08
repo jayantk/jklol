@@ -52,17 +52,17 @@ public class JunctionTree implements MarginalCalculator {
 
     // long time = System.nanoTime();
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
-    // long delta = (System.nanoTime() - time) / 1000000;
+    // long delta = (System.nanoTime() - time) / 1000;
     // System.out.println("building clique tree: " + delta);
     
     // time = System.nanoTime();
     Set<Integer> rootFactorNums = runMessagePassing(cliqueTree, true);
-    // delta = (System.nanoTime() - time) / 1000000;
+    // delta = (System.nanoTime() - time) / 1000;
     // System.out.println("Running message passing: " + delta);
 
     // time = System.nanoTime();
     MarginalSet marginals = cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
-    // delta = (System.nanoTime() - time) / 1000000;
+    // delta = (System.nanoTime() - time) / 1000;
     // System.out.println("marginals: " + delta);
 
     return marginals;

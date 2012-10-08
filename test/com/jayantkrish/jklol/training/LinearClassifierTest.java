@@ -11,7 +11,6 @@ import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPr
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.LinearClassifierFactor;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
@@ -20,7 +19,6 @@ import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -71,7 +69,7 @@ public class LinearClassifierTest extends TestCase {
     // (yes, the name is terrible). Just copy this definition, replacing x, y
     // and featureVar with whatever you called those things.
     builder.addUnreplicatedFactor("classifier", new ConditionalLogLinearFactor(x, y, y,
-        featureVar, DenseTensorBuilder.getFactory()));
+        featureVar));
     // Builds the actual trainable model.
     linearClassifier = builder.build();
 
@@ -135,13 +133,6 @@ public class LinearClassifierTest extends TestCase {
     FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
             
-    LinearClassifierFactor classifierFactor = (LinearClassifierFactor) trainedModel.getFactors().get(0);
-    Tensor falseWeights = classifierFactor.getFeatureWeightsForClass(y.outcomeArrayToAssignment("F"));
-    Tensor trueWeights = classifierFactor.getFeatureWeightsForClass(y.outcomeArrayToAssignment("T"));
-    Tensor deltas = trueWeights.elementwiseAddition(falseWeights.elementwiseProduct(-1.0));
-    System.out.println("DELTAS: " + deltas);
-    System.out.println(Arrays.toString(deltas.getDimensionSizes()));
-
     // Should be able to get 0 training error. This uses a simple wrapper around
     // the factor graph. Another option is to use
     // trainedModel.conditional(x.outcomeArrayToAssignment(<the feature vector)),

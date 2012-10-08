@@ -12,10 +12,9 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.tensor.TensorFactory;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -42,9 +41,6 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   private final int[] dimensionSizes;
   private final VariableNumMap sufficientStatisticVars;
   
-  // Constructs the type of tensor to use.
-  private final TensorFactory tensorFactory;
-
   /**
    * Create a factor which represents a conditional distribution over outputVars
    * given inputVar. {@code featureVectorDimensionality} is the dimension of the
@@ -54,10 +50,9 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
    * @param outputVars
    * @param conditionalVars
    * @param featureDictionary
-   * @param tensorFactory
    */
   public ConditionalLogLinearFactor(VariableNumMap inputVar, VariableNumMap outputVars, 
-      VariableNumMap conditionalVars, DiscreteVariable featureDictionary, TensorFactory tensorFactory) {
+      VariableNumMap conditionalVars, DiscreteVariable featureDictionary) {
     super(inputVar.union(outputVars));
     Preconditions.checkArgument(inputVar.size() == 1);
     Preconditions.checkArgument(outputVars.getDiscreteVariables().size() == outputVars.size());
@@ -79,7 +74,6 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     VariableNumMap featureVar = VariableNumMap.singleton(inputVar.getOnlyVariableNum(), 
         inputVar.getOnlyVariableName(), featureDictionary);
     this.sufficientStatisticVars = featureVar.union(outputVars);
-    this.tensorFactory = Preconditions.checkNotNull(tensorFactory);
   }
 
   @Override
@@ -108,11 +102,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    /*
-    return new TensorBuilderSufficientStatistics(sufficientStatisticVars, 
-        tensorFactory.getBuilder(dimensionNums, dimensionSizes));
-        */
-    return new TensorSufficientStatistics(sufficientStatisticVars, 
+    return TensorBuilderSufficientStatistics.createSparse(sufficientStatisticVars,
         SparseTensor.empty(dimensionNums, dimensionSizes));
   }
 
@@ -125,9 +115,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     Tensor outputDistribution = SparseTensor.singleElement(outputVars.getVariableNumsArray(), 
         outputVars.getVariableSizes(), outputVars.assignmentToIntArray(assignment.intersection(outputVars)),
         1.0);
-    Tensor expectedCounts = inputValueFeatures.outerProduct(outputDistribution);
-    
-    ((TensorSufficientStatistics) statistics).increment(expectedCounts, count);
+    Tensor expectedCounts = inputValueFeatures.outerProduct(outputDistribution);    
+    ((TensorBuilderSufficientStatistics) statistics).increment(expectedCounts, count);
   }
 
   @Override
@@ -148,18 +137,10 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
         .relabelDimensions(Ints.toArray(inputVar.getVariableNums()));
     Tensor expectedCounts = inputTensor.outerProduct(outputMarginal.getWeights());
-    ((TensorSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
+    ((TensorBuilderSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
   }
   
   private Tensor getWeightTensorFromStatistics(SufficientStatistics stats) {
-    return ((TensorSufficientStatistics) stats).get();
-    /*
-    TensorBuilder weightTensor = ((TensorSufficientStatistics) stats).get();
-    Preconditions.checkArgument(Arrays.equals(dimensionNums, weightTensor.getDimensionNumbers()),
-        "Wrong parameter dimensions. Expected %s, got %s", Arrays.toString(dimensionNums), 
-        Arrays.toString(weightTensor.getDimensionNumbers()));
-    Preconditions.checkArgument(Arrays.equals(dimensionSizes, weightTensor.getDimensionSizes()));
-    return weightTensor;
-    */
+    return ((TensorBuilderSufficientStatistics) stats).get();
   }
 }

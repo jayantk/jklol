@@ -86,7 +86,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
       long totalDecimal = total % 1000;
       long invocations = getTimerInvocations(timer);
       double average = ((double) total) / invocations;
-      print(timer + ": " +  totalSecs + "." + totalDecimal + " s (" + average + " * " + invocations + ")");
+      print(String.format("%s: %d.%03d sec (%.3f ms * %d)", timer, totalSecs, totalDecimal, average, invocations));
     }
   }
   

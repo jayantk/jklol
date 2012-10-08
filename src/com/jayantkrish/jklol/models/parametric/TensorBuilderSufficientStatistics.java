@@ -10,7 +10,9 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.DenseTensor;
-import com.jayantkrish.jklol.tensor.TensorBase;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -26,29 +28,113 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
   private static final long serialVersionUID = -888818836179147365L;
 
   private final VariableNumMap statisticNames;
-  private final TensorBuilder statistics;
+
+  // This flag determines whether statisticsTensor or statistics
+  // contains the current parameters.
+  private boolean isDense;
+  private Tensor statisticsTensor;
+  private TensorBuilder statistics;
 
   /**
+   * Copy constructor.
+   * 
+   * @param toCopy
+   */
+  private TensorBuilderSufficientStatistics(TensorBuilderSufficientStatistics toCopy) {
+    this.statisticNames = Preconditions.checkNotNull(toCopy.statisticNames);
+    if (toCopy.isDense) {
+      this.isDense = true;
+      this.statistics = toCopy.statistics.getCopy();
+      this.statisticsTensor = null;
+    } else {
+      this.isDense = false;
+      this.statistics = null;
+      // Tensors are immutable, so this tensor can be shared.
+      this.statisticsTensor = toCopy.statisticsTensor;
+    }
+  }
+
+  /**
+   * Creates sufficient statistics represented by a dense tensor.
    * 
    * @param statisticNames assigns names to the entries of {@code statistics}.
    * @param statistics
    */
-  public TensorBuilderSufficientStatistics(VariableNumMap statisticNames,
-      TensorBuilder statistics) {
+  public TensorBuilderSufficientStatistics(VariableNumMap statisticNames, TensorBuilder statistics) {
     Preconditions.checkArgument(statisticNames.getDiscreteVariables().size() == statisticNames.size());
     Preconditions.checkArgument(Ints.asList(statistics.getDimensionNumbers()).equals(statisticNames.getVariableNums()));
 
     this.statisticNames = statisticNames;
     this.statistics = statistics;
+
+    this.statisticsTensor = null;
+    this.isDense = true;
+  }
+
+  private TensorBuilderSufficientStatistics(VariableNumMap statisticNames, Tensor statistics) {
+    Preconditions.checkArgument(statisticNames.getDiscreteVariables().size() == statisticNames.size());
+    Preconditions.checkArgument(Ints.asList(statistics.getDimensionNumbers()).equals(statisticNames.getVariableNums()));
+
+    this.statisticNames = statisticNames;
+    this.statistics = null;
+
+    this.statisticsTensor = statistics;
+    this.isDense = false;
+  }
+
+  /**
+   * Creates a sufficient statistics vector represented using a sparse tensor.
+   * 
+   * @param statisticNames
+   * @param statistics
+   * @return
+   */
+  public static TensorBuilderSufficientStatistics createSparse(VariableNumMap statisticNames, Tensor statistics) {
+    return new TensorBuilderSufficientStatistics(statisticNames, statistics);
+  }
+
+  /**
+   * Creates a sufficient statistics vector represented using a dense tensor.
+   * 
+   * @param statisticNames
+   * @param statistics
+   * @return
+   */
+  public static TensorBuilderSufficientStatistics createDense(VariableNumMap statisticNames, TensorBuilder statistics) {
+    return new TensorBuilderSufficientStatistics(statisticNames, statistics);
   }
 
   /**
    * Gets the tensor in {@code this}.
+   * <p>
+   * For efficiency, this method does not copy the parameters, and hence the
+   * values in the returned tensor may be modified if {@code this} is updated.
+   * This situation should be avoided.  
    * 
    * @return
    */
-  public TensorBuilder get() {
-    return statistics;
+  public Tensor get() {
+    if (isDense) {
+      return statistics.buildNoCopy();
+    } else {
+      return statisticsTensor;
+    }
+  }
+
+  private int[] getTensorDimensions() {
+    if (isDense) {
+      return statistics.getDimensionNumbers();
+    } else {
+      return statisticsTensor.getDimensionNumbers();
+    }
+  }
+
+  private int[] getTensorSizes() {
+    if (isDense) {
+      return statistics.getDimensionSizes();
+    } else {
+      return statisticsTensor.getDimensionSizes();
+    }
   }
 
   /**
@@ -60,7 +146,7 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
    * @return
    */
   public DiscreteFactor getFactor() {
-    return new TableFactor(statisticNames, statistics.build());
+    return new TableFactor(statisticNames, get());
   }
 
   /**
@@ -76,11 +162,15 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
   public void increment(SufficientStatistics other, double multiplier) {
     Preconditions.checkArgument(other instanceof TensorBuilderSufficientStatistics);
     TensorBuilderSufficientStatistics otherStats = (TensorBuilderSufficientStatistics) other;
-    statistics.incrementWithMultiplier(otherStats.statistics, multiplier);
+    increment(otherStats.get(), multiplier);
   }
 
-  public void increment(TensorBase other, double multiplier) {
-    statistics.incrementWithMultiplier(other, multiplier);
+  public void increment(Tensor other, double multiplier) {
+    if (isDense) {
+      statistics.incrementWithMultiplier(other, multiplier);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseAddition(other.elementwiseProduct(multiplier));
+    }
   }
 
   /**
@@ -91,7 +181,29 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
    * @param amount
    */
   public void incrementFeature(Assignment featureAssignment, double amount) {
-    statistics.incrementEntry(amount, statisticNames.assignmentToIntArray(featureAssignment));
+    if (isDense) {
+      statistics.incrementEntry(amount, statisticNames.assignmentToIntArray(featureAssignment));
+    } else {
+      Tensor increment = SparseTensor.singleElement(getTensorDimensions(), getTensorSizes(),
+          statisticNames.assignmentToIntArray(featureAssignment), amount);
+      statisticsTensor = statisticsTensor.elementwiseAddition(increment);
+    }
+  }
+
+  /**
+   * Increments the value of {@code index} by {@code amount}.
+   * 
+   * @param index
+   * @param amount
+   */
+  public void incrementFeatureIndex(double amount, int... key) {
+    if (isDense) {
+      statistics.incrementEntry(amount, key);
+    } else {
+      Tensor increment = SparseTensor.singleElement(getTensorDimensions(), getTensorSizes(),
+          key, amount);
+      statisticsTensor = statisticsTensor.elementwiseAddition(increment);
+    }
   }
 
   @Override
@@ -111,47 +223,83 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
 
   @Override
   public void increment(double amount) {
-    statistics.increment(amount);
+    if (isDense) {
+      statistics.increment(amount);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseAddition(amount);
+    }
   }
 
   @Override
   public void multiply(double amount) {
-    statistics.multiply(amount);
+    if (isDense) {
+      statistics.multiply(amount);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseProduct(amount);
+    }
   }
-  
+
   @Override
   public void softThreshold(double threshold) {
-    statistics.softThreshold(threshold);
+    if (isDense) {
+      statistics.softThreshold(threshold);
+    } else {
+      statisticsTensor = statisticsTensor.softThreshold(threshold);
+    }
   }
 
   @Override
   public void perturb(double stddev) {
-    statistics.increment(DenseTensor.random(
-        statistics.getDimensionNumbers(), statistics.getDimensionSizes(), 0.0, stddev));
+    if (!isDense) {
+      // Make the representation dense, since the random perturbation is dense.
+      statistics = DenseTensorBuilder.copyOf(statisticsTensor);
+      statisticsTensor = null;
+      isDense = true;
+    }
+
+    Tensor perturbation = DenseTensor.random(getTensorDimensions(), getTensorSizes(), 0.0, stddev);
+    statistics.increment(perturbation);
   }
 
   @Override
   public TensorBuilderSufficientStatistics duplicate() {
-    return new TensorBuilderSufficientStatistics(statisticNames, statistics.getCopy());
+    return new TensorBuilderSufficientStatistics(this);
   }
 
   @Override
   public double innerProduct(SufficientStatistics other) {
     Preconditions.checkArgument(other instanceof TensorBuilderSufficientStatistics);
-    TensorBuilder otherStatistics = ((TensorBuilderSufficientStatistics) other).statistics;
-    return statistics.innerProduct(otherStatistics);
+    Tensor otherStatistics = ((TensorBuilderSufficientStatistics) other).get();
+    if (isDense) {
+      return statistics.innerProduct(otherStatistics);
+    } else {
+      return statisticsTensor.innerProduct(otherStatistics).getByDimKey();
+    }
   }
 
   @Override
   public double getL2Norm() {
-    return statistics.getL2Norm();
+    if (isDense) {
+      return statistics.getL2Norm();
+    } else {
+      return statisticsTensor.getL2Norm();
+    }
   }
 
   @Override
   public ListSufficientStatistics coerceToList() {
     throw new CoercionError("Cannot coerce TensorSufficientStatistics instance into ListSufficientStatistics.");
   }
-  
+
+  @Override
+  public void makeDense() {
+    if (!isDense) {
+      statistics = DenseTensorBuilder.copyOf(statisticsTensor);
+      statisticsTensor = null;
+      isDense = true;
+    }
+  }
+
   public void getFeatureNames() {
     System.out.println("**** feature names *****" + this.statisticNames.getVariables().get(0).toString());
   }

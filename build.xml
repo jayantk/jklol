@@ -79,12 +79,24 @@
     </junit>
   </target>
 
+  <target name="test-small" depends="compile-test">
+    <junit fork="no">
+      <classpath refid="classpath.test" />
+      <formatter type="brief" usefile="false"/>
+      <batchtest>
+        <fileset dir="${tst-dir}" includes="com/jayantkrish/jklol/training/*.java">
+          <include name="com/jayantkrish/jklol/training/*.java" />
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
   <target name="perf" depends="compile-test">
     <junit fork="no">
       <classpath refid="classpath.test" />
       <formatter type="brief" usefile="false" />
       <test name="com.jayantkrish.jklol.util.SparseOutcomeTablePerformanceTest" />
-      <test name="com.jayantkrish.jklol.inference.JunctionTreePerformanceTest" />
+      <!-- <test name="com.jayantkrish.jklol.inference.JunctionTreePerformanceTest" /> -->
     </junit>
   </target>
 

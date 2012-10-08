@@ -62,7 +62,6 @@ Example<DynamicAssignment, DynamicAssignment>> {
     FactorGraph inputFactorGraph = factorGraph.conditional(input);
     // System.out.println("input factor graph:");
     // System.out.println(inputFactorGraph.getParameterDescription());
-
     MarginalSet inputMarginals = marginalCalculator.computeMarginals(inputFactorGraph);
     log.stopTimer("update_gradient/input_marginal");
 

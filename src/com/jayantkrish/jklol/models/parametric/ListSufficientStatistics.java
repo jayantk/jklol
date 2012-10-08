@@ -165,6 +165,13 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
+  public void makeDense() {
+    for (SufficientStatistics statistic : statistics) {
+      statistic.makeDense();
+    }
+  }
+  
+  @Override
   public String toString() {
     return statistics.toString();
   }

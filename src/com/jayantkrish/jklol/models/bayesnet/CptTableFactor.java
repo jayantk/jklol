@@ -53,7 +53,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   @Override
   public DiscreteFactor getFactorFromParameters(SufficientStatistics parameters) {
     TensorBuilderSufficientStatistics tensorStats = (TensorBuilderSufficientStatistics) parameters;
-    Tensor allTensor = tensorStats.get().build();
+    Tensor allTensor = tensorStats.get();
     Tensor parentTensor = allTensor.sumOutDimensions(childVars.getVariableNums());
     
     return new TableFactor(getVars(), allTensor.elementwiseProduct(parentTensor.elementwiseInverse()));
@@ -102,9 +102,7 @@ public class CptTableFactor extends AbstractParametricFactor {
       Assignment a, double count) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
     TensorBuilderSufficientStatistics tensorStats = (TensorBuilderSufficientStatistics) statistics;
-
-    int[] combinedIndex = getVars().assignmentToIntArray(a);
-    tensorStats.get().incrementEntry(count, combinedIndex);
+    tensorStats.incrementFeature(a, count);
   }
 
   @Override
@@ -119,9 +117,7 @@ public class CptTableFactor extends AbstractParametricFactor {
       Assignment a = outcome.getAssignment().union(conditionalSubAssignment);
       double incrementAmount = count * outcome.getProbability() / partitionFunction;
       
-      int[] combinedIndex = getVars().assignmentToIntArray(a);
-    
-      tensorStats.get().incrementEntry(incrementAmount, combinedIndex);
+      tensorStats.incrementFeature(a, incrementAmount);
     }
   }
 

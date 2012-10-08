@@ -112,4 +112,11 @@ public interface SufficientStatistics extends Serializable {
    * @return
    */
   public ListSufficientStatistics coerceToList();
+  
+  /**
+   * Converts any sparsely-represented sufficient statistics to equivalent dense
+   * representations. Dense representations are faster to update, but slower to
+   * copy.
+   */
+  public void makeDense();
 }

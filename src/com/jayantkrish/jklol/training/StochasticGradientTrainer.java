@@ -81,6 +81,10 @@ public class StochasticGradientTrainer {
   public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
       SufficientStatistics initialParameters, Iterable<E> trainingData) {
 
+    // The parameter vector should probably be represented densely, as
+    // it will be continuously updated.
+    initialParameters.makeDense();
+    
     // cycledTrainingData loops indefinitely over the elements of trainingData.
     // This is desirable because we want batchSize examples but don't
     // particularly care where in trainingData they come from.
@@ -193,7 +197,7 @@ public class StochasticGradientTrainer {
 
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize) {
-      gradient.increment(currentParameters, -1.0 * l2Penalty);
+      currentParameters.multiply(1 - (currentStepSize * l2Penalty));
       currentParameters.increment(gradient, currentStepSize);
     }
   }

@@ -13,7 +13,6 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -66,7 +65,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
-    Tensor featureWeights = getFeatureWeights(parameters).build();
+    Tensor featureWeights = getFeatureWeights(parameters);
 
     double[] logProbs = featureWeights.getValues();
     double[] probs = new double[logProbs.length];
@@ -79,7 +78,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    Tensor featureWeights = getFeatureWeights(parameters).build();
+    Tensor featureWeights = getFeatureWeights(parameters);
     
     TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
         initialWeights.getWeights().replaceValues(featureWeights.getValues()));
@@ -91,7 +90,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   
   @Override
   public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    Tensor featureWeights = getFeatureWeights(parameters).build();
+    Tensor featureWeights = getFeatureWeights(parameters);
     
     TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
         initialWeights.getWeights().replaceValues(featureWeights.getValues()));
@@ -114,15 +113,12 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
         initialWeights.getVars().assignmentToIntArray(subAssignment));
     int index = initialWeights.getWeights().keyNumToIndex(keyNum);
 
-    TensorBuilder weights = getFeatureWeights(statistics);
-    weights.incrementEntry(count, index);
+    ((TensorBuilderSufficientStatistics) statistics).incrementFeatureIndex(count, index);
   }
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    TensorBuilder weights = getFeatureWeights(statistics);
-
     VariableNumMap conditionedVars = initialWeights.getVars().intersection(
         conditionalAssignment.getVariableNums());
 
@@ -134,13 +130,14 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
     double[] productFactorValues = productFactorWeights.getValues();
     int tensorSize = productFactorWeights.size();
     double multiplier = count / partitionFunction;
+    TensorBuilderSufficientStatistics stats = (TensorBuilderSufficientStatistics) statistics;
     for (int i = 0; i < tensorSize; i++) {
       int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
-      weights.incrementEntry(productFactorValues[i] * multiplier, builderIndex);
+      stats.incrementFeatureIndex(productFactorValues[i] * multiplier, builderIndex);
     }
   }
   
-  private TensorBuilder getFeatureWeights(SufficientStatistics parameters) {
+  private Tensor getFeatureWeights(SufficientStatistics parameters) {
     TensorBuilderSufficientStatistics featureParameters = (TensorBuilderSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.
     Preconditions.checkArgument(featureParameters.get().getDimensionNumbers().length == 1);

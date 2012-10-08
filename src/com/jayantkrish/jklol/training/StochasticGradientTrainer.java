@@ -92,7 +92,6 @@ public class StochasticGradientTrainer {
 
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
-    int searchErrors = 0;
     double gradientL2 = 0.0;
     // This is an attempt at estimating how much the parameters are still
     // changing.

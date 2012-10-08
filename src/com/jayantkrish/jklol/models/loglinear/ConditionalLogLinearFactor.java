@@ -111,7 +111,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
       Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
 
-    Tensor inputValueFeatures = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
+    Tensor inputValueFeatures = ((Tensor) assignment.getValue(inputVar.getOnlyVariableNum()))
+        .relabelDimensions(inputVar.getVariableNumsArray());
     Tensor outputDistribution = SparseTensor.singleElement(outputVars.getVariableNumsArray(), 
         outputVars.getVariableSizes(), outputVars.assignmentToIntArray(assignment.intersection(outputVars)),
         1.0);
@@ -124,20 +125,25 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
       Assignment conditionalAssignment, double count, double partitionFunction) {
     Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNums()));
 
-    // Construct a factor representing the unnormalized probability distribution over all
-    // of the output variables.
-    VariableNumMap conditionedVars = outputVars.intersection(conditionalAssignment.getVariableNums());
-    DiscreteFactor outputMarginal = marginal.coerceToDiscrete();
-    if (conditionedVars.size() > 0) {
-      Assignment conditionedAssignment = conditionalAssignment.intersection(conditionedVars);
-      DiscreteFactor conditionedFactor = TableFactor.pointDistribution(conditionedVars, conditionedAssignment);
-      outputMarginal = conditionedFactor.outerProduct(marginal);
-    }
+    if (conditionalAssignment.containsAll(getVars().getVariableNums())) {
+      // Easy case where all variables' values are known.
+      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, count / partitionFunction);
+    } else {
+      // Construct a factor representing the unnormalized probability distribution over all
+      // of the output variables.
+      VariableNumMap conditionedVars = outputVars.intersection(conditionalAssignment.getVariableNums());
+      DiscreteFactor outputMarginal = marginal.coerceToDiscrete();
+      if (conditionedVars.size() > 0) {
+        Assignment conditionedAssignment = conditionalAssignment.intersection(conditionedVars);
+        DiscreteFactor conditionedFactor = TableFactor.pointDistribution(conditionedVars, conditionedAssignment);
+        outputMarginal = conditionedFactor.outerProduct(marginal);
+      }
+      Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
+          .relabelDimensions(inputVar.getVariableNumsArray());
 
-    Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
-        .relabelDimensions(Ints.toArray(inputVar.getVariableNums()));
-    Tensor expectedCounts = inputTensor.outerProduct(outputMarginal.getWeights());
-    ((TensorBuilderSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
+      Tensor expectedCounts = inputTensor.outerProduct(outputMarginal.getWeights());
+      ((TensorBuilderSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
+    }
   }
   
   private Tensor getWeightTensorFromStatistics(SufficientStatistics stats) {

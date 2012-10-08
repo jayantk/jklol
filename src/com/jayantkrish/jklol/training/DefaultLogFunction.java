@@ -15,19 +15,22 @@ import com.jayantkrish.jklol.util.Assignment;
 public class DefaultLogFunction extends AbstractLogFunction {
   
   private final int logInterval;
+  private final boolean showExamples;
   
   // Print asynchronously for speed.
   private final ExecutorService printExecutor;
 
   public DefaultLogFunction() {
     super();
-    this.logInterval = 1; 
+    this.logInterval = 1;
+    this.showExamples = true;
     this.printExecutor = Executors.newSingleThreadExecutor();
   }
   
-  public DefaultLogFunction(int logInterval) { 
-    super(); 
+  public DefaultLogFunction(int logInterval, boolean showExamples) { 
+    super();
     this.logInterval = logInterval;
+    this.showExamples = showExamples;
     this.printExecutor = Executors.newSingleThreadExecutor();
   }
   
@@ -37,17 +40,21 @@ public class DefaultLogFunction extends AbstractLogFunction {
   
 	@Override
 	public void log(Assignment example, FactorGraph graph) {
-	  print("?.?: example: " + graph.assignmentToObject(example));
+	  if (showExamples) {
+	    print("?.?: example: " + graph.assignmentToObject(example));
+	  }
 	}
 
 	@Override
 	public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {
-	  if (iteration % logInterval == 0) {
-	    String prob = "";
-	    if (example.containsAll(graph.getVariables().getVariableNums())) {
-	      prob = Double.toString(graph.getUnnormalizedLogProbability(example));
-	    } 
-	    print(iteration + "." + exampleNum + " " + prob + ": example: " + graph.assignmentToObject(example));
+	  if (showExamples) {
+	    if (iteration % logInterval == 0) {
+	      String prob = "";
+	      if (example.containsAll(graph.getVariables().getVariableNums())) {
+	        prob = Double.toString(graph.getUnnormalizedLogProbability(example));
+	      } 
+	      print(iteration + "." + exampleNum + " " + prob + ": example: " + graph.assignmentToObject(example));
+	    }
 	  }
 	}
 

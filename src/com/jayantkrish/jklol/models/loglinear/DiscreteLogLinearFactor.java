@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -166,8 +166,8 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public TensorBuilderSufficientStatistics getNewSufficientStatistics() {
-    return new TensorBuilderSufficientStatistics(featureVariables, 
+  public TensorSufficientStatistics getNewSufficientStatistics() {
+    return new TensorSufficientStatistics(featureVariables, 
         new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
             featureVariables.getVariableSizes()));
   }
@@ -180,7 +180,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
     // Get a factor containing only the feature variable.
     Tensor assignmentFeatures = featureValues.conditional(subAssignment).getWeights();
-    ((TensorBuilderSufficientStatistics) statistics).increment(assignmentFeatures, count);
+    ((TensorSufficientStatistics) statistics).increment(assignmentFeatures, count);
   }
 
   @Override
@@ -191,12 +191,12 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
         .product(marginal).marginalize(marginal.getVars().getVariableNums());
     Preconditions.checkState(expectedFeatureCounts.getVars().equals(featureVariables));
 
-    ((TensorBuilderSufficientStatistics) statistics).increment(expectedFeatureCounts.getWeights(), 
+    ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts.getWeights(), 
         count / partitionFunction);
   }
 
   private Tensor getFeatureWeights(SufficientStatistics parameters) {
-    TensorBuilderSufficientStatistics featureParameters = (TensorBuilderSufficientStatistics) parameters;
+    TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.
     Preconditions.checkArgument(Arrays.equals(featureParameters.get().getDimensionSizes(),
         featureVariables.getVariableSizes()), "DiscreteLogLinearFactor: Parameters don't have the right dimensionality.");

@@ -23,7 +23,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class TensorBuilderSufficientStatistics implements SufficientStatistics {
+public class TensorSufficientStatistics implements SufficientStatistics {
 
   private static final long serialVersionUID = -888818836179147365L;
 
@@ -40,7 +40,7 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
    * 
    * @param toCopy
    */
-  private TensorBuilderSufficientStatistics(TensorBuilderSufficientStatistics toCopy) {
+  private TensorSufficientStatistics(TensorSufficientStatistics toCopy) {
     this.statisticNames = Preconditions.checkNotNull(toCopy.statisticNames);
     if (toCopy.isDense) {
       this.isDense = true;
@@ -60,7 +60,7 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
    * @param statisticNames assigns names to the entries of {@code statistics}.
    * @param statistics
    */
-  public TensorBuilderSufficientStatistics(VariableNumMap statisticNames, TensorBuilder statistics) {
+  public TensorSufficientStatistics(VariableNumMap statisticNames, TensorBuilder statistics) {
     Preconditions.checkArgument(statisticNames.getDiscreteVariables().size() == statisticNames.size());
     Preconditions.checkArgument(Ints.asList(statistics.getDimensionNumbers()).equals(statisticNames.getVariableNums()));
 
@@ -71,7 +71,7 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
     this.isDense = true;
   }
 
-  private TensorBuilderSufficientStatistics(VariableNumMap statisticNames, Tensor statistics) {
+  private TensorSufficientStatistics(VariableNumMap statisticNames, Tensor statistics) {
     Preconditions.checkArgument(statisticNames.getDiscreteVariables().size() == statisticNames.size());
     Preconditions.checkArgument(Ints.asList(statistics.getDimensionNumbers()).equals(statisticNames.getVariableNums()));
 
@@ -89,8 +89,8 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
    * @param statistics
    * @return
    */
-  public static TensorBuilderSufficientStatistics createSparse(VariableNumMap statisticNames, Tensor statistics) {
-    return new TensorBuilderSufficientStatistics(statisticNames, statistics);
+  public static TensorSufficientStatistics createSparse(VariableNumMap statisticNames, Tensor statistics) {
+    return new TensorSufficientStatistics(statisticNames, statistics);
   }
 
   /**
@@ -100,8 +100,8 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
    * @param statistics
    * @return
    */
-  public static TensorBuilderSufficientStatistics createDense(VariableNumMap statisticNames, TensorBuilder statistics) {
-    return new TensorBuilderSufficientStatistics(statisticNames, statistics);
+  public static TensorSufficientStatistics createDense(VariableNumMap statisticNames, TensorBuilder statistics) {
+    return new TensorSufficientStatistics(statisticNames, statistics);
   }
 
   /**
@@ -160,8 +160,8 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
 
   @Override
   public void increment(SufficientStatistics other, double multiplier) {
-    Preconditions.checkArgument(other instanceof TensorBuilderSufficientStatistics);
-    TensorBuilderSufficientStatistics otherStats = (TensorBuilderSufficientStatistics) other;
+    Preconditions.checkArgument(other instanceof TensorSufficientStatistics);
+    TensorSufficientStatistics otherStats = (TensorSufficientStatistics) other;
     increment(otherStats.get(), multiplier);
   }
 
@@ -208,7 +208,7 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
 
   @Override
   public void transferParameters(SufficientStatistics other) {
-    DiscreteFactor otherFactor = ((TensorBuilderSufficientStatistics) other).getFactor();
+    DiscreteFactor otherFactor = ((TensorSufficientStatistics) other).getFactor();
 
     Iterator<Outcome> outcomeIter = otherFactor.outcomeIterator();
     while (outcomeIter.hasNext()) {
@@ -262,14 +262,14 @@ public class TensorBuilderSufficientStatistics implements SufficientStatistics {
   }
 
   @Override
-  public TensorBuilderSufficientStatistics duplicate() {
-    return new TensorBuilderSufficientStatistics(this);
+  public TensorSufficientStatistics duplicate() {
+    return new TensorSufficientStatistics(this);
   }
 
   @Override
   public double innerProduct(SufficientStatistics other) {
-    Preconditions.checkArgument(other instanceof TensorBuilderSufficientStatistics);
-    Tensor otherStatistics = ((TensorBuilderSufficientStatistics) other).get();
+    Preconditions.checkArgument(other instanceof TensorSufficientStatistics);
+    Tensor otherStatistics = ((TensorSufficientStatistics) other).get();
     if (isDense) {
       return statistics.innerProduct(otherStatistics);
     } else {

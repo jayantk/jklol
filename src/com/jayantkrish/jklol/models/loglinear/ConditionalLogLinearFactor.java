@@ -12,7 +12,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -102,7 +102,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    return TensorBuilderSufficientStatistics.createSparse(sufficientStatisticVars,
+    return TensorSufficientStatistics.createSparse(sufficientStatisticVars,
         SparseTensor.empty(dimensionNums, dimensionSizes));
   }
 
@@ -117,7 +117,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
         outputVars.getVariableSizes(), outputVars.assignmentToIntArray(assignment.intersection(outputVars)),
         1.0);
     Tensor expectedCounts = inputValueFeatures.outerProduct(outputDistribution);    
-    ((TensorBuilderSufficientStatistics) statistics).increment(expectedCounts, count);
+    ((TensorSufficientStatistics) statistics).increment(expectedCounts, count);
   }
 
   @Override
@@ -142,11 +142,11 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
           .relabelDimensions(inputVar.getVariableNumsArray());
 
       Tensor expectedCounts = inputTensor.outerProduct(outputMarginal.getWeights());
-      ((TensorBuilderSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
+      ((TensorSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
     }
   }
   
   private Tensor getWeightTensorFromStatistics(SufficientStatistics stats) {
-    return ((TensorBuilderSufficientStatistics) stats).get();
+    return ((TensorSufficientStatistics) stats).get();
   }
 }

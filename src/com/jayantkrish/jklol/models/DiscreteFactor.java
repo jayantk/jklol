@@ -123,12 +123,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
+    if (varNumsToEliminate.size() == 0) {
+      return this;
+    }
     return new TableFactor(getVars().removeAll(varNumsToEliminate),
         getWeights().sumOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }
 
   @Override
   public DiscreteFactor maxMarginalize(Collection<Integer> varNumsToEliminate) {
+    if (varNumsToEliminate.size() == 0) {
+      return this;
+    }
     return new TableFactor(getVars().removeAll(varNumsToEliminate),
         getWeights().maxOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }

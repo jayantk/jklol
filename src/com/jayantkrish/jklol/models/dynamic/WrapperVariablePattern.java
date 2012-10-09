@@ -14,15 +14,17 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 public class WrapperVariablePattern extends AbstractVariablePattern {
 
   private final VariableNumMap variables;
+  private final List<VariableMatch> cachedMatches;
   
   public WrapperVariablePattern(VariableNumMap variables) {
     this.variables = variables;
+    this.cachedMatches = Lists.newArrayList(new VariableMatch(variables));
   }
   
   @Override
   public List<VariableMatch> matchVariables(VariableNumMap inputVariables) {
     if (inputVariables.containsAll(variables)) {
-      return Lists.newArrayList(new VariableMatch(variables));
+      return cachedMatches;
     } else {
       return Collections.emptyList();
     }

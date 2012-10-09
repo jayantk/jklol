@@ -85,7 +85,7 @@
       <formatter type="brief" usefile="false"/>
       <batchtest>
         <fileset dir="${tst-dir}" includes="com/jayantkrish/jklol/training/*.java">
-          <include name="com/jayantkrish/jklol/training/*.java" />
+          <include name="com/jayantkrish/jklol/training/LinearClassifierTest.java" />
         </fileset>
       </batchtest>
     </junit>

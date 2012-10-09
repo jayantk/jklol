@@ -138,10 +138,12 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
         DiscreteFactor conditionedFactor = TableFactor.pointDistribution(conditionedVars, conditionedAssignment);
         outputMarginal = conditionedFactor.outerProduct(marginal);
       }
+      
       Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
           .relabelDimensions(inputVar.getVariableNumsArray());
 
       Tensor expectedCounts = inputTensor.outerProduct(outputMarginal.getWeights());
+
       ((TensorSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
     }
   }

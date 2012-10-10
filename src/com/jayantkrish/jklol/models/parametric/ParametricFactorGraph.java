@@ -182,7 +182,8 @@ public class ParametricFactorGraph {
 
         // to here: 13 microsecs
         Factor relabeledMarginal = factorMarginal.relabelVariables(match.getMappingToTemplate());
-        Assignment relabeledAssignment = factorAssignment.mapVariables(match.getMappingToTemplate().getVariableIndexReplacementMap());
+        Assignment relabeledAssignment = factorAssignment.mapVariables(match.getMappingToTemplate()
+            .getVariableIndexReplacementMap());
 
         // to here: 18 microsecs
         parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i),

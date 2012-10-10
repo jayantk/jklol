@@ -38,6 +38,7 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
   int[] intArray;
   Object[] objectArray;
   
+  @SuppressWarnings("unchecked")
   public void setUp() {
     objects = Maps.newTreeMap();
     strings = Maps.newTreeMap();

@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.ccg;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +21,7 @@ import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.AppendOnlySparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -102,14 +104,15 @@ public class ParametricCcgParser {
       addArgumentsToPredicateList(line.getRight().getObjects(), semanticPredicates);
     }
 
-    // Build the terminal distribution.
+    // Build the terminal distribution. This maps word sequences to 
+    // CCG categories, with one possible mapping per entry in the lexicon.
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories.items());
     DiscreteVariable wordType = new DiscreteVariable("words", words.items());
 
     VariableNumMap terminalVar = VariableNumMap.singleton(0, "words", wordType);
     VariableNumMap ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
     VariableNumMap vars = terminalVar.union(ccgCategoryVar);
-    TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+    TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, AppendOnlySparseTensorBuilder.getFactory());
     for (String lexiconLine : lexiconLines) {
       Pair<ArrayList<String>, CcgCategory> line = parseLexiconLine(lexiconLine);
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(line.getLeft(),
@@ -119,7 +122,14 @@ public class ParametricCcgParser {
 
     // Build the dependency distribution.
     DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates.items());
-    DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(0, 1, 2, 3));
+    // The set of possible argument numbers depends on the entries 
+    // provided in the lexicon. 
+    int maxArgNum = Collections.max(maxNumArgs.values());
+    List<Integer> argNumValues = Lists.newArrayList();
+    for (int i = 0; i <= maxArgNum; i++) {
+      argNumValues.add(i);
+    }
+    DiscreteVariable argumentNums = new DiscreteVariable("argNums", argNumValues);
 
     VariableNumMap semanticHeadVar = VariableNumMap.singleton(0, "semanticHead", semanticPredicateType);
     VariableNumMap semanticArgNumVar = VariableNumMap.singleton(1, "semanticArgNum", argumentNums);
@@ -135,8 +145,8 @@ public class ParametricCcgParser {
     for (String semanticPredicate : semanticPredicates.items()) {
       int predicateIndex = semanticPredicates.getIndex(semanticPredicate);
       if (maxNumArgs.containsKey(predicateIndex)) {
-        int maxArgNum = maxNumArgs.get(predicateIndex);
-        for (int i = 0; i <= maxArgNum; i++) {
+        int predicateMaxArgNum = maxNumArgs.get(predicateIndex);
+        for (int i = 0; i <= predicateMaxArgNum; i++) {
           Assignment a = headAndArgNumVars.outcomeArrayToAssignment(semanticPredicate, i);
           indicatorFeatureBuilder.setWeight(a, 1.0);
         }

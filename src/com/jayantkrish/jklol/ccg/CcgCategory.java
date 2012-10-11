@@ -68,6 +68,9 @@ public class CcgCategory implements Serializable {
    */
   public static CcgCategory parseFrom(String categoryString) {
     String[] parts = categoryString.split(",");
+    Preconditions.checkArgument(parts.length >= 2, "Invalid CCG category string: %s", 
+        categoryString);
+    
     List<String> headStrings = Lists.newArrayList(parts[0].split("#"));
     Set<Argument> heads = Sets.newHashSet(); 
     for (String headString : headStrings) {
@@ -84,6 +87,8 @@ public class CcgCategory implements Serializable {
       String[] depStrings = parts[2].split("#");
       for (int i = 0; i < depStrings.length; i++) {
         String[] depParts = depStrings[i].split(" ");
+        Preconditions.checkArgument(depParts.length == 3, "Invalid CCG semantic dependency: %s", 
+            categoryString);
 
         argumentNumbers.add(Integer.parseInt(depParts[1]));
         subjects.add(Argument.parseFromString(depParts[0]));

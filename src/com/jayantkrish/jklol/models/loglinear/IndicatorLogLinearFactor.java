@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.models.loglinear;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -32,7 +33,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   private static final long serialVersionUID = 40981380830895221L;
 
   // The outcomes which are given indicator features.
-  private final TableFactor initialWeights;
+  private final DiscreteFactor initialWeights;
   
   // Names for the features in the sufficient statistics.
   private VariableNumMap featureVars;
@@ -46,7 +47,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
    * @param vars
    * @param features
    */
-  public IndicatorLogLinearFactor(VariableNumMap variables, TableFactor initialWeights) {
+  public IndicatorLogLinearFactor(VariableNumMap variables, DiscreteFactor initialWeights) {
     super(variables);
     this.initialWeights = Preconditions.checkNotNull(initialWeights);
     
@@ -55,7 +56,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
     this.featureVars = VariableNumMap.singleton(0, "features", featureNameDictionary);  
   }
 
-  public TableFactor getFeatureValues() {
+  public DiscreteFactor getFeatureValues() {
     return initialWeights;
   }
 

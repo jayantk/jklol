@@ -119,7 +119,8 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       
       for (int i = 1; i < otherSizes.length; i++) {
         Preconditions.checkArgument(mySizes[mySizes.length - i] == otherSizes[otherSizes.length - i],
-            "Tensor dimension sizes do not agree: %s and %s", mySizes, otherSizes);
+            "Tensor dimension sizes do not agree: %s and %s", Ints.asList(mySizes), 
+            Ints.asList(otherSizes));
       }
 
       return fastInnerProduct(other, maxKeyNum, keyNumIncrement, 1, newDims, newSizes);
@@ -131,7 +132,8 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
 
       for (int i = 0; i < minDimIndex; i++) {
         Preconditions.checkArgument(mySizes[i] == otherSizes[i], 
-            "Tensor dimension sizes do not agree: %s and %s", mySizes, otherSizes);
+            "Tensor dimension sizes do not agree: %s and %s", Ints.asList(mySizes),
+            Ints.asList(otherSizes));
       }
 
       return fastInnerProduct(other, maxKeyNum, 1, maxKeyNum, newDims, newSizes);

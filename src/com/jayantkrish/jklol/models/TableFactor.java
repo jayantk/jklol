@@ -8,12 +8,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -109,12 +109,8 @@ public class TableFactor extends DiscreteFactor {
    * @return
    */
   public static TableFactor unity(VariableNumMap vars) {
-    TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
-    Iterator<Assignment> iterator = new AllAssignmentIterator(vars);
-    while (iterator.hasNext()) {
-      builder.setWeight(iterator.next(), 1.0);
-    }
-    return builder.build();
+    return new TableFactor(vars, 
+        DenseTensor.constant(vars.getVariableNumsArray(), vars.getVariableSizes(), 1.0));
   }
 
   public static FactorFactory getFactory() {

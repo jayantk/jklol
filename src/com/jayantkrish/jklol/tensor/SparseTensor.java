@@ -16,13 +16,11 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.util.HeapUtils;
 
 /**
- * A SparseTensor sparsely stores a mapping from int[] to double. This class
- * represents a sparse tensor, where all values are presumed to be 0 unless
- * otherwise specified.
- * 
- * SparseTensors are immutable.
+ * Sparse tensor representation, where all values are presumed to be 0 unless
+ * otherwise specified. This implementation maintains paired arrays of the
+ * non-zero keys and their values.
  */
-public class SparseTensor extends AbstractTensor implements Serializable{
+public class SparseTensor extends AbstractTensor implements Serializable {
 
   private static final long serialVersionUID = 4502341777401127137L;
 
@@ -44,11 +42,6 @@ public class SparseTensor extends AbstractTensor implements Serializable{
   // Inherited from TensorBase
   // ////////////////////////////////////////////////////////////////////
 
-  /**
-   * Gets the number of keys stored in {@code this}.
-   * 
-   * @return
-   */
   @Override
   public int size() {
     return values.length;
@@ -382,7 +375,7 @@ public class SparseTensor extends AbstractTensor implements Serializable{
     return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(), resultKeyInts,
         resultValues, resultInd);
   }
-  
+
   @Override
   public SparseTensor innerProduct(Tensor other) {
     return elementwiseProduct(other).sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
@@ -440,10 +433,10 @@ public class SparseTensor extends AbstractTensor implements Serializable{
   public SparseTensor elementwiseAddition(Tensor otherTensor) {
     return doElementwise(otherTensor, true);
   }
-  
+
   @Override
   public Tensor elementwiseAddition(double value) {
-    // This kind of addition is going to destroy sparsity, 
+    // This kind of addition is going to destroy sparsity,
     // so may as well use a dense tensor.
     DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
@@ -530,7 +523,7 @@ public class SparseTensor extends AbstractTensor implements Serializable{
     // treats both outcomes and values as immutable.
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
-  
+
   @Override
   public SparseTensor elementwiseSqrt() {
     double[] newValues = new double[size()];
@@ -563,17 +556,17 @@ public class SparseTensor extends AbstractTensor implements Serializable{
     }
     return builder.buildNoCopy();
   }
-  
+
   public SparseTensor softThreshold(double threshold) {
     double[] newValues = new double[values.length];
     long[] newKeyNums = new long[values.length];
-    
+
     int curIndex = 0;
     int length = values.length;
     double negThreshold = -1.0 * threshold;
     for (int i = 0; i < length; i++) {
       if (values[i] > threshold) {
-        newKeyNums[curIndex] = keyNums[i]; 
+        newKeyNums[curIndex] = keyNums[i];
         newValues[curIndex] = values[i] - threshold;
         curIndex++;
       } else if (values[i] < negThreshold) {
@@ -704,7 +697,7 @@ public class SparseTensor extends AbstractTensor implements Serializable{
         resultValues[resultInd] = relabeled.values[i];
         resultInd++;
       }
-      
+
       int prevIndex = resultInd - 1;
       if (!useSum && resultValues[prevIndex] < 0.0) {
         // Ensure that, if values is negative, we include missing keys in the
@@ -712,14 +705,16 @@ public class SparseTensor extends AbstractTensor implements Serializable{
         long prevKeyNum = relabeled.keyNums[i] - 1;
         long nextKeyNum = relabeled.keyNums[i] + 1;
 
-        if (i > 0 && relabeled.keyNums[i - 1] != prevKeyNum 
+        if (i > 0 && relabeled.keyNums[i - 1] != prevKeyNum
             && prevKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
-          // prevKeyNum is not in relabeled, but has a higher value than the current key.
+          // prevKeyNum is not in relabeled, but has a higher value than the
+          // current key.
           resultValues[prevIndex] = 0.0;
           backpointerKeyInts[prevIndex] = prevKeyNum;
-        } else if (i + 1 < relabeled.keyNums.length && relabeled.keyNums[i + 1] != nextKeyNum 
+        } else if (i + 1 < relabeled.keyNums.length && relabeled.keyNums[i + 1] != nextKeyNum
             && nextKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
-          // nextKeyNum is not in relabeled, but has a higher value than the current key.
+          // nextKeyNum is not in relabeled, but has a higher value than the
+          // current key.
           // Delete the current key from the tensor.
           resultValues[prevIndex] = 0.0;
           backpointerKeyInts[prevIndex] = nextKeyNum;

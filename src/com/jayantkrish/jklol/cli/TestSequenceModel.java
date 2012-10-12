@@ -80,6 +80,7 @@ public class TestSequenceModel {
       sb.append(values.get(0) + "/" + values.get(1) + " ");
     }
 
+    // Print the predicted labels.
     System.out.println(sb);
   }
 }

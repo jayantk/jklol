@@ -21,7 +21,6 @@ import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.AppendOnlySparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -112,7 +111,7 @@ public class ParametricCcgParser {
     VariableNumMap terminalVar = VariableNumMap.singleton(0, "words", wordType);
     VariableNumMap ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
     VariableNumMap vars = terminalVar.union(ccgCategoryVar);
-    TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, AppendOnlySparseTensorBuilder.getFactory());
+    TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (String lexiconLine : lexiconLines) {
       Pair<ArrayList<String>, CcgCategory> line = parseLexiconLine(lexiconLine);
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(line.getLeft(),
@@ -152,8 +151,11 @@ public class ParametricCcgParser {
         }
       }
     }
+    
+    System.out.println("outer product:");
     DiscreteFactor indicatorFeatures = indicatorFeatureBuilder.build().outerProduct(
         TableFactor.unity(semanticArgVar));
+    System.out.println("done!");
     ParametricFactor dependencyParametricFactor = new IndicatorLogLinearFactor(vars, indicatorFeatures);
     System.out.println(indicatorFeatures.size() + " " + Ints.asList(vars.getVariableSizes()));
     System.out.println(indicatorFeatures.getNonzeroAssignments());

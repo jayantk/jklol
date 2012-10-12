@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.dynamic;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -23,7 +24,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayant
  */
-public class DynamicVariableSet {
+public class DynamicVariableSet implements Serializable {
 
   private final VariableNumMap fixedVariables;
   private final int fixedVariableMaxInd;

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.dynamic;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -155,7 +156,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
     return validMatches;
   }
   
-  public static class VariableNameMatcher {
+  public static class VariableNameMatcher implements Serializable {
 
     private final Pattern pattern;
     private final int indexOffset;

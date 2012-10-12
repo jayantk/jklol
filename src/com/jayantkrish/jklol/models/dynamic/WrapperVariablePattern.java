@@ -13,6 +13,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  */
 public class WrapperVariablePattern extends AbstractVariablePattern {
 
+  private static final long serialVersionUID = 1L;
+
   private final VariableNumMap variables;
   private final List<VariableMatch> cachedMatches;
   

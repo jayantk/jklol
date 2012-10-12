@@ -17,6 +17,8 @@ import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
  */
 public class ReplicatedFactor implements PlateFactor {
 
+  private static final long serialVersionUID = 1L;
+  
   private final Factor factorToReplicate;
   private final VariablePattern variablePattern;
 

@@ -23,6 +23,8 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class DynamicFactorGraph implements Serializable {
 
+  private static final long serialVersionUID = 1L;
+
   private final DynamicVariableSet variables;
 
   // Plates represent graphical model structure which is replicated in a

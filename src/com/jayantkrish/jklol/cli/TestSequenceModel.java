@@ -19,7 +19,8 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Tests a sequence model, which is serialized to disk as a {@code DynamicFactorGraph}.
+ * Tests a sequence model, which is serialized to disk as a 
+ * {@code DynamicFactorGraph}. 
  *
  * @author jayantk
  */
@@ -28,7 +29,8 @@ public class TestSequenceModel {
   public static void main(String[] args) {
     OptionParser parser = new OptionParser();
     // Required arguments.
-    OptionSpec<String> model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
+    OptionSpec<String> model = parser.accepts("model").withRequiredArg()
+        .ofType(String.class).required();
     OptionSet options = parser.parse(args);
 
     // Read in the serialized model.
@@ -56,7 +58,6 @@ public class TestSequenceModel {
     VariableNumMap plateVars = sequenceModel.getVariables().getPlate(TrainSequenceModel.PLATE_NAME)
         .getFixedVariables();
     VariableNumMap x = plateVars.getVariablesByName(TrainSequenceModel.INPUT_NAME);
-    VariableNumMap y = plateVars.getVariablesByName(TrainSequenceModel.OUTPUT_NAME);
     for (String word : wordsToTag) {
       Assignment input = x.outcomeArrayToAssignment(word);
       inputs.add(input);

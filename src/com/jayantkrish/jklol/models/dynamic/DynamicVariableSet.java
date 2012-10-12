@@ -26,6 +26,8 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class DynamicVariableSet implements Serializable {
 
+  private static final long serialVersionUID = 1L;
+
   private final VariableNumMap fixedVariables;
   private final int fixedVariableMaxInd;
   private final List<String> plateNames;

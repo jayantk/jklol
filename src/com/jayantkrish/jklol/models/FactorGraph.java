@@ -41,6 +41,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class FactorGraph implements Serializable {
 
+  private static final long serialVersionUID = 1L;
+
   private VariableNumMap variables;
 
   private HashMultimap<Integer, Integer> variableFactorMap;

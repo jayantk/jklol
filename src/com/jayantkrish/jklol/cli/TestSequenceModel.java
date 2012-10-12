@@ -53,8 +53,10 @@ public class TestSequenceModel {
 
     // Construct an assignment from the input words.
     List<Assignment> inputs = Lists.newArrayList();
-    VariableNumMap x = sequenceModel.getVariables().getPlate(TrainSequenceModel.PLATE_NAME)
-        .getFixedVariables().getVariablesByName(TrainSequenceModel.INPUT_NAME);
+    VariableNumMap plateVars = sequenceModel.getVariables().getPlate(TrainSequenceModel.PLATE_NAME)
+        .getFixedVariables();
+    VariableNumMap x = plateVars.getVariablesByName(TrainSequenceModel.INPUT_NAME);
+    VariableNumMap y = plateVars.getVariablesByName(TrainSequenceModel.OUTPUT_NAME);
     for (String word : wordsToTag) {
       Assignment input = x.outcomeArrayToAssignment(word);
       inputs.add(input);
@@ -70,8 +72,14 @@ public class TestSequenceModel {
 
     // Map the assignment back to plate indexes, then print out the labels.
     DynamicAssignment prediction = sequenceModel.getVariables()
-        .toDynamicAssignment(bestAssignment, fg.getVariables());
-    
-    System.out.println(prediction);
+        .toDynamicAssignment(bestAssignment, fg.getAllVariables());
+    StringBuilder sb = new StringBuilder();
+    for (Assignment plateAssignment : prediction
+             .getPlateFixedAssignments(TrainSequenceModel.PLATE_NAME)) {
+      List<Object> values = plateAssignment.getValues();
+      sb.append(values.get(0) + "/" + values.get(1) + " ");
+    }
+
+    System.out.println(sb);
   }
 }

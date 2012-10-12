@@ -72,8 +72,8 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   }
 
   private TensorSufficientStatistics(VariableNumMap statisticNames, Tensor statistics) {
-    Preconditions.checkArgument(statisticNames.getDiscreteVariables().size() == statisticNames.size());
-    Preconditions.checkArgument(Ints.asList(statistics.getDimensionNumbers()).equals(statisticNames.getVariableNums()));
+      Preconditions.checkArgument(statisticNames.getDiscreteVariables().size() == statisticNames.size());
+      Preconditions.checkArgument(Ints.asList(statistics.getDimensionNumbers()).equals(statisticNames.getVariableNums()));
 
     this.statisticNames = statisticNames;
     this.statistics = null;

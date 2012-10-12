@@ -47,6 +47,8 @@ public class ParseCcg {
     if (parses.size() > 0) {
       System.out.println("HEAD: " + parses.get(0).getSemanticHeads());
       System.out.println("DEPS: " + parses.get(0).getAllDependencies());
+      System.out.println("---");
+      System.out.println("LEX: " + parses.get(0).getSpannedLexiconEntries());
     }
 
     System.exit(0);

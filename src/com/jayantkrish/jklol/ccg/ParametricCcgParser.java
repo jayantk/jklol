@@ -10,13 +10,12 @@ import java.util.Map;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -138,6 +137,7 @@ public class ParametricCcgParser {
     // Naively storing the dependency features can result in a large
     // parameter vector. However, many semantic predicates have no 
     // arguments, which can save some memory.
+    /*
     VariableNumMap headAndArgNumVars = semanticHeadVar.union(semanticArgNumVar);
     TableFactorBuilder indicatorFeatureBuilder = new TableFactorBuilder(headAndArgNumVars,
         SparseTensorBuilder.getFactory());
@@ -151,14 +151,13 @@ public class ParametricCcgParser {
         }
       }
     }
-    
-    System.out.println("outer product:");
     DiscreteFactor indicatorFeatures = indicatorFeatureBuilder.build().outerProduct(
-        TableFactor.unity(semanticArgVar));
-    System.out.println("done!");
+    TableFactor.unity(semanticArgVar));
     ParametricFactor dependencyParametricFactor = new IndicatorLogLinearFactor(vars, indicatorFeatures);
     System.out.println(indicatorFeatures.size() + " " + Ints.asList(vars.getVariableSizes()));
-    System.out.println(indicatorFeatures.getNonzeroAssignments());
+    */
+    
+    ParametricFactor dependencyParametricFactor = new DenseIndicatorLogLinearFactor(vars);
     
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor);

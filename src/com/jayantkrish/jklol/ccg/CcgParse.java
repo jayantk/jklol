@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -111,6 +112,23 @@ public class CcgParse {
    */
   public List<String> getSpannedWords() {
     return spannedWords;
+  }
+  
+  /**
+   * Gets the CCG lexicon entries used for the words in this parse, in
+   * left-to-right order.
+   * 
+   * @return
+   */
+  public List<CcgCategory> getSpannedLexiconEntries() {
+    if (isTerminal()) {
+      return Arrays.asList(lexiconEntry);
+    } else {
+      List<CcgCategory> categories = Lists.newArrayList();
+      categories.addAll(left.getSpannedLexiconEntries());
+      categories.addAll(right.getSpannedLexiconEntries());
+      return categories;
+    }
   }
   
   /**

@@ -66,8 +66,12 @@ public class TestSequenceModel {
     FactorGraph fg = sequenceModel.conditional(dynamicInput);    
     JunctionTree jt = new JunctionTree();
     MaxMarginalSet maxMarginals = jt.computeMaxMarginals(fg);
+    Assignment bestAssignment = maxMarginals.getNthBestAssignment(0);
 
+    // Map the assignment back to plate indexes, then print out the labels.
+    DynamicAssignment prediction = sequenceModel.getVariables()
+        .toDynamicAssignment(bestAssignment, fg.getVariables());
     
-    System.out.println(maxMarginals.getNthBestAssignment(0));
+    System.out.println(prediction);
   }
 }

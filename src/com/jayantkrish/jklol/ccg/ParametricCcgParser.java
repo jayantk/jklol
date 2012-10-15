@@ -87,6 +87,7 @@ public class ParametricCcgParser {
     for (String lexiconLine : lexiconLines) {
       // Create the CCG category.
       LexiconEntry lexiconEntry = LexiconEntry.parseLexiconEntry(lexiconLine);
+      System.out.println(lexiconEntry);
       words.add(lexiconEntry.getWords());
       categories.add(lexiconEntry.getCategory());
 

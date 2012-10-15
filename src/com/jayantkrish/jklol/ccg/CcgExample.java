@@ -1,8 +1,11 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+
+import au.com.bytecode.opencsv.CSVParser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -50,28 +53,35 @@ public class CcgExample {
    * @return
    */
   public static CcgExample parseFromString(String exampleString) {
-    String[] parts = exampleString.split("###");
-    List<String> words = Arrays.asList(parts[0].split("\\s+"));
-
-    Set<DependencyStructure> dependencies = Sets.newHashSet();
-    String[] dependencyParts = parts[1].split("#");
-    for (int i = 0; i < dependencyParts.length; i++) {
-      String[] dep = dependencyParts[i].split("\\s+");
-      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
-          Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
-    }
-
-    List<LexiconEntry> lexiconEntries = null;
-    if (parts.length >= 3) {
-      // Parse out observed lexicon entries, if they are given.
-      String[] lexiconLabels = parts[2].split("@@@");
-      lexiconEntries = Lists.newArrayList();
-      for (int i = 0; i < lexiconLabels.length; i++) {
-        lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLabels[i]));
+    try {
+      String[] parts = exampleString.split("###");
+      List<String> words = Arrays.asList(parts[0].split("\\s+"));
+      
+      Set<DependencyStructure> dependencies = Sets.newHashSet();
+      String[] dependencyParts = new CSVParser('#').parseLine(parts[1]);
+      for (int i = 0; i < dependencyParts.length; i++) {
+        if (dependencyParts[i].trim().length() == 0) {
+          continue;
+        }
+        String[] dep = dependencyParts[i].split("\\s+");
+        dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
+            Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
       }
-    }
 
-    return new CcgExample(words, dependencies, lexiconEntries);
+      List<LexiconEntry> lexiconEntries = null;
+      if (parts.length >= 3) {
+        // Parse out observed lexicon entries, if they are given.
+        String[] lexiconLabels = parts[2].split("@@@");
+        lexiconEntries = Lists.newArrayList();
+        for (int i = 0; i < lexiconLabels.length; i++) {
+          lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLabels[i]));
+        }
+      }
+
+      return new CcgExample(words, dependencies, lexiconEntries);
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Illegal example string: " + exampleString, e);
+    }
   }
 
   public List<String> getWords() {

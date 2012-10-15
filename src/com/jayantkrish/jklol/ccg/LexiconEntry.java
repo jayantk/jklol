@@ -1,7 +1,10 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+
+import au.com.bytecode.opencsv.CSVParser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -19,6 +22,10 @@ import com.google.common.collect.ImmutableList;
 public class LexiconEntry {
   private final List<String> words;
   private final CcgCategory category;
+
+  // Character that delimits the components of lexicon entries
+  // during lexicon entry parsing. 
+  private static final char ENTRY_DELIMITER=',';
 
   public LexiconEntry(List<String> words, CcgCategory category) {
     this.words = ImmutableList.copyOf(words);
@@ -41,11 +48,21 @@ public class LexiconEntry {
    * @return
    */
   public static LexiconEntry parseLexiconEntry(String lexiconLine) {
-    int commaIndex = lexiconLine.indexOf(",");
-    // Add the lexicon word sequence to the lexicon.
-    String wordPart = lexiconLine.substring(0, commaIndex);
-    return new LexiconEntry(Arrays.asList(wordPart.split(" ")),
-        CcgCategory.parseFrom(lexiconLine.substring(commaIndex + 1)));
+    try {
+      String[] parts = new CSVParser(ENTRY_DELIMITER).parseLine(lexiconLine);
+
+      // Add the lexicon word sequence to the lexicon.
+      String wordPart = parts[0];
+      if (parts.length >= 4) {
+        return new LexiconEntry(Arrays.asList(wordPart.split(" ")),
+            CcgCategory.parseFrom(parts[1], parts[2], parts[3]));
+      } else {
+        return new LexiconEntry(Arrays.asList(wordPart.split(" ")),
+            CcgCategory.parseFrom(parts[1], parts[2], ""));
+      }
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Invalid lexicon line: " + lexiconLine, e);
+    }
   }
 
   /**

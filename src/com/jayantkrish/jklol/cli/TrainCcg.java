@@ -46,7 +46,7 @@ public class TrainCcg {
     parser.accepts("brief"); // Hides training output.
     OptionSet options = parser.parse(args);
     
-    // Read in the lexicon to instantiate the model. 
+    // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(lexicon));
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries);
     

@@ -19,6 +19,7 @@
   <path id="classpath.base">
     <pathelement location="lib/guava-r09.jar" />
     <pathelement location="lib/jopt-simple-4.3.jar" />
+    <pathelement location="lib/opencsv-2.3.jar" />
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />

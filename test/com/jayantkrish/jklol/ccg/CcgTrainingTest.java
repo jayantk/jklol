@@ -75,11 +75,9 @@ public class CcgTrainingTest extends TestCase {
     
     parses = parser.beamSearch(Arrays.asList("near"), 10);
     assertEquals(4, parses.size());
-    System.out.println(parses);
     
     parses = parser.beamSearch(Arrays.asList(","), 10);
     assertEquals(1, parses.size());
-    System.out.println(parses);
   }
 
   public void testTrain() {

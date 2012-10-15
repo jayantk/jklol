@@ -120,14 +120,14 @@ public class CcgParse {
    * 
    * @return
    */
-  public List<CcgCategory> getSpannedLexiconEntries() {
+  public List<LexiconEntry> getSpannedLexiconEntries() {
     if (isTerminal()) {
-      return Arrays.asList(lexiconEntry);
+      return Arrays.asList(new LexiconEntry(spannedWords, lexiconEntry));
     } else {
-      List<CcgCategory> categories = Lists.newArrayList();
-      categories.addAll(left.getSpannedLexiconEntries());
-      categories.addAll(right.getSpannedLexiconEntries());
-      return categories;
+      List<LexiconEntry> lexiconEntries = Lists.newArrayList();
+      lexiconEntries.addAll(left.getSpannedLexiconEntries());
+      lexiconEntries.addAll(right.getSpannedLexiconEntries());
+      return lexiconEntries;
     }
   }
   

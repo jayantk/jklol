@@ -220,7 +220,7 @@ public class CcgCategory implements Serializable {
 
   @Override
   public String toString() {
-    return heads.toString() + " : " + syntax.toString();
+    return heads.toString() + ":" + syntax.toString();
   }
   
   public static final class Argument implements Serializable {

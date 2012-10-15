@@ -39,9 +39,17 @@ public class CcgTrainingTest extends TestCase {
     "the kinda red block###pred:red 2 1 pred:block 3#pred:almost 1 1 pred:red 2",
     "near the object is the red block###pred:near 0 2 pred:object 2#pred:near 0 1 pred:block 0#pred:equals 3 1 pred:block 0#pred:equals 3 2 pred:block 6#pred:red 5 1 pred:block 6"
   };
+  
+  private static final String[] trainingDataWithLexicon = {
+    "red block###pred:red 0 1 pred:block 1###red,pred:red,N/>N,pred:red 1 ?1@@@block,pred:block,N",
+    "red green block###pred:red 0 1 pred:block 2#pred:green 1 1 pred:block 2###red,pred:red,N/>N,pred:red 1 ?1@@@green,pred:green,N/>N,pred:green 1 ?1@@@block,pred:block,N",
+    "red block near the green block###pred:red 0 1 pred:block 1#pred:green 4 1 pred:block 5#pred:near 2 1 pred:block 1#pred:near 2 2 pred:block 5###"
+    + "red,pred:red,N/>N,pred:red 1 ?1@@@block,pred:block,N@@@near,pred:near,(N\\>N)/N,pred:near 1 ?1#pred:near 2 ?2@@@the,the,N/>N@@@green,pred:green,N/>N,pred:green 1 ?1@@@block,pred:block,N",
+  };
 
   private ParametricCcgParser family;
   private List<CcgExample> trainingExamples;
+  private List<CcgExample> trainingExamplesWithLexicon;
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon));
@@ -49,6 +57,11 @@ public class CcgTrainingTest extends TestCase {
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {
       trainingExamples.add(CcgExample.parseFromString(trainingData[i]));
+    }
+    
+    trainingExamplesWithLexicon = Lists.newArrayList();
+    for (int i = 0; i < trainingDataWithLexicon.length; i++) {
+      trainingExamplesWithLexicon.add(CcgExample.parseFromString(trainingDataWithLexicon[i]));
     }
   }
 
@@ -63,19 +76,32 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrain() {
+    CcgParser parser = testZeroTrainingError(trainingExamples);
+    // Check that the resulting parameters are sensible.  
+    assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability());
+  }
+
+  public void testTrainWithLexicon() {
+    testZeroTrainingError(trainingExamplesWithLexicon);
+  }
+  
+  private CcgParser testZeroTrainingError(List<CcgExample> examples) {
     CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 10);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1, 
         true, 0.1, new DefaultLogFunction());
     
-    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingExamples);
+    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), examples);
     CcgParser parser = family.getParserFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
 
     // Test that zero training error is achieved.
-    for (CcgExample example : trainingExamples) {
+    for (CcgExample example : examples) {
       List<CcgParse> parses = parser.beamSearch(example.getWords(), 10);
       System.out.println(example.getWords() + " " + parses.get(0).getAllDependencies());
       assertEquals(example.getDependencies(), Sets.newHashSet(parses.get(0).getAllDependencies()));
     }
+    
+    return parser; 
   }
 }
+

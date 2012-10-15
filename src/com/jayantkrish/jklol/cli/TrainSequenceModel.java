@@ -27,7 +27,11 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
+import com.jayantkrish.jklol.training.MaxMarginOracle;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -124,9 +128,13 @@ public class TrainSequenceModel {
         .ofType(String.class).required();
     // Where to serialize the trained factor graph
     OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
-    // Feature functions of label/label pairs
-    // OptionSpec<String> features = parser.accepts("transitionFeatures").withRequiredArg()
-    // .ofType(String.class).required();
+    // Optional options
+    OptionSpec<Integer> iterations = parser.accepts("iterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
+    OptionSpec<Double> initialStepSize = parser.accepts("initialStepSize").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
+    OptionSpec<Double> l2Regularization = parser.accepts("l2Regularization").withRequiredArg().ofType(Double.class).defaultsTo(0.1);
+    // boolean options.
+    parser.accepts("brief"); // Hides training output.
+    parser.accepts("maxMargin"); // Trains with a max-margin method.
     OptionSet options = parser.parse(args); 
     
     // Construct the sequence model
@@ -139,10 +147,21 @@ public class TrainSequenceModel {
     System.out.println(trainingData.size() + " training examples.");
 
     // Estimate parameters
-    LoglikelihoodOracle oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
+    GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
+    if (options.has("maxMargin")) {
+      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
+    } else {
+      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
+    }
+
+    System.out.println("Training...");
+    int numIterations = trainingData.size() * options.valueOf(iterations);
+    LogFunction log = (options.has("brief")) ? new NullLogFunction() : new DefaultLogFunction();
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        100, 1, 1.0, true, 0.1, new DefaultLogFunction());
-    SufficientStatistics parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
+        numIterations, 1, options.valueOf(initialStepSize), true, options.valueOf(l2Regularization),
+        log);
+    SufficientStatistics parameters = trainer.train(
+        oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     DynamicFactorGraph factorGraph = sequenceModel.getFactorGraphFromParameters(parameters);
 
      System.out.println("Serializing trained model...");

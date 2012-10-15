@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,7 +22,6 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
-import com.jayantkrish.jklol.util.Pair;
 
 /**
  * Parameterized CCG grammar. This class instantiates CCG parsers given
@@ -87,19 +85,18 @@ public class ParametricCcgParser {
     IndexedList<String> semanticPredicates = IndexedList.create();
     Map<Integer, Integer> maxNumArgs = Maps.newHashMap();
     for (String lexiconLine : lexiconLines) {
-
       // Create the CCG category.
-      Pair<ArrayList<String>, CcgCategory> line = parseLexiconLine(lexiconLine);
-      words.add(line.getLeft());
-      categories.add(line.getRight());
+      LexiconEntry lexiconEntry = LexiconEntry.parseLexiconEntry(lexiconLine);
+      words.add(lexiconEntry.getWords());
+      categories.add(lexiconEntry.getCategory());
 
       // Store the heads of the dependencies as semantic predicates.
-      addArgumentsToPredicateList(line.getRight().getHeads(), semanticPredicates);
+      addArgumentsToPredicateList(lexiconEntry.getCategory().getHeads(), semanticPredicates);
       // Store any predicates from the subjects of the dependency structures.
-      addSubjectsToPredicateList(line.getRight().getSubjects(), line.getRight().getArgumentNumbers(),
-          semanticPredicates, maxNumArgs);
+      addSubjectsToPredicateList(lexiconEntry.getCategory().getSubjects(), 
+          lexiconEntry.getCategory().getArgumentNumbers(), semanticPredicates, maxNumArgs);
       // Store any predicates from the objects of the dependency structures.
-      addArgumentsToPredicateList(line.getRight().getObjects(), semanticPredicates);
+      addArgumentsToPredicateList(lexiconEntry.getCategory().getObjects(), semanticPredicates);
     }
 
     // Build the terminal distribution. This maps word sequences to 
@@ -112,9 +109,9 @@ public class ParametricCcgParser {
     VariableNumMap vars = terminalVar.union(ccgCategoryVar);
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (String lexiconLine : lexiconLines) {
-      Pair<ArrayList<String>, CcgCategory> line = parseLexiconLine(lexiconLine);
-      terminalBuilder.setWeight(vars.outcomeArrayToAssignment(line.getLeft(),
-          line.getRight()), 1.0);
+      LexiconEntry lexiconEntry = LexiconEntry.parseLexiconEntry(lexiconLine);
+      terminalBuilder.setWeight(vars.outcomeArrayToAssignment(lexiconEntry.getWords(),
+          lexiconEntry.getCategory()), 1.0);
     }
     ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(vars, terminalBuilder.build());
 
@@ -161,14 +158,6 @@ public class ParametricCcgParser {
     
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor);
-  }
-
-  private static Pair<ArrayList<String>, CcgCategory> parseLexiconLine(String lexiconLine) {
-    int commaIndex = lexiconLine.indexOf(",");
-    // Add the lexicon word sequence to the lexicon.
-    String wordPart = lexiconLine.substring(0, commaIndex);
-    return Pair.of(Lists.newArrayList(wordPart.split(" ")),
-        CcgCategory.parseFrom(lexiconLine.substring(commaIndex + 1)));
   }
 
   private static void addArgumentsToPredicateList(Collection<Argument> arguments,
@@ -239,6 +228,46 @@ public class ParametricCcgParser {
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
         dependencyHeadVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution);
   }
+  
+  /**
+   * Increments {@code gradient} by {@code count * features(dependency)} for all 
+   * dependency structures in {@code dependencies}.
+   *   
+   * @param gradient
+   * @param dependencies
+   * @param count
+   */
+  public void incrementDependencySufficientStatistics(SufficientStatistics gradient, 
+      Collection<DependencyStructure> dependencies, double count) {
+    SufficientStatistics dependencyGradient = gradient.coerceToList().getStatisticByName(DEPENDENCY_PARAMETERS);
+    for (DependencyStructure dependency : dependencies) {
+      Assignment assignment = Assignment.unionAll(
+          dependencyHeadVar.outcomeArrayToAssignment(dependency.getHead()),
+          dependencyArgNumVar.outcomeArrayToAssignment(dependency.getArgIndex()),
+          dependencyArgVar.outcomeArrayToAssignment(dependency.getObject()));
+
+      dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient, assignment, count);
+    }
+  }
+
+  /**
+   * Increments {@code gradient} by {@code count * features(lexiconEntry)} for all 
+   * lexicon entries in {@code lexiconEntries}.
+   *   
+   * @param gradient
+   * @param dependencies
+   * @param count
+   */
+  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
+      Collection<LexiconEntry> lexiconEntries, double count) {
+    SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
+    for (LexiconEntry lexiconEntry : lexiconEntries) {
+      Assignment assignment = Assignment.unionAll(
+          terminalVar.outcomeArrayToAssignment(lexiconEntry.getWords()),
+          ccgCategoryVar.outcomeArrayToAssignment(lexiconEntry.getCategory()));
+      terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient, assignment, count);
+    }
+  }
 
   /**
    * Increments {@code gradient} by {@code count * features(parse)}, where
@@ -251,31 +280,9 @@ public class ParametricCcgParser {
   public void incrementSufficientStatistics(SufficientStatistics gradient, CcgParse parse,
       double count) {
     // Update the dependency structure parameters.
-    SufficientStatistics dependencyGradient = gradient.coerceToList().getStatisticByName(DEPENDENCY_PARAMETERS);
-    for (DependencyStructure dependencies : parse.getAllDependencies()) {
-      Assignment assignment = Assignment.unionAll(
-          dependencyHeadVar.outcomeArrayToAssignment(dependencies.getHead()),
-          dependencyArgNumVar.outcomeArrayToAssignment(dependencies.getArgIndex()),
-          dependencyArgVar.outcomeArrayToAssignment(dependencies.getObject()));
-
-      dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient, assignment, count);
-    }
-
+    incrementDependencySufficientStatistics(gradient, parse.getAllDependencies(), count);
     // Update terminal distribution parameters.
-    SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
-    updateTerminalGradient(terminalGradient, parse, count);
-  }
-
-  private void updateTerminalGradient(SufficientStatistics terminalGradient, CcgParse parse, double count) {
-    if (parse.isTerminal()) {
-      Assignment assignment = Assignment.unionAll(
-          terminalVar.outcomeArrayToAssignment(parse.getSpannedWords()),
-          ccgCategoryVar.outcomeArrayToAssignment(parse.getLexiconEntry()));
-      terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient, assignment, count);
-    } else {
-      updateTerminalGradient(terminalGradient, parse.getLeft(), count);
-      updateTerminalGradient(terminalGradient, parse.getRight(), count);
-    }
+    incrementLexiconSufficientStatistics(gradient, parse.getSpannedLexiconEntries(), count);
   }
 
   public String getParameterDescription(SufficientStatistics parameters) {

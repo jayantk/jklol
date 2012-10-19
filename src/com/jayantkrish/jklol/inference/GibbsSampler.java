@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -43,6 +44,7 @@ public class GibbsSampler implements MarginalCalculator {
 			for (int i = 0; i < samplesBetweenDraws; i++) {
 				curAssignment = doSamplingRound(factorGraph, curAssignment);
 			}
+			curAssignment = doSamplingRound(factorGraph, curAssignment);
 			samples.add(curAssignment);
 		}
 		return new SampleMarginalSet(factorGraph.getVariables(), samples, 
@@ -78,8 +80,9 @@ public class GibbsSampler implements MarginalCalculator {
 	 */
 	private Assignment doSamplingRound(FactorGraph factorGraph, Assignment curAssignment) {
 	  Assignment assignment = curAssignment;
-		for (int i = 0; i < factorGraph.getVariables().size(); i++) {
-			assignment = doSample(factorGraph, assignment, i);
+	  int[] variableNums = factorGraph.getVariables().getVariableNumsArray();
+		for (int i = 0; i < variableNums.length; i++) {
+			assignment = doSample(factorGraph, assignment, variableNums[i]);
 		}
 		return assignment;
 	}
@@ -95,6 +98,8 @@ public class GibbsSampler implements MarginalCalculator {
 		// Multiply together all of the factors which define a probability distribution over 
 		// variable varNum, conditioned on all other variables.
 		Set<Integer> factorNums = factorGraph.getFactorsWithVariable(varNum);
+
+		Preconditions.checkState(factorNums.size() > 0, "Variable not in factor: " + varNum + " " + factorNums);
 		List<Factor> factorsToCombine = new ArrayList<Factor>();
 		for (Integer factorNum : factorNums) {
 			Factor conditional = factorGraph.getFactor(factorNum)

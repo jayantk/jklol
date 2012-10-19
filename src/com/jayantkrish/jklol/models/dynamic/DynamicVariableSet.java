@@ -44,7 +44,7 @@ public class DynamicVariableSet implements Serializable {
     Preconditions.checkArgument(plateNames.size() == plates.size());
     Preconditions.checkArgument(plateNames.size() == maximumReplications.length);
     this.fixedVariables = fixedVariables;
-    this.fixedVariableMaxInd = (fixedVariables.size() > 0) ? Collections.max(fixedVariables.getVariableNums()) : 0;
+    this.fixedVariableMaxInd = (fixedVariables.size() > 0) ? Collections.max(fixedVariables.getVariableNums()) : -1;
     this.plateNames = plateNames;
     this.plates = plates;
     this.maximumReplications = maximumReplications;

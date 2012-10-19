@@ -1,4 +1,6 @@
-Pittsburgh,city of _,1
-Pittsburgh,west of _,1
-Pennsylvania,west of _,1
-Pennsylvania,state of _,1
+Pittsburgh,city of _,T,1
+Pittsburgh,state of _,F,1
+Pittsburgh,west of _,T,1
+Pennsylvania,city of _,F,1
+Pennsylvania,state of _,T,1
+Pennsylvania,west of _,T,1

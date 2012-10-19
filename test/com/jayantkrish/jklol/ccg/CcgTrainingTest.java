@@ -83,7 +83,7 @@ public class CcgTrainingTest extends TestCase {
   public void testTrain() {
     CcgParser parser = testZeroTrainingError(trainingExamples);
     // Check that the resulting parameters are sensible.  
-    assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability());
+    assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
   }
 
   public void testTrainWithLexicon() {

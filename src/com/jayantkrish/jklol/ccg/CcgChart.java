@@ -1,13 +1,13 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
 import com.jayantkrish.jklol.util.HeapUtils;
@@ -45,38 +45,68 @@ public class CcgChart {
   public int size() {
     return terminals.size();
   }
+  
+  public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses) {
+    // Perform a heap sort on the array indexes paired with the probabilities.
+    double[] probsCopy = Arrays.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
+    Integer[] chartEntryIndexes = new Integer[probabilities[spanStart][spanEnd].length];
+    for (int i = 0; i < chartEntryIndexes.length; i++) {
+      chartEntryIndexes[i] = i;
+    }
+    
+    // Heaps are min-heaps, so we throw away the initial entries. 
+    // Then the remaining entries are the best parses.
+    List<CcgParse> bestParses = Lists.newArrayList();
+    int numChartEntries = getNumChartEntriesForSpan(spanStart, spanEnd);
+    while (numChartEntries > 0) {
+      if (numChartEntries <= numParses) {
+        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0]));        
+      }
+      
+      HeapUtils.removeMin(chartEntryIndexes, probsCopy, numChartEntries);
+      numChartEntries--;
+    }
+    
+    Collections.reverse(bestParses);
+    return bestParses;
+  }
 
   /**
-   * Decodes the CCG parse which is the {@code beamIndex}'th best parse in 
-   * the beam for the given span. 
+   * Decodes the CCG parse which is the {@code beamIndex}'th parse in the beam
+   * for the given span.
    * 
    * @param spanStart
    * @param spanEnd
    * @param beamIndex
    * @return
    */
-  public CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex) {
+  private CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex) {
     ChartEntry entry = chart[spanStart][spanEnd][beamIndex];
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(entry.getLexiconEntry(), entry.getHeads(), entry.getDependencies(), 
-          terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex]);
+      return CcgParse.forTerminal(entry.getLexiconEntry(), entry.getHeads(), 
+          Arrays.asList(entry.getDependencies()), terminals.subList(spanStart, spanEnd + 1),
+          probabilities[spanStart][spanEnd][beamIndex]);
     } else {
-      CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(), entry.getLeftChartIndex());
-      CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(), entry.getRightChartIndex());
+      CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
+          entry.getLeftChartIndex());
+      CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
+          entry.getRightChartIndex());
 
-      double nodeProb = probabilities[spanStart][spanEnd][beamIndex] / (left.getSubtreeProbability() * right.getSubtreeProbability());
-      
-      return CcgParse.forNonterminal(entry.getSyntax(), entry.getHeads(), entry.getDependencies(), nodeProb, left, right);
+      double nodeProb = probabilities[spanStart][spanEnd][beamIndex] / 
+          (left.getSubtreeProbability() * right.getSubtreeProbability());
+
+      return CcgParse.forNonterminal(entry.getSyntax(), entry.getHeads(), 
+          Arrays.asList(entry.getDependencies()), nodeProb, left, right);
     }
   }
 
   /**
-   * Gets the chart entries spanning the words {@code spanStart}-{@code spanEnd}, 
-   * inclusive. Some entries of the returned array may not be valid 
-   * {@code ChartEntry}s. Use {@link #getNumChartEntriesForSpan(int, int)} to determine
-   * how many chart entries exist for a given span.
-   *  
+   * Gets the chart entries spanning the words {@code spanStart}-{@code spanEnd}
+   * , inclusive. Some entries of the returned array may not be valid
+   * {@code ChartEntry}s. Use {@link #getNumChartEntriesForSpan(int, int)} to
+   * determine how many chart entries exist for a given span.
+   * 
    * @param spanStart
    * @param spanEnd
    * @return
@@ -86,9 +116,9 @@ public class CcgChart {
   }
 
   /**
-   * Gets the probabilities of each chart entry spanning {@code spanStart}-{@code spanEnd}, 
-   * inclusive. The indexes of the returned array match the indexes of the ChartEntry[] 
-   * returned by {@link #getChartEntriesForSpan}.
+   * Gets the probabilities of each chart entry spanning {@code spanStart}-
+   * {@code spanEnd}, inclusive. The indexes of the returned array match the
+   * indexes of the ChartEntry[] returned by {@link #getChartEntriesForSpan}.
    * 
    * @param spanStart
    * @param spanEnd
@@ -99,9 +129,9 @@ public class CcgChart {
   }
 
   /**
-   * Gets the number of chart entries spanning {@code spanStart}-{@code spanEnd}, 
-   * inclusive. This is the number of valid entries in  
-   *  
+   * Gets the number of chart entries spanning {@code spanStart}-{@code spanEnd}
+   * , inclusive. This is the number of valid entries in
+   * 
    * @param spanStart
    * @param spanEnd
    * @return
@@ -111,19 +141,19 @@ public class CcgChart {
   }
 
   /**
-   * Adds {@code entry} as a chart entry spanning {@code spanStart}-{@code spanEnd},
-   * with probability {@code probability}.
+   * Adds {@code entry} as a chart entry spanning {@code spanStart}-
+   * {@code spanEnd}, with probability {@code probability}.
    * 
    * @param entry
    * @param probability
    * @param spanStart
    * @param spanEnd
    */
-  public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, int spanEnd) { 
+  public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, int spanEnd) {
     offerEntry(entry, probability, spanStart, spanEnd);
   }
 
-  public void addChartEntryForTerminalSpan(CcgCategory result, double probability, 
+  public void addChartEntryForTerminalSpan(CcgCategory result, double probability,
       int spanStart, int spanEnd) {
     // Assign each predicate in this category a unique word index.
     Set<IndexedPredicate> heads = Sets.newHashSet();
@@ -136,40 +166,43 @@ public class CcgChart {
       }
     }
     List<DependencyStructure> deps = Lists.newArrayList();
-    Multimap<Integer, UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, deps);
+    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, deps);
     
-    ChartEntry entry = new ChartEntry(result, heads, headArgumentNumbers,
-        unfilledDeps, deps, spanStart, spanEnd);
-    
+    DependencyStructure[] depArray = deps.toArray(new DependencyStructure[deps.size()]);
+    UnfilledDependency[] unfilledDepArray = unfilledDeps.toArray(
+        new UnfilledDependency[unfilledDeps.size()]);
+
+    ChartEntry entry = new ChartEntry(result, heads, headArgumentNumbers, unfilledDepArray, 
+        depArray, spanStart, spanEnd);
+
     offerEntry(entry, probability, spanStart, spanEnd);
   }
 
   /**
-   * Adds a chart entry to the heap for {@code spanStart} to {@code spanEnd}. 
-   * This operation implements beam truncation by discarding the minimum 
-   * probability entry when a heap reaches the beam size. 
+   * Adds a chart entry to the heap for {@code spanStart} to {@code spanEnd}.
+   * This operation implements beam truncation by discarding the minimum
+   * probability entry when a heap reaches the beam size.
    */
   private final void offerEntry(ChartEntry entry, double probability, int spanStart, int spanEnd) {
     HeapUtils.offer(chart[spanStart][spanEnd], probabilities[spanStart][spanEnd],
         chartSizes[spanEnd + (terminals.size() * spanStart)], entry, probability);
     chartSizes[spanEnd + (terminals.size() * spanStart)]++;
-    
+
     if (chartSizes[spanEnd + (terminals.size() * spanStart)] > beamSize) {
-      HeapUtils.removeMin(chart[spanStart][spanEnd], probabilities[spanStart][spanEnd], 
+      HeapUtils.removeMin(chart[spanStart][spanEnd], probabilities[spanStart][spanEnd],
           chartSizes[spanEnd + (terminals.size() * spanStart)]);
       chartSizes[spanEnd + (terminals.size() * spanStart)]--;
     }
   }
 
   /**
-   * An entry of the beam search chart, containing both a syntactic and 
-   * semantic type. The semantic type consists of yet-unfilled semantic 
-   * dependencies.
+   * An entry of the beam search chart, containing both a syntactic and semantic
+   * type. The semantic type consists of yet-unfilled semantic dependencies.
    * <p>
-   * Chart entries also include any filled dependencies instantiated during
-   * the parsing operation that produced the entry. Finally, chart entries
-   * include backpointers to the chart entries used to create them. These
-   * backpointers allow CCG parses to be reconstructed from the chart.
+   * Chart entries also include any filled dependencies instantiated during the
+   * parsing operation that produced the entry. Finally, chart entries include
+   * backpointers to the chart entries used to create them. These backpointers
+   * allow CCG parses to be reconstructed from the chart.
    * 
    * @author jayant
    */
@@ -177,19 +210,19 @@ public class CcgChart {
     private final SyntacticCategory syntax;
     private final Set<IndexedPredicate> heads;
     private final Set<Integer> headArguments;
-    private final Multimap<Integer, UnfilledDependency> unfilledDependencies;
-    
-    private final List<DependencyStructure> deps;
+    private final UnfilledDependency[] unfilledDependencies;
+
+    private final DependencyStructure[] deps;
 
     private final boolean isTerminal;
 
-    // If this is a terminal, lexiconEntry contains the CcgCategory 
+    // If this is a terminal, lexiconEntry contains the CcgCategory
     // from the lexicon used to create this chartEntry. This variable
     // is saved to track which lexicon entries are used in a parse,
     // for parameter estimation purposes.
     private final CcgCategory lexiconEntry;
-        
-    // Backpointer information 
+
+    // Backpointer information
     private final int leftSpanStart;
     private final int leftSpanEnd;
     private final int leftChartIndex;
@@ -199,7 +232,7 @@ public class CcgChart {
     private final int rightChartIndex;
 
     public ChartEntry(SyntacticCategory syntax, Set<IndexedPredicate> heads, Set<Integer> headArguments,
-        Multimap<Integer, UnfilledDependency> unfilledDependencies, List<DependencyStructure> deps,
+        UnfilledDependency[] unfilledDependencies, DependencyStructure[] deps,
         int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex) {
       this.syntax = Preconditions.checkNotNull(syntax);
@@ -232,16 +265,16 @@ public class CcgChart {
      * @param spanStart
      * @param spanEnd
      */
-    public ChartEntry(CcgCategory lexiconEntry, Set<IndexedPredicate> heads, 
-        Set<Integer> headArguments, Multimap<Integer, UnfilledDependency> unfilledDependencies, 
-        List<DependencyStructure> deps, int spanStart, int spanEnd) {
+    public ChartEntry(CcgCategory lexiconEntry, Set<IndexedPredicate> heads,
+        Set<Integer> headArguments, UnfilledDependency[] unfilledDependencies,
+        DependencyStructure[] deps, int spanStart, int spanEnd) {
       this.syntax = Preconditions.checkNotNull(lexiconEntry.getSyntax());
       this.heads = Preconditions.checkNotNull(heads);
       this.headArguments = Preconditions.checkNotNull(headArguments);
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
-      
-      this.lexiconEntry = lexiconEntry;  
-      this.deps = ImmutableList.copyOf(deps);
+
+      this.lexiconEntry = lexiconEntry;
+      this.deps = Preconditions.checkNotNull(deps);
 
       isTerminal = true;
 
@@ -249,7 +282,7 @@ public class CcgChart {
       this.leftSpanStart = spanStart;
       this.leftSpanEnd = spanEnd;
       this.leftChartIndex = -1;
-      
+
       this.rightSpanStart = -1;
       this.rightSpanEnd = -1;
       this.rightChartIndex = -1;
@@ -258,24 +291,24 @@ public class CcgChart {
     public SyntacticCategory getSyntax() {
       return syntax;
     }
-    
+
     public Set<IndexedPredicate> getHeads() {
       return heads;
     }
-    
+
     public Set<Integer> getUnfilledHeads() {
       return headArguments;
     }
-    
-    public Multimap<Integer, UnfilledDependency> getUnfilledDependencies() {
+
+    public UnfilledDependency[] getUnfilledDependencies() {
       return unfilledDependencies;
     }
-    
+
     public CcgCategory getLexiconEntry() {
       return lexiconEntry;
     }
-    
-    public List<DependencyStructure> getDependencies() {
+
+    public DependencyStructure[] getDependencies() {
       return deps;
     }
 
@@ -307,22 +340,22 @@ public class CcgChart {
       return rightChartIndex;
     }
   }
-  
+
   /**
-   * A semantic predicate paired with the index of the word that instantiated it.
-   * This class disambiguates between multiple distinct instantiations of a
-   * predicate in a sentence. Such instantiations occur, for example, when 
-   * a single word occurs multiple times in the sentence.
-   *   
+   * A semantic predicate paired with the index of the word that instantiated
+   * it. This class disambiguates between multiple distinct instantiations of a
+   * predicate in a sentence. Such instantiations occur, for example, when a
+   * single word occurs multiple times in the sentence.
+   * 
    * @author jayant
    */
   public static class IndexedPredicate {
     // The name of the predicate.
     private final String predicate;
-    
+
     // The word index that created predicate.
     private final int wordIndex;
-    
+
     public IndexedPredicate(String head, int wordIndex) {
       this.predicate = head;
       this.wordIndex = wordIndex;
@@ -331,11 +364,11 @@ public class CcgChart {
     public String getHead() {
       return predicate;
     }
-    
+
     public int getHeadIndex() {
       return wordIndex;
     }
-    
+
     @Override
     public String toString() {
       return predicate + ":" + wordIndex;

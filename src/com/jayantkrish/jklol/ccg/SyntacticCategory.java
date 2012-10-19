@@ -52,6 +52,8 @@ public class SyntacticCategory implements Serializable {
   private final SyntacticCategory returnType;
   private final SyntacticCategory argumentType;
   
+  private final int cachedHashCode;
+
   // NOTE: remember to update .equals() and .hashCode() if the members change.
 
   public SyntacticCategory(String value, Direction direction, HeadValue head,
@@ -61,6 +63,8 @@ public class SyntacticCategory implements Serializable {
     this.head = head;
     this.returnType = returnType;
     this.argumentType = argumentType;
+    
+    this.cachedHashCode = cacheHashCode();
   }
 
   /**
@@ -96,9 +100,8 @@ public class SyntacticCategory implements Serializable {
 
     if (minParenDepthIndex == -1) {
       // Atomic category.
-      // Strip any parentheses around the variable name, then remove any feature
-      // subcategorization.
-      String baseSyntacticType = typeString.replaceAll("[\\(\\)]", "").split("\\[")[0].intern();
+      // Strip any parentheses around the variable name.
+      String baseSyntacticType = typeString.replaceAll("[\\(\\)]", "").intern();
       return new SyntacticCategory(baseSyntacticType, null, null, null, null);
     } else {
       // Find the string corresponding to the operator.
@@ -222,8 +225,7 @@ public class SyntacticCategory implements Serializable {
     return equals(other);
   }
 
-  @Override
-  public int hashCode() {
+  private int cacheHashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result + ((argumentType == null) ? 0 : argumentType.hashCode());
@@ -232,6 +234,11 @@ public class SyntacticCategory implements Serializable {
     result = prime * result + ((returnType == null) ? 0 : returnType.hashCode());
     result = prime * result + ((value == null) ? 0 : value.hashCode());
     return result;
+  }
+
+  @Override
+  public int hashCode() {
+    return cachedHashCode;
   }
 
   @Override

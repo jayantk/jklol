@@ -8,10 +8,8 @@ import java.util.Set;
 import au.com.bytecode.opencsv.CSVParser;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
@@ -152,9 +150,9 @@ public class CcgCategory implements Serializable {
     return argumentNumbers;
   }
   
-  public Multimap<Integer, UnfilledDependency> createUnfilledDependencies(int wordIndex,
+  public List<UnfilledDependency> createUnfilledDependencies(int wordIndex, 
       List<DependencyStructure> appendDependencies) {
-    Multimap<Integer, UnfilledDependency> map = HashMultimap.create();
+    List<UnfilledDependency> unfilledDependencies = Lists.newArrayListWithCapacity(subjects.size());
     for (int i = 0; i < subjects.size(); i++) {
       Set<IndexedPredicate> subject = null;
       int subjectIndex = -1;
@@ -174,22 +172,19 @@ public class CcgCategory implements Serializable {
 
       UnfilledDependency dep = new UnfilledDependency(subject, subjectIndex, 
           argumentNumbers.get(i), object, objectIndex);
-      if (!dep.hasSubjects()) {
-        map.put(dep.getSubjectIndex(), dep);
-      }
-      if (!dep.hasObjects()) {
-        map.put(dep.getObjectIndex(), dep);
-      }
       if (dep.hasSubjects() && dep.hasObjects()) {
+        // This is actually a filled dependency.
         for (IndexedPredicate subj : dep.getSubjects()) {
           for (IndexedPredicate obj : dep.getObjects()) {
             appendDependencies.add(new DependencyStructure(subj.getHead(), subj.getHeadIndex(),
                 obj.getHead(), obj.getHeadIndex(), argumentNumbers.get(i)));
           }
         }
+      } else {
+        unfilledDependencies.add(dep);
       }
     }
-    return map;
+    return unfilledDependencies;
   }
   
   @Override

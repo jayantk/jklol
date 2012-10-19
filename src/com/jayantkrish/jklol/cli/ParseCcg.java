@@ -23,6 +23,9 @@ public class ParseCcg {
     OptionParser parser = new OptionParser();
     // Required arguments.
     OptionSpec<String> model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
+    // Optional arguments
+    OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    OptionSpec<Integer> numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     OptionSet options = parser.parse(args);
 
     // Read the parser.
@@ -43,12 +46,15 @@ public class ParseCcg {
     }
     
     List<String> sentenceToParse = options.nonOptionArguments();
-    List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, 100);
-    if (parses.size() > 0) {
-      System.out.println("HEAD: " + parses.get(0).getSemanticHeads());
-      System.out.println("DEPS: " + parses.get(0).getAllDependencies());
-      System.out.println("---");
-      System.out.println("LEX: " + parses.get(0).getSpannedLexiconEntries());
+    List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, options.valueOf(beamSize));
+    for (int i = 0 ; i < Math.min(parses.size(), options.valueOf(numParses)); i++) {
+      if (i > 0) {
+        System.out.println("---");
+      }
+      System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
+      System.out.println("DEPS: " + parses.get(i).getAllDependencies());
+      System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
+      System.out.println("PROB: " + parses.get(i).getSubtreeProbability());
     }
 
     System.exit(0);

@@ -19,7 +19,7 @@ public class NullLogFunction extends AbstractLogFunction {
   public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {}
   
   @Override
-  public void logStatistic(int iteration, String statisticName, Object value) {}
+  public void logStatistic(int iteration, String statisticName, double value) {}
 
   @Override
   public void notifyIterationStart(int iteration) {}

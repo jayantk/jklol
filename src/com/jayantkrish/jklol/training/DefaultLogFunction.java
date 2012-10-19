@@ -68,7 +68,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 
 	@Override
 	public void notifyIterationEnd(int iteration) {
-	  long elapsedTime = stopTimer("iteration");
+	  double elapsedTime = stopTimer("iteration");
 	  if (iteration % logInterval == 0) {
 	    print(iteration + " done. Elapsed: " + elapsedTime + " ms");
 	    printTimeStatistics();
@@ -76,7 +76,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 
   @Override
-  public void logStatistic(int iteration, String statisticName, Object value) {
+  public void logStatistic(int iteration, String statisticName, double value) {
     if (iteration % logInterval == 0) {
       print(iteration + ": " + statisticName + "=" + value);
     }

@@ -13,7 +13,7 @@ public interface LogFunction {
 
   public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph);
 
-  public void logStatistic(int iteration, String statisticName, Object value);
+  public void logStatistic(int iteration, String statisticName, double value);
 
   public void notifyIterationStart(int iteration);
 
@@ -21,5 +21,5 @@ public interface LogFunction {
 
   public void startTimer(String timerName);
   
-  public long stopTimer(String timerName);
+  public double stopTimer(String timerName);
 }

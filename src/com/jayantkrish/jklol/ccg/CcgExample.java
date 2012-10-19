@@ -64,6 +64,8 @@ public class CcgExample {
           continue;
         }
         String[] dep = dependencyParts[i].split("\\s+");
+        Preconditions.checkState(dep.length >= 5, "Illegal dependency string: " + dependencyParts[i]);
+        
         dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
             Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
       }

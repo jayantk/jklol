@@ -25,6 +25,8 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
 
+  private static final long serialVersionUID = 1L;
+
   public DenseIndicatorLogLinearFactor(VariableNumMap variables) {
     super(variables);
   }

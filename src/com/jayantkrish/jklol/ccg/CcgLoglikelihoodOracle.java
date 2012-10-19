@@ -45,7 +45,11 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
     // Calculate the unconditional distribution over CCG parses.
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), beamSize);
+    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), beamSize, log);
+    if (parses.size() == 0) {
+        // Search error: couldn't find any parses.
+        throw new ZeroProbabilityError();      
+    }
     log.stopTimer("update_gradient/input_marginal");
 
     List<CcgParse> correctParses = null;
@@ -84,6 +88,8 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       // If both the correct dependencies and lexicon entries are observed, no
       // inference is necessary. Simply increment the gradient using the correct
       // answers.
+      // TODO: this partition function is wrong... Should be the probability
+      // of observing the given dependencies and lexicon entries.
       conditionalPartitionFunction = 1.0;
       family.incrementDependencySufficientStatistics(gradient, example.getDependencies(), 1.0);
       family.incrementLexiconSufficientStatistics(gradient, example.getLexiconEntries(), 1.0);

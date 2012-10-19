@@ -1,0 +1,4 @@
+Pittsburgh,city of _,1
+Pittsburgh,west of _,1
+Pennsylvania,west of _,1
+Pennsylvania,state of _,1

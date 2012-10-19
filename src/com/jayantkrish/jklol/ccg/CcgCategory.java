@@ -1,14 +1,15 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
+import au.com.bytecode.opencsv.CSVParser;
+
 import com.google.common.base.Preconditions;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
@@ -46,6 +47,9 @@ public class CcgCategory implements Serializable {
   private final List<Argument> objects;
   private final List<Integer> argumentNumbers;
   
+  private static final char ENTRY_DELIMITER=',';
+  private static final char DEPENDENCY_DELIMITER='#';
+  
   public CcgCategory(SyntacticCategory syntax, Set<Argument> heads,  
       List<Argument> subjects, List<Argument> objects, List<Integer> argumentNumbers) {
     this.syntax = Preconditions.checkNotNull(syntax);
@@ -67,31 +71,53 @@ public class CcgCategory implements Serializable {
    * @return
    */
   public static CcgCategory parseFrom(String categoryString) {
-    String[] parts = categoryString.split(",");
-    List<String> headStrings = Lists.newArrayList(parts[0].split("#"));
-    Set<Argument> heads = Sets.newHashSet(); 
-    for (String headString : headStrings) {
-      heads.add(Argument.parseFromString(headString));
-    }
-    
-    SyntacticCategory syntax = SyntacticCategory.parseFrom(parts[1]);
-
-    // Parse the semantic dependencies.
-    List<Argument> subjects = Lists.newArrayList();
-    List<Argument> objects = Lists.newArrayList();
-    List<Integer> argumentNumbers = Lists.newArrayList();
-    if (parts.length > 2) {
-      String[] depStrings = parts[2].split("#");
-      for (int i = 0; i < depStrings.length; i++) {
-        String[] depParts = depStrings[i].split(" ");
-
-        argumentNumbers.add(Integer.parseInt(depParts[1]));
-        subjects.add(Argument.parseFromString(depParts[0]));
-        objects.add(Argument.parseFromString(depParts[2]));
+    try {
+      String[] parts = new CSVParser(ENTRY_DELIMITER).parseLine(categoryString);
+      Preconditions.checkArgument(parts.length >= 2, "Invalid CCG category string: %s", 
+          categoryString);
+      if (parts.length > 2) {
+        return parseFrom(parts[0], parts[1], parts[2]);
+      } else {
+        return parseFrom(parts[0], parts[1], "");
       }
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Invalid CCG category: " + categoryString, e);
     }
-    
-    return new CcgCategory(syntax, heads, subjects, objects, argumentNumbers);
+  }
+
+  public static CcgCategory parseFrom(String semanticHeadString, String syntaxString, String dependencyString) {
+    try {
+      CSVParser dependencyParser = new CSVParser(DEPENDENCY_DELIMITER);
+      List<String> headStrings = Lists.newArrayList(dependencyParser.parseLine(semanticHeadString));
+      Set<Argument> heads = Sets.newHashSet(); 
+      for (String headString : headStrings) {
+        heads.add(Argument.parseFromString(headString));
+      }
+
+      SyntacticCategory syntax = SyntacticCategory.parseFrom(syntaxString);
+
+      // Parse the semantic dependencies.
+      List<Argument> subjects = Lists.newArrayList();
+      List<Argument> objects = Lists.newArrayList();
+      List<Integer> argumentNumbers = Lists.newArrayList();
+      if (dependencyString.trim().length() > 0) {
+        String[] depStrings = dependencyParser.parseLine(dependencyString);
+        for (int i = 0; i < depStrings.length; i++) {
+          String[] depParts = depStrings[i].split(" ");
+          Preconditions.checkArgument(depParts.length == 3, "Invalid CCG semantic dependency: %s", 
+              depStrings[i]);
+
+          argumentNumbers.add(Integer.parseInt(depParts[1]));
+          subjects.add(Argument.parseFromString(depParts[0]));
+          objects.add(Argument.parseFromString(depParts[2]));
+        }
+      }
+
+      return new CcgCategory(syntax, heads, subjects, objects, argumentNumbers);
+    } catch (IOException e) {
+      throw new IllegalArgumentException("Invalid CCG category: " + semanticHeadString + "," 
+          + syntaxString + "," + dependencyString, e);
+    }
   }
 
   /**
@@ -124,9 +150,9 @@ public class CcgCategory implements Serializable {
     return argumentNumbers;
   }
   
-  public Multimap<Integer, UnfilledDependency> createUnfilledDependencies(int wordIndex,
+  public List<UnfilledDependency> createUnfilledDependencies(int wordIndex, 
       List<DependencyStructure> appendDependencies) {
-    Multimap<Integer, UnfilledDependency> map = HashMultimap.create();
+    List<UnfilledDependency> unfilledDependencies = Lists.newArrayListWithCapacity(subjects.size());
     for (int i = 0; i < subjects.size(); i++) {
       Set<IndexedPredicate> subject = null;
       int subjectIndex = -1;
@@ -146,22 +172,19 @@ public class CcgCategory implements Serializable {
 
       UnfilledDependency dep = new UnfilledDependency(subject, subjectIndex, 
           argumentNumbers.get(i), object, objectIndex);
-      if (!dep.hasSubjects()) {
-        map.put(dep.getSubjectIndex(), dep);
-      }
-      if (!dep.hasObjects()) {
-        map.put(dep.getObjectIndex(), dep);
-      }
       if (dep.hasSubjects() && dep.hasObjects()) {
+        // This is actually a filled dependency.
         for (IndexedPredicate subj : dep.getSubjects()) {
           for (IndexedPredicate obj : dep.getObjects()) {
             appendDependencies.add(new DependencyStructure(subj.getHead(), subj.getHeadIndex(),
                 obj.getHead(), obj.getHeadIndex(), argumentNumbers.get(i)));
           }
         }
+      } else {
+        unfilledDependencies.add(dep);
       }
     }
-    return map;
+    return unfilledDependencies;
   }
   
   @Override
@@ -215,7 +238,7 @@ public class CcgCategory implements Serializable {
 
   @Override
   public String toString() {
-    return heads.toString() + " : " + syntax.toString();
+    return heads.toString() + ":" + syntax.toString();
   }
   
   public static final class Argument implements Serializable {

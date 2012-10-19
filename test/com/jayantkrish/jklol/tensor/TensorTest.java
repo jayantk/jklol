@@ -32,7 +32,7 @@ public abstract class TensorTest extends TestCase {
   protected Tensor table, emptyInputTable;
   
   protected List<Tensor> smallTables, missingMiddles, missingFirsts,
-      missingLasts, emptyTables, addTables, disjointTables;
+    missingLasts, emptyTables, addTables, disjointTables, vectors;
 
   protected int[] a1, a2;
   
@@ -75,6 +75,7 @@ public abstract class TensorTest extends TestCase {
     builder.put(new int[] { 4, 0, 0 }, 0.0);
     builder.put(new int[] { 4, 0, 1 }, 5.0);
     builder.put(new int[] { 4, 1, 0 }, 5.0);
+    builder.put(new int[] { 5, 4, 3 }, 3.0);
     table = builder.build();
     
     // Empty table is a table with no dimensions, which should behave like a
@@ -90,6 +91,7 @@ public abstract class TensorTest extends TestCase {
     missingMiddles = Lists.newArrayList();
     missingLasts = Lists.newArrayList();
     emptyTables = Lists.newArrayList();
+    vectors = Lists.newArrayList();
     for (TensorFactory otherFactory : allTensorFactories) {
       builder = otherFactory.getBuilder(varNums, varSizes);
       builder.put(a1, 1.0);
@@ -120,6 +122,8 @@ public abstract class TensorTest extends TestCase {
       builder.put(new int[] { 3, 0 }, 4.0);
       builder.put(new int[] { 4, 0 }, 5.0);
       builder.put(new int[] { 4, 1 }, 6.0);
+      builder.put(new int[] { 5, 3 }, 7.0);
+      builder.put(new int[] { 5, 4 }, 8.0);
       missingLasts.add(builder.build());
 
       // Empty table is a table with no dimensions, which should behave like a
@@ -133,6 +137,14 @@ public abstract class TensorTest extends TestCase {
       builder.put(new int[] {1, 1}, 2.0);
       builder.put(new int[] {1, 2}, 3.0);
       disjointTables.add(builder.build());
+
+      builder = otherFactory.getBuilder(new int[] {1}, new int[] {6});
+      builder.put(new int[] {0}, 2.0);
+      builder.put(new int[] {1}, 2.5);
+      builder.put(new int[] {3}, 3.0);
+      builder.put(new int[] {4}, 4.0);
+      builder.put(new int[] {5}, 6.0);
+      vectors.add(builder.build());
     }
   }
 
@@ -188,7 +200,7 @@ public abstract class TensorTest extends TestCase {
       intSet.add(Arrays.copyOf(keyValue.getKey(), 3));
     }
     assertTrue("Found " + intSet.size() + " keys, expected either 18 or 120", 
-        intSet.size() == 17 || intSet.size() == 120);
+        intSet.size() == 18 || intSet.size() == 120);
   }
   
   public void testGetKeyInt() {
@@ -332,10 +344,6 @@ public abstract class TensorTest extends TestCase {
       Tensor actual = table.innerProduct(missingFirst);
       Tensor expected = simpleReduce(simpleMultiply(table, missingFirst), 
           Sets.newHashSet(Ints.asList(missingFirst.getDimensionNumbers())), true);
-      
-      System.out.println(actual);
-      System.out.println(expected);
-      
       assertEquals(expected, actual);
     }
   }
@@ -344,11 +352,19 @@ public abstract class TensorTest extends TestCase {
     for (Tensor missingLast : missingLasts) {
       Tensor actual = table.innerProduct(missingLast);
       Tensor expected = simpleReduce(simpleMultiply(table, missingLast), 
-          Sets.newHashSet(Ints.asList(missingLast.getDimensionNumbers())), true);
-      
-      System.out.println(actual);
-      System.out.println(expected);
-      
+          Sets.newHashSet(Ints.asList(missingLast.getDimensionNumbers())), true);      
+      assertEquals(expected, actual);
+    }
+  }
+
+  public void testInnerProductLeftAlignedVector() {
+    for (Tensor vector : vectors) {
+      Tensor actual = table.innerProduct(vector);
+      Tensor expected = simpleReduce(simpleMultiply(table, vector), 
+          Sets.newHashSet(Ints.asList(vector.getDimensionNumbers())), true);
+
+      System.out.println("expected: " + expected);
+      System.out.println("actual: " + actual);
       assertEquals(expected, actual);
     }
   }
@@ -356,11 +372,7 @@ public abstract class TensorTest extends TestCase {
   public void testInnerProductAllDims() {
     Tensor actual = table.innerProduct(table);
     Tensor expected = simpleReduce(simpleMultiply(table, table), 
-          Sets.newHashSet(Ints.asList(table.getDimensionNumbers())), true);
-      
-    System.out.println(actual);
-    System.out.println(expected);
-    
+          Sets.newHashSet(Ints.asList(table.getDimensionNumbers())), true);    
     assertEquals(expected, actual);
   }
 
@@ -379,7 +391,7 @@ public abstract class TensorTest extends TestCase {
       assertTrue(Arrays.equals(new int[] {6, 5, 4, 2, 3}, result.getDimensionSizes()));
       
       // The size is different depending on whether the tensor is sparse or dense.
-      assertTrue(result.size() == (17 * 3) || result.size() == (120 * 6));
+      assertTrue(result.size() == (18 * 3) || result.size() == (120 * 6));
     }
   }
  

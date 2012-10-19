@@ -62,14 +62,14 @@ Example<DynamicAssignment, DynamicAssignment>> {
     FactorGraph inputFactorGraph = factorGraph.conditional(input);
     // System.out.println("input factor graph:");
     // System.out.println(inputFactorGraph.getParameterDescription());
-
     MarginalSet inputMarginals = marginalCalculator.computeMarginals(inputFactorGraph);
     log.stopTimer("update_gradient/input_marginal");
 
     log.startTimer("update_gradient/output_marginal");
     // Compute the first term of the gradient, the model expectations
     // conditioned on the training example.
-    FactorGraph outputFactorGraph = factorGraph.conditional(observed);
+    FactorGraph outputFactorGraph = inputFactorGraph.conditional(observed
+        .intersection(inputFactorGraph.getVariables()));
     // System.out.println("output factor graph:");
     // System.out.println(outputFactorGraph.getParameterDescription());
     MarginalSet outputMarginals = marginalCalculator.computeMarginals(

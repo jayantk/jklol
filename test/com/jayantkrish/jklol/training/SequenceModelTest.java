@@ -22,7 +22,6 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -54,7 +53,7 @@ public class SequenceModelTest extends TestCase {
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
     ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.emptyMap(), 
-        DiscreteVariable.sequence("foo", 4), DenseTensorBuilder.getFactory());
+        DiscreteVariable.sequence("foo", 4));
     builder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
 
     // Factor connecting adjacent y's
@@ -105,7 +104,7 @@ public class SequenceModelTest extends TestCase {
   private void testZeroTrainingError(
       GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
 
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(80, 1, 1.0, true, 0.1, new DefaultLogFunction());
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1.0, true, 0.1, new DefaultLogFunction());
     
     SufficientStatistics parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData); 
     DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);

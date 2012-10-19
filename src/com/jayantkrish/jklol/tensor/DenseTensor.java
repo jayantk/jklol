@@ -24,9 +24,8 @@ import com.google.common.primitives.Ints;
  */
 public class DenseTensor extends DenseTensorBase implements Tensor, Serializable {
 
-	private static final long serialVersionUID = 1L;
-	
-	private static Random random = new Random();
+  private static final long serialVersionUID = 1L;
+  private static Random random = new Random();
 
   /**
    * Creates a tensor that spans {@code dimensions}, and each dimension has the
@@ -100,6 +99,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   @Override
   public DenseTensor innerProduct(Tensor other) {
     int[] otherDims = other.getDimensionNumbers();
+    int[] otherSizes = other.getDimensionSizes();
     if (otherDims.length == 0) {
       // Both products coincide in this case. 
       return elementwiseProduct(other);
@@ -109,6 +109,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     // with this tensor's dimensions, in which case we can use a faster
     // inner product algorithm.
     int[] myDims = getDimensionNumbers();
+    int[] mySizes = getDimensionSizes();
     if (areDimensionsRightAligned(otherDims)) {
       int maxDimIndex = myDims.length - (otherDims.length + 1);
       int[] newDims = Arrays.copyOf(myDims, maxDimIndex + 1);
@@ -116,12 +117,24 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       long maxKeyNum = getMaxKeyNum();
       long keyNumIncrement = (maxDimIndex < 0) ? maxKeyNum : getDimensionOffsets()[maxDimIndex];
       
+      for (int i = 1; i < otherSizes.length; i++) {
+        Preconditions.checkArgument(mySizes[mySizes.length - i] == otherSizes[otherSizes.length - i],
+            "Tensor dimension sizes do not agree: %s and %s", Ints.asList(mySizes), 
+            Ints.asList(otherSizes));
+      }
+
       return fastInnerProduct(other, maxKeyNum, keyNumIncrement, 1, newDims, newSizes);
     } else if (areDimensionsLeftAligned(otherDims)) {
       int minDimIndex = otherDims.length;
       int[] newDims = Arrays.copyOfRange(myDims, minDimIndex, myDims.length);
       int[] newSizes = Arrays.copyOfRange(getDimensionSizes(), minDimIndex, myDims.length);
       long maxKeyNum = (minDimIndex == 0) ? getMaxKeyNum() : getDimensionOffsets()[minDimIndex - 1];
+
+      for (int i = 0; i < minDimIndex; i++) {
+        Preconditions.checkArgument(mySizes[i] == otherSizes[i], 
+            "Tensor dimension sizes do not agree: %s and %s", Ints.asList(mySizes),
+            Ints.asList(otherSizes));
+      }
 
       return fastInnerProduct(other, maxKeyNum, 1, maxKeyNum, newDims, newSizes);
     } else {
@@ -151,7 +164,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
         double otherValue = other.getByIndex(otherIndex);
         
         innerProd += get(myKeyNum + (otherKeyNum * otherKeyNumMultiplier)) * otherValue;
-      }      
+      }
       resultBuilder.putByKeyNum(myKeyNum / keyNumIncrement, innerProd);
     }
     

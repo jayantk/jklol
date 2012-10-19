@@ -41,28 +41,34 @@ public class JunctionTree implements MarginalCalculator {
 
   @Override
   public MarginalSet computeMarginals(FactorGraph factorGraph) {
-    // Efficiency override -- all variables in the factor graph have assigned
-    // values.
+    // Efficiency overrides.
     if (factorGraph.getVariables().size() == 0) {
-      // Some applications require an accurate estimate of the partition function.
+      // All variables in the factor graph have assigned values.
+      // This returns the partition function, wrapped in a factor marginal set.
       return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(),
           factorGraph.getConditionedValues(), 
           factorGraph.getUnnormalizedProbability(Assignment.EMPTY));
+    } else if (factorGraph.getFactors().size() == 1) {
+      // Factor graph has only one factor, meaning the marginal distribution is 
+      // already computed.
+      Factor theFactor = Iterables.getOnlyElement(factorGraph.getFactors());
+      return new FactorMarginalSet(factorGraph.getFactors(), theFactor.getTotalUnnormalizedProbability(),
+          factorGraph.getConditionedVariables(), factorGraph.getConditionedValues());
     }
 
     // long time = System.nanoTime();
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
-    // long delta = (System.nanoTime() - time) / 1000000;
+    // long delta = (System.nanoTime() - time) / 1000;
     // System.out.println("building clique tree: " + delta);
     
     // time = System.nanoTime();
     Set<Integer> rootFactorNums = runMessagePassing(cliqueTree, true);
-    // delta = (System.nanoTime() - time) / 1000000;
+    // delta = (System.nanoTime() - time) / 1000;
     // System.out.println("Running message passing: " + delta);
 
     // time = System.nanoTime();
     MarginalSet marginals = cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
-    // delta = (System.nanoTime() - time) / 1000000;
+    // delta = (System.nanoTime() - time) / 1000;
     // System.out.println("marginals: " + delta);
 
     return marginals;

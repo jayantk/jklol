@@ -6,9 +6,18 @@ import java.util.Map;
 
 /**
  * Tensors are generalizations of matrices that have any number of key
- * dimensions. This interface represents mappings from multidimensional keys
- * (represented as {@code int[]}) to values. Tensors support mathematical
- * operations, such as addition and multiplication.
+ * dimensions (known as modes). This interface represents mappings from
+ * multidimensional keys (represented as {@code int[]}) to values. Tensors
+ * support mathematical operations, such as addition and multiplication.
+ * 
+ * <p>
+ * The values of a tensor are accessible in three ways: using {@code int[]} keys
+ * (known as "dim keys"), keynums, and indexes. Dim keys are arrays with the
+ * same dimensionality as this tensor, where each entry represents the key for a
+ * particular dimension. Keynums are simply numeric encodings of dim keys, and
+ * are convertible to dimkeys 1-to-1. However, indexes only represent a subset
+ * of the keys in a tensor; all non-zero values are accessible by index. Indexes
+ * may be converted into keynums, but not all keynums may be mapped to indexes.
  * 
  * <p>
  * Tensors are immutable. All operations on {@code Tensor}s return new objects,
@@ -22,7 +31,7 @@ public interface Tensor extends TensorBase, Serializable {
    * Selects a lower-dimensional subset of {@code this} by fixing the
    * {@code keys} of {@code dimensionNumbers}. The value of a key in the
    * returned tensor is equal to the value in {@code this} of key augmented with
-   * {@code keyValues} (on the appropriate dimensions).
+   * {@code keys} (along the appropriate dimensions).
    * 
    * @param dimensionNumbers
    * @param keys
@@ -118,14 +127,14 @@ public interface Tensor extends TensorBase, Serializable {
   Tensor elementwiseLog();
 
   /**
-   * Computes e to the power of each element in this tensor. This operation
-   * applies {@code Math.exp} to every element of this and returns the result in
-   * a new tensor.
+   * Computes {@code e} to the power of each element in this tensor. This
+   * operation applies {@code Math.exp} to every element of this and returns the
+   * result in a new tensor.
    * 
    * @return
    */
   Tensor elementwiseExp();
-  
+
   /**
    * Applies the soft threshold operator to each element in this. The soft
    * threshold operator {@code f} applied to an element {@code x} is defined as:
@@ -170,7 +179,7 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate);
-  
+
   Tensor sumOutDimensions(int[] dimensionsToEliminate);
 
   /**
@@ -183,7 +192,7 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate);
-  
+
   Tensor maxOutDimensions(int[] dimensionsToEliminate);
 
   /**

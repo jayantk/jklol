@@ -54,9 +54,6 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
     Assignment input = currentDynamicModel.getVariables().toAssignment(example.getInput());
     Assignment observed = currentDynamicModel.getVariables().toAssignment(
         example.getOutput().union(example.getInput()));
-    Assignment output = observed.removeAll(input.getVariableNums());
-    VariableNumMap outputVariables = currentDynamicModel.getVariables().instantiateVariables(
-        example.getInput()).intersection(output.getVariableNums());
     log.log(input, currentModel);
     log.log(observed, currentModel);
     log.stopTimer("dynamic_instantiation");

@@ -76,6 +76,50 @@ public class UnfilledDependency implements Serializable {
   public int getArgumentIndex() {
     return subjectArgIndex;
   }
+      
+  /**
+   * Returns a new UnfilledDependency whose subject is {@code newSubjectIndex} 
+   * and whose objects are equal to {@code this}'s objects.
+   *  
+   * @param newSubjectIndex
+   * @return
+   */
+  public UnfilledDependency replaceSubject(int newSubjectIndex) {
+    return new UnfilledDependency(null, newSubjectIndex, subjectArgIndex, objects, objectArgumentIndex);
+  }
+  
+  /**
+   * Returns a new UnfilledDependency whose subjects are {@code newSubjects} 
+   * and whose objects are equal to {@code this}'s objects.
+   *  
+   * @param newSubjects
+   * @return
+   */
+  public UnfilledDependency replaceSubject(Set<IndexedPredicate> newSubjects) {
+    return new UnfilledDependency(newSubjects, -1, subjectArgIndex, objects, objectArgumentIndex);
+  }
+  
+  /**
+   * Returns a new UnfilledDependency whose object is {@code newObjectIndex} 
+   * and whose subjects are equal to {@code this}'s subjects.
+   *  
+   * @param newObjectIndex
+   * @return
+   */
+  public UnfilledDependency replaceObject(int newObjectIndex) {
+    return new UnfilledDependency(subjects, subjectFunctionVarIndex, subjectArgIndex, null, newObjectIndex);
+  }
+  
+  /**
+   * Returns a new UnfilledDependency whose objects are {@code newObjects} 
+   * and whose subjects are equal to {@code this}'s subjects.
+   *  
+   * @param newObjects
+   * @return
+   */
+  public UnfilledDependency replaceObject(Set<IndexedPredicate> objects) {
+    return new UnfilledDependency(subjects, subjectFunctionVarIndex, subjectArgIndex, objects, -1);
+  }
 
   @Override
   public int hashCode() {

@@ -164,21 +164,32 @@ public class ParametricFactorGraph {
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
 
+    List<Integer> conditionedVariableNums = marginals.getConditionedValues().getVariableNums();
+
     for (int i = 0; i < statisticsList.size(); i++) {
       VariablePattern pattern = factorPatterns.get(i);
       List<VariableMatch> matches = pattern.matchVariables(marginals.getVariables());
 
       for (VariableMatch match : matches) {
-        VariableNumMap fixedVars = match.getMatchedVariables().intersection(marginals.getConditionedValues().getVariableNums());
-        VariableNumMap marginalVars = match.getMatchedVariables().removeAll(marginals.getConditionedValues().getVariableNums());
+        VariableNumMap matchVars = match.getMatchedVariables();
+        // These calls take ~ 4 microseconds
+        VariableNumMap fixedVars = matchVars.intersection(conditionedVariableNums);
+        VariableNumMap marginalVars = matchVars.removeAll(conditionedVariableNums);
 
+        // to here: 6 microsecs
         Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
         Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
 
+        // to here: 13 microsecs
+        Factor relabeledMarginal = factorMarginal.relabelVariables(match.getMappingToTemplate());
+        Assignment relabeledAssignment = factorAssignment.mapVariables(match.getMappingToTemplate()
+            .getVariableIndexReplacementMap());
+
+        // to here: 18 microsecs
         parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i),
-            factorMarginal.relabelVariables(match.getMappingToTemplate()),
-            factorAssignment.mapVariables(match.getMappingToTemplate().getVariableIndexReplacementMap()),
+            relabeledMarginal, relabeledAssignment,
             count, marginals.getPartitionFunction());
+        // to here: 27 microsecs
       }
     }
   }

@@ -12,6 +12,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  */
 public abstract class AbstractVariablePattern implements VariablePattern {
 
+  private static final long serialVersionUID = 1L;
+
   @Override
   public VariableNumMap getAllMatchingVariables(VariableNumMap inputVariables) {
     List<VariableNumMap> allMatches = Lists.newArrayList();

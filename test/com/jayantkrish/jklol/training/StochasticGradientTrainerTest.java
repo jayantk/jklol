@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.TensorBase;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -102,7 +102,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		  
 		  DiscreteFactor featureValues = factor.getFeatureValues();
 		  VariableNumMap featureVariable = featureValues.getVars().removeAll(factor.getVars());
-		  TensorBase weights = ((TensorBuilderSufficientStatistics) stats).get();
+		  TensorBase weights = ((TensorSufficientStatistics) stats).get();
 		  for (int j = 0; j < weights.size(); j++) {
 		    
 		    Assignment a = featureValues.conditional(featureVariable.intArrayToAssignment(new int[] {j}))

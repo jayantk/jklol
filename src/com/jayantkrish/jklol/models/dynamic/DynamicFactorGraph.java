@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.dynamic;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -20,7 +21,9 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class DynamicFactorGraph {
+public class DynamicFactorGraph implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final DynamicVariableSet variables;
 

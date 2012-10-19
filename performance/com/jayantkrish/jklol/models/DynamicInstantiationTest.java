@@ -17,7 +17,6 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
-import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.testing.PerformanceTest;
 import com.jayantkrish.jklol.testing.PerformanceTestCase;
@@ -39,6 +38,7 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
   int[] intArray;
   Object[] objectArray;
   
+  @SuppressWarnings("unchecked")
   public void setUp() {
     objects = Maps.newTreeMap();
     strings = Maps.newTreeMap();
@@ -58,7 +58,7 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
     ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.emptyMap(), 
-        DiscreteVariable.sequence("foo", 4), SparseTensorBuilder.getFactory()); 
+        DiscreteVariable.sequence("foo", 4)); 
     builder.addFactor("f1", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
     platePattern = VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap());
 

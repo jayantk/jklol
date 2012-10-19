@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.dynamic;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.jayantkrish.jklol.models.Factor;
@@ -17,7 +18,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * 
  * @author jayantk
  */
-public interface PlateFactor {
+public interface PlateFactor extends Serializable {
 
   /**
    * Returns a list of {@code Factor}s created by replicating this

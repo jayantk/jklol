@@ -8,7 +8,7 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.NormalizedFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorBuilderSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBase;
 import com.jayantkrish.jklol.util.Assignment;
@@ -84,7 +84,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
-    TensorBase weights = ((TensorBuilderSufficientStatistics) s).get();
+    TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(3, weights.getDimensionSizes()[0]);
     assertEquals(0.0, weights.getByDimKey(0));
@@ -99,7 +99,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
     
-    TensorBase weights = ((TensorBuilderSufficientStatistics) s).get();
+    TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(3, weights.getDimensionSizes()[0]);
     assertEquals(0.0, weights.getByDimKey(0));
@@ -113,7 +113,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromMarginal(s, factor, Assignment.EMPTY, 1.0, partitionFunction);
     
-    TensorBase weights = ((TensorBuilderSufficientStatistics) s).get();
+    TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
     assertEquals(3, weights.getDimensionSizes()[0]);
     assertEquals((Math.E / partitionFunction), weights.getByDimKey(0), .00001);
@@ -122,7 +122,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   }
   
   public void testNonIndicatorFeatures() {
-    TensorBuilderSufficientStatistics gParams = g.getNewSufficientStatistics();
+    TensorSufficientStatistics gParams = g.getNewSufficientStatistics();
     assertEquals(6, gParams.get().size());
     
     g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("T", "T"), 1.0);

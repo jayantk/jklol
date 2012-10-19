@@ -22,9 +22,9 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   private static final long serialVersionUID = 8713086123218790186L;
   
-  private final DenseTensor logWeights;
+  private final Tensor logWeights;
 
-  public LogSpaceTensorAdapter(DenseTensor logWeights) {
+  public LogSpaceTensorAdapter(Tensor logWeights) {
     super(logWeights.getDimensionNumbers(), logWeights.getDimensionSizes());
     this.logWeights = logWeights;
   }
@@ -56,11 +56,15 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public Iterator<KeyValue> keyValueIterator() {
+    Preconditions.checkState(logWeights instanceof DenseTensor);
+    // This iterator only works if logWeights is dense.
     return new LogSpaceKeyValueIterator(logWeights.keyValueIterator());
   }
 
   @Override
   public Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix) {
+    Preconditions.checkState(logWeights instanceof DenseTensor);
+    // This iterator only works if logWeights is dense.
     return new LogSpaceKeyValueIterator(logWeights.keyValuePrefixIterator(keyPrefix));
   }
 
@@ -86,7 +90,7 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   
   @Override
   public Tensor innerProduct(Tensor other) {
-    DenseTensor product = logWeights.elementwiseAddition(other.elementwiseLog());
+    Tensor product = logWeights.elementwiseAddition(other.elementwiseLog());
     return (new LogSpaceTensorAdapter(product)).sumOutDimensions(other.getDimensionNumbers());
   }
   

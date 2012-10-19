@@ -37,7 +37,7 @@ public abstract class AbstractLogFunction implements LogFunction {
   }
 
   @Override
-  public long stopTimer(String timerName) {
+  public double stopTimer(String timerName) {
     Long threadId = Thread.currentThread().getId();
     Preconditions.checkArgument(activeTimers.get(threadId).containsKey(timerName));
     long end = System.nanoTime();

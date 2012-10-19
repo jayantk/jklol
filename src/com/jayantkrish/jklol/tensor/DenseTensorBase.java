@@ -40,7 +40,8 @@ public class DenseTensorBase extends AbstractTensorBase {
     for (int i = 0; i < sizes.length; i++) {
       size *= sizes[i];
     }
-    Preconditions.checkArgument(size <= Integer.MAX_VALUE);
+    Preconditions.checkArgument(size <= Integer.MAX_VALUE, "Tensor size too big: %s", 
+        Ints.asList(sizes));
     values = new double[(int) size];
   }
 

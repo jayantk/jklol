@@ -80,7 +80,7 @@ public class StochasticGradientTrainer {
 
   public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
       SufficientStatistics initialParameters, Iterable<E> trainingData) {
-
+    
     // cycledTrainingData loops indefinitely over the elements of trainingData.
     // This is desirable because we want batchSize examples but don't
     // particularly care where in trainingData they come from.
@@ -88,7 +88,6 @@ public class StochasticGradientTrainer {
 
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
-    int searchErrors = 0;
     double gradientL2 = 0.0;
     // This is an attempt at estimating how much the parameters are still
     // changing.
@@ -193,7 +192,7 @@ public class StochasticGradientTrainer {
 
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize) {
-      gradient.increment(currentParameters, -1.0 * l2Penalty);
+      currentParameters.multiply(1 - (currentStepSize * l2Penalty));
       currentParameters.increment(gradient, currentStepSize);
     }
   }

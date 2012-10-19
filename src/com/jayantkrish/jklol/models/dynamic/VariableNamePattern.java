@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.dynamic;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +34,8 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * @author jayantk
  */
 public class VariableNamePattern extends AbstractVariablePattern {
+ 
+  private static final long serialVersionUID = 1L;
 
   // These variables may be instantiated multiple times with varying names.
   private final VariableNumMap templateVariables;
@@ -155,8 +158,9 @@ public class VariableNamePattern extends AbstractVariablePattern {
     return validMatches;
   }
   
-  public static class VariableNameMatcher {
-
+  public static class VariableNameMatcher implements Serializable {
+    private static final long serialVersionUID = 1L;
+    
     private final Pattern pattern;
     private final int indexOffset;
 

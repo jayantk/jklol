@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.IndexedList;
+import com.jayantkrish.jklol.util.IoUtils;
 
 /**
  * Represents a discrete random variable type which takes on one value from a
@@ -39,6 +40,23 @@ public class DiscreteVariable implements Variable, Serializable {
       values.add(i);
     }
     return new DiscreteVariable(name, values);
+  }
+  
+  /**
+   * Constructs a variable containing all of the values in {@code columnNumber}
+   * of the delimited file {@code filename}. {@code delimiter} separates the
+   * columns of the file.
+   *
+   * @param variableName
+   * @param filename
+   * @param delimiter
+   * @param columnNumber
+   * @return
+   */
+  public static DiscreteVariable fromCsvColumn(String variableName, 
+      String filename, String delimiter, int columnNumber) {
+    List<String> values = IoUtils.readColumnFromDelimitedFile(filename, columnNumber, delimiter);
+    return new DiscreteVariable(variableName, values);
   }
 
   @Override

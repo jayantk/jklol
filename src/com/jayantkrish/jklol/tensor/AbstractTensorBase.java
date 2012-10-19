@@ -170,7 +170,7 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     return true;
   }
   
-    /**
+  /**
    * Returns {@code true} if the dimensions in {@code otherDims} occur
    * occur at the very beginning of this tensor's dimension array.
    *    

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,7 +39,9 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayantk
  */
-public class FactorGraph {
+public class FactorGraph implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private VariableNumMap variables;
 

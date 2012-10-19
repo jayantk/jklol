@@ -98,7 +98,7 @@ public class StepwiseEMTrainer extends AbstractTrainer
                 new SufficientStatisticsReducer(bn));
         SufficientStatistics batchStatistics = result.getStatistics();
         log.logStatistic(i, "average loglikelihood",
-            Double.toString(result.getLoglikelihood() / result.getNumExamples()));
+            result.getLoglikelihood() / result.getNumExamples());
 
         // Update the the parameter vector.
         // Instead of multiplying the sufficient statistics (dense update)

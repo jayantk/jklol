@@ -14,13 +14,19 @@ public interface TensorBase {
 
   int[] getDimensionNumbers();
 
+  /**
+   * Gets the size of each of this tensor's dimensions. Valid keys for this
+   * tensor are (elementwise) between 0 and the returned values.
+   * 
+   * @return
+   */
   int[] getDimensionSizes();
 
   /**
    * Gets an array whose vector product with a {@code dimKey} constructs its
-   * corresponding {@code keyNum}. This method should only be used when
-   * performance is an issue; in other cases, use {@link #dimKeyToKeyNum(int[])}
-   * .
+   * corresponding {@code keyNum}. This method should only be used when the
+   * offsets themselves are required -- in other cases, use
+   * {@link #dimKeyToKeyNum(int[])}.
    * 
    * @return
    */
@@ -29,11 +35,10 @@ public interface TensorBase {
   int numDimensions();
 
   /**
-   * Gets the size of this tensor, which corresponds to the amount of work
-   * required to perform operations with it. For sparse tensors, this is the
-   * number of nonzero values; for dense tensors, this is the total number of
-   * values. Indexes from {@code 0} to {@code size() - 1} are valid for methods
-   * like {@link #getByIndex(int)}.
+   * Gets the size of this tensor. For sparse tensors, this is the number of
+   * nonzero values; for dense tensors, this is the total number of values.
+   * Indexes from {@code 0} to {@code size() - 1} are valid for methods like
+   * {@link #getByIndex(int)}.
    * 
    * @return
    */

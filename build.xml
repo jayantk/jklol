@@ -19,6 +19,7 @@
   <path id="classpath.base">
     <pathelement location="lib/guava-r09.jar" />
     <pathelement location="lib/jopt-simple-4.3.jar" />
+    <pathelement location="lib/opencsv-2.3.jar" />
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />
@@ -79,12 +80,25 @@
     </junit>
   </target>
 
+  <target name="test-small" depends="compile-test">
+    <junit fork="no">
+      <classpath refid="classpath.test" />
+      <formatter type="brief" usefile="false"/>
+      <batchtest>
+        <fileset dir="${tst-dir}" includes="com/jayantkrish/jklol/ccg/*.java">
+          <include name="com/jayantkrish/jklol/ccg/CcgParserTest.java" />
+          <include name="com/jayantkrish/jklol/ccg/CcgTrainingTest.java" />
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
   <target name="perf" depends="compile-test">
     <junit fork="no">
       <classpath refid="classpath.test" />
       <formatter type="brief" usefile="false" />
       <test name="com.jayantkrish.jklol.util.SparseOutcomeTablePerformanceTest" />
-      <test name="com.jayantkrish.jklol.inference.JunctionTreePerformanceTest" />
+      <!-- <test name="com.jayantkrish.jklol.inference.JunctionTreePerformanceTest" /> -->
     </junit>
   </target>
 

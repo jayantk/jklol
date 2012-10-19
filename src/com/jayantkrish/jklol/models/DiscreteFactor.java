@@ -123,12 +123,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor marginalize(Collection<Integer> varNumsToEliminate) {
+    if (varNumsToEliminate.size() == 0) {
+      return this;
+    }
     return new TableFactor(getVars().removeAll(varNumsToEliminate),
         getWeights().sumOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }
 
   @Override
   public DiscreteFactor maxMarginalize(Collection<Integer> varNumsToEliminate) {
+    if (varNumsToEliminate.size() == 0) {
+      return this;
+    }
     return new TableFactor(getVars().removeAll(varNumsToEliminate),
         getWeights().maxOutDimensions(Sets.newHashSet(varNumsToEliminate)));
   }
@@ -199,9 +205,18 @@ public abstract class DiscreteFactor extends AbstractFactor {
    */
   public DiscreteFactor outerProduct(Factor other) {
     Preconditions.checkArgument(getVars().intersection(other.getVars()).size() == 0);
-    // This implementation is slow, but Tensors currently don't support outer
-    // products.
     DiscreteFactor otherAsDiscrete = other.coerceToDiscrete();
+
+    // See if the fast, tensor outer product implementation is usable.
+    int[] myDims = getVars().getVariableNumsArray();
+    int[] otherDims = other.getVars().getVariableNumsArray();
+    if (myDims[myDims.length - 1] < otherDims[0]) {
+      return new TableFactor(getVars().union(other.getVars()), 
+          getWeights().outerProduct(otherAsDiscrete.getWeights()));
+    }
+    
+    // This implementation is slow, but Tensors currently don't support all
+    // outer products.
     TableFactorBuilder builder = new TableFactorBuilder(getVars().union(other.getVars()),
         SparseTensorBuilder.getFactory());
     Iterator<Outcome> myIter = outcomeIterator();
@@ -294,7 +309,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteObjectFactor coerceToDiscreteObject() {
     throw new UnsupportedOperationException("Not yet implemented");
   }
-  
+
   /**
    * Prints out this factor as a comma-separated values file, suitable for
    * reading using {@link TableFactor#fromDelimitedFile}.
@@ -417,7 +432,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     public String toString() {
       return assignment + "=" + probability;
     }
-    
+
     public String toCsv() {
       return Joiner.on(",").join(assignment.getValues()) + "," + probability;
     }

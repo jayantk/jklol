@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -10,13 +11,18 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -36,6 +42,13 @@ public class CcgParser implements Serializable {
   private final VariableNumMap dependencyArgNumVar;
   private final VariableNumMap dependencyArgVar;
   private final DiscreteFactor dependencyDistribution;
+  
+  // Pull out the weights and variable types from the dependency 
+  // structure distribution for efficiency.
+  private final DiscreteVariable dependencyHeadType;
+  private final DiscreteVariable dependencyArgNumType;
+  private final DiscreteVariable dependencyArgType;
+  private final Tensor dependencyTensor;
 
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar, VariableNumMap dependencyArgNumVar,
@@ -44,10 +57,23 @@ public class CcgParser implements Serializable {
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
 
+    Preconditions.checkArgument(dependencyDistribution.getVars().equals(
+        VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, dependencyArgVar)));
+    Preconditions.checkArgument(dependencyHeadVar.getOnlyVariableNum() < dependencyArgNumVar.getOnlyVariableNum());
+    Preconditions.checkArgument(dependencyArgNumVar.getOnlyVariableNum() < dependencyArgVar.getOnlyVariableNum());
     this.dependencyHeadVar = Preconditions.checkNotNull(dependencyHeadVar);
     this.dependencyArgNumVar = Preconditions.checkNotNull(dependencyArgNumVar);
     this.dependencyArgVar = Preconditions.checkNotNull(dependencyArgVar);
     this.dependencyDistribution = Preconditions.checkNotNull(dependencyDistribution);
+    
+    this.dependencyHeadType = dependencyHeadVar.getDiscreteVariables().get(0);
+    this.dependencyArgNumType = dependencyArgNumVar.getDiscreteVariables().get(0);
+    this.dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
+    this.dependencyTensor = dependencyDistribution.getWeights();
+  }
+
+  public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
+    return beamSearch(terminals, beamSize, new NullLogFunction());
   }
 
   /**
@@ -58,28 +84,30 @@ public class CcgParser implements Serializable {
    * 
    * @param terminals
    * @param beamSize
+   * @param log
    * @return {@code beamSize} best parses for {@code terminals}.
    */
-  public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
+  public List<CcgParse> beamSearch(List<String> terminals, int beamSize, LogFunction log) {
     CcgChart chart = new CcgChart(terminals, beamSize);
 
+    log.startTimer("ccg_parse/initialize_chart");
     initializeChart(terminals, chart);
+    log.stopTimer("ccg_parse/initialize_chart");
 
     // Construct a tree from the nonterminals.
-    for (int spanSize = 1; spanSize < chart.size(); spanSize++) {
-      for (int spanStart = 0; spanStart + spanSize < chart.size(); spanStart++) {
+    log.startTimer("ccg_parse/calculate_inside_beam");
+    int chartSize = chart.size();
+    for (int spanSize = 1; spanSize < chartSize; spanSize++) {
+      for (int spanStart = 0; spanStart + spanSize < chartSize; spanStart++) {
         int spanEnd = spanStart + spanSize;
-        calculateInsideBeam(spanStart, spanEnd, chart);
+        calculateInsideBeam(spanStart, spanEnd, chart, log);
       }
     }
+    log.stopTimer("ccg_parse/calculate_inside_beam");
 
     int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
 
-    List<CcgParse> parses = Lists.newArrayListWithCapacity(numParses);
-    for (int i = numParses - 1; i >= 0; i--) {
-      parses.add(chart.decodeParseFromSpan(0, chart.size() - 1, i));
-    }
-    return parses;
+    return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses);
   }
   
   /**
@@ -109,66 +137,139 @@ public class CcgParser implements Serializable {
     }
   }
 
-  private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart) {
+  private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j is for forward compatibility for skipping terminal symbols.
       for (int j = i + 1; j < i + 2; j++) {
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
         int numLeftTrees = chart.getNumChartEntriesForSpan(spanStart, spanStart + i);
+        Multimap<SyntacticCategory, Integer> leftTypes = aggregateBySyntacticType(leftTrees, numLeftTrees);
+        Multimap<SyntacticCategory, Integer> leftArguments = aggregateByArgumentType(leftTrees, numLeftTrees, Direction.RIGHT);
 
         ChartEntry[] rightTrees = chart.getChartEntriesForSpan(spanStart + j, spanEnd);
         double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
         int numRightTrees = chart.getNumChartEntriesForSpan(spanStart + j, spanEnd);
+        Multimap<SyntacticCategory, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
+        Multimap<SyntacticCategory, Integer> rightArguments = aggregateByArgumentType(rightTrees, numRightTrees, Direction.LEFT);
 
-        for (int leftIndex = 0; leftIndex < numLeftTrees; leftIndex++) {
-          ChartEntry leftRoot = leftTrees[leftIndex];
-          double leftProb = leftProbs[leftIndex];
-          for (int rightIndex = 0; rightIndex < numRightTrees; rightIndex++) {
-            ChartEntry rightRoot = rightTrees[rightIndex];
-            double rightProb = rightProbs[rightIndex];
+        // Do CCG right application. (The category on the left is a function.)
+        for (SyntacticCategory leftArgument : leftArguments.keySet()) {
+          for (SyntacticCategory rightType : rightTypes.keySet()) {
+            if (leftArgument.isUnifiableWith(rightType)) {
+              for (Integer leftIndex : leftArguments.get(leftArgument)) {
+                ChartEntry leftRoot = leftTrees[leftIndex];
+                double leftProb = leftProbs[leftIndex];
+                for (Integer rightIndex : rightTypes.get(rightType)) {
+                  ChartEntry rightRoot = rightTrees[rightIndex];
+                  double rightProb = rightProbs[rightIndex];
 
-            populateChartEntry(leftRoot, spanStart, spanStart + i, leftIndex,
-                rightRoot, spanStart + j, spanEnd, rightIndex,
-                chart, leftProb * rightProb, spanStart, spanEnd);
+                  ChartEntry result = apply(leftRoot, rightRoot, Direction.RIGHT, spanStart, 
+                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex);
+                  if (result != null) {
+                    addChartEntry(result, chart, leftProb * rightProb, spanStart, spanEnd);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Do CCG left application. (The category on the right is a function.)
+        for (SyntacticCategory rightArgument : rightArguments.keySet()) {
+          for (SyntacticCategory leftType : leftTypes.keySet()) {
+            if (rightArgument.isUnifiableWith(leftType)) {
+              for (Integer leftIndex : leftTypes.get(leftType)) {
+                ChartEntry leftRoot = leftTrees[leftIndex];
+                double leftProb = leftProbs[leftIndex];
+                for (Integer rightIndex : rightArguments.get(rightArgument)) {
+                  ChartEntry rightRoot = rightTrees[rightIndex];
+                  double rightProb = rightProbs[rightIndex];
+
+                  ChartEntry result = apply(rightRoot, leftRoot, Direction.LEFT, spanStart,
+                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex);
+                  if (result != null) {
+                    addChartEntry(result, chart, leftProb * rightProb, spanStart, spanEnd);
+                  }
+                }
+              }
+            }
           }
         }
       }
     }
   }
 
-  private void populateChartEntry(ChartEntry leftRoot, int leftSpanStart, int leftSpanEnd, int leftIndex,
-      ChartEntry rightRoot, int rightSpanStart, int rightSpanEnd, int rightIndex,
-      CcgChart chart, double leftRightProb, int rootSpanStart, int rootSpanEnd) {
-    // Try the various rule combinations.
-    List<ChartEntry> results = Lists.newArrayList();
-    results.add(apply(leftRoot, rightRoot, Direction.RIGHT, leftSpanStart, leftSpanEnd, 
-        leftIndex, rightSpanStart, rightSpanEnd, rightIndex));
-    results.add(apply(rightRoot, leftRoot, Direction.LEFT, leftSpanStart, leftSpanEnd, 
-        leftIndex, rightSpanStart, rightSpanEnd, rightIndex));
-    results.add(compose(leftRoot, rightRoot, Direction.RIGHT));
-    results.add(compose(rightRoot, leftRoot, Direction.LEFT));
+  private Multimap<SyntacticCategory, Integer> aggregateBySyntacticType(
+      ChartEntry[] entries, int numEntries) {
+    Multimap<SyntacticCategory, Integer> map = HashMultimap.create();
+    for (int i = 0; i < numEntries; i++) {
+      map.put(entries[i].getSyntax(), i);
+    }
+    return map;
+  }
 
-    for (ChartEntry result : results) {
-      if (result != null) {
-        // Get the probabilities of the generated dependencies.
-        double depProb = 1.0;
-        for (DependencyStructure dep : result.getDependencies()) {
-          Assignment assignment = dependencyHeadVar.outcomeArrayToAssignment(dep.getHead())
-              .union(dependencyArgNumVar.outcomeArrayToAssignment(dep.getArgIndex()))
-              .union(dependencyArgVar.outcomeArrayToAssignment(dep.getObject()));
-
-          depProb *= dependencyDistribution.getUnnormalizedProbability(assignment);
-        }
-
-        chart.addChartEntryForSpan(result, leftRightProb * depProb, rootSpanStart, rootSpanEnd); 
-        // System.out.println(rootSpanStart + "." + rootSpanEnd + " " + result.getCategory() + " " + result.getDependencies() + " " + (depProb * leftRightProb)); 
+  /**
+   * Identifies all elements of {@code entries} that accept an argument on
+   * {@code direction}, and returns a map from the argument type to the 
+   * indexes of chart entries that accept that type. 
+   *   
+   * @param entries
+   * @param numEntries
+   * @param direction
+   * @return
+   */
+  private Multimap<SyntacticCategory, Integer> aggregateByArgumentType(
+      ChartEntry[] entries, int numEntries, Direction direction) {
+    Multimap<SyntacticCategory, Integer> map = HashMultimap.create();
+    for (int i = 0; i < numEntries; i++) {
+      SyntacticCategory syntax = entries[i].getSyntax();
+      if (!syntax.isAtomic() && syntax.acceptsArgumentOn(direction)) {
+        map.put(syntax.getArgument(), i);
       }
     }
+    return map;
+  }
+
+  /**
+   * Computes the {@code keyNum} containing the weight for {@code dep} 
+   * in {@code dependencyTensor}.
+   * 
+   * @param dep
+   * @return
+   */
+  private long dependencyToLong(DependencyStructure dep) {
+    int headNum = dependencyHeadType.getValueIndex(dep.getHead());
+    int argNumNum = dependencyArgNumType.getValueIndex(dep.getArgIndex());
+    int objectNum = dependencyArgType.getValueIndex(dep.getObject());
+    return dependencyTensor.dimKeyToKeyNum(new int[] {headNum, argNumNum, objectNum});
+  }
+
+  /**
+   * Calculates the probability of any new dependencies in {@code result}, then inserts it
+   * into {@code chart}.
+   * @param result
+   * @param chart
+   * @param leftRightProb
+   * @param spanStart
+   * @param spanEnd
+   */
+  private void addChartEntry(ChartEntry result, CcgChart chart, double leftRightProb, 
+      int spanStart, int spanEnd) {
+    // Get the probabilities of the generated dependencies.
+    double depProb = 1.0;
+    for (DependencyStructure dep : result.getDependencies()) {
+      long depNum = dependencyToLong(dep);
+      depProb *= dependencyTensor.get(depNum);
+    }
+
+    chart.addChartEntryForSpan(result, leftRightProb * depProb, spanStart, spanEnd); 
+    // System.out.println(rootSpanStart + "." + rootSpanEnd + " " + result.getCategory() + " " + result.getDependencies() + " " + (depProb * leftRightProb)); 
   }
   
   private ChartEntry apply(ChartEntry first, ChartEntry other, Direction direction,
-      int leftSpanStart, int leftSpanEnd, int leftIndex, int rightSpanStart, int rightSpanEnd, int rightIndex) {
+      int leftSpanStart, int leftSpanEnd, int leftIndex, int rightSpanStart, int rightSpanEnd,
+      int rightIndex) {
     SyntacticCategory syntax = first.getSyntax();
     if (syntax.isAtomic() || !syntax.acceptsArgumentOn(direction) || 
         !syntax.getArgument().isUnifiableWith(other.getSyntax())) {
@@ -183,16 +284,18 @@ public class CcgParser implements Serializable {
     // Resolve semantic dependencies. Fill all dependency slots which require this argument.
     // Return any fully-filled dependencies, while saving partially-filled dependencies for later.
     int argNum = syntax.getArgumentList().size(); 
-    Multimap<Integer, UnfilledDependency> unfilledDependencies = first.getUnfilledDependencies();
-    Multimap<Integer, UnfilledDependency> newDeps = HashMultimap.create(unfilledDependencies);
-    newDeps.removeAll(argNum);
+    UnfilledDependency[] unfilledDependencies = first.getUnfilledDependencies();
+    UnfilledDependency[] otherUnfilledDeps = other.getUnfilledDependencies();
 
     List<DependencyStructure> filledDeps = Lists.newArrayList();
-    for (UnfilledDependency unfilled : unfilledDependencies.get(argNum)) {
-
+    List<UnfilledDependency> newUnfilledDependencies = Lists.newArrayList();
+    for (UnfilledDependency unfilled : unfilledDependencies) {
+      // Check if the argument currently being filled matches the argument
+      // expected by this dependency.
       if (unfilled.getObjectIndex() == argNum) {
         Set<IndexedPredicate> objects = other.getHeads();
-        if (unfilled.hasSubjects()) { 
+        if (unfilled.hasSubjects()) {
+          // After substituting the objects, this dependency is completely filled.
           for (IndexedPredicate head : unfilled.getSubjects()) {
             for (IndexedPredicate object : objects) {
               filledDeps.add(new DependencyStructure(head.getHead(), head.getHeadIndex(), 
@@ -203,37 +306,41 @@ public class CcgParser implements Serializable {
           // The subject of this dependency has not been filled.
           int subjectIndex = unfilled.getSubjectIndex();
           int argIndex = unfilled.getArgumentIndex();
-          
-          newDeps.remove(subjectIndex, unfilled);
+
           for (IndexedPredicate object : objects) {
-            newDeps.put(subjectIndex, UnfilledDependency.createWithKnownObject(subjectIndex, argIndex, object.getHead(), object.getHeadIndex()));
+            newUnfilledDependencies.add(UnfilledDependency.createWithKnownObject(subjectIndex, 
+                argIndex, object.getHead(), object.getHeadIndex()));
           }
         }
       } else if (unfilled.getSubjectIndex() == argNum) {
-        Set<IndexedPredicate> subjects = other.getHeads();
+        int otherArgNum = unfilled.getArgumentIndex();
+        
         if (unfilled.hasObjects()) {
-          for (IndexedPredicate subject : subjects) {
-            for (IndexedPredicate object : unfilled.getObjects()) {
-              filledDeps.add(new DependencyStructure(subject.getHead(), subject.getHeadIndex(), 
-                  object.getHead(), object.getHeadIndex(), unfilled.getArgumentIndex()));
+          for (IndexedPredicate object : unfilled.getObjects()) {
+            for (UnfilledDependency otherDep : otherUnfilledDeps) {
+              if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
+                substituteDependencyVariable(otherArgNum, otherDep, object, filledDeps);
+              }
             }
           }
         } else {
           // Part of the dependency remains unresolved. Fill what's possible, then propagate
           // the unfilled portions.
-          int objectIndex = unfilled.getObjectIndex();
-          newDeps.remove(objectIndex, unfilled);
-          
-          for (IndexedPredicate subject : subjects) {
-            newDeps.put(objectIndex, UnfilledDependency.createWithKnownSubject(subject.getHead(),
-                subject.getHeadIndex(), unfilled.getArgumentIndex(), objectIndex)); 
+          int replacementIndex = unfilled.getObjectIndex();
+
+          for (UnfilledDependency otherDep : otherUnfilledDeps) {
+            if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
+              substituteDependencyVariable(otherArgNum, otherDep, replacementIndex, newUnfilledDependencies);
+            }
           }
         }
+      } else {
+        newUnfilledDependencies.add(unfilled);
       }
     }
     
     if (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) {
-      newDeps.putAll(other.getUnfilledDependencies());
+      newUnfilledDependencies.addAll(Arrays.asList(other.getUnfilledDependencies()));
     }
     
     // Handle any unfilled head arguments.
@@ -241,8 +348,109 @@ public class CcgParser implements Serializable {
       newHeads.addAll(other.getHeads());
     }
     
-    return new ChartEntry(syntax.getReturn(), newHeads, newHeadArgumentNums, newDeps, filledDeps, 
-        leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart, rightSpanEnd, rightIndex);
+    DependencyStructure[] filledDepArray = filledDeps.toArray(
+        new DependencyStructure[filledDeps.size()]);
+    UnfilledDependency[] unfilledDepArray = newUnfilledDependencies.toArray(
+        new UnfilledDependency[newUnfilledDependencies.size()]);
+    
+    return new ChartEntry(syntax.getReturn(), newHeads, newHeadArgumentNums, 
+        unfilledDepArray, filledDepArray, leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart,
+        rightSpanEnd, rightIndex);
+  }
+
+  /*
+  private int countFilledDeps(UnfilledDependency[] unfilledDependencies, 
+      UnfilledDependency[] otherUnfilledDeps, int argNum) {
+    int count = 0;
+    for (UnfilledDependency unfilled : unfilledDependencies) {
+      // Check if the argument currently being filled matches the argument
+      // expected by this dependency.
+      if (unfilled.getObjectIndex() == argNum && unfilled.hasSubjects()) {
+        count += unfilled.getSubjects().size() * other.getHeads().size();
+      } else if (unfilled.getSubjectIndex() == argNum && unfilled.hasObjects()) {
+        int otherArgNum = unfilled.getArgumentIndex();
+        
+        if (unfilled.hasObjects()) {
+          for (IndexedPredicate object : unfilled.getObjects()) {
+            for (UnfilledDependency otherDep : otherUnfilledDeps) {
+              if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
+                substituteDependencyVariable(otherArgNum, otherDep, object, filledDeps);
+              }
+            }
+          }
+        } else {
+          // Part of the dependency remains unresolved. Fill what's possible, then propagate
+          // the unfilled portions.
+          int replacementIndex = unfilled.getObjectIndex();
+
+          for (UnfilledDependency otherDep : otherUnfilledDeps) {
+            if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
+              substituteDependencyVariable(otherArgNum, otherDep, replacementIndex, newUnfilledDependencies);
+            }
+          }
+        }
+      } else {
+        newUnfilledDependencies.add(unfilled);
+      }
+    }
+  }
+  */
+
+  /**
+   * Replaces all instances of {@code dependencyVariableNum} in {@code dep} 
+   * with the variable given by {@code replacementVariableNum}. 
+   * 
+   * @param dependencyVariableNum
+   * @param dep
+   * @param replacementVariableNum
+   * @param unfilledDepsAccumulator
+   */
+  private void substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
+      int replacementVariableNum, List<UnfilledDependency> unfilledDepsAccumulator) {
+    UnfilledDependency newDep = dep;
+    if (dep.getSubjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceSubject(replacementVariableNum);
+    } else {
+      Preconditions.checkState(dep.hasSubjects());
+    }
+    
+    if (dep.getObjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceObject(replacementVariableNum);
+    } else {
+      Preconditions.checkState(dep.hasObjects());
+    }
+    
+    unfilledDepsAccumulator.add(newDep);
+  }
+  
+  /**
+   * Replaces all instances of {@code dependencyVariableNum} in {@code dep} 
+   * with {@code value}, which is a defined predicate. 
+   *  
+   * @param dependencyVariableNum
+   * @param dep
+   * @param value
+   * @param filledDepsAccumulator
+   */
+  private void substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
+      IndexedPredicate value, List<DependencyStructure> filledDepsAccumulator) {
+    UnfilledDependency newDep = dep;
+    Set<IndexedPredicate> values = Sets.newHashSet(value);
+    if (dep.getSubjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceSubject(values);
+    }
+    
+    if (dep.getObjectIndex() == dependencyVariableNum) {
+      newDep = newDep.replaceObject(values);
+    }
+    
+    Preconditions.checkState(newDep.hasObjects() && newDep.hasSubjects());
+    for (IndexedPredicate head : newDep.getSubjects()) {
+      for (IndexedPredicate object : newDep.getObjects()) {
+        filledDepsAccumulator.add(new DependencyStructure(head.getHead(), head.getHeadIndex(), 
+            object.getHead(), object.getHeadIndex(), newDep.getArgumentIndex()));
+      }
+    }
   }
 
   private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {

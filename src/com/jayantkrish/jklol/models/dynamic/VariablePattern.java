@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.dynamic;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -26,7 +27,7 @@ import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
  * 
  * @author jayantk
  */
-public interface VariablePattern {
+public interface VariablePattern extends Serializable {
 
   /**
    * Identifies all of the variables which match this pattern, and returns them

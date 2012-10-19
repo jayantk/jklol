@@ -62,7 +62,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       // Search error: couldn't find any correct parses.
       throw new ZeroProbabilityError();
     }
-    
+
     // Subtract the unconditional expected feature counts
     log.startTimer("update_gradient/increment_gradient");
     double unconditionalPartitionFunction = getPartitionFunction(parses);

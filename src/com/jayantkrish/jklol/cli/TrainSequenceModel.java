@@ -1,8 +1,5 @@
 package com.jayantkrish.jklol.cli;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -26,12 +23,9 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
-import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -129,11 +123,7 @@ public class TrainSequenceModel {
     // Where to serialize the trained factor graph
     OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional options
-    OptionSpec<Integer> iterations = parser.accepts("iterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
-    OptionSpec<Double> initialStepSize = parser.accepts("initialStepSize").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
-    OptionSpec<Double> l2Regularization = parser.accepts("l2Regularization").withRequiredArg().ofType(Double.class).defaultsTo(0.1);
-    // boolean options.
-    parser.accepts("brief"); // Hides training output.
+    OptionUtils.addStochasticGradientOptions(parser);
     parser.accepts("maxMargin"); // Trains with a max-margin method.
     OptionSet options = parser.parse(args); 
     
@@ -155,27 +145,14 @@ public class TrainSequenceModel {
     }
 
     System.out.println("Training...");
-    int numIterations = trainingData.size() * options.valueOf(iterations);
-    LogFunction log = (options.has("brief")) ? new NullLogFunction() : new DefaultLogFunction();
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        numIterations, 1, options.valueOf(initialStepSize), true, options.valueOf(l2Regularization),
-        log);
+    StochasticGradientTrainer trainer = OptionUtils.createStochasticGradientTrainer(
+        options, trainingData.size());
     SufficientStatistics parameters = trainer.train(
         oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     DynamicFactorGraph factorGraph = sequenceModel.getFactorGraphFromParameters(parameters);
 
-     System.out.println("Serializing trained model...");
-    FileOutputStream fos = null;
-    ObjectOutputStream out = null;
-    try {
-      fos = new FileOutputStream(options.valueOf(modelOutput));
-      out = new ObjectOutputStream(fos);
-      out.writeObject(factorGraph);
-      out.close();
-    } catch(IOException ex) {
-      ex.printStackTrace();
-      System.exit(1);
-    }
+    System.out.println("Serializing trained model...");
+    IoUtils.serializeObjectToFile(factorGraph, options.valueOf(modelOutput));
  
     System.out.println("Learned parameters: ");
     System.out.println(sequenceModel.getParameterDescription(parameters));

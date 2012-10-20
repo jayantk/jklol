@@ -61,8 +61,7 @@ public class LinearClassifierTest extends TestCase {
     // Define the names of the features used in the classifier. Our classifier
     // will expect input vectors of dimension NUM_DIMS. This DiscreteVariable maps each
     // feature name to an index in the feature vector; it can also be used to
-    // construct the input
-    // vectors.
+    // construct the input vectors.
     DiscreteVariable featureVar = DiscreteVariable.sequence("features", NUM_DIMS);
 
     // A ConditionalLogLinearFactor represents a trainable linear classifier

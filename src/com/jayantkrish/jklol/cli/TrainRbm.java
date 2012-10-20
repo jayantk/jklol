@@ -25,10 +25,7 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
-import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
-import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.OracleAdapter;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
@@ -132,12 +129,7 @@ public class TrainRbm {
     OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     OptionSpec<Integer> hiddenUnits = parser.accepts("hiddenUnits").withRequiredArg().ofType(Integer.class).required();
     // Optional options
-    OptionSpec<Integer> iterations = parser.accepts("iterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
-    OptionSpec<Integer> batchSize = parser.accepts("batchSize").withRequiredArg().ofType(Integer.class).defaultsTo(1);
-    OptionSpec<Double> initialStepSize = parser.accepts("initialStepSize").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
-    OptionSpec<Double> l2Regularization = parser.accepts("l2Regularization").withRequiredArg().ofType(Double.class).defaultsTo(0.0);
-    // boolean options.
-    parser.accepts("brief"); // Hides training output.
+    OptionUtils.addStochasticGradientOptions(parser);
     OptionSet options = parser.parse(args);
     
     // Build the RBM from the input data.
@@ -151,12 +143,8 @@ public class TrainRbm {
         ",", rbmFamily);
 
     // The iterations option is interpreted as the number of passes over the training data to perform.
-    int numIterations = (int) Math.ceil(options.valueOf(iterations) * trainingExamples.size() 
-        / ((double) options.valueOf(batchSize)));
-    LogFunction log = (options.has("brief")) ? new NullLogFunction() : new DefaultLogFunction();
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        numIterations, options.valueOf(batchSize), options.valueOf(initialStepSize), true, 
-        options.valueOf(l2Regularization), log);
+    StochasticGradientTrainer trainer = OptionUtils.createStochasticGradientTrainer(
+        options, trainingExamples.size());
     LoglikelihoodOracle oracle = new LoglikelihoodOracle(rbmFamily, new GibbsSampler(0, 10, 0));
     SufficientStatistics parameters = rbmFamily.getNewSufficientStatistics();
     parameters.perturb(0.01);

@@ -1,8 +1,10 @@
 package com.jayantkrish.jklol.util;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -84,5 +86,25 @@ public class IoUtils {
       throw new RuntimeException(e);
     }
     return columnValues;
+  }
+
+  /**
+   * Serializes {@code object} into {@code filename}.
+   * 
+   * @param filename
+   * @param object
+   */
+  public static void serializeObjectToFile(Object object, String filename) {
+    FileOutputStream fos = null;
+    ObjectOutputStream out = null;
+    try {
+      fos = new FileOutputStream(filename);
+      out = new ObjectOutputStream(fos);
+      out.writeObject(object);
+      out.close();
+    } catch(IOException ex) {
+      ex.printStackTrace();
+      System.exit(1);
+    }    
   }
 }

@@ -1,8 +1,5 @@
 package com.jayantkrish.jklol.cli;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.List;
 
 import joptsimple.OptionParser;
@@ -15,9 +12,6 @@ import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
-import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -37,13 +31,8 @@ public class TrainCcg {
     OptionSpec<String> trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional options
-    OptionSpec<Integer> iterations = parser.accepts("iterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
-    OptionSpec<Integer> batchSize = parser.accepts("batchSize").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
-    OptionSpec<Double> initialStepSize = parser.accepts("initialStepSize").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
-    OptionSpec<Double> l2Regularization = parser.accepts("l2Regularization").withRequiredArg().ofType(Double.class).defaultsTo(0.1);
-    // boolean options.
-    parser.accepts("brief"); // Hides training output.
+    OptionUtils.addStochasticGradientOptions(parser);
     OptionSet options = parser.parse(args);
     
     // Read in the lexicon to instantiate the model.
@@ -60,29 +49,14 @@ public class TrainCcg {
     
     // Train the model.
     CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
-    // The iterations option is interpreted as the number of passes over the training data to perform.
-    int numIterations = (int) Math.ceil(options.valueOf(iterations) * trainingExamples.size() 
-        / ((double) options.valueOf(batchSize)));
-    LogFunction log = (options.has("brief")) ? new NullLogFunction() : new DefaultLogFunction();
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        numIterations, options.valueOf(batchSize), options.valueOf(initialStepSize), true, 
-        options.valueOf(l2Regularization), log);
-    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingExamples);
+    StochasticGradientTrainer trainer = OptionUtils.createStochasticGradientTrainer(
+        options, trainingExamples.size());
+    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), 
+        trainingExamples);
     CcgParser ccgParser = family.getParserFromParameters(parameters);
 
     System.out.println("Serializing trained model...");
-    // Serialize and write out model. 
-    FileOutputStream fos = null;
-    ObjectOutputStream out = null;
-    try {
-      fos = new FileOutputStream(options.valueOf(modelOutput));
-      out = new ObjectOutputStream(fos);
-      out.writeObject(ccgParser);
-      out.close();
-    } catch(IOException ex) {
-      ex.printStackTrace();
-      System.exit(1);
-    }
+    IoUtils.serializeObjectToFile(ccgParser, options.valueOf(modelOutput));
     
     System.out.println("Trained model parameters:");
     System.out.println(family.getParameterDescription(parameters));

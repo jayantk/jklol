@@ -6,8 +6,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class IoUtils {
 
@@ -86,6 +88,23 @@ public class IoUtils {
       throw new RuntimeException(e);
     }
     return columnValues;
+  }
+
+  /**
+   * Returns a list of the unique values in {@code columnNumber} of 
+   * {@code filename}. The columns of {@code filename} are delimited 
+   * by {@code delimiter}.
+   * 
+   * @param filename
+   * @param columnNumber
+   * @param delimiter
+   * @return
+   */
+  public static List<String> readUniqueColumnValuesFromDelimitedFile(String filename, 
+      int columnNumber, String delimiter) {
+    Set<String> values = Sets.newHashSet(
+        readColumnFromDelimitedFile(filename, columnNumber, delimiter));
+    return Lists.newArrayList(values);
   }
 
   /**

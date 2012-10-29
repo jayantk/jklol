@@ -12,6 +12,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
@@ -20,6 +23,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
@@ -34,22 +38,38 @@ public class CcgParser implements Serializable {
 
   private static final long serialVersionUID = 1L;
   
+  // Parameters for encoding (filled and unfilled) dependency structures
+  // in longs. These are the size of each field, in bits.
+  private static final int PREDICATE_BITS = 20;
+  private static final long PREDICATE_MASK = ~(-1L << PREDICATE_BITS);
+  private static final int ARG_NUM_BITS = 4;
+  private static final long ARG_NUM_MASK = ~(-1L << ARG_NUM_BITS);
+  private static final int WORD_IND_BITS = 8;
+  private static final long WORD_IND_MASK = ~(-1L << WORD_IND_BITS);
+  // The largest possible argument number.
+  private static final int MAX_ARG_NUM = 2 << ARG_NUM_BITS;
+  // These are the locations of each field within the number. The layout
+  // within the number is:
+  // | sbj word ind | obj word ind | arg num | subj word | obj word |
+  // 63                                                             0
+  private static final int OBJECT_OFFSET = 0;
+  private static final int ARG_NUM_OFFSET = OBJECT_OFFSET + PREDICATE_BITS;
+  private static final int SUBJECT_OFFSET = ARG_NUM_OFFSET + ARG_NUM_BITS;
+  private static final int OBJECT_WORD_IND_OFFSET = SUBJECT_OFFSET + PREDICATE_BITS;
+  private static final int SUBJECT_WORD_IND_OFFSET = OBJECT_WORD_IND_OFFSET + WORD_IND_BITS;
+
+  // Member variables ////////////////////////////////////
+  
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;
-
-  private final VariableNumMap dependencyHeadVar;
-  private final VariableNumMap dependencyArgNumVar;
-  private final VariableNumMap dependencyArgVar;
-  private final DiscreteFactor dependencyDistribution;
   
   // Pull out the weights and variable types from the dependency 
   // structure distribution for efficiency.
-  private final DiscreteVariable dependencyHeadType;
+  private final DiscreteVariable dependencyHeadType; // type of head and argument.
   private final DiscreteVariable dependencyArgNumType;
-  private final DiscreteVariable dependencyArgType;
   private final Tensor dependencyTensor;
-
+  
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar, VariableNumMap dependencyArgNumVar,
       VariableNumMap dependencyArgVar, DiscreteFactor dependencyDistribution) {
@@ -61,14 +81,10 @@ public class CcgParser implements Serializable {
         VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, dependencyArgVar)));
     Preconditions.checkArgument(dependencyHeadVar.getOnlyVariableNum() < dependencyArgNumVar.getOnlyVariableNum());
     Preconditions.checkArgument(dependencyArgNumVar.getOnlyVariableNum() < dependencyArgVar.getOnlyVariableNum());
-    this.dependencyHeadVar = Preconditions.checkNotNull(dependencyHeadVar);
-    this.dependencyArgNumVar = Preconditions.checkNotNull(dependencyArgNumVar);
-    this.dependencyArgVar = Preconditions.checkNotNull(dependencyArgVar);
-    this.dependencyDistribution = Preconditions.checkNotNull(dependencyDistribution);
-    
     this.dependencyHeadType = dependencyHeadVar.getDiscreteVariables().get(0);
     this.dependencyArgNumType = dependencyArgNumVar.getDiscreteVariables().get(0);
-    this.dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
+    DiscreteVariable dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
+    Preconditions.checkArgument(dependencyHeadType.equals(dependencyArgType));
     this.dependencyTensor = dependencyDistribution.getWeights();
   }
 
@@ -93,7 +109,7 @@ public class CcgParser implements Serializable {
     log.startTimer("ccg_parse/initialize_chart");
     initializeChart(terminals, chart);
     log.stopTimer("ccg_parse/initialize_chart");
-
+    
     // Construct a tree from the nonterminals.
     log.startTimer("ccg_parse/calculate_inside_beam");
     int chartSize = chart.size();
@@ -107,7 +123,7 @@ public class CcgParser implements Serializable {
 
     int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
 
-    return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses);
+    return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this);
   }
   
   /**
@@ -119,6 +135,10 @@ public class CcgParser implements Serializable {
   private void initializeChart(List<String> terminals, CcgChart chart) {
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
+    // Identify all possible assignments to the dependency head and argument
+    // variables, so that we can look up probabilities in a sparser tensor.
+    Set<Long> possiblePredicates = Sets.newHashSet();
+    
     int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
     for (int i = 0; i < terminals.size(); i++) {
       for (int j = i; j < terminals.size(); j++) {
@@ -129,12 +149,71 @@ public class CcgParser implements Serializable {
             Outcome bestOutcome = iterator.next();
             CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
 
-            chart.addChartEntryForTerminalSpan(category, bestOutcome.getProbability(), i, j);
-            // System.out.println(i + "." + j + " : " + category + " " + bestOutcome.getProbability());
+            ChartEntry entry = ccgCategoryToChartEntry(category, i, j);
+
+            for (int headWordNum : entry.getHeadWordNums()) {
+              possiblePredicates.add((long) headWordNum);
+            }
+            
+            for (long dep : entry.getUnfilledDependencies()) {
+              int subject = getSubjectPredicateFromDep(dep);
+              int object = getObjectPredicateFromDep(dep);
+              
+              if (subject != -1) {
+                possiblePredicates.add((long) subject);
+              }
+              
+              if (object != -1) {
+                possiblePredicates.add((long) object);
+              }
+            }
+
+            chart.addChartEntryForSpan(entry, bestOutcome.getProbability(), i, j);
           }
         }
       }
     }
+
+    // Sparsify the dependency tensor for faster parsing.
+    long[] keyNums = Longs.toArray(possiblePredicates);
+    double[] values = new double[keyNums.length];
+    Arrays.fill(values, 1.0);
+    
+    int headVarNum = dependencyTensor.getDimensionNumbers()[0];
+    int argVarNum = dependencyTensor.getDimensionNumbers()[2];
+    int predVarSize = dependencyTensor.getDimensionSizes()[0];
+
+    SparseTensor keyIndicator = SparseTensor.fromUnorderedKeyValues(new int[] {headVarNum},
+        new int[] {predVarSize}, keyNums, values);
+    
+    Tensor smallDependencyTensor = dependencyTensor.retainKeys(keyIndicator)
+        .retainKeys(keyIndicator.relabelDimensions(new int[] {argVarNum}));
+    
+    chart.setDependencyTensor(smallDependencyTensor);
+  }
+  
+  private ChartEntry ccgCategoryToChartEntry(CcgCategory result, int spanStart, int spanEnd) {
+    // Assign each predicate in this category a unique word index.
+    List<Integer> headWordNums = Lists.newArrayList();
+    List<Integer> headIndexes = Lists.newArrayList();
+    List<Integer> headArgumentNumbers = Lists.newArrayList();
+    for (Argument head : result.getHeads()) {
+      if (head.hasPredicate()) {
+        headWordNums.add(dependencyHeadType.getValueIndex(head.getPredicate()));
+        headIndexes.add(spanEnd);
+      } else {
+        headArgumentNumbers.add(head.getArgumentNumber());
+      }
+    }
+
+    List<UnfilledDependency> deps = Lists.newArrayList();
+    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, deps);
+    
+    long[] unfilledDepArray = unfilledDependencyArrayToLongArray(unfilledDeps);
+    long[] depArray = unfilledDependencyArrayToLongArray(deps);
+
+    return new ChartEntry(result, Ints.toArray(headWordNums), Ints.toArray(headIndexes), 
+        Ints.toArray(headArgumentNumbers), unfilledDepArray, depArray, spanStart, spanEnd);
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
@@ -152,8 +231,12 @@ public class CcgParser implements Serializable {
         int numRightTrees = chart.getNumChartEntriesForSpan(spanStart + j, spanEnd);
         Multimap<SyntacticCategory, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
         Multimap<SyntacticCategory, Integer> rightArguments = aggregateByArgumentType(rightTrees, numRightTrees, Direction.LEFT);
+        
+        long[] filledDeps = new long[20];
+        long[] newUnfilledDependencies = new long[20];
 
         // Do CCG right application. (The category on the left is a function.)
+        // log.startTimer("ccg_parse/calculate_inside_beam/apply");
         for (SyntacticCategory leftArgument : leftArguments.keySet()) {
           for (SyntacticCategory rightType : rightTypes.keySet()) {
             if (leftArgument.isUnifiableWith(rightType)) {
@@ -165,7 +248,8 @@ public class CcgParser implements Serializable {
                   double rightProb = rightProbs[rightIndex];
 
                   ChartEntry result = apply(leftRoot, rightRoot, Direction.RIGHT, spanStart, 
-                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex);
+                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex, filledDeps,
+                      newUnfilledDependencies);
                   if (result != null) {
                     addChartEntry(result, chart, leftProb * rightProb, spanStart, spanEnd);
                   }
@@ -187,7 +271,8 @@ public class CcgParser implements Serializable {
                   double rightProb = rightProbs[rightIndex];
 
                   ChartEntry result = apply(rightRoot, leftRoot, Direction.LEFT, spanStart,
-                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex);
+                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex, filledDeps,
+                      newUnfilledDependencies);
                   if (result != null) {
                     addChartEntry(result, chart, leftProb * rightProb, spanStart, spanEnd);
                   }
@@ -196,6 +281,7 @@ public class CcgParser implements Serializable {
             }
           }
         }
+        // log.stopTimer("ccg_parse/calculate_inside_beam/apply");
       }
     }
   }
@@ -230,21 +316,6 @@ public class CcgParser implements Serializable {
     }
     return map;
   }
-
-  /**
-   * Computes the {@code keyNum} containing the weight for {@code dep} 
-   * in {@code dependencyTensor}.
-   * 
-   * @param dep
-   * @return
-   */
-  private long dependencyToLong(DependencyStructure dep) {
-    int headNum = dependencyHeadType.getValueIndex(dep.getHead());
-    int argNumNum = dependencyArgNumType.getValueIndex(dep.getArgIndex());
-    int objectNum = dependencyArgType.getValueIndex(dep.getObject());
-    return dependencyTensor.dimKeyToKeyNum(new int[] {headNum, argNumNum, objectNum});
-  }
-
   /**
    * Calculates the probability of any new dependencies in {@code result}, then inserts it
    * into {@code chart}.
@@ -258,9 +329,10 @@ public class CcgParser implements Serializable {
       int spanStart, int spanEnd) {
     // Get the probabilities of the generated dependencies.
     double depProb = 1.0;
-    for (DependencyStructure dep : result.getDependencies()) {
-      long depNum = dependencyToLong(dep);
-      depProb *= dependencyTensor.get(depNum);
+    Tensor currentParseTensor = chart.getDependencyTensor();
+    for (long dep : result.getDependencies()) {
+      long depNum = dependencyLongToTensorKeyNum(dep);
+      depProb *= currentParseTensor.get(depNum);
     }
 
     chart.addChartEntryForSpan(result, leftRightProb * depProb, spanStart, spanEnd); 
@@ -269,132 +341,112 @@ public class CcgParser implements Serializable {
   
   private ChartEntry apply(ChartEntry first, ChartEntry other, Direction direction,
       int leftSpanStart, int leftSpanEnd, int leftIndex, int rightSpanStart, int rightSpanEnd,
-      int rightIndex) {
+      int rightIndex, long[] filledDeps, long[] newUnfilledDependencies) {
     SyntacticCategory syntax = first.getSyntax();
-    if (syntax.isAtomic() || !syntax.acceptsArgumentOn(direction) || 
-        !syntax.getArgument().isUnifiableWith(other.getSyntax())) {
-      return null;
-    }
 
-    Set<IndexedPredicate> newHeads = (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) 
-        ? other.getHeads() : first.getHeads();
-    Set<Integer> newHeadArgumentNums = (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) 
+    int[] newHeadNums = (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) 
+        ? other.getHeadWordNums() : first.getHeadWordNums();
+    int[] newHeadIndexes = (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) 
+        ? other.getHeadIndexes() : first.getHeadIndexes();
+                        
+    int[] newHeadArgumentNums = (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) 
         ? other.getUnfilledHeads() : first.getUnfilledHeads(); 
 
     // Resolve semantic dependencies. Fill all dependency slots which require this argument.
     // Return any fully-filled dependencies, while saving partially-filled dependencies for later.
     int argNum = syntax.getArgumentList().size(); 
-    UnfilledDependency[] unfilledDependencies = first.getUnfilledDependencies();
-    UnfilledDependency[] otherUnfilledDeps = other.getUnfilledDependencies();
+    long[] unfilledDependencies = first.getUnfilledDependencies();
+    long[] otherUnfilledDeps = other.getUnfilledDependencies();
 
-    List<DependencyStructure> filledDeps = Lists.newArrayList();
-    List<UnfilledDependency> newUnfilledDependencies = Lists.newArrayList();
-    for (UnfilledDependency unfilled : unfilledDependencies) {
+    int filledDepsSize = 0;
+    int newUnfilledDepsSize = 0;
+    for (int i = 0 ; i < unfilledDependencies.length; i++) {
+      long unfilled = unfilledDependencies[i];
       // Check if the argument currently being filled matches the argument
       // expected by this dependency.
-      if (unfilled.getObjectIndex() == argNum) {
-        Set<IndexedPredicate> objects = other.getHeads();
-        if (unfilled.hasSubjects()) {
-          // After substituting the objects, this dependency is completely filled.
-          for (IndexedPredicate head : unfilled.getSubjects()) {
-            for (IndexedPredicate object : objects) {
-              filledDeps.add(new DependencyStructure(head.getHead(), head.getHeadIndex(), 
-                  object.getHead(), object.getHeadIndex(), unfilled.getArgumentIndex()));
-            }
+      if (getObjectArgNumFromDep(unfilled) == argNum) {
+        int[] objectHeadNums = other.getHeadWordNums();
+        int[] objectHeadIndexes = other.getHeadIndexes();
+        if (getSubjectArgNumFromDep(unfilled) == -1) {
+          for (int j = 0; j < objectHeadNums.length; j++) {
+            // Create a new filled dependency by substituting in the current object.
+            long filledDep = unfilled - (argNum << OBJECT_OFFSET);
+            filledDep += ((long) objectHeadNums[j] + MAX_ARG_NUM) << OBJECT_OFFSET;
+            filledDep += ((long) objectHeadIndexes[j]) << OBJECT_WORD_IND_OFFSET;
+            
+            filledDeps[filledDepsSize] = filledDep;
+            filledDepsSize++;
           }
         } else {
           // The subject of this dependency has not been filled.
-          int subjectIndex = unfilled.getSubjectIndex();
-          int argIndex = unfilled.getArgumentIndex();
-
-          for (IndexedPredicate object : objects) {
-            newUnfilledDependencies.add(UnfilledDependency.createWithKnownObject(subjectIndex, 
-                argIndex, object.getHead(), object.getHeadIndex()));
+          int subjectIndex = getSubjectArgNumFromDep(unfilled);
+          int argIndex = getArgNumFromDep(unfilled);
+          
+          for (int j = 0; j < objectHeadNums.length; j++) {
+            newUnfilledDependencies[newUnfilledDepsSize] = marshalUnfilledDependency(
+                objectHeadNums[j] + MAX_ARG_NUM, argIndex, subjectIndex, objectHeadIndexes[j], 0);
+            newUnfilledDepsSize++;
           }
         }
-      } else if (unfilled.getSubjectIndex() == argNum) {
-        int otherArgNum = unfilled.getArgumentIndex();
+      } else if (getSubjectArgNumFromDep(unfilled) == argNum) {
+        UnfilledDependency unfilledAsDep = longToUnfilledDependency(unfilled);
+        int otherArgNum = unfilledAsDep.getArgumentIndex();
         
-        if (unfilled.hasObjects()) {
-          for (IndexedPredicate object : unfilled.getObjects()) {
-            for (UnfilledDependency otherDep : otherUnfilledDeps) {
-              if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
-                substituteDependencyVariable(otherArgNum, otherDep, object, filledDeps);
-              }
+        if (unfilledAsDep.hasObject()) {
+          IndexedPredicate object = unfilledAsDep.getObject();
+          for (long otherDep : otherUnfilledDeps) {
+            UnfilledDependency otherDepAsDep = longToUnfilledDependency(otherDep);
+            if (otherDepAsDep.getObjectIndex() == otherArgNum || otherDepAsDep.getSubjectIndex() == otherArgNum) {
+              filledDepsSize += substituteDependencyVariable(otherArgNum, otherDepAsDep, object, filledDeps, filledDepsSize);
             }
           }
         } else {
           // Part of the dependency remains unresolved. Fill what's possible, then propagate
           // the unfilled portions.
-          int replacementIndex = unfilled.getObjectIndex();
+          int replacementIndex = unfilledAsDep.getObjectIndex();
 
-          for (UnfilledDependency otherDep : otherUnfilledDeps) {
-            if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
-              substituteDependencyVariable(otherArgNum, otherDep, replacementIndex, newUnfilledDependencies);
+          for (long otherDep : otherUnfilledDeps) {
+            UnfilledDependency otherDepAsDep = longToUnfilledDependency(otherDep);
+            if (otherDepAsDep.getObjectIndex() == otherArgNum || otherDepAsDep.getSubjectIndex() == otherArgNum) {
+              newUnfilledDepsSize += substituteDependencyVariable(otherArgNum, otherDepAsDep, replacementIndex, 
+                  newUnfilledDependencies, newUnfilledDepsSize);
             }
           }
         }
       } else {
-        newUnfilledDependencies.add(unfilled);
+        newUnfilledDependencies[newUnfilledDepsSize] = unfilled;
+        newUnfilledDepsSize++;
       }
     }
     
     if (syntax.getHead() == SyntacticCategory.HeadValue.ARGUMENT) {
-      newUnfilledDependencies.addAll(Arrays.asList(other.getUnfilledDependencies()));
+      long[] otherUnfilledDepArray = other.getUnfilledDependencies();
+      for (int i = 0; i < otherUnfilledDepArray.length; i++) {
+        newUnfilledDependencies[newUnfilledDepsSize] = otherUnfilledDepArray[i];
+        newUnfilledDepsSize++;
+      }
     }
     
     // Handle any unfilled head arguments.
-    if (newHeadArgumentNums.contains(argNum)) {
-      newHeads.addAll(other.getHeads());
+    if (Ints.contains(newHeadArgumentNums, argNum)) {
+      int[] otherHeadNums = other.getHeadWordNums();
+      int[] otherHeadIndexes = other.getHeadIndexes();
+      
+      newHeadNums = Ints.concat(newHeadNums, otherHeadNums);
+      newHeadIndexes = Ints.concat(newHeadIndexes, otherHeadIndexes);
     }
     
-    DependencyStructure[] filledDepArray = filledDeps.toArray(
-        new DependencyStructure[filledDeps.size()]);
-    UnfilledDependency[] unfilledDepArray = newUnfilledDependencies.toArray(
-        new UnfilledDependency[newUnfilledDependencies.size()]);
+    long[] filledDepArray = Arrays.copyOf(filledDeps, filledDepsSize);
+    long[] unfilledDepArray = Arrays.copyOf(newUnfilledDependencies, newUnfilledDepsSize);
     
-    return new ChartEntry(syntax.getReturn(), newHeads, newHeadArgumentNums, 
+    return new ChartEntry(syntax.getReturn(), newHeadNums, newHeadIndexes, newHeadArgumentNums, 
         unfilledDepArray, filledDepArray, leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart,
         rightSpanEnd, rightIndex);
   }
-
-  /*
-  private int countFilledDeps(UnfilledDependency[] unfilledDependencies, 
-      UnfilledDependency[] otherUnfilledDeps, int argNum) {
-    int count = 0;
-    for (UnfilledDependency unfilled : unfilledDependencies) {
-      // Check if the argument currently being filled matches the argument
-      // expected by this dependency.
-      if (unfilled.getObjectIndex() == argNum && unfilled.hasSubjects()) {
-        count += unfilled.getSubjects().size() * other.getHeads().size();
-      } else if (unfilled.getSubjectIndex() == argNum && unfilled.hasObjects()) {
-        int otherArgNum = unfilled.getArgumentIndex();
-        
-        if (unfilled.hasObjects()) {
-          for (IndexedPredicate object : unfilled.getObjects()) {
-            for (UnfilledDependency otherDep : otherUnfilledDeps) {
-              if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
-                substituteDependencyVariable(otherArgNum, otherDep, object, filledDeps);
-              }
-            }
-          }
-        } else {
-          // Part of the dependency remains unresolved. Fill what's possible, then propagate
-          // the unfilled portions.
-          int replacementIndex = unfilled.getObjectIndex();
-
-          for (UnfilledDependency otherDep : otherUnfilledDeps) {
-            if (otherDep.getObjectIndex() == otherArgNum || otherDep.getSubjectIndex() == otherArgNum) {
-              substituteDependencyVariable(otherArgNum, otherDep, replacementIndex, newUnfilledDependencies);
-            }
-          }
-        }
-      } else {
-        newUnfilledDependencies.add(unfilled);
-      }
-    }
+  
+  private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {
+    return null;
   }
-  */
 
   /**
    * Replaces all instances of {@code dependencyVariableNum} in {@code dep} 
@@ -405,22 +457,23 @@ public class CcgParser implements Serializable {
    * @param replacementVariableNum
    * @param unfilledDepsAccumulator
    */
-  private void substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
-      int replacementVariableNum, List<UnfilledDependency> unfilledDepsAccumulator) {
+  private int substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
+      int replacementVariableNum, long[] unfilledDepsAccumulator, int unfilledDepsSize) {
     UnfilledDependency newDep = dep;
     if (dep.getSubjectIndex() == dependencyVariableNum) {
       newDep = newDep.replaceSubject(replacementVariableNum);
     } else {
-      Preconditions.checkState(dep.hasSubjects());
+      Preconditions.checkState(dep.hasSubject());
     }
     
     if (dep.getObjectIndex() == dependencyVariableNum) {
       newDep = newDep.replaceObject(replacementVariableNum);
     } else {
-      Preconditions.checkState(dep.hasObjects());
+      Preconditions.checkState(dep.hasObject());
     }
     
-    unfilledDepsAccumulator.add(newDep);
+    unfilledDepsAccumulator[unfilledDepsSize] = unfilledDependencyToLong(newDep);
+    return 1;
   }
   
   /**
@@ -432,28 +485,175 @@ public class CcgParser implements Serializable {
    * @param value
    * @param filledDepsAccumulator
    */
-  private void substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
-      IndexedPredicate value, List<DependencyStructure> filledDepsAccumulator) {
+  private int substituteDependencyVariable(int dependencyVariableNum, UnfilledDependency dep,
+      IndexedPredicate value, long[] filledDepsAccumulator, int filledDepsSize) {
     UnfilledDependency newDep = dep;
-    Set<IndexedPredicate> values = Sets.newHashSet(value);
     if (dep.getSubjectIndex() == dependencyVariableNum) {
-      newDep = newDep.replaceSubject(values);
+      newDep = newDep.replaceSubject(value);
     }
     
     if (dep.getObjectIndex() == dependencyVariableNum) {
-      newDep = newDep.replaceObject(values);
+      newDep = newDep.replaceObject(value);
     }
     
-    Preconditions.checkState(newDep.hasObjects() && newDep.hasSubjects());
-    for (IndexedPredicate head : newDep.getSubjects()) {
-      for (IndexedPredicate object : newDep.getObjects()) {
-        filledDepsAccumulator.add(new DependencyStructure(head.getHead(), head.getHeadIndex(), 
-            object.getHead(), object.getHeadIndex(), newDep.getArgumentIndex()));
-      }
-    }
+    Preconditions.checkState(newDep.isFilledDependency());
+    filledDepsAccumulator[filledDepsSize] = unfilledDependencyToLong(newDep);
+    return 1;
   }
 
-  private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {
-    return null;
+  // Methods for efficiently encoding dependencies as longs //////////////////////////////
+  
+  /**
+   * Computes the {@code keyNum} containing the weight for {@code dep} 
+   * in {@code dependencyTensor}.
+   * 
+   * @param dep
+   * @return
+   */
+  private long dependencyLongToTensorKeyNum(long depLong) {
+    int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+    int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+
+    int argNumNum = dependencyArgNumType.getValueIndex(
+        (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK));
+
+    return dependencyTensor.dimKeyToKeyNum(new int[] {headNum, argNumNum, objectNum});
+  }
+  
+  private long unfilledDependencyToLong(UnfilledDependency dep) {
+    long argNum = dep.getArgumentIndex();
+    long objectNum, objectWordInd, subjectNum, subjectWordInd;
+    
+    if (dep.hasObject()) { 
+      IndexedPredicate obj = dep.getObject();
+      objectNum = dependencyHeadType.getValueIndex(obj.getHead()) + MAX_ARG_NUM;
+      objectWordInd = obj.getHeadIndex();
+    } else {
+      objectNum = dep.getObjectIndex();
+      objectWordInd = 0L;
+    }
+    
+    if (dep.hasSubject()) {
+      IndexedPredicate sbj = dep.getSubject();
+      subjectNum = dependencyHeadType.getValueIndex(sbj.getHead()) + MAX_ARG_NUM;
+      subjectWordInd = sbj.getHeadIndex();
+    } else {
+      subjectNum = dep.getSubjectIndex();
+      subjectWordInd = 0L;
+    }
+    
+    return marshalUnfilledDependency(objectNum, argNum, subjectNum, objectWordInd, subjectWordInd);
+  }
+  
+  private long marshalUnfilledDependency(long objectNum, long argNum, long subjectNum,
+      long objectWordInd, long subjectWordInd) {
+    long value = 0L;
+    value += objectNum << OBJECT_OFFSET;
+    value += argNum << ARG_NUM_OFFSET;
+    value += subjectNum << SUBJECT_OFFSET;
+    value += objectWordInd << OBJECT_WORD_IND_OFFSET;
+    value += subjectWordInd << SUBJECT_WORD_IND_OFFSET;
+    return value;
+  }
+  
+  private int getArgNumFromDep(long depLong) { 
+    return (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
+  }
+  
+  private int getObjectArgNumFromDep(long depLong) {
+    int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK);
+    if (objectNum >= MAX_ARG_NUM) {
+      return -1;
+    } else {
+      return objectNum;
+    }
+  }
+  
+  private int getObjectPredicateFromDep(long depLong) {
+    int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK);
+    if (objectNum >= MAX_ARG_NUM) {
+      return objectNum - MAX_ARG_NUM;
+    } else {
+      return -1;
+    }
+  }
+  
+  private int getSubjectArgNumFromDep(long depLong) {
+    int subjectNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK);
+    if (subjectNum >= MAX_ARG_NUM) {
+      return -1;
+    } else {
+      return subjectNum;
+    }
+  }
+  
+  private int getSubjectPredicateFromDep(long depLong) {
+    int subjectNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK);
+    if (subjectNum >= MAX_ARG_NUM) {
+      return subjectNum - MAX_ARG_NUM;
+    } else {
+      return -1;
+    }
+  }
+  
+  private UnfilledDependency longToUnfilledDependency(long value) {
+    int argNum, objectNum, objectWordInd, subjectNum, subjectWordInd;
+    
+    objectNum = (int) ((value >> OBJECT_OFFSET) & PREDICATE_MASK);  
+    argNum = (int) ((value >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
+    subjectNum = (int) ((value >> SUBJECT_OFFSET) & PREDICATE_MASK);
+    objectWordInd = (int) ((value >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+    subjectWordInd = (int) ((value >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+    
+    IndexedPredicate sbj = null, obj = null;
+    int objectArgIndex = -1, subjectArgIndex = -1;
+    if (objectNum >= MAX_ARG_NUM) {
+      String objectHead = (String) dependencyHeadType.getValue(objectNum - MAX_ARG_NUM);
+      obj = new IndexedPredicate(objectHead, objectWordInd);
+    } else {
+      objectArgIndex = objectNum;
+    }
+    
+    if (subjectNum >= MAX_ARG_NUM) {
+      String subjectHead = (String) dependencyHeadType.getValue(subjectNum - MAX_ARG_NUM);
+      sbj = new IndexedPredicate(subjectHead, subjectWordInd);
+    } else {
+      subjectArgIndex = subjectNum;
+    }
+    
+    return new UnfilledDependency(sbj, subjectArgIndex, argNum, obj, objectArgIndex);
+  }
+  
+  private UnfilledDependency[] longArrayToUnfilledDependencyArray(long[] values) {
+    UnfilledDependency[] unfilled = new UnfilledDependency[values.length];
+    for (int i = 0; i < values.length; i++) {
+      unfilled[i] = longToUnfilledDependency(values[i]);
+    }
+    return unfilled;
+  }
+
+  private long[] unfilledDependencyArrayToLongArray(List<UnfilledDependency> deps) {
+    long[] values = new long[deps.size()];
+    for (int i = 0; i < deps.size(); i++) {
+      values[i] = unfilledDependencyToLong(deps.get(i));
+    }
+    return values;
+  }
+  
+  public DependencyStructure[] longArrayToFilledDependencyArray(long[] values) {
+    DependencyStructure[] deps = new DependencyStructure[values.length];
+    for (int i = 0; i < values.length; i++) {
+      UnfilledDependency unfilled = longToUnfilledDependency(values[i]);
+      deps[i] = unfilled.toDependencyStructure(); 
+    }
+    return deps;
+  }
+  
+  public Set<IndexedPredicate> headArrayToIndexedPredicateArray(int[] headWordNums, int[] headIndexes) {
+    Set<IndexedPredicate> predicates = Sets.newHashSet();
+    for (int i = 0; i < headWordNums.length; i++) {
+      predicates.add(new IndexedPredicate((String) dependencyHeadType.getValue(headWordNums[i]), headIndexes[i]));
+    }
+    return predicates;
   }
 }

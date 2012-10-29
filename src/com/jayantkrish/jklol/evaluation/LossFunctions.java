@@ -97,7 +97,7 @@ public class LossFunctions {
     private int falsePositives;
     private int falseNegatives;
 
-    // Store scores in order to generate precision/recall curves.
+    // Store scores in order to generate precision/recall curves. 
     private List<Double> truePositiveScores;
     private List<Double> falsePositiveScores;
 

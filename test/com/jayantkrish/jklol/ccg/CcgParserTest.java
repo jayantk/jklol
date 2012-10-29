@@ -57,11 +57,11 @@ public class CcgParserTest extends TestCase {
     System.out.println(parses.get(0));
     System.out.println(parses.get(0).getAllDependencies());
     
-    assertEquals(0.5 * 0.3 * 2.0 * 4.0, parse.getSubtreeProbability());
     assertEquals(1.0, parse.getNodeProbability());
     assertEquals(2.0, parse.getRight().getNodeProbability());
     assertEquals(4.0, parse.getRight().getLeft().getNodeProbability());
     assertEquals(0.5, parse.getLeft().getNodeProbability());
+    assertEquals(0.5 * 0.3 * 2.0 * 4.0, parse.getSubtreeProbability());
     
     assertEquals(5, parse.getAllDependencies().size());
     
@@ -183,7 +183,6 @@ public class CcgParserTest extends TestCase {
       words.add(Arrays.asList(lexicon[i].substring(0, commaInd)));
 
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
-      System.out.println(category);
       categories.add(category);
       for (Argument head : category.getHeads()) {
         if (head.hasPredicate()) {

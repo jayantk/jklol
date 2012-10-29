@@ -69,6 +69,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     builder.put(key, 1.0);
     return elementwiseProduct(builder.build()).sumOutDimensions(Ints.asList(dimensionNumbers));
   }
+  
+  @Override
+  public DenseTensor retainKeys(Tensor indicatorTensor) {
+    return this;
+  }
 
   @Override
   public DenseTensor elementwiseProduct(Tensor other) {

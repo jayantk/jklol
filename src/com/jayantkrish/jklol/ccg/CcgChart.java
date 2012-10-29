@@ -3,13 +3,11 @@ package com.jayantkrish.jklol.ccg;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.HeapUtils;
 
 /**
@@ -25,10 +23,16 @@ public class CcgChart {
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
   private final int[] chartSizes;
+  
+  // The parser weights which might be used in this sentence.
+  // This is a subset of all parser weights, which is precomputed
+  // to make lookups more efficient during parsing.
+  private Tensor dependencyTensor;
 
   public CcgChart(List<String> terminals, int beamSize) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.beamSize = beamSize;
+    this.dependencyTensor = null;
 
     int n = terminals.size();
     this.chart = new ChartEntry[n][n][beamSize + 1];
@@ -45,8 +49,19 @@ public class CcgChart {
   public int size() {
     return terminals.size();
   }
+
+  /**
+   * Gets the subset of all parser weights which may be 
+   * used in this parse.
+   * 
+   * @return
+   */
+  public Tensor getDependencyTensor() {
+    return dependencyTensor;
+  }
   
-  public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses) {
+  public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses, 
+      CcgParser parser) {
     // Perform a heap sort on the array indexes paired with the probabilities.
     double[] probsCopy = Arrays.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
     Integer[] chartEntryIndexes = new Integer[probabilities[spanStart][spanEnd].length];
@@ -60,7 +75,7 @@ public class CcgChart {
     int numChartEntries = getNumChartEntriesForSpan(spanStart, spanEnd);
     while (numChartEntries > 0) {
       if (numChartEntries <= numParses) {
-        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0]));        
+        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0], parser));        
       }
       
       HeapUtils.removeMin(chartEntryIndexes, probsCopy, numChartEntries);
@@ -80,24 +95,27 @@ public class CcgChart {
    * @param beamIndex
    * @return
    */
-  private CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex) {
+  private CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, 
+      CcgParser parser) {
     ChartEntry entry = chart[spanStart][spanEnd][beamIndex];
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(entry.getLexiconEntry(), entry.getHeads(), 
-          Arrays.asList(entry.getDependencies()), terminals.subList(spanStart, spanEnd + 1),
-          probabilities[spanStart][spanEnd][beamIndex]);
+      return CcgParse.forTerminal(entry.getLexiconEntry(), 
+          parser.headArrayToIndexedPredicateArray(entry.getHeadWordNums(), entry.getHeadIndexes()),
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
+          terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex]);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
-          entry.getLeftChartIndex());
+          entry.getLeftChartIndex(), parser);
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
-          entry.getRightChartIndex());
+          entry.getRightChartIndex(), parser);
 
       double nodeProb = probabilities[spanStart][spanEnd][beamIndex] / 
           (left.getSubtreeProbability() * right.getSubtreeProbability());
 
-      return CcgParse.forNonterminal(entry.getSyntax(), entry.getHeads(), 
-          Arrays.asList(entry.getDependencies()), nodeProb, left, right);
+      return CcgParse.forNonterminal(entry.getSyntax(), 
+          parser.headArrayToIndexedPredicateArray(entry.getHeadWordNums(), entry.getHeadIndexes()), 
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right);
     }
   }
 
@@ -152,30 +170,9 @@ public class CcgChart {
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, int spanEnd) {
     offerEntry(entry, probability, spanStart, spanEnd);
   }
-
-  public void addChartEntryForTerminalSpan(CcgCategory result, double probability,
-      int spanStart, int spanEnd) {
-    // Assign each predicate in this category a unique word index.
-    Set<IndexedPredicate> heads = Sets.newHashSet();
-    Set<Integer> headArgumentNumbers = Sets.newHashSet();
-    for (Argument head : result.getHeads()) {
-      if (head.hasPredicate()) {
-        heads.add(new IndexedPredicate(head.getPredicate(), spanEnd));
-      } else {
-        headArgumentNumbers.add(head.getArgumentNumber());
-      }
-    }
-    List<DependencyStructure> deps = Lists.newArrayList();
-    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, deps);
-    
-    DependencyStructure[] depArray = deps.toArray(new DependencyStructure[deps.size()]);
-    UnfilledDependency[] unfilledDepArray = unfilledDeps.toArray(
-        new UnfilledDependency[unfilledDeps.size()]);
-
-    ChartEntry entry = new ChartEntry(result, heads, headArgumentNumbers, unfilledDepArray, 
-        depArray, spanStart, spanEnd);
-
-    offerEntry(entry, probability, spanStart, spanEnd);
+  
+  public void setDependencyTensor(Tensor tensor) {
+    this.dependencyTensor = tensor;
   }
 
   /**
@@ -208,11 +205,19 @@ public class CcgChart {
    */
   public static class ChartEntry {
     private final SyntacticCategory syntax;
-    private final Set<IndexedPredicate> heads;
-    private final Set<Integer> headArguments;
-    private final UnfilledDependency[] unfilledDependencies;
-
-    private final DependencyStructure[] deps;
+    
+    // The words/predicates that are the head of this entry, along
+    // with their positions in the sentence.
+    private final int[] headWordNums;
+    private final int[] headIndexes;
+    // Argument numbers which become heads of this.
+    private final int[] headUnfilledArgs;
+    
+    // Partially complete dependency structures, encoded into longs 
+    // for efficiency.
+    private final long[] unfilledDependencies;
+    // Complete dependency structures, encoded into longs for efficiency. 
+    private final long[] deps;
 
     private final boolean isTerminal;
 
@@ -231,13 +236,14 @@ public class CcgChart {
     private final int rightSpanEnd;
     private final int rightChartIndex;
 
-    public ChartEntry(SyntacticCategory syntax, Set<IndexedPredicate> heads, Set<Integer> headArguments,
-        UnfilledDependency[] unfilledDependencies, DependencyStructure[] deps,
+    public ChartEntry(SyntacticCategory syntax, int[] headWordNums, int[] headIndexes, 
+        int[] headUnfilledArgs, long[] unfilledDependencies, long[] deps,
         int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex) {
       this.syntax = Preconditions.checkNotNull(syntax);
-      this.heads = Preconditions.checkNotNull(heads);
-      this.headArguments = Preconditions.checkNotNull(headArguments);
+      this.headWordNums = Preconditions.checkNotNull(headWordNums);
+      this.headIndexes = Preconditions.checkNotNull(headIndexes);
+      this.headUnfilledArgs = Preconditions.checkNotNull(headUnfilledArgs);
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
 
       this.lexiconEntry = null;
@@ -265,12 +271,13 @@ public class CcgChart {
      * @param spanStart
      * @param spanEnd
      */
-    public ChartEntry(CcgCategory lexiconEntry, Set<IndexedPredicate> heads,
-        Set<Integer> headArguments, UnfilledDependency[] unfilledDependencies,
-        DependencyStructure[] deps, int spanStart, int spanEnd) {
+    public ChartEntry(CcgCategory lexiconEntry, int[] headWordNums, int[] headIndexes, 
+        int[] headUnfilledArgs, long[] unfilledDependencies,
+        long[] deps, int spanStart, int spanEnd) {
       this.syntax = Preconditions.checkNotNull(lexiconEntry.getSyntax());
-      this.heads = Preconditions.checkNotNull(heads);
-      this.headArguments = Preconditions.checkNotNull(headArguments);
+      this.headWordNums = Preconditions.checkNotNull(headWordNums);
+      this.headIndexes = Preconditions.checkNotNull(headIndexes);
+      this.headUnfilledArgs = Preconditions.checkNotNull(headUnfilledArgs);
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
 
       this.lexiconEntry = lexiconEntry;
@@ -291,16 +298,38 @@ public class CcgChart {
     public SyntacticCategory getSyntax() {
       return syntax;
     }
-
-    public Set<IndexedPredicate> getHeads() {
-      return heads;
+    
+    /**
+     * Returns the words/predicates that are the head of this entry, encoded
+     * as integers. The integers can be converted back to words by looking them
+     * up in the DiscreteVariable representing the heads of dependency structures.
+     *    
+     * @return
+     */
+    public int[] getHeadWordNums() {
+      return headWordNums;
     }
 
-    public Set<Integer> getUnfilledHeads() {
-      return headArguments;
+    /**
+     * Gets the positions of each head predicate in the sentence.
+     * 
+     * @return
+     */
+    public int[] getHeadIndexes() {
+      return headIndexes;
     }
 
-    public UnfilledDependency[] getUnfilledDependencies() {
+    /**
+     * Gets any heads of this which are not yet filled. Parsing should fill
+     * these heads with values from this category's arguments.
+     * 
+     * @return
+     */
+    public int[] getUnfilledHeads() {
+      return headUnfilledArgs;
+    }
+
+    public long[] getUnfilledDependencies() {
       return unfilledDependencies;
     }
 
@@ -308,7 +337,7 @@ public class CcgChart {
       return lexiconEntry;
     }
 
-    public DependencyStructure[] getDependencies() {
+    public long[] getDependencies() {
       return deps;
     }
 

@@ -178,6 +178,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     builder.put(key, 1.0);
     return elementwiseProduct(builder.build()).sumOutDimensions(Ints.asList(dimensionNumbers));
   }
+  
+  @Override
+  public SparseTensor retainKeys(Tensor indicatorTensor) {
+    return elementwiseProduct(indicatorTensor);
+  }
 
   /**
    * Elementwise multiplies {@code this} and {@code other}, returning the result

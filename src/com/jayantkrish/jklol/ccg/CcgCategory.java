@@ -151,35 +151,29 @@ public class CcgCategory implements Serializable {
   }
   
   public List<UnfilledDependency> createUnfilledDependencies(int wordIndex, 
-      List<DependencyStructure> appendDependencies) {
+      List<UnfilledDependency> filledDependencies) {
     List<UnfilledDependency> unfilledDependencies = Lists.newArrayListWithCapacity(subjects.size());
     for (int i = 0; i < subjects.size(); i++) {
-      Set<IndexedPredicate> subject = null;
+      IndexedPredicate subject = null;
       int subjectIndex = -1;
       if (subjects.get(i).hasPredicate()) {
-        subject = Sets.newHashSet(new IndexedPredicate(subjects.get(i).getPredicate(), wordIndex));
+        subject = new IndexedPredicate(subjects.get(i).getPredicate(), wordIndex);
       } else {
         subjectIndex = subjects.get(i).getArgumentNumber();
       }
       
-      Set<IndexedPredicate> object = null;
+      IndexedPredicate object = null;
       int objectIndex = -1;
       if (objects.get(i).hasPredicate()) {
-        object = Sets.newHashSet(new IndexedPredicate(objects.get(i).getPredicate(), wordIndex));
+        object = new IndexedPredicate(objects.get(i).getPredicate(), wordIndex);
       } else {
         objectIndex = objects.get(i).getArgumentNumber();
       }
 
       UnfilledDependency dep = new UnfilledDependency(subject, subjectIndex, 
           argumentNumbers.get(i), object, objectIndex);
-      if (dep.hasSubjects() && dep.hasObjects()) {
-        // This is actually a filled dependency.
-        for (IndexedPredicate subj : dep.getSubjects()) {
-          for (IndexedPredicate obj : dep.getObjects()) {
-            appendDependencies.add(new DependencyStructure(subj.getHead(), subj.getHeadIndex(),
-                obj.getHead(), obj.getHeadIndex(), argumentNumbers.get(i)));
-          }
-        }
+      if (dep.isFilledDependency()) {
+        filledDependencies.add(dep);
       } else {
         unfilledDependencies.add(dep);
       }
@@ -253,11 +247,11 @@ public class CcgCategory implements Serializable {
     }
     
     public static Argument parseFromString(String argString) {
-      if (!argString.startsWith("?")) {
-        return Argument.createFromPredicate(argString);
-      } else {
+      if (argString.startsWith("?") && argString.trim().length() == 2) {
         Integer argInd = Integer.parseInt(argString.substring(1));
         return Argument.createFromArgumentNumber(argInd);
+      } else {
+        return Argument.createFromPredicate(argString);
       }
     }
     

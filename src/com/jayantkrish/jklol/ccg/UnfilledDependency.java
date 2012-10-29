@@ -1,16 +1,15 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
-import java.util.Set;
 
-import com.google.common.collect.Sets;
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
 public class UnfilledDependency implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  // Subject is the word(s) projecting the dependency. Null if subjects is unfilled. 
-  private final Set<IndexedPredicate> subjects;
+  // Subject is the word projecting the dependency. Null if the subject is unfilled. 
+  private final IndexedPredicate subject;
   // Subject may be unfilled. If so, then this variable 
   // is the index of the argument which fills the subject role. 
   private final int subjectFunctionVarIndex;
@@ -19,22 +18,22 @@ public class UnfilledDependency implements Serializable {
   // (i.e., which dependencies inherited from the subject are filled by the object.)
   private final int subjectArgIndex;
 
-  // Objects are the arguments of the projected dependency. Null if objects is unfilled. 
-  private final Set<IndexedPredicate> objects;
+  // Object is the arguments of the projected dependency. Null if object is unfilled. 
+  private final IndexedPredicate object;
   private final int objectArgumentIndex;
 
-  public UnfilledDependency(Set<IndexedPredicate> subjects, int subjectFunctionVarIndex, 
-      int subjectArgIndex, Set<IndexedPredicate> objects, int objectIndex) {
-    this.subjects = subjects;
+  public UnfilledDependency(IndexedPredicate subject, int subjectFunctionVarIndex, 
+      int subjectArgIndex, IndexedPredicate object, int objectIndex) {
+    this.subject = subject;
     this.subjectFunctionVarIndex = subjectFunctionVarIndex;
     this.subjectArgIndex = subjectArgIndex;
-    this.objects = objects;
+    this.object = object;
     this.objectArgumentIndex = objectIndex;
   }
 
   public static UnfilledDependency createWithKnownSubject(String subject, int subjectHeadWordIndex, 
       int subjectArgIndex, int objectIndex) {
-    return new UnfilledDependency(Sets.newHashSet(new IndexedPredicate(subject, subjectHeadWordIndex)),
+    return new UnfilledDependency(new IndexedPredicate(subject, subjectHeadWordIndex),
         -1, subjectArgIndex, null, objectIndex);
   }
 
@@ -46,27 +45,43 @@ public class UnfilledDependency implements Serializable {
   public static UnfilledDependency createWithKnownObject(int subjectIndex, int subjectArgIndex, 
       String object, int objectHeadWordIndex) {
     return new UnfilledDependency(null, subjectIndex, subjectArgIndex, 
-        Sets.newHashSet(new IndexedPredicate(object, objectHeadWordIndex)), -1);
+        new IndexedPredicate(object, objectHeadWordIndex), -1);
   }
 
-  public Set<IndexedPredicate> getSubjects() {
-    return subjects;
+  public IndexedPredicate getSubject() {
+    return subject;
   }
 
-  public boolean hasSubjects() {
-    return subjects != null;
+  public boolean hasSubject() {
+    return subject != null;
   }
 
   public int getSubjectIndex() {
     return subjectFunctionVarIndex;
   }
 
-  public Set<IndexedPredicate> getObjects() {
-    return objects;
+  public IndexedPredicate getObject() {
+    return object;
   }
 
-  public boolean hasObjects() {
-    return objects != null;
+  public boolean hasObject() {
+    return object != null;
+  }
+  
+  /**
+   * Returns {@code true} if this dependency has both a subject and
+   * an object.
+   *  
+   * @return
+   */
+  public boolean isFilledDependency() {
+    return subject != null && object != null;
+  }
+  
+  public DependencyStructure toDependencyStructure() {
+    Preconditions.checkState(isFilledDependency());
+    return new DependencyStructure(subject.getHead(), subject.getHeadIndex(), 
+        object.getHead(), object.getHeadIndex(), subjectArgIndex);
   }
 
   public int getObjectIndex() {
@@ -79,46 +94,46 @@ public class UnfilledDependency implements Serializable {
       
   /**
    * Returns a new UnfilledDependency whose subject is {@code newSubjectIndex} 
-   * and whose objects are equal to {@code this}'s objects.
+   * and whose object is equal to {@code this}'s object.
    *  
    * @param newSubjectIndex
    * @return
    */
   public UnfilledDependency replaceSubject(int newSubjectIndex) {
-    return new UnfilledDependency(null, newSubjectIndex, subjectArgIndex, objects, objectArgumentIndex);
+    return new UnfilledDependency(null, newSubjectIndex, subjectArgIndex, object, objectArgumentIndex);
   }
   
   /**
-   * Returns a new UnfilledDependency whose subjects are {@code newSubjects} 
-   * and whose objects are equal to {@code this}'s objects.
+   * Returns a new UnfilledDependency whose subject is equal to 
+   * {@code newSubject} and whose object is equal to {@code this}' object.
    *  
-   * @param newSubjects
+   * @param newSubject
    * @return
    */
-  public UnfilledDependency replaceSubject(Set<IndexedPredicate> newSubjects) {
-    return new UnfilledDependency(newSubjects, -1, subjectArgIndex, objects, objectArgumentIndex);
+  public UnfilledDependency replaceSubject(IndexedPredicate newSubject) {
+    return new UnfilledDependency(newSubject, -1, subjectArgIndex, object, objectArgumentIndex);
   }
   
   /**
    * Returns a new UnfilledDependency whose object is {@code newObjectIndex} 
-   * and whose subjects are equal to {@code this}'s subjects.
+   * and whose subject is equal to {@code this}'s subject.
    *  
    * @param newObjectIndex
    * @return
    */
   public UnfilledDependency replaceObject(int newObjectIndex) {
-    return new UnfilledDependency(subjects, subjectFunctionVarIndex, subjectArgIndex, null, newObjectIndex);
+    return new UnfilledDependency(subject, subjectFunctionVarIndex, subjectArgIndex, null, newObjectIndex);
   }
   
   /**
-   * Returns a new UnfilledDependency whose objects are {@code newObjects} 
-   * and whose subjects are equal to {@code this}'s subjects.
+   * Returns a new UnfilledDependency whose object is {@code newObject} 
+   * and whose subject is equal to {@code this}'s subject.
    *  
-   * @param newObjects
+   * @param newObject
    * @return
    */
-  public UnfilledDependency replaceObject(Set<IndexedPredicate> objects) {
-    return new UnfilledDependency(subjects, subjectFunctionVarIndex, subjectArgIndex, objects, -1);
+  public UnfilledDependency replaceObject(IndexedPredicate newObject) {
+    return new UnfilledDependency(subject, subjectFunctionVarIndex, subjectArgIndex, newObject, -1);
   }
 
   @Override
@@ -126,10 +141,10 @@ public class UnfilledDependency implements Serializable {
     final int prime = 31;
     int result = 1;
     result = prime * result + objectArgumentIndex;
-    result = prime * result + ((objects == null) ? 0 : objects.hashCode());
+    result = prime * result + ((object == null) ? 0 : object.hashCode());
     result = prime * result + subjectArgIndex;
     result = prime * result + subjectFunctionVarIndex;
-    result = prime * result + ((subjects == null) ? 0 : subjects.hashCode());
+    result = prime * result + ((subject == null) ? 0 : subject.hashCode());
     return result;
   }
 
@@ -144,19 +159,19 @@ public class UnfilledDependency implements Serializable {
     UnfilledDependency other = (UnfilledDependency) obj;
     if (objectArgumentIndex != other.objectArgumentIndex)
       return false;
-    if (objects == null) {
-      if (other.objects != null)
+    if (object == null) {
+      if (other.object != null)
         return false;
-    } else if (!objects.equals(other.objects))
+    } else if (!object.equals(other.object))
       return false;
     if (subjectArgIndex != other.subjectArgIndex)
       return false;
     if (subjectFunctionVarIndex != other.subjectFunctionVarIndex)
       return false;
-    if (subjects == null) {
-      if (other.subjects != null)
+    if (subject == null) {
+      if (other.subject != null)
         return false;
-    } else if (!subjects.equals(other.subjects))
+    } else if (!subject.equals(other.subject))
       return false;
     return true;
   }

@@ -82,6 +82,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public Tensor slice(int[] dimensionNumbers, int[] keys) {
     return new LogSpaceTensorAdapter(logWeights.slice(dimensionNumbers, keys));
   }
+  
+  @Override
+  public Tensor retainKeys(Tensor indicatorTensor) {
+    return new LogSpaceTensorAdapter(logWeights.retainKeys(indicatorTensor));
+  }
 
   @Override
   public Tensor elementwiseProduct(Tensor other) {

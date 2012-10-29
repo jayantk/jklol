@@ -40,6 +40,22 @@ public interface Tensor extends TensorBase, Serializable {
   Tensor slice(int[] dimensionNumbers, int[] keys);
 
   /**
+   * Selects a subset of the keys in this tensor, as given by
+   * {@code indicatorTensor}. The primary use of this method is to sparsify a
+   * tensor to make future lookups more efficient by discarding unnecessary
+   * keys.
+   * <p>
+   * All keys {@code k} in the returned tensor have the same value as in
+   * {@code this}, if (a subset of) {@code k} is in {@code indicatorTensor}. If
+   * {@code k} is not in {@code indicatorTensor}, any value may be returned. All
+   * values in {@code indicatorTensor} must be either 0 or 1.
+   * 
+   * @param indicatorTensor
+   * @return
+   */
+  Tensor retainKeys(Tensor indicatorTensor);
+
+  /**
    * Returns the elementwise product of this with {@code other}. {@code other}
    * must contain a subset of the dimensions of {@code this}, and the returned
    * tensor will have the same dimensions as {@code this}. Each key in the

@@ -282,6 +282,12 @@ public class CcgParser implements Serializable {
             }
           }
         }
+        
+        for (SyntacticCategory rightType : rightTypes.keySet()) {
+          for (SyntacticCategory leftType : leftTypes.keySet()) {
+            
+          }
+        }
         // log.stopTimer("ccg_parse/calculate_inside_beam/apply");
       }
     }
@@ -414,6 +420,7 @@ public class CcgParser implements Serializable {
             }
           }
         }
+
       } else {
         newUnfilledDependencies[newUnfilledDepsSize] = unfilled;
         newUnfilledDepsSize++;
@@ -446,9 +453,28 @@ public class CcgParser implements Serializable {
   }
   
   private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {
+    SyntacticCategory firstSyntax = first.getSyntax();
+    SyntacticCategory secondSyntax = second.getSyntax();
+    if (firstSyntax.isAtomic() || !firstSyntax.acceptsArgumentOn(direction) ||
+        secondSyntax.isAtomic()) {
+      return null;
+    }
+    
+    SyntacticCategory firstArgumentType = firstSyntax.getArgument();
+    SyntacticCategory returnType = secondSyntax.getReturn();
+    while (returnType != null) {
+      if (firstArgumentType.isUnifiableWith(returnType)) {
+        return composeHelper(first, second, direction);
+      }
+    }
     return null;
   }
-
+  
+  private ChartEntry composeHelper(ChartEntry first, ChartEntry second, Direction direction) {
+    
+    
+  }
+  
   /**
    * Replaces all instances of {@code dependencyVariableNum} in {@code dep} 
    * with the variable given by {@code replacementVariableNum}. 

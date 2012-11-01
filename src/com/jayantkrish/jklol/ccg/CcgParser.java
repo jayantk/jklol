@@ -71,8 +71,9 @@ public class CcgParser implements Serializable {
   private final Tensor dependencyTensor;
   
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
-      DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar, VariableNumMap dependencyArgNumVar,
-      VariableNumMap dependencyArgVar, DiscreteFactor dependencyDistribution) {
+      DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar, 
+      VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
+      DiscreteFactor dependencyDistribution) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);

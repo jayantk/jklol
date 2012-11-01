@@ -2,8 +2,10 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * A syntactic category for a CCG, such as N/N. In addition to 
@@ -53,6 +55,9 @@ public class SyntacticCategory implements Serializable {
   private final SyntacticCategory argumentType;
   
   private final int cachedHashCode;
+  
+  private static final Map<String, SyntacticCategory> categoryInternmentMap = 
+      Maps.newHashMap();
 
   // NOTE: remember to update .equals() and .hashCode() if the members change.
 
@@ -73,11 +78,15 @@ public class SyntacticCategory implements Serializable {
    * @param typeString
    * @return
    */
-  public static SyntacticCategory parseFrom(String typeString) {
+  public static synchronized SyntacticCategory parseFrom(String typeString) {
     return parseSyntacticTypeStringHelper(typeString);
   }
 
   private static SyntacticCategory parseSyntacticTypeStringHelper(String typeString) {
+    if (categoryInternmentMap.containsKey(typeString)) {
+      return categoryInternmentMap.get(typeString);
+    }
+
     int index = 0;
     int parenDepth = 0;
 
@@ -98,11 +107,12 @@ public class SyntacticCategory implements Serializable {
       index++;
     }
 
+    SyntacticCategory returnValue;
     if (minParenDepthIndex == -1) {
       // Atomic category.
       // Strip any parentheses around the variable name.
       String baseSyntacticType = typeString.replaceAll("[\\(\\)]", "").intern();
-      return new SyntacticCategory(baseSyntacticType, null, null, null, null);
+      returnValue = new SyntacticCategory(baseSyntacticType, null, null, null, null);
     } else {
       // Find the string corresponding to the operator.
       int returnTypeIndex = minParenDepthIndex + 1;
@@ -135,8 +145,11 @@ public class SyntacticCategory implements Serializable {
         }
       }
 
-      return new SyntacticCategory(null, direction, head, left, right);
+      returnValue = new SyntacticCategory(null, direction, head, left, right);
     }
+    
+    // categoryInternmentMap.put(typeString, returnValue);
+    return returnValue;
   }
 
   /**

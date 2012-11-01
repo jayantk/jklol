@@ -734,6 +734,17 @@ public class VariableNumMap implements Serializable {
     }
     return true;
   }
+  
+  /**
+   * Returns {@code true} if {@code values} can be converted into an
+   * assignment to these variables.
+   * 
+   * @param values
+   * @return
+   */
+  public boolean isValidOutcomeArray(Object... outcomes) {
+    return isValidAssignment(outcomeArrayToAssignment(outcomes));
+  }
 
   @Override
   public String toString() {

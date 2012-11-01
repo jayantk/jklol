@@ -87,6 +87,7 @@ public class ParseCcg {
           
           Set<DependencyStructure> correctDeps = Sets.newHashSet(allDeps);
           correctDeps.retainAll(trueDeps);
+          System.out.println("CORRECT: " + correctDeps);
           correct += correctDeps.size();
           falsePositive += allDeps.size() - correctDeps.size();
           falseNegative += trueDeps.size() - correctDeps.size();

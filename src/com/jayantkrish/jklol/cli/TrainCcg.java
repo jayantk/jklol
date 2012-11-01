@@ -6,6 +6,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
@@ -23,6 +24,8 @@ import com.jayantkrish.jklol.util.IoUtils;
  * @author jayantk
  */
 public class TrainCcg {
+  
+  private static final String DISCARD_INVALID_OPT = "discardInvalid";
 
   public static void main(String[] args) {
     OptionParser parser = new OptionParser();
@@ -32,6 +35,7 @@ public class TrainCcg {
     OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional options
     OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    parser.accepts(DISCARD_INVALID_OPT);
     OptionUtils.addStochasticGradientOptions(parser);
     OptionSet options = parser.parse(args);
     
@@ -41,11 +45,20 @@ public class TrainCcg {
     
     // Read in training data.
     List<CcgExample> trainingExamples = Lists.newArrayList();
+    int numDiscarded = 0;
     for (String line : IoUtils.readLines(options.valueOf(trainingData))) {
-      trainingExamples.add(CcgExample.parseFromString(line));
+      CcgExample example = CcgExample.parseFromString(line);
+      if (family.isValidExample(example)) {
+        trainingExamples.add(example);
+      } else {
+        Preconditions.checkState(options.has(DISCARD_INVALID_OPT), "Invalid example: %s", example);
+        System.out.println("Discarding example: " + example);
+        numDiscarded++;
+      }
     }
     System.out.println(lexiconEntries.size() + " lexicon entries.");
     System.out.println(trainingExamples.size() + " training examples.");
+    System.out.println(numDiscarded + " discarded training examples.");
     
     // Train the model.
     CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));

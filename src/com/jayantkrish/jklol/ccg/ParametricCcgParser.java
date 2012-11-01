@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -93,13 +94,13 @@ public class ParametricCcgParser {
       // Store the heads of the dependencies as semantic predicates.
       addArgumentsToPredicateList(lexiconEntry.getCategory().getHeads(), semanticPredicates);
       // Store any predicates from the subjects of the dependency structures.
-      addSubjectsToPredicateList(lexiconEntry.getCategory().getSubjects(), 
+      addSubjectsToPredicateList(lexiconEntry.getCategory().getSubjects(),
           lexiconEntry.getCategory().getArgumentNumbers(), semanticPredicates, maxNumArgs);
       // Store any predicates from the objects of the dependency structures.
       addArgumentsToPredicateList(lexiconEntry.getCategory().getObjects(), semanticPredicates);
     }
 
-    // Build the terminal distribution. This maps word sequences to 
+    // Build the terminal distribution. This maps word sequences to
     // CCG categories, with one possible mapping per entry in the lexicon.
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories.items());
     DiscreteVariable wordType = new DiscreteVariable("words", words.items());
@@ -117,8 +118,8 @@ public class ParametricCcgParser {
 
     // Build the dependency distribution.
     DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates.items());
-    // The set of possible argument numbers depends on the entries 
-    // provided in the lexicon. 
+    // The set of possible argument numbers depends on the entries
+    // provided in the lexicon.
     int maxArgNum = Collections.max(maxNumArgs.values());
     List<Integer> argNumValues = Lists.newArrayList();
     for (int i = 0; i <= maxArgNum; i++) {
@@ -131,31 +132,8 @@ public class ParametricCcgParser {
     VariableNumMap semanticArgVar = VariableNumMap.singleton(2, "semanticArg", semanticPredicateType);
     vars = VariableNumMap.unionAll(semanticHeadVar, semanticArgNumVar, semanticArgVar);
 
-    // Naively storing the dependency features can result in a large
-    // parameter vector. However, many semantic predicates have no 
-    // arguments, which can save some memory.
-    /*
-    VariableNumMap headAndArgNumVars = semanticHeadVar.union(semanticArgNumVar);
-    TableFactorBuilder indicatorFeatureBuilder = new TableFactorBuilder(headAndArgNumVars,
-        SparseTensorBuilder.getFactory());
-    for (String semanticPredicate : semanticPredicates.items()) {
-      int predicateIndex = semanticPredicates.getIndex(semanticPredicate);
-      if (maxNumArgs.containsKey(predicateIndex)) {
-        int predicateMaxArgNum = maxNumArgs.get(predicateIndex);
-        for (int i = 0; i <= predicateMaxArgNum; i++) {
-          Assignment a = headAndArgNumVars.outcomeArrayToAssignment(semanticPredicate, i);
-          indicatorFeatureBuilder.setWeight(a, 1.0);
-        }
-      }
-    }
-    DiscreteFactor indicatorFeatures = indicatorFeatureBuilder.build().outerProduct(
-    TableFactor.unity(semanticArgVar));
-    ParametricFactor dependencyParametricFactor = new IndicatorLogLinearFactor(vars, indicatorFeatures);
-    System.out.println(indicatorFeatures.size() + " " + Ints.asList(vars.getVariableSizes()));
-    */
-    
     ParametricFactor dependencyParametricFactor = new DenseIndicatorLogLinearFactor(vars);
-    
+
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor);
   }
@@ -228,16 +206,16 @@ public class ParametricCcgParser {
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
         dependencyHeadVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution);
   }
-  
+
   /**
-   * Increments {@code gradient} by {@code count * features(dependency)} for all 
+   * Increments {@code gradient} by {@code count * features(dependency)} for all
    * dependency structures in {@code dependencies}.
-   *   
+   * 
    * @param gradient
    * @param dependencies
    * @param count
    */
-  public void incrementDependencySufficientStatistics(SufficientStatistics gradient, 
+  public void incrementDependencySufficientStatistics(SufficientStatistics gradient,
       Collection<DependencyStructure> dependencies, double count) {
     SufficientStatistics dependencyGradient = gradient.coerceToList().getStatisticByName(DEPENDENCY_PARAMETERS);
     for (DependencyStructure dependency : dependencies) {
@@ -251,9 +229,9 @@ public class ParametricCcgParser {
   }
 
   /**
-   * Increments {@code gradient} by {@code count * features(lexiconEntry)} for all 
-   * lexicon entries in {@code lexiconEntries}.
-   *   
+   * Increments {@code gradient} by {@code count * features(lexiconEntry)} for
+   * all lexicon entries in {@code lexiconEntries}.
+   * 
    * @param gradient
    * @param dependencies
    * @param count
@@ -289,6 +267,14 @@ public class ParametricCcgParser {
     return getParameterDescription(parameters, -1);
   }
 
+  /**
+   * Gets a human-readable description of the {@code numFeatures}
+   * highest-weighted (in absolute value) features of {@code parameters}.
+   * 
+   * @param parameters
+   * @param numFeatures
+   * @return
+   */
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
 
@@ -298,5 +284,40 @@ public class ParametricCcgParser {
     sb.append(dependencyFamily.getParameterDescription(
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS), numFeatures));
     return sb.toString();
+  }
+  
+  /**
+   * Returns true if {@code example} can be used to train this model family.
+   * 
+   * @param example
+   * @return
+   */
+  public boolean isValidExample(CcgExample example) {
+    Set<DependencyStructure> dependencies = example.getDependencies();
+    for (DependencyStructure dependency : dependencies) {
+      if (!isValidDependency(dependency)) {
+        return false;
+      }
+    }
+    
+    if (example.hasLexiconEntries()) {
+      for (LexiconEntry lexiconEntry : example.getLexiconEntries()) {
+        if (!isValidLexiconEntry(lexiconEntry)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  
+  public boolean isValidDependency(DependencyStructure dependency) {
+    return dependencyHeadVar.isValidOutcomeArray(dependency.getHead()) &&  
+        dependencyArgNumVar.isValidOutcomeArray(dependency.getArgIndex()) && 
+        dependencyArgVar.isValidOutcomeArray(dependency.getObject());
+  }
+  
+  public boolean isValidLexiconEntry(LexiconEntry lexiconEntry) {
+    return terminalVar.isValidOutcomeArray(lexiconEntry.getWords()) && 
+        ccgCategoryVar.isValidOutcomeArray(lexiconEntry.getCategory()); 
   }
 }

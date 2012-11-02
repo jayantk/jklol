@@ -119,7 +119,7 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     long keyNum = 0;
     for (int i = 0; i < keyPrefix.length; i++) {
       Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i],
-          "Illegal key prefix.");
+          "Illegal key prefix: %s %s %s", i, keyPrefix[i], sizes[i]);
       keyNum += ((long) keyPrefix[i]) * indexOffsets[i];
     }
     return keyNum;

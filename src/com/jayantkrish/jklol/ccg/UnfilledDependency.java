@@ -135,6 +135,11 @@ public class UnfilledDependency implements Serializable {
   public UnfilledDependency replaceObject(IndexedPredicate newObject) {
     return new UnfilledDependency(subject, subjectFunctionVarIndex, subjectArgIndex, newObject, -1);
   }
+  
+  @Override
+  public String toString() {
+    return subjectFunctionVarIndex + " " + subjectArgIndex + " " + objectArgumentIndex;
+  }
 
   @Override
   public int hashCode() {

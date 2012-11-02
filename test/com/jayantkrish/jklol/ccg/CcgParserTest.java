@@ -28,13 +28,20 @@ public class CcgParserTest extends TestCase {
     "amazingly,amazingly,(N/>N)/>(N/>N),amazingly 1 ?2", "tasty,tasty,(N/>N),tasty 1 ?1",
     "in,in,((S\\\\N)\\\\>(S\\\\N))/N,in 1 ?2#in 2 ?3",
     "and,?1#?2,(N\\\\N)/N", "almost,almost,((N\\\\>N)/N)/>((N\\\\>N)/N),almost 1 ?3",
-    "is,is,(S\\\\N)/N,is 1 ?1, is 2 ?2", "directed,directed,(S\\\\N)/N,directed 1 ?2#directed 2 ?1"};
+    "is,is,(S\\\\N)/N,is 1 ?1, is 2 ?2", "directed,directed,(S\\\\N)/N,directed 1 ?2#directed 2 ?1",
+    ";,;,;", "or,or,conj,"};
+  
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
     1.0, 1.0,
     1.0, 1.0,
     0.5, 1.0, 2.0,
-    0.25, 1.0};
+    0.25, 1.0, 
+    1.0, 0.5};
+  
+  private static final String[] rules = {"; N N###F###T", "N ; N###T###F", 
+    "; S\\N N\\N###F###T", "conj N N\\N###F###T###?1", 
+    "conj S\\N (S\\N)\\(S\\N)###F###T###?2###?2 1 ?1"};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -44,7 +51,7 @@ public class CcgParserTest extends TestCase {
   private VariableNumMap semanticArgVar;
 
   public void setUp() {
-    parser = parseLexicon(lexicon, weights);
+    parser = parseLexicon(lexicon, rules, weights);
   }
   
   public void testParse() {
@@ -173,7 +180,72 @@ public class CcgParserTest extends TestCase {
     }
   }
   
-  private CcgParser parseLexicon(String[] lexicon, double[] weights) {
+  public void testBinaryRules() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "eat", "berries", ";"), 10);
+    
+    assertEquals(1, parses.size());
+    
+    CcgParse parse = parses.get(0);
+    assertEquals(0.3 * 2, parse.getSubtreeProbability());
+    assertEquals(2, parse.getAllDependencies().size());
+  }
+  
+   public void testBinaryRules2() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", ";", "eat", "berries", ";"), 10);
+    
+    assertEquals(3, parses.size());
+
+    Set<String> syntaxTypes = Sets.newHashSet();
+    for (CcgParse parse : parses) {
+      assertEquals(0.3 * 2, parse.getSubtreeProbability());
+      assertEquals(2, parse.getAllDependencies().size());
+      syntaxTypes.add(parse.getSyntacticCategory().getValue());
+    }
+    Set<String> expectedTypes = Sets.newHashSet("N", "S");
+    assertEquals(expectedTypes, syntaxTypes);
+  }
+   
+  public void testBinaryRulesConj() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "or", "berries"), 10);
+    
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    
+    Set<String> heads = Sets.newHashSet();
+    for (IndexedPredicate pred : parse.getSemanticHeads()) {
+      heads.add(pred.getHead());
+    }
+    Set<String> expectedHeads = Sets.newHashSet("people", "berries");
+    assertEquals(expectedHeads, heads);
+  }
+
+  public void testBinaryRulesConj2() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
+    
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    
+    Set<String> heads = Sets.newHashSet();
+    for (IndexedPredicate pred : parse.getSemanticHeads()) {
+      heads.add(pred.getHead());
+    }
+    Set<String> expectedHeads = Sets.newHashSet("eat", "directed");
+    assertEquals(expectedHeads, heads);
+    
+    Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("eat", 1, "people", 0, 1),
+        new DependencyStructure("eat", 1, "berries", 2, 2),
+        new DependencyStructure("directed", 4, "people", 0, 2),
+        new DependencyStructure("directed", 4, "houses", 5, 1));
+    assertEquals(expectedDeps, deps);
+  }
+  
+  private CcgParser parseLexicon(String[] lexicon, String[] rules, double[] weights) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
     Set<List<String>> words = Sets.newHashSet();
@@ -221,7 +293,14 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("quickly", 1, "eat"), 3.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
     
+    // Parse the binary rules
+    List<CcgBinaryRule> binaryRules = Lists.newArrayList();
+    for (int i = 0; i < rules.length; i++) {
+      binaryRules.add(CcgBinaryRule.parseFrom(rules[i]));
+    }
+    
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
-        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build());
+        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
+        binaryRules);
   }
 }

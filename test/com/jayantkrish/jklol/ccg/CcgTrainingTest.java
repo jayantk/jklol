@@ -55,7 +55,8 @@ public class CcgTrainingTest extends TestCase {
   private List<CcgExample> trainingExamplesWithLexicon;
 
   public void setUp() {
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon));
+    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
+        Lists.<String>newArrayList());
     
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {

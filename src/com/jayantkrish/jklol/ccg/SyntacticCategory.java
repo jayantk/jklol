@@ -71,6 +71,11 @@ public class SyntacticCategory implements Serializable {
     
     this.cachedHashCode = cacheHashCode();
   }
+  
+  public static SyntacticCategory create(Direction direction, HeadValue head,
+      SyntacticCategory returnType, SyntacticCategory argumentType) {
+    return new SyntacticCategory(null, direction, head, returnType, argumentType);
+  }
 
   /**
    * Parses a CCG syntactic type string into a tree.
@@ -179,6 +184,15 @@ public class SyntacticCategory implements Serializable {
    */
   public HeadValue getHead() {
     return head;
+  }
+  
+  /**
+   * Gets the direction that this category accepts an argument on.
+   * 
+   * @return
+   */
+  public Direction getDirection() {
+    return direction;
   }
 
   public boolean acceptsArgumentOn(Direction direction) {

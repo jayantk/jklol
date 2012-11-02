@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
@@ -44,6 +45,8 @@ public class ParametricCcgParser {
   private final VariableNumMap dependencyArgNumVar;
   private final VariableNumMap dependencyArgVar;
   private final ParametricFactor dependencyFamily;
+  
+  private final List<CcgBinaryRule> binaryRules;
 
   private final String TERMINAL_PARAMETERS = "terminals";
   private final String DEPENDENCY_PARAMETERS = "dependencies";
@@ -51,7 +54,7 @@ public class ParametricCcgParser {
   public ParametricCcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       ParametricFactor terminalFamily, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
-      ParametricFactor dependencyFamily) {
+      ParametricFactor dependencyFamily, List<CcgBinaryRule> binaryRules) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalFamily = Preconditions.checkNotNull(terminalFamily);
@@ -59,6 +62,7 @@ public class ParametricCcgParser {
     this.dependencyArgNumVar = Preconditions.checkNotNull(dependencyArgNumVar);
     this.dependencyArgVar = Preconditions.checkNotNull(dependencyArgVar);
     this.dependencyFamily = Preconditions.checkNotNull(dependencyFamily);
+    this.binaryRules = ImmutableList.copyOf(binaryRules);
   }
 
   /**
@@ -70,7 +74,15 @@ public class ParametricCcgParser {
    * @param lexiconLines
    * @return
    */
-  public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines) {
+  public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
+      Iterable<String> unfilteredRuleLines) {    
+    List<CcgBinaryRule> binaryRules = Lists.newArrayList();
+    for (String line : unfilteredRuleLines) {
+      if (!line.startsWith("#")) {
+        binaryRules.add(CcgBinaryRule.parseFrom(line));
+      }
+    }
+
     // Remove comments, which are lines that begin with "#".
     List<String> lexiconLines = Lists.newArrayList();
     for (String line : unfilteredLexiconLines) {
@@ -78,7 +90,7 @@ public class ParametricCcgParser {
         lexiconLines.add(line);
       }
     }
-
+    
     // Parse out all of the categories, words, and semanticPredicates from the
     // lexicon.
     IndexedList<CcgCategory> categories = IndexedList.create();
@@ -135,7 +147,8 @@ public class ParametricCcgParser {
     ParametricFactor dependencyParametricFactor = new DenseIndicatorLogLinearFactor(vars);
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
-        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor);
+        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor, 
+        binaryRules);
   }
 
   private static void addArgumentsToPredicateList(Collection<Argument> arguments,
@@ -204,7 +217,8 @@ public class ParametricCcgParser {
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS)).coerceToDiscrete();
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
-        dependencyHeadVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution);
+        dependencyHeadVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution,
+        binaryRules);
   }
 
   /**

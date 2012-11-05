@@ -24,12 +24,12 @@ public class CcgTrainingTest extends TestCase {
     "block,pred:block,N", "object,pred:object,N", 
     "red,pred:red,N/>N,pred:red 1 ?1","green,pred:green,N/>N,pred:green 1 ?1",
     "the,the,N/>N","a,the,N/>N",
-    "near,pred:near,(N\\\\>N)/N,pred:near 1 ?1#pred:near 2 ?2",
-    "near,pred:near,(S/(S\\\\N))/N,pred:near 2 ?2#pred:near 1 pred:block#?1 1 pred:block",
-    "near,pred:close,(N\\\\>N)/N,pred:close 1 ?1#pred:close 2 ?2", "near,pred:near,PP/>N,",
+    "near,pred:near,(N\\>N)/N,pred:near 1 ?1#pred:near 2 ?2",
+    "near,pred:near,(S/(S\\N))/N,pred:near 2 ?2#pred:near 1 pred:block#?1 1 pred:block",
+    "near,pred:close,(N\\>N)/N,pred:close 1 ?1#pred:close 2 ?2", "near,pred:near,PP/>N,",
     "kinda,pred:almost,(N/>N)/>(N/>N),pred:almost 1 ?2#?2 1 ?1",
-    "is,pred:equals,(S\\\\N)/N,pred:equals 1 ?1#pred:equals 2 ?2",
-    "\",\",\",\",(N\\\\>N)/N,\", 1 ?1#, 2 ?2\"",
+    "is,pred:equals,(S\\N)/N,pred:equals 1 ?1#pred:equals 2 ?2",
+    "\",\",\",\",(N\\>N)/N,\", 1 ?1#, 2 ?2\"",
     "2,NUM,N"
   };
 
@@ -47,7 +47,7 @@ public class CcgTrainingTest extends TestCase {
     "red block###pred:red 0 1 pred:block 1###red,pred:red,N/>N,pred:red 1 ?1@@@block,pred:block,N",
     "red green block###pred:red 0 1 pred:block 2#pred:green 1 1 pred:block 2###red,pred:red,N/>N,pred:red 1 ?1@@@green,pred:green,N/>N,pred:green 1 ?1@@@block,pred:block,N",
     "red block near the green block###pred:red 0 1 pred:block 1#pred:green 4 1 pred:block 5#pred:near 2 1 pred:block 1#pred:near 2 2 pred:block 5###"
-    + "red,pred:red,N/>N,pred:red 1 ?1@@@block,pred:block,N@@@near,pred:near,(N\\\\>N)/N,pred:near 1 ?1#pred:near 2 ?2@@@the,the,N/>N@@@green,pred:green,N/>N,pred:green 1 ?1@@@block,pred:block,N",
+    + "red,pred:red,N/>N,pred:red 1 ?1@@@block,pred:block,N@@@near,pred:near,(N\\>N)/N,pred:near 1 ?1#pred:near 2 ?2@@@the,the,N/>N@@@green,pred:green,N/>N,pred:green 1 ?1@@@block,pred:block,N",
   };
 
   private ParametricCcgParser family;

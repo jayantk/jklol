@@ -39,9 +39,9 @@ public class CcgParserTest extends TestCase {
     0.25, 1.0, 
     1.0, 0.5};
   
-  private static final String[] rules = {"; N N###F###T", "N ; N###T###F", 
-    "; S\\N N\\N###F###T", "conj N N\\N###F###T###?1", 
-    "conj S\\N (S\\N)\\(S\\N)###F###T###?2###?2 1 ?1"};
+  private static final String[] rules = {"\"; N N\",\"F\",\"T\"", "\"N ; N\",\"T\",\"F\"", 
+    "\"; S\\N N\\N\",\"F\",\"T\"", "\"conj N N\\N\",\"F\",\"T\",\"?1\"", 
+    "\"conj S\\N (S\\N)\\(S\\N)\",\"F\",\"T\",\"?2\",\"?2 1 ?1\""};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;

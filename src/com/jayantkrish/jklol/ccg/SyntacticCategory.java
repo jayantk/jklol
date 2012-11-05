@@ -54,6 +54,10 @@ public class SyntacticCategory implements Serializable {
   private final SyntacticCategory returnType;
   private final SyntacticCategory argumentType;
   
+  // An index >= 0 representing the semantic variable that is the head of this
+  // syntactic category.
+  private final int semanticHead;
+  
   private final int cachedHashCode;
   
   private static final Map<String, SyntacticCategory> categoryInternmentMap = 
@@ -62,12 +66,13 @@ public class SyntacticCategory implements Serializable {
   // NOTE: remember to update .equals() and .hashCode() if the members change.
 
   public SyntacticCategory(String value, Direction direction, HeadValue head,
-      SyntacticCategory returnType, SyntacticCategory argumentType) {
+      SyntacticCategory returnType, SyntacticCategory argumentType, int longRangeDep) {
     this.value = value;
     this.direction = direction;
     this.head = head;
     this.returnType = returnType;
     this.argumentType = argumentType;
+    
     
     this.cachedHashCode = cacheHashCode();
   }

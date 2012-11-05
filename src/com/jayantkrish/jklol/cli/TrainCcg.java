@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cli;
 
+import java.util.Collections;
 import java.util.List;
 
 import joptsimple.OptionParser;
@@ -34,6 +35,7 @@ public class TrainCcg {
     OptionSpec<String> trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional options
+    OptionSpec<String> rules = parser.accepts("rules").withRequiredArg().ofType(String.class);
     OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     parser.accepts(DISCARD_INVALID_OPT);
     OptionUtils.addStochasticGradientOptions(parser);
@@ -41,7 +43,9 @@ public class TrainCcg {
     
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(lexicon));
-    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries);
+    List<String> ruleEntries = options.has(rules) ? IoUtils.readLines(options.valueOf(rules))
+        : Collections.<String>emptyList();
+    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries);
     
     // Read in training data.
     List<CcgExample> trainingExamples = Lists.newArrayList();

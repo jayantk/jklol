@@ -73,7 +73,7 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 	/**
 	 * Add each element of a set of elements to this list.
 	 */ 
-	public void addAll(Collection<T> items) {
+	public void addAll(Iterable<T> items) {
 		for (T item : items) {
 			add(item);
 		}

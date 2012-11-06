@@ -9,9 +9,9 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -103,13 +103,11 @@ public class ParametricCcgParser {
       words.add(lexiconEntry.getWords());
       categories.add(lexiconEntry.getCategory());
 
-      // Store the heads of the dependencies as semantic predicates.
-      addArgumentsToPredicateList(lexiconEntry.getCategory().getHeads(), semanticPredicates);
+      // Store the values of any assignments as semantic predicates.
+      semanticPredicates.addAll(Iterables.concat(lexiconEntry.getCategory().getAssignment()));
       // Store any predicates from the subjects of the dependency structures.
       addSubjectsToPredicateList(lexiconEntry.getCategory().getSubjects(),
           lexiconEntry.getCategory().getArgumentNumbers(), semanticPredicates, maxNumArgs);
-      // Store any predicates from the objects of the dependency structures.
-      addArgumentsToPredicateList(lexiconEntry.getCategory().getObjects(), semanticPredicates);
     }
 
     // Build the terminal distribution. This maps word sequences to
@@ -151,15 +149,6 @@ public class ParametricCcgParser {
         binaryRules);
   }
 
-  private static void addArgumentsToPredicateList(Collection<Argument> arguments,
-      IndexedList<String> semanticPredicates) {
-    for (Argument arg : arguments) {
-      if (arg.hasPredicate()) {
-        semanticPredicates.add(arg.getPredicate());
-      }
-    }
-  }
-
   /**
    * Adds the predicates in {@code subjects} to {@code semanticPredicates},
    * while simultaneously counting the argument numbers each predicate appears
@@ -170,21 +159,19 @@ public class ParametricCcgParser {
    * @param semanticPredicates
    * @param maxNumArgs
    */
-  private static void addSubjectsToPredicateList(List<Argument> subjects, List<Integer> argNums,
+  private static void addSubjectsToPredicateList(List<String> subjects, List<Integer> argNums,
       IndexedList<String> semanticPredicates, Map<Integer, Integer> maxNumArgs) {
     Preconditions.checkArgument(subjects.size() == argNums.size());
     for (int i = 0; i < subjects.size(); i++) {
-      Argument subject = subjects.get(i);
+      String subject = subjects.get(i);
       int argNum = argNums.get(i);
-      if (subject.hasPredicate()) {
-        semanticPredicates.add(subject.getPredicate());
-        int predicateIndex = semanticPredicates.getIndex(subject.getPredicate());
+      semanticPredicates.add(subject);
+      int predicateIndex = semanticPredicates.getIndex(subject);
 
-        if (!maxNumArgs.containsKey(predicateIndex)) {
-          maxNumArgs.put(predicateIndex, argNum);
-        } else {
-          maxNumArgs.put(predicateIndex, Math.max(maxNumArgs.get(predicateIndex), argNum));
-        }
+      if (!maxNumArgs.containsKey(predicateIndex)) {
+        maxNumArgs.put(predicateIndex, argNum);
+      } else {
+        maxNumArgs.put(predicateIndex, Math.max(maxNumArgs.get(predicateIndex), argNum));
       }
     }
   }

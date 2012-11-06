@@ -14,164 +14,188 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
 /**
- * A CCG category composed of both a syntactic and semantic type. 
- * Syntax is represented using a {@code SyntacticCategory}, while 
- * the semantics are contained within this class itself.
+ * A CCG category composed of both a syntactic and semantic type.
+ * Syntax is represented using a {@code HeadedSyntacticCategory},
+ * while the semantics are contained within this class itself.
  * <p>
- * CCG semantics are represented in the dependency format. Each
- * category contains a number of unfilled dependencies, represented
- * as a (subject, argument number, object) tuples. Both subject and
- * object may be variables that represent yet-unfilled arguments to
- * this category. Such variables are the typically case for objects,
- * and may be used for subjects to project long-range dependencies.
- * <p>
- * Each CCG category also has zero or more semantic heads. When this
- * category is consumed by another category, these heads are used to 
- * fill the object dependencies in the consuming category.
+ * CCG semantics are represented in the dependency format and made up
+ * of two parts: (1) a set of unfilled dependencies, and (2) a set of
+ * semantic variable assignments. Each category contains a number of
+ * unfilled dependencies, represented as a (subject, argument number,
+ * object) tuples. The subject is the name of a predicate, the
+ * argument number an argument to that predicate, and the object a
+ * semantic variable. The semantic variable assignment is a mapping
+ * from semantic variables to predicates; this assignment determines
+ * the head of the current category, as well as the fillers for
+ * unfilled dependencies.
  * 
  * @author jayant
  */
 public class CcgCategory implements Serializable {
   private static final long serialVersionUID = 1L;
-  
-  // NOTE: Remember to change .equals() and .hashCode() if these members 
-  // are modified.
-  
+
+  // NOTE: Remember to change .equals() and .hashCode() if these
+  // members are modified.
+
   // The syntactic type of this category
-  private final SyntacticCategory syntax;
-  // The category's semantic heads.
-  private final Set<Argument> heads;
-  
-  // The semantic dependencies of this category, both filled and unfilled.
-  private final List<Argument> subjects;
-  private final List<Argument> objects;
+  private final HeadedSyntacticCategory syntax;
+
+  // The semantic dependencies of this category, both filled and
+  // unfilled.
+  private final List<String> subjects;
   private final List<Integer> argumentNumbers;
-  
-  private static final char ENTRY_DELIMITER=',';
-  private static final char DEPENDENCY_DELIMITER='#';
-  
-  public CcgCategory(SyntacticCategory syntax, Set<Argument> heads,  
-      List<Argument> subjects, List<Argument> objects, List<Integer> argumentNumbers) {
+  // The variables each dependency accepts.
+  private final List<Integer> objects;
+
+  // An assignment to the semantic variables of the syntactic
+  // category. 
+  // TODO: Set is the wrong representation! Must allow duplicate elements.
+  private final List<Set<String>> variableAssignments;
+
+  private static final char ENTRY_DELIMITER = ',';
+  private static final char DEPENDENCY_DELIMITER = '#';
+
+  public CcgCategory(HeadedSyntacticCategory syntax, List<String> subjects,
+      List<Integer> argumentNumbers, List<Integer> objects, List<Set<String>> variableAssignments) {
     this.syntax = Preconditions.checkNotNull(syntax);
-    this.heads = Preconditions.checkNotNull(heads);
-    
+
     this.subjects = ImmutableList.copyOf(subjects);
-    this.objects = ImmutableList.copyOf(objects);
     this.argumentNumbers = ImmutableList.copyOf(argumentNumbers);
+    this.objects = ImmutableList.copyOf(objects);
+
+    this.variableAssignments = Preconditions.checkNotNull(variableAssignments);
   }
 
   /**
    * Parses a CCG category from a string. The format is:
    * <p>
-   * (#-separated head word list),(syntactic type),(#-separated dependency list).
+   * (#-separated head word list),(syntactic type),(#-separated
+   * dependency list).
    * <p>
-   * For example, the category for "in" is: "in,(N\N)/N,in 1 ?1, in 2 ?2".
-   *  
+   * For example, the category for "in" is: "in,(N\N)/N,in 1 ?1, in 2
+   * ?2".
+   * 
    * @param categoryString
    * @return
    */
   public static CcgCategory parseFrom(String categoryString) {
     try {
-      String[] parts = new CSVParser(ENTRY_DELIMITER).parseLine(categoryString);
-      Preconditions.checkArgument(parts.length >= 2, "Invalid CCG category string: %s", 
+      String[] parts = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER, 
+          CSVParser.NULL_CHARACTER).parseLine(categoryString);
+      Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
           categoryString);
       if (parts.length > 2) {
         return parseFrom(parts[0], parts[1], parts[2]);
-      } else {
+      } else if (parts.length > 1) {
         return parseFrom(parts[0], parts[1], "");
+      } else {
+        return parseFrom(parts[0], "", "");
       }
     } catch (IOException e) {
       throw new IllegalArgumentException("Invalid CCG category: " + categoryString, e);
     }
   }
 
-  public static CcgCategory parseFrom(String semanticHeadString, String syntaxString, String dependencyString) {
+  public static CcgCategory parseFrom(String syntaxString, String assignmentString, String dependencyString) {
     try {
+      // Parse the syntactic category.
+      HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom(syntaxString);
+
       CSVParser dependencyParser = new CSVParser(DEPENDENCY_DELIMITER);
-      List<String> headStrings = Lists.newArrayList(dependencyParser.parseLine(semanticHeadString));
-      Set<Argument> heads = Sets.newHashSet(); 
-      for (String headString : headStrings) {
-        heads.add(Argument.parseFromString(headString));
+
+      // Parse any value assignments to variables.
+      String[] assignmentStrings = dependencyParser.parseLine(assignmentString);
+      List<Set<String>> values = Lists.newArrayList();
+      for (int i = 0; i < syntax.getUniqueVariables().length; i++) {
+        values.add(Sets.<String>newHashSet());
       }
-
-      SyntacticCategory syntax = SyntacticCategory.parseFrom(syntaxString);
-
-      // Parse the semantic dependencies.
-      List<Argument> subjects = Lists.newArrayList();
-      List<Argument> objects = Lists.newArrayList();
+      if (assignmentString.trim().length() > 0) {
+        for (int i = 0; i < assignmentStrings.length; i++) {
+          String[] parts = assignmentStrings[i].split("\\s+");
+          Preconditions.checkArgument(parts.length == 2, "Invalid CCG variable assignment: %s", 
+              assignmentStrings[i]);
+          
+          int varNum = Integer.parseInt(parts[0]);
+          String value = parts[1];
+          values.get(varNum).add(value);
+        }
+      }
+      
+      // Parse any semantic dependencies.
+      List<String> subjects = Lists.newArrayList();
       List<Integer> argumentNumbers = Lists.newArrayList();
+      List<Integer> objects = Lists.newArrayList();
       if (dependencyString.trim().length() > 0) {
         String[] depStrings = dependencyParser.parseLine(dependencyString);
         for (int i = 0; i < depStrings.length; i++) {
           String[] depParts = depStrings[i].split(" ");
-          Preconditions.checkArgument(depParts.length == 3, "Invalid CCG semantic dependency: %s", 
+          Preconditions.checkArgument(depParts.length == 3, "Invalid CCG semantic dependency: %s",
               depStrings[i]);
 
+          subjects.add(depParts[0]);
           argumentNumbers.add(Integer.parseInt(depParts[1]));
-          subjects.add(Argument.parseFromString(depParts[0]));
-          objects.add(Argument.parseFromString(depParts[2]));
+          objects.add(Integer.parseInt(depParts[2]));
         }
       }
 
-      return new CcgCategory(syntax, heads, subjects, objects, argumentNumbers);
+      return new CcgCategory(syntax, subjects, argumentNumbers, objects, values);
     } catch (IOException e) {
-      throw new IllegalArgumentException("Invalid CCG category: " + semanticHeadString + "," 
-          + syntaxString + "," + dependencyString, e);
+      throw new IllegalArgumentException("Invalid CCG category: " + syntaxString + "," 
+          + assignmentString + "," + dependencyString, e);
     }
   }
 
   /**
    * Gets the syntactic type of this category.
-   *  
-   * @return
-   */
-  public SyntacticCategory getSyntax() {
-    return syntax;
-  }
-  
-  /**
-   * Gets the head semantic type of this category.
    * 
    * @return
    */
-  public Set<Argument> getHeads() {
-    return heads;
+  public HeadedSyntacticCategory getSyntax() {
+    return syntax;
   }
-  
-  public List<Argument> getSubjects() {
+
+  /**
+   * Gets the values assigned to each semantic variable of this. The
+   * length of the returned list is equal to the number of semantic
+   * variables, as returned by {@link #getSemanticVariables()}.
+   * 
+   * @return
+   */
+  public List<Set<String>> getAssignment() {
+    return variableAssignments;
+  }
+
+  /**
+   * Gets the set of semantic variables used in this category.
+   * 
+   * @return
+   */
+  public int[] getSemanticVariables() {
+    return syntax.getUniqueVariables();
+  }
+
+  public List<String> getSubjects() {
     return subjects;
   }
-  
-  public List<Argument> getObjects() {
-    return subjects;
+
+  public List<Integer> getObjects() {
+    return objects;
   }
-  
+
   public List<Integer> getArgumentNumbers() {
     return argumentNumbers;
   }
-  
-  public List<UnfilledDependency> createUnfilledDependencies(int wordIndex, 
+
+  public List<UnfilledDependency> createUnfilledDependencies(int wordIndex,
       List<UnfilledDependency> filledDependencies) {
     List<UnfilledDependency> unfilledDependencies = Lists.newArrayListWithCapacity(subjects.size());
     for (int i = 0; i < subjects.size(); i++) {
-      IndexedPredicate subject = null;
-      int subjectIndex = -1;
-      if (subjects.get(i).hasPredicate()) {
-        subject = new IndexedPredicate(subjects.get(i).getPredicate(), wordIndex);
-      } else {
-        subjectIndex = subjects.get(i).getArgumentNumber();
-      }
-      
-      IndexedPredicate object = null;
-      int objectIndex = -1;
-      if (objects.get(i).hasPredicate()) {
-        object = new IndexedPredicate(objects.get(i).getPredicate(), wordIndex);
-      } else {
-        objectIndex = objects.get(i).getArgumentNumber();
-      }
+      IndexedPredicate subject = new IndexedPredicate(subjects.get(i), wordIndex);
+      UnfilledDependency dep = new UnfilledDependency(subject, -1, argumentNumbers.get(i),
+          null, objects.get(i));
 
-      UnfilledDependency dep = new UnfilledDependency(subject, subjectIndex, 
-          argumentNumbers.get(i), object, objectIndex);
+      // Technically, this is unnecessary since removing the possibility of pre-filled
+      // dependencies. TODO: add back pre-filled dependencies.
       if (dep.isFilledDependency()) {
         filledDependencies.add(dep);
       } else {
@@ -180,16 +204,16 @@ public class CcgCategory implements Serializable {
     }
     return unfilledDependencies;
   }
-  
+
   @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result + ((argumentNumbers == null) ? 0 : argumentNumbers.hashCode());
-    result = prime * result + ((heads == null) ? 0 : heads.hashCode());
     result = prime * result + ((objects == null) ? 0 : objects.hashCode());
     result = prime * result + ((subjects == null) ? 0 : subjects.hashCode());
     result = prime * result + ((syntax == null) ? 0 : syntax.hashCode());
+    result = prime * result + ((variableAssignments == null) ? 0 : variableAssignments.hashCode());
     return result;
   }
 
@@ -207,11 +231,6 @@ public class CcgCategory implements Serializable {
         return false;
     } else if (!argumentNumbers.equals(other.argumentNumbers))
       return false;
-    if (heads == null) {
-      if (other.heads != null)
-        return false;
-    } else if (!heads.equals(other.heads))
-      return false;
     if (objects == null) {
       if (other.objects != null)
         return false;
@@ -227,85 +246,16 @@ public class CcgCategory implements Serializable {
         return false;
     } else if (!syntax.equals(other.syntax))
       return false;
+    if (variableAssignments == null) {
+      if (other.variableAssignments != null)
+        return false;
+    } else if (!variableAssignments.equals(other.variableAssignments))
+      return false;
     return true;
   }
 
   @Override
   public String toString() {
-    return heads.toString() + ":" + syntax.toString();
-  }
-  
-  public static final class Argument implements Serializable {
-    private static final long serialVersionUID = 1L;
-
-    private final int argumentNumber;
-    private final String predicate;
-
-    private Argument(int argumentNumber, String predicate) {
-      this.argumentNumber = argumentNumber;
-      this.predicate = predicate;
-    }
-    
-    public static Argument parseFromString(String argString) {
-      if (argString.startsWith("?") && argString.trim().length() == 2) {
-        Integer argInd = Integer.parseInt(argString.substring(1));
-        return Argument.createFromArgumentNumber(argInd);
-      } else {
-        return Argument.createFromPredicate(argString);
-      }
-    }
-    
-    public static Argument createFromPredicate(String predicate) {
-      return new Argument(-1, predicate);
-    }
-    
-    public static Argument createFromArgumentNumber(int argumentNumber) {
-      return new Argument(argumentNumber, null);
-    }
-    
-    public boolean hasPredicate() {
-      return predicate != null;
-    }
-    
-    public int getArgumentNumber() {
-      return argumentNumber;
-    }
-    
-    public String getPredicate() {
-      return predicate;
-    }
-    
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + argumentNumber;
-      result = prime * result + ((predicate == null) ? 0 : predicate.hashCode());
-      return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj)
-        return true;
-      if (obj == null)
-        return false;
-      if (getClass() != obj.getClass())
-        return false;
-      Argument other = (Argument) obj;
-      if (argumentNumber != other.argumentNumber)
-        return false;
-      if (predicate == null) {
-        if (other.predicate != null)
-          return false;
-      } else if (!predicate.equals(other.predicate))
-        return false;
-      return true;
-    }
-    
-    @Override
-    public String toString() {
-      return (predicate != null) ? predicate : ("?" + argumentNumber); 
-    }
+    return subjects.toString() + ":" + syntax.toString();
   }
 }

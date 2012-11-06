@@ -101,7 +101,8 @@ public class CcgChart {
 
     if (entry.isTerminal()) {
       return CcgParse.forTerminal(entry.getLexiconEntry(), 
-          parser.headArrayToIndexedPredicateArray(entry.getHeadWordNums(), entry.getHeadIndexes()),
+          parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
+              entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
           terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex]);
     } else {
@@ -113,8 +114,9 @@ public class CcgChart {
       double nodeProb = probabilities[spanStart][spanEnd][beamIndex] / 
           (left.getSubtreeProbability() * right.getSubtreeProbability());
 
-      return CcgParse.forNonterminal(entry.getSyntax(), 
-          parser.headArrayToIndexedPredicateArray(entry.getHeadWordNums(), entry.getHeadIndexes()), 
+      return CcgParse.forNonterminal(entry.getHeadedSyntax(), 
+          parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
+              entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()), 
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right);
     }
   }
@@ -204,14 +206,13 @@ public class CcgChart {
    * @author jayant
    */
   public static class ChartEntry {
-    private final SyntacticCategory syntax;
+    private final HeadedSyntacticCategory syntax;
     
-    // The words/predicates that are the head of this entry, along
-    // with their positions in the sentence.
-    private final int[] headWordNums;
-    private final int[] headIndexes;
-    // Argument numbers which become heads of this.
-    private final int[] headUnfilledArgs;
+    // An assignment to the semantic variables given by syntax. 
+    // Each value is both a predicate and its index in the sentence. 
+    private final int[] assignmentVariableNums;
+    private final int[] assignmentPredicateNums;
+    private final int[] assignmentIndexes;
     
     // Partially complete dependency structures, encoded into longs 
     // for efficiency.
@@ -236,14 +237,14 @@ public class CcgChart {
     private final int rightSpanEnd;
     private final int rightChartIndex;
 
-    public ChartEntry(SyntacticCategory syntax, int[] headWordNums, int[] headIndexes, 
-        int[] headUnfilledArgs, long[] unfilledDependencies, long[] deps,
-        int leftSpanStart, int leftSpanEnd, int leftChartIndex,
+    public ChartEntry(HeadedSyntacticCategory syntax, int[] assignmentVariableNums, 
+        int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
+        long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex) {
       this.syntax = Preconditions.checkNotNull(syntax);
-      this.headWordNums = Preconditions.checkNotNull(headWordNums);
-      this.headIndexes = Preconditions.checkNotNull(headIndexes);
-      this.headUnfilledArgs = Preconditions.checkNotNull(headUnfilledArgs);
+      this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
+      this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
+      this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
 
       this.lexiconEntry = null;
@@ -260,27 +261,16 @@ public class CcgChart {
       this.rightChartIndex = rightChartIndex;
     }
 
-    /**
-     * Create a chart entry for a terminal (lexicon entry) in the parse tree.
-     * 
-     * @param lexiconEntry
-     * @param heads
-     * @param headArguments
-     * @param unfilledDependencies
-     * @param deps
-     * @param spanStart
-     * @param spanEnd
-     */
-    public ChartEntry(CcgCategory lexiconEntry, int[] headWordNums, int[] headIndexes, 
-        int[] headUnfilledArgs, long[] unfilledDependencies,
+    public ChartEntry(CcgCategory ccgCategory, int[] assignmentVariableNums,
+        int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
         long[] deps, int spanStart, int spanEnd) {
-      this.syntax = Preconditions.checkNotNull(lexiconEntry.getSyntax());
-      this.headWordNums = Preconditions.checkNotNull(headWordNums);
-      this.headIndexes = Preconditions.checkNotNull(headIndexes);
-      this.headUnfilledArgs = Preconditions.checkNotNull(headUnfilledArgs);
+      this.syntax = Preconditions.checkNotNull(ccgCategory.getSyntax());
+      this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
+      this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);      
+      this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
 
-      this.lexiconEntry = lexiconEntry;
+      this.lexiconEntry = ccgCategory;
       this.deps = Preconditions.checkNotNull(deps);
 
       isTerminal = true;
@@ -294,39 +284,25 @@ public class CcgChart {
       this.rightSpanEnd = -1;
       this.rightChartIndex = -1;
     }
-
-    public SyntacticCategory getSyntax() {
+    
+    public HeadedSyntacticCategory getHeadedSyntax() {
       return syntax;
     }
+
+    public SyntacticCategory getSyntax() {
+      return syntax.getSyntax();
+    }
     
-    /**
-     * Returns the words/predicates that are the head of this entry, encoded
-     * as integers. The integers can be converted back to words by looking them
-     * up in the DiscreteVariable representing the heads of dependency structures.
-     *    
-     * @return
-     */
-    public int[] getHeadWordNums() {
-      return headWordNums;
+    public int[] getAssignmentVariableNums() {
+      return assignmentVariableNums;
     }
-
-    /**
-     * Gets the positions of each head predicate in the sentence.
-     * 
-     * @return
-     */
-    public int[] getHeadIndexes() {
-      return headIndexes;
+    
+    public int[] getAssignmentPredicateNums() {
+      return assignmentPredicateNums;
     }
-
-    /**
-     * Gets any heads of this which are not yet filled. Parsing should fill
-     * these heads with values from this category's arguments.
-     * 
-     * @return
-     */
-    public int[] getUnfilledHeads() {
-      return headUnfilledArgs;
+    
+    public int[] getAssignmentIndexes() {
+      return assignmentIndexes;
     }
 
     public long[] getUnfilledDependencies() {
@@ -367,6 +343,11 @@ public class CcgChart {
 
     public int getRightChartIndex() {
       return rightChartIndex;
+    }
+    
+    @Override
+    public String toString() {
+      return "[" + Arrays.toString(assignmentPredicateNums) + ":" + syntax.getSyntax().toString() + "]";
     }
   }
 

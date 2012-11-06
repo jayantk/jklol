@@ -47,7 +47,7 @@ public class CcgUnaryRule {
         Preconditions.checkArgument(newDeps.length == 3);
         long subjectNum = Long.parseLong(newDeps[0].substring(1));
         long argNum = Long.parseLong(newDeps[1]);
-        long objectNum = Long.parseLong(newDeps[2].substring(1)); 
+        long objectNum = Long.parseLong(newDeps[2].substring(1));
         unfilledDeps = new long[1];
 
         unfilledDeps[0] = CcgParser.marshalUnfilledDependency(objectNum, argNum, subjectNum, 0, 0);

@@ -6,8 +6,6 @@ import java.util.Arrays;
 import au.com.bytecode.opencsv.CSVParser;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 
 /**
@@ -160,6 +158,8 @@ public class CcgBinaryRule {
       int leftSpanEnd, int leftIndex, int rightSpanStart, int rightSpanEnd,
       int rightIndex) {
 
+    throw new UnsupportedOperationException();
+    /*
     int[] newHeadNums = new int[0];
     int[] newHeadIndexes = new int[0];
     int[] newUnfilledHeads = Arrays.copyOf(unfilledHeads, unfilledHeads.length);
@@ -181,5 +181,6 @@ public class CcgBinaryRule {
     return new ChartEntry(returnSyntax, newHeadNums, newHeadIndexes, newUnfilledHeads,
         newUnfilledDeps, newFilledDeps, leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart,
         rightSpanEnd, rightIndex);
+        */
   }
 }

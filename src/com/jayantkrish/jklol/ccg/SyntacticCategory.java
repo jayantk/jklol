@@ -8,11 +8,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
- * A syntactic category for a CCG, such as N/N. In addition to 
- * representing function/argument information, these categories 
- * contain head rules for deciding, after a function is applied,
- * what the head word of the resulting category is.
- *  
+ * A syntactic category for a CCG, such as N/N. In addition to
+ * representing function/argument information, these categories
+ * contain head rules for deciding, after a function is applied, what
+ * the head word of the resulting category is.
+ * 
  * @author jayant
  */
 public class SyntacticCategory implements Serializable {
@@ -22,64 +22,48 @@ public class SyntacticCategory implements Serializable {
     LEFT("\\"), RIGHT("/");
 
     private final String slash;
+
     private Direction(final String slash) {
       this.slash = slash;
     }
+
     @Override
     public String toString() {
       return slash;
     }
   };
 
-  public enum HeadValue {
-    ARGUMENT(">"), RETURN("");
-    
-    private final String str;
-    private HeadValue(final String str) {
-      this.str = str;
-    }
-    @Override
-    public String toString() {
-      return str;
-    }
-  };
-
   // If this category is atomic, then it has a value.
   private final String value;
 
-  // If this category is functional, it has an argument direction, an argument
+  // If this category is functional, it has an argument direction, an
+  // argument
   // and a return type.
   private final Direction direction;
-  private final HeadValue head;
   private final SyntacticCategory returnType;
   private final SyntacticCategory argumentType;
-  
-  // An index >= 0 representing the semantic variable that is the head of this
-  // syntactic category.
-  private final int semanticHead;
-  
+
   private final int cachedHashCode;
-  
-  private static final Map<String, SyntacticCategory> categoryInternmentMap = 
+
+  private static final Map<String, SyntacticCategory> categoryInternmentMap =
       Maps.newHashMap();
 
-  // NOTE: remember to update .equals() and .hashCode() if the members change.
+  // NOTE: remember to update .equals() and .hashCode() if the members
+  // change.
 
-  public SyntacticCategory(String value, Direction direction, HeadValue head,
-      SyntacticCategory returnType, SyntacticCategory argumentType, int longRangeDep) {
+  public SyntacticCategory(String value, Direction direction, SyntacticCategory returnType,
+      SyntacticCategory argumentType) {
     this.value = value;
     this.direction = direction;
-    this.head = head;
     this.returnType = returnType;
     this.argumentType = argumentType;
-    
-    
+
     this.cachedHashCode = cacheHashCode();
   }
-  
-  public static SyntacticCategory create(Direction direction, HeadValue head,
-      SyntacticCategory returnType, SyntacticCategory argumentType) {
-    return new SyntacticCategory(null, direction, head, returnType, argumentType);
+
+  public static SyntacticCategory create(Direction direction, SyntacticCategory returnType,
+      SyntacticCategory argumentType) {
+    return new SyntacticCategory(null, direction, returnType, argumentType);
   }
 
   /**
@@ -92,11 +76,7 @@ public class SyntacticCategory implements Serializable {
     return parseSyntacticTypeStringHelper(typeString);
   }
 
-  private static SyntacticCategory parseSyntacticTypeStringHelper(String typeString) {
-    if (categoryInternmentMap.containsKey(typeString)) {
-      return categoryInternmentMap.get(typeString);
-    }
-
+  public static int findSlashIndex(String typeString) {
     int index = 0;
     int parenDepth = 0;
 
@@ -116,21 +96,25 @@ public class SyntacticCategory implements Serializable {
       }
       index++;
     }
+    return minParenDepthIndex;
+  }
+
+  private static SyntacticCategory parseSyntacticTypeStringHelper(String typeString) {
+    if (categoryInternmentMap.containsKey(typeString)) {
+      return categoryInternmentMap.get(typeString);
+    }
+
+    int minParenDepthIndex = findSlashIndex(typeString);
 
     SyntacticCategory returnValue;
     if (minParenDepthIndex == -1) {
       // Atomic category.
       // Strip any parentheses around the variable name.
       String baseSyntacticType = typeString.replaceAll("[\\(\\)]", "").intern();
-      returnValue = new SyntacticCategory(baseSyntacticType, null, null, null, null);
+      returnValue = new SyntacticCategory(baseSyntacticType, null, null, null);
     } else {
       // Find the string corresponding to the operator.
       int returnTypeIndex = minParenDepthIndex + 1;
-      if (typeString.charAt(returnTypeIndex) == '>') {
-        // Type string wants the return argument to inherit the head from the
-        // right.
-        returnTypeIndex++;
-      }
 
       SyntacticCategory left = parseSyntacticTypeStringHelper(
           typeString.substring(0, minParenDepthIndex));
@@ -148,16 +132,9 @@ public class SyntacticCategory implements Serializable {
         throw new IllegalArgumentException("Invalid argument direction: " + directionString);
       }
 
-      HeadValue head = HeadValue.RETURN;
-      if (directionString.length() > 1) {
-        if (directionString.charAt(1) == '>') {
-          head = HeadValue.ARGUMENT;
-        }
-      }
-
-      returnValue = new SyntacticCategory(null, direction, head, left, right);
+      returnValue = new SyntacticCategory(null, direction, left, right);
     }
-    
+
     // categoryInternmentMap.put(typeString, returnValue);
     return returnValue;
   }
@@ -172,7 +149,7 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
-   * Returns the atomic syntactic type of this. Returns null if 
+   * Returns the atomic syntactic type of this. Returns null if
    * {@code isAtomic() != true}.
    * 
    * @return
@@ -181,16 +158,6 @@ public class SyntacticCategory implements Serializable {
     return value;
   }
 
-  /**
-   * Where the head word of the return type (result of applying this category)
-   * is inherited from.
-   * 
-   * @return
-   */
-  public HeadValue getHead() {
-    return head;
-  }
-  
   /**
    * Gets the direction that this category accepts an argument on.
    * 
@@ -205,11 +172,43 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
-   * Gets the sequence of arguments that this category accepts. Note that the
-   * returned arguments themselves may be functional types.
+   * Gets the number of subcategories of this category. This number is
+   * equal to the number of nodes in the binary tree required to
+   * represent the category. Specifically, this method returns 1 if
+   * this is an atomic category.
    * 
-   * The sequence is returned with the first required argument at the end of the
-   * list.
+   * @return
+   */
+  public int getNumSubcategories() {
+    if (isAtomic()) {
+      return 1;
+    } else {
+      return 1 + argumentType.getNumSubcategories() + returnType.getNumSubcategories();
+    }
+  }
+  
+  public int getNumArgumentSubcategories() {
+    if (isAtomic()) {
+      return 0;
+    } else {
+      return argumentType.getNumSubcategories();
+    }
+  }
+  
+  public int getNumReturnSubcategories() {
+    if (isAtomic()) {
+      return 0;
+    } else {
+      return returnType.getNumSubcategories();
+    }
+  }
+
+  /**
+   * Gets the sequence of arguments that this category accepts. Note
+   * that the returned arguments themselves may be functional types.
+   * 
+   * The sequence is returned with the first required argument at the
+   * end of the list.
    * 
    * @return
    */
@@ -224,9 +223,8 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
-   * If this is a functional category, this gets the type of the 
-   * return value. Returns {@code null} if this is an atomic
-   * category. 
+   * If this is a functional category, this gets the type of the
+   * return value. Returns {@code null} if this is an atomic category.
    * 
    * @return
    */
@@ -235,9 +233,9 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
-   * If this is a functional category, this gets the expected type 
-   * of the function's argument. Returns {@code null} if this is 
-   * an atomic category. 
+   * If this is a functional category, this gets the expected type of
+   * the function's argument. Returns {@code null} if this is an
+   * atomic category.
    * 
    * @return
    */
@@ -246,9 +244,9 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
-   * Returns {@code true} if this category is unifiable with {@code other}.
-   * This method exists mostly for forward compatibility -- it currently
-   * checks exact equality. 
+   * Returns {@code true} if this category is unifiable with
+   * {@code other}. This method exists mostly for forward
+   * compatibility -- it currently checks exact equality.
    * 
    * @param other
    * @return
@@ -262,7 +260,6 @@ public class SyntacticCategory implements Serializable {
     int result = 1;
     result = prime * result + ((argumentType == null) ? 0 : argumentType.hashCode());
     result = prime * result + ((direction == null) ? 0 : direction.hashCode());
-    result = prime * result + ((head == null) ? 0 : head.hashCode());
     result = prime * result + ((returnType == null) ? 0 : returnType.hashCode());
     result = prime * result + ((value == null) ? 0 : value.hashCode());
     return result;
@@ -289,8 +286,6 @@ public class SyntacticCategory implements Serializable {
       return false;
     if (direction != other.direction)
       return false;
-    if (head != other.head)
-      return false;
     if (returnType == null) {
       if (other.returnType != null)
         return false;
@@ -316,7 +311,6 @@ public class SyntacticCategory implements Serializable {
       }
 
       sb.append(direction.toString());
-      sb.append(head.toString());
 
       if (argumentType != null) {
         sb.append(argumentType.toString());

@@ -10,7 +10,7 @@ import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
 public class CcgParse {
 
-  private final SyntacticCategory syntax;
+  private final HeadedSyntacticCategory syntax;
   
   // The lexicon entry used to create this parse.
   // Non-null only when this is a terminal.
@@ -35,13 +35,17 @@ public class CcgParse {
   private final CcgParse right;
 
   /**
-   * Use static methods to construct a {@code CcgParse}.
    * 
-   * @param head
+   * @param syntax
+   * @param lexiconEntry
+   * @param spannedWords
+   * @param heads
+   * @param dependencies
+   * @param probability
    * @param left
    * @param right
    */
-  private CcgParse(SyntacticCategory syntax, CcgCategory lexiconEntry, List<String> spannedWords, 
+  private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry, List<String> spannedWords, 
       Set<IndexedPredicate> heads, List<DependencyStructure> dependencies, double probability,
       CcgParse left, CcgParse right) {
     this.syntax = Preconditions.checkNotNull(syntax);
@@ -81,7 +85,7 @@ public class CcgParse {
         heads, deps, lexicalProbability, null, null);
   }
 
-  public static CcgParse forNonterminal(SyntacticCategory syntax, Set<IndexedPredicate> heads,
+  public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left, CcgParse right) {
     return new CcgParse(syntax, null, null, heads, dependencies, dependencyProbability, left, right);
   }
@@ -102,6 +106,10 @@ public class CcgParse {
    * @return
    */
   public SyntacticCategory getSyntacticCategory() {
+    return syntax.getSyntax();
+  }
+  
+  public HeadedSyntacticCategory getHeadedSyntacticCategory() {
     return syntax;
   }
   
@@ -215,9 +223,9 @@ public class CcgParse {
   @Override
   public String toString() {
     if (left != null && right != null) {
-      return "(" + syntax + ", " + left + ", " + right + ")";
+      return "(" + syntax.getSyntax() + ", " + left + ", " + right + ")";
     } else {
-      return "(" + syntax + ")";
+      return "(" + syntax.getSyntax() + ")";
     }
   }
 }

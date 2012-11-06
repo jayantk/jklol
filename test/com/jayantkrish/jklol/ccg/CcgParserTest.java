@@ -11,7 +11,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.CcgCategory.Argument;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -22,14 +21,18 @@ public class CcgParserTest extends TestCase {
 
   CcgParser parser;
   
-  private static final String[] lexicon = {"I,I,N", "people,people,N,", "berries,berries,N", "houses,houses,N",
-    "eat,eat,(S\\\\N)/N,eat 1 ?1#eat 2 ?2", "that,that,(N\\\\>N)/(S\\\\N),that 1 ?1#?2 1 ?1#that 2 ?2", 
-    "quickly,quickly,((S\\\\N)/N)/>((S\\\\N)/N),quickly 1 ?3", "in,in,(N\\\\>N)/N,in 1 ?1#in 2 ?2",
-    "amazingly,amazingly,(N/>N)/>(N/>N),amazingly 1 ?2", "tasty,tasty,(N/>N),tasty 1 ?1",
-    "in,in,((S\\\\N)\\\\>(S\\\\N))/N,in 1 ?2#in 2 ?3",
-    "and,?1#?2,(N\\\\N)/N", "almost,almost,((N\\\\>N)/N)/>((N\\\\>N)/N),almost 1 ?3",
-    "is,is,(S\\\\N)/N,is 1 ?1, is 2 ?2", "directed,directed,(S\\\\N)/N,directed 1 ?2#directed 2 ?1",
-    ";,;,;", "or,or,conj,"};
+  private static final String[] lexicon = {"I,N{0},0 I", "people,N{0},0 people", "berries,N{0},0 berries", "houses,N{0},0 houses",
+    "eat,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1#eat 2 2", "that,((N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0},0 that,that 1 1#that 2 2", 
+    "quickly,(((S{1}\\N{2}){1}/N{3}){1}/((S{1}\\N{2}){1}/N{3}){1}){0},0 quickly,quickly 1 1", 
+    "in,((N{1}\\N{1}){0}/N{2}){0},0 in,in 1 1#in 2 2",
+    "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 amazingly,amazingly 1 2", 
+    "tasty,(N{1}/N{1}){0},0 tasty,tasty 1 1",
+    "in,(((S{1}\\N{2}){1}\\(S{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 2#in 2 3",
+    "and,((N{1}\\N{1}){0}/N{2}){0},0 and", 
+    "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},0 almost,almost 1 2",
+    "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
+    "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2#directed 2 1",
+    ";,;", "or,conj,"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
@@ -39,9 +42,12 @@ public class CcgParserTest extends TestCase {
     0.25, 1.0, 
     1.0, 0.5};
   
+  /*
   private static final String[] rules = {"\"; N N\",\"F\",\"T\"", "\"N ; N\",\"T\",\"F\"", 
     "\"; S\\N N\\N\",\"F\",\"T\"", "\"conj N N\\N\",\"F\",\"T\",\"?1\"", 
     "\"conj S\\N (S\\N)\\(S\\N)\",\"F\",\"T\",\"?2\",\"?2 1 ?1\""};
+    */
+  private static final String[] rules = {};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -66,6 +72,7 @@ public class CcgParserTest extends TestCase {
     
     assertEquals(1.0, parse.getNodeProbability());
     assertEquals(2.0, parse.getRight().getNodeProbability());
+    System.out.println(parse.getRight().getLeft());
     assertEquals(4.0, parse.getRight().getLeft().getNodeProbability());
     assertEquals(0.5, parse.getLeft().getNodeProbability());
     assertEquals(0.5 * 0.3 * 2.0 * 4.0, parse.getSubtreeProbability());
@@ -256,10 +263,8 @@ public class CcgParserTest extends TestCase {
 
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       categories.add(category);
-      for (Argument head : category.getHeads()) {
-        if (head.hasPredicate()) {
-          semanticPredicates.addAll(Arrays.asList(head.getPredicate()));
-        }
+      for (String head : Iterables.concat(category.getAssignment())) {
+        semanticPredicates.addAll(Arrays.asList(head));
       }
     }
     

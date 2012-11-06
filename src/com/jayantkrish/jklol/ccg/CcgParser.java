@@ -381,27 +381,18 @@ public class CcgParser implements Serializable {
     HeadedSyntacticCategory firstReturnSyntax = first.getHeadedSyntax().getReturnType();
     HeadedSyntacticCategory otherSyntax = other.getHeadedSyntax();
 
-    System.out.println(first + " " + other);
-    
     // Map each semantic variable of other to a variable of {@code
     // this}.
-    int[] otherVars = otherSyntax.getUniqueVariables();
     int[] otherToFirstMap = otherSyntax.unifyVariables(firstArgumentSyntax);
+    if (otherToFirstMap == null) {
+      return null;
+    }
 
     // Relabel other's variable assignment to correspond to this'
     // variables.
-    int[] otherAssignmentVariableNums = other.getAssignmentVariableNums();
+    int[] relabeledAssignmentVariableNums = other.getAssignmentVariableNumsRelabeled(otherToFirstMap);
     int[] otherAssignmentPredicateNums = other.getAssignmentPredicateNums();
     int[] otherAssignmentIndexes = other.getAssignmentIndexes();
-    int[] relabeledAssignmentVariableNums = new int[otherAssignmentVariableNums.length];
-    Arrays.fill(relabeledAssignmentVariableNums, -1);
-    for (int i = 0; i < otherAssignmentVariableNums.length; i++) {
-      for (int j = 0; j < otherVars.length; j++) {
-        if (otherVars[j] == otherAssignmentVariableNums[i]) {
-          relabeledAssignmentVariableNums[i] = otherToFirstMap[j];
-        }
-      }
-    }
 
     // Variables which will be in the returned syntactic type.
     int[] returnVariables = firstReturnSyntax.getUniqueVariables();
@@ -411,34 +402,13 @@ public class CcgParser implements Serializable {
     List<Integer> newAssignmentPredicateNums = Lists.newArrayList();
     List<Integer> newAssignmentIndexes = Lists.newArrayList();
 
-    // Fill any dependencies containing the index of a just-filled
-    // variable.
-    long[] unfilledDependencies = first.getUnfilledDependencies();
-    int numDeps = 0;
-    // Fill any dependencies that depend on this variable.
-    for (long unfilledDependency : unfilledDependencies) {
-      int objectArgNum = getObjectArgNumFromDep(unfilledDependency);
-      
-      boolean depWasFilled = false;
-      for (int i = 0; i < relabeledAssignmentVariableNums.length; i++) {
-        if (relabeledAssignmentVariableNums[i] == objectArgNum) {
-          // Create a new filled dependency by substituting in the
-          // current object.
-          long filledDep = unfilledDependency - (objectArgNum << OBJECT_OFFSET);
-          filledDep += ((long) otherAssignmentPredicateNums[i] + MAX_ARG_NUM) << OBJECT_OFFSET;
-          filledDep += ((long) otherAssignmentIndexes[i]) << OBJECT_WORD_IND_OFFSET;
-          
-          depAccumulator[numDeps] = filledDep;
-          numDeps++;
-          depWasFilled = true;
-        } 
-      }
-
-      if (!depWasFilled) {
-        depAccumulator[numDeps] = unfilledDependency;
-        numDeps++;
-      }
-    }
+    // Fill any dependencies from first, using any just-filled variables.
+    long[] unfilledDependencies = first.getUnfilledDependencies(); 
+    int numDeps = accumulateDependencies(unfilledDependencies, relabeledAssignmentVariableNums,
+        otherAssignmentPredicateNums, otherAssignmentIndexes, depAccumulator, 0);
+    long[] otherUnfilledDependencies = other.getUnfilledDependenciesRelabeled(otherToFirstMap);
+    numDeps = accumulateDependencies(otherUnfilledDependencies, first.getAssignmentVariableNums(),
+        first.getAssignmentPredicateNums(), first.getAssignmentIndexes(), depAccumulator, numDeps);
 
     // Copy any assignments from the argument type which remain in the return type.
     for (int i = 0; i < relabeledAssignmentVariableNums.length; i++) {
@@ -464,26 +434,12 @@ public class CcgParser implements Serializable {
       }
     }
     
+    /*
     System.out.println(newAssignmentVariableNums);
     System.out.println(newAssignmentPredicateNums);
     System.out.println(newAssignmentIndexes);
     System.out.println(Arrays.toString(Arrays.copyOf(depAccumulator, numDeps)));
-
-    // Relabel other's dependencies to match this one's variable
-    // indexing scheme.
-    long[] otherUnfilledDependencies = other.getUnfilledDependencies();
-    for (long otherUnfilledDependency : otherUnfilledDependencies) {
-      int objectVarNum = getObjectArgNumFromDep(otherUnfilledDependency);
-      int objectVarIndex = Ints.indexOf(otherVars, objectVarNum);
-      int relabeledVarNum = otherToFirstMap[objectVarIndex];
-
-      Preconditions.checkState(Ints.contains(returnVariables, relabeledVarNum));
-
-      long relabeledUnfilledDep = otherUnfilledDependency - (objectVarNum << OBJECT_OFFSET);
-      relabeledUnfilledDep += ((long) relabeledVarNum) << OBJECT_OFFSET;
-      depAccumulator[numDeps] = relabeledUnfilledDep;
-      numDeps++;
-    }
+    */
 
     long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
     long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
@@ -497,6 +453,75 @@ public class CcgParser implements Serializable {
         Ints.toArray(newAssignmentPredicateNums), Ints.toArray(newAssignmentIndexes),
         unfilledDepArray, filledDepArray, leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart,
         rightSpanEnd, rightIndex);
+  }
+
+  private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {
+    SyntacticCategory firstSyntax = first.getSyntax();
+    SyntacticCategory secondSyntax = second.getSyntax();
+    if (firstSyntax.isAtomic() || !firstSyntax.acceptsArgumentOn(direction) ||
+        secondSyntax.isAtomic()) {
+      return null;
+    }
+
+    SyntacticCategory firstArgumentType = firstSyntax.getArgument();
+    SyntacticCategory returnType = secondSyntax.getReturn();
+    while (returnType != null) {
+      if (firstArgumentType.isUnifiableWith(returnType)) {
+        //return composeHelper(first, second, direction);
+      }
+      returnType = returnType.getReturn();
+    }
+    return null;
+  }
+
+  /*
+  private ChartEntry composeHelper(ChartEntry first, HeadedSyntacticCategory firstArgument, 
+      ChartEntry second, HeadedSyntacticCategory secondReturn, Direction direction) {
+    SyntacticCategory firstSyntax = first.getSyntax();
+    
+    
+  }
+  */
+
+  /**
+   * Fills any dependencies in {@code unfilledDependencies} and 
+   * accumulates them in {@code depAccumulator}.
+   * 
+   * @param unfilledDependencies
+   * @param assignmentVariableNums
+   * @param assignmentPredicateNums
+   * @param assignmentIndexes
+   * @param depAccumulator
+   * @param numDeps
+   * @return
+   */
+  private int accumulateDependencies(long[] unfilledDependencies, int[] assignmentVariableNums,
+      int[] assignmentPredicateNums, int[] assignmentIndexes, long[] depAccumulator, int numDeps) {
+    // Fill any dependencies that depend on this variable.
+    for (long unfilledDependency : unfilledDependencies) {
+      int objectArgNum = getObjectArgNumFromDep(unfilledDependency);
+
+      boolean depWasFilled = false;
+      for (int i = 0; i < assignmentVariableNums.length; i++) {
+        if (assignmentVariableNums[i] == objectArgNum) {
+          // Create a new filled dependency by substituting in the
+          // current object.
+          long filledDep = unfilledDependency - (objectArgNum << OBJECT_OFFSET);
+          filledDep += ((long) assignmentPredicateNums[i] + MAX_ARG_NUM) << OBJECT_OFFSET;
+          filledDep += ((long) assignmentIndexes[i]) << OBJECT_WORD_IND_OFFSET;
+
+          depAccumulator[numDeps] = filledDep;
+          numDeps++;
+          depWasFilled = true;
+        } 
+      }
+
+      if (!depWasFilled) {
+        depAccumulator[numDeps] = unfilledDependency;
+        numDeps++;
+      }
+    }
+    return numDeps;
   }
 
   private long[] separateDependencies(long[] deps, int numDeps, boolean getFilled) {
@@ -517,28 +542,6 @@ public class CcgParser implements Serializable {
       }
     }
     return filtered;
-  }
-
-  private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {
-    SyntacticCategory firstSyntax = first.getSyntax();
-    SyntacticCategory secondSyntax = second.getSyntax();
-    if (firstSyntax.isAtomic() || !firstSyntax.acceptsArgumentOn(direction) ||
-        secondSyntax.isAtomic()) {
-      return null;
-    }
-
-    SyntacticCategory firstArgumentType = firstSyntax.getArgument();
-    SyntacticCategory returnType = secondSyntax.getReturn();
-    while (returnType != null) {
-      if (firstArgumentType.isUnifiableWith(returnType)) {
-        return composeHelper(first, second, direction);
-      }
-    }
-    return null;
-  }
-
-  private ChartEntry composeHelper(ChartEntry first, ChartEntry second, Direction direction) {
-    return null;
   }
 
   // Methods for efficiently encoding dependencies as longs
@@ -601,7 +604,7 @@ public class CcgParser implements Serializable {
     return (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
   }
 
-  private int getObjectArgNumFromDep(long depLong) {
+  public static int getObjectArgNumFromDep(long depLong) {
     int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK);
     if (objectNum >= MAX_ARG_NUM) {
       return -1;

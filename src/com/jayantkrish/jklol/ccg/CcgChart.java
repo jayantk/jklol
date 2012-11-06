@@ -297,6 +297,28 @@ public class CcgChart {
       return assignmentVariableNums;
     }
     
+    /**
+     * Replaces the {@code i}th unique variable in {@code this} with the 
+     * {@code i}th variable in {@code relabeling}.
+     * 
+     * @param relabeling
+     * @return
+     */
+    public int[] getAssignmentVariableNumsRelabeled(int[] relabeling) {
+      int[] uniqueVars = syntax.getUniqueVariables();
+      int[] relabeledAssignmentVariableNums = new int[assignmentVariableNums.length];
+      Arrays.fill(relabeledAssignmentVariableNums, -1);
+      for (int i = 0; i < assignmentVariableNums.length; i++) {
+        for (int j = 0; j < uniqueVars.length; j++) {
+          if (uniqueVars[j] == assignmentVariableNums[i]) {
+            relabeledAssignmentVariableNums[i] = relabeling[j];
+          }
+        }
+      }
+      
+      return relabeledAssignmentVariableNums;
+    }
+    
     public int[] getAssignmentPredicateNums() {
       return assignmentPredicateNums;
     }
@@ -307,6 +329,25 @@ public class CcgChart {
 
     public long[] getUnfilledDependencies() {
       return unfilledDependencies;
+    }
+    
+    public long[] getUnfilledDependenciesRelabeled(int[] relabeling) {
+      int[] uniqueVars = syntax.getUniqueVariables();
+      long[] relabeledUnfilledDependencies = new long[unfilledDependencies.length];
+      for (int i = 0; i < unfilledDependencies.length; i++) {
+        long unfilledDependency = unfilledDependencies[i];
+        int objectVarNum = CcgParser.getObjectArgNumFromDep(unfilledDependency);
+        for (int j = 0; j < uniqueVars.length; j++) {
+          if (uniqueVars[j] == objectVarNum) {
+            unfilledDependency -= CcgParser.marshalUnfilledDependency(objectVarNum, 0, 0, 0, 0);
+            unfilledDependency += CcgParser.marshalUnfilledDependency(relabeling[j], 0, 0, 0, 0);
+            relabeledUnfilledDependencies[i] = unfilledDependency;
+            break;
+          }
+        }
+      }
+
+      return relabeledUnfilledDependencies;
     }
 
     public CcgCategory getLexiconEntry() {

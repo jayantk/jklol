@@ -21,16 +21,17 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 public class CcgTrainingTest extends TestCase {
 
   private static final String[] lexicon = {
-    "block,pred:block,N", "object,pred:object,N", 
-    "red,pred:red,N/>N,pred:red 1 ?1","green,pred:green,N/>N,pred:green 1 ?1",
-    "the,the,N/>N","a,the,N/>N",
-    "near,pred:near,(N\\>N)/N,pred:near 1 ?1#pred:near 2 ?2",
-    "near,pred:near,(S/(S\\N))/N,pred:near 2 ?2#pred:near 1 pred:block#?1 1 pred:block",
-    "near,pred:close,(N\\>N)/N,pred:close 1 ?1#pred:close 2 ?2", "near,pred:near,PP/>N,",
-    "kinda,pred:almost,(N/>N)/>(N/>N),pred:almost 1 ?2#?2 1 ?1",
-    "is,pred:equals,(S\\N)/N,pred:equals 1 ?1#pred:equals 2 ?2",
-    "\",\",\",\",(N\\>N)/N,\", 1 ?1#, 2 ?2\"",
-    "2,NUM,N"
+    "block,N{0},0 pred:block", "object,N{0},0 pred:object", 
+    "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1","green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1",
+    "the,(N{1}/N{1}){0},0 the","a,(N{1}/N{1}){0},0 the",
+    "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1#pred:near 2 2",
+    "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 pred:near,pred:near 2 2",
+    "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:close,pred:close 1 1#pred:close 2 2", 
+    "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 2",
+    "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 pred:almost,pred:almost 1 2",
+    "is,((S{0}\\N{1}){0}/N{2}){0},0 pred:equals,pred:equals 1 1#pred:equals 2 2",
+    "\",\",((N{1}\\N{1}){0}/N{2}){0},\"0 ,\",\", 1 1#, 2 2\"",
+    "2,N{0},0 NUM"
   };
 
   private static final String[] trainingData = {
@@ -39,15 +40,15 @@ public class CcgTrainingTest extends TestCase {
     "red object near the green block###pred:red 0 1 pred:object 1#pred:green 4 1 pred:block 5#pred:near 2 1 pred:object 1#pred:near 2 2 pred:block 5",
     "red block near the green block###pred:red 0 1 pred:block 1#pred:green 4 1 pred:block 5#pred:near 2 1 pred:block 1#pred:near 2 2 pred:block 5",
     "the kinda red block###pred:red 2 1 pred:block 3#pred:almost 1 1 pred:red 2",
-    "near the object is the red block###pred:near 0 2 pred:object 2#pred:near 0 1 pred:block 0#pred:equals 3 1 pred:block 0#pred:equals 3 2 pred:block 6#pred:red 5 1 pred:block 6",
+    "near the object is the red block###pred:near 0 2 pred:object 2#pred:equals 3 1 pred:near 0#pred:equals 3 2 pred:block 6#pred:red 5 1 pred:block 6",
     "block , object###\\, 1 1 pred:block 0#\\, 1 2 pred:object 2",
   };
   
   private static final String[] trainingDataWithLexicon = {
-    "red block###pred:red 0 1 pred:block 1###red,pred:red,N/>N,pred:red 1 ?1@@@block,pred:block,N",
-    "red green block###pred:red 0 1 pred:block 2#pred:green 1 1 pred:block 2###red,pred:red,N/>N,pred:red 1 ?1@@@green,pred:green,N/>N,pred:green 1 ?1@@@block,pred:block,N",
+    "red block###pred:red 0 1 pred:block 1###red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1@@@block,N{0},0 pred:block",
+    "red green block###pred:red 0 1 pred:block 2#pred:green 1 1 pred:block 2###red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1@@@green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1@@@block,N{0},0 pred:block",
     "red block near the green block###pred:red 0 1 pred:block 1#pred:green 4 1 pred:block 5#pred:near 2 1 pred:block 1#pred:near 2 2 pred:block 5###"
-    + "red,pred:red,N/>N,pred:red 1 ?1@@@block,pred:block,N@@@near,pred:near,(N\\>N)/N,pred:near 1 ?1#pred:near 2 ?2@@@the,the,N/>N@@@green,pred:green,N/>N,pred:green 1 ?1@@@block,pred:block,N",
+    + "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1@@@block,N{0},0 pred:block@@@near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1#pred:near 2 2@@@green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1@@@block,N{0},0 pred:block"
   };
 
   private ParametricCcgParser family;

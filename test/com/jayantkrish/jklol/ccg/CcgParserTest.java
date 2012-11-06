@@ -28,7 +28,7 @@ public class CcgParserTest extends TestCase {
     "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 amazingly,amazingly 1 2", 
     "tasty,(N{1}/N{1}){0},0 tasty,tasty 1 1",
     "in,(((S{1}\\N{2}){1}\\(S{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 2#in 2 3",
-    "and,((N{1}\\N{1}){0}/N{2}){0},0 and", 
+    "and,((N{1}\\N{1}){0}/N{1}){0},0 and", 
     "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},0 almost,almost 1 2",
     "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
     "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2#directed 2 1",
@@ -41,13 +41,10 @@ public class CcgParserTest extends TestCase {
     0.5, 1.0, 2.0,
     0.25, 1.0, 
     1.0, 0.5};
-  
-  /*
-  private static final String[] rules = {"\"; N N\",\"F\",\"T\"", "\"N ; N\",\"T\",\"F\"", 
-    "\"; S\\N N\\N\",\"F\",\"T\"", "\"conj N N\\N\",\"F\",\"T\",\"?1\"", 
-    "\"conj S\\N (S\\N)\\(S\\N)\",\"F\",\"T\",\"?2\",\"?2 1 ?1\""};
-    */
-  private static final String[] rules = {};
+
+  private static final String[] rules = {"; N{0} N{0}", "N{0} ; N{0}", 
+    "; (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "conj{1} N{0} (N{0}\\N{0}){1}", 
+    "conj{2} (S{0}\\N{1}){0} ((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}"};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;

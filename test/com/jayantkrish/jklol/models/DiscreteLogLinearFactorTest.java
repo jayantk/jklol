@@ -64,7 +64,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   }
   
   public void testGetFactorFromParameters() {
-    TableFactor factor = (TableFactor) f.getFactorFromParameters(parameters);
+    TableFactor factor = (TableFactor) f.getModelFromParameters(parameters);
     assertEquals(Math.E, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T")), .00001);
     assertEquals(Math.E, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "F")), .00001);
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
@@ -72,7 +72,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   }
   
   public void testGetFactorFromParametersNormed() {
-    TableFactor factor = (TableFactor) normed.getFactorFromParameters(parameters);
+    TableFactor factor = (TableFactor) normed.getModelFromParameters(parameters);
     assertEquals(0.5, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T")), .00001);
     assertEquals(0.5, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "F")), .00001);
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
@@ -108,7 +108,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   }
   
   public void testGetSufficientStatisticsFromMarginal() {
-    TableFactor factor = (TableFactor) f.getFactorFromParameters(parameters);
+    TableFactor factor = (TableFactor) f.getModelFromParameters(parameters);
     double partitionFunction = 1.0 + (2 * Math.E);
     SufficientStatistics s = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromMarginal(s, factor, Assignment.EMPTY, 1.0, partitionFunction);
@@ -127,7 +127,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     
     g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("T", "T"), 1.0);
     g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("F", "F"), 1.0);
-    DiscreteFactor d = g.getFactorFromParameters(gParams);
+    DiscreteFactor d = g.getModelFromParameters(gParams);
     assertEquals(1.0, d.getUnnormalizedLogProbability("T", "T"), 0.00001);
     assertEquals(24.0, d.getUnnormalizedLogProbability("T", "F"), 0.00001);
     assertEquals(52.0, d.getUnnormalizedLogProbability("F", "F"), 0.00001);

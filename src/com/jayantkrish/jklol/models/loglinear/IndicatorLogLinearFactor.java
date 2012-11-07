@@ -65,7 +65,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   // ///////////////////////////////////////////////////////////
 
   @Override
-  public TableFactor getFactorFromParameters(SufficientStatistics parameters) {
+  public TableFactor getModelFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters);
 
     double[] logProbs = featureWeights.getValues();

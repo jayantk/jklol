@@ -70,7 +70,7 @@ public class TrainCcg {
         options, trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), 
         trainingExamples);
-    CcgParser ccgParser = family.getParserFromParameters(parameters);
+    CcgParser ccgParser = family.getModelFromParameters(parameters);
 
     System.out.println("Serializing trained model...");
     IoUtils.serializeObjectToFile(ccgParser, options.valueOf(modelOutput));

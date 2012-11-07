@@ -91,7 +91,7 @@ public class StepwiseEMTrainer extends AbstractTrainer
             Math.min((j + 1) * batchSize, trainingDataList.size()));
 
         // Calculate the sufficient statistics for batch.
-        DynamicFactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
+        DynamicFactorGraph factorGraph = bn.getModelFromParameters(initialParameters);
         SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()
             .mapReduce(batch,
                 new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),

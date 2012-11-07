@@ -76,7 +76,7 @@ public class SubgradientSvmTrainerTest extends TestCase {
     SufficientStatistics parameters = t.train(o, initialParameters, trainingData);
     assertEquals(1.0, parameters.getL2Norm(), .01);
 
-    DynamicFactorGraph dynamicFactorGraph = model.getFactorGraphFromParameters(parameters);
+    DynamicFactorGraph dynamicFactorGraph = model.getModelFromParameters(parameters);
     FactorGraph factorGraph = dynamicFactorGraph.getFactorGraph(DynamicAssignment.EMPTY);
     for (Example<DynamicAssignment, DynamicAssignment> example : trainingData) {
       Assignment input = dynamicFactorGraph.getVariables().toAssignment(example.getInput());
@@ -93,7 +93,7 @@ public class SubgradientSvmTrainerTest extends TestCase {
   }
 
   public void testHammingCost() {
-    FactorGraph graph = model.getFactorGraphFromParameters(model.getNewSufficientStatistics()).getFactorGraph(DynamicAssignment.EMPTY);
+    FactorGraph graph = model.getModelFromParameters(model.getNewSufficientStatistics()).getFactorGraph(DynamicAssignment.EMPTY);
     HammingCost cost = new HammingCost();
     FactorGraph augmented = cost.augmentWithCosts(graph, outputVars, outputVars.outcomeArrayToAssignment("F"));
     assertEquals(3, augmented.getFactors().size());

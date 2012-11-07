@@ -42,7 +42,7 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
 
   @Override
   public DynamicFactorGraph instantiateModel(SufficientStatistics parameters) {
-    return family.getFactorGraphFromParameters(parameters);
+    return family.getModelFromParameters(parameters);
   }
 
   @Override

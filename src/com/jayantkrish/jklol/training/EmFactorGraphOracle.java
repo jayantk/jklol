@@ -34,7 +34,7 @@ public class EmFactorGraphOracle implements EmOracle<DynamicFactorGraph,
 
   @Override
   public DynamicFactorGraph instantiateModel(SufficientStatistics parameters) {
-    return parametricModel.getFactorGraphFromParameters(parameters);
+    return parametricModel.getModelFromParameters(parameters);
   }
 
   @Override

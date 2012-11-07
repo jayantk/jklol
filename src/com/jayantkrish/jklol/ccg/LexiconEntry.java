@@ -36,12 +36,12 @@ public class LexiconEntry {
    * Parses a line of a CCG lexicon into a lexicon entry. The expected format is
    * a comma separated tuple:
    * <code>
-   * (space delimited word list),(semantic head),(syntactic type),(# delimited semantic dependencies)
+   * (space delimited word list),(syntactic type),(list of variable assignments and unfilled semantic dependencies)
    * </code>
-   * The last three components of the list represent the CCG category. For example:
+   * The final two components of the list represent the CCG category. Examples:
    * <code>
-   * baseball player,baseball_player,N
-   * in,concept:locatedIn,(N\>N)/N,concept:locatedIn 1 ?1#concept:locatedIn 2 ?2 
+   * baseball player,N{0},0 baseball_player
+   * in,((N{1}\N{1}){0}/N{2}){0},0 concept:locatedIn,concept:locatedIn 1 1,concept:locatedIn 2 2 
    * </code>
    * 
    * @param lexiconLine
@@ -54,13 +54,9 @@ public class LexiconEntry {
 
       // Add the lexicon word sequence to the lexicon.
       String wordPart = parts[0];
-      if (parts.length >= 4) {
-        return new LexiconEntry(Arrays.asList(wordPart.split(" ")),
-            CcgCategory.parseFrom(parts[1], parts[2], parts[3]));
-      } else {
-        return new LexiconEntry(Arrays.asList(wordPart.split(" ")),
-            CcgCategory.parseFrom(parts[1], parts[2], ""));
-      }
+      List<String> words = Arrays.asList(wordPart.split(" "));
+      return new LexiconEntry(words, CcgCategory.parseFrom(
+          Arrays.copyOfRange(parts, 1, parts.length)));
     } catch (IOException e) {
       throw new IllegalArgumentException("Invalid lexicon line: " + lexiconLine, e);
     }

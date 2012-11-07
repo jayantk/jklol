@@ -1,22 +1,17 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.io.IOException;
-import java.util.Arrays;
-
-import au.com.bytecode.opencsv.CSVParser;
-
-import com.google.common.base.Preconditions;
 
 public class CcgUnaryRule {
 
   private final SyntacticCategory inputSyntax;
   private final SyntacticCategory returnSyntax;
   
-  private final int[] unfilledHeads;
-  private final long[] unfilledDeps;
+  public CcgUnaryRule(SyntacticCategory inputSyntax, SyntacticCategory returnSyntax) {
+    this.inputSyntax = inputSyntax;
+    this.returnSyntax = returnSyntax;
+  }  
 
-  private final boolean inheritSemantics;
-
+  /*
   public static CcgUnaryRule parseFrom(String line) {
     try {
       String[] chunks = new CSVParser(CSVParser.DEFAULT_SEPARATOR, 
@@ -59,4 +54,5 @@ public class CcgUnaryRule {
       throw new IllegalArgumentException("Illegal binary rule string: " + line, e);
     }
   }
+  */
 }

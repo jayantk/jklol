@@ -69,8 +69,8 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
         VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
 
     sequenceModel = builder.build();
-    dynamicFactorGraph = sequenceModel.getFactorGraphFromParameters(sequenceModel.getNewSufficientStatistics());
-    replicatedFactor = new ReplicatedFactor(f.getFactorFromParameters(f.getNewSufficientStatistics()), 
+    dynamicFactorGraph = sequenceModel.getModelFromParameters(sequenceModel.getNewSufficientStatistics());
+    replicatedFactor = new ReplicatedFactor(f.getModelFromParameters(f.getNewSufficientStatistics()), 
         VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
     
     // Construct some training data.

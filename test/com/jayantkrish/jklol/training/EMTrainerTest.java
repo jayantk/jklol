@@ -99,7 +99,7 @@ public class EMTrainerTest extends TestCase {
     initialParameters.increment(1.0);
     SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
 
-    FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters)
+    FactorGraph factorGraph = bn.getModelFromParameters(trainedParameters)
         .getFactorGraph(DynamicAssignment.EMPTY);		
     return factorGraph.getFactors().get(1);
   }
@@ -131,7 +131,7 @@ public class EMTrainerTest extends TestCase {
     bn.incrementSufficientStatistics(initialParameters, allVars, probAssignment, 1.0);
 
     SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
-    FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters)
+    FactorGraph factorGraph = bn.getModelFromParameters(trainedParameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
     return factorGraph.getFactors().get(1);
   }

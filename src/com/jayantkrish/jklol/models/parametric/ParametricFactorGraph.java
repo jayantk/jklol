@@ -20,17 +20,21 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * A parametric family of graphical models. This class can represent either a
- * loglinear model or Bayesian Network, depending on the types of factors it is
- * constructed with. See {@link BayesNetBuilder} and
- * {@link ParametricFactorGraphBuilder} for how to construct each type of model.
- * 
- * This class simply delegates all of its methods to the corresponding methods
- * of {@link ParametricFactor}, then aggregates and returns the results.
+ * A parametric family of graphical models. This class can represent
+ * either a loglinear model or Bayesian Network, depending on the
+ * types of factors it is constructed with. See
+ * {@link BayesNetBuilder} and {@link ParametricFactorGraphBuilder}
+ * for how to construct each type of model.
+ * <p>
+ * This class simply delegates all of its methods to the corresponding
+ * methods of {@link ParametricFactor}, then aggregates and returns
+ * the results.
  * 
  * @author jayantk
  */
-public class ParametricFactorGraph {
+public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGraph> {
+
+  private static final long serialVersionUID = 1L;
 
   private final DynamicFactorGraph baseFactorGraph;
 
@@ -50,9 +54,9 @@ public class ParametricFactorGraph {
   }
 
   /**
-   * Gets the variables over which the distributions in this family are defined.
-   * All {@code DynamicFactorGraph}s returned by
-   * {@link #getFactorGraphFromParameters(Object)} are defined over the same
+   * Gets the variables over which the distributions in this family
+   * are defined. All {@code DynamicFactorGraph}s returned by
+   * {@link #getModelFromParameters(Object)} are defined over the same
    * variables.
    * 
    * @return
@@ -79,50 +83,53 @@ public class ParametricFactorGraph {
   }
 
   /**
-   * Gets a {@code DynamicFactorGraph} which is the member of this family
-   * indexed by {@code parameters}. Note that multiple values of
-   * {@code parameters} may result in the same {@code FactorGraph}.
+   * Gets a {@code DynamicFactorGraph} which is the member of this
+   * family indexed by {@code parameters}. Note that multiple values
+   * of {@code parameters} may result in the same {@code FactorGraph}.
    * 
    * @param parameters
    * @return
    */
-  public DynamicFactorGraph getFactorGraphFromParameters(SufficientStatistics parameters) {
+  public DynamicFactorGraph getModelFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     List<PlateFactor> plateFactors = Lists.newArrayList();
     for (int i = 0; i < parameterList.size(); i++) {
       plateFactors.add(new ReplicatedFactor(
-          parametricFactors.get(i).getFactorFromParameters(parameterList.get(i)),
+          parametricFactors.get(i).getModelFromParameters(parameterList.get(i)),
           factorPatterns.get(i)));
     }
     return baseFactorGraph.addPlateFactors(plateFactors, factorNames.items());
   }
 
-  /**
-   * Gets a human-interpretable description of {@code parameters}. The returned
-   * string has one parameter/description pair per line, with separators for
-   * distinct factors.
-   * 
-   * @param parameters
-   * @return
-   */
+  @Override
   public String getParameterDescription(SufficientStatistics parameters) {
+    return getParameterDescription(parameters, -1);
+  }
+
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     StringBuilder builder = new StringBuilder();
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     for (int i = 0; i < parameterList.size(); i++) {
-      builder.append(parametricFactors.get(i).getParameterDescription(parameterList.get(i)));
+      builder.append(parametricFactors.get(i).getParameterDescription(parameterList.get(i), numFeatures));
     }
     return builder.toString();
   }
 
   /**
-   * Gets a new, all-zero parameter vector for {@code this} family of
-   * distributions. The returned statistics have names corresponding to 
-   * the parametric factors in this.
+   * {@inheritDoc}
+   * <p>
+   * The returned statistics have names corresponding to the
+   * parametric factors in this. That is, the parameters for a
+   * particular parametric factor in this factor graph can be
+   * retrieved using
+   * {@link ListSufficientStatistics#getStatisticByName(String)}.
    * 
    * @return
    */
+  @Override
   public ListSufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> sufficientStatistics = Lists.newArrayList();
     for (ParametricFactor factor : getParametricFactors()) {
@@ -132,12 +139,13 @@ public class ParametricFactorGraph {
   }
 
   /**
-   * Accumulates sufficient statistics (in {@code statistics}) for estimating a
-   * model from {@code this} family based on a point distribution at
-   * {@code assignment}. {@code count} is the number of times that
-   * {@code assignment} has been observed in the training data, and acts as a
-   * multiplier for the computed statistics {@code assignment} must contain a
-   * value for all of the variables in {@code this.getVariables()}.
+   * Accumulates sufficient statistics (in {@code statistics}) for
+   * estimating a model from {@code this} family based on a point
+   * distribution at {@code assignment}. {@code count} is the number
+   * of times that {@code assignment} has been observed in the
+   * training data, and acts as a multiplier for the computed
+   * statistics {@code assignment} must contain a value for all of the
+   * variables in {@code this.getVariables()}.
    * 
    * @param statistics
    * @param assignment
@@ -150,15 +158,16 @@ public class ParametricFactorGraph {
   }
 
   /**
-   * Computes a vector of sufficient statistics for {@code this} and accumulates
-   * them in {@code statistics}. The statistics are computed from the
-   * (conditional) marginal distribution {@code marginals}. {@code count} is the
-   * number of times {@code marginals} has been observed in the training data.
+   * Computes a vector of sufficient statistics for {@code this} and
+   * accumulates them in {@code statistics}. The statistics are
+   * computed from the (conditional) marginal distribution
+   * {@code marginals}. {@code count} is the number of times
+   * {@code marginals} has been observed in the training data.
    * 
    * @param statistics
    * @param marginals
    * @param count
-   */ 
+   */
   public void incrementSufficientStatistics(SufficientStatistics statistics,
       MarginalSet marginals, double count) {
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();

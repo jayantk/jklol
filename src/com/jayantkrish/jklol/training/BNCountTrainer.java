@@ -36,7 +36,7 @@ public class BNCountTrainer {
     // We must instantiate a graph in order to handle dynamic factor graphs,
     // as dynamic factor graphs have assignments of variable size. 
     SufficientStatistics parameters = bn.getNewSufficientStatistics();
-    DynamicFactorGraph factorGraph = bn.getFactorGraphFromParameters(parameters);
+    DynamicFactorGraph factorGraph = bn.getModelFromParameters(parameters);
 
     // Compute sufficient statistics for all examples in parallel.
     SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()

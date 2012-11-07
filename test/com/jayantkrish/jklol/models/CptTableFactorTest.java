@@ -51,7 +51,7 @@ public class CptTableFactorTest extends TestCase {
   }
   
   public void testGetNewSufficientStatistics() {
-    DiscreteFactor factor = f.getFactorFromParameters(f.getNewSufficientStatistics());
+    DiscreteFactor factor = f.getModelFromParameters(f.getNewSufficientStatistics());
     assertEquals(allVars, factor.getVars());
     
     // All assignments should have a count of 0.
@@ -69,23 +69,23 @@ public class CptTableFactorTest extends TestCase {
         f.getVars().outcomeToAssignment(assignments[1]), 2.0);
     newStats.increment(1.0);
 
-    DiscreteFactor factor = f.getFactorFromParameters(newStats);
+    DiscreteFactor factor = f.getModelFromParameters(newStats);
     assertEquals(3.0 / 6.0, factor.getUnnormalizedProbability(allVars.outcomeToAssignment(assignments[1])));
   }
   
   public void testGetSufficientStatisticsFromMarginal() {
     SufficientStatistics newStats = f.getNewSufficientStatistics();
     f.incrementSufficientStatisticsFromMarginal(newStats, 
-        f.getFactorFromParameters(parameters), Assignment.EMPTY, 6.0, 3.0);
+        f.getModelFromParameters(parameters), Assignment.EMPTY, 6.0, 3.0);
     newStats.increment(1.0);
     
-    DiscreteFactor factor = f.getFactorFromParameters(newStats);
+    DiscreteFactor factor = f.getModelFromParameters(newStats);
     assertEquals(2.0 / 6.0, factor.getUnnormalizedProbability(allVars.outcomeToAssignment(assignments[1])));
     assertEquals(3.0 / 6.0, factor.getUnnormalizedProbability(allVars.outcomeToAssignment(assignments[2])));
   }
     
   public void testGetFactorFromParameters() {
-    DiscreteFactor factor = f.getFactorFromParameters(parameters);
+    DiscreteFactor factor = f.getModelFromParameters(parameters);
     Iterator<Outcome> iter = factor.outcomeIterator();
     Set<Assignment> foundOutcomes = Sets.newHashSet();
     while (iter.hasNext()) {

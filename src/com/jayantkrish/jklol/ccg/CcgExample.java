@@ -46,7 +46,7 @@ public class CcgExample {
   }
 
   /**
-   * Expected format is (space-separated words)###(#-separated dependency
+   * Expected format is (space-separated words)###(,-separated dependency
    * structures)###(@@@-separated lexicon entries (optional)).
    * 
    * @param exampleString
@@ -58,7 +58,8 @@ public class CcgExample {
       List<String> words = Arrays.asList(parts[0].split("\\s+"));
       
       Set<DependencyStructure> dependencies = Sets.newHashSet();
-      String[] dependencyParts = new CSVParser('#').parseLine(parts[1]);
+      String[] dependencyParts = new CSVParser(CSVParser.DEFAULT_SEPARATOR, 
+          CSVParser.DEFAULT_QUOTE_CHARACTER, CSVParser.NULL_CHARACTER).parseLine(parts[1]);
       for (int i = 0; i < dependencyParts.length; i++) {
         if (dependencyParts[i].trim().length() == 0) {
           continue;

@@ -51,7 +51,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   // ///////////////////////////////////////////////////////////////
 
   @Override
-  public DiscreteFactor getFactorFromParameters(SufficientStatistics parameters) {
+  public DiscreteFactor getModelFromParameters(SufficientStatistics parameters) {
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) parameters;
     Tensor allTensor = tensorStats.get();
     Tensor parentTensor = allTensor.sumOutDimensions(childVars.getVariableNums());
@@ -61,7 +61,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
-    DiscreteFactor factor = getFactorFromParameters(parameters);
+    DiscreteFactor factor = getModelFromParameters(parameters);
     if (numFeatures >= 0) {
       return factor.describeAssignments(factor.getMostLikelyAssignments(numFeatures));
     } else {

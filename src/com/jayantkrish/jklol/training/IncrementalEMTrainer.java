@@ -72,7 +72,7 @@ public class IncrementalEMTrainer extends AbstractTrainer
         // Get the current training data point and the most recent factor graph
         // based on the current iteration.
         DynamicAssignment dynamicExample = trainingData.get(j);
-        DynamicFactorGraph dynamicFactorGraph = bn.getFactorGraphFromParameters(initialParameters);
+        DynamicFactorGraph dynamicFactorGraph = bn.getModelFromParameters(initialParameters);
         FactorGraph currentFactorGraph = dynamicFactorGraph.getFactorGraph(dynamicExample);
         Assignment trainingExample = dynamicFactorGraph.getVariables().toAssignment(dynamicExample);
         log.log(i, j, trainingExample, currentFactorGraph);

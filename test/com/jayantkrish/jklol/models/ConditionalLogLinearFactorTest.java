@@ -51,7 +51,7 @@ public class ConditionalLogLinearFactorTest extends TestCase {
     factor.incrementSufficientStatisticsFromAssignment(stats, 
         both.outcomeArrayToAssignment(featureVectors.get(1), "B"), 1.0);
     
-    Factor classifier = factor.getFactorFromParameters(stats);
+    Factor classifier = factor.getModelFromParameters(stats);
     Assignment inputAssignment = input.outcomeArrayToAssignment(featureVectors.get(0));
     Factor conditional = classifier.conditional(inputAssignment);
 
@@ -64,7 +64,7 @@ public class ConditionalLogLinearFactorTest extends TestCase {
     double partitionFunction = conditional.getTotalUnnormalizedProbability();
     factor.incrementSufficientStatisticsFromMarginal(stats, conditional, inputAssignment, 1.0, partitionFunction);
     
-    classifier = factor.getFactorFromParameters(stats);
+    classifier = factor.getModelFromParameters(stats);
     conditional = classifier.conditional(inputAssignment);
 
     // partitionFunction = 157.8022

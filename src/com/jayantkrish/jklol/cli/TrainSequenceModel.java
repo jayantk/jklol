@@ -149,7 +149,7 @@ public class TrainSequenceModel {
         options, trainingData.size());
     SufficientStatistics parameters = trainer.train(
         oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
-    DynamicFactorGraph factorGraph = sequenceModel.getFactorGraphFromParameters(parameters);
+    DynamicFactorGraph factorGraph = sequenceModel.getModelFromParameters(parameters);
 
     System.out.println("Serializing trained model...");
     IoUtils.serializeObjectToFile(factorGraph, options.valueOf(modelOutput));

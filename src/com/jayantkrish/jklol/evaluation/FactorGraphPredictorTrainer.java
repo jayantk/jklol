@@ -50,7 +50,7 @@ public abstract class FactorGraphPredictorTrainer<I, O> implements PredictorTrai
         trainingDataAssignments);
     
     Predictor<DynamicAssignment, DynamicAssignment> assignmentPredictor = 
-        new FactorGraphPredictor(model.getFactorGraphFromParameters(finalParameters),
+        new FactorGraphPredictor(model.getModelFromParameters(finalParameters),
             getOutputVariables(model), new JunctionTree());
     
     return ForwardingPredictor.create(assignmentPredictor, inputConverter, outputConverter); 

@@ -48,12 +48,12 @@ public class CcgCategory implements Serializable {
   private final List<Integer> objects;
 
   // An assignment to the semantic variables of the syntactic
-  // category. 
-  // TODO: Set is the wrong representation! Must allow duplicate elements.
+  // category.
+  // TODO: Set is the wrong representation! Must allow duplicate
+  // elements.
   private final List<Set<String>> variableAssignments;
 
   private static final char ENTRY_DELIMITER = ',';
-  private static final char DEPENDENCY_DELIMITER = '#';
 
   public CcgCategory(HeadedSyntacticCategory syntax, List<String> subjects,
       List<Integer> argumentNumbers, List<Integer> objects, List<Set<String>> variableAssignments) {
@@ -67,82 +67,74 @@ public class CcgCategory implements Serializable {
   }
 
   /**
-   * Parses a CCG category from a string. The format is:
+   * Parses a CCG category from a string. The expected format is a
+   * comma separated list:
+   * 
+   * <ol>
+   * <li>Syntactic type, formatted as for a
+   * {@link HeadedSyntacticCategory}.
+   * <li>A list of variable assignments or unfilled dependencies:
+   * <ul>
+   * <li>Variable assignments are of the format
+   * "(variable number) (value)".
+   * <li>Unfilled dependencies are of the format
+   * "(predicate name) (argument number) (variable number)".
+   * </ul>
    * <p>
-   * (#-separated head word list),(syntactic type),(#-separated
-   * dependency list).
-   * <p>
-   * For example, the category for "in" is: "in,(N\N)/N,in 1 ?1, in 2
-   * ?2".
+   * For example, the category for "in" is:
+   * <code>
+   * ((N{1}\N{1}){0}/N{2}){0},0 in,in 1 1,in 2 2
+   * </code>
    * 
    * @param categoryString
    * @return
    */
   public static CcgCategory parseFrom(String categoryString) {
     try {
-      String[] parts = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER, 
+      String[] parts = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER,
           CSVParser.NULL_CHARACTER).parseLine(categoryString);
-      Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
+      Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s", 
           categoryString);
-      if (parts.length > 2) {
-        return parseFrom(parts[0], parts[1], parts[2]);
-      } else if (parts.length > 1) {
-        return parseFrom(parts[0], parts[1], "");
-      } else {
-        return parseFrom(parts[0], "", "");
-      }
+      return parseFrom(parts);
     } catch (IOException e) {
       throw new IllegalArgumentException("Invalid CCG category: " + categoryString, e);
     }
   }
 
-  public static CcgCategory parseFrom(String syntaxString, String assignmentString, String dependencyString) {
-    try {
-      // Parse the syntactic category.
-      HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom(syntaxString);
+  public static CcgCategory parseFrom(String[] categoryParts) {
+    // Parse the syntactic category.
+    HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom(categoryParts[0]);
 
-      CSVParser dependencyParser = new CSVParser(DEPENDENCY_DELIMITER);
+    // Create an empty assignment to each variable in the syntactic category.
+    List<Set<String>> values = Lists.newArrayList();
+    for (int i = 0; i < syntax.getUniqueVariables().length; i++) {
+      values.add(Sets.<String> newHashSet());
+    }
+    // Create empty set of unfilled dependencies. 
+    List<String> subjects = Lists.newArrayList();
+    List<Integer> argumentNumbers = Lists.newArrayList();
+    List<Integer> objects = Lists.newArrayList();
 
-      // Parse any value assignments to variables.
-      String[] assignmentStrings = dependencyParser.parseLine(assignmentString);
-      List<Set<String>> values = Lists.newArrayList();
-      for (int i = 0; i < syntax.getUniqueVariables().length; i++) {
-        values.add(Sets.<String>newHashSet());
-      }
-      if (assignmentString.trim().length() > 0) {
-        for (int i = 0; i < assignmentStrings.length; i++) {
-          String[] parts = assignmentStrings[i].split("\\s+");
-          Preconditions.checkArgument(parts.length == 2, "Invalid CCG variable assignment: %s", 
-              assignmentStrings[i]);
-          
-          int varNum = Integer.parseInt(parts[0]);
-          String value = parts[1];
-          values.get(varNum).add(value);
-        }
+    // Parse any value assignments to variables and unfilled dependencies.
+    for (int i = 1; i < categoryParts.length; i++) {
+      if (categoryParts[i].trim().length() == 0) {
+        continue;
       }
       
-      // Parse any semantic dependencies.
-      List<String> subjects = Lists.newArrayList();
-      List<Integer> argumentNumbers = Lists.newArrayList();
-      List<Integer> objects = Lists.newArrayList();
-      if (dependencyString.trim().length() > 0) {
-        String[] depStrings = dependencyParser.parseLine(dependencyString);
-        for (int i = 0; i < depStrings.length; i++) {
-          String[] depParts = depStrings[i].split(" ");
-          Preconditions.checkArgument(depParts.length == 3, "Invalid CCG semantic dependency: %s",
-              depStrings[i]);
-
-          subjects.add(depParts[0]);
-          argumentNumbers.add(Integer.parseInt(depParts[1]));
-          objects.add(Integer.parseInt(depParts[2]));
-        }
+      String[] parts = categoryParts[i].trim().split("\\s+");
+      Preconditions.checkArgument(parts.length == 2 || parts.length == 3,
+          "Invalid CCG semantic part: \"%s\".", categoryParts[i]);
+      if (parts.length == 2) {
+        int varNum = Integer.parseInt(parts[0]);
+        String value = parts[1];
+        values.get(varNum).add(value);
+      } else if (parts.length == 3) {
+        subjects.add(parts[0]);
+        argumentNumbers.add(Integer.parseInt(parts[1]));
+        objects.add(Integer.parseInt(parts[2]));
       }
-
-      return new CcgCategory(syntax, subjects, argumentNumbers, objects, values);
-    } catch (IOException e) {
-      throw new IllegalArgumentException("Invalid CCG category: " + syntaxString + "," 
-          + assignmentString + "," + dependencyString, e);
     }
+    return new CcgCategory(syntax, subjects, argumentNumbers, objects, values);
   }
 
   /**
@@ -194,7 +186,8 @@ public class CcgCategory implements Serializable {
       UnfilledDependency dep = new UnfilledDependency(subject, -1, argumentNumbers.get(i),
           null, objects.get(i));
 
-      // Technically, this is unnecessary since removing the possibility of pre-filled
+      // Technically, this is unnecessary since removing the
+      // possibility of pre-filled
       // dependencies. TODO: add back pre-filled dependencies.
       if (dep.isFilledDependency()) {
         filledDependencies.add(dep);

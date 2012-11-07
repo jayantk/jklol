@@ -49,7 +49,7 @@ public class CptCfgFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public Factor getFactorFromParameters(SufficientStatistics parameters) {
+  public Factor getModelFromParameters(SufficientStatistics parameters) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
@@ -57,8 +57,8 @@ public class CptCfgFactor extends AbstractParametricFactor {
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
     
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, 
-        (DiscreteFactor) nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
-        (DiscreteFactor) terminalFactor.getFactorFromParameters(terminalStatistics), 0, false);
+        (DiscreteFactor) nonterminalFactor.getModelFromParameters(nonterminalStatistics),
+        (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics), 0, false);
     return new CfgFactor(rootVar, childVar, parser);
   }
   

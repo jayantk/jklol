@@ -130,7 +130,7 @@ public class LinearClassifierTest extends TestCase {
         linearClassifier.getNewSufficientStatistics(), trainingData);
     // Get the trained classifier as a factor graph (enabling inference). The
     // "getFactorGraph()" part again exists to support dynamic factor graphs.
-    FactorGraph trainedModel = linearClassifier.getFactorGraphFromParameters(parameters)
+    FactorGraph trainedModel = linearClassifier.getModelFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
             
     // Should be able to get 0 training error. This uses a simple wrapper around

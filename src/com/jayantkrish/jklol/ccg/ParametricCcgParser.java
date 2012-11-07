@@ -20,14 +20,16 @@ import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
- * Parameterized CCG grammar. This class instantiates CCG parsers given
- * parameter vectors. This class parameterizes CCGs with probabilities for:
+ * Parameterized CCG grammar. This class instantiates CCG parsers
+ * given parameter vectors. This class parameterizes CCGs with
+ * probabilities for:
  * <ul>
  * <li>Lexicon entries.
  * <li>Dependency structures (i.e., semantic dependencies).
@@ -35,8 +37,10 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayant
  */
-public class ParametricCcgParser {
-
+public class ParametricCcgParser implements ParametricFamily<CcgParser> {
+  
+  private static final long serialVersionUID = 1L;
+  
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final ParametricFactor terminalFamily;
@@ -45,7 +49,7 @@ public class ParametricCcgParser {
   private final VariableNumMap dependencyArgNumVar;
   private final VariableNumMap dependencyArgVar;
   private final ParametricFactor dependencyFamily;
-  
+
   private final List<CcgBinaryRule> binaryRules;
 
   private final String TERMINAL_PARAMETERS = "terminals";
@@ -66,16 +70,17 @@ public class ParametricCcgParser {
   }
 
   /**
-   * Produces a parametric CCG parser from a lexicon, represented a series of
-   * phrase/CCG category mappings. Each mapping is given as a comma separated
-   * string, whose first value is the phrase and whose second value is the CCG
-   * category string.
+   * Produces a parametric CCG parser from a lexicon, represented a
+   * series of phrase/CCG category mappings. Each mapping is given as
+   * a comma separated string, whose first value is the phrase and
+   * whose second value is the CCG category string. Lines beginning
+   * with # are interpreted as comments and skipped over.
    * 
    * @param lexiconLines
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
-      Iterable<String> unfilteredRuleLines) {    
+      Iterable<String> unfilteredRuleLines) {
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     for (String line : unfilteredRuleLines) {
       if (!line.startsWith("#")) {
@@ -90,8 +95,9 @@ public class ParametricCcgParser {
         lexiconLines.add(line);
       }
     }
-    
-    // Parse out all of the categories, words, and semanticPredicates from the
+
+    // Parse out all of the categories, words, and semanticPredicates
+    // from the
     // lexicon.
     IndexedList<CcgCategory> categories = IndexedList.create();
     IndexedList<List<String>> words = IndexedList.create();
@@ -105,13 +111,15 @@ public class ParametricCcgParser {
 
       // Store the values of any assignments as semantic predicates.
       semanticPredicates.addAll(Iterables.concat(lexiconEntry.getCategory().getAssignment()));
-      // Store any predicates from the subjects of the dependency structures.
+      // Store any predicates from the subjects of the dependency
+      // structures.
       addSubjectsToPredicateList(lexiconEntry.getCategory().getSubjects(),
           lexiconEntry.getCategory().getArgumentNumbers(), semanticPredicates, maxNumArgs);
     }
 
     // Build the terminal distribution. This maps word sequences to
-    // CCG categories, with one possible mapping per entry in the lexicon.
+    // CCG categories, with one possible mapping per entry in the
+    // lexicon.
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories.items());
     DiscreteVariable wordType = new DiscreteVariable("words", words.items());
 
@@ -145,14 +153,15 @@ public class ParametricCcgParser {
     ParametricFactor dependencyParametricFactor = new DenseIndicatorLogLinearFactor(vars);
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
-        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor, 
+        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor,
         binaryRules);
   }
 
   /**
-   * Adds the predicates in {@code subjects} to {@code semanticPredicates},
-   * while simultaneously counting the argument numbers each predicate appears
-   * with and maintaining the maximum number seen in {@code maxNumArgs}.
+   * Adds the predicates in {@code subjects} to
+   * {@code semanticPredicates}, while simultaneously counting the
+   * argument numbers each predicate appears with and maintaining the
+   * maximum number seen in {@code maxNumArgs}.
    * 
    * @param subjects
    * @param argNums
@@ -190,17 +199,17 @@ public class ParametricCcgParser {
   }
 
   /**
-   * Instantiates a {@code CcgParser} whose probability distributions are
-   * derived from {@code parameters}.
+   * Instantiates a {@code CcgParser} whose probability distributions
+   * are derived from {@code parameters}.
    * 
    * @param parameters
    * @return
    */
-  public CcgParser getParserFromParameters(SufficientStatistics parameters) {
+  public CcgParser getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
-    DiscreteFactor terminalDistribution = terminalFamily.getFactorFromParameters(
+    DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(
         parameterList.getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
-    DiscreteFactor dependencyDistribution = dependencyFamily.getFactorFromParameters(
+    DiscreteFactor dependencyDistribution = dependencyFamily.getModelFromParameters(
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS)).coerceToDiscrete();
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
@@ -209,8 +218,9 @@ public class ParametricCcgParser {
   }
 
   /**
-   * Increments {@code gradient} by {@code count * features(dependency)} for all
-   * dependency structures in {@code dependencies}.
+   * Increments {@code gradient} by
+   * {@code count * features(dependency)} for all dependency
+   * structures in {@code dependencies}.
    * 
    * @param gradient
    * @param dependencies
@@ -230,8 +240,9 @@ public class ParametricCcgParser {
   }
 
   /**
-   * Increments {@code gradient} by {@code count * features(lexiconEntry)} for
-   * all lexicon entries in {@code lexiconEntries}.
+   * Increments {@code gradient} by
+   * {@code count * features(lexiconEntry)} for all lexicon entries in
+   * {@code lexiconEntries}.
    * 
    * @param gradient
    * @param dependencies
@@ -249,8 +260,9 @@ public class ParametricCcgParser {
   }
 
   /**
-   * Increments {@code gradient} by {@code count * features(parse)}, where
-   * {@code features} is a function from CCG parses to a feature vectors.
+   * Increments {@code gradient} by {@code count * features(parse)},
+   * where {@code features} is a function from CCG parses to a feature
+   * vectors.
    * 
    * @param gradient
    * @param parse
@@ -270,7 +282,8 @@ public class ParametricCcgParser {
 
   /**
    * Gets a human-readable description of the {@code numFeatures}
-   * highest-weighted (in absolute value) features of {@code parameters}.
+   * highest-weighted (in absolute value) features of
+   * {@code parameters}.
    * 
    * @param parameters
    * @param numFeatures
@@ -286,9 +299,10 @@ public class ParametricCcgParser {
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS), numFeatures));
     return sb.toString();
   }
-  
+
   /**
-   * Returns true if {@code example} can be used to train this model family.
+   * Returns true if {@code example} can be used to train this model
+   * family.
    * 
    * @param example
    * @return
@@ -297,28 +311,30 @@ public class ParametricCcgParser {
     Set<DependencyStructure> dependencies = example.getDependencies();
     for (DependencyStructure dependency : dependencies) {
       if (!isValidDependency(dependency)) {
+        System.out.println(dependency);
         return false;
       }
     }
-    
+
     if (example.hasLexiconEntries()) {
       for (LexiconEntry lexiconEntry : example.getLexiconEntries()) {
         if (!isValidLexiconEntry(lexiconEntry)) {
+          System.out.println(lexiconEntry);
           return false;
         }
       }
     }
     return true;
   }
-  
+
   public boolean isValidDependency(DependencyStructure dependency) {
-    return dependencyHeadVar.isValidOutcomeArray(dependency.getHead()) &&  
-        dependencyArgNumVar.isValidOutcomeArray(dependency.getArgIndex()) && 
+    return dependencyHeadVar.isValidOutcomeArray(dependency.getHead()) &&
+        dependencyArgNumVar.isValidOutcomeArray(dependency.getArgIndex()) &&
         dependencyArgVar.isValidOutcomeArray(dependency.getObject());
   }
-  
+
   public boolean isValidLexiconEntry(LexiconEntry lexiconEntry) {
-    return terminalVar.isValidOutcomeArray(lexiconEntry.getWords()) && 
-        ccgCategoryVar.isValidOutcomeArray(lexiconEntry.getCategory()); 
+    return terminalVar.isValidOutcomeArray(lexiconEntry.getWords()) &&
+        ccgCategoryVar.isValidOutcomeArray(lexiconEntry.getCategory());
   }
 }

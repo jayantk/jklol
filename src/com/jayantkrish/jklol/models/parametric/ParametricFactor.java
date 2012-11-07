@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import java.io.Serializable;
-
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
@@ -25,16 +23,24 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public interface ParametricFactor extends Serializable {
+public interface ParametricFactor extends ParametricFamily<Factor> {
 
   /**
    * Gets the variables over which this {@code ParametricFactor} is defined. The
    * returned variables are the same as the variables for the factor returned by
-   * {@link #getFactorFromParameters(Object)}.
+   * {@link #getModelFromParameters(Object)}.
    * 
    * @return
    */
   public VariableNumMap getVars();
+  
+  /**
+   * Gets a human-interpretable XML description {@code parameters}.
+   * 
+   * @param parameters
+   * @return
+   */
+  public String getParameterDescriptionXML(SufficientStatistics parameters);
 
   /**
    * Gets a {@code Factor} from a set of {@code parameters}. This method returns
@@ -45,51 +51,7 @@ public interface ParametricFactor extends Serializable {
    * @param parameters
    * @return
    */
-  public Factor getFactorFromParameters(SufficientStatistics parameters);
-
-  /**
-   * Gets a human-interpretable string describing {@code parameters}. This
-   * method returns one line per parameter, containing a description of the
-   * parameter and its value. Equivalent to
-   * {@link #getParameterDescription(SufficientStatistics, int)} with a negative
-   * {@code numFeatures} value.
-   * 
-   * @param parameters
-   * @return
-   */
-  public String getParameterDescription(SufficientStatistics parameters);
-
-  /**
-   * Gets a human-interpretable string describing {@code parameters}. This
-   * method returns one line per parameter, containing a description of the
-   * parameter and its value.
-   * <p>
-   * If {@code numFeatures >= 0}, this method returns a string describing the
-   * {@code numFeatures} features with the largest weights. If
-   * {@code numFeatures} is negative, all features are included.
-   * 
-   * @param parameters
-   * @param numFeatures
-   * @return
-   */
-  public String getParameterDescription(SufficientStatistics parameters, int numFeatures);
-
-  /**
-   * Gets a human-interpretable XML description {@code parameters}.
-   * 
-   * @param parameters
-   * @return
-   */
-  public String getParameterDescriptionXML(SufficientStatistics parameters);
-
-  /**
-   * Gets a new all-zero vector of parameters for {@code this}. The returned
-   * vector can be an argument to methods of this instance which take parameters
-   * as an argument, e.g., {@link #getFactorFromParameters()}.
-   * 
-   * @return
-   */
-  public SufficientStatistics getNewSufficientStatistics();
+  public Factor getModelFromParameters(SufficientStatistics parameters);
 
   /**
    * Computes sufficient statistics for {@code this} factor based on an assumed

@@ -77,7 +77,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public BeamSearchCfgFactor getFactorFromParameters(SufficientStatistics parameters) {
+  public BeamSearchCfgFactor getModelFromParameters(SufficientStatistics parameters) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
@@ -85,8 +85,8 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
 
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
-        (DiscreteFactor) nonterminalFactor.getFactorFromParameters(nonterminalStatistics),
-        (DiscreteFactor) terminalFactor.getFactorFromParameters(terminalStatistics), beamSize, canSkipTerminals);
+        (DiscreteFactor) nonterminalFactor.getModelFromParameters(nonterminalStatistics),
+        (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics), beamSize, canSkipTerminals);
     return new BeamSearchCfgFactor(treeVar, inputVar, parser, terminalFunction, validTreeFilter);
   }
   

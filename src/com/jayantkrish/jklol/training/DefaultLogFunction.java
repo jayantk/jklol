@@ -7,6 +7,8 @@ import java.util.concurrent.Executors;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFamily;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -57,6 +59,10 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	    }
 	  }
 	}
+	
+	@Override
+	public void logParameters(int iteration, SufficientStatistics parameters, 
+	    ParametricFamily<?> family) {}
 
 	@Override
 	public void notifyIterationStart(int iteration) {

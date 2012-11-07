@@ -107,7 +107,7 @@ public class SequenceModelTest extends TestCase {
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1.0, true, 0.1, new DefaultLogFunction());
     
     SufficientStatistics parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData); 
-    DynamicFactorGraph trainedModel = sequenceModel.getFactorGraphFromParameters(parameters);
+    DynamicFactorGraph trainedModel = sequenceModel.getModelFromParameters(parameters);
     
     // Should be able to get 0 training error.
     FactorGraphPredictor predictor = new FactorGraphPredictor(trainedModel, 

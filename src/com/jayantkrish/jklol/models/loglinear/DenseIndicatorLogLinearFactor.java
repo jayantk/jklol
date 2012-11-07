@@ -32,7 +32,7 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public Factor getFactorFromParameters(SufficientStatistics parameters) {
+  public Factor getModelFromParameters(SufficientStatistics parameters) {
     return new TableFactor(getVars(), new LogSpaceTensorAdapter(getFeatureWeights(parameters)));
   }
 

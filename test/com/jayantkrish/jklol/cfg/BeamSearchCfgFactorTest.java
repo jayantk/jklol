@@ -169,7 +169,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
 
     SufficientStatistics parameters = trainer.train(adaptedOracle,
         adaptedOracle.initializeGradient(), trainingData);
-    FactorGraph trainedModel = cfgModel.getFactorGraphFromParameters(parameters)
+    FactorGraph trainedModel = cfgModel.getModelFromParameters(parameters)
         .getFactorGraph(DynamicAssignment.EMPTY);
     SimpleFactorGraphPredictor predictor = new SimpleFactorGraphPredictor(
         trainedModel, y, new JunctionTree());

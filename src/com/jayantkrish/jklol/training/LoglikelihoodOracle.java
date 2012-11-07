@@ -39,7 +39,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
   
   @Override
   public DynamicFactorGraph instantiateModel(SufficientStatistics parameters) {
-    return family.getFactorGraphFromParameters(parameters);
+    return family.getModelFromParameters(parameters);
   }
 
   @Override

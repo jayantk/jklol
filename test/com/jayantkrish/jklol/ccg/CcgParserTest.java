@@ -22,16 +22,16 @@ public class CcgParserTest extends TestCase {
   CcgParser parser;
   
   private static final String[] lexicon = {"I,N{0},0 I", "people,N{0},0 people", "berries,N{0},0 berries", "houses,N{0},0 houses",
-    "eat,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1#eat 2 2", "that,((N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0},0 that,that 1 1#that 2 2", 
+    "eat,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2", "that,((N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0},0 that,that 1 1,that 2 2", 
     "quickly,(((S{1}\\N{2}){1}/N{3}){1}/((S{1}\\N{2}){1}/N{3}){1}){0},0 quickly,quickly 1 1", 
-    "in,((N{1}\\N{1}){0}/N{2}){0},0 in,in 1 1#in 2 2",
+    "in,((N{1}\\N{1}){0}/N{2}){0},0 in,in 1 1,in 2 2",
     "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 amazingly,amazingly 1 2", 
     "tasty,(N{1}/N{1}){0},0 tasty,tasty 1 1",
-    "in,(((S{1}\\N{2}){1}\\(S{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 2#in 2 3",
+    "in,(((S{1}\\N{2}){1}\\(S{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 2,in 2 3",
     "and,((N{1}\\N{1}){0}/N{1}){0},0 and", 
     "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},0 almost,almost 1 2",
     "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
-    "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2#directed 2 1",
+    "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
     ";,;", "or,conj,"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 

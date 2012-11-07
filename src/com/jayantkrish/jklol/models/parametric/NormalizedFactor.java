@@ -29,8 +29,8 @@ public class NormalizedFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public Factor getFactorFromParameters(SufficientStatistics parameters) {
-    Factor factor = wrappedFactor.getFactorFromParameters(parameters);
+  public Factor getModelFromParameters(SufficientStatistics parameters) {
+    Factor factor = wrappedFactor.getModelFromParameters(parameters);
 
     if (conditionalVariables.size() > 0) {
       // Normalize the returned factor.

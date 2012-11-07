@@ -152,7 +152,7 @@ public class TrainRbm {
         parameters, trainingExamples);
 
     // Print training error.
-    FactorGraph factorGraph = rbmFamily.getFactorGraphFromParameters(parameters)
+    FactorGraph factorGraph = rbmFamily.getModelFromParameters(parameters)
         .conditional(DynamicAssignment.EMPTY);
     
     System.out.println(rbmFamily.getParameterDescription(parameters));

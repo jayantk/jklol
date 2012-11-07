@@ -15,6 +15,11 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IoUtils;
 
+/**
+ * Command line program for training a linear classifier.
+ * 
+ * @author jayantk
+ */
 public class TrainLinearClassifier {
   
   public static ParametricFactorGraph buildModel(List<String> features, 
@@ -65,6 +70,5 @@ public class TrainLinearClassifier {
         options.valueOf(inputData), 1, delimiter);
     List<String> labelNames = IoUtils.readUniqueColumnValuesFromDelimitedFile(
         options.valueOf(labelData), 1, delimiter);
-    
   }
 }

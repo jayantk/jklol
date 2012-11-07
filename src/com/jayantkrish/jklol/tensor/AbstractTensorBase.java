@@ -14,7 +14,8 @@ import com.google.common.primitives.Ints;
 public abstract class AbstractTensorBase implements TensorBase, Serializable {
 
   private static final long serialVersionUID = 251634505015766912L;
-  // The dimensions spanned by this tensor, and the size in each dimension.
+  // The dimensions spanned by this tensor, and the size in each
+  // dimension.
   private final int[] dimensions;
   private final int[] sizes;
 
@@ -32,14 +33,15 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     this.dimensions = Arrays.copyOf(dimensions, dimensions.length);
     this.sizes = Arrays.copyOf(sizes, sizes.length);
 
-    // Create the data structure for converting dimension keys to integers.
+    // Create the data structure for converting dimension keys to
+    // integers.
     indexOffsets = computeIndexOffsets(sizes);
   }
 
   /**
-   * Computes an array of index offsets (multipliers) from a set of dimension
-   * sizes. The returned array is used to convert int[] tensor keys to longs
-   * (and vice versa).
+   * Computes an array of index offsets (multipliers) from a set of
+   * dimension sizes. The returned array is used to convert int[]
+   * tensor keys to longs (and vice versa).
    * 
    * @param sizes
    */
@@ -119,7 +121,7 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     long keyNum = 0;
     for (int i = 0; i < keyPrefix.length; i++) {
       Preconditions.checkArgument(keyPrefix[i] >= 0 && keyPrefix[i] < sizes[i],
-          "Illegal key prefix: %s %s %s", i, keyPrefix[i], sizes[i]);
+          "Illegal key element: %s. (index: %s, allowed range: 0 to %s)", keyPrefix[i], i, sizes[i]);
       keyNum += ((long) keyPrefix[i]) * indexOffsets[i];
     }
     return keyNum;
@@ -153,11 +155,11 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     }
     return -1;
   }
-  
+
   /**
    * Returns {@code true} if the dimensions in {@code otherDims} occur
    * occur at the very end of this tensor's dimension array.
-   *    
+   * 
    * @param otherDims
    * @return
    */
@@ -169,11 +171,11 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     }
     return true;
   }
-  
+
   /**
    * Returns {@code true} if the dimensions in {@code otherDims} occur
    * occur at the very beginning of this tensor's dimension array.
-   *    
+   * 
    * @param otherDims
    * @return
    */

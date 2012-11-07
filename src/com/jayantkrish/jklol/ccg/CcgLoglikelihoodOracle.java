@@ -34,7 +34,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
   @Override
   public CcgParser instantiateModel(SufficientStatistics parameters) {
-    return family.getParserFromParameters(parameters);
+    return family.getModelFromParameters(parameters);
   }
 
   @Override

@@ -102,7 +102,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   // ///////////////////////////////////////////////////////////
 
   @Override
-  public DiscreteFactor getFactorFromParameters(SufficientStatistics parameters) {
+  public DiscreteFactor getModelFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters);
     Tensor logProbs = featureValues.getWeights().elementwiseProduct(featureWeights)
         .sumOutDimensions(featureVariables.getVariableNums());

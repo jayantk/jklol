@@ -58,7 +58,7 @@ public class BNCountTrainerTest extends TestCase {
 		SufficientStatistics parameters = t.train(bn, trainingData);
 		parameters.increment(1.0);
 		
-		FactorGraph factorGraph = bn.getFactorGraphFromParameters(parameters).getFactorGraph(DynamicAssignment.EMPTY);
+		FactorGraph factorGraph = bn.getModelFromParameters(parameters).getFactorGraph(DynamicAssignment.EMPTY);
 		
 		// TODO(jayantk): This test depends on the bayes net preserving the order
 		// of the factors when constructing the factor graph.

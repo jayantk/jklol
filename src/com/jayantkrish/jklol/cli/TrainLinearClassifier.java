@@ -20,9 +20,44 @@ import com.jayantkrish.jklol.util.IoUtils;
  * 
  * @author jayantk
  */
-public class TrainLinearClassifier {
+public class TrainLinearClassifier extends AbstractCli {
   
-  public static ParametricFactorGraph buildModel(List<String> features, 
+  private OptionSpec<String> inputData;
+  private OptionSpec<String> labelData;
+  private OptionSpec<String> modelOutput;
+  private OptionSpec<String> delimiterOption;
+  
+  public TrainLinearClassifier() {
+    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
+  }
+
+  @Override
+  public void initializeOptions(OptionParser parser) {
+    // Required arguments.
+    inputData = parser.accepts("input").withRequiredArg().ofType(String.class).required();
+    labelData = parser.accepts("labels").withRequiredArg().ofType(String.class).required();
+    modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+    // Optional options
+    delimiterOption = parser.accepts("delimiter").withRequiredArg().ofType(String.class)
+        .required().defaultsTo(",");
+  }
+
+  @Override
+  public void run(OptionSet options) {
+    String delimiter = options.valueOf(delimiterOption);
+    List<String> featureNames = IoUtils.readUniqueColumnValuesFromDelimitedFile(
+        options.valueOf(inputData), 1, delimiter);
+    List<String> labelNames = IoUtils.readUniqueColumnValuesFromDelimitedFile(
+        options.valueOf(labelData), 1, delimiter);
+    
+    ParametricFactorGraph family = buildModel(featureNames, labelNames);
+  }
+  
+  public static void main(String[] args) {
+    new TrainLinearClassifier().run(args);
+  }
+  
+  private ParametricFactorGraph buildModel(List<String> features, 
       List<String> outputLabels) {
     // A linear classifier is represented as a parametric factor graph with
     // two variables: an input variable (x) whose values are feature vectors
@@ -51,24 +86,5 @@ public class TrainLinearClassifier {
         VariableNumMap.emptyMap(), featureVar));
     // Builds the actual trainable model.
     return builder.build();
-  }
-
-  public static void main(String[] args) {
-    OptionParser parser = new OptionParser();
-    // Required arguments.
-    OptionSpec<String> inputData = parser.accepts("input").withRequiredArg().ofType(String.class).required();
-    OptionSpec<String> labelData = parser.accepts("labels").withRequiredArg().ofType(String.class).required();
-    OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
-    // Optional options
-    OptionSpec<String> delimiterOption = parser.accepts("delimiter").withRequiredArg().ofType(String.class)
-        .required().defaultsTo(",");
-    OptionUtils.addStochasticGradientOptions(parser);
-    OptionSet options = parser.parse(args);
-
-    String delimiter = options.valueOf(delimiterOption);
-    List<String> featureNames = IoUtils.readUniqueColumnValuesFromDelimitedFile(
-        options.valueOf(inputData), 1, delimiter);
-    List<String> labelNames = IoUtils.readUniqueColumnValuesFromDelimitedFile(
-        options.valueOf(labelData), 1, delimiter);
   }
 }

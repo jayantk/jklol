@@ -24,23 +24,34 @@ import com.jayantkrish.jklol.util.IoUtils;
  * 
  * @author jayantk
  */
-public class TrainCcg {
+public class TrainCcg extends AbstractCli {
   
   private static final String DISCARD_INVALID_OPT = "discardInvalid";
 
-  public static void main(String[] args) {
-    OptionParser parser = new OptionParser();
+  private OptionSpec<String> lexicon;
+  private OptionSpec<String> trainingData;
+  private OptionSpec<String> modelOutput;
+  private OptionSpec<String> rules;
+  private OptionSpec<Integer> beamSize;
+
+  public TrainCcg() {
+    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
+  }
+  
+  @Override
+  public void initializeOptions(OptionParser parser) {
     // Required arguments.
-    OptionSpec<String> lexicon = parser.accepts("lexicon").withRequiredArg().ofType(String.class).required();
-    OptionSpec<String> trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
-    OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+    lexicon = parser.accepts("lexicon").withRequiredArg().ofType(String.class).required();
+    trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
+    modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional options
-    OptionSpec<String> rules = parser.accepts("rules").withRequiredArg().ofType(String.class);
-    OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    rules = parser.accepts("rules").withRequiredArg().ofType(String.class);
+    beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     parser.accepts(DISCARD_INVALID_OPT);
-    OptionUtils.addStochasticGradientOptions(parser);
-    OptionSet options = parser.parse(args);
-    
+  }
+
+  @Override
+  public void run(OptionSet options) {
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(lexicon));
     List<String> ruleEntries = options.has(rules) ? IoUtils.readLines(options.valueOf(rules))
@@ -66,9 +77,8 @@ public class TrainCcg {
     
     // Train the model.
     CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
-    StochasticGradientTrainer trainer = OptionUtils.createStochasticGradientTrainer(
-        options, trainingExamples.size());
-    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), 
+    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingExamples.size());
+    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
     CcgParser ccgParser = family.getModelFromParameters(parameters);
 
@@ -77,7 +87,9 @@ public class TrainCcg {
     
     System.out.println("Trained model parameters:");
     System.out.println(family.getParameterDescription(parameters));
-    
-    System.exit(0);
+  }
+  
+  public static void main(String[] args) {
+    new TrainCcg().run(args);
   }
 }

@@ -31,9 +31,63 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
-public class TrainRbm {
+public class TrainRbm extends AbstractCli {
   
-  private static DiscreteVariable trueFalse = new DiscreteVariable("trueFalse", Arrays.asList("F", "T"));
+  private static final DiscreteVariable trueFalse = new DiscreteVariable("trueFalse", Arrays.asList("F", "T"));
+  
+  private OptionSpec<String> inputData;
+  private OptionSpec<String> modelOutput;
+  private OptionSpec<Integer> hiddenUnits;
+
+  public TrainRbm() {
+    super(CommonOptions.STOCHASTIC_GRADIENT);
+  }
+  
+  @Override
+  public void initializeOptions(OptionParser parser) {
+    inputData = parser.accepts("input").withRequiredArg().ofType(String.class).required();
+    modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+    hiddenUnits = parser.accepts("hiddenUnits").withRequiredArg().ofType(Integer.class).required();
+  }
+
+  @Override
+  public void run(OptionSet options) {
+    // Build the RBM from the input data.
+    String inputFilename = options.valueOf(inputData);
+    List<String> observedNames = Lists.newArrayList(Sets.newHashSet(
+        IoUtils.readColumnFromDelimitedFile(inputFilename, 1, ",")));
+    ParametricFactorGraph rbmFamily = buildRbm(observedNames, options.valueOf(hiddenUnits));
+    
+    // Read in the training examples.
+    List<Example<Assignment, Assignment>> trainingExamples = readTrainingData(inputFilename, 
+        ",", rbmFamily);
+
+    // The iterations option is interpreted as the number of passes over the training data to perform.
+    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingExamples.size()); 
+    LoglikelihoodOracle oracle = new LoglikelihoodOracle(rbmFamily, new GibbsSampler(0, 10, 0));
+    SufficientStatistics parameters = rbmFamily.getNewSufficientStatistics();
+    parameters.perturb(0.01);
+    parameters = trainer.train(OracleAdapter.createAssignmentAdapter(oracle),
+        parameters, trainingExamples);
+
+    // Print training error.
+    FactorGraph factorGraph = rbmFamily.getModelFromParameters(parameters)
+        .conditional(DynamicAssignment.EMPTY);
+    
+    System.out.println(rbmFamily.getParameterDescription(parameters));
+    System.out.println(factorGraph.getParameterDescription());
+    
+    JunctionTree jt = new JunctionTree();
+    for (Example<Assignment, Assignment> example : trainingExamples) {
+      Assignment a = example.getOutput();
+      MaxMarginalSet maxMarginals = jt.computeMaxMarginals(factorGraph.conditional(a));
+      System.out.println(maxMarginals.getNthBestAssignment(0));
+    }
+  }
+    
+  public static void main(String[] args) {
+    new TrainRbm().run(args);
+  }
   
   private static List<Example<Assignment, Assignment>> readTrainingData(
       String filename, String delimiter, ParametricFactorGraph rbmFamily) {
@@ -120,49 +174,5 @@ public class TrainRbm {
       }
     }
     return builder.build();
-  }
-
-  public static void main(String[] args) {
-    OptionParser parser = new OptionParser();
-    // Required arguments.
-    OptionSpec<String> inputData = parser.accepts("input").withRequiredArg().ofType(String.class).required();
-    OptionSpec<String> modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
-    OptionSpec<Integer> hiddenUnits = parser.accepts("hiddenUnits").withRequiredArg().ofType(Integer.class).required();
-    // Optional options
-    OptionUtils.addStochasticGradientOptions(parser);
-    OptionSet options = parser.parse(args);
-    
-    // Build the RBM from the input data.
-    String inputFilename = options.valueOf(inputData);
-    List<String> observedNames = Lists.newArrayList(Sets.newHashSet(
-        IoUtils.readColumnFromDelimitedFile(inputFilename, 1, ",")));
-    ParametricFactorGraph rbmFamily = buildRbm(observedNames, options.valueOf(hiddenUnits));
-    
-    // Read in the training examples.
-    List<Example<Assignment, Assignment>> trainingExamples = readTrainingData(inputFilename, 
-        ",", rbmFamily);
-
-    // The iterations option is interpreted as the number of passes over the training data to perform.
-    StochasticGradientTrainer trainer = OptionUtils.createStochasticGradientTrainer(
-        options, trainingExamples.size());
-    LoglikelihoodOracle oracle = new LoglikelihoodOracle(rbmFamily, new GibbsSampler(0, 10, 0));
-    SufficientStatistics parameters = rbmFamily.getNewSufficientStatistics();
-    parameters.perturb(0.01);
-    parameters = trainer.train(OracleAdapter.createAssignmentAdapter(oracle),
-        parameters, trainingExamples);
-
-    // Print training error.
-    FactorGraph factorGraph = rbmFamily.getModelFromParameters(parameters)
-        .conditional(DynamicAssignment.EMPTY);
-    
-    System.out.println(rbmFamily.getParameterDescription(parameters));
-    System.out.println(factorGraph.getParameterDescription());
-    
-    JunctionTree jt = new JunctionTree();
-    for (Example<Assignment, Assignment> example : trainingExamples) {
-      Assignment a = example.getOutput();
-      MaxMarginalSet maxMarginals = jt.computeMaxMarginals(factorGraph.conditional(a));
-      System.out.println(maxMarginals.getNthBestAssignment(0));
-    }
   }
 }

@@ -1,2 +1,2 @@
-sort the lines of this file###sortFunc 0 1 getLines 2#getLines 2 1 file 5
-sort this in numeric order###sortFunc 0 1 this 1#sortFunc 0 1 this 1#sortFunc 0 2 numericOrder 3
+sort the lines of this file###sortFunc 0 1 getLines 2,getLines 2 1 file 5
+sort this in numeric order###sortFunc 0 1 this 1,sortFunc 0 1 this 1,sortFunc 0 2 numericOrder 3

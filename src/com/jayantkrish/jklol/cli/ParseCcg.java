@@ -36,7 +36,7 @@ public class ParseCcg {
       System.out.println("PROB: " + parses.get(i).getSubtreeProbability());
     }
   }
-  
+
   public static void main(String[] args) {
     OptionParser parser = new OptionParser();
     // Required arguments.

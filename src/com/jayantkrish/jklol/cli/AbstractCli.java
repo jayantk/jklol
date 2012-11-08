@@ -1,7 +1,10 @@
 package com.jayantkrish.jklol.cli;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.Set;
 
+import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
@@ -23,13 +26,16 @@ public abstract class AbstractCli {
 
   private final Set<CommonOptions> opts;
   private OptionSet parsedOptions;
+  
+  // Help options.
+  private OptionSpec<Void> helpOpt;
 
   // Stochastic gradient options.
   private OptionSpec<Integer> sgdIterations;
   private OptionSpec<Integer> sgdBatchSize;
   private OptionSpec<Double> sgdInitialStep;
   private OptionSpec<Double> sgdL2Regularization;
-  private static final String SGD_BRIEF = "brief";
+  private OptionSpec<Void> sgdBrief;
 
   // Map reduce options.
   private OptionSpec<Integer> mrMaxThreads;
@@ -50,7 +56,17 @@ public abstract class AbstractCli {
     OptionParser parser = new OptionParser();
     initializeCommonOptions(parser);
     initializeOptions(parser);
-    parsedOptions = parser.parse(args);
+    try {
+      parsedOptions = parser.parse(args);
+    } catch (OptionException e) {
+      // If a help option is given, print help then quit.
+      try {
+        parser.printHelpOn(System.out);
+      } catch (IOException ioException) {
+        throw new RuntimeException(ioException);
+      }
+      System.exit(0);
+    }
 
     // Log any passed-in options.
     System.out.println("Command-line options:");
@@ -92,19 +108,32 @@ public abstract class AbstractCli {
    * @param parser
    */
   private void initializeCommonOptions(OptionParser parser) {
+    helpOpt = parser.acceptsAll(Arrays.asList("help", "h"), "Print this help message.");
+    
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT)) {
-      sgdIterations = parser.accepts("iterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
-      sgdBatchSize = parser.accepts("batchSize").withRequiredArg().ofType(Integer.class).defaultsTo(1);
-      sgdInitialStep = parser.accepts("initialStepSize").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
-      sgdL2Regularization = parser.accepts("l2Regularization").withRequiredArg().ofType(Double.class).defaultsTo(0.1);
+      sgdIterations = parser.accepts("iterations", 
+          "Number of iterations (passes over the data) for stochastic gradient descent.").
+          withRequiredArg().ofType(Integer.class).defaultsTo(10);
+      sgdBatchSize = parser.accepts("batchSize", 
+          "Minibatch size, i.e., the number of examples processed per gradient computation.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(1);
+      sgdInitialStep = parser.accepts("initialStepSize", 
+          "Initial step size for stochastic gradient descent.")
+          .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
+      sgdL2Regularization = parser.accepts("l2Regularization", 
+          "Regularization parameter for the L2 norm of the parameter vector.")
+          .withRequiredArg().ofType(Double.class).defaultsTo(0.1);
       // boolean option.
-      parser.accepts(SGD_BRIEF); // Hides training output.
+      sgdBrief = parser.accepts("brief", "Hides training output."); 
     }
+    
     if (opts.contains(CommonOptions.MAP_REDUCE)) {
-      mrMaxThreads = parser.accepts("maxThreads").withRequiredArg().ofType(Integer.class)
-          .defaultsTo(Runtime.getRuntime().availableProcessors());
-      mrMaxBatchesPerThread = parser.accepts("maxBatchesPerThread").withRequiredArg()
-          .ofType(Integer.class).defaultsTo(20);
+      mrMaxThreads = parser.accepts("maxThreads", 
+          "Maximum number of threads to use during parallel execution.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(Runtime.getRuntime().availableProcessors());
+      mrMaxBatchesPerThread = parser.accepts("maxBatchesPerThread", 
+          "Number of batches of items to create per thread.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(20);
     }
   }
 
@@ -138,7 +167,7 @@ public abstract class AbstractCli {
     int numIterations = (int) Math.ceil(iterationsOption * numExamples / ((double) batchSize));
     double initialStepSize = parsedOptions.valueOf(sgdInitialStep);
     double l2Regularization = parsedOptions.valueOf(sgdL2Regularization);
-    boolean brief = parsedOptions.has(SGD_BRIEF);
+    boolean brief = parsedOptions.has(sgdBrief);
 
     LogFunction log = (brief ? new NullLogFunction() : new DefaultLogFunction());
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(

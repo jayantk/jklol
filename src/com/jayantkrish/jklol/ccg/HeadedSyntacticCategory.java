@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
@@ -14,8 +15,10 @@ import com.google.common.primitives.Ints;
  * 
  * @author jayantk
  */
-public class HeadedSyntacticCategory {
+public class HeadedSyntacticCategory implements Serializable {
 
+  private static final long serialVersionUID = 1L;
+  
   private final SyntacticCategory syntacticCategory;
   // Semantic variable for each subcategory of syntacticCategory,
   // where the ith entry represents the variable for the i'th

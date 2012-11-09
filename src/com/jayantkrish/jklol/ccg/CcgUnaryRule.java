@@ -76,7 +76,7 @@ public class CcgUnaryRule {
       throw new IllegalArgumentException("Illegal unary rule string: " + line, e);
     }
   }
-  
+
   public SyntacticCategory getInputSyntacticCategory() {
     return inputSyntax.getSyntax();
   }
@@ -90,12 +90,12 @@ public class CcgUnaryRule {
     if (patternToChart == null) {
       return null;
     }
-
+    
     int[] returnVars = entry.getAssignmentVariableNumsRelabeled(patternToChart);
     int[] returnPredicateNums = entry.getAssignmentPredicateNums();
     int[] returnIndexes = entry.getAssignmentIndexes();
     long[] returnUnfilledDeps = entry.getUnfilledDependenciesRelabeled(patternToChart);
-
+    
     if (entry.isTerminal()) {
       return new ChartEntry(returnSyntax, entry.getLexiconEntry(), this, returnVars, 
           returnPredicateNums, returnIndexes, returnUnfilledDeps, entry.getDependencies(), 
@@ -106,5 +106,5 @@ public class CcgUnaryRule {
           entry.getLeftChartIndex(), entry.getRightSpanStart(), entry.getRightSpanEnd(), 
           entry.getRightChartIndex());
     }
-   }
+  }
 }

@@ -33,7 +33,9 @@ public class CcgParserTest extends TestCase {
     "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},0 almost,almost 1 2",
     "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
     "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
-    ";,;", "or,conj,"};
+    ";,;", "or,conj,",
+    "about,(N{0}/(S{1}\\N{2}){1}){0},0 about,about 1 1", 
+    "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
@@ -41,7 +43,8 @@ public class CcgParserTest extends TestCase {
     1.0, 1.0,
     0.5, 1.0, 2.0,
     0.25, 1.0, 
-    1.0, 0.5};
+    1.0, 0.5,
+    1.0, 1.0};
 
   private static final String[] binaryRuleArray = {"; N{0} N{0}", "N{0} ; N{0}", 
     "; (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\", N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
@@ -189,6 +192,19 @@ public class CcgParserTest extends TestCase {
     }
   }
   
+  public void testParseUnfilledDep() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("about", "eating", "berries"), 10);
+    
+    assertEquals(1, parses.size());
+    
+    CcgParse parse = parses.get(0);
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("about", 0, "eat", 1, 1),
+        new DependencyStructure("eat", 1, "berries", 2, 2));
+    assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
+  }
+
   public void testBinaryRules() {
     List<CcgParse> parses = parser.beamSearch(
         Arrays.asList("people", "eat", "berries", ";"), 10);
@@ -283,7 +299,6 @@ public class CcgParserTest extends TestCase {
       assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
     }
   }
-
   
   private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray, 
       String[] unaryRuleArray, double[] weights) {
@@ -301,11 +316,11 @@ public class CcgParserTest extends TestCase {
         semanticPredicates.addAll(Arrays.asList(head));
       }
     }
-    
+
     // Build the terminal distribution.
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories);
     DiscreteVariable wordType = new DiscreteVariable("words", words);
-    
+
     terminalVar = VariableNumMap.singleton(0, "words", wordType);
     ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
     VariableNumMap vars = terminalVar.union(ccgCategoryVar);

@@ -100,7 +100,7 @@ public class CcgChart {
     ChartEntry entry = chart[spanStart][spanEnd][beamIndex];
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(entry.getLexiconEntry(), 
+      return CcgParse.forTerminal(entry.getHeadedSyntax(), entry.getLexiconEntry(), 
           parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
@@ -206,7 +206,12 @@ public class CcgChart {
    * @author jayant
    */
   public static class ChartEntry {
+    // The syntactic category of the root of the parse span.
     private final HeadedSyntacticCategory syntax;
+    
+    // If non-null, this unary rule was applied at this entry to
+    // produce syntax from the original category.
+    private final CcgUnaryRule unaryRule;
     
     // An assignment to the semantic variables given by syntax. 
     // Each value is both a predicate and its index in the sentence. 
@@ -219,8 +224,6 @@ public class CcgChart {
     private final long[] unfilledDependencies;
     // Complete dependency structures, encoded into longs for efficiency. 
     private final long[] deps;
-
-    private final boolean isTerminal;
 
     // If this is a terminal, lexiconEntry contains the CcgCategory
     // from the lexicon used to create this chartEntry. This variable
@@ -237,11 +240,12 @@ public class CcgChart {
     private final int rightSpanEnd;
     private final int rightChartIndex;
 
-    public ChartEntry(HeadedSyntacticCategory syntax, int[] assignmentVariableNums, 
+    public ChartEntry(HeadedSyntacticCategory syntax, CcgUnaryRule unaryRule, int[] assignmentVariableNums, 
         int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
         long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex) {
       this.syntax = Preconditions.checkNotNull(syntax);
+      this.unaryRule = unaryRule;
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
       this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
       this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
@@ -249,8 +253,6 @@ public class CcgChart {
 
       this.lexiconEntry = null;
       this.deps = Preconditions.checkNotNull(deps);
-
-      isTerminal = false;
 
       this.leftSpanStart = leftSpanStart;
       this.leftSpanEnd = leftSpanEnd;
@@ -261,10 +263,11 @@ public class CcgChart {
       this.rightChartIndex = rightChartIndex;
     }
 
-    public ChartEntry(CcgCategory ccgCategory, int[] assignmentVariableNums,
-        int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
-        long[] deps, int spanStart, int spanEnd) {
-      this.syntax = Preconditions.checkNotNull(ccgCategory.getSyntax());
+    public ChartEntry(HeadedSyntacticCategory syntax, CcgCategory ccgCategory, CcgUnaryRule unaryRule,
+        int[] assignmentVariableNums, int[] assignmentPredicateNums, int[] assignmentIndexes, 
+        long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
+      this.syntax = Preconditions.checkNotNull(syntax);
+      this.unaryRule = unaryRule;
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
       this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);      
       this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
@@ -272,8 +275,6 @@ public class CcgChart {
 
       this.lexiconEntry = ccgCategory;
       this.deps = Preconditions.checkNotNull(deps);
-
-      isTerminal = true;
 
       // Use the leftSpan to represent the spanned terminal.
       this.leftSpanStart = spanStart;
@@ -291,6 +292,16 @@ public class CcgChart {
 
     public SyntacticCategory getSyntax() {
       return syntax.getSyntax();
+    }
+    
+    /**
+     * Gets the unary rule used to produce this chart entry. If no rule was used,
+     * returns {@code null}.
+     * 
+     * @return
+     */
+    public CcgUnaryRule getUnaryRule() {
+      return unaryRule;
     }
     
     public int[] getAssignmentVariableNums() {
@@ -359,7 +370,7 @@ public class CcgChart {
     }
 
     public boolean isTerminal() {
-      return isTerminal;
+      return rightChartIndex == -1;
     }
 
     public int getLeftSpanStart() {

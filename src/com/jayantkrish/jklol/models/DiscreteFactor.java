@@ -23,6 +23,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * DiscreteFactor provides a generic implementation of most methods of the
@@ -239,7 +240,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public Assignment sample() {
-    double draw = Math.random();
+    double draw = Pseudorandom.get().nextDouble();
     double partitionFunction = getPartitionFunction();
     double sumProb = 0.0;
     Iterator<Outcome> iter = outcomeIterator();

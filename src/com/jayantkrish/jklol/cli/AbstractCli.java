@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 public abstract class AbstractCli {
   public static enum CommonOptions {
@@ -29,6 +30,10 @@ public abstract class AbstractCli {
   
   // Help options.
   private OptionSpec<Void> helpOpt;
+  
+  // Always available options.
+  // Seed the random number generator
+  private OptionSpec<Long> randomSeed;
 
   // Stochastic gradient options.
   private OptionSpec<Integer> sgdIterations;
@@ -109,6 +114,10 @@ public abstract class AbstractCli {
    */
   private void initializeCommonOptions(OptionParser parser) {
     helpOpt = parser.acceptsAll(Arrays.asList("help", "h"), "Print this help message.");
+
+    randomSeed = parser.accepts("randomSeed", "Seed to use for generating random numbers. "
+        + "Program execution may still be nondeterministic, if multithreading is used.").
+        withRequiredArg().ofType(Long.class).defaultsTo(0L);
     
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT)) {
       sgdIterations = parser.accepts("iterations", 
@@ -144,6 +153,8 @@ public abstract class AbstractCli {
    * @param options
    */
   private void processOptions(OptionSet options) {
+    Pseudorandom.get().setSeed(options.valueOf(randomSeed));
+
     if (opts.contains(CommonOptions.MAP_REDUCE)) {
       MapReduceConfiguration.setMapReduceExecutor(new LocalMapReduceExecutor(
           options.valueOf(mrMaxThreads), options.valueOf(mrMaxBatchesPerThread)));

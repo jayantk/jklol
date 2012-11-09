@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 public class CcgParserTest extends TestCase {
 
   CcgParser parser;
+  CcgParser parserWithUnary;
   
   private static final String[] lexicon = {"I,N{0},0 I", "people,N{0},0 people", "berries,N{0},0 berries", "houses,N{0},0 houses",
     "eat,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2", "that,((N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0},0 that,that 1 1,that 2 2", 
@@ -42,9 +43,12 @@ public class CcgParserTest extends TestCase {
     0.25, 1.0, 
     1.0, 0.5};
 
-  private static final String[] rules = {"; N{0} N{0}", "N{0} ; N{0}", 
-    "; (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "conj{1} N{0} (N{0}\\N{0}){1}", 
+  private static final String[] binaryRuleArray = {"; N{0} N{0}", "N{0} ; N{0}", 
+    "; (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\", N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
     "conj{2} (S{0}\\N{1}){0} ((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}"};
+  
+  private static final String[] unaryRuleArray = {"N{0} (S{1}/(S{1}\\N{0}){1})",
+    "N{0} (N{1}/N{1})"};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -54,7 +58,8 @@ public class CcgParserTest extends TestCase {
   private VariableNumMap semanticArgVar;
 
   public void setUp() {
-    parser = parseLexicon(lexicon, rules, weights);
+    parser = parseLexicon(lexicon, binaryRuleArray, new String[0], weights);
+    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights);
   }
   
   public void testParse() {
@@ -249,7 +254,39 @@ public class CcgParserTest extends TestCase {
     assertEquals(expectedDeps, deps);
   }
   
-  private CcgParser parseLexicon(String[] lexicon, String[] rules, double[] weights) {
+  public void testParseUnaryRules1() {
+    List<CcgParse> parses = parserWithUnary.beamSearch(
+        Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
+
+    assertEquals(2, parses.size());
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("eat", 1, "people", 0, 1),
+        new DependencyStructure("eat", 1, "berries", 2, 2),
+        new DependencyStructure("directed", 4, "people", 0, 2),
+        new DependencyStructure("directed", 4, "houses", 5, 1));
+    
+    for (CcgParse parse : parses) {
+      assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
+    }
+  }
+  
+  public void testParseUnaryRules2() {
+    List<CcgParse> parses = parserWithUnary.beamSearch(
+        Arrays.asList("people", "eat", "people", "berries"), 10);
+
+    assertEquals(2, parses.size());
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("eat", 1, "people", 0, 1),
+        new DependencyStructure("eat", 1, "berries", 3, 2));
+    
+    for (CcgParse parse : parses) {
+      assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
+    }
+  }
+
+  
+  private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray, 
+      String[] unaryRuleArray, double[] weights) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
     Set<List<String>> words = Sets.newHashSet();
@@ -297,12 +334,17 @@ public class CcgParserTest extends TestCase {
     
     // Parse the binary rules
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
-    for (int i = 0; i < rules.length; i++) {
-      binaryRules.add(CcgBinaryRule.parseFrom(rules[i]));
+    for (int i = 0; i < binaryRuleArray.length; i++) {
+      binaryRules.add(CcgBinaryRule.parseFrom(binaryRuleArray[i]));
+    }
+    
+    List<CcgUnaryRule> unaryRules = Lists.newArrayList();
+    for (int i = 0; i < unaryRuleArray.length; i++) {
+      unaryRules.add(CcgUnaryRule.parseFrom(unaryRuleArray[i]));
     }
     
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
-        binaryRules);
+        binaryRules, unaryRules);
   }
 }

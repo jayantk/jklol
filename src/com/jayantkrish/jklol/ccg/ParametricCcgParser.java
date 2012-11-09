@@ -51,6 +51,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final ParametricFactor dependencyFamily;
 
   private final List<CcgBinaryRule> binaryRules;
+  private final List<CcgUnaryRule> unaryRules;
 
   private final String TERMINAL_PARAMETERS = "terminals";
   private final String DEPENDENCY_PARAMETERS = "dependencies";
@@ -58,7 +59,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public ParametricCcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       ParametricFactor terminalFamily, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
-      ParametricFactor dependencyFamily, List<CcgBinaryRule> binaryRules) {
+      ParametricFactor dependencyFamily, List<CcgBinaryRule> binaryRules, 
+      List<CcgUnaryRule> unaryRules) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalFamily = Preconditions.checkNotNull(terminalFamily);
@@ -67,6 +69,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.dependencyArgVar = Preconditions.checkNotNull(dependencyArgVar);
     this.dependencyFamily = Preconditions.checkNotNull(dependencyFamily);
     this.binaryRules = ImmutableList.copyOf(binaryRules);
+    this.unaryRules = ImmutableList.copyOf(unaryRules);
   }
 
   /**
@@ -82,9 +85,15 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
       Iterable<String> unfilteredRuleLines) {
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
+    List<CcgUnaryRule> unaryRules = Lists.newArrayList();
     for (String line : unfilteredRuleLines) {
+      System.out.println(line);
       if (!line.startsWith("#")) {
-        binaryRules.add(CcgBinaryRule.parseFrom(line));
+        try {
+          binaryRules.add(CcgBinaryRule.parseFrom(line));
+        } catch (IllegalArgumentException e) {
+          unaryRules.add(CcgUnaryRule.parseFrom(line));
+        }
       }
     }
 
@@ -154,7 +163,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor,
-        binaryRules);
+        binaryRules, unaryRules);
   }
 
   /**
@@ -214,7 +223,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
         dependencyHeadVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution,
-        binaryRules);
+        binaryRules, unaryRules);
   }
 
   /**

@@ -33,5 +33,7 @@ public class HeadedSyntacticCategoryTest extends TestCase {
     assertEquals(1, cat.getReturnType().getRootVariable());
     assertEquals(1, cat.getReturnType().getReturnType().getRootVariable());
     assertEquals(0, cat.getReturnType().getArgumentType().getRootVariable());
+    
+    System.out.println(cat.toString());
   }
 }

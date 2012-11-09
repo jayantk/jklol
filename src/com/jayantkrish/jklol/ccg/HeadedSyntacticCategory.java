@@ -230,4 +230,20 @@ public class HeadedSyntacticCategory implements Serializable {
       return false;
     return true;
   }
+  
+  @Override
+  public String toString() {
+    if (syntacticCategory.isAtomic()) {
+      return syntacticCategory.toString() + "_" + semanticVariables[rootIndex];
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append("(");
+      sb.append(getReturnType());
+      sb.append(syntacticCategory.getDirection());
+      sb.append(getArgumentType());
+      sb.append(")_");
+      sb.append(semanticVariables[rootIndex]);
+      return sb.toString();
+    }
+  }
 }

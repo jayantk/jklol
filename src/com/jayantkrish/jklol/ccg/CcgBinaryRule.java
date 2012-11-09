@@ -67,7 +67,7 @@ public class CcgBinaryRule {
   public static CcgBinaryRule parseFrom(String line) {
     try {
       String[] chunks = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER,
-          CSVParser.NULL_CHARACTER).parseLine(line);
+          CSVParser.NULL_CHARACTER).parseLine(line.trim());
       Preconditions.checkArgument(chunks.length >= 1);
 
       System.out.println(Arrays.toString(chunks));
@@ -183,12 +183,8 @@ public class CcgBinaryRule {
       }
     }
     
-    System.out.println("left unfilled: " + Arrays.toString(leftUnfilledDeps));
-    System.out.println("right unfilled: " + Arrays.toString(rightUnfilledDeps));
-    System.out.println("unfilled: " + Arrays.toString(returnUnfilledDeps));
-
-    return new ChartEntry(returnSyntax, Ints.toArray(returnVars), Ints.toArray(returnPredicateNums), 
-        Ints.toArray(returnIndexes), returnUnfilledDeps, new long[0], leftSpanStart, leftSpanEnd, 
+    return new ChartEntry(returnSyntax, null, Ints.toArray(returnVars), Ints.toArray(returnPredicateNums), 
+        Ints.toArray(returnIndexes), returnUnfilledDeps, new long[0], leftSpanStart, leftSpanEnd,  
         leftIndex, rightSpanStart, rightSpanEnd, rightIndex);
   }
 }

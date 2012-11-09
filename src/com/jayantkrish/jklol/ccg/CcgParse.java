@@ -73,16 +73,20 @@ public class CcgParse {
    * Create a CCG parse for a terminal of the CCG parse tree. This terminal 
    * parse represents using {@code lexiconEntry} as the initial CCG category for
    * {@code spannedWords}.
-   *    
+   * 
+   * @param syntax
    * @param lexiconEntry
+   * @param heads
+   * @param deps
    * @param spannedWords
    * @param lexicalProbability
    * @return
    */
-  public static CcgParse forTerminal(CcgCategory lexiconEntry, Set<IndexedPredicate> heads,
-      List<DependencyStructure> deps, List<String> spannedWords, double lexicalProbability) {
-    return new CcgParse(lexiconEntry.getSyntax(), lexiconEntry, spannedWords, 
-        heads, deps, lexicalProbability, null, null);
+  public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry, 
+      Set<IndexedPredicate> heads, List<DependencyStructure> deps, List<String> spannedWords,
+      double lexicalProbability) {
+    return new CcgParse(syntax, lexiconEntry, spannedWords, heads, deps, lexicalProbability,
+        null, null);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
@@ -223,9 +227,9 @@ public class CcgParse {
   @Override
   public String toString() {
     if (left != null && right != null) {
-      return "(" + syntax.getSyntax() + ", " + left + ", " + right + ")";
+      return "<" + syntax.getSyntax() + ", " + left + ", " + right + ">";
     } else {
-      return "(" + syntax.getSyntax() + ")";
+      return "<" + syntax.getSyntax() + ">";
     }
   }
 }

@@ -15,6 +15,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * Immutable tensor, represented densely. The dense representation is faster
@@ -25,7 +26,6 @@ import com.google.common.primitives.Ints;
 public class DenseTensor extends DenseTensorBase implements Tensor, Serializable {
 
   private static final long serialVersionUID = 1L;
-  private static Random random = new Random();
 
   /**
    * Creates a tensor that spans {@code dimensions}, and each dimension has the
@@ -491,6 +491,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public static DenseTensor random(int[] dimensions, int[] sizes, double mean, double stddev) {
     DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes);
     Iterator<KeyValue> keyValueIter = builder.keyValueIterator();
+    Random random = Pseudorandom.get();
     while (keyValueIter.hasNext()) {
       builder.put(keyValueIter.next().getKey(), (random.nextGaussian() * stddev) + mean);
     }

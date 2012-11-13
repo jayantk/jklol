@@ -86,7 +86,8 @@ public class CcgUnaryRule {
 
     // Relabel entry's dependencies and variables to match the
     // assignments in the return type.
-    int[] patternToChart = entrySyntax.unifyVariables(inputSyntax);
+    int[] patternToChart = entrySyntax.unifyVariables(entrySyntax.getUniqueVariables(), inputSyntax,
+        new int[0]);
     if (patternToChart == null) {
       return null;
     }

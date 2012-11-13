@@ -26,7 +26,7 @@ public class CcgParserTest extends TestCase {
     "eat,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2", "that,((N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0},0 that,that 1 1,that 2 2", 
     "quickly,(((S{1}\\N{2}){1}/N{3}){1}/((S{1}\\N{2}){1}/N{3}){1}){0},0 quickly,quickly 1 1", 
     "in,((N{1}\\N{1}){0}/N{2}){0},0 in,in 1 1,in 2 2",
-    "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 amazingly,amazingly 1 2", 
+    "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 amazingly,amazingly 1 2",
     "tasty,(N{1}/N{1}){0},0 tasty,tasty 1 1",
     "in,(((S{1}\\N{2}){1}\\(S{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 2,in 2 3",
     "and,((N{1}\\N{1}){0}/N{1}){0},0 and", 
@@ -35,23 +35,25 @@ public class CcgParserTest extends TestCase {
     "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
     ";,;", "or,conj,",
     "about,(N{0}/(S{1}\\N{2}){1}){0},0 about,about 1 1", 
-    "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2"};
+    "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
+    "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
     1.0, 1.0,
     1.0, 1.0,
     0.5, 1.0, 2.0,
-    0.25, 1.0, 
+    0.25, 1.0,
     1.0, 0.5,
-    1.0, 1.0};
+    1.0, 1.0,
+    0.5};
 
   private static final String[] binaryRuleArray = {"; N{0} N{0}", "N{0} ; N{0}", 
     "; (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\", N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
     "conj{2} (S{0}\\N{1}){0} ((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}"};
   
   private static final String[] unaryRuleArray = {"N{0} (S{1}/(S{1}\\N{0}){1})",
-    "N{0} (N{1}/N{1})"};
+    "N{0} (N{1}/N{1}){0}"};
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -69,11 +71,18 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = parser.beamSearch(
         Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 10);
     
-    assertEquals(1, parses.size());
-    CcgParse parse = parses.get(0);
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+      System.out.println(parse.getAllDependencies());
+    }
+    
+    assertEquals(2, parses.size());
+    CcgParse parse = parses.get(1);
     
     System.out.println(parses.get(0));
+    System.out.println(parses.get(1));
     System.out.println(parses.get(0).getAllDependencies());
+    System.out.println(parses.get(1).getAllDependencies());
     
     assertEquals(1.0, parse.getNodeProbability());
     assertEquals(2.0, parse.getRight().getNodeProbability());
@@ -131,6 +140,38 @@ public class CcgParserTest extends TestCase {
     assertTrue(heads.contains("eat"));
 
     assertEquals(0.3 * 4 * 2, parse.getSubtreeProbability());
+  }
+  
+  public void testParseComposition() {
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("rapidly", "eat"), 10);
+
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    
+    Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("rapidly", 0, "eat", 1, 1));
+    assertEquals(expectedDeps, deps);
+    
+    SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S\\N)/N");
+    assertEquals(expectedSyntax, parse.getSyntacticCategory());
+  }
+
+  public void testParseComposition2() {
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("eat", "amazingly", "tasty"), 10);
+
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    
+    Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("amazingly", 1, "tasty", 2, 1));
+    assertEquals(expectedDeps, deps);
+    
+    SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S\\N)/N");
+    assertEquals(expectedSyntax, parse.getSyntacticCategory());
+    
+    System.out.println(parse.getHeadedSyntacticCategory());
   }
 
   public void testParseHeadUnification() {

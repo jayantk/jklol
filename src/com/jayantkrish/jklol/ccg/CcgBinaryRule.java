@@ -140,8 +140,10 @@ public class CcgBinaryRule {
     HeadedSyntacticCategory leftChartSyntax = left.getHeadedSyntax();
     HeadedSyntacticCategory rightChartSyntax = right.getHeadedSyntax();
     
-    int[] leftPatternToChart = leftChartSyntax.unifyVariables(leftSyntax);
-    int[] rightPatternToChart = rightChartSyntax.unifyVariables(rightSyntax);
+    int[] leftPatternToChart = leftChartSyntax.unifyVariables(
+        leftChartSyntax.getUniqueVariables(), leftSyntax, new int[0]);
+    int[] rightPatternToChart = rightChartSyntax.unifyVariables(
+        rightChartSyntax.getUniqueVariables(), rightSyntax, new int[0]);
     
     if (leftPatternToChart == null || rightPatternToChart == null) {
       return null;

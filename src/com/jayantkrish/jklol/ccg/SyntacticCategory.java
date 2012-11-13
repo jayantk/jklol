@@ -37,8 +37,7 @@ public class SyntacticCategory implements Serializable {
   private final String value;
 
   // If this category is functional, it has an argument direction, an
-  // argument
-  // and a return type.
+  // argument and a return type.
   private final Direction direction;
   private final SyntacticCategory returnType;
   private final SyntacticCategory argumentType;
@@ -172,6 +171,18 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
+   * Gets the syntactic category which accepts {@code argument} in
+   * {@code direction} and returns {@code this}.
+   * 
+   * @param argument
+   * @param direction
+   * @return
+   */
+  public SyntacticCategory addArgument(SyntacticCategory argument, Direction direction) {
+    return SyntacticCategory.create(direction, this, argument);
+  }
+
+  /**
    * Gets the number of subcategories of this category. This number is
    * equal to the number of nodes in the binary tree required to
    * represent the category. Specifically, this method returns 1 if
@@ -186,7 +197,7 @@ public class SyntacticCategory implements Serializable {
       return 1 + argumentType.getNumSubcategories() + returnType.getNumSubcategories();
     }
   }
-  
+
   public int getNumArgumentSubcategories() {
     if (isAtomic()) {
       return 0;
@@ -194,7 +205,7 @@ public class SyntacticCategory implements Serializable {
       return argumentType.getNumSubcategories();
     }
   }
-  
+
   public int getNumReturnSubcategories() {
     if (isAtomic()) {
       return 0;

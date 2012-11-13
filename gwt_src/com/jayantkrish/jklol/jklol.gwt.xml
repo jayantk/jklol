@@ -24,7 +24,7 @@
   <!-- Other module inherits                                      -->
 
   <!-- Specify the app entry point class.                         -->
-  <entry-point class='com.jayantkrish.jklol.gwt.GwtSequenceModel'/>
+  <entry-point class='com.jayantkrish.jklol.gwt.JklolExporter'/>
 
   <!-- Specify the paths for translatable code                    -->
   <source path='gwt'/>

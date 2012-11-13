@@ -41,6 +41,8 @@
     <delete dir="${object-dir}" />
     <delete dir="${bin-dir}" />
     <delete file="jklol.jar" />
+    <delete dir="war/WEB-INF/classes" failonerror="false" />
+    <delete dir="war/jklol" failonerror="false" />
   </target>
   
   <!-- compilation targets -->

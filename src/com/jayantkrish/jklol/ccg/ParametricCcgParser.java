@@ -52,6 +52,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
   private final List<CcgBinaryRule> binaryRules;
   private final List<CcgUnaryRule> unaryRules;
+  
+  private final boolean allowComposition;
 
   private final String TERMINAL_PARAMETERS = "terminals";
   private final String DEPENDENCY_PARAMETERS = "dependencies";
@@ -60,7 +62,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       ParametricFactor terminalFamily, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       ParametricFactor dependencyFamily, List<CcgBinaryRule> binaryRules, 
-      List<CcgUnaryRule> unaryRules) {
+      List<CcgUnaryRule> unaryRules, boolean allowComposition) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalFamily = Preconditions.checkNotNull(terminalFamily);
@@ -70,6 +72,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.dependencyFamily = Preconditions.checkNotNull(dependencyFamily);
     this.binaryRules = ImmutableList.copyOf(binaryRules);
     this.unaryRules = ImmutableList.copyOf(unaryRules);
+    
+    this.allowComposition = allowComposition;
   }
 
   /**
@@ -83,7 +87,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
-      Iterable<String> unfilteredRuleLines) {
+      Iterable<String> unfilteredRuleLines, boolean allowComposition) {
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
     for (String line : unfilteredRuleLines) {
@@ -163,7 +167,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor,
-        binaryRules, unaryRules);
+        binaryRules, unaryRules, allowComposition);
   }
 
   /**
@@ -223,7 +227,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
         dependencyHeadVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution,
-        binaryRules, unaryRules);
+        binaryRules, unaryRules, allowComposition);
   }
 
   /**

@@ -56,7 +56,8 @@ public class TrainCcg extends AbstractCli {
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(lexicon));
     List<String> ruleEntries = options.has(rules) ? IoUtils.readLines(options.valueOf(rules))
         : Collections.<String>emptyList();
-    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries);
+    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, 
+        true);
     
     // Read in training data.
     List<CcgExample> trainingExamples = Lists.newArrayList();

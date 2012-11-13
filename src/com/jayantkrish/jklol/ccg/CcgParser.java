@@ -61,6 +61,7 @@ public class CcgParser implements Serializable {
 
   // Member variables ////////////////////////////////////
 
+  // Weights and object -> int mappings for the lexicon (terminals).
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;
@@ -77,12 +78,14 @@ public class CcgParser implements Serializable {
   // Unary type changing/raising rules.
   private final List<CcgUnaryRule> unaryRules;
   private final Multimap<SyntacticCategory, CcgUnaryRule> applicableUnaryRuleMap;
+  
+  private final boolean allowComposition;
 
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       DiscreteFactor dependencyDistribution, List<CcgBinaryRule> binaryRules,
-      List<CcgUnaryRule> unaryRules) {
+      List<CcgUnaryRule> unaryRules, boolean allowComposition) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -104,10 +107,16 @@ public class CcgParser implements Serializable {
     for (CcgUnaryRule rule : unaryRules) {
       applicableUnaryRuleMap.put(rule.getInputSyntacticCategory(), rule);
     }
+    
+    this.allowComposition = allowComposition;
   }
 
   public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
     return beamSearch(terminals, beamSize, new NullLogFunction());
+  }
+  
+  public List<CcgParse> beamSearch(int beamSize, String... terminals) {
+    return beamSearch(Arrays.asList(terminals), beamSize);
   }
 
   /**
@@ -299,22 +308,24 @@ public class CcgParser implements Serializable {
           }
         }
         
-        // Rightward depth-1 forward composition 
-        for (SyntacticCategory leftArgument : leftArguments.keySet()) {
-          for (SyntacticCategory rightReturn : rightReturns.keySet()) {
-            if (leftArgument.isUnifiableWith(rightReturn)) {
-              for (Integer rightIndex : rightReturns.get(rightReturn)) {
-                ChartEntry rightRoot = rightTrees[rightIndex];
-                double rightProb = rightProbs[rightIndex];
-                for (Integer leftIndex : leftArguments.get(leftArgument)) {
-                  ChartEntry leftRoot = leftTrees[leftIndex];
-                  double leftProb = leftProbs[leftIndex];
-
-                  ChartEntry result = unifyChartEntries(leftRoot, rightRoot, 1, spanStart,
-                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
-                      depAccumulator);
-                  if (result != null) {
-                    addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
+        // Rightward depth-1 forward composition
+        if (allowComposition) {
+          for (SyntacticCategory leftArgument : leftArguments.keySet()) {
+            for (SyntacticCategory rightReturn : rightReturns.keySet()) {
+              if (leftArgument.isUnifiableWith(rightReturn)) {
+                for (Integer rightIndex : rightReturns.get(rightReturn)) {
+                  ChartEntry rightRoot = rightTrees[rightIndex];
+                  double rightProb = rightProbs[rightIndex];
+                  for (Integer leftIndex : leftArguments.get(leftArgument)) {
+                    ChartEntry leftRoot = leftTrees[leftIndex];
+                    double leftProb = leftProbs[leftIndex];
+                    
+                    ChartEntry result = unifyChartEntries(leftRoot, rightRoot, 1, spanStart,
+                        spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
+                        depAccumulator);
+                    if (result != null) {
+                      addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
+                    }
                   }
                 }
               }
@@ -323,21 +334,23 @@ public class CcgParser implements Serializable {
         }
 
         // Leftward depth-1 forward composition 
-        for (SyntacticCategory rightArgument : rightArguments.keySet()) {
-          for (SyntacticCategory leftReturn : leftReturns.keySet()) {
-            if (rightArgument.isUnifiableWith(leftReturn)) {
-              for (Integer leftIndex : leftReturns.get(leftReturn)) {
-                ChartEntry leftRoot = leftTrees[leftIndex];
-                double leftProb = leftProbs[leftIndex];
-                for (Integer rightIndex : rightArguments.get(rightArgument)) {
-                  ChartEntry rightRoot = rightTrees[rightIndex];
-                  double rightProb = rightProbs[rightIndex];
-
-                  ChartEntry result = unifyChartEntries(rightRoot, leftRoot, 1, spanStart,
-                      spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
-                      depAccumulator);
+        if (allowComposition) {
+          for (SyntacticCategory rightArgument : rightArguments.keySet()) {
+            for (SyntacticCategory leftReturn : leftReturns.keySet()) {
+              if (rightArgument.isUnifiableWith(leftReturn)) {
+                for (Integer leftIndex : leftReturns.get(leftReturn)) {
+                  ChartEntry leftRoot = leftTrees[leftIndex];
+                  double leftProb = leftProbs[leftIndex];
+                  for (Integer rightIndex : rightArguments.get(rightArgument)) {
+                    ChartEntry rightRoot = rightTrees[rightIndex];
+                    double rightProb = rightProbs[rightIndex];
+                    
+                    ChartEntry result = unifyChartEntries(rightRoot, leftRoot, 1, spanStart,
+                        spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
+                        depAccumulator);
                   if (result != null) {
                     addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
+                  }
                   }
                 }
               }

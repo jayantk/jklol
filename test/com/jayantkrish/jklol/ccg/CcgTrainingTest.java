@@ -59,8 +59,8 @@ public class CcgTrainingTest extends TestCase {
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
-        Lists.<String>newArrayList());
-    
+        Lists.<String>newArrayList(), true);
+
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {
       trainingExamples.add(CcgExample.parseFromString(trainingData[i]));
@@ -87,7 +87,7 @@ public class CcgTrainingTest extends TestCase {
     assertEquals(2, parses.size());
     
     parses = parser.beamSearch(Arrays.asList("#", "2", "block"), 10);
-    assertEquals(2, parses.size());
+    assertEquals(3, parses.size());
   }
 
   public void testTrain() {
@@ -111,9 +111,17 @@ public class CcgTrainingTest extends TestCase {
 
     // Test that zero training error is achieved.
     for (CcgExample example : examples) {
-      List<CcgParse> parses = parser.beamSearch(example.getWords(), 10);
-      System.out.println(example.getWords() + " " + parses.get(0).getAllDependencies());
-      assertEquals(example.getDependencies(), Sets.newHashSet(parses.get(0).getAllDependencies()));
+      List<CcgParse> parses = parser.beamSearch(example.getWords(), 100);
+      CcgParse bestParse = null;
+      for (CcgParse parse : parses) {
+        if (parse.getSyntacticCategory().isAtomic()) {
+          bestParse = parse;
+          break;
+        }
+      }
+      
+      System.out.println(example.getWords() + " " + bestParse);
+      assertEquals(example.getDependencies(), Sets.newHashSet(bestParse.getAllDependencies()));
     }
     
     return parser; 

@@ -170,7 +170,7 @@ public class HeadedSyntacticCategory implements Serializable {
   public int getRootVariable() {
     return semanticVariables[rootIndex];
   }
-  
+
   public HeadedSyntacticCategory relabelVariables(int[] currentVars, int[] relabeledVars) {
     Preconditions.checkArgument(currentVars.length == relabeledVars.length);
 
@@ -179,16 +179,16 @@ public class HeadedSyntacticCategory implements Serializable {
       int varIndex = Ints.indexOf(currentVars, semanticVariables[i]);
       newSemanticVariables[i] = relabeledVars[varIndex];
     }
-    
+
     return new HeadedSyntacticCategory(syntacticCategory, newSemanticVariables, rootIndex);
   }
 
   /**
    * Maps each variable in {@code uniqueVars} to a unique variable in
    * {@code other}. {@code uniqueVars} is a set of variables which may
-   * occur in {@code this}. Returns {@code null} if no such mapping is
-   * possible (i.e., if some variable must map to multiple variables
-   * in {@code other}).
+   * occur in {@code this}. The mapping must be one-to-one, and this
+   * method returns {@code null} if no one-to-one mapping exists
+   * (i.e., if some variable must map to multiple variables.).
    * <p>
    * The returned list is a relabeling of each variable in
    * {@code uniqueVars}. The ith element of the returned list is the
@@ -224,6 +224,15 @@ public class HeadedSyntacticCategory implements Serializable {
         }
       }
     }
+    
+    // Check that mapping contains no duplicate elements.
+    int[] sortedMapping = Arrays.copyOf(mapping, mapping.length);
+    Arrays.sort(sortedMapping);
+    for (int i = 1; i < sortedMapping.length; i++) {
+      if (sortedMapping[i - 1] == sortedMapping[i]) {
+        return null;
+      }
+    }
 
     int maxAssigned = assignedVars.length != 0 ? Ints.max(assignedVars) : 0;
     int maxUnique = other.getUniqueVariables().length != 0 ? Ints.max(other.getUniqueVariables()) : 0;
@@ -253,7 +262,7 @@ public class HeadedSyntacticCategory implements Serializable {
       uniqueVarsArray[i] = uniqueVar;
       i++;
     }
-    
+
     return uniqueVarsArray;
   }
 

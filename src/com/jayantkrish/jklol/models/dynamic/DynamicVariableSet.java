@@ -317,7 +317,10 @@ public class DynamicVariableSet implements Serializable {
     newPlateNames.add(plateName);
     List<DynamicVariableSet> newPlates = Lists.newArrayList(plates);
     newPlates.add(plateVariables);
-    int[] newReplications = Arrays.copyOf(maximumReplications, maximumReplications.length + 1);
+    int[] newReplications = new int[maximumReplications.length + 1];
+    for (int i = 0; i < maximumReplications.length; i++) {
+      newReplications[i] = maximumReplications[i];
+    }
     newReplications[maximumReplications.length] = plateMaxReplications;
     return new DynamicVariableSet(fixedVariables, newPlateNames, newPlates, newReplications);
   }

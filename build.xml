@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <project name="jklol" default="jar">
   <property name="src-dir" location="src" />
-  <property name="gwt-src-dir" location="gwt_src" />
   <property name="lib-dir" location="lib" />
   <property name="tst-dir" location="test" />
   <property name="perf-dir" location="performance" />
@@ -19,7 +18,7 @@
   </uptodate>
 
   <path id="classpath.base">
-    <pathelement location="lib/guava-r09.jar" />
+    <pathelement location="lib/guava-13.0.1.jar" />
     <pathelement location="lib/jopt-simple-4.3.jar" />
     <pathelement location="lib/opencsv-2.3.jar" />
   </path>
@@ -49,7 +48,8 @@
   
   <target name="compile">
     <mkdir dir="build" />
-    <javac srcdir="${src-dir}" destdir="build" debug="on">
+    <javac sourcepath="" srcdir="${src-dir}" destdir="build" debug="on"
+           excludes="com/jayantkrish/jklol/gwt/**">
       <classpath refid="classpath.base"/>
     </javac>
   </target>
@@ -213,7 +213,7 @@
 
   <target name="javac" depends="libs" description="Compile java source to bytecode">
     <mkdir dir="war/WEB-INF/classes"/>
-    <javac srcdir="${src-dir}:${gwt-src-dir}" includes="**" encoding="utf-8"
+    <javac srcdir="${src-dir}" includes="**" encoding="utf-8"
         destdir="war/WEB-INF/classes"
         source="1.5" target="1.5" nowarn="true"
         debug="true" debuglevel="lines,vars,source">
@@ -228,7 +228,6 @@
     <java failonerror="true" fork="true" classname="com.google.gwt.dev.Compiler">
       <classpath>
         <pathelement location="${src-dir}"/>
-        <pathelement location="${gwt-src-dir}"/>
         <path refid="project.class.path"/>
         <pathelement location="/home/jayantk/gwt/gwt-2.5.0/validation-api-1.0.0.GA.jar" />
         <pathelement location="/home/jayantk/gwt/gwt-2.5.0/validation-api-1.0.0.GA-sources.jar" />

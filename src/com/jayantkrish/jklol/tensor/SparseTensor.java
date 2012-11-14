@@ -13,6 +13,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;
 
 /**
@@ -144,7 +145,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     }
     // Check for an efficient case, where the dimensions are the first elements
     // of this.
-    if (Arrays.equals(Arrays.copyOf(getDimensionNumbers(), dimensionNumbers.length),
+    if (Arrays.equals(ArrayUtils.copyOf(getDimensionNumbers(), dimensionNumbers.length),
         dimensionNumbers)) {
       long minKeyInt = 0;
       for (int i = 0; i < dimensionNumbers.length; i++) {
@@ -155,14 +156,14 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       int startIndex = getNearestIndex(minKeyInt);
       int endIndex = getNearestIndex(maxKeyInt);
 
-      long[] newKeyInts = Arrays.copyOfRange(keyNums, startIndex, endIndex);
+      long[] newKeyInts = ArrayUtils.copyOfRange(keyNums, startIndex, endIndex);
       for (int i = 0; i < newKeyInts.length; i++) {
         newKeyInts[i] -= minKeyInt;
       }
 
-      int[] newDimensionNumbers = Arrays.copyOfRange(getDimensionNumbers(), dimensionNumbers.length, getDimensionNumbers().length);
-      int[] newDimensionSizes = Arrays.copyOfRange(getDimensionSizes(), dimensionNumbers.length, getDimensionSizes().length);
-      double[] newValues = Arrays.copyOfRange(values, startIndex, endIndex);
+      int[] newDimensionNumbers = ArrayUtils.copyOfRange(getDimensionNumbers(), dimensionNumbers.length, getDimensionNumbers().length);
+      int[] newDimensionSizes = ArrayUtils.copyOfRange(getDimensionSizes(), dimensionNumbers.length, getDimensionSizes().length);
+      double[] newValues = ArrayUtils.copyOfRange(values, startIndex, endIndex);
       return new SparseTensor(newDimensionNumbers, newDimensionSizes, newKeyInts, newValues);
     }
 
@@ -583,8 +584,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
     int[] dimensionNums = getDimensionNumbers();
     int[] dimensionSizes = getDimensionSizes();
-    return resizeIntoTable(Arrays.copyOf(dimensionNums, dimensionNums.length),
-        Arrays.copyOf(dimensionSizes, dimensionSizes.length),
+    return resizeIntoTable(ArrayUtils.copyOf(dimensionNums, dimensionNums.length),
+        ArrayUtils.copyOf(dimensionSizes, dimensionSizes.length),
         newKeyNums, newValues, curIndex);
   }
 
@@ -735,8 +736,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       backpointers.setBackpointers(resultKeyInts, transformedBackpointers, resultInd, this);
     }
 
-    return resizeIntoTable(Arrays.copyOf(newDimensions, resultNumDimensions),
-        Arrays.copyOf(newDimensionSizes, resultNumDimensions),
+    return resizeIntoTable(ArrayUtils.copyOf(newDimensions, resultNumDimensions),
+        ArrayUtils.copyOf(newDimensionSizes, resultNumDimensions),
         resultKeyInts, resultValues, resultInd);
   }
 
@@ -781,7 +782,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       return new SparseTensor(newDimensions, getDimensionSizes(), keyNums, values);
     }
 
-    int[] sortedDims = Arrays.copyOf(newDimensions, newDimensions.length);
+    int[] sortedDims = ArrayUtils.copyOf(newDimensions, newDimensions.length);
     Arrays.sort(sortedDims);
 
     // Figure out the mapping from the new, sorted dimension indices to
@@ -803,7 +804,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       curIndexOffset *= sortedSizes[i];
     }
 
-    double[] resultValues = Arrays.copyOf(values, values.length);
+    double[] resultValues = ArrayUtils.copyOf(values, values.length);
     // Map each key of this into a key of the relabeled tensor.
     long[] resultKeyInts = transformKeyNums(keyNums, indexOffsets, sortedIndexOffsets, newOrder);
 
@@ -1002,8 +1003,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
    */
   public static SparseTensor fromUnorderedKeyValues(int[] dimensionNumbers, int[] dimensionSizes,
       long[] keyNums, double[] values) {
-    long[] keyNumsCopy = Arrays.copyOf(keyNums, keyNums.length);
-    double[] valuesCopy = Arrays.copyOf(values, values.length);
+    long[] keyNumsCopy = ArrayUtils.copyOf(keyNums, keyNums.length);
+    double[] valuesCopy = ArrayUtils.copyOf(values, values.length);
     sortOutcomeTable(keyNumsCopy, valuesCopy, 0, keyNums.length);
 
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNumsCopy, valuesCopy);
@@ -1040,8 +1041,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       return new SparseTensor(dimensions, dimensionSizes, keyNums, values);
     } else {
       // Resize the result array to fit the actual number of result keyNums.
-      long[] shrunkResultKeyInts = Arrays.copyOf(keyNums, size);
-      double[] shrunkResultValues = Arrays.copyOf(values, size);
+      long[] shrunkResultKeyInts = ArrayUtils.copyOf(keyNums, size);
+      double[] shrunkResultValues = ArrayUtils.copyOf(values, size);
       return new SparseTensor(dimensions, dimensionSizes, shrunkResultKeyInts, shrunkResultValues);
     }
   }

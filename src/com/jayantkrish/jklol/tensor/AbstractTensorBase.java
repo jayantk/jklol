@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.util.ArrayUtils;
 
 /**
  * Common implementations of basic {@link TensorBase} methods.
@@ -30,8 +31,8 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
           "Cannot create Tensors with zero-size dimensions. Requested dimensions: %s and sizes: %s",
           Ints.asList(dimensions), Ints.asList(sizes));
     }
-    this.dimensions = Arrays.copyOf(dimensions, dimensions.length);
-    this.sizes = Arrays.copyOf(sizes, sizes.length);
+    this.dimensions = ArrayUtils.copyOf(dimensions, dimensions.length);
+    this.sizes = ArrayUtils.copyOf(sizes, sizes.length);
 
     // Create the data structure for converting dimension keys to
     // integers.

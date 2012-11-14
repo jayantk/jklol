@@ -90,6 +90,16 @@ public class IoUtils {
     return columnValues;
   }
 
+  public static List<String> readColumnFromDelimitedLines(Iterable<String> lines,
+      int columnNumber, String delimiter) {
+    List<String> columnValues = Lists.newArrayList();
+    for (String line : lines) {
+      String[] parts = line.split(delimiter);
+      columnValues.add(parts[columnNumber]);
+    }
+    return columnValues;
+  }
+
   /**
    * Returns a list of the unique values in {@code columnNumber} of 
    * {@code filename}. The columns of {@code filename} are delimited 

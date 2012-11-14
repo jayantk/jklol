@@ -99,7 +99,7 @@ public class CcgChart {
       CcgParser parser) {
     ChartEntry entry = chart[spanStart][spanEnd][beamIndex];
     
-    System.out.println(spanStart + "." + spanEnd + "." + beamIndex + "   " + entry) ;
+    // System.out.println(spanStart + "." + spanEnd + "." + beamIndex + "   " + entry) ;
 
     if (entry.isTerminal()) {
       return CcgParse.forTerminal(entry.getHeadedSyntax(), entry.getLexiconEntry(), 

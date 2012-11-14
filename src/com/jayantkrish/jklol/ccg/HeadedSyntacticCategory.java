@@ -44,8 +44,8 @@ public class HeadedSyntacticCategory implements Serializable {
    * parenthesized or atomic element may be followed by a semantic
    * variable number in curly braces ({}). All elements with the same
    * number will be semantically unified during parsing. Unnumbered
-   * elements will be assigned their own semantic variable (with an
-   * unpredictable number).
+   * elements will be assigned to semantic variable 0, which typically
+   * denotes the head of the syntactic category.
    * <p>
    * If a category contains {@code n} semantic variables, they must be
    * numbered {@code 0,1,...,n-1}.
@@ -224,7 +224,7 @@ public class HeadedSyntacticCategory implements Serializable {
         }
       }
     }
-    
+
     // Check that mapping contains no duplicate elements.
     int[] sortedMapping = Arrays.copyOf(mapping, mapping.length);
     Arrays.sort(sortedMapping);

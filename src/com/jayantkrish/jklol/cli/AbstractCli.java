@@ -61,9 +61,15 @@ public abstract class AbstractCli {
     OptionParser parser = new OptionParser();
     initializeCommonOptions(parser);
     initializeOptions(parser);
+    
+    boolean printHelp = false;
     try {
       parsedOptions = parser.parse(args);
     } catch (OptionException e) {
+      printHelp = true;
+    }
+    
+    if (printHelp || parsedOptions.has(helpOpt)) {
       // If a help option is given, print help then quit.
       try {
         parser.printHelpOn(System.out);

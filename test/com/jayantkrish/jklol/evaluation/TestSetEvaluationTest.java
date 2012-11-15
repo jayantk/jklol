@@ -7,6 +7,7 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.LossFunctions.Accuracy;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * Unit tests for {@link TestSetEvaluation}.
@@ -43,8 +44,10 @@ public class TestSetEvaluationTest extends TestCase {
 	  List<Example<String, String>> data = arrayToList(training);
 	  data.addAll(arrayToList(test));
 	  
+	  Pseudorandom.get().setSeed(0);
 	  TestSetEvaluation<String, String> firstEvaluation = 
 	      TestSetEvaluation.createHoldOutEvaluation(data, 0.2, 0.2);
+	  Pseudorandom.get().setSeed(0);
 	  TestSetEvaluation<String, String> secondEvaluation = 
 	      TestSetEvaluation.createHoldOutEvaluation(data, 0.2, 0.2);
 

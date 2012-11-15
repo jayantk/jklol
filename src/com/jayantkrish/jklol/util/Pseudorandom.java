@@ -14,7 +14,7 @@ import java.util.Random;
  */
 public class Pseudorandom {
 
-  private static Random random = new Random(0L);
+  private static Random random = new Random(0);
 
   public static Random get() {
     return random;

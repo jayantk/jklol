@@ -53,6 +53,6 @@ public class ExportTest implements Exportable {
       sb.append(words.get(i) + "/" + labels.get(1) + " ");
     }
 
-    return labels.toString();
+    return sb.toString();
   }
 }

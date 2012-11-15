@@ -52,33 +52,11 @@ public class TestSequenceModel {
 
     // Read in the words to tag.
     List<String> wordsToTag = options.nonOptionArguments();
+    List<String> labels = ModelUtils.testSequenceModel(wordsToTag, sequenceModel);
 
-    // Construct an assignment from the input words.
-    List<Assignment> inputs = Lists.newArrayList();
-    VariableNumMap plateVars = sequenceModel.getVariables().getPlate(TrainSequenceModel.PLATE_NAME)
-        .getFixedVariables();
-    VariableNumMap x = plateVars.getVariablesByName(TrainSequenceModel.INPUT_NAME);
-    for (String word : wordsToTag) {
-      Assignment input = x.outcomeArrayToAssignment(word);
-      inputs.add(input);
-    }
-    DynamicAssignment dynamicInput = DynamicAssignment
-        .createPlateAssignment(TrainSequenceModel.PLATE_NAME, inputs);
-
-    // Compute the best assignment of label variables.
-    FactorGraph fg = sequenceModel.conditional(dynamicInput);    
-    JunctionTree jt = new JunctionTree();
-    MaxMarginalSet maxMarginals = jt.computeMaxMarginals(fg);
-    Assignment bestAssignment = maxMarginals.getNthBestAssignment(0);
-
-    // Map the assignment back to plate indexes, then print out the labels.
-    DynamicAssignment prediction = sequenceModel.getVariables()
-        .toDynamicAssignment(bestAssignment, fg.getAllVariables());
     StringBuilder sb = new StringBuilder();
-    for (Assignment plateAssignment : prediction
-             .getPlateFixedAssignments(TrainSequenceModel.PLATE_NAME)) {
-      List<Object> values = plateAssignment.getValues();
-      sb.append(values.get(0) + "/" + values.get(1) + " ");
+    for (int i = 0; i < wordsToTag.size(); i++) {
+      sb.append(wordsToTag.get(i) + "/" + labels.get(1) + " ");
     }
 
     // Print the predicted labels.

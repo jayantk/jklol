@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.tensor;
 
 import java.util.Arrays;
 
+import com.jayantkrish.jklol.util.ArrayUtils;
+
 /**
  * Mapping from keys of one tensor to keys of a second tensor. Such mappings
  * frequently represent how keys of one tensor were derived from a second
@@ -18,8 +20,8 @@ public class Backpointers {
 
   public void setBackpointers(long[] newKeyNums, long[] oldKeyNums, int size,
       Tensor oldTensor) {
-    this.newKeyNums = Arrays.copyOf(newKeyNums, size);
-    this.oldKeyNums = Arrays.copyOf(oldKeyNums, size);
+    this.newKeyNums = ArrayUtils.copyOf(newKeyNums, size);
+    this.oldKeyNums = ArrayUtils.copyOf(oldKeyNums, size);
     this.oldTensor = oldTensor;
   }
 

@@ -8,7 +8,9 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
@@ -31,6 +33,8 @@ public class ModelUtils {
   public static final String PLATE_NAME = "plate";
   public static final String INPUT_NAME = "x";
   public static final String OUTPUT_NAME = "y";
+  public static final String WORD_LABEL_FACTOR = "wordLabelFactor";
+  public static final String TRANSITION_FACTOR = "transition";
 
   /**
    * Constructs a sequence model from the lines of a file containing features of
@@ -71,15 +75,47 @@ public class ModelUtils {
     // Add a parametric factor for the word/label weights
     DiscreteLogLinearFactor emissionFactor = new DiscreteLogLinearFactor(x.union(y), emissionFeatureVar,
         emissionFeatureFactor);
-    builder.addFactor("wordLabelFactor", emissionFactor,
+    builder.addFactor(WORD_LABEL_FACTOR, emissionFactor,
         VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
 
     // Create a factor connecting adjacent labels
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
         Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(labelType, labelType));
-    builder.addFactor("transition", DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
+    builder.addFactor(TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
         VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
 
     return builder.build();
+  }
+
+  public static List<String> testSequenceModel(List<String> wordsToTag, 
+      DynamicFactorGraph sequenceModel) {
+    // Construct an assignment from the input words.
+    List<Assignment> inputs = Lists.newArrayList();
+    VariableNumMap plateVars = sequenceModel.getVariables().getPlate(PLATE_NAME)
+        .getFixedVariables();
+    VariableNumMap x = plateVars.getVariablesByName(INPUT_NAME);
+    for (String word : wordsToTag) {
+      Assignment input = x.outcomeArrayToAssignment(word);
+      inputs.add(input);
+    }
+    DynamicAssignment dynamicInput = DynamicAssignment.createPlateAssignment(PLATE_NAME, inputs);
+
+    // Compute the best assignment of label variables.
+    FactorGraph fg = sequenceModel.conditional(dynamicInput);
+    JunctionTree jt = new JunctionTree();
+    MaxMarginalSet maxMarginals = jt.computeMaxMarginals(fg);
+    Assignment bestAssignment = maxMarginals.getNthBestAssignment(0);
+
+    // Map the assignment back to plate indexes, then print out the labels.
+    DynamicAssignment prediction = sequenceModel.getVariables()
+        .toDynamicAssignment(bestAssignment, fg.getAllVariables());
+    List<String> labels = Lists.newArrayList();
+    for (Assignment plateAssignment : prediction
+             .getPlateFixedAssignments(PLATE_NAME)) {
+      List<Object> values = plateAssignment.getValues();
+      labels.add((String) values.get(1));
+    }
+
+    return labels;
   }
 }

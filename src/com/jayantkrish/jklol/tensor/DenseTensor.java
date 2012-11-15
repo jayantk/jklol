@@ -15,6 +15,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
@@ -117,8 +118,8 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     int[] mySizes = getDimensionSizes();
     if (areDimensionsRightAligned(otherDims)) {
       int maxDimIndex = myDims.length - (otherDims.length + 1);
-      int[] newDims = Arrays.copyOf(myDims, maxDimIndex + 1);
-      int[] newSizes = Arrays.copyOf(getDimensionSizes(), maxDimIndex + 1);
+      int[] newDims = ArrayUtils.copyOf(myDims, maxDimIndex + 1);
+      int[] newSizes = ArrayUtils.copyOf(getDimensionSizes(), maxDimIndex + 1);
       long maxKeyNum = getMaxKeyNum();
       long keyNumIncrement = (maxDimIndex < 0) ? maxKeyNum : getDimensionOffsets()[maxDimIndex];
       
@@ -131,8 +132,8 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       return fastInnerProduct(other, maxKeyNum, keyNumIncrement, 1, newDims, newSizes);
     } else if (areDimensionsLeftAligned(otherDims)) {
       int minDimIndex = otherDims.length;
-      int[] newDims = Arrays.copyOfRange(myDims, minDimIndex, myDims.length);
-      int[] newSizes = Arrays.copyOfRange(getDimensionSizes(), minDimIndex, myDims.length);
+      int[] newDims = ArrayUtils.copyOfRange(myDims, minDimIndex, myDims.length);
+      int[] newSizes = ArrayUtils.copyOfRange(getDimensionSizes(), minDimIndex, myDims.length);
       long maxKeyNum = (minDimIndex == 0) ? getMaxKeyNum() : getDimensionOffsets()[minDimIndex - 1];
 
       for (int i = 0; i < minDimIndex; i++) {
@@ -392,7 +393,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       return new DenseTensor(newDimensions, getDimensionSizes(), values);
     }
 
-    int[] sortedDims = Arrays.copyOf(newDimensions, newDimensions.length);
+    int[] sortedDims = ArrayUtils.copyOf(newDimensions, newDimensions.length);
     Arrays.sort(sortedDims);
 
     // Figure out the mapping from the new, sorted dimension indices to

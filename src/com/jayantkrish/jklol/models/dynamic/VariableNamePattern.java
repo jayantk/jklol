@@ -161,17 +161,17 @@ public class VariableNamePattern extends AbstractVariablePattern {
   public static class VariableNameMatcher implements Serializable {
     private static final long serialVersionUID = 1L;
     
-    private final RegExp pattern;
+    private final String pattern;
     private final int indexOffset;
 
     public VariableNameMatcher(String variableNamePrefix, String variableNameSuffix, int indexOffset) {
       this.indexOffset = indexOffset;
-      pattern = RegExp.compile(variableNamePrefix + "(\\d+)" + variableNameSuffix);
+      this.pattern = variableNamePrefix + "(\\d+)" + variableNameSuffix;
     }
     
     public VariableNameMatcher(String pattern, int indexOffset) {
       this.indexOffset = indexOffset;
-      this.pattern = RegExp.compile(pattern);
+      this.pattern = pattern;
     }
 
     /**
@@ -182,7 +182,8 @@ public class VariableNamePattern extends AbstractVariablePattern {
      * @return
      */
     public Collection<Integer> getMatchedIndices(String variableName) {
-      MatchResult m = pattern.exec(variableName);
+      RegExp regexp = RegExp.compile(pattern);
+      MatchResult m = regexp.exec(variableName);
       if (m != null) {
         int originalIndex = Integer.parseInt(m.getGroup(1));
         return Ints.asList(originalIndex - indexOffset);
@@ -200,7 +201,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
     }
     
     public String getPattern() {
-      return pattern.getSource();
+      return pattern;
     }
   }
 }

@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
@@ -46,7 +47,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
    */
   public DenseTensorBuilder(DenseTensorBase builder) {
     super(builder.getDimensionNumbers(), builder.getDimensionSizes(),
-        Arrays.copyOf(builder.values, builder.values.length));
+        ArrayUtils.copyOf(builder.values, builder.values.length));
   }
 
   @Override
@@ -130,7 +131,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   private void repmatIncrement(TensorBase other, double multiplier) {
     // Maps a key of other into a partial key of this.
     int[] dimensionMapping = getDimensionMapping(other.getDimensionNumbers());
-    int[] partialKey = Arrays.copyOf(getDimensionSizes(), getDimensionSizes().length);
+    int[] partialKey = ArrayUtils.copyOf(getDimensionSizes(), getDimensionSizes().length);
     for (int i = 0; i < dimensionMapping.length; i++) {
       partialKey[dimensionMapping[i]] = 1;
     }
@@ -264,7 +265,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
 
   @Override
   public DenseTensor build() {
-    return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), Arrays.copyOf(values, values.length));
+    return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), ArrayUtils.copyOf(values, values.length));
   }
 
   /**

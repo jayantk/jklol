@@ -24,7 +24,7 @@ import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IoUtils;
+import com.jayantkrish.jklol.util.StringUtils;
 
 public class ModelUtils {
 
@@ -41,9 +41,9 @@ public class ModelUtils {
    */
   public static ParametricFactorGraph buildSequenceModel(Iterable<String> emissionFeatureLines) {
     // Read in the possible values of each variable.
-    List<String> words = IoUtils.readColumnFromDelimitedLines(emissionFeatureLines, 0, ",");
-    List<String> labels = IoUtils.readColumnFromDelimitedLines(emissionFeatureLines, 1, ",");
-    List<String> emissionFeatures = IoUtils.readColumnFromDelimitedLines(emissionFeatureLines, 2, ",");
+    List<String> words = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 0, ",");
+    List<String> labels = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 1, ",");
+    List<String> emissionFeatures = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 2, ",");
     // Create dictionaries for each variable's values.
     DiscreteVariable wordType = new DiscreteVariable("word", words);
     DiscreteVariable labelType = new DiscreteVariable("label", labels);

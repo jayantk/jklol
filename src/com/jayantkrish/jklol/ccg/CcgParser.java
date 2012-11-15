@@ -245,7 +245,7 @@ public class CcgParser implements Serializable {
       // Index j is for forward compatibility for skipping terminal
       // symbols.
       for (int j = i + 1; j < i + 2; j++) {
-        log.startTimer("ccg_parse/aggregate_syntax");
+        // log.startTimer("ccg_parse/aggregate_syntax");
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
         int numLeftTrees = chart.getNumChartEntriesForSpan(spanStart, spanStart + i);
@@ -259,9 +259,9 @@ public class CcgParser implements Serializable {
         Multimap<SyntacticCategory, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
         Multimap<SyntacticCategory, Integer> rightArguments = aggregateByArgumentType(rightTrees, numRightTrees, Direction.LEFT);
         Multimap<SyntacticCategory, Integer> rightReturns = aggregateByReturnType(rightTrees, numRightTrees);
-        log.stopTimer("ccg_parse/aggregate_syntax");
+        // log.stopTimer("ccg_parse/aggregate_syntax");
 
-        log.startTimer("ccg_parse/application");
+        // log.startTimer("ccg_parse/application");
         // Do CCG right application. (The category on the left is a
         // function.)
         for (SyntacticCategory leftArgument : leftArguments.keySet()) {
@@ -309,9 +309,9 @@ public class CcgParser implements Serializable {
             }
           }
         }
-        log.stopTimer("ccg_parse/application");
+        // log.stopTimer("ccg_parse/application");
         
-        log.startTimer("ccg_parse/composition");
+        // log.startTimer("ccg_parse/composition");
         // Rightward depth-1 forward composition
         if (allowComposition) {
           for (SyntacticCategory leftArgument : leftArguments.keySet()) {
@@ -361,9 +361,9 @@ public class CcgParser implements Serializable {
             }
           }
         }
-        log.stopTimer("ccg_parse/composition");
+        // log.stopTimer("ccg_parse/composition");
 
-        log.startTimer("ccg_parse/binary_rules");
+        // log.startTimer("ccg_parse/binary_rules");
         // Do any binary CCG rules.
         for (CcgBinaryRule binaryRule : binaryRules) {
           SyntacticCategory leftType = binaryRule.getLeftSyntacticType();
@@ -384,7 +384,7 @@ public class CcgParser implements Serializable {
             }
           }
         }
-        log.stopTimer("ccg_parse/binary_rules");
+        // log.stopTimer("ccg_parse/binary_rules");
       }
     }
   }
@@ -494,7 +494,7 @@ public class CcgParser implements Serializable {
   private ChartEntry unifyChartEntries(ChartEntry first, ChartEntry other, int otherArgumentDepth,
       int leftSpanStart, int leftSpanEnd, int leftIndex, int rightSpanStart, int rightSpanEnd,
       int rightIndex, long[] depAccumulator, LogFunction log) {
-    log.startTimer("unify/syntax");
+    // log.startTimer("unify/syntax");
     HeadedSyntacticCategory firstArgumentSyntax = first.getHeadedSyntax().getArgumentType();
     HeadedSyntacticCategory firstReturnSyntax = first.getHeadedSyntax().getReturnType();
 
@@ -508,9 +508,9 @@ public class CcgParser implements Serializable {
       otherHeadNums[i] = otherReturnSyntax.getRootVariable();
       otherReturnSyntax = otherReturnSyntax.getReturnType();
     }
-    log.stopTimer("unify/syntax");
+    // log.stopTimer("unify/syntax");
     
-    log.startTimer("unify/relabel_vars");
+    // log.startTimer("unify/relabel_vars");
     // Variables which will be in the returned syntactic type.
     int[] firstReturnVars = firstReturnSyntax.getUniqueVariables();
 
@@ -539,9 +539,9 @@ public class CcgParser implements Serializable {
     int[] relabeledAssignmentVariableNums = other.getAssignmentVariableNumsRelabeled(otherToFirstMap); 
     int[] otherAssignmentPredicateNums = other.getAssignmentPredicateNums();
     int[] otherAssignmentIndexes = other.getAssignmentIndexes();
-    log.stopTimer("unify/relabel_vars");
+    // log.stopTimer("unify/relabel_vars");
 
-    log.startTimer("unify/fill_dependencies");
+    // log.startTimer("unify/fill_dependencies");
     // Fill any dependencies from first, using any just-filled
     // variables.
     long[] unfilledDependencies = first.getUnfilledDependencies();
@@ -561,9 +561,9 @@ public class CcgParser implements Serializable {
           "Unfillable dependency: %s %s ->\n %s %s", first.getHeadedSyntax(), other.getHeadedSyntax(),
           firstReturnSyntax, objectVarNum);
     }
-    log.stopTimer("unify/fill_dependencies");    
+    // log.stopTimer("unify/fill_dependencies");    
     
-    log.startTimer("unify/fill_assignment");
+    // log.startTimer("unify/fill_assignment");
     // Accumulators for the new assignment.
     List<Integer> newAssignmentVariableNums = Lists.newArrayList();
     List<Integer> newAssignmentPredicateNums = Lists.newArrayList();
@@ -594,7 +594,7 @@ public class CcgParser implements Serializable {
         newAssignmentIndexes.add(firstAssignmentIndexes[i]);
       }
     }
-    log.startTimer("unify/fill_assignment");
+    // log.startTimer("unify/fill_assignment");
 
     /*
      * System.out.println(newAssignmentVariableNums);

@@ -19,6 +19,7 @@
 
   <path id="classpath.base">
     <pathelement location="lib/guava-13.0.1.jar" />
+    <pathelement location="lib/gwt-user.jar" />
     <pathelement location="lib/jopt-simple-4.3.jar" />
     <pathelement location="lib/opencsv-2.3.jar" />
   </path>

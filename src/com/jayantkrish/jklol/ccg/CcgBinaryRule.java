@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
@@ -27,7 +28,7 @@ import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
  * 
  * @author jayantk
  */
-public class CcgBinaryRule {
+public class CcgBinaryRule implements Serializable {
   private final HeadedSyntacticCategory leftSyntax;
   private final HeadedSyntacticCategory rightSyntax;
   private final HeadedSyntacticCategory returnSyntax;

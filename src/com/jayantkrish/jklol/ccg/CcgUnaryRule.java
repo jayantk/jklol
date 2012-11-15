@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Set;
 
 import au.com.bytecode.opencsv.CSVParser;
@@ -10,7 +11,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 
-public class CcgUnaryRule {
+public class CcgUnaryRule implements Serializable {
 
   private final HeadedSyntacticCategory inputSyntax;
   private final HeadedSyntacticCategory returnSyntax;

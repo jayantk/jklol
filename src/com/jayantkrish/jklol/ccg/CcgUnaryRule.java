@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Set;
 
 import au.com.bytecode.opencsv.CSVParser;
@@ -10,7 +11,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 
-public class CcgUnaryRule {
+public class CcgUnaryRule implements Serializable {
 
   private final HeadedSyntacticCategory inputSyntax;
   private final HeadedSyntacticCategory returnSyntax;
@@ -76,7 +77,7 @@ public class CcgUnaryRule {
       throw new IllegalArgumentException("Illegal unary rule string: " + line, e);
     }
   }
-  
+
   public SyntacticCategory getInputSyntacticCategory() {
     return inputSyntax.getSyntax();
   }
@@ -86,16 +87,17 @@ public class CcgUnaryRule {
 
     // Relabel entry's dependencies and variables to match the
     // assignments in the return type.
-    int[] patternToChart = entrySyntax.unifyVariables(inputSyntax);
+    int[] patternToChart = entrySyntax.unifyVariables(entrySyntax.getUniqueVariables(), inputSyntax,
+        new int[0]);
     if (patternToChart == null) {
       return null;
     }
-
+    
     int[] returnVars = entry.getAssignmentVariableNumsRelabeled(patternToChart);
     int[] returnPredicateNums = entry.getAssignmentPredicateNums();
     int[] returnIndexes = entry.getAssignmentIndexes();
     long[] returnUnfilledDeps = entry.getUnfilledDependenciesRelabeled(patternToChart);
-
+    
     if (entry.isTerminal()) {
       return new ChartEntry(returnSyntax, entry.getLexiconEntry(), this, returnVars, 
           returnPredicateNums, returnIndexes, returnUnfilledDeps, entry.getDependencies(), 
@@ -106,5 +108,5 @@ public class CcgUnaryRule {
           entry.getLeftChartIndex(), entry.getRightSpanStart(), entry.getRightSpanEnd(), 
           entry.getRightChartIndex());
     }
-   }
+  }
 }

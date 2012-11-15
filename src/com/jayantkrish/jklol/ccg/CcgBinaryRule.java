@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
@@ -27,7 +28,7 @@ import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
  * 
  * @author jayantk
  */
-public class CcgBinaryRule {
+public class CcgBinaryRule implements Serializable {
   private final HeadedSyntacticCategory leftSyntax;
   private final HeadedSyntacticCategory rightSyntax;
   private final HeadedSyntacticCategory returnSyntax;
@@ -140,8 +141,10 @@ public class CcgBinaryRule {
     HeadedSyntacticCategory leftChartSyntax = left.getHeadedSyntax();
     HeadedSyntacticCategory rightChartSyntax = right.getHeadedSyntax();
     
-    int[] leftPatternToChart = leftChartSyntax.unifyVariables(leftSyntax);
-    int[] rightPatternToChart = rightChartSyntax.unifyVariables(rightSyntax);
+    int[] leftPatternToChart = leftChartSyntax.unifyVariables(
+        leftChartSyntax.getUniqueVariables(), leftSyntax, new int[0]);
+    int[] rightPatternToChart = rightChartSyntax.unifyVariables(
+        rightChartSyntax.getUniqueVariables(), rightSyntax, new int[0]);
     
     if (leftPatternToChart == null || rightPatternToChart == null) {
       return null;

@@ -61,6 +61,7 @@ public class CcgParser implements Serializable {
 
   // Member variables ////////////////////////////////////
 
+  // Weights and object -> int mappings for the lexicon (terminals).
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;
@@ -76,12 +77,15 @@ public class CcgParser implements Serializable {
   private final List<CcgBinaryRule> binaryRules;
   // Unary type changing/raising rules.
   private final List<CcgUnaryRule> unaryRules;
+  private final Multimap<SyntacticCategory, CcgUnaryRule> applicableUnaryRuleMap;
+  
+  private final boolean allowComposition;
 
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       DiscreteFactor dependencyDistribution, List<CcgBinaryRule> binaryRules,
-      List<CcgUnaryRule> unaryRules) {
+      List<CcgUnaryRule> unaryRules, boolean allowComposition) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -98,10 +102,21 @@ public class CcgParser implements Serializable {
 
     this.binaryRules = Preconditions.checkNotNull(binaryRules);
     this.unaryRules = Preconditions.checkNotNull(unaryRules);
+
+    this.applicableUnaryRuleMap = HashMultimap.create();
+    for (CcgUnaryRule rule : unaryRules) {
+      applicableUnaryRuleMap.put(rule.getInputSyntacticCategory(), rule);
+    }
+    
+    this.allowComposition = allowComposition;
   }
 
   public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
     return beamSearch(terminals, beamSize, new NullLogFunction());
+  }
+  
+  public List<CcgParse> beamSearch(int beamSize, String... terminals) {
+    return beamSearch(Arrays.asList(terminals), beamSize);
   }
 
   /**
@@ -218,33 +233,37 @@ public class CcgParser implements Serializable {
     long[] unfilledDepArray = unfilledDependencyArrayToLongArray(unfilledDeps);
     long[] depArray = unfilledDependencyArrayToLongArray(deps);
 
-    return new ChartEntry(result.getSyntax(), result, null, Ints.toArray(variableNums), 
-        Ints.toArray(predicateNums), Ints.toArray(indexes), unfilledDepArray, depArray, 
+    return new ChartEntry(result.getSyntax(), result, null, Ints.toArray(variableNums),
+        Ints.toArray(predicateNums), Ints.toArray(indexes), unfilledDepArray, depArray,
         spanStart, spanEnd);
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
+    long[] depAccumulator = new long[50];
+
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j is for forward compatibility for skipping terminal
       // symbols.
       for (int j = i + 1; j < i + 2; j++) {
+        // log.startTimer("ccg_parse/aggregate_syntax");
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
         int numLeftTrees = chart.getNumChartEntriesForSpan(spanStart, spanStart + i);
         Multimap<SyntacticCategory, Integer> leftTypes = aggregateBySyntacticType(leftTrees, numLeftTrees);
         Multimap<SyntacticCategory, Integer> leftArguments = aggregateByArgumentType(leftTrees, numLeftTrees, Direction.RIGHT);
+        Multimap<SyntacticCategory, Integer> leftReturns = aggregateByReturnType(leftTrees, numLeftTrees);
 
         ChartEntry[] rightTrees = chart.getChartEntriesForSpan(spanStart + j, spanEnd);
         double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
         int numRightTrees = chart.getNumChartEntriesForSpan(spanStart + j, spanEnd);
         Multimap<SyntacticCategory, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
         Multimap<SyntacticCategory, Integer> rightArguments = aggregateByArgumentType(rightTrees, numRightTrees, Direction.LEFT);
+        Multimap<SyntacticCategory, Integer> rightReturns = aggregateByReturnType(rightTrees, numRightTrees);
+        // log.stopTimer("ccg_parse/aggregate_syntax");
 
-        long[] depAccumulator = new long[20];
-
+        // log.startTimer("ccg_parse/application");
         // Do CCG right application. (The category on the left is a
         // function.)
-        // log.startTimer("ccg_parse/calculate_inside_beam/apply");
         for (SyntacticCategory leftArgument : leftArguments.keySet()) {
           for (SyntacticCategory rightType : rightTypes.keySet()) {
             if (leftArgument.isUnifiableWith(rightType)) {
@@ -255,9 +274,9 @@ public class CcgParser implements Serializable {
                   ChartEntry rightRoot = rightTrees[rightIndex];
                   double rightProb = rightProbs[rightIndex];
 
-                  ChartEntry result = apply(leftRoot, rightRoot, Direction.RIGHT, spanStart,
+                  ChartEntry result = unifyChartEntries(leftRoot, rightRoot, 0, spanStart,
                       spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
-                      depAccumulator);
+                      depAccumulator, log);
                   if (result != null) {
                     addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
                   }
@@ -279,9 +298,9 @@ public class CcgParser implements Serializable {
                   ChartEntry rightRoot = rightTrees[rightIndex];
                   double rightProb = rightProbs[rightIndex];
 
-                  ChartEntry result = apply(rightRoot, leftRoot, Direction.LEFT, spanStart,
+                  ChartEntry result = unifyChartEntries(rightRoot, leftRoot, 0, spanStart,
                       spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
-                      depAccumulator);
+                      depAccumulator, log);
                   if (result != null) {
                     addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
                   }
@@ -290,23 +309,24 @@ public class CcgParser implements Serializable {
             }
           }
         }
-
-        // Do any binary CCG rules.
-        for (SyntacticCategory rightType : rightTypes.keySet()) {
-          for (SyntacticCategory leftType : leftTypes.keySet()) {
-            for (CcgBinaryRule binaryRule : binaryRules) {
-              if (binaryRule.getLeftSyntacticType().isUnifiableWith(leftType) &&
-                  binaryRule.getRightSyntacticType().isUnifiableWith(rightType)) {
-                for (Integer leftIndex : leftTypes.get(leftType)) {
-                  ChartEntry leftRoot = leftTrees[leftIndex];
-                  double leftProb = leftProbs[leftIndex];
-                  for (Integer rightIndex : rightTypes.get(rightType)) {
-                    ChartEntry rightRoot = rightTrees[rightIndex];
-                    double rightProb = rightProbs[rightIndex];
-
-                    ChartEntry result = binaryRule.apply(leftRoot, rightRoot, spanStart, spanStart + i,
-                        leftIndex, spanStart + j, spanEnd, rightIndex);
-
+        // log.stopTimer("ccg_parse/application");
+        
+        // log.startTimer("ccg_parse/composition");
+        // Rightward depth-1 forward composition
+        if (allowComposition) {
+          for (SyntacticCategory leftArgument : leftArguments.keySet()) {
+            for (SyntacticCategory rightReturn : rightReturns.keySet()) {
+              if (leftArgument.isUnifiableWith(rightReturn)) {
+                for (Integer rightIndex : rightReturns.get(rightReturn)) {
+                  ChartEntry rightRoot = rightTrees[rightIndex];
+                  double rightProb = rightProbs[rightIndex];
+                  for (Integer leftIndex : leftArguments.get(leftArgument)) {
+                    ChartEntry leftRoot = leftTrees[leftIndex];
+                    double leftProb = leftProbs[leftIndex];
+                    
+                    ChartEntry result = unifyChartEntries(leftRoot, rightRoot, 1, spanStart,
+                        spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
+                        depAccumulator, log);
                     if (result != null) {
                       addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
                     }
@@ -316,7 +336,55 @@ public class CcgParser implements Serializable {
             }
           }
         }
-        // log.stopTimer("ccg_parse/calculate_inside_beam/apply");
+
+        // Leftward depth-1 forward composition 
+        if (allowComposition) {
+          for (SyntacticCategory rightArgument : rightArguments.keySet()) {
+            for (SyntacticCategory leftReturn : leftReturns.keySet()) {
+              if (rightArgument.isUnifiableWith(leftReturn)) {
+                for (Integer leftIndex : leftReturns.get(leftReturn)) {
+                  ChartEntry leftRoot = leftTrees[leftIndex];
+                  double leftProb = leftProbs[leftIndex];
+                  for (Integer rightIndex : rightArguments.get(rightArgument)) {
+                    ChartEntry rightRoot = rightTrees[rightIndex];
+                    double rightProb = rightProbs[rightIndex];
+                    
+                    ChartEntry result = unifyChartEntries(rightRoot, leftRoot, 1, spanStart,
+                        spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
+                        depAccumulator, log);
+                  if (result != null) {
+                    addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
+                  }
+                  }
+                }
+              }
+            }
+          }
+        }
+        // log.stopTimer("ccg_parse/composition");
+
+        // log.startTimer("ccg_parse/binary_rules");
+        // Do any binary CCG rules.
+        for (CcgBinaryRule binaryRule : binaryRules) {
+          SyntacticCategory leftType = binaryRule.getLeftSyntacticType();
+          SyntacticCategory rightType = binaryRule.getRightSyntacticType();
+          for (Integer leftIndex : leftTypes.get(leftType)) {
+            ChartEntry leftRoot = leftTrees[leftIndex];
+            double leftProb = leftProbs[leftIndex];
+            for (Integer rightIndex : rightTypes.get(rightType)) {
+              ChartEntry rightRoot = rightTrees[rightIndex];
+              double rightProb = rightProbs[rightIndex];
+
+              ChartEntry result = binaryRule.apply(leftRoot, rightRoot, spanStart, spanStart + i,
+                  leftIndex, spanStart + j, spanEnd, rightIndex);
+
+              if (result != null) {
+                addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
+              }
+            }
+          }
+        }
+        // log.stopTimer("ccg_parse/binary_rules");
       }
     }
   }
@@ -352,6 +420,18 @@ public class CcgParser implements Serializable {
     }
     return map;
   }
+  
+  private Multimap<SyntacticCategory, Integer> aggregateByReturnType(ChartEntry[] entries, 
+      int numEntries) {
+    Multimap<SyntacticCategory, Integer> map = HashMultimap.create();
+    for (int i = 0; i < numEntries; i++) {
+      SyntacticCategory syntax = entries[i].getSyntax();
+      if (!syntax.isAtomic()) {
+        map.put(syntax.getReturn(), i);
+      }
+    }
+    return map;
+  }
 
   /**
    * Calculates the probability of any new dependencies in
@@ -377,68 +457,124 @@ public class CcgParser implements Serializable {
     double totalProb = leftRightProb * depProb;
     chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd);
     /*
-    System.out.println(spanStart + "." + spanEnd + " " + result.getHeadedSyntax() + " " +
-        result.getDependencies() + " " + totalProb);
-        */
-    
-    for (CcgUnaryRule unaryRule : unaryRules) {
-      if (unaryRule.getInputSyntacticCategory().isUnifiableWith(result.getSyntax())) {
-        ChartEntry unaryRuleResult = unaryRule.apply(result);
+     * System.out.println(spanStart + "." + spanEnd + " " +
+     * result.getHeadedSyntax() + " " +
+     * Arrays.toString(result.getDependencies()) + " " + totalProb);
+     */
 
-        if (unaryRuleResult != null) {
-          chart.addChartEntryForSpan(unaryRuleResult, totalProb, spanStart, spanEnd);
+    for (CcgUnaryRule unaryRule : applicableUnaryRuleMap.get(result.getSyntax())) {
+      ChartEntry unaryRuleResult = unaryRule.apply(result);
+
+      if (unaryRuleResult != null) {
+        chart.addChartEntryForSpan(unaryRuleResult, totalProb, spanStart, spanEnd);
           /*
-          System.out.println(spanStart + "." + spanEnd + " " + unaryRuleResult.getHeadedSyntax() + " " +
-              unaryRuleResult.getDependencies() + " " + totalProb);
-              */
-        }
+           * System.out.println(spanStart + "." + spanEnd + " " +
+           * unaryRuleResult.getHeadedSyntax() + " " +
+           * unaryRuleResult.getDependencies() + " " + totalProb);
+           */
       }
     }
   }
 
-  private ChartEntry apply(ChartEntry first, ChartEntry other, Direction direction,
+  /**
+   * This method generalizes both function application and composition.
+   * 
+   * @param first
+   * @param other
+   * @param otherArgumentDepth
+   * @param leftSpanStart
+   * @param leftSpanEnd
+   * @param leftIndex
+   * @param rightSpanStart
+   * @param rightSpanEnd
+   * @param rightIndex
+   * @param depAccumulator
+   * @return
+   */
+  private ChartEntry unifyChartEntries(ChartEntry first, ChartEntry other, int otherArgumentDepth,
       int leftSpanStart, int leftSpanEnd, int leftIndex, int rightSpanStart, int rightSpanEnd,
-      int rightIndex, long[] depAccumulator) {
+      int rightIndex, long[] depAccumulator, LogFunction log) {
+    // log.startTimer("unify/syntax");
     HeadedSyntacticCategory firstArgumentSyntax = first.getHeadedSyntax().getArgumentType();
     HeadedSyntacticCategory firstReturnSyntax = first.getHeadedSyntax().getReturnType();
-    HeadedSyntacticCategory otherSyntax = other.getHeadedSyntax();
+
+    HeadedSyntacticCategory otherReturnSyntax = other.getHeadedSyntax();
+    HeadedSyntacticCategory[] otherArgumentSyntaxes = new HeadedSyntacticCategory[otherArgumentDepth];
+    Direction[] otherArgumentDirections = new Direction[otherArgumentDepth];
+    int[] otherHeadNums = new int[otherArgumentDepth];
+    for (int i = 0; i < otherArgumentDepth; i++) {
+      otherArgumentSyntaxes[i] = otherReturnSyntax.getArgumentType();
+      otherArgumentDirections[i] = otherReturnSyntax.getSyntax().getDirection();
+      otherHeadNums[i] = otherReturnSyntax.getRootVariable();
+      otherReturnSyntax = otherReturnSyntax.getReturnType();
+    }
+    // log.stopTimer("unify/syntax");
+    
+    // log.startTimer("unify/relabel_vars");
+    // Variables which will be in the returned syntactic type.
+    int[] firstReturnVars = firstReturnSyntax.getUniqueVariables();
 
     // Map each semantic variable of other to a variable of {@code
     // this}.
-    int[] otherToFirstMap = otherSyntax.unifyVariables(firstArgumentSyntax);
+    int[] otherUniqueVars = other.getHeadedSyntax().getUniqueVariables();
+    int[] otherToFirstMap = otherReturnSyntax.unifyVariables(otherUniqueVars, 
+        firstArgumentSyntax, firstReturnVars);
     if (otherToFirstMap == null) {
       return null;
     }
 
+    // Build the return syntactic type.
+    HeadedSyntacticCategory returnSyntax = firstReturnSyntax;
+    for (int i = 0; i < otherArgumentSyntaxes.length; i++) {
+      int relabeledHeadNum = otherToFirstMap[Ints.indexOf(otherUniqueVars, otherHeadNums[i])];
+      returnSyntax = returnSyntax.addArgument(otherArgumentSyntaxes[i]
+          .relabelVariables(other.getHeadedSyntax().getUniqueVariables(), otherToFirstMap),
+          otherArgumentDirections[i], relabeledHeadNum);
+    }
+
+    int[] uniqueReturnVars = returnSyntax.getUniqueVariables(); 
+
     // Relabel other's variable assignment to correspond to this'
     // variables.
-    int[] relabeledAssignmentVariableNums = other.getAssignmentVariableNumsRelabeled(otherToFirstMap);
+    int[] relabeledAssignmentVariableNums = other.getAssignmentVariableNumsRelabeled(otherToFirstMap); 
     int[] otherAssignmentPredicateNums = other.getAssignmentPredicateNums();
     int[] otherAssignmentIndexes = other.getAssignmentIndexes();
+    // log.stopTimer("unify/relabel_vars");
 
-    // Variables which will be in the returned syntactic type.
-    int[] returnVariables = firstReturnSyntax.getUniqueVariables();
-
-    // Accumulators for the new assignment.
-    List<Integer> newAssignmentVariableNums = Lists.newArrayList();
-    List<Integer> newAssignmentPredicateNums = Lists.newArrayList();
-    List<Integer> newAssignmentIndexes = Lists.newArrayList();
-
+    // log.startTimer("unify/fill_dependencies");
     // Fill any dependencies from first, using any just-filled
     // variables.
     long[] unfilledDependencies = first.getUnfilledDependencies();
     int numDeps = accumulateDependencies(unfilledDependencies, relabeledAssignmentVariableNums,
-        otherAssignmentPredicateNums, otherAssignmentIndexes, depAccumulator, 0);
+        otherAssignmentPredicateNums, otherAssignmentIndexes, depAccumulator, uniqueReturnVars, 0);
     long[] otherUnfilledDependencies = other.getUnfilledDependenciesRelabeled(otherToFirstMap);
     numDeps = accumulateDependencies(otherUnfilledDependencies, first.getAssignmentVariableNums(),
-        first.getAssignmentPredicateNums(), first.getAssignmentIndexes(), depAccumulator, numDeps);
+        first.getAssignmentPredicateNums(), first.getAssignmentIndexes(), depAccumulator,
+        uniqueReturnVars, numDeps);
+
+    long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
+    long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
+
+    for (int i = 0; i < unfilledDepArray.length; i++) {
+      int objectVarNum = getObjectArgNumFromDep(unfilledDepArray[i]);
+      Preconditions.checkState(Ints.contains(uniqueReturnVars, objectVarNum),
+          "Unfillable dependency: %s %s ->\n %s %s", first.getHeadedSyntax(), other.getHeadedSyntax(),
+          firstReturnSyntax, objectVarNum);
+    }
+    // log.stopTimer("unify/fill_dependencies");    
+    
+    // log.startTimer("unify/fill_assignment");
+    // Accumulators for the new assignment.
+    List<Integer> newAssignmentVariableNums = Lists.newArrayList();
+    List<Integer> newAssignmentPredicateNums = Lists.newArrayList();
+    List<Integer> newAssignmentIndexes = Lists.newArrayList();
 
     // Copy any assignments from the argument type which remain in the
     // return type.
     for (int i = 0; i < relabeledAssignmentVariableNums.length; i++) {
       // If the return type contains this variable, update the current
       // assignment.
-      if (Ints.indexOf(returnVariables, relabeledAssignmentVariableNums[i]) != -1) {
+      if (Ints.indexOf(uniqueReturnVars, relabeledAssignmentVariableNums[i]) != -1) {
         newAssignmentVariableNums.add(relabeledAssignmentVariableNums[i]);
         newAssignmentPredicateNums.add(otherAssignmentPredicateNums[i]);
         newAssignmentIndexes.add(otherAssignmentIndexes[i]);
@@ -452,12 +588,13 @@ public class CcgParser implements Serializable {
     int[] firstAssignmentIndexes = first.getAssignmentIndexes();
     for (int i = 0; i < firstAssignmentVariableNums.length; i++) {
       int curVar = firstAssignmentVariableNums[i];
-      if (Ints.indexOf(returnVariables, curVar) != -1) {
+      if (Ints.indexOf(uniqueReturnVars, curVar) != -1) {
         newAssignmentVariableNums.add(curVar);
         newAssignmentPredicateNums.add(firstAssignmentPredicateNums[i]);
         newAssignmentIndexes.add(firstAssignmentIndexes[i]);
       }
     }
+    // log.startTimer("unify/fill_assignment");
 
     /*
      * System.out.println(newAssignmentVariableNums);
@@ -467,48 +604,17 @@ public class CcgParser implements Serializable {
      * .toString(Arrays.copyOf(depAccumulator, numDeps)));
      */
 
-    long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
-    long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
 
     // System.out.println("filledDeps: " +
     // Arrays.toString(longArrayToUnfilledDependencyArray(filledDepArray)));
     // System.out.println("unfilledDeps: " +
     // Arrays.toString(longArrayToUnfilledDependencyArray(unfilledDepArray)));
 
-    return new ChartEntry(firstReturnSyntax, null, Ints.toArray(newAssignmentVariableNums),
+    return new ChartEntry(returnSyntax, null, Ints.toArray(newAssignmentVariableNums),
         Ints.toArray(newAssignmentPredicateNums), Ints.toArray(newAssignmentIndexes),
         unfilledDepArray, filledDepArray, leftSpanStart, leftSpanEnd, leftIndex, rightSpanStart,
         rightSpanEnd, rightIndex);
   }
-
-  private ChartEntry compose(ChartEntry first, ChartEntry second, Direction direction) {
-    SyntacticCategory firstSyntax = first.getSyntax();
-    SyntacticCategory secondSyntax = second.getSyntax();
-    if (firstSyntax.isAtomic() || !firstSyntax.acceptsArgumentOn(direction) ||
-        secondSyntax.isAtomic()) {
-      return null;
-    }
-
-    SyntacticCategory firstArgumentType = firstSyntax.getArgument();
-    SyntacticCategory returnType = secondSyntax.getReturn();
-    while (returnType != null) {
-      if (firstArgumentType.isUnifiableWith(returnType)) {
-        // return composeHelper(first, second, direction);
-      }
-      returnType = returnType.getReturn();
-    }
-    return null;
-  }
-
-  /*
-   * private ChartEntry composeHelper(ChartEntry first,
-   * HeadedSyntacticCategory firstArgument, ChartEntry second,
-   * HeadedSyntacticCategory secondReturn, Direction direction) {
-   * SyntacticCategory firstSyntax = first.getSyntax();
-   * 
-   * 
-   * }
-   */
 
   /**
    * Fills any dependencies in {@code unfilledDependencies} and
@@ -519,11 +625,22 @@ public class CcgParser implements Serializable {
    * @param assignmentPredicateNums
    * @param assignmentIndexes
    * @param depAccumulator
+   * @param returnVariableNums
    * @param numDeps
    * @return
    */
   private int accumulateDependencies(long[] unfilledDependencies, int[] assignmentVariableNums,
-      int[] assignmentPredicateNums, int[] assignmentIndexes, long[] depAccumulator, int numDeps) {
+      int[] assignmentPredicateNums, int[] assignmentIndexes, long[] depAccumulator,
+      int[] returnVariableNums, int numDeps) {
+    
+    /*
+    System.out.println(Arrays.toString(unfilledDependencies));
+    System.out.println(Arrays.toString(assignmentVariableNums));
+    System.out.println(Arrays.toString(assignmentPredicateNums));
+    System.out.println(Arrays.toString(assignmentIndexes));
+    System.out.println(numDeps);
+    */
+
     // Fill any dependencies that depend on this variable.
     for (long unfilledDependency : unfilledDependencies) {
       int objectArgNum = getObjectArgNumFromDep(unfilledDependency);
@@ -543,7 +660,7 @@ public class CcgParser implements Serializable {
         }
       }
 
-      if (!depWasFilled) {
+      if (!depWasFilled && Ints.contains(returnVariableNums, objectArgNum)) {
         depAccumulator[numDeps] = unfilledDependency;
         numDeps++;
       }

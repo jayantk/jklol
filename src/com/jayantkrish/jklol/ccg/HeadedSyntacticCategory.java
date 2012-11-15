@@ -2,10 +2,13 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 
 /**
  * A semantic category augmented with semantic variables. These
@@ -18,7 +21,7 @@ import com.google.common.primitives.Ints;
 public class HeadedSyntacticCategory implements Serializable {
 
   private static final long serialVersionUID = 1L;
-  
+
   private final SyntacticCategory syntacticCategory;
   // Semantic variable for each subcategory of syntacticCategory,
   // where the ith entry represents the variable for the i'th
@@ -41,8 +44,8 @@ public class HeadedSyntacticCategory implements Serializable {
    * parenthesized or atomic element may be followed by a semantic
    * variable number in curly braces ({}). All elements with the same
    * number will be semantically unified during parsing. Unnumbered
-   * elements will be assigned their own semantic variable (with an
-   * unpredictable number).
+   * elements will be assigned to semantic variable 0, which typically
+   * denotes the head of the syntactic category.
    * <p>
    * If a category contains {@code n} semantic variables, they must be
    * numbered {@code 0,1,...,n-1}.
@@ -67,7 +70,7 @@ public class HeadedSyntacticCategory implements Serializable {
 
   private static void parseSemanticVariables(SyntacticCategory category,
       String typeString, int[] semanticVariables, int firstFillableIndex) {
-    
+
     int curIndex;
     if (!category.isAtomic()) {
       curIndex = firstFillableIndex + category.getNumReturnSubcategories();
@@ -88,7 +91,7 @@ public class HeadedSyntacticCategory implements Serializable {
 
     if (!category.isAtomic()) {
       int splitIndex = SyntacticCategory.findSlashIndex(typeString);
-      
+
       if (lastParenIndex != -1) {
         parseSemanticVariables(category.getArgument(), typeString.substring(splitIndex + 1, lastParenIndex),
             semanticVariables, curIndex + 1);
@@ -132,9 +135,30 @@ public class HeadedSyntacticCategory implements Serializable {
    */
   public HeadedSyntacticCategory getReturnType() {
     SyntacticCategory returnSyntax = syntacticCategory.getReturn();
-    int[] returnSemantics = Arrays.copyOf(semanticVariables, rootIndex);    
+    int[] returnSemantics = Arrays.copyOf(semanticVariables, rootIndex);
     int returnRoot = returnSyntax.getNumReturnSubcategories();
     return new HeadedSyntacticCategory(returnSyntax, returnSemantics, returnRoot);
+  }
+
+  /**
+   * Gets the syntactic category and semantic variables that accepts
+   * {@code argument} on {@code direction} and returns {@code this}.
+   * Any semantic variables in both {@code argument} and {@code this}
+   * are assumed to be equivalent.
+   * 
+   * @param argument
+   * @param direction
+   * @param headVarNum
+   * @return
+   */
+  public HeadedSyntacticCategory addArgument(HeadedSyntacticCategory argument, Direction direction,
+      int headVarNum) {
+    SyntacticCategory newCategory = syntacticCategory.addArgument(argument.getSyntax(), direction);
+    int[] newSemantics = Ints.concat(semanticVariables, new int[] { headVarNum },
+        argument.semanticVariables);
+    int newRoot = semanticVariables.length;
+
+    return new HeadedSyntacticCategory(newCategory, newSemantics, newRoot);
   }
 
   /**
@@ -144,40 +168,79 @@ public class HeadedSyntacticCategory implements Serializable {
    * @return
    */
   public int getRootVariable() {
-    return semanticVariables[rootIndex]; 
+    return semanticVariables[rootIndex];
+  }
+
+  public HeadedSyntacticCategory relabelVariables(int[] currentVars, int[] relabeledVars) {
+    Preconditions.checkArgument(currentVars.length == relabeledVars.length);
+
+    int[] newSemanticVariables = new int[semanticVariables.length];
+    for (int i = 0; i < semanticVariables.length; i++) {
+      int varIndex = Ints.indexOf(currentVars, semanticVariables[i]);
+      newSemanticVariables[i] = relabeledVars[varIndex];
+    }
+
+    return new HeadedSyntacticCategory(syntacticCategory, newSemanticVariables, rootIndex);
   }
 
   /**
-   * Maps each variable in this to a unique variable in {@code other}.
-   * Returns {@code null} if no such mapping is possible (i.e., if
-   * some variable in this must map to multiple variables in
-   * {@code other}). Indexes in the returned list correspond to
-   * indexes in {@link #getUniqueVariables()}.
+   * Maps each variable in {@code uniqueVars} to a unique variable in
+   * {@code other}. {@code uniqueVars} is a set of variables which may
+   * occur in {@code this}. The mapping must be one-to-one, and this
+   * method returns {@code null} if no one-to-one mapping exists
+   * (i.e., if some variable must map to multiple variables.).
+   * <p>
+   * The returned list is a relabeling of each variable in
+   * {@code uniqueVars}. The ith element of the returned list is the
+   * relabeled variable for the ith element of {@code uniqueVars}. If
+   * a variable in {@code uniqueVars} is not mapped to a variable in
+   * {@code other}, its relabeling is equal to an arbitrary number not
+   * in {@code assignedVars}.
    * 
+   * @param uniqueVars
    * @param other
    * @return
    */
-  public int[] unifyVariables(HeadedSyntacticCategory other) {
+  public int[] unifyVariables(int[] uniqueVars, HeadedSyntacticCategory other, int[] assignedVars) {
     Preconditions.checkArgument(syntacticCategory.isUnifiableWith(other.getSyntax()));
     int[] otherSemanticVariables = other.semanticVariables;
     Preconditions.checkArgument(otherSemanticVariables.length == semanticVariables.length);
 
-    int[] uniqueVars = getUniqueVariables();
     int[] mapping = new int[uniqueVars.length];
     Arrays.fill(mapping, -1);
 
     for (int i = 0; i < semanticVariables.length; i++) {
       int curVar = semanticVariables[i];
       if (curVar != -1) {
-        int existingMapping = mapping[curVar];
+        int curVarIndex = Ints.indexOf(uniqueVars, curVar);
+        int existingMapping = mapping[curVarIndex];
         int curMapping = otherSemanticVariables[i];
         if (curMapping == -1) {
           continue;
         } else if (existingMapping == -1) {
-          mapping[curVar] = curMapping;
+          mapping[curVarIndex] = curMapping;
         } else if (curMapping != existingMapping) {
           return null;
         }
+      }
+    }
+
+    // Check that mapping contains no duplicate elements.
+    int[] sortedMapping = Arrays.copyOf(mapping, mapping.length);
+    Arrays.sort(sortedMapping);
+    for (int i = 1; i < sortedMapping.length; i++) {
+      if (sortedMapping[i - 1] == sortedMapping[i]) {
+        return null;
+      }
+    }
+
+    int maxAssigned = assignedVars.length != 0 ? Ints.max(assignedVars) : 0;
+    int maxUnique = other.getUniqueVariables().length != 0 ? Ints.max(other.getUniqueVariables()) : 0;
+    int nextVar = Math.max(maxAssigned, maxUnique) + 1;
+    for (int i = 0; i < mapping.length; i++) {
+      if (mapping[i] == -1) {
+        mapping[i] = nextVar;
+        nextVar++;
       }
     }
 
@@ -191,13 +254,16 @@ public class HeadedSyntacticCategory implements Serializable {
    * @return
    */
   public int[] getUniqueVariables() {
-    int maxVarNum = Ints.max(semanticVariables);
+    Set<Integer> uniqueVars = Sets.newTreeSet(Ints.asList(semanticVariables));
 
-    int[] uniqueVars = new int[maxVarNum + 1];
-    for (int i = 0; i < uniqueVars.length; i++) {
-      uniqueVars[i] = i;
+    int[] uniqueVarsArray = new int[uniqueVars.size()];
+    int i = 0;
+    for (Integer uniqueVar : uniqueVars) {
+      uniqueVarsArray[i] = uniqueVar;
+      i++;
     }
-    return uniqueVars;
+
+    return uniqueVarsArray;
   }
 
   @Override
@@ -230,7 +296,7 @@ public class HeadedSyntacticCategory implements Serializable {
       return false;
     return true;
   }
-  
+
   @Override
   public String toString() {
     if (syntacticCategory.isAtomic()) {

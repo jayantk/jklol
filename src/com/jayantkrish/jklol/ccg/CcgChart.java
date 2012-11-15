@@ -98,6 +98,8 @@ public class CcgChart {
   private CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, 
       CcgParser parser) {
     ChartEntry entry = chart[spanStart][spanEnd][beamIndex];
+    
+    // System.out.println(spanStart + "." + spanEnd + "." + beamIndex + "   " + entry) ;
 
     if (entry.isTerminal()) {
       return CcgParse.forTerminal(entry.getHeadedSyntax(), entry.getLexiconEntry(), 
@@ -348,7 +350,8 @@ public class CcgChart {
       for (int i = 0; i < unfilledDependencies.length; i++) {
         long unfilledDependency = unfilledDependencies[i];
         int objectVarNum = CcgParser.getObjectArgNumFromDep(unfilledDependency);
-        for (int j = 0; j < uniqueVars.length; j++) {
+        int j;
+        for (j = 0; j < uniqueVars.length; j++) {
           if (uniqueVars[j] == objectVarNum) {
             unfilledDependency -= CcgParser.marshalUnfilledDependency(objectVarNum, 0, 0, 0, 0);
             unfilledDependency += CcgParser.marshalUnfilledDependency(relabeling[j], 0, 0, 0, 0);
@@ -356,6 +359,8 @@ public class CcgChart {
             break;
           }
         }
+        
+        Preconditions.checkState(j != uniqueVars.length, "No relabeling %s %s %s", syntax, i, objectVarNum);
       }
 
       return relabeledUnfilledDependencies;
@@ -399,7 +404,8 @@ public class CcgChart {
     
     @Override
     public String toString() {
-      return "[" + Arrays.toString(assignmentPredicateNums) + ":" + syntax.getSyntax().toString() + "]";
+      return "[" + Arrays.toString(assignmentPredicateNums) + ":" + syntax.getSyntax().toString()
+          + " " + Arrays.toString(deps) + " " + Arrays.toString(unfilledDependencies) + "]";
     }
   }
 
@@ -414,7 +420,7 @@ public class CcgChart {
   public static class IndexedPredicate {
     // The name of the predicate.
     private final String predicate;
-
+ 
     // The word index that created predicate.
     private final int wordIndex;
 

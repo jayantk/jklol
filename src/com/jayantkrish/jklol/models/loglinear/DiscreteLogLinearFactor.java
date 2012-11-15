@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.models.loglinear;
 
+import java.lang.System;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -117,7 +118,8 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
       Tensor initialTensor = initialWeights.getWeights();
       double[] initialWeightValues = initialWeights.getWeights().getValues();
       double[] logProbValues = logProbs.getValues();
-      double[] newWeights = Arrays.copyOf(initialWeightValues, initialWeightValues.length);
+      double[] newWeights = new double[initialWeightValues.length];
+      System.arraycopy(initialWeightValues, 0, newWeights, 0, initialWeightValues.length);
 
       int initialWeightIndex = 0, logProbIndex = 0;
       long initialWeightKeyNum, logProbKeyNum;

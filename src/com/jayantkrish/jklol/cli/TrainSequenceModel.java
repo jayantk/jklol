@@ -71,26 +71,15 @@ public class TrainSequenceModel extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Construct the sequence model
-    ParametricFactorGraph sequenceModel = buildModel(options.valueOf(emissionFeatures));
+    ParametricFactorGraph sequenceModel = ModelUtils.buildSequenceModel(
+        IoUtils.readLines(options.valueOf(emissionFeatures)));
 
     // Read in the training data, formatted as assignments.
     List<Example<DynamicAssignment, DynamicAssignment>> trainingData = readTrainingData(
         sequenceModel, options.valueOf(trainingFilename));
 
-    System.out.println(trainingData.size() + " training examples.");
+    SufficientStatistics parameters = run(sequenceModel, trainingData, options.has(MAX_MARGIN));
 
-    // Estimate parameters
-    GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
-    if (options.has(MAX_MARGIN)) {
-      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
-    } else {
-      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
-    }
-
-    System.out.println("Training...");
-    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
-    SufficientStatistics parameters = trainer.train(
-        oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     DynamicFactorGraph factorGraph = sequenceModel.getModelFromParameters(parameters);
 
     System.out.println("Serializing trained model...");
@@ -100,60 +89,32 @@ public class TrainSequenceModel extends AbstractCli {
     System.out.println(sequenceModel.getParameterDescription(parameters));
   }
 
+  public SufficientStatistics run(ParametricFactorGraph sequenceModel, 
+      List<Example<DynamicAssignment, DynamicAssignment>> trainingData,
+      boolean useMaxMargin) {
+    System.out.println(trainingData.size() + " training examples.");
+
+    // Estimate parameters
+    GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
+    if (useMaxMargin) {
+      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
+    } else {
+      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
+    }
+
+    System.out.println("Training...");
+    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
+    SufficientStatistics parameters = trainer.train(
+        oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
+
+    return parameters;
+  }
+
+
   public static void main(String[] args) {
     new TrainSequenceModel().run(args);
   }
 
-  /**
-   * Constructs a sequence model from a file containing features of
-   * the emission distribution.
-   * 
-   * @param emissionFeatureFilename
-   * @return
-   */
-  private static ParametricFactorGraph buildModel(String emissionFeatureFilename) {
-    // Read in the possible values of each variable.
-    List<String> words = IoUtils.readColumnFromDelimitedFile(emissionFeatureFilename, 0, ",");
-    List<String> labels = IoUtils.readColumnFromDelimitedFile(emissionFeatureFilename, 1, ",");
-    List<String> emissionFeatures = IoUtils.readColumnFromDelimitedFile(emissionFeatureFilename, 2, ",");
-    // Create dictionaries for each variable's values.
-    DiscreteVariable wordType = new DiscreteVariable("word", words);
-    DiscreteVariable labelType = new DiscreteVariable("label", labels);
-    DiscreteVariable emissionFeatureType = new DiscreteVariable("emissionFeature", emissionFeatures);
-
-    // Create a dynamic factor graph with a single plate replicating
-    // the input/output variables.
-    ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
-    builder.addPlate(PLATE_NAME, new VariableNumMap(Ints.asList(1, 2),
-        Arrays.asList(INPUT_NAME, OUTPUT_NAME), Arrays.asList(wordType, labelType)), 10000);
-    String inputPattern = PLATE_NAME + "/?(0)/" + INPUT_NAME;
-    String outputPattern = PLATE_NAME + "/?(0)/" + OUTPUT_NAME;
-    String nextOutputPattern = PLATE_NAME + "/?(1)/" + OUTPUT_NAME;
-    VariableNumMap plateVars = new VariableNumMap(Ints.asList(1, 2),
-        Arrays.asList(inputPattern, outputPattern), Arrays.asList(wordType, labelType));
-
-    // Read in the emission features (for the word/label weights).
-    VariableNumMap x = plateVars.getVariablesByName(inputPattern);
-    VariableNumMap y = plateVars.getVariablesByName(outputPattern);
-    VariableNumMap emissionFeatureVar = VariableNumMap.singleton(0, "emissionFeature", emissionFeatureType);
-    TableFactor emissionFeatureFactor = TableFactor.fromDelimitedFile(
-        Arrays.asList(x, y, emissionFeatureVar), IoUtils.readLines(emissionFeatureFilename),
-        ",", false);
-
-    // Add a parametric factor for the word/label weights
-    DiscreteLogLinearFactor emissionFactor = new DiscreteLogLinearFactor(x.union(y), emissionFeatureVar,
-        emissionFeatureFactor);
-    builder.addFactor("wordLabelFactor", emissionFactor,
-        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
-
-    // Create a factor connecting adjacent labels
-    VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
-        Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(labelType, labelType));
-    builder.addFactor("transition", DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
-
-    return builder.build();
-  }
 
   private static List<Example<DynamicAssignment, DynamicAssignment>> readTrainingData(
       ParametricFactorGraph model, String trainingFilename) {

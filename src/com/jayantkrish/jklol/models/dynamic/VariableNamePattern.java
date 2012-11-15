@@ -6,14 +6,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.google.gwt.regexp.shared.RegExp;
+import com.google.gwt.regexp.shared.MatchResult;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -161,17 +161,17 @@ public class VariableNamePattern extends AbstractVariablePattern {
   public static class VariableNameMatcher implements Serializable {
     private static final long serialVersionUID = 1L;
     
-    private final Pattern pattern;
+    private final RegExp pattern;
     private final int indexOffset;
 
     public VariableNameMatcher(String variableNamePrefix, String variableNameSuffix, int indexOffset) {
       this.indexOffset = indexOffset;
-      pattern = Pattern.compile(variableNamePrefix + "(\\d+)" + variableNameSuffix);
+      pattern = RegExp.compile(variableNamePrefix + "(\\d+)" + variableNameSuffix);
     }
     
     public VariableNameMatcher(String pattern, int indexOffset) {
       this.indexOffset = indexOffset;
-      this.pattern = Pattern.compile(pattern); 
+      this.pattern = RegExp.compile(pattern);
     }
 
     /**
@@ -182,9 +182,9 @@ public class VariableNamePattern extends AbstractVariablePattern {
      * @return
      */
     public Collection<Integer> getMatchedIndices(String variableName) {
-      Matcher m = pattern.matcher(variableName);
-      if (m.matches()) {
-        int originalIndex = Integer.parseInt(m.group(1));
+      MatchResult m = pattern.exec(variableName);
+      if (m != null) {
+        int originalIndex = Integer.parseInt(m.getGroup(1));
         return Ints.asList(originalIndex - indexOffset);
       }
       return Collections.emptyList();
@@ -200,7 +200,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
     }
     
     public String getPattern() {
-      return pattern.pattern();
+      return pattern.getSource();
     }
   }
 }

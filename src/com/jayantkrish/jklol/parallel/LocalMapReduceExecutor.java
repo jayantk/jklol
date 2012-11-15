@@ -57,6 +57,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
     
     // If batchSize is 1, then there are potentially more batches than items.
     int numBatches = (int) Math.ceil(((double) items.size()) / batchSize); 
+    System.out.println(numBatches + " / " + numThreads);
     for (int i = 0; i < numBatches; i++) {
       ImmutableList<A> batchItems = itemsAsList.subList(
           Math.min(i * batchSize, items.size()), Math.min((i + 1) * batchSize, items.size()));

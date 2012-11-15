@@ -50,7 +50,7 @@ public class ExportTest implements Exportable {
 
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < words.size(); i++) {
-      sb.append(words.get(i) + "/" + labels.get(1) + " ");
+      sb.append(words.get(i) + "/" + labels.get(i) + " ");
     }
 
     return sb.toString();

@@ -35,14 +35,13 @@ public class ExportTest implements Exportable {
     return var;
   }
 
-  public static String testSequenceModel(String input, int seed) {
+  public static String testSequenceModel(String input) {
     List<String> emissionFeatures = Arrays.asList("the,DT,the=DT,1",
-        "the,N,the=N,1", "thing,DT,thing=DT,1", "thing,N,thing=N,1");
+        "the,N,the=N,0.5", "thing,DT,thing=DT,0.5", "thing,N,thing=N,1");
 
     ParametricFactorGraph pfg = ModelUtils.buildSequenceModel(emissionFeatures);
     SufficientStatistics stats = pfg.getNewSufficientStatistics();
-    Pseudorandom.get().setSeed(seed);
-    stats.perturb(0.1);
+    stats.increment(1);
     DynamicFactorGraph model = pfg.getModelFromParameters(stats);
 
     List<String> words = Arrays.asList(input.split(" "));

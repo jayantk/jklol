@@ -82,12 +82,10 @@ public class HeadedSyntacticCategory implements Serializable {
     int lastRightBraceIndex = typeString.lastIndexOf('}');
     int lastParenIndex = typeString.lastIndexOf(')');
 
-    if (lastLeftBraceIndex > lastParenIndex) {
-      semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
-          lastLeftBraceIndex + 1, lastRightBraceIndex));
-    } else {
-      semanticVariables[curIndex] = -1;
-    }
+    Preconditions.checkArgument(lastLeftBraceIndex > lastParenIndex, 
+        "Illegal headed syntactic category: %s", typeString);
+    semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
+        lastLeftBraceIndex + 1, lastRightBraceIndex));
 
     if (!category.isAtomic()) {
       int splitIndex = SyntacticCategory.findSlashIndex(typeString);

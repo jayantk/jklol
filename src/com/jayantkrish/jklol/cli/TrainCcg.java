@@ -18,14 +18,14 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
- * Estimates parameters for a CCG parser given a lexicon and a 
- * set of training data. The training data consists of sentences
- * with annotations of the correct dependency structures.  
+ * Estimates parameters for a CCG parser given a lexicon and a set of
+ * training data. The training data consists of sentences with
+ * annotations of the correct dependency structures.
  * 
  * @author jayantk
  */
 public class TrainCcg extends AbstractCli {
-  
+
   private static final String DISCARD_INVALID_OPT = "discardInvalid";
 
   private OptionSpec<String> lexicon;
@@ -33,11 +33,12 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> rules;
   private OptionSpec<Integer> beamSize;
+  private OptionSpec<Void> applicationOnly;
 
   public TrainCcg() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
   }
-  
+
   @Override
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
@@ -47,6 +48,8 @@ public class TrainCcg extends AbstractCli {
     // Optional options
     rules = parser.accepts("rules").withRequiredArg().ofType(String.class);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    applicationOnly = parser.accepts("applicationOnly", 
+        "Use only function application during parsing, i.e., no composition.");
     parser.accepts(DISCARD_INVALID_OPT);
   }
 
@@ -55,10 +58,10 @@ public class TrainCcg extends AbstractCli {
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(lexicon));
     List<String> ruleEntries = options.has(rules) ? IoUtils.readLines(options.valueOf(rules))
-        : Collections.<String>emptyList();
-    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, 
-        true);
-    
+        : Collections.<String> emptyList();
+    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries,
+        !options.has(applicationOnly));
+
     // Read in training data.
     List<CcgExample> trainingExamples = Lists.newArrayList();
     int numDiscarded = 0;
@@ -75,7 +78,7 @@ public class TrainCcg extends AbstractCli {
     System.out.println(lexiconEntries.size() + " lexicon entries.");
     System.out.println(trainingExamples.size() + " training examples.");
     System.out.println(numDiscarded + " discarded training examples.");
-    
+
     // Train the model.
     CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
     StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingExamples.size());
@@ -85,11 +88,11 @@ public class TrainCcg extends AbstractCli {
 
     System.out.println("Serializing trained model...");
     IoUtils.serializeObjectToFile(ccgParser, options.valueOf(modelOutput));
-    
+
     System.out.println("Trained model parameters:");
     System.out.println(family.getParameterDescription(parameters));
   }
-  
+
   public static void main(String[] args) {
     new TrainCcg().run(args);
   }

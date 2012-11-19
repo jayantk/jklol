@@ -32,10 +32,11 @@ public class CcgParserTest extends TestCase {
     "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},0 almost,almost 1 2",
     "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
     "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
-    ";,;", "or,conj,",
+    ";,;{0},0 ;", "or,conj{0},0 or",
     "about,(N{0}/(S{1}\\N{2}){1}){0},0 about,about 1 1", 
     "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
-    "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1"};
+    "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1",
+    "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
@@ -45,13 +46,13 @@ public class CcgParserTest extends TestCase {
     0.25, 1.0,
     1.0, 0.5,
     1.0, 1.0,
-    0.5};
+    0.5, 1.0};
 
-  private static final String[] binaryRuleArray = {"; N{0} N{0}", "N{0} ; N{0}", 
-    "; (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\", N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
+  private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0}", 
+    ";{2} (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
     "conj{2} (S{0}\\N{1}){0} ((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}"};
   
-  private static final String[] unaryRuleArray = {"N{0} (S{1}/(S{1}\\N{0}){1})",
+  private static final String[] unaryRuleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}",
     "N{0} (N{1}/N{1}){0}"};
   
   private VariableNumMap terminalVar;
@@ -183,6 +184,14 @@ public class CcgParserTest extends TestCase {
     Set<IndexedPredicate> heads = parse.getSemanticHeads();
     assertEquals(1, heads.size());
     assertEquals("tasty", Iterables.getOnlyElement(heads).getHead());
+  }
+  
+  public void testCompositionHeads() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(100, "tasty", "colorful", "tasty", "tasty", "tasty", "tasty", "tasty", "tasty", "tasty", 
+        "colorful", "colorful", "colorful", "colorful");
+    
+    CcgParse parse = parses.get(0);
+    assertEquals("colorful", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
   }
 
   public void testParseHeadUnification() {

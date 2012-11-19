@@ -23,12 +23,12 @@ public class HeadedSyntacticCategoryTest extends TestCase {
   
   public void testParseFrom2() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(
-        "(((S{1}\\N{2}){1}/N{0}){1}/((S{1}\\N{2})/N{0})){3}");
+        "(((S{1}\\N{2}){1}/N{0}){1}/((S{1}\\N{2}){1}/N{0}){1}){3}");
     
     assertEquals(3, cat.getRootVariable());
-    assertEquals(-1, cat.getArgumentType().getRootVariable());
+    assertEquals(1, cat.getArgumentType().getRootVariable());
     assertEquals(0, cat.getArgumentType().getArgumentType().getRootVariable());
-    assertEquals(-1, cat.getArgumentType().getReturnType().getRootVariable());
+    assertEquals(1, cat.getArgumentType().getReturnType().getRootVariable());
     assertEquals(1, cat.getArgumentType().getReturnType().getReturnType().getRootVariable());
     assertEquals(1, cat.getReturnType().getRootVariable());
     assertEquals(1, cat.getReturnType().getReturnType().getRootVariable());

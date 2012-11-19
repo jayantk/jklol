@@ -82,17 +82,30 @@ public class ParseCcg {
         printCcgParses(parses, options.valueOf(numParses));
         
         if (parses.size() > 0) {
-          Set<DependencyStructure> allDeps = Sets.newHashSet(parses.get(0).getAllDependencies());
+          List<DependencyStructure> predictedDeps = parses.get(0).getAllDependencies();
           Set<DependencyStructure> trueDeps = example.getDependencies();
+          System.out.println("Predicted: ");
+          for (DependencyStructure dep : predictedDeps) {
+            if (trueDeps.contains(dep)) {
+              System.out.println(dep);              
+            } else {
+              System.out.println(dep + "\tINCORRECT");
+            }
+          }
           
-          Set<DependencyStructure> incorrectDeps = Sets.newHashSet(allDeps);
+          System.out.println("Missing true dependencies:");
+          for (DependencyStructure dep : trueDeps) {
+            if (!predictedDeps.contains(dep)) {
+              System.out.println(dep);
+            }
+          }
+          
+          Set<DependencyStructure> incorrectDeps = Sets.newHashSet(predictedDeps);
           incorrectDeps.removeAll(trueDeps);
-          Set<DependencyStructure> correctDeps = Sets.newHashSet(allDeps);
+          Set<DependencyStructure> correctDeps = Sets.newHashSet(predictedDeps);
           correctDeps.retainAll(trueDeps);
-          System.out.println("CORRECT: " + correctDeps);
-          System.out.println("INCORRECT: " + incorrectDeps);
           correct += correctDeps.size();
-          falsePositive += allDeps.size() - correctDeps.size();
+          falsePositive += predictedDeps.size() - correctDeps.size();
           falseNegative += trueDeps.size() - correctDeps.size();
         }
         

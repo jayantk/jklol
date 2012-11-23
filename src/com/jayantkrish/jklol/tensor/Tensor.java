@@ -62,13 +62,31 @@ public interface Tensor extends TensorBase, Serializable {
    * returned tensor's value will be equal to {@code this.get(k) * other.get(k)}
    * .
    * 
-   * @param other
-   * @return
+   * @param other tensor to multiply with {@code this}.
+   * @return the elementwise product of {@code this} with {@code
+   * other}.
    */
   Tensor elementwiseProduct(Tensor other);
 
+  /**
+   * Elementwise multiplies this tensor with each tensor in {@code
+   * others} and returns the result. The effect of this method is
+   * identical to repeatedly applying {@link
+   * #elementwiseProduct(Tensor)}, but may be more efficient.
+   *
+   * @param others tensors to multiply with {@code this}
+   * @return the elementwise product of {@code this} with {@code others}.
+   */
   Tensor elementwiseProduct(Collection<Tensor> others);
 
+  /**
+   * Elementwise multiplies each value in {@code this} by {@code
+   * value}.
+   *
+   * @param value value to multiply by
+   * @return tensor equal to {@code this} with each value multiplied
+   * by {@code value}.
+   */
   Tensor elementwiseProduct(double value);
 
   /**
@@ -140,6 +158,13 @@ public interface Tensor extends TensorBase, Serializable {
    */
   Tensor elementwiseSqrt();
 
+  /**
+   * Takes the natural log of each value in {@code this}. Note that
+   * zero values will be mapped to -Infinity.
+   *
+   * @return tensor whose values are the logarithm of {@code this}
+   * tensor's values.
+   */
   Tensor elementwiseLog();
 
   /**
@@ -196,6 +221,9 @@ public interface Tensor extends TensorBase, Serializable {
    */
   Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate);
 
+  /**
+   * Same as {@link sumOutDimensions(Collection)}.
+   */
   Tensor sumOutDimensions(int[] dimensionsToEliminate);
 
   /**
@@ -209,6 +237,9 @@ public interface Tensor extends TensorBase, Serializable {
    */
   Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate);
 
+  /**
+   * Same as {@link #maxOutDimensions(Collection)}.
+   */
   Tensor maxOutDimensions(int[] dimensionsToEliminate);
 
   /**
@@ -223,8 +254,34 @@ public interface Tensor extends TensorBase, Serializable {
    */
   Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate, Backpointers backpointers);
 
+  /**
+   * Relabels the dimensions of this tensor to {@code
+   * newDimensions}. The i'th dimension of {@code this} is relabeled
+   * to the i'th element in {@code newDimensions}. If the resulting
+   * relabeled dimensions are not in sorted order, they will be
+   * reordered and the keys of the tensor will be appropriately relabeled.
+   * <p>
+   * Expects {@code newDimensions} to have length equal to the number
+   * of dimensions in this tensor.
+   *
+   * @param newDimensions target dimensions to relabel {@code this}
+   * tensor's dimensions to.
+   * @return copy of {@code this} with its dimensions relabeled to
+   * match {@code newDimensions}.
+   */
   Tensor relabelDimensions(int[] newDimensions);
-
+    
+  /**
+   * Same as {@link relabelDimensions(int[])} with a different format
+   * for the relabeling. {@code relabeling} maps each dimension in
+   * {@code this} to a new dimension which should replace the existing
+   * dimension.
+   *
+   * @param relabeling mapping from dimensions of {@code this} to new
+   * dimensions.
+   * @return copy of {@code this} with its dimensions relabeled
+   * according to {@code relabeling}.
+   */
   Tensor relabelDimensions(Map<Integer, Integer> relabeling);
 
   /**

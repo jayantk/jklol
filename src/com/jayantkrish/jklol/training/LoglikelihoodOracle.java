@@ -9,6 +9,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -56,10 +57,12 @@ Example<DynamicAssignment, DynamicAssignment>> {
     log.log(input, factorGraph);
     log.log(observed, factorGraph);
 
-    log.startTimer("update_gradient/input_marginal");
+    log.startTimer("update_gradient/condition");
     // Compute the second term of the gradient, the unconditional expected
     // feature counts
     FactorGraph inputFactorGraph = factorGraph.conditional(input);
+    log.stopTimer("update_gradient/condition");
+    log.startTimer("update_gradient/input_marginal");
     // System.out.println("input factor graph:");
     // System.out.println(inputFactorGraph.getParameterDescription());
     MarginalSet inputMarginals = marginalCalculator.computeMarginals(inputFactorGraph);
@@ -86,6 +89,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
     family.incrementSufficientStatistics(gradient, outputMarginals, 1.0);
     // System.out.println("=== output marginals ===");
     // System.out.println(outputMarginals);
+    // System.out.println(gradient);
     log.stopTimer("update_gradient/increment");
 
     return Math.log(outputMarginals.getPartitionFunction()) - 

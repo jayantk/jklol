@@ -64,4 +64,13 @@ public class ArrayUtils {
     System.arraycopy(old, from, newArray, 0, minLength);
     return newArray;
   }
+
+  public static boolean subarrayEquals(int[] array, int[] subarray, int startIndex) {
+      for (int i = 0; i < subarray.length; i++) {
+	  if (array[i + startIndex] != subarray[i]) {
+	      return false;
+	  }
+      }
+      return true;
+  }
 }

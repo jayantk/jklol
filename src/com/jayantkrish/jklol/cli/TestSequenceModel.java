@@ -24,15 +24,21 @@ import com.jayantkrish.jklol.util.Assignment;
  *
  * @author jayantk
  */
-public class TestSequenceModel {
+public class TestSequenceModel extends AbstractCli {
 
-  public static void main(String[] args) {
-    OptionParser parser = new OptionParser();
-    // Required arguments.
-    OptionSpec<String> model = parser.accepts("model").withRequiredArg()
-        .ofType(String.class).required();
-    OptionSet options = parser.parse(args);
+  private OptionSpec<String> model;
 
+  public TestSequenceModel() {
+    super();
+  }
+
+  @Override
+  public void initializeOptions(OptionParser parser) {
+    model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
+  }
+
+  @Override
+  public void run(OptionSet options) {
     // Read in the serialized model.
     DynamicFactorGraph sequenceModel = null;
     FileInputStream fis = null;
@@ -56,10 +62,14 @@ public class TestSequenceModel {
 
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < wordsToTag.size(); i++) {
-      sb.append(wordsToTag.get(i) + "/" + labels.get(1) + " ");
+      sb.append(wordsToTag.get(i) + "/" + labels.get(i) + " ");
     }
 
     // Print the predicted labels.
     System.out.println(sb);
+  }
+
+  public static void main(String[] args) {
+    new TestSequenceModel().run(args);
   }
 }

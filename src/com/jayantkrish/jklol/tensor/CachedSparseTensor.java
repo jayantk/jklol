@@ -8,6 +8,7 @@ import java.util.Map;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.PermutationIterator;
 
 /**
@@ -68,6 +69,43 @@ public class CachedSparseTensor extends SparseTensor {
         return new CachedSparseTensorBuilder(dimNums, dimSizes);
       }
     };
+  }
+
+  @Override
+  public SparseTensor slice(int[] dimensionNumbers, int[] key) {
+      if (dimensionNumbers.length == 0) {
+	  return this;
+      }
+
+      int[] myDims = getDimensionNumbers();
+      int[] permutation = new int[myDims.length];
+      int[] sequence = new int[dimensionNumbers.length];
+      int[] remainingDims = new int[myDims.length - dimensionNumbers.length];
+      int numRemaining = 0;
+      for (int i = 0; i < myDims.length; i++) {
+	  int index = Ints.indexOf(dimensionNumbers, myDims[i]);
+	  if (index == -1) {
+	      remainingDims[numRemaining] = myDims[i];
+	      permutation[i] = dimensionNumbers.length + numRemaining;
+	      numRemaining++;
+	  } else {
+	      permutation[i] = index;
+	  }
+      }
+      Preconditions.checkState(numRemaining == remainingDims.length);
+
+      for (int i = 0; i < dimensionNumbers.length; i++) {
+	  sequence[i] = i;
+      }
+
+      SparseTensor cached = tensorCache.get(Ints.asList(permutation));
+      // System.out.println(cachedPermutation + " " + Ints.asList(cached.getDimensionNumbers()) + " " + Ints.asList(permutation));
+      if (cached != null) {
+	  return cached.slice(sequence, key).relabelDimensions(remainingDims);
+      }
+  
+      // No cached tensor falls into the efficient case.
+      return super.slice(dimensionNumbers, key);
   }
 
   @Override

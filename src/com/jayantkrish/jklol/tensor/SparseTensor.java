@@ -49,7 +49,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Returns {@code true} if {@code key} has a value in this.
+   * Returns {@code true} if {@code key} has a value in this. If
+   * {@code false}, {@code key} has a zero value. If {@code true},
+   * {@code key} may have a nonzero value.
    * 
    * @param key
    * @return
@@ -145,8 +147,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     }
     // Check for an efficient case, where the dimensions are the first elements
     // of this.
-    if (Arrays.equals(ArrayUtils.copyOf(getDimensionNumbers(), dimensionNumbers.length),
-        dimensionNumbers)) {
+    if (ArrayUtils.subarrayEquals(getDimensionNumbers(), dimensionNumbers, 0)) {
       long minKeyInt = 0;
       for (int i = 0; i < dimensionNumbers.length; i++) {
         minKeyInt += indexOffsets[i] * key[i];

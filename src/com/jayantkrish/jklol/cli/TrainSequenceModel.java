@@ -44,6 +44,7 @@ public class TrainSequenceModel extends AbstractCli {
 
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> emissionFeatures;
+  private OptionSpec<String> emissionFeaturesDelimiter;
   private OptionSpec<String> modelOutput;
   private static final String MAX_MARGIN = "maxMargin";
 
@@ -62,6 +63,8 @@ public class TrainSequenceModel extends AbstractCli {
     // Feature functions of word/label pairs
     emissionFeatures = parser.accepts("emissionFeatures").withRequiredArg()
         .ofType(String.class).required();
+    emissionFeaturesDelimiter = parser.accepts("emissionFeaturesDelimiter").withRequiredArg()
+	.ofType(String.class).defaultsTo(",");
     // Where to serialize the trained factor graph
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional arguments.
@@ -72,7 +75,8 @@ public class TrainSequenceModel extends AbstractCli {
   public void run(OptionSet options) {
     // Construct the sequence model
     ParametricFactorGraph sequenceModel = ModelUtils.buildSequenceModel(
-        IoUtils.readLines(options.valueOf(emissionFeatures)));
+        IoUtils.readLines(options.valueOf(emissionFeatures)),
+	options.valueOf(emissionFeaturesDelimiter));
 
     // Read in the training data, formatted as assignments.
     List<Example<DynamicAssignment, DynamicAssignment>> trainingData = readTrainingData(
@@ -104,8 +108,10 @@ public class TrainSequenceModel extends AbstractCli {
 
     System.out.println("Training...");
     StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
+    SufficientStatistics initialParameters = sequenceModel.getNewSufficientStatistics();
+    initialParameters.makeDense();
     SufficientStatistics parameters = trainer.train(
-        oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
+        oracle, initialParameters, trainingData);
 
     return parameters;
   }
@@ -125,16 +131,13 @@ public class TrainSequenceModel extends AbstractCli {
     List<Example<DynamicAssignment, DynamicAssignment>> examples = Lists.newArrayList();
     for (String line : IoUtils.readLines(trainingFilename)) {
       String[] chunks = line.split(" ");
+      Preconditions.checkState(chunks.length % 2 == 0, "Invalid input line: " + line);
 
       List<Assignment> inputs = Lists.newArrayList();
       List<Assignment> outputs = Lists.newArrayList();
-      for (int i = 0; i < chunks.length; i++) {
-        String[] parts = chunks[i].split("/");
-
-        Preconditions.checkArgument(parts.length == 2, "Invalid input line: " + line);
-
-        inputs.add(x.outcomeArrayToAssignment(parts[0]));
-        outputs.add(y.outcomeArrayToAssignment(parts[1]));
+      for (int i = 0; i < chunks.length; i += 2) {
+        inputs.add(x.outcomeArrayToAssignment(chunks[i]));
+        outputs.add(y.outcomeArrayToAssignment(chunks[i + 1]));
       }
       DynamicAssignment input = DynamicAssignment.createPlateAssignment(PLATE_NAME, inputs);
       DynamicAssignment output = DynamicAssignment.createPlateAssignment(PLATE_NAME, outputs);

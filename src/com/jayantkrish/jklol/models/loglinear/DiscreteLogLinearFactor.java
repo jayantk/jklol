@@ -21,6 +21,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
@@ -169,9 +170,14 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {
-    return new TensorSufficientStatistics(featureVariables, 
-        new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
-            featureVariables.getVariableSizes()));
+      return new TensorSufficientStatistics(featureVariables, 
+               new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
+				      featureVariables.getVariableSizes()));
+      /*
+      return TensorSufficientStatistics.createSparse(featureVariables, 
+           SparseTensor.empty(Ints.toArray(featureVariables.getVariableNums()),
+			      featureVariables.getVariableSizes()));
+      */
   }
 
   @Override
@@ -191,6 +197,14 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
     // Compute expected feature counts based on the input marginal distribution.
     DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
         .product(marginal).marginalize(marginal.getVars().getVariableNums());
+
+      /*
+    DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
+        .product(marginal);
+    System.out.println(expectedFeatureCounts.getVars() + " " + 
+		       expectedFeatureCounts.size());
+      */
+
     Preconditions.checkState(expectedFeatureCounts.getVars().equals(featureVariables));
 
     ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts.getWeights(), 
@@ -229,7 +243,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
           .union(featureVarMap.outcomeArrayToAssignment(featureValues));
       featureValueBuilder.setWeight(newAssignment, 1.0);
     }
-    return featureValueBuilder.build();
+    return featureValueBuilder.build().cacheWeightPermutations();
   }
 
   /**

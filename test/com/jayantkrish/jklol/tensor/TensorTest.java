@@ -216,6 +216,16 @@ public abstract class TensorTest extends TestCase {
     assertEquals(5, slice.getDimensionSizes()[0]);
     assertEquals(3, slice.getDimensionNumbers()[0]);
   }
+
+  public void testSlice2() {
+    Tensor slice = table.slice(new int[] {3, 4}, new int[] {4, 3});
+    System.out.println("slice: " + slice);
+    assertEquals(0.0, slice.getByDimKey(0));
+    assertEquals(7.0, slice.getByDimKey(3));
+    assertEquals(3.0, slice.getByDimKey(5));
+    assertEquals(6, slice.getDimensionSizes()[0]);
+    assertEquals(1, slice.getDimensionNumbers()[0]);
+  }
   
   public void testSliceLeft1() {
     // Test a case where both the start and end index are in the tensor:
@@ -243,6 +253,11 @@ public abstract class TensorTest extends TestCase {
   public void testSliceEmpty() {
     Tensor slice = emptyInputTable.slice(new int[0], new int[0]);
     assertEquals(5.0, slice.getByDimKey(new int[0]));
+  }
+
+  public void testSliceAll() {
+    Tensor slice = table.slice(new int[] {1, 3, 4}, new int[] {2, 0, 1});
+    assertEquals(4.0, slice.getByDimKey(new int[0]));
   }
   
   public void testKeyPrefixIteratorEmpty() {

@@ -21,6 +21,8 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.CachedSparseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
@@ -41,13 +43,15 @@ public class ModelUtils {
    * the emission distribution.
    * 
    * @param emissionFeatureLines
+   * @param featureDelimiter
    * @return
    */
-  public static ParametricFactorGraph buildSequenceModel(Iterable<String> emissionFeatureLines) {
+    public static ParametricFactorGraph buildSequenceModel(Iterable<String> emissionFeatureLines,
+							   String featureDelimiter) {
     // Read in the possible values of each variable.
-    List<String> words = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 0, ",");
-    List<String> labels = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 1, ",");
-    List<String> emissionFeatures = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 2, ",");
+    List<String> words = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 0, featureDelimiter);
+    List<String> labels = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 1, featureDelimiter);
+    List<String> emissionFeatures = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 2, featureDelimiter);
     // Create dictionaries for each variable's values.
     DiscreteVariable wordType = new DiscreteVariable("word", words);
     DiscreteVariable labelType = new DiscreteVariable("label", labels);
@@ -70,7 +74,9 @@ public class ModelUtils {
     VariableNumMap emissionFeatureVar = VariableNumMap.singleton(0, "emissionFeature", emissionFeatureType);
     TableFactor emissionFeatureFactor = TableFactor.fromDelimitedFile(
         Arrays.asList(x, y, emissionFeatureVar), emissionFeatureLines,
-        ",", false);
+        featureDelimiter, false).cacheWeightPermutations();
+
+    System.out.println(emissionFeatureFactor.getVars());
 
     // Add a parametric factor for the word/label weights
     DiscreteLogLinearFactor emissionFactor = new DiscreteLogLinearFactor(x.union(y), emissionFeatureVar,

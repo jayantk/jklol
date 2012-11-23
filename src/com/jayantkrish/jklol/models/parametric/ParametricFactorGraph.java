@@ -174,11 +174,9 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
 
     List<Integer> conditionedVariableNums = marginals.getConditionedValues().getVariableNums();
-
     for (int i = 0; i < statisticsList.size(); i++) {
       VariablePattern pattern = factorPatterns.get(i);
       List<VariableMatch> matches = pattern.matchVariables(marginals.getVariables());
-
       for (VariableMatch match : matches) {
         VariableNumMap matchVars = match.getMatchedVariables();
         // These calls take ~ 4 microseconds

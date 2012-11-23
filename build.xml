@@ -22,6 +22,7 @@
     <pathelement location="lib/gwt-user.jar" />
     <pathelement location="lib/jopt-simple-4.3.jar" />
     <pathelement location="lib/opencsv-2.3.jar" />
+    <pathelement location="lib/gwtexporter-2.4.0.jar" />
   </path>
   <path id="classpath.test">
     <pathelement location="/usr/share/java/junit.jar" />
@@ -90,9 +91,8 @@
       <classpath refid="classpath.test" />
       <formatter type="brief" usefile="false"/>
       <batchtest>
-        <fileset dir="${tst-dir}" includes="com/jayantkrish/jklol/ccg/*.java">
-          <include name="com/jayantkrish/jklol/ccg/CcgParserTest.java" />
-          <include name="com/jayantkrish/jklol/ccg/CcgTrainingTest.java" />
+        <fileset dir="${tst-dir}" includes="com/jayantkrish/jklol/tensor/*.java">
+          <include name="com/jayantkrish/jklol/ccg/CachedSparseTensorTest.java" />
         </fileset>
       </batchtest>
     </junit>
@@ -111,7 +111,7 @@
 
   <target name="javadoc">
     <mkdir dir="${doc-dir}" />
-    <javadoc destdir="${doc-dir}">
+    <javadoc destdir="${doc-dir}" classpathref="classpath.base">
        <fileset dir="${src-dir}" includes="**/*.java" />
     </javadoc>
   </target>

@@ -8,9 +8,9 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
  * Oracle for the steps of the {@link ExpectationMaximization} algorithm.
  * 
  * @author jayantk
- * @param <M>
- * @param <E>
- * @param <O>
+ * @param <M> instantiated model type
+ * @param <E> example type
+ * @param <O> expectation type
  */
 public interface EmOracle<M, E, O> {
 

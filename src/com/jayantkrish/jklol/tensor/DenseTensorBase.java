@@ -59,7 +59,8 @@ public class DenseTensorBase extends AbstractTensorBase {
     for (int i = 0; i < sizes.length; i++) {
       size *= sizes[i];
     }
-    Preconditions.checkArgument(values.length == size);
+    Preconditions.checkArgument(values.length == size, "Expected size: %s, was: %s", size, 
+				values.length);
 
     this.values = values;
   }

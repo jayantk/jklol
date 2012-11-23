@@ -17,6 +17,7 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -81,6 +82,11 @@ public abstract class DiscreteFactor extends AbstractFactor {
    * @return
    */
   public abstract Tensor getWeights();
+
+  public TableFactor cacheWeightPermutations() {
+    return new TableFactor(getVars(), CachedSparseTensor.cacheAllPermutations(
+         (SparseTensor) getWeights()));
+  }
 
   // /////////////////////////////////////////////////////////////////////////////////
   // Overrides of Factor methods.

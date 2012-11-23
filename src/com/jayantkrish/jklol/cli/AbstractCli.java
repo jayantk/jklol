@@ -20,9 +20,42 @@ import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Pseudorandom;
 
+/**
+ * Common framework for command line programs. This class provides
+ * option parsing functionality and implementations of commonly-used
+ * option sets, such as an option to seed the random number generator.
+ * This class also provides basic logging functionality for the
+ * passed-in options, making experiments easier to repeat.
+ * <p>
+ * Command-line programs using this class should implement all
+ * abstract methods, then write a main method which instantiates a
+ * class instance and invokes {@link #run}. See {@link
+ * TrainSequenceModel} for an example.
+ * 
+ * @author jayantk
+ */
 public abstract class AbstractCli {
+  
+  /**
+   * Common sets of options which subclasses may optionally choose to
+   * accept. To accept a given set of options, include the corresponding
+   * value in the constructor for {@code AbstractCli}.
+   */
   public static enum CommonOptions {
-    STOCHASTIC_GRADIENT, MAP_REDUCE
+    /**
+     * Enables options for constructing a {@code
+     * StochasticGradientTrainer}. For example, these options include
+     * the number of training iterations and regularization
+     * parameters.
+     */
+    STOCHASTIC_GRADIENT, 
+    /**
+     * Enables parallelization options configuring the execution of
+     * embarassingly parallel tasks. These options set the default
+     * {@code MapReduceExecutor} used by the program. For example,
+     * these options include the maximum number of threads to use.
+     */
+    MAP_REDUCE
   };
 
   private final Set<CommonOptions> opts;
@@ -38,6 +71,7 @@ public abstract class AbstractCli {
   // Stochastic gradient options.
   private OptionSpec<Integer> sgdIterations;
   private OptionSpec<Integer> sgdBatchSize;
+  private OptionSpec<Integer> sgdLogInterval;
   private OptionSpec<Double> sgdInitialStep;
   private OptionSpec<Double> sgdL2Regularization;
   private OptionSpec<Void> sgdBrief;
@@ -50,12 +84,18 @@ public abstract class AbstractCli {
    * Creates a command line program that accepts the specified set of
    * options.
    * 
-   * @param opts
+   * @param opts any optional option sets to accept
    */
   public AbstractCli(CommonOptions... opts) {
     this.opts = Sets.newHashSet(opts);
   }
 
+  /**
+   * Runs the program, parsing any options from {@code args}.
+   *
+   * @param args arguments to the program, in the same format as provided
+   * by {@code main}.
+   */
   public void run(String[] args) {
     // Add and parse options.
     OptionParser parser = new OptionParser();
@@ -99,17 +139,18 @@ public abstract class AbstractCli {
   }
 
   /**
-   * Adds subclass-specific options to {@code parser}. Subclasses
-   * should implement this method in order to accept
+   * Adds subclass-specific options to {@code parser}. Subclasses must
+   * implement this method in order to accept class-specific options.
    * 
-   * @param parser
+   * @param parser option parser to which additional command-line
+   * options should be added.
    */
   public abstract void initializeOptions(OptionParser parser);
 
   /**
-   * Runs the command line program using parsed {@code options}.
+   * Runs the program using parsed {@code options}.
    * 
-   * @param options
+   * @param options option values passed to the program
    */
   public abstract void run(OptionSet options);
 
@@ -132,6 +173,9 @@ public abstract class AbstractCli {
       sgdBatchSize = parser.accepts("batchSize", 
           "Minibatch size, i.e., the number of examples processed per gradient computation.")
           .withRequiredArg().ofType(Integer.class).defaultsTo(1);
+      sgdLogInterval = parser.accepts("logInterval",
+          "Number of iterations of stochastic gradient training between logging outputs.")
+	  .withRequiredArg().ofType(Integer.class).defaultsTo(1);
       sgdInitialStep = parser.accepts("initialStepSize", 
           "Initial step size for stochastic gradient descent.")
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
@@ -172,9 +216,8 @@ public abstract class AbstractCli {
    * provided options. In order to use this method, pass
    * {@link CommonOptions#STOCHASTIC_GRADIENT} to the constructor.
    * 
-   * @param options
-   * @param numExamples
-   * @return
+   * @return a stochastic gradient trainer configured using any
+   * command-line options passed to the program
    */
   protected StochasticGradientTrainer createStochasticGradientTrainer(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.STOCHASTIC_GRADIENT));
@@ -186,7 +229,8 @@ public abstract class AbstractCli {
     double l2Regularization = parsedOptions.valueOf(sgdL2Regularization);
     boolean brief = parsedOptions.has(sgdBrief);
 
-    LogFunction log = (brief ? new NullLogFunction() : new DefaultLogFunction());
+    LogFunction log = (brief ? new NullLogFunction() 
+		       : new DefaultLogFunction(parsedOptions.valueOf(sgdLogInterval), false));
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
         numIterations, batchSize, initialStepSize, true, l2Regularization, log);
 

@@ -11,8 +11,6 @@ import com.jayantkrish.jklol.cli.ModelUtils;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.SparseTensor;
-import com.jayantkrish.jklol.util.Pseudorandom;
 
 @Export()
 @ExportPackage("jklol")

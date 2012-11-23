@@ -17,9 +17,10 @@ import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A discrete probability distibution whose unnormalized probabilities are given in a table,
- * represeted as a {@code Tensor}. This factor is the most common type of factor used to represent
- * discrete factor graphs.
+ * A discrete probability distibution whose unnormalized probabilities
+ * are given in a table, represeted as a {@code Tensor}. This factor
+ * is the most common type of factor used to represent discrete factor
+ * graphs.
  *
  * @author jayantk
  */

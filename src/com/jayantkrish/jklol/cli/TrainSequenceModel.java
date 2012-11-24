@@ -87,10 +87,8 @@ public class TrainSequenceModel extends AbstractCli {
     DynamicFactorGraph factorGraph = sequenceModel.getModelFromParameters(parameters);
 
     System.out.println("Serializing trained model...");
-    IoUtils.serializeObjectToFile(factorGraph, options.valueOf(modelOutput));
-
-    System.out.println("Learned parameters: ");
-    System.out.println(sequenceModel.getParameterDescription(parameters));
+    TrainedModelSet trainedModel = new TrainedModelSet(sequenceModel, parameters, factorGraph);
+    IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
 
   public SufficientStatistics run(ParametricFactorGraph sequenceModel, 
@@ -116,11 +114,9 @@ public class TrainSequenceModel extends AbstractCli {
     return parameters;
   }
 
-
   public static void main(String[] args) {
     new TrainSequenceModel().run(args);
   }
-
 
   private static List<Example<DynamicAssignment, DynamicAssignment>> readTrainingData(
       ParametricFactorGraph model, String trainingFilename) {
@@ -136,8 +132,8 @@ public class TrainSequenceModel extends AbstractCli {
       List<Assignment> inputs = Lists.newArrayList();
       List<Assignment> outputs = Lists.newArrayList();
       for (int i = 0; i < chunks.length; i += 2) {
-        inputs.add(x.outcomeArrayToAssignment(chunks[i]));
-        outputs.add(y.outcomeArrayToAssignment(chunks[i + 1]));
+        inputs.add(x.outcomeArrayToAssignment(chunks[i].intern()));
+        outputs.add(y.outcomeArrayToAssignment(chunks[i + 1].intern()));
       }
       DynamicAssignment input = DynamicAssignment.createPlateAssignment(PLATE_NAME, inputs);
       DynamicAssignment output = DynamicAssignment.createPlateAssignment(PLATE_NAME, outputs);

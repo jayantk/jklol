@@ -239,6 +239,12 @@ public abstract class DiscreteFactor extends AbstractFactor {
     return builder.build();
   }
 
+  public DiscreteFactor innerProduct(Factor other) {
+    VariableNumMap remainingVars = getVars().removeAll(other.getVars());
+    return new TableFactor(remainingVars, getWeights()
+        .innerProduct(other.coerceToDiscrete().getWeights()));
+  }
+
   @Override
   public DiscreteFactor inverse() {
     return new TableFactor(getVars(), getWeights().elementwiseInverse());

@@ -7,6 +7,7 @@ filename = sys.argv[1]
 
 def generate_string_features(word, label):
     dict = {}
+
     '''
     patterns = ['\d$', '\d\d$', '\d\d\d+$', '\d?\d?:\d\d$', 
                 '[0-9:]+$', '[A-Z]', '[A-Z]$', '[A-Z][A-Z]$', 
@@ -16,8 +17,8 @@ def generate_string_features(word, label):
     for pattern in patterns:
         if re.match(pattern, word):
             dict['regex=' + pattern + '_label=' + label] = 1
-
     '''
+
     dict['bias_label=' + label] = 1
     dict['word=' + word.lower() + '_label=' + label] = 1
 

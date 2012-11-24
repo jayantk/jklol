@@ -1,9 +1,11 @@
 package com.jayantkrish.jklol.util;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.List;
 import java.util.Set;
@@ -135,5 +137,23 @@ public class IoUtils {
       ex.printStackTrace();
       System.exit(1);
     }    
+  }
+
+  public static <T> T readSerializedObject(String filename, Class<T> clazz) {
+    // Read in the serialized model.
+    T object = null;
+    FileInputStream fis = null;
+    ObjectInputStream in = null;
+    try {
+      fis = new FileInputStream(filename);
+      in = new ObjectInputStream(fis);
+      object = clazz.cast(in.readObject());
+      in.close();
+    } catch(IOException ex) {
+      throw new RuntimeException(ex);
+    } catch(ClassNotFoundException ex) {
+      throw new RuntimeException(ex);
+    }
+    return object;
   }
 }

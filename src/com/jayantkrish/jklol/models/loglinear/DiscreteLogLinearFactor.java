@@ -66,6 +66,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
     this.featureValues = Preconditions.checkNotNull(featureValues);
     Preconditions.checkArgument(featureValues.getVars().equals(
         variables.union(featureVariables)));
+
     this.initialWeights = null;
   }
 
@@ -196,7 +197,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     // Compute expected feature counts based on the input marginal distribution.
     DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
-        .product(marginal).marginalize(marginal.getVars().getVariableNums());
+        .innerProduct(marginal);
 
       /*
     DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)

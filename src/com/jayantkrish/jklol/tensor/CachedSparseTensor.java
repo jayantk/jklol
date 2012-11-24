@@ -71,41 +71,68 @@ public class CachedSparseTensor extends SparseTensor {
     };
   }
 
+  private int[] getLeftAlignedPermutation(int[] dimensionNumbers) {
+    int[] myDims = getDimensionNumbers();
+    int[] permutation = new int[myDims.length];
+    int numRemaining = 0;
+    for (int i = 0; i < myDims.length; i++) {
+      int index = Ints.indexOf(dimensionNumbers, myDims[i]);
+      if (index == -1) {
+        permutation[i] = dimensionNumbers.length + numRemaining;
+        numRemaining++;
+      } else {
+        permutation[i] = index;
+      }
+    }
+    Preconditions.checkState(numRemaining == (myDims.length - dimensionNumbers.length));
+    return permutation;
+  }
+
+  private int[] getRightmostDimensions(int[] dimensionNumbers, int[] permutation, int numDims) {
+    int[] remainingDims = new int[numDims];
+    int numFilled = 0;
+    for (int i = 0; i < dimensionNumbers.length; i++) {
+      if (permutation[i] >= dimensionNumbers.length - numDims) {
+        remainingDims[numFilled] = dimensionNumbers[i];
+        numFilled++;
+      }
+    }
+    Preconditions.checkState(numFilled == numDims);
+    return remainingDims;
+  }
+
   @Override
   public SparseTensor slice(int[] dimensionNumbers, int[] key) {
-      if (dimensionNumbers.length == 0) {
-	  return this;
-      }
+    if (dimensionNumbers.length == 0) {
+      return this;
+    }
+    
+    int[] permutation = getLeftAlignedPermutation(dimensionNumbers);
+    SparseTensor cached = tensorCache.get(Ints.asList(permutation));
+    // System.out.println(cachedPermutation + " " + Ints.asList(cached.getDimensionNumbers()) + " " + Ints.asList(permutation));
+    if (cached != null) {
+      int[] remainingDims = getRightmostDimensions(getDimensionNumbers(), permutation, 
+          permutation.length - dimensionNumbers.length);
+      int[] sequence = ArrayUtils.range(0, dimensionNumbers.length);
+      return cached.slice(sequence, key).relabelDimensions(remainingDims);
+    }
+    
+    // No cached tensor falls into the efficient case.
+    return super.slice(dimensionNumbers, key);
+  }
 
-      int[] myDims = getDimensionNumbers();
-      int[] permutation = new int[myDims.length];
-      int[] sequence = new int[dimensionNumbers.length];
-      int[] remainingDims = new int[myDims.length - dimensionNumbers.length];
-      int numRemaining = 0;
-      for (int i = 0; i < myDims.length; i++) {
-	  int index = Ints.indexOf(dimensionNumbers, myDims[i]);
-	  if (index == -1) {
-	      remainingDims[numRemaining] = myDims[i];
-	      permutation[i] = dimensionNumbers.length + numRemaining;
-	      numRemaining++;
-	  } else {
-	      permutation[i] = index;
-	  }
-      }
-      Preconditions.checkState(numRemaining == remainingDims.length);
-
-      for (int i = 0; i < dimensionNumbers.length; i++) {
-	  sequence[i] = i;
-      }
-
-      SparseTensor cached = tensorCache.get(Ints.asList(permutation));
-      // System.out.println(cachedPermutation + " " + Ints.asList(cached.getDimensionNumbers()) + " " + Ints.asList(permutation));
-      if (cached != null) {
-	  return cached.slice(sequence, key).relabelDimensions(remainingDims);
-      }
-  
-      // No cached tensor falls into the efficient case.
-      return super.slice(dimensionNumbers, key);
+  @Override
+  public SparseTensor innerProduct(Tensor other) {
+    int[] otherDims = other.getDimensionNumbers();
+    int[] permutation = getLeftAlignedPermutation(otherDims);
+    SparseTensor cached = tensorCache.get(Ints.asList(permutation));
+    if (cached != null) {
+      int[] remainingDims = getRightmostDimensions(getDimensionNumbers(), permutation, 
+          permutation.length - otherDims.length);
+      int[] sequence = ArrayUtils.range(0, otherDims.length);
+      return cached.innerProduct(other.relabelDimensions(sequence)).relabelDimensions(remainingDims);
+    }
+    return super.innerProduct(other);
   }
 
   @Override

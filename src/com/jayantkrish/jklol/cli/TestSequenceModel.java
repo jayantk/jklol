@@ -1,8 +1,5 @@
 package com.jayantkrish.jklol.cli;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.List;
 
 import joptsimple.OptionParser;
@@ -17,10 +14,11 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IoUtils;
 
 /**
  * Tests a sequence model, which is serialized to disk as a 
- * {@code DynamicFactorGraph}. 
+ * {@code TrainedModelSet}. 
  *
  * @author jayantk
  */
@@ -40,21 +38,9 @@ public class TestSequenceModel extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Read in the serialized model.
-    DynamicFactorGraph sequenceModel = null;
-    FileInputStream fis = null;
-    ObjectInputStream in = null;
-    try {
-      fis = new FileInputStream(options.valueOf(model));
-      in = new ObjectInputStream(fis);
-      sequenceModel = (DynamicFactorGraph) in.readObject();
-      in.close();
-    } catch(IOException ex) {
-      ex.printStackTrace();
-      System.exit(1);
-    } catch(ClassNotFoundException ex) {
-      ex.printStackTrace();
-      System.exit(1);
-    }
+    TrainedModelSet trainedModel = IoUtils.readSerializedObject(options.valueOf(model),
+        TrainedModelSet.class);
+    DynamicFactorGraph sequenceModel = trainedModel.getInstantiatedModel();
 
     // Read in the words to tag.
     List<String> wordsToTag = options.nonOptionArguments();

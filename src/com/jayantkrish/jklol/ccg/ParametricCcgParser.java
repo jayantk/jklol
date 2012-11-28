@@ -110,8 +110,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     }
 
     // Parse out all of the categories, words, and semanticPredicates
-    // from the
-    // lexicon.
+    // from the lexicon.
     IndexedList<CcgCategory> categories = IndexedList.create();
     IndexedList<List<String>> words = IndexedList.create();
     IndexedList<String> semanticPredicates = IndexedList.create();
@@ -128,6 +127,14 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       // structures.
       addSubjectsToPredicateList(lexiconEntry.getCategory().getSubjects(),
           lexiconEntry.getCategory().getArgumentNumbers(), semanticPredicates, maxNumArgs);
+    }
+    
+    // Add any predicates from binary and unary rules.
+    for (CcgBinaryRule rule : binaryRules) {
+      addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates, maxNumArgs);
+    }
+    for (CcgUnaryRule rule : unaryRules) {
+      addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates, maxNumArgs);
     }
 
     // Build the terminal distribution. This maps word sequences to

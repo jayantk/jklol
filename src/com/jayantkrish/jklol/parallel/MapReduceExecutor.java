@@ -12,5 +12,6 @@ import java.util.Collection;
  */
 public interface MapReduceExecutor {
 
-  public <A, B, C> C mapReduce(Collection<A> items, Mapper<A, B> mapper, Reducer<B, C> reducer);
+  public <A, B, C> C mapReduce(Collection<? extends A> items, Mapper<A, B> mapper,
+      Reducer<B, C> reducer);
 }

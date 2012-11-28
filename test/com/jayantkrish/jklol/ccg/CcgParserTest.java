@@ -50,7 +50,8 @@ public class CcgParserTest extends TestCase {
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0}", 
     ";{2} (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
-    "conj{2} (S{0}\\N{1}){0} ((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}"};
+    "conj{2} (S{0}\\N{1}){0} ((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}",
+    "\"N{0} N{1} N{1}\",\"special:compound 1 0\",\"special:compound 2 1\""};
   
   private static final String[] unaryRuleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}",
     "N{0} (N{1}/N{1}){0}"};
@@ -103,6 +104,9 @@ public class CcgParserTest extends TestCase {
     
     assertEquals("eat", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
     assertEquals("I", Iterables.getOnlyElement(parse.getLeft().getSemanticHeads()).getHead());
+    
+    List<DependencyStructure> eatDeps = parse.getDependenciesWithHeadWord(2);
+    assertEquals(2, eatDeps.size());
   }
   
   public void testParse2() {
@@ -330,7 +334,21 @@ public class CcgParserTest extends TestCase {
         new DependencyStructure("directed", 4, "houses", 5, 1));
     assertEquals(expectedDeps, deps);
   }
-  
+      
+  public void testBinaryRulesNounCompound() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "berries"), 10);
+    
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    
+    Set<DependencyStructure> observedDeps = Sets.newHashSet(parse.getAllDependencies());
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("special:compound", 1, "berries", 1, 2),
+        new DependencyStructure("special:compound", 1, "people", 0, 1));
+    assertEquals(expectedDeps, observedDeps);
+  }
+
   public void testParseUnaryRules1() {
     List<CcgParse> parses = parserWithUnary.beamSearch(
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
@@ -351,13 +369,14 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = parserWithUnary.beamSearch(
         Arrays.asList("people", "eat", "people", "berries"), 10);
 
-    assertEquals(2, parses.size());
+    assertEquals(4, parses.size());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
         new DependencyStructure("eat", 1, "people", 0, 1),
         new DependencyStructure("eat", 1, "berries", 3, 2));
     
     for (CcgParse parse : parses) {
-      assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
+      Set<DependencyStructure> trueDeps = Sets.newHashSet(parse.getAllDependencies());
+      assertTrue(trueDeps.containsAll(expectedDeps));
     }
   }
   
@@ -376,6 +395,21 @@ public class CcgParserTest extends TestCase {
       for (String head : Iterables.concat(category.getAssignment())) {
         semanticPredicates.addAll(Arrays.asList(head));
       }
+    }
+
+    // Parse the binary rules
+    List<CcgBinaryRule> binaryRules = Lists.newArrayList();
+    for (int i = 0; i < binaryRuleArray.length; i++) {
+      CcgBinaryRule rule = CcgBinaryRule.parseFrom(binaryRuleArray[i]);
+      binaryRules.add(rule);
+      semanticPredicates.addAll(rule.getSubjects());
+    }
+
+    List<CcgUnaryRule> unaryRules = Lists.newArrayList();
+    for (int i = 0; i < unaryRuleArray.length; i++) {
+      CcgUnaryRule rule = CcgUnaryRule.parseFrom(unaryRuleArray[i]); 
+      unaryRules.add(rule);
+      semanticPredicates.addAll(rule.getSubjects());
     }
 
     // Build the terminal distribution.
@@ -407,17 +441,6 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("eat", 2, "berries"), 1.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("quickly", 1, "eat"), 3.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
-    
-    // Parse the binary rules
-    List<CcgBinaryRule> binaryRules = Lists.newArrayList();
-    for (int i = 0; i < binaryRuleArray.length; i++) {
-      binaryRules.add(CcgBinaryRule.parseFrom(binaryRuleArray[i]));
-    }
-    
-    List<CcgUnaryRule> unaryRules = Lists.newArrayList();
-    for (int i = 0; i < unaryRuleArray.length; i++) {
-      unaryRules.add(CcgUnaryRule.parseFrom(unaryRuleArray[i]));
-    }
     
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),

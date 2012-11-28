@@ -110,6 +110,17 @@ public class LossFunctions {
       truePositiveScores = Lists.newArrayList();
       falsePositiveScores = Lists.newArrayList();
     }
+    
+    public PrecisionRecall(int truePositives, int trueNegatives, int falsePositives, 
+        int falseNegatives) {
+      this.truePositives = truePositives;
+      this.trueNegatives = trueNegatives;
+      this.falsePositives = falsePositives;
+      this.falseNegatives = falseNegatives;
+      
+      this.truePositiveScores = null;
+      this.falsePositiveScores = null;
+    }
 
     public void accumulatePrediction(Boolean prediction, Boolean actual, double score) {
       if (prediction == null) {

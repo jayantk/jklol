@@ -37,7 +37,7 @@ public class ExportTest implements Exportable {
     List<String> emissionFeatures = Arrays.asList("the,DT,the=DT,1",
         "the,N,the=N,0.5", "thing,DT,thing=DT,0.5", "thing,N,thing=N,1");
 
-    ParametricFactorGraph pfg = ModelUtils.buildSequenceModel(emissionFeatures);
+    ParametricFactorGraph pfg = ModelUtils.buildSequenceModel(emissionFeatures, ","); 
     SufficientStatistics stats = pfg.getNewSufficientStatistics();
     stats.increment(1);
     DynamicFactorGraph model = pfg.getModelFromParameters(stats);

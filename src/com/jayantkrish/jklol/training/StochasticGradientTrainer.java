@@ -78,13 +78,13 @@ public class StochasticGradientTrainer {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L1Regularizer(l1Penalty), log);
   }
 
-  public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
-      SufficientStatistics initialParameters, Iterable<E> trainingData) {
+  public <M, E, T extends E> SufficientStatistics train(GradientOracle<M, E> oracle,
+      SufficientStatistics initialParameters, Iterable<T> trainingData) {
     
     // cycledTrainingData loops indefinitely over the elements of trainingData.
     // This is desirable because we want batchSize examples but don't
     // particularly care where in trainingData they come from.
-    Iterator<E> cycledTrainingData = Iterators.cycle(trainingData);
+    Iterator<T> cycledTrainingData = Iterators.cycle(trainingData);
 
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
@@ -102,7 +102,7 @@ public class StochasticGradientTrainer {
       // more efficient and is fairly close if the examples are provided in
       // random order.
       log.startTimer("factor_graph_from_parameters");
-      List<E> batchData = getBatch(cycledTrainingData, batchSize);
+      List<T> batchData = getBatch(cycledTrainingData, batchSize);
       M currentModel = oracle.instantiateModel(initialParameters);
       log.stopTimer("factor_graph_from_parameters");
 

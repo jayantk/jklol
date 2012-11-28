@@ -14,53 +14,65 @@ import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 
 /**
- * A binary combination rule applicable to two adjacent CCG categories. These
- * rules represent operations like type-changing, which can be applied in
- * addition to the standard CCG application/combination rules. For example,
- * {@code CcgBinaryRule} can be used to absorb punctuation marks.
+ * A binary combination rule applicable to two adjacent CCG
+ * categories. These rules represent operations like type-changing,
+ * which can be applied in addition to the standard CCG
+ * application/combination rules. For example, {@code CcgBinaryRule}
+ * can be used to absorb punctuation marks.
  * <p>
- * Each combination rule matches a pair of adjacent {@code SyntacticCategory}s,
- * and returns a new category for their span. The returned category may inherit
- * some of its semantics from one of the combined categories. In addition, the
- * semantics of the returned category may be augmented with additional
- * unfilled dependencies. The inherited semantics enable {@code CcgBinaryRule} to 
- * capture comma conjunction (for example).
+ * Each combination rule matches a pair of adjacent
+ * {@code SyntacticCategory}s, and returns a new category for their
+ * span. The returned category may inherit some of its semantics from
+ * one of the combined categories. In addition, the semantics of the
+ * returned category may be augmented with additional unfilled
+ * dependencies. The inherited semantics enable {@code CcgBinaryRule}
+ * to capture comma conjunction (for example).
  * 
  * @author jayantk
  */
 public class CcgBinaryRule implements Serializable {
+  
+  private static final long serialVersionUID = 2L;
+  
   private final HeadedSyntacticCategory leftSyntax;
   private final HeadedSyntacticCategory rightSyntax;
   private final HeadedSyntacticCategory returnSyntax;
 
-  // Unfilled dependencies to add to the returned category,
-  // in addition to any inherited heads and dependencies.
-  private final long[] unfilledDeps;
+  // Unfilled dependencies created by this rule.
+  private final String[] subjects;
+  private final int[] argumentNumbers;
+  // The variables each dependency accepts.
+  private final int[] objects;
 
   private static final char ENTRY_DELIMITER = ',';
 
   public CcgBinaryRule(HeadedSyntacticCategory leftSyntax, HeadedSyntacticCategory rightSyntax,
-      HeadedSyntacticCategory returnSyntax, long[] unfilledDeps) {
+      HeadedSyntacticCategory returnSyntax, List<String> subjects, List<Integer> argumentNumbers,
+      List<Integer> objects) {
     this.leftSyntax = leftSyntax;
     this.rightSyntax = rightSyntax;
     this.returnSyntax = returnSyntax;
 
-    this.unfilledDeps = unfilledDeps;
+    this.subjects = subjects.toArray(new String[0]);
+    this.argumentNumbers = Ints.toArray(argumentNumbers);
+    this.objects = Ints.toArray(objects);
   }
 
   /**
-   * Parses a binary rule from a line in comma-separated format. The expected
-   * fields, in order, are:
+   * Parses a binary rule from a line in comma-separated format. The
+   * expected fields, in order, are:
    * <ul>
    * <li>The headed syntactic categories to combine and return:
    * <code>(left syntax) (right syntax) (return syntax)</code>
-   * <li>(optional) Additional unfilled dependencies, in standard format:
+   * <li>(optional) Additional unfilled dependencies, in standard
+   * format:
    * <code>(predicate) (argument number) (argument variable)</code>
    * </ul>
    * 
-   * For example, ", NP{0} NP{0}" is a binary rule that allows an NP to absorb a
-   * comma on the left. Or, "conj{2} (S{0}\NP{1}){0} ((S{0}\NP{1}){0}\(S{0}\NP{1}){0}){2}"
-   * allows the "conj" type to conjoin verb phrases of type (S\NP).
+   * For example, ", NP{0} NP{0}" is a binary rule that allows an NP
+   * to absorb a comma on the left. Or, "conj{2} (S{0}\NP{1}){0}
+   * ((S{0}\NP{1}){0}\(S{0}\NP{1}){0}){2}" allows the "conj" type to
+   * conjoin verb phrases of type (S\NP).
    * 
    * @param line
    * @return
@@ -79,30 +91,28 @@ public class CcgBinaryRule implements Serializable {
       HeadedSyntacticCategory rightSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
       HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[2]);
 
-      long[] unfilledDeps = new long[0];
+      List<String> subjects = Lists.newArrayList();
+      List<Integer> argNums = Lists.newArrayList();
+      List<Integer> objects = Lists.newArrayList();
       if (chunks.length >= 2) {
-        throw new UnsupportedOperationException("Not yet implemented");
-        /*
-        String[] newDeps = chunks[4].split(" ");
-        Preconditions.checkArgument(newDeps.length == 3);
-        long subjectNum = Long.parseLong(newDeps[0].substring(1));
-        long argNum = Long.parseLong(newDeps[1]);
-        long objectNum = Long.parseLong(newDeps[2].substring(1));
-        unfilledDeps = new long[1];
-
-        unfilledDeps[0] = CcgParser.marshalUnfilledDependency(objectNum, argNum, subjectNum, 0, 0);
-        */
+        for (int i = 1; i < chunks.length; i++) {
+          String[] newDeps = chunks[i].split(" ");
+          Preconditions.checkArgument(newDeps.length == 3);
+          subjects.add(newDeps[0]);
+          argNums.add(Integer.parseInt(newDeps[1]));
+          objects.add(Integer.parseInt(newDeps[2]));
+        }
       }
 
-      return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, unfilledDeps);
+      return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, subjects, argNums, objects);
     } catch (IOException e) {
       throw new IllegalArgumentException("Illegal binary rule string: " + line, e);
     }
   }
 
   /**
-   * Gets the expected syntactic type that should occur on the left side in
-   * order to instantiate this rule.
+   * Gets the expected syntactic type that should occur on the left
+   * side in order to instantiate this rule.
    * 
    * @return
    */
@@ -111,8 +121,8 @@ public class CcgBinaryRule implements Serializable {
   }
 
   /**
-   * Gets the expected syntactic type that should occur on the right side in
-   * order to instantiate this rule.
+   * Gets the expected syntactic type that should occur on the right
+   * side in order to instantiate this rule.
    * 
    * @return
    */
@@ -121,8 +131,38 @@ public class CcgBinaryRule implements Serializable {
   }
 
   /**
-   * Combines {@code left} and {@code right} using this rule, returning a new
-   * {@code ChartEntry} spanning the two.
+   * Gets the list of subjects of the dependencies instantiated by
+   * this rule.
+   * 
+   * @return
+   */
+  public List<String> getSubjects() {
+    return Arrays.asList(subjects);
+  }
+
+  /**
+   * Gets the list of argument numbers of the dependencies
+   * instantiated by this rule.
+   * 
+   * @return
+   */
+  public List<Integer> getArgumentNumbers() {
+    return Ints.asList(argumentNumbers);
+  }
+
+  /**
+   * Gets the list of object variable numbers of the dependencies
+   * instantiated by this rule.
+   * 
+   * @return
+   */
+  public List<Integer> getObjects() {
+    return Ints.asList(objects);
+  }
+
+  /**
+   * Combines {@code left} and {@code right} using this rule,
+   * returning a new {@code ChartEntry} spanning the two.
    * 
    * @param left
    * @param right
@@ -136,36 +176,39 @@ public class CcgBinaryRule implements Serializable {
    */
   public ChartEntry apply(ChartEntry left, ChartEntry right, int leftSpanStart,
       int leftSpanEnd, int leftIndex, int rightSpanStart, int rightSpanEnd,
-      int rightIndex) {
+      int rightIndex, CcgParser parser) {
 
     HeadedSyntacticCategory leftChartSyntax = left.getHeadedSyntax();
     HeadedSyntacticCategory rightChartSyntax = right.getHeadedSyntax();
-    
+
     int[] leftPatternToChart = leftChartSyntax.unifyVariables(
         leftChartSyntax.getUniqueVariables(), leftSyntax, new int[0]);
     int[] rightPatternToChart = rightChartSyntax.unifyVariables(
         rightChartSyntax.getUniqueVariables(), rightSyntax, new int[0]);
-    
+
     if (leftPatternToChart == null || rightPatternToChart == null) {
       return null;
     }
-    
+
     int[] leftVars = left.getAssignmentVariableNumsRelabeled(leftPatternToChart);
     int[] leftPredicateNums = left.getAssignmentPredicateNums();
     int[] leftIndexes = left.getAssignmentIndexes();
     long[] leftUnfilledDeps = left.getUnfilledDependenciesRelabeled(leftPatternToChart);
-    
+
     int[] rightVars = right.getAssignmentVariableNumsRelabeled(rightPatternToChart);
     int[] rightPredicateNums = right.getAssignmentPredicateNums();
     int[] rightIndexes = right.getAssignmentIndexes();
     long[] rightUnfilledDeps = right.getUnfilledDependenciesRelabeled(rightPatternToChart);
-    
+
     int[] returnUniqueVars = returnSyntax.getUniqueVariables();
     long[] returnUnfilledDeps = Longs.concat(leftUnfilledDeps, rightUnfilledDeps);
     List<Integer> returnVars = Lists.newArrayList();
     List<Integer> returnPredicateNums = Lists.newArrayList();
     List<Integer> returnIndexes = Lists.newArrayList();
-    
+
+    // Determine which variables from the left and right syntactic
+    // types
+    // are retained in the returned assignment.
     for (int i = 0; i < leftVars.length; i++) {
       for (int j = 0; j < returnUniqueVars.length; j++) {
         if (leftVars[i] == returnUniqueVars[j]) {
@@ -175,7 +218,7 @@ public class CcgBinaryRule implements Serializable {
         }
       }
     }
-    
+
     for (int i = 0; i < rightVars.length; i++) {
       for (int j = 0; j < returnUniqueVars.length; j++) {
         if (rightVars[i] == returnUniqueVars[j]) {
@@ -185,9 +228,36 @@ public class CcgBinaryRule implements Serializable {
         }
       }
     }
-    
-    return new ChartEntry(returnSyntax, null, Ints.toArray(returnVars), Ints.toArray(returnPredicateNums), 
-        Ints.toArray(returnIndexes), returnUnfilledDeps, new long[0], leftSpanStart, leftSpanEnd,  
+
+    // Fill the binary rule dependencies.
+    long[] filledDepArray = new long[0];
+    if (objects.length > 0) {
+      List<Long> filledDeps = Lists.newArrayList();
+      for (int i = 0; i < objects.length; i++) {
+        int leftVarIndex = Ints.indexOf(leftVars, objects[i]);
+        int rightVarIndex = Ints.indexOf(rightVars, objects[i]);
+
+        if (leftVarIndex != -1) {
+          long subjectNum = parser.predicateToLong(subjects[i]);
+          long objectNum = leftPredicateNums[leftVarIndex];
+
+          filledDeps.add(CcgParser.marshalFilledDependency(objectNum, argumentNumbers[i],
+              subjectNum, leftSpanEnd, rightSpanStart));
+        }
+
+        if (rightVarIndex != -1) {
+          long subjectNum = parser.predicateToLong(subjects[i]);
+          long objectNum = rightPredicateNums[rightVarIndex];
+
+          filledDeps.add(CcgParser.marshalFilledDependency(objectNum, argumentNumbers[i],
+              subjectNum, leftSpanEnd, rightSpanStart));
+        }
+      }
+      filledDepArray = Longs.toArray(filledDeps);
+    }
+
+    return new ChartEntry(returnSyntax, null, Ints.toArray(returnVars), Ints.toArray(returnPredicateNums),
+        Ints.toArray(returnIndexes), returnUnfilledDeps, filledDepArray, leftSpanStart, leftSpanEnd,
         leftIndex, rightSpanStart, rightSpanEnd, rightIndex);
   }
 }

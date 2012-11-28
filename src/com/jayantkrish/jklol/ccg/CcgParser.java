@@ -352,9 +352,9 @@ public class CcgParser implements Serializable {
                     ChartEntry result = unifyChartEntries(rightRoot, leftRoot, 1, spanStart,
                         spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex,
                         depAccumulator, log, chart);
-                  if (result != null) {
-                    addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
-                  }
+                    if (result != null) {
+                      addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
+                    }
                   }
                 }
               }
@@ -376,7 +376,7 @@ public class CcgParser implements Serializable {
               double rightProb = rightProbs[rightIndex];
 
               ChartEntry result = binaryRule.apply(leftRoot, rightRoot, spanStart, spanStart + i,
-                  leftIndex, spanStart + j, spanEnd, rightIndex);
+                  leftIndex, spanStart + j, spanEnd, rightIndex, this);
 
               if (result != null) {
                 addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
@@ -764,6 +764,10 @@ public class CcgParser implements Serializable {
 
     return marshalUnfilledDependency(objectNum, argNum, subjectNum, objectWordInd, subjectWordInd);
   }
+  
+  public long predicateToLong(String predicate) {
+    return dependencyHeadType.getValueIndex(predicate);
+  }
 
   public static long marshalUnfilledDependency(long objectNum, long argNum, long subjectNum,
       long objectWordInd, long subjectWordInd) {
@@ -771,6 +775,17 @@ public class CcgParser implements Serializable {
     value += objectNum << OBJECT_OFFSET;
     value += argNum << ARG_NUM_OFFSET;
     value += subjectNum << SUBJECT_OFFSET;
+    value += objectWordInd << OBJECT_WORD_IND_OFFSET;
+    value += subjectWordInd << SUBJECT_WORD_IND_OFFSET;
+    return value;
+  }
+  
+  public static long marshalFilledDependency(long objectNum, long argNum, long subjectNum,
+      long objectWordInd, long subjectWordInd) {
+    long value = 0L;
+    value += (objectNum + MAX_ARG_NUM) << OBJECT_OFFSET;
+    value += argNum << ARG_NUM_OFFSET;
+    value += (subjectNum + MAX_ARG_NUM) << SUBJECT_OFFSET;
     value += objectWordInd << OBJECT_WORD_IND_OFFSET;
     value += subjectWordInd << SUBJECT_WORD_IND_OFFSET;
     return value;
@@ -830,7 +845,7 @@ public class CcgParser implements Serializable {
     return objectNum >= MAX_ARG_NUM && subjectNum >= MAX_ARG_NUM;
   }
 
-  private UnfilledDependency longToUnfilledDependency(long value) {
+  public UnfilledDependency longToUnfilledDependency(long value) {
     int argNum, objectNum, objectWordInd, subjectNum, subjectWordInd;
 
     objectNum = (int) ((value >> OBJECT_OFFSET) & PREDICATE_MASK);

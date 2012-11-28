@@ -10,6 +10,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * Regression tests for training CCG parsers from dependency structures.
@@ -24,9 +25,9 @@ public class CcgTrainingTest extends TestCase {
     "block,N{0},0 pred:block", "object,N{0},0 pred:object", 
     "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1","green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1",
     "the,(N{1}/N{1}){0},0 the","a,(N{1}/N{1}){0},0 the",
+    "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:close,pred:close 1 1,pred:close 2 2", 
     "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1,pred:near 2 2",
     "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 pred:near,pred:near 2 2",
-    "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:close,pred:close 1 1,pred:close 2 2", 
     "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 2",
     "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 pred:almost,pred:almost 1 2",
     "is,((S{0}\\N{1}){0}/N{2}){0},0 pred:equals,pred:equals 1 1,pred:equals 2 2",
@@ -100,15 +101,38 @@ public class CcgTrainingTest extends TestCase {
     testZeroTrainingError(trainingExamplesWithLexicon);
   }
   
+  public void testTrainPerceptronWithLexicon() {
+    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, 100);
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1, 
+        false, 0.0, new DefaultLogFunction());
+
+    // Ensure that this test is deterministic.
+    Pseudorandom.get().setSeed(1);
+    SufficientStatistics initialParameters = oracle.initializeGradient();
+    initialParameters.perturb(0.01);
+    
+    SufficientStatistics parameters = trainer.train(oracle, initialParameters, 
+        trainingExamplesWithLexicon);
+    CcgParser parser = family.getModelFromParameters(parameters);
+    System.out.println(family.getParameterDescription(parameters));
+
+    assertZeroError(parser, trainingExamplesWithLexicon);
+  }
+  
   private CcgParser testZeroTrainingError(List<CcgExample> examples) {
-    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 10);
+    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 100);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1, 
         true, 0.1, new DefaultLogFunction());
-    
+
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), examples);
     CcgParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
 
+    assertZeroError(parser, examples);
+    return parser; 
+  }
+  
+  private void assertZeroError(CcgParser parser, Iterable<CcgExample> examples) {
     // Test that zero training error is achieved.
     for (CcgExample example : examples) {
       List<CcgParse> parses = parser.beamSearch(example.getWords(), 100);
@@ -119,12 +143,10 @@ public class CcgTrainingTest extends TestCase {
           break;
         }
       }
-      
+
       System.out.println(example.getWords() + " " + bestParse);
       assertEquals(example.getDependencies(), Sets.newHashSet(bestParse.getAllDependencies()));
     }
-    
-    return parser; 
   }
 }
 

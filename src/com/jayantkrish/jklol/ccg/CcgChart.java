@@ -328,7 +328,7 @@ public class CcgChart {
           }
         }
       }
-      
+
       return relabeledAssignmentVariableNums;
     }
     

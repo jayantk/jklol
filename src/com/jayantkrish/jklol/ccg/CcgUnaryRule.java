@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import au.com.bytecode.opencsv.CSVParser;
@@ -12,6 +14,8 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 
 public class CcgUnaryRule implements Serializable {
+
+  private static final long serialVersionUID = 1L;
 
   private final HeadedSyntacticCategory inputSyntax;
   private final HeadedSyntacticCategory returnSyntax;
@@ -78,8 +82,43 @@ public class CcgUnaryRule implements Serializable {
     }
   }
 
+  /**
+   * Gets the syntactic category which this rule can be applied to.
+   * 
+   * @return
+   */
   public SyntacticCategory getInputSyntacticCategory() {
     return inputSyntax.getSyntax();
+  }
+
+  /**
+   * Gets the list of subjects of the dependencies instantiated by
+   * this rule.
+   * 
+   * @return
+   */
+  public List<String> getSubjects() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Gets the list of argument numbers of the dependencies
+   * instantiated by this rule.
+   * 
+   * @return
+   */
+  public List<Integer> getArgumentNumbers() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Gets the list of object variable numbers of the dependencies
+   * instantiated by this rule.
+   * 
+   * @return
+   */
+  public List<Integer> getObjects() {
+    return Collections.emptyList();
   }
 
   public ChartEntry apply(ChartEntry entry) {
@@ -92,20 +131,20 @@ public class CcgUnaryRule implements Serializable {
     if (patternToChart == null) {
       return null;
     }
-    
+
     int[] returnVars = entry.getAssignmentVariableNumsRelabeled(patternToChart);
     int[] returnPredicateNums = entry.getAssignmentPredicateNums();
     int[] returnIndexes = entry.getAssignmentIndexes();
     long[] returnUnfilledDeps = entry.getUnfilledDependenciesRelabeled(patternToChart);
-    
+
     if (entry.isTerminal()) {
-      return new ChartEntry(returnSyntax, entry.getLexiconEntry(), this, returnVars, 
-          returnPredicateNums, returnIndexes, returnUnfilledDeps, entry.getDependencies(), 
+      return new ChartEntry(returnSyntax, entry.getLexiconEntry(), this, returnVars,
+          returnPredicateNums, returnIndexes, returnUnfilledDeps, entry.getDependencies(),
           entry.getLeftSpanStart(), entry.getLeftSpanEnd());
     } else {
       return new ChartEntry(returnSyntax, this, returnVars, returnPredicateNums, returnIndexes,
           returnUnfilledDeps, entry.getDependencies(), entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
-          entry.getLeftChartIndex(), entry.getRightSpanStart(), entry.getRightSpanEnd(), 
+          entry.getLeftChartIndex(), entry.getRightSpanStart(), entry.getRightSpanEnd(),
           entry.getRightChartIndex());
     }
   }

@@ -27,7 +27,7 @@ public class ListSufficientStatistics implements SufficientStatistics {
   /**
    * Creates a collection of sufficient statistics containing all of the
    * outcomes in {@code statistics}. Each statistic is given the 
-   * correpsonding name from {@code names}.
+   * corresponding name from {@code names}.
    * 
    * @param names
    * @param statistics

@@ -23,10 +23,10 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
 
 /**
- * A {@code VariableNumMap} represents a set of variables in a graphical model.
- * Each variable has a unique numerical index, a unique name, and a
- * {@code Variable} representing the type of its values. {@code VariableNumMap}s
- * are immutable.
+ * A {@code VariableNumMap} represents a set of variables in a
+ * graphical model. Each variable has a unique numerical index, a
+ * unique name, and a {@code Variable} representing the type of its
+ * values. {@code VariableNumMap}s are immutable.
  * 
  * @author jayant
  */
@@ -38,13 +38,17 @@ public class VariableNumMap implements Serializable {
   private final BiMap<Integer, String> names;
 
   /**
-   * Instantiate a VariableNumMap with the specified variables. Each variable is
-   * named by both a unique integer id and a (possibly not unique) String name.
-   * All three passed in lists must be of the same size.
+   * Instantiate a VariableNumMap with the specified variables. Each
+   * variable is named by both a unique integer id and a (possibly not
+   * unique) String name. All three passed in lists must be of the
+   * same size.
    * 
-   * @param varNums - The unique integer id of each variable
-   * @param varNames - The String name of each variable
-   * @param vars - The Variable type of each variable
+   * @param varNums
+   *          - The unique integer id of each variable
+   * @param varNames
+   *          - The String name of each variable
+   * @param vars
+   *          - The Variable type of each variable
    */
   public VariableNumMap(List<Integer> varNums, List<String> varNames, List<? extends Variable> vars) {
     Preconditions.checkArgument(varNums.size() == vars.size());
@@ -58,8 +62,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Constructor used internally for building the results of operations that
-   * return new {@code VariableNumMap}s, such as {@link #union(VariableNumMap)}.
+   * Constructor used internally for building the results of
+   * operations that return new {@code VariableNumMap}s, such as
+   * {@link #union(VariableNumMap)}.
    * 
    * @param varNumMap
    * @param varNames
@@ -93,10 +98,10 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Converts a list of outcomes into a list of assignments. Each row of
-   * {@code outcomes} is converted into an assignment by mapping the ith column
-   * of {@code outcomes[i]} to an assignment of the ith variable in
-   * {@code variables}. {@code null} entries are ignored.
+   * Converts a list of outcomes into a list of assignments. Each row
+   * of {@code outcomes} is converted into an assignment by mapping
+   * the ith column of {@code outcomes[i]} to an assignment of the ith
+   * variable in {@code variables}. {@code null} entries are ignored.
    * 
    * @param outcomes
    * @return
@@ -126,7 +131,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Get the numbers of the variables in this map, in ascending sorted order.
+   * Get the numbers of the variables in this map, in ascending sorted
+   * order.
    * 
    * @return
    */
@@ -135,8 +141,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Get the numbers of the variables in this map as an array, in ascending
-   * sorted order.
+   * Get the numbers of the variables in this map as an array, in
+   * ascending sorted order.
    * 
    * @return
    */
@@ -145,8 +151,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the number of the sole variable contained in {@code this}. Requires
-   * {@code this.size() == 1}.
+   * Gets the number of the sole variable contained in {@code this}.
+   * Requires {@code this.size() == 1}.
    * 
    * @return
    */
@@ -170,8 +176,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the {@code Variable} of the sole variable contained in {@code this}.
-   * Requires {@code this.size() == 1}.
+   * Gets the {@code Variable} of the sole variable contained in
+   * {@code this}. Requires {@code this.size() == 1}.
    * 
    * @return
    */
@@ -181,8 +187,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the names of all of the variables in {@code this}, ordered by their
-   * variable index.
+   * Gets the names of all of the variables in {@code this}, ordered
+   * by their variable index.
    * 
    * @return
    */
@@ -195,8 +201,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the name of the variable whose numerical index is {@code index}.
-   * Throws a {@code KeyError} if no such variable exists.
+   * Gets the name of the variable whose numerical index is
+   * {@code index}. Throws a {@code KeyError} if no such variable
+   * exists.
    * 
    * @return
    */
@@ -205,7 +212,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Get the discrete variables in this map, ordered by variable index.
+   * Get the discrete variables in this map, ordered by variable
+   * index.
    */
   public List<DiscreteVariable> getDiscreteVariables() {
     List<DiscreteVariable> discreteVars = new ArrayList<DiscreteVariable>();
@@ -218,9 +226,10 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets an array containing the number of possible values for each variable in
-   * this. Requires all {@code Variable}s in this to be {@code DiscreteVariable}
-   * s. The returned size array is sorted by dimension number.
+   * Gets an array containing the number of possible values for each
+   * variable in this. Requires all {@code Variable}s in this to have
+   * type {@code DiscreteVariable}. The returned size array is sorted
+   * by dimension number.
    * 
    * @return
    */
@@ -234,9 +243,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets an array containing the number of possible joint assignments to the
-   * variables in {@code this}. Requires all {@code Variable}s in this to be
-   * {@code DiscreteVariable}s.
+   * Gets an array containing the number of possible joint assignments
+   * to the variables in {@code this}. Requires all {@code Variable}s
+   * in this to be {@code DiscreteVariable}s.
    * 
    * @return
    */
@@ -263,8 +272,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets any variables in {@code this} whose values are objects of type
-   * {@code T}.
+   * Gets any variables in {@code this} whose values are objects of
+   * type {@code T}.
    * 
    * @return
    */
@@ -294,8 +303,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Get the variable referenced by a particular variable number. Throws a
-   * KeyError if the variable number is not contained in this map.
+   * Get the variable referenced by a particular variable number.
+   * Throws a KeyError if the variable number is not contained in this
+   * map.
    * 
    * @param variableNum
    * @return
@@ -305,8 +315,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the index of the variable named {@code variableName}. Throws a
-   * {@code KeyError} if no such variable exists.
+   * Gets the index of the variable named {@code variableName}. Throws
+   * a {@code KeyError} if no such variable exists.
    * 
    * @param variableName
    * @return
@@ -316,9 +326,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the subset of {@code this} containing variables with a name in
-   * {@code variableNames}. Names in {@code variableNames} which are not in
-   * {@code this} are ignored.
+   * Gets the subset of {@code this} containing variables with a name
+   * in {@code variableNames}. Names in {@code variableNames} which
+   * are not in {@code this} are ignored.
    * 
    * @param variableNames
    * @return
@@ -338,8 +348,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Identical to {@link #getVariablesByName(Collection)}, but with an array of
-   * names instead of a {@code Collection}.
+   * Identical to {@link #getVariablesByName(Collection)}, but with an
+   * array of names instead of a {@code Collection}.
    * 
    * @param variableNames
    * @return
@@ -389,9 +399,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Returns {@code true} if every variable number in {@code variableNums} is
-   * mapped to a variable in {@code this} map. Returns {@code true} if
-   * {@code variableNums} is empty.
+   * Returns {@code true} if every variable number in
+   * {@code variableNums} is mapped to a variable in {@code this} map.
+   * Returns {@code true} if {@code variableNums} is empty.
    * 
    * @param variableNums
    * @return
@@ -406,8 +416,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Same as {@link #containsAll(Collection)}, using the variable numbers in the
-   * passed map.
+   * Same as {@link #containsAll(Collection)}, using the variable
+   * numbers in the passed map.
    * 
    * @param other
    * @return
@@ -417,9 +427,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Returns {@code true} if any variable number in {@code variableNums} is
-   * mapped to a variable in {@code this} map. Returns {@code false} if
-   * {@code variableNums} is empty.
+   * Returns {@code true} if any variable number in
+   * {@code variableNums} is mapped to a variable in {@code this} map.
+   * Returns {@code false} if {@code variableNums} is empty.
    * 
    * @param variableNums
    * @return
@@ -434,8 +444,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Same as {@link #containsAny(Collection)}, using the variable numbers in the
-   * passed map.
+   * Same as {@link #containsAny(Collection)}, using the variable
+   * numbers in the passed map.
    * 
    * @param other
    * @return
@@ -445,8 +455,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /*
-   * Ensures that all variable numbers which are shared between other and this
-   * are mapped to the same variables.
+   * Ensures that all variable numbers which are shared between other
+   * and this are mapped to the same variables.
    */
   private void checkCompatibility(VariableNumMap other) {
     for (Integer key : other.getVariableNums()) {
@@ -461,8 +471,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Return a VariableNumMap containing all variable numbers shared by both
-   * maps.
+   * Return a VariableNumMap containing all variable numbers shared by
+   * both maps.
    * 
    * @param other
    * @return
@@ -492,9 +502,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Returns a {@code VariableNumMap} containing only the variable with number
-   * {@code varNumToKeep}. If this map does not contain such a variable, returns
-   * an empty map.
+   * Returns a {@code VariableNumMap} containing only the variable
+   * with number {@code varNumToKeep}. If this map does not contain
+   * such a variable, returns an empty map.
    * 
    * @param varNumsToKeep
    * @return
@@ -525,7 +535,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Removes all variable mappings whose numbers are in varNumsToRemove.
+   * Removes all variable mappings whose numbers are in
+   * varNumsToRemove.
    * 
    * @param varNumsToRemove
    * @return
@@ -545,9 +556,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Returns a VariableNumMap containing the union of the number->variable
-   * mappings from this map and other. The maps may not contain conflicting
-   * mappings for any number.
+   * Returns a VariableNumMap containing the union of the
+   * number->variable mappings from this map and other. The maps may
+   * not contain conflicting mappings for any number.
    * 
    * @param other
    * @return
@@ -581,7 +592,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the {@code numVariables} in this with the lowest variable nums.
+   * Gets the {@code numVariables} in this with the lowest variable
+   * nums.
    * 
    * @param numVariables
    * @return
@@ -602,10 +614,10 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets the values of the variables in {@code Assignment} and returns them as
-   * a {@code List}. This operation is the inverse of
-   * {@link #outcomeToAssignment(List)}. The size of the returned list is equal
-   * to {@code this.size()}.
+   * Gets the values of the variables in {@code Assignment} and
+   * returns them as a {@code List}. This operation is the inverse of
+   * {@link #outcomeToAssignment(List)}. The size of the returned list
+   * is equal to {@code this.size()}.
    * 
    * @param assignment
    * @return
@@ -619,10 +631,11 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Get the assignment corresponding to a particular setting of the variables
-   * in this set. The Objects in outcome are assumed to be ordered in ascending
-   * order by variable number. (i.e., the ith object is the value of the ith
-   * variable returned by getVariableNums())
+   * Get the assignment corresponding to a particular setting of the
+   * variables in this set. The Objects in outcome are assumed to be
+   * ordered in ascending order by variable number. (i.e., the ith
+   * object is the value of the ith variable returned by
+   * getVariableNums())
    */
   public Assignment outcomeToAssignment(List<? extends Object> outcome) {
     Preconditions.checkArgument(outcome.size() == varMap.size(),
@@ -639,16 +652,16 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Get the assignment corresponding to a particular setting of the variables
-   * in this factor.
+   * Get the assignment corresponding to a particular setting of the
+   * variables in this factor.
    */
   public Assignment outcomeToAssignment(Object[] outcome) {
     return outcomeToAssignment(Arrays.asList(outcome));
   }
 
   /**
-   * Same as {@link #outcomeToAssignment(Object[])}, but using a varargs
-   * parameter.
+   * Same as {@link #outcomeToAssignment(Object[])}, but using a
+   * varargs parameter.
    * 
    * @param outcome
    * @return
@@ -658,9 +671,9 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Gets a converter for transforming outcomes (settings of variables in
-   * {@code this}) into their corresponding assignments, and vice versa. The
-   * returned converter performs the functions of
+   * Gets a converter for transforming outcomes (settings of variables
+   * in {@code this}) into their corresponding assignments, and vice
+   * versa. The returned converter performs the functions of
    * {@link #outcomeToAssignment(List)} and
    * {@link #assignmentToOutcome(Assignment)}.
    * 
@@ -671,14 +684,16 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Converts an assignment over a set of {@code DiscreteVariable}s into an
-   * equivalent {@code int[]} representation. This method is used to efficiently
-   * store the possible assignments to discrete variables. The returned array
-   * has length equal to {@code this.size()}, and can be converted back into an
-   * assignment using {@link #intArrayToAssignment(int[])}.
+   * Converts an assignment over a set of {@code DiscreteVariable}s
+   * into an equivalent {@code int[]} representation. This method is
+   * used to efficiently store the possible assignments to discrete
+   * variables. The returned array has length equal to
+   * {@code this.size()}, and can be converted back into an assignment
+   * using {@link #intArrayToAssignment(int[])}.
    * <p>
-   * If {@code assignment} contains values which are not in the domain of the
-   * corresponding discrete variables, this method throws an exception.
+   * If {@code assignment} contains values which are not in the domain
+   * of the corresponding discrete variables, this method throws an
+   * exception.
    * 
    * @param assignment
    * @return
@@ -697,9 +712,10 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Converts the passed {@code int[]} of variable value indices into an
-   * {@code Assignment} by mapping it through the {@code DiscreteVariable}s
-   * contained in {@code this}. This operation is the inverse of
+   * Converts the passed {@code int[]} of variable value indices into
+   * an {@code Assignment} by mapping it through the
+   * {@code DiscreteVariable}s contained in {@code this}. This
+   * operation is the inverse of
    * {@link #assignmentToIntArray(Assignment)}
    * 
    * @param values
@@ -718,9 +734,10 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Returns {@code true} if the values in {@code assignment} are possible
-   * values for the variables in {@code this}. {@code assignment} must contain a
-   * subset of the variables in {@code this}.
+   * Returns {@code true} if the values in {@code assignment} are
+   * possible values for the variables in {@code this}.
+   * {@code assignment} must contain a subset of the variables in
+   * {@code this}.
    * 
    * @param assignment
    * @return
@@ -734,7 +751,7 @@ public class VariableNumMap implements Serializable {
     }
     return true;
   }
-  
+
   /**
    * Returns {@code true} if {@code values} can be converted into an
    * assignment to these variables.
@@ -766,8 +783,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * VariableNumMaps are equal if they contain exactly the same variable number
-   * -> variable mappings.
+   * VariableNumMaps are equal if they contain exactly the same
+   * variable number -> variable mappings.
    */
   @Override
   public boolean equals(Object o) {
@@ -788,8 +805,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Returns the union of all of the passed-in maps, which may not contain
-   * conflicting mappings for any variable number.
+   * Returns the union of all of the passed-in maps, which may not
+   * contain conflicting mappings for any variable number.
    * 
    * @param varNumMaps
    * @return
@@ -807,7 +824,8 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Converter from assignments to outcomes (list of objects) and vice-versa.
+   * Converter from assignments to outcomes (list of objects) and
+   * vice-versa.
    * 
    * The converter maps {@code null} inputs to {@code null} outputs.
    * 
@@ -833,10 +851,10 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * A one-to-one conversion function between two sets of variable indices and
-   * names. A {@code VariableRelabeling} can be applied to
-   * {@code VariableNumMap}s from either set to get the corresponding map using
-   * the other set of indices and names.
+   * A one-to-one conversion function between two sets of variable
+   * indices and names. A {@code VariableRelabeling} can be applied to
+   * {@code VariableNumMap}s from either set to get the corresponding
+   * map using the other set of indices and names.
    * 
    * @author jayantk
    */
@@ -888,8 +906,8 @@ public class VariableNumMap implements Serializable {
     }
 
     /*
-     * Override the default implementation so that the non-Converter methods
-     * work as expected on the inverse operation.
+     * Override the default implementation so that the non-Converter
+     * methods work as expected on the inverse operation.
      */
     @Override
     public VariableRelabeling inverse() {
@@ -902,8 +920,8 @@ public class VariableNumMap implements Serializable {
     }
 
     /**
-     * Expects {@code other} and {@code this} to contain mappings for disjoint
-     * sets of variables.
+     * Expects {@code other} and {@code this} to contain mappings for
+     * disjoint sets of variables.
      * 
      * @param other
      * @return
@@ -919,9 +937,9 @@ public class VariableNumMap implements Serializable {
     }
 
     /**
-     * Constructs a relabeling from {@code domain} to {@code range} by mapping
-     * the {@code i}th variable name/index in {@code domain} to the {@code i}th
-     * name/index in {@code range}. Requires
+     * Constructs a relabeling from {@code domain} to {@code range} by
+     * mapping the {@code i}th variable name/index in {@code domain}
+     * to the {@code i}th name/index in {@code range}. Requires
      * {@code domain.size() == range.size()}.
      * 
      * @param domain
@@ -939,7 +957,8 @@ public class VariableNumMap implements Serializable {
     }
 
     /**
-     * Constructs the identity relabeling between variables in {@code map}.
+     * Constructs the identity relabeling between variables in
+     * {@code map}.
      * 
      * @param map
      * @return
@@ -955,9 +974,10 @@ public class VariableNumMap implements Serializable {
     }
 
     /**
-     * Replaces each index in {@code inputVar} with its corresponding value in
-     * {@code indexReplacements}, and similarly replaces each name in
-     * {@code inputVar} with its value in {@code nameReplacements}.
+     * Replaces each index in {@code inputVar} with its corresponding
+     * value in {@code indexReplacements}, and similarly replaces each
+     * name in {@code inputVar} with its value in
+     * {@code nameReplacements}.
      * 
      * @param inputVar
      * @param indexReplacements

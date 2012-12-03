@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensor;
@@ -168,6 +169,15 @@ public class TableFactor extends DiscreteFactor {
     }
 
     return builder.build();
+  }
+  
+  public static TableFactor fromDelimitedFile(VariableNumMap vars, Iterable<String> lines,
+      String delimiter, boolean ignoreInvalidAssignments) {
+    List<VariableNumMap> varList = Lists.newArrayList();
+    for (Integer varNum : vars.getVariableNums()) {
+      varList.add(vars.intersection(varNum));
+    }
+    return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments);
   }
 
   // //////////////////////////////////////////////////////////////////////////////

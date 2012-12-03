@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.Arrays;
 import java.util.List;
@@ -7,6 +7,11 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.ObjectVariable;
+import com.jayantkrish.jklol.models.Variable;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;

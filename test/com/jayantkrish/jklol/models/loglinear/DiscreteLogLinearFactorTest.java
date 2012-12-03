@@ -1,9 +1,14 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.Arrays;
 
 import junit.framework.TestCase;
 
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.NormalizedFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;

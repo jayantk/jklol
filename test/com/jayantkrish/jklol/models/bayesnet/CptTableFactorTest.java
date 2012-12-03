@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.models;
+package com.jayantkrish.jklol.models.bayesnet;
 
 import java.util.Arrays;
 import java.util.Iterator;
@@ -7,6 +7,9 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;

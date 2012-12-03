@@ -207,8 +207,7 @@ public class CcgBinaryRule implements Serializable {
     List<Integer> returnIndexes = Lists.newArrayList();
 
     // Determine which variables from the left and right syntactic
-    // types
-    // are retained in the returned assignment.
+    // types are retained in the returned assignment.
     for (int i = 0; i < leftVars.length; i++) {
       for (int j = 0; j < returnUniqueVars.length; j++) {
         if (leftVars[i] == returnUniqueVars[j]) {
@@ -250,7 +249,7 @@ public class CcgBinaryRule implements Serializable {
           long objectNum = rightPredicateNums[rightVarIndex];
 
           filledDeps.add(CcgParser.marshalFilledDependency(objectNum, argumentNumbers[i],
-              subjectNum, leftSpanEnd, rightSpanStart));
+              subjectNum, rightSpanStart, rightSpanStart));
         }
       }
       filledDepArray = Longs.toArray(filledDeps);

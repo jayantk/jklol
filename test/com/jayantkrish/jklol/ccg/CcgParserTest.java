@@ -341,6 +341,7 @@ public class CcgParserTest extends TestCase {
     
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
+    assertEquals(2.0, parse.getSubtreeProbability());
     
     Set<DependencyStructure> observedDeps = Sets.newHashSet(parse.getAllDependencies());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
@@ -441,6 +442,7 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("eat", 2, "berries"), 1.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("quickly", 1, "eat"), 3.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
+    dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("special:compound", 1, "people"), 1.0);
     
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),

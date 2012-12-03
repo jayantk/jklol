@@ -39,12 +39,20 @@ public class DependencyStructure {
   }
 
   @Override
+  public String toString() {
+    return "(" + head + ":" + headWordIndex + "," + argumentNumber + "," 
+        + object + ":" + objectWordIndex + ")";
+  }
+
+  @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((head == null) ? 0 : head.hashCode());
     result = prime * result + argumentNumber;
+    result = prime * result + ((head == null) ? 0 : head.hashCode());
+    result = prime * result + headWordIndex;
     result = prime * result + ((object == null) ? 0 : object.hashCode());
+    result = prime * result + objectWordIndex;
     return result;
   }
 
@@ -57,24 +65,22 @@ public class DependencyStructure {
     if (getClass() != obj.getClass())
       return false;
     DependencyStructure other = (DependencyStructure) obj;
+    if (argumentNumber != other.argumentNumber)
+      return false;
     if (head == null) {
       if (other.head != null)
         return false;
     } else if (!head.equals(other.head))
       return false;
-    if (argumentNumber != other.argumentNumber)
+    if (headWordIndex != other.headWordIndex)
       return false;
     if (object == null) {
       if (other.object != null)
         return false;
     } else if (!object.equals(other.object))
       return false;
+    if (objectWordIndex != other.objectWordIndex)
+      return false;
     return true;
-  }
-
-  @Override
-  public String toString() {
-    return "(" + head + ":" + headWordIndex + "," + argumentNumber + "," 
-        + object + ":" + objectWordIndex + ")";
   }
 }

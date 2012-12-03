@@ -29,6 +29,7 @@ public class ParseCcg {
         System.out.println("---");
       }
       System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
+      System.out.println("SYN: " + parses.get(i).getSyntacticCategory());
       System.out.println("DEPS: " + parses.get(i).getAllDependencies());
       System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
       System.out.println("PROB: " + parses.get(i).getSubtreeProbability());
@@ -43,11 +44,9 @@ public class ParseCcg {
     OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     OptionSpec<Integer> numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     // If provided, running this program computes test error using the
-    // given file.
-    // Otherwise, this program parses a string provided on the command
-    // line.
-    // The format of testFile is the same as expected by TrainCcg to
-    // train a CCG parser.
+    // given file. Otherwise, this program parses a string provided on
+    // the command line. The format of testFile is the same as
+    // expected by TrainCcg to train a CCG parser.
     OptionSpec<String> testFile = parser.accepts("test").withRequiredArg().ofType(String.class);
     OptionSet options = parser.parse(args);
 
@@ -100,8 +99,8 @@ public class ParseCcg {
           }
         }
 
-        // Compute the correct / incorrect labeled dependencies for the
-        // current example.
+        // Compute the correct / incorrect labeled dependencies for
+        // the current example.
         Set<DependencyStructure> incorrectDeps = Sets.newHashSet(predictedDeps);
         incorrectDeps.removeAll(trueDeps);
         Set<DependencyStructure> correctDeps = Sets.newHashSet(predictedDeps);
@@ -115,12 +114,12 @@ public class ParseCcg {
         System.out.println("Labeled Precision: " + precision);
         System.out.println("Labeled Recall: " + recall);
 
-        // Update the labeled dependency score accumulators for the whole data
-        // set.
+        // Update the labeled dependency score accumulators for the
+        // whole data set.
         labeledTp += correct;
         labeledFp += falsePositive;
         labeledFn += falseNegative;
-        
+
         // Compute the correct / incorrect unlabeled dependencies.
         Set<DependencyStructure> unlabeledPredicted = stripDependencyLabels(predictedDeps);
         trueDeps = stripDependencyLabels(trueDeps);
@@ -152,7 +151,7 @@ public class ParseCcg {
   private static Set<DependencyStructure> stripDependencyLabels(Collection<DependencyStructure> dependencies) {
     Set<DependencyStructure> deps = Sets.newHashSet();
     for (DependencyStructure oldDep : dependencies) {
-      deps.add(new DependencyStructure("", oldDep.getHeadWordIndex(), 
+      deps.add(new DependencyStructure("", oldDep.getHeadWordIndex(),
           "", oldDep.getObjectWordIndex(), 0));
     }
     return deps;

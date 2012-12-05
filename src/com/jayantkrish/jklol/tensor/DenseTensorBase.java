@@ -102,13 +102,8 @@ public class DenseTensorBase extends AbstractTensorBase {
 
   @Override
   public Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix) {
-    int[] dimSizes = getDimensionSizes();
-    int[] sizesForIteration = new int[dimSizes.length - keyPrefix.length];
-    for (int i = keyPrefix.length; i < dimSizes.length; i++) {
-      sizesForIteration[i - keyPrefix.length] = dimSizes[i];
-    }
-    return new KeyToKeyValueIterator(new IntegerArrayIterator(sizesForIteration, keyPrefix),
-        this);
+    return new KeyToKeyValueIterator(IntegerArrayIterator.createFromKeyPrefix(
+        getDimensionSizes(), keyPrefix), this);
   }
 
   @Override
@@ -184,39 +179,6 @@ public class DenseTensorBase extends AbstractTensorBase {
         currentIndex[variableDimensionInds[i]] = nextKey[i];
       }
       return currentIndex;
-    }
-
-    @Override
-    public void remove() {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  protected class KeyToKeyValueIterator implements Iterator<KeyValue> {
-
-    private final Iterator<int[]> keyIterator;
-    private final TensorBase tensor;
-
-    private final KeyValue keyValue;
-
-    public KeyToKeyValueIterator(Iterator<int[]> keyIterator, TensorBase tensor) {
-      this.keyIterator = Preconditions.checkNotNull(keyIterator);
-      this.tensor = Preconditions.checkNotNull(tensor);
-
-      this.keyValue = new KeyValue(null, 0.0);
-    }
-
-    @Override
-    public boolean hasNext() {
-      return keyIterator.hasNext();
-    }
-
-    @Override
-    public KeyValue next() {
-      int[] key = keyIterator.next();
-      keyValue.setKey(key);
-      keyValue.setValue(tensor.getByDimKey(key));
-      return keyValue;
     }
 
     @Override

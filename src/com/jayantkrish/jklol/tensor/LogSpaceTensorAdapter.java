@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
  * A tensor which stores all weights in logarithmic space. This transformation
@@ -50,23 +50,21 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
     return logWeights.keyNumToIndex(keyNum);
   }
 
-  @Override
+  @Override 
   public long indexToKeyNum(int index) {
     return logWeights.indexToKeyNum(index);
   }
 
   @Override
   public Iterator<KeyValue> keyValueIterator() {
-    Preconditions.checkState(logWeights instanceof DenseTensor);
-    // This iterator only works if logWeights is dense.
-    return new LogSpaceKeyValueIterator(logWeights.keyValueIterator());
+    return new KeyToKeyValueIterator(new IntegerArrayIterator(logWeights.getDimensionSizes(), 
+        new int[0]), this);
   }
 
   @Override
   public Iterator<KeyValue> keyValuePrefixIterator(int[] keyPrefix) {
-    Preconditions.checkState(logWeights instanceof DenseTensor);
-    // This iterator only works if logWeights is dense.
-    return new LogSpaceKeyValueIterator(logWeights.keyValuePrefixIterator(keyPrefix));
+    return new KeyToKeyValueIterator(IntegerArrayIterator.createFromKeyPrefix(
+        getDimensionSizes(), keyPrefix), this);
   }
 
   @Override
@@ -179,7 +177,7 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public Tensor replaceValues(double[] values) {
-    // This method is unsupported because it's behavior will be bizarre:
+    // This method is unsupported because its behavior will be bizarre:
     // replacing the values of the underlying tensor means that values are
     // interpreted as log probabilities (instead of probabilities).
     throw new UnsupportedOperationException();
@@ -198,30 +196,5 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   @Override
   public long[] getLargestValues(int n) {
     return logWeights.getLargestValues(n);
-  }
-
-  private static final class LogSpaceKeyValueIterator implements Iterator<KeyValue> {
-    private final Iterator<KeyValue> logIterator;
-
-    public LogSpaceKeyValueIterator(Iterator<KeyValue> logIterator) {
-      this.logIterator = Preconditions.checkNotNull(logIterator);
-    }
-
-    @Override
-    public boolean hasNext() {
-      return logIterator.hasNext();
-    }
-
-    @Override
-    public KeyValue next() {
-      KeyValue next = logIterator.next();
-      next.setValue(Math.exp(next.getValue()));
-      return next;
-    }
-
-    @Override
-    public void remove() {
-      logIterator.remove();
-    }
   }
 }

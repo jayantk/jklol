@@ -62,18 +62,18 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     int[] myDimensionSizes = getDimensionSizes();
     long[] myDimensionOffsets = getDimensionOffsets();
     if (ArrayUtils.subarrayEquals(myDimensionNumbers, dimensionNumbers, 0)) {
-	int firstKeyNum = (int) dimKeyPrefixToKeyNum(key);
-	int lastKeyNum = firstKeyNum + (int) myDimensionOffsets[dimensionNumbers.length - 1];
-	double[] newValues = new double[lastKeyNum - firstKeyNum];
-	for (int i = firstKeyNum; i < lastKeyNum; i++) {
-	    newValues[i - firstKeyNum] = values[i];
-	}
+      int firstKeyNum = (int) dimKeyPrefixToKeyNum(key);
+      int lastKeyNum = firstKeyNum + (int) myDimensionOffsets[dimensionNumbers.length - 1];
+      double[] newValues = new double[lastKeyNum - firstKeyNum];
+      for (int i = firstKeyNum; i < lastKeyNum; i++) {
+        newValues[i - firstKeyNum] = values[i];
+      }
 
-	int[] newDimensions = Arrays.copyOfRange(myDimensionNumbers, 
-             dimensionNumbers.length, myDimensionNumbers.length);
-	int[] newSizes = Arrays.copyOfRange(myDimensionSizes,
-             dimensionNumbers.length, myDimensionNumbers.length);
-	return new DenseTensor(newDimensions, newSizes, newValues);
+      int[] newDimensions = Arrays.copyOfRange(myDimensionNumbers, 
+          dimensionNumbers.length, myDimensionNumbers.length);
+      int[] newSizes = Arrays.copyOfRange(myDimensionSizes,
+          dimensionNumbers.length, myDimensionNumbers.length);
+      return new DenseTensor(newDimensions, newSizes, newValues);
     }
 
     // TODO(jayantk): This is an extremely naive implementation of slice.

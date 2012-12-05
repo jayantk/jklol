@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -81,8 +82,7 @@ public class CcgCategory implements Serializable {
    * "(predicate name) (argument number) (variable number)".
    * </ul>
    * <p>
-   * For example, the category for "in" is:
-   * <code>
+   * For example, the category for "in" is: <code>
    * ((N{1}\N{1}){0}/N{2}){0},0 in,in 1 1,in 2 2
    * </code>
    * 
@@ -93,7 +93,7 @@ public class CcgCategory implements Serializable {
     try {
       String[] parts = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER,
           CSVParser.NULL_CHARACTER).parseLine(categoryString);
-      Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s", 
+      Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
           categoryString);
       return parseFrom(parts);
     } catch (IOException e) {
@@ -105,22 +105,24 @@ public class CcgCategory implements Serializable {
     // Parse the syntactic category.
     HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom(categoryParts[0]);
 
-    // Create an empty assignment to each variable in the syntactic category.
+    // Create an empty assignment to each variable in the syntactic
+    // category.
     List<Set<String>> values = Lists.newArrayList();
     for (int i = 0; i < syntax.getUniqueVariables().length; i++) {
       values.add(Sets.<String> newHashSet());
     }
-    // Create empty set of unfilled dependencies. 
+    // Create empty set of unfilled dependencies.
     List<String> subjects = Lists.newArrayList();
     List<Integer> argumentNumbers = Lists.newArrayList();
     List<Integer> objects = Lists.newArrayList();
 
-    // Parse any value assignments to variables and unfilled dependencies.
+    // Parse any value assignments to variables and unfilled
+    // dependencies.
     for (int i = 1; i < categoryParts.length; i++) {
       if (categoryParts[i].trim().length() == 0) {
         continue;
       }
-      
+
       String[] parts = categoryParts[i].trim().split("\\s+");
       Preconditions.checkArgument(parts.length == 2 || parts.length == 3,
           "Invalid CCG semantic part: \"%s\".", categoryParts[i]);
@@ -166,10 +168,40 @@ public class CcgCategory implements Serializable {
     return syntax.getUniqueVariables();
   }
 
+  /**
+   * The semantic head of this category, i.e., the assignment to the
+   * semantic variable at the root of the syntactic tree.
+   * 
+   * @return
+   */
+  public List<String> getSemanticHeads() {
+    int headSemanticVariable = syntax.getRootVariable();
+    int[] allSemanticVariables = getSemanticVariables();
+    for (int i = 0; i < allSemanticVariables.length; i++) {
+      if (allSemanticVariables[i] == headSemanticVariable) {
+        return Lists.newArrayList(variableAssignments.get(i));
+      }
+    }
+    return Collections.emptyList();
+  }
+
+  /**
+   * Gets the subjects of any unfilled dependencies projected by this
+   * category.
+   * 
+   * @return
+   */
   public List<String> getSubjects() {
     return subjects;
   }
 
+  /**
+   * Gets the objects of any unfilled dependencies projected by this
+   * category. Each returned integer is a semantic variable in this
+   * category, as given by {@link #getSemanticVariables()}.
+   * 
+   * @return
+   */
   public List<Integer> getObjects() {
     return objects;
   }
@@ -187,8 +219,8 @@ public class CcgCategory implements Serializable {
           null, objects.get(i));
 
       // Technically, this is unnecessary since removing the
-      // possibility of pre-filled
-      // dependencies. TODO: add back pre-filled dependencies.
+      // possibility of pre-filled dependencies. TODO: add back
+      // pre-filled dependencies.
       if (dep.isFilledDependency()) {
         filledDependencies.add(dep);
       } else {
@@ -249,6 +281,6 @@ public class CcgCategory implements Serializable {
 
   @Override
   public String toString() {
-    return subjects.toString() + ":" + syntax.toString();
+    return getSemanticHeads() + ":" + syntax.toString();
   }
 }

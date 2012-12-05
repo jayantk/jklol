@@ -23,19 +23,6 @@ import com.jayantkrish.jklol.util.IoUtils;
  */
 public class ParseCcg {
 
-  public static void printCcgParses(List<CcgParse> parses, int numParses) {
-    for (int i = 0; i < Math.min(parses.size(), numParses); i++) {
-      if (i > 0) {
-        System.out.println("---");
-      }
-      System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
-      System.out.println("SYN: " + parses.get(i).getSyntacticCategory());
-      System.out.println("DEPS: " + parses.get(i).getAllDependencies());
-      System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
-      System.out.println("PROB: " + parses.get(i).getSubtreeProbability());
-    }
-  }
-
   public static void main(String[] args) {
     OptionParser parser = new OptionParser();
     // Required arguments.
@@ -43,6 +30,7 @@ public class ParseCcg {
     // Optional arguments
     OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     OptionSpec<Integer> numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
+    OptionSpec<Void> atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
     // If provided, running this program computes test error using the
     // given file. Otherwise, this program parses a string provided on
     // the command line. The format of testFile is the same as
@@ -65,10 +53,27 @@ public class ParseCcg {
       // Parse a string from the command line.
       List<String> sentenceToParse = options.nonOptionArguments();
       List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, options.valueOf(beamSize));
-      printCcgParses(parses, options.valueOf(numParses));
+      printCcgParses(parses, options.valueOf(numParses), options.has(atomic));
     }
 
     System.exit(0);
+  }
+  
+  public static void printCcgParses(List<CcgParse> parses, int numParses, boolean onlyPrintAtomic) {
+    int numPrinted = 0;
+    for (int i = 0; i < parses.size() && numPrinted < numParses; i++) {
+      if (!onlyPrintAtomic || parses.get(i).getSyntacticCategory().isAtomic()) {
+        if (numPrinted > 0) {
+          System.out.println("---");
+        }
+        System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
+        System.out.println("SYN: " + parses.get(i).getSyntacticCategory());
+        System.out.println("DEPS: " + parses.get(i).getAllDependencies());
+        System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
+        System.out.println("PROB: " + parses.get(i).getSubtreeProbability());
+        numPrinted++;
+      }
+    }
   }
 
   public static CcgLoss runTestSetEvaluation(CcgParser ccgParser, Iterable<CcgExample> testExamples,
@@ -78,7 +83,7 @@ public class ParseCcg {
     for (CcgExample example : testExamples) {
       List<CcgParse> parses = ccgParser.beamSearch(example.getWords(), beamSize);
       System.out.println("SENT: " + example.getWords());
-      printCcgParses(parses, 1);
+      printCcgParses(parses, 1, false);
 
       if (parses.size() > 0) {
         List<DependencyStructure> predictedDeps = parses.get(0).getAllDependencies();

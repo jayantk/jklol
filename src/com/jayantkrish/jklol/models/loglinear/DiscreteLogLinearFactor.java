@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
@@ -142,7 +143,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
       return new TableFactor(getVars(), initialTensor.replaceValues(newWeights));
     } else {
-      return new TableFactor(getVars(), logProbs.elementwiseExp());
+      return new TableFactor(getVars(), new LogSpaceTensorAdapter(logProbs)); 
     }
   }
 

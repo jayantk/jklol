@@ -93,6 +93,7 @@ public abstract class AbstractCli {
   // CCG parser options
   private OptionSpec<String> ccgLexicon;
   private OptionSpec<String> ccgRules;
+  private OptionSpec<String> ccgDependencyFeatures;
   private OptionSpec<Void> ccgApplicationOnly;
 
   /**
@@ -220,6 +221,8 @@ public abstract class AbstractCli {
       ccgRules = parser.accepts("rules",
           "Binary and unary rules to use during CCG parsing, in addition to function application and composition.")
           .withRequiredArg().ofType(String.class);
+      ccgDependencyFeatures = parser.accepts("dependencyFeatures",
+          "CSV file containing features of dependency structures.").withRequiredArg().ofType(String.class);
       ccgApplicationOnly = parser.accepts("applicationOnly",
           "Use only function application during parsing, i.e., no composition.");
     }
@@ -272,7 +275,9 @@ public abstract class AbstractCli {
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
-    return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries,
+    List<String> dependencyFeatures = parsedOptions.has(ccgDependencyFeatures) ? 
+        IoUtils.readLines(parsedOptions.valueOf(ccgDependencyFeatures)) : null;
+    return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, dependencyFeatures,
         !parsedOptions.has(ccgApplicationOnly));
   }
 }

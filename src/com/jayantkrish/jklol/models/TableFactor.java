@@ -1,9 +1,11 @@
 package com.jayantkrish.jklol.models;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -131,6 +133,7 @@ public class TableFactor extends DiscreteFactor {
    * line is the weight.
    * 
    * @param variables
+   * @param inputConverters
    * @param lines
    * @param delimiter
    * @param ignoreInvalidAssignments if {@code true}, lines representing invalid
@@ -138,8 +141,9 @@ public class TableFactor extends DiscreteFactor {
    * thrown.
    * @return
    */
-  public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, Iterable<String> lines,
-      String delimiter, boolean ignoreInvalidAssignments) {
+  public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, 
+      List<? extends Function<String, ?>> inputConverters, Iterable<String> lines, String delimiter,
+      boolean ignoreInvalidAssignments) {
     int numVars = variables.size();
     VariableNumMap allVars = VariableNumMap.unionAll(variables);
     TableFactorBuilder builder = new TableFactorBuilder(allVars, SparseTensorBuilder.getFactory());
@@ -153,7 +157,8 @@ public class TableFactor extends DiscreteFactor {
       Preconditions.checkState(parts.length == (numVars + 1), "\"%s\" is incorrectly formatted", line);
       Assignment assignment = Assignment.EMPTY;
       for (int i = 0; i < numVars; i++) {
-        assignment = assignment.union(variables.get(i).outcomeArrayToAssignment(parts[i]));
+        Object value = inputConverters.get(i).apply(parts[i].intern());
+        assignment = assignment.union(variables.get(i).outcomeArrayToAssignment(value));
       }
 
       // Check if the assignment is valid, if its not, then don't add it to the
@@ -171,12 +176,30 @@ public class TableFactor extends DiscreteFactor {
     return builder.build();
   }
   
+  public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, 
+      Iterable<String> lines, String delimiter, boolean ignoreInvalidAssignments) {
+    List<Function<String, String>> converters = Collections.nCopies(variables.size(), Functions.<String>identity());
+    return fromDelimitedFile(variables, converters, lines, delimiter, ignoreInvalidAssignments);
+  }
+  
+  public static TableFactor fromDelimitedFile(VariableNumMap vars, 
+      List<? extends Function<String, ?>> inputConverters, Iterable<String> lines,
+      String delimiter, boolean ignoreInvalidAssignments) {
+    List<VariableNumMap> varList = Lists.newArrayList();
+    for (Integer varNum : vars.getVariableNums()) {
+      varList.add(vars.intersection(varNum));
+    }
+    System.out.println(varList);
+    return fromDelimitedFile(varList, inputConverters, lines, delimiter, ignoreInvalidAssignments);    
+  }
+  
   public static TableFactor fromDelimitedFile(VariableNumMap vars, Iterable<String> lines,
       String delimiter, boolean ignoreInvalidAssignments) {
     List<VariableNumMap> varList = Lists.newArrayList();
     for (Integer varNum : vars.getVariableNums()) {
       varList.add(vars.intersection(varNum));
     }
+    System.out.println(varList);
     return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments);
   }
 

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -90,9 +91,16 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public Tensor elementwiseProduct(Tensor other) {
-    return new LogSpaceTensorAdapter(logWeights.elementwiseAddition(other.elementwiseLog()));
+    if (!(logWeights instanceof SparseTensor) || 
+        Arrays.equals(other.getDimensionNumbers(), logWeights.getDimensionNumbers())) {
+      return new LogSpaceTensorAdapter(logWeights.elementwiseAddition(other.elementwiseLog()));
+    } else {
+      // This code hacks around the fact that sparse tensors don't support
+      // elementwise addition with replicated dimensions.
+      return logWeights.elementwiseExp().elementwiseProduct(other);
+    }
   }
-  
+
   @Override
   public Tensor innerProduct(Tensor other) {
     Tensor product = logWeights.elementwiseAddition(other.elementwiseLog());

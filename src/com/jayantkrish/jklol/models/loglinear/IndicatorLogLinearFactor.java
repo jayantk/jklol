@@ -114,7 +114,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
         initialWeights.getVars().assignmentToIntArray(subAssignment));
     int index = initialWeights.getWeights().keyNumToIndex(keyNum);
 
-    ((TensorSufficientStatistics) statistics).incrementFeatureIndex(count, index);
+    ((TensorSufficientStatistics) statistics).incrementFeatureByIndex(count, index);
   }
 
   @Override
@@ -134,7 +134,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
     TensorSufficientStatistics stats = (TensorSufficientStatistics) statistics;
     for (int i = 0; i < tensorSize; i++) {
       int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
-      stats.incrementFeatureIndex(productFactorValues[i] * multiplier, builderIndex);
+      stats.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
     }
   }
   

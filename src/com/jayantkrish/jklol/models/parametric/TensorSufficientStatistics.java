@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models.parametric;
 
 import java.util.Iterator;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
@@ -189,6 +190,11 @@ public class TensorSufficientStatistics implements SufficientStatistics {
       statisticsTensor = statisticsTensor.elementwiseAddition(increment);
     }
   }
+  
+  public void incrementFeatureByName(double amount, Object ... featureName) {
+    Assignment assignment = statisticNames.outcomeArrayToAssignment(featureName);
+    incrementFeature(assignment, amount);
+  }
 
   /**
    * Increments the value of {@code index} by {@code amount}.
@@ -196,7 +202,7 @@ public class TensorSufficientStatistics implements SufficientStatistics {
    * @param index
    * @param amount
    */
-  public void incrementFeatureIndex(double amount, int... key) {
+  public void incrementFeatureByIndex(double amount, int... key) {
     if (isDense) {
       statistics.incrementEntry(amount, key);
     } else {

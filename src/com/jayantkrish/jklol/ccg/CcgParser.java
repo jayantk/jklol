@@ -15,6 +15,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
+import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -144,7 +145,12 @@ public class CcgParser implements Serializable {
    * @return {@code beamSize} best parses for {@code terminals}.
    */
   public List<CcgParse> beamSearch(List<String> terminals, int beamSize, LogFunction log) {
-    CcgChart chart = new CcgChart(terminals, beamSize);
+    return beamSearch(terminals, beamSize, null, log);
+  }
+  
+  public List<CcgParse> beamSearch(List<String> terminals, int beamSize, ChartFilter beamFilter,
+      LogFunction log) {
+    CcgChart chart = new CcgChart(terminals, beamSize, beamFilter);
 
     log.startTimer("ccg_parse/initialize_chart");
     initializeChart(terminals, chart);
@@ -814,7 +820,11 @@ public class CcgParser implements Serializable {
   }
 
   public long predicateToLong(String predicate) {
-    return dependencyHeadType.getValueIndex(predicate);
+    if (dependencyHeadType.canTakeValue(predicate)) {
+      return dependencyHeadType.getValueIndex(predicate);
+    } else {
+      return -1;
+    }
   }
 
   public static long marshalUnfilledDependency(long objectNum, long argNum, long subjectNum,
@@ -861,7 +871,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  private int getSubjectArgNumFromDep(long depLong) {
+  public static int getSubjectArgNumFromDep(long depLong) {
     int subjectNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK);
     if (subjectNum >= MAX_ARG_NUM) {
       return -1;
@@ -870,7 +880,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  private int getSubjectPredicateFromDep(long depLong) {
+  public static int getSubjectPredicateFromDep(long depLong) {
     int subjectNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK);
     if (subjectNum >= MAX_ARG_NUM) {
       return subjectNum - MAX_ARG_NUM;

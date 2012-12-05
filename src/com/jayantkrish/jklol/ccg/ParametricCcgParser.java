@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -14,10 +16,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
@@ -25,6 +30,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
+import com.jayantkrish.jklol.util.StringUtils;
 
 /**
  * Parameterized CCG grammar. This class instantiates CCG parsers
@@ -55,8 +61,18 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   
   private final boolean allowComposition;
 
-  private final String TERMINAL_PARAMETERS = "terminals";
-  private final String DEPENDENCY_PARAMETERS = "dependencies";
+  /**
+   * Name of the parameter vector governing lexicon entries.
+   */
+  public static final String TERMINAL_PARAMETERS = "terminals";
+
+  /**
+   * Name of the parameter vector governing dependency structures.
+   */
+  public static final String DEPENDENCY_PARAMETERS = "dependencies";
+  
+  public static final String INPUT_DEPENDENCY_PARAMETERS = "inputFeatures";
+  public static final String INDICATOR_DEPENDENCY_PARAMETERS = "indicatorFeatures";
 
   public ParametricCcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       ParametricFactor terminalFamily, VariableNumMap dependencyHeadVar,
@@ -87,7 +103,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
-      Iterable<String> unfilteredRuleLines, boolean allowComposition) {
+      Iterable<String> unfilteredRuleLines, Iterable<String> dependencyFeatures,
+      boolean allowComposition) {
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
     for (String line : unfilteredRuleLines) {
@@ -131,10 +148,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     
     // Add any predicates from binary and unary rules.
     for (CcgBinaryRule rule : binaryRules) {
-      addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates, maxNumArgs);
+      addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates,
+          maxNumArgs);
     }
     for (CcgUnaryRule rule : unaryRules) {
-      addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates, maxNumArgs);
+      addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates,
+          maxNumArgs);
     }
 
     // Build the terminal distribution. This maps word sequences to
@@ -152,10 +171,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(lexiconEntry.getWords(),
           lexiconEntry.getCategory()), 1.0);
     }
-    ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(vars, terminalBuilder.build());
+    ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(vars,
+        terminalBuilder.build());
 
-    // Build the dependency distribution.
-    DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates.items());
+    // Create variables for representing the CCG parser's dependency structures.  
+    DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", 
+        semanticPredicates.items());
     // The set of possible argument numbers depends on the entries
     // provided in the lexicon.
     int maxArgNum = Collections.max(maxNumArgs.values());
@@ -169,8 +190,38 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap semanticArgNumVar = VariableNumMap.singleton(1, "semanticArgNum", argumentNums);
     VariableNumMap semanticArgVar = VariableNumMap.singleton(2, "semanticArg", semanticPredicateType);
     vars = VariableNumMap.unionAll(semanticHeadVar, semanticArgNumVar, semanticArgVar);
-
-    ParametricFactor dependencyParametricFactor = new DenseIndicatorLogLinearFactor(vars);
+    
+    // Create features over dependency structures.
+    ParametricFactor dependencyIndicatorFactor = new DenseIndicatorLogLinearFactor(vars);
+    ParametricFactor dependencyParametricFactor;
+    if (dependencyFeatures != null) {
+      DiscreteVariable dependencyFeatureVarType = new DiscreteVariable("dependencyFeatures", 
+          StringUtils.readColumnFromDelimitedLines(dependencyFeatures, 3, ","));
+      System.out.println(dependencyFeatureVarType.getValues());
+      VariableNumMap dependencyFeatureVar = VariableNumMap.singleton(3, 
+          "dependencyFeatures", dependencyFeatureVarType);
+      VariableNumMap featureFactorVars = vars.union(dependencyFeatureVar);
+      
+      List<Function<String, ?>> converters = Lists.newArrayList();
+      converters.add(Functions.<String>identity());
+      converters.add(new Function<String, Integer>() {
+        public Integer apply(String input) {
+          return Integer.parseInt(input);
+        }
+      });
+      converters.add(Functions.<String>identity());
+      converters.add(Functions.<String>identity());
+      TableFactor dependencyFeatureTable = TableFactor.fromDelimitedFile(featureFactorVars, 
+          converters, dependencyFeatures, ",", true);
+      DiscreteLogLinearFactor dependencyFeatureFactor = new DiscreteLogLinearFactor(vars,
+          dependencyFeatureVar, dependencyFeatureTable);
+      
+      dependencyParametricFactor = new CombiningParametricFactor(vars, 
+          Arrays.asList(INPUT_DEPENDENCY_PARAMETERS, INDICATOR_DEPENDENCY_PARAMETERS), 
+          Arrays.asList(dependencyFeatureFactor, dependencyIndicatorFactor));
+    } else {
+      dependencyParametricFactor = dependencyIndicatorFactor; 
+    }
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor,

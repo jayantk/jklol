@@ -29,7 +29,18 @@ public class CcgChart {
   // to make lookups more efficient during parsing.
   private Tensor dependencyTensor;
 
-  public CcgChart(List<String> terminals, int beamSize) {
+  private final ChartFilter entryFilter;
+
+  /**
+   * Creates a CCG chart for storing the current state of a beam
+   * search trying to parse {@code terminals}.
+   * 
+   * @param terminals
+   * @param beamSize
+   * @param entryFilter filter for discarding portions of the beam.
+   * May be {@code null}, in which case all beam entries are retained.
+   */
+  public CcgChart(List<String> terminals, int beamSize, ChartFilter entryFilter) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.beamSize = beamSize;
     this.dependencyTensor = null;
@@ -39,6 +50,8 @@ public class CcgChart {
     this.probabilities = new double[n][n][beamSize + 1];
     this.chartSizes = new int[n * n];
     Arrays.fill(chartSizes, 0);
+
+    this.entryFilter = entryFilter;
   }
 
   /**
@@ -49,7 +62,7 @@ public class CcgChart {
   public int size() {
     return terminals.size();
   }
-  
+
   public int getBeamSize() {
     return beamSize;
   }
@@ -172,7 +185,7 @@ public class CcgChart {
   /**
    * Gets the number of chart entries spanning {@code spanStart}-
    * {@code spanEnd} , inclusive. This is the number of valid entries
-   * in
+   * in {@link #getChartEntriesForSpan}.
    * 
    * @param spanStart
    * @param spanEnd
@@ -191,8 +204,12 @@ public class CcgChart {
    * @param spanStart
    * @param spanEnd
    */
-  public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, int spanEnd) {
-    offerEntry(entry, probability, spanStart, spanEnd);
+  public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, 
+      int spanEnd) {
+    if ((entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd)) && 
+        probability != Double.NEGATIVE_INFINITY) {
+      offerEntry(entry, probability, spanStart, spanEnd);
+    }
   }
 
   /**
@@ -475,5 +492,15 @@ public class CcgChart {
     public String toString() {
       return predicate + ":" + wordIndex;
     }
+  }
+
+  /**
+   * Filter for discarding portions of the CCG beam. Chart entries for
+   * which {@code apply} returns {@code false} are discarded.
+   * 
+   * @author jayantk
+   */
+  public static interface ChartFilter {
+    public boolean apply(ChartEntry entry, int spanStart, int spanEnd);
   }
 }

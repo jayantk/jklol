@@ -60,7 +60,7 @@ public class CcgTrainingTest extends TestCase {
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
-        Lists.<String>newArrayList(), true);
+        Lists.<String>newArrayList(), null, true);
 
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {

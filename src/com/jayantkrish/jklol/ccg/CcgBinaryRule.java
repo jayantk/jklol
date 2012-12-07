@@ -83,8 +83,6 @@ public class CcgBinaryRule implements Serializable {
           CSVParser.NULL_CHARACTER).parseLine(line.trim());
       Preconditions.checkArgument(chunks.length >= 1);
 
-      System.out.println(Arrays.toString(chunks));
-
       String[] syntacticParts = chunks[0].split(" ");
       Preconditions.checkArgument(syntacticParts.length == 3);
       HeadedSyntacticCategory leftSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[0]);

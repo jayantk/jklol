@@ -8,9 +8,11 @@ import junit.framework.TestCase;
  * @author jayantk
  */
 public class HeadedSyntacticCategoryTest extends TestCase {
-
+  String transVerb = "((S{0}\\N{1}){0}/N{2}){0}";
+  String verbMod = "(((S{1}\\N{2}){1}/N{0}){1}/((S{1}\\N{2}){1}/N{0}){1}){3}";
+  String verbModCanonical = "(((S{0}\\N{1}){0}/N{2}){0}/((S{0}\\N{1}){0}/N{2}){0}){3}";
+  
   public void testParseFrom() {
-    String transVerb = "((S{0}\\N{1}){0}/N{2}){0}";
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(transVerb);
     
     assertEquals(0, cat.getRootVariable());
@@ -22,8 +24,7 @@ public class HeadedSyntacticCategoryTest extends TestCase {
   }
   
   public void testParseFrom2() {
-    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(
-        "(((S{1}\\N{2}){1}/N{0}){1}/((S{1}\\N{2}){1}/N{0}){1}){3}");
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(verbMod);
     
     assertEquals(3, cat.getRootVariable());
     assertEquals(1, cat.getArgumentType().getRootVariable());
@@ -33,7 +34,17 @@ public class HeadedSyntacticCategoryTest extends TestCase {
     assertEquals(1, cat.getReturnType().getRootVariable());
     assertEquals(1, cat.getReturnType().getReturnType().getRootVariable());
     assertEquals(0, cat.getReturnType().getArgumentType().getRootVariable());
-    
-    System.out.println(cat.toString());
+  }
+  
+  public void testCanonicalize() {
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(transVerb);
+    assertEquals(cat, cat.getCanonicalForm());
+  }
+  
+  public void testCanonicalize2() {
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(verbMod);
+    HeadedSyntacticCategory canonicalCat = HeadedSyntacticCategory.parseFrom(verbModCanonical);
+
+    assertEquals(canonicalCat, cat.getCanonicalForm());
   }
 }

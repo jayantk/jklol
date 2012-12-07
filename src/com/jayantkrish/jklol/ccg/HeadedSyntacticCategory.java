@@ -2,10 +2,12 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
@@ -70,7 +72,6 @@ public class HeadedSyntacticCategory implements Serializable {
 
   private static void parseSemanticVariables(SyntacticCategory category,
       String typeString, int[] semanticVariables, int firstFillableIndex) {
-
     int curIndex;
     if (!category.isAtomic()) {
       curIndex = firstFillableIndex + category.getNumReturnSubcategories();
@@ -82,7 +83,7 @@ public class HeadedSyntacticCategory implements Serializable {
     int lastRightBraceIndex = typeString.lastIndexOf('}');
     int lastParenIndex = typeString.lastIndexOf(')');
 
-    Preconditions.checkArgument(lastLeftBraceIndex > lastParenIndex, 
+    Preconditions.checkArgument(lastLeftBraceIndex > lastParenIndex,
         "Illegal headed syntactic category: %s", typeString);
     semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
         lastLeftBraceIndex + 1, lastRightBraceIndex));
@@ -103,6 +104,54 @@ public class HeadedSyntacticCategory implements Serializable {
   }
 
   /**
+   * Version of {@link #getCanonicalForm()} that does not return the
+   * relabeling.
+   * 
+   * @return
+   */
+  public HeadedSyntacticCategory getCanonicalForm() {
+    return getCanonicalForm(Maps.<Integer, Integer> newHashMap());
+  }
+  
+  /**
+   * Returns {@code true} if this category is in canonical form.
+   * 
+   * @return {@code true} if this category is in canonical form.
+   */
+  public boolean isCanonicalForm() {
+    return getCanonicalForm().equals(this);
+  }
+
+  /**
+   * Gets a canonical representation of this category that treats each
+   * variable number as an equivalence class. The canonical form
+   * relabels variables in the category such that all categories with
+   * the same variable equivalence relations have the same canonical
+   * form.
+   * 
+   * @param relabeling the relabeling applied to variables in this to
+   * produce the relabeled category.
+   * @return
+   */
+  public HeadedSyntacticCategory getCanonicalForm(Map<Integer, Integer> relabeling) {
+    Preconditions.checkArgument(relabeling.size() == 0);
+    int[] relabeledVariables = new int[semanticVariables.length];
+    for (int i = 0; i < semanticVariables.length; i++) {
+      int curVar = semanticVariables[i];
+      int relabeledVar = -1;
+      if (!relabeling.containsKey(curVar)) {
+        relabeledVar = relabeling.size();
+        relabeling.put(curVar, relabeling.size());
+      } else {
+        relabeledVar = relabeling.get(curVar);
+      }
+
+      relabeledVariables[i] = relabeledVar;
+    }
+    return new HeadedSyntacticCategory(syntacticCategory, relabeledVariables, rootIndex);
+  }
+
+  /**
    * Gets the syntactic category of this, without any semantic
    * annotations.
    * 
@@ -110,6 +159,14 @@ public class HeadedSyntacticCategory implements Serializable {
    */
   public SyntacticCategory getSyntax() {
     return syntacticCategory;
+  }
+  
+  public Direction getDirection() {
+    return syntacticCategory.getDirection();
+  }
+  
+  public boolean isAtomic() {
+    return syntacticCategory.isAtomic();
   }
 
   /**
@@ -226,8 +283,9 @@ public class HeadedSyntacticCategory implements Serializable {
     // Check that mapping contains no duplicate elements.
     int[] sortedMapping = Arrays.copyOf(mapping, mapping.length);
     Arrays.sort(sortedMapping);
+    System.out.println(Arrays.toString(sortedMapping));
     for (int i = 1; i < sortedMapping.length; i++) {
-      if (sortedMapping[i - 1] == sortedMapping[i]) {
+      if (sortedMapping[i] != -1 && sortedMapping[i - 1] == sortedMapping[i]) {
         return null;
       }
     }
@@ -243,6 +301,10 @@ public class HeadedSyntacticCategory implements Serializable {
     }
 
     return mapping;
+  }
+  
+  public boolean isUnifiableWith(HeadedSyntacticCategory other) {
+    return getCanonicalForm().equals(other.getCanonicalForm());
   }
 
   /**
@@ -298,15 +360,16 @@ public class HeadedSyntacticCategory implements Serializable {
   @Override
   public String toString() {
     if (syntacticCategory.isAtomic()) {
-      return syntacticCategory.toString() + "_" + semanticVariables[rootIndex];
+      return syntacticCategory.toString() + "{" + semanticVariables[rootIndex] + "}";
     } else {
       StringBuilder sb = new StringBuilder();
       sb.append("(");
       sb.append(getReturnType());
       sb.append(syntacticCategory.getDirection());
       sb.append(getArgumentType());
-      sb.append(")_");
+      sb.append("){");
       sb.append(semanticVariables[rootIndex]);
+      sb.append("}");
       return sb.toString();
     }
   }

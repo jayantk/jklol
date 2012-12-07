@@ -28,7 +28,7 @@ public class CcgTrainingTest extends TestCase {
     "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:close,pred:close 1 1,pred:close 2 2", 
     "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1,pred:near 2 2",
     "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 pred:near,pred:near 2 2",
-    "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 2",
+    "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 1",
     "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 pred:almost,pred:almost 1 2",
     "is,((S{0}\\N{1}){0}/N{2}){0},0 pred:equals,pred:equals 1 1,pred:equals 2 2",
     "\",\",((N{1}\\N{1}){0}/N{2}){0},\"0 ,\",\", 1 1\",\", 2 2\"",

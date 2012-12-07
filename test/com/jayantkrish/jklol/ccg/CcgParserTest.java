@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -33,10 +34,11 @@ public class CcgParserTest extends TestCase {
     "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
     "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
     ";,;{0},0 ;", "or,conj{0},0 or",
-    "about,(N{0}/(S{1}\\N{2}){1}){0},0 about,about 1 1", 
+    "about,(NP{0}/(S{1}\\N{2}){1}){0},0 about,about 1 1", 
     "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
     "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1",
-    "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1"};
+    "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1",
+    "*NOT_A_WORD*,(NP{0}/N{1}){0},0 *NOT_A_WORD*"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
@@ -46,7 +48,8 @@ public class CcgParserTest extends TestCase {
     0.25, 1.0,
     1.0, 0.5,
     1.0, 1.0,
-    0.5, 1.0};
+    0.5, 1.0,
+    1.0};
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0}", 
     ";{2} (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
@@ -70,22 +73,11 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testParse() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(
-        Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 10);
-    
-    for (CcgParse parse : parses) {
-      System.out.println(parse);
-      System.out.println(parse.getAllDependencies());
-    }
-    
-    assertEquals(2, parses.size());
-    CcgParse parse = parses.get(1);
-    
-    System.out.println(parses.get(0));
-    System.out.println(parses.get(1));
-    System.out.println(parses.get(0).getAllDependencies());
-    System.out.println(parses.get(1).getAllDependencies());
-    
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+
     assertEquals(1.0, parse.getNodeProbability());
     assertEquals(2.0, parse.getRight().getNodeProbability());
     System.out.println(parse.getRight().getLeft());
@@ -159,6 +151,7 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
+    System.out.println(parse);
     
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
@@ -184,18 +177,63 @@ public class CcgParserTest extends TestCase {
     
     SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S\\N)/N");
     assertEquals(expectedSyntax, parse.getSyntacticCategory());
+    System.out.println(parse.getHeadedSyntacticCategory());
     
     Set<IndexedPredicate> heads = parse.getSemanticHeads();
     assertEquals(1, heads.size());
-    assertEquals("tasty", Iterables.getOnlyElement(heads).getHead());
+    assertEquals("eat", Iterables.getOnlyElement(heads).getHead());
   }
   
+  public void testParseComposition3() {
+    assertEquals(1, parser.beamSearch(Arrays.asList("about", "eating", "berries"), 10).size());
+    
+    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("about", "eating", "berries"), 10);
+    
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+      System.out.println(parse.getAllDependencies());
+    }
+
+    assertEquals(2, parses.size());
+    for (CcgParse parse : parses) {    
+      Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
+      Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+          new DependencyStructure("about", 0, "eat", 1, 1),
+          new DependencyStructure("eat", 1, "berries", 2, 2));
+      assertEquals(expectedDeps, deps);
+
+      HeadedSyntacticCategory expectedSyntax = HeadedSyntacticCategory.parseFrom("NP{0}");
+      assertEquals(expectedSyntax, parse.getHeadedSyntacticCategory());
+
+      Set<IndexedPredicate> heads = parse.getSemanticHeads();
+      assertEquals(1, heads.size());
+      assertEquals("about", Iterables.getOnlyElement(heads).getHead());
+    }
+  }
+  
+  public void testParseComposition4() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(
+        Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
+    assertEquals(3, parses.size());
+    
+    Set<DependencyStructure> expectedDeps = Sets.newHashSet(
+        new DependencyStructure("eat", 2, "I", 0, 1),
+        new DependencyStructure("eat", 2, "berries", 5, 2),
+        new DependencyStructure("quickly", 1, "eat", 2, 1),
+        new DependencyStructure("amazingly", 3, "tasty", 4, 1),
+        new DependencyStructure("tasty", 4, "berries", 5, 1));
+
+    for (CcgParse parse : parses) {
+      assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
+    }
+  }
+
   public void testCompositionHeads() {
     List<CcgParse> parses = parserWithComposition.beamSearch(100, "tasty", "colorful", "tasty", "tasty", "tasty", "tasty", "tasty", "tasty", "tasty", 
         "colorful", "colorful", "colorful", "colorful");
     
     CcgParse parse = parses.get(0);
-    assertEquals("colorful", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
+    assertEquals("tasty", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
   }
 
   public void testParseHeadUnification() {
@@ -385,6 +423,7 @@ public class CcgParserTest extends TestCase {
       String[] unaryRuleArray, double[] weights, boolean allowComposition) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
+    Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
     Set<List<String>> words = Sets.newHashSet();
     Set<String> semanticPredicates = Sets.newHashSet();
     for (int i = 0; i < lexicon.length; i++) {
@@ -396,6 +435,7 @@ public class CcgParserTest extends TestCase {
       for (String head : Iterables.concat(category.getAssignment())) {
         semanticPredicates.addAll(Arrays.asList(head));
       }
+      syntacticCategories.add(category.getSyntax());
     }
 
     // Parse the binary rules
@@ -444,8 +484,14 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("special:compound", 1, "people"), 1.0);
     
+    DiscreteFactor syntaxDistribution = CcgParser.buildSyntacticDistribution(syntacticCategories, allowComposition);
+    VariableNumMap leftSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
+    VariableNumMap rightSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
+    VariableNumMap parentSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
+    
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
-        binaryRules, unaryRules, allowComposition);
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution,
+        binaryRules, unaryRules);
   }
 }

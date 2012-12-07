@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import au.com.bytecode.opencsv.CSVParser;
@@ -11,6 +12,7 @@ import au.com.bytecode.opencsv.CSVParser;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
@@ -102,9 +104,11 @@ public class CcgCategory implements Serializable {
   }
 
   public static CcgCategory parseFrom(String[] categoryParts) {
-    // Parse the syntactic category.
+    // Parse the syntactic category and store it in canonical form.
     HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom(categoryParts[0]);
-
+    Map<Integer, Integer> relabeling = Maps.newHashMap();
+    syntax = syntax.getCanonicalForm(relabeling);
+    
     // Create an empty assignment to each variable in the syntactic
     // category.
     List<Set<String>> values = Lists.newArrayList();
@@ -127,13 +131,22 @@ public class CcgCategory implements Serializable {
       Preconditions.checkArgument(parts.length == 2 || parts.length == 3,
           "Invalid CCG semantic part: \"%s\".", categoryParts[i]);
       if (parts.length == 2) {
-        int varNum = Integer.parseInt(parts[0]);
+        int originalVarNum = Integer.parseInt(parts[0]);
+        Preconditions.checkArgument(relabeling.containsKey(originalVarNum), 
+            "Illegal assignment \"%s\" for syntactic category %s", categoryParts[i], 
+            categoryParts[0]);
+        int varNum = relabeling.get(originalVarNum);
         String value = parts[1];
         values.get(varNum).add(value);
       } else if (parts.length == 3) {
         subjects.add(parts[0]);
         argumentNumbers.add(Integer.parseInt(parts[1]));
-        objects.add(Integer.parseInt(parts[2]));
+        int originalVarNum = Integer.parseInt(parts[2]);
+        Preconditions.checkArgument(relabeling.containsKey(originalVarNum), 
+            "Illegal dependency \"%s\" for syntactic category %s", categoryParts[i], 
+            categoryParts[0]);
+        int objectVarNum = relabeling.get(originalVarNum);
+        objects.add(objectVarNum);
       }
     }
     return new CcgCategory(syntax, subjects, argumentNumbers, objects, values);

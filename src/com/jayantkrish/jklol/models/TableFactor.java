@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.CsvParser;
 
 /**
  * A discrete probability distibution whose unnormalized probabilities

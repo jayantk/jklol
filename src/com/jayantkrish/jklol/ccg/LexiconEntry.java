@@ -1,13 +1,12 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import au.com.bytecode.opencsv.CSVParser;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.jayantkrish.jklol.util.ArrayUtils;
+import com.jayantkrish.jklol.util.CsvParser;
 
 /**
  * A mapping from a list of words to a {@link CcgCategory}. Each lexicon entry
@@ -48,18 +47,14 @@ public class LexiconEntry {
    * @return
    */
   public static LexiconEntry parseLexiconEntry(String lexiconLine) {
-    try {
-      String[] parts = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER, 
-          CSVParser.NULL_CHARACTER).parseLine(lexiconLine);
+    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, 
+        CsvParser.NULL_ESCAPE).parseLine(lexiconLine);
 
-      // Add the lexicon word sequence to the lexicon.
-      String wordPart = parts[0];
-      List<String> words = Arrays.asList(wordPart.split(" "));
-      return new LexiconEntry(words, CcgCategory.parseFrom(
-          Arrays.copyOfRange(parts, 1, parts.length)));
-    } catch (IOException e) {
-      throw new IllegalArgumentException("Invalid lexicon line: " + lexiconLine, e);
-    }
+    // Add the lexicon word sequence to the lexicon.
+    String wordPart = parts[0];
+    List<String> words = Arrays.asList(wordPart.split(" "));
+    return new LexiconEntry(words, CcgCategory.parseFrom(
+        ArrayUtils.copyOfRange(parts, 1, parts.length)));
   }
 
   /**

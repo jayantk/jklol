@@ -31,6 +31,16 @@ public class ArrayUtils {
     System.arraycopy(old, 0, newArray, 0, minLength);
     return newArray;
   }
+  
+  /**
+   * Identical to {@code Arrays.copyOf}, but GWT compatible.
+   */
+  public static String[] copyOf(String[] old, int length) {
+    String[] newArray = new String[length];
+    int minLength = Math.min(old.length, length);
+    System.arraycopy(old, 0, newArray, 0, minLength);
+    return newArray;
+  }
 
   /**
    * Identical to {@code Arrays.copyOfRange}, but GWT compatible.
@@ -65,6 +75,17 @@ public class ArrayUtils {
     return newArray;
   }
 
+  /**
+   * Identical to {@code Arrays.copyOfRange}, but GWT compatible.
+   */
+  public static String[] copyOfRange(String[] old, int from, int to) {
+    int length = to - from;
+    String[] newArray = new String[length];
+    int minLength = Math.min(old.length - from, length);
+    System.arraycopy(old, from, newArray, 0, minLength);
+    return newArray;
+  }
+  
   public static boolean subarrayEquals(int[] array, int[] subarray, int startIndex) {
     for (int i = 0; i < subarray.length; i++) {
       if (array[i + startIndex] != subarray[i]) {

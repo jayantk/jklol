@@ -69,9 +69,9 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
         newValues[i - firstKeyNum] = values[i];
       }
 
-      int[] newDimensions = Arrays.copyOfRange(myDimensionNumbers, 
+      int[] newDimensions = ArrayUtils.copyOfRange(myDimensionNumbers, 
           dimensionNumbers.length, myDimensionNumbers.length);
-      int[] newSizes = Arrays.copyOfRange(myDimensionSizes,
+      int[] newSizes = ArrayUtils.copyOfRange(myDimensionSizes,
           dimensionNumbers.length, myDimensionNumbers.length);
       return new DenseTensor(newDimensions, newSizes, newValues);
     }

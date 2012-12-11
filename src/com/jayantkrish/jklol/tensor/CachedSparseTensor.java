@@ -140,7 +140,7 @@ public class CachedSparseTensor extends SparseTensor {
     Preconditions.checkArgument(newDimensions.length == numDimensions());
 
     // Compute how {@code newDimensions} permutes the indexes of this.
-    int[] sortedDims = Arrays.copyOf(newDimensions, newDimensions.length);
+    int[] sortedDims = ArrayUtils.copyOf(newDimensions, newDimensions.length);
     Arrays.sort(sortedDims);
 
     Map<Integer, Integer> newDimensionIndexes = Maps.newHashMap();

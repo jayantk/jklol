@@ -1,17 +1,15 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
-
-import au.com.bytecode.opencsv.CSVParser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
+import com.jayantkrish.jklol.util.CsvParser;
 
 /**
  * A binary combination rule applicable to two adjacent CCG
@@ -43,8 +41,6 @@ public class CcgBinaryRule implements Serializable {
   private final int[] argumentNumbers;
   // The variables each dependency accepts.
   private final int[] objects;
-
-  private static final char ENTRY_DELIMITER = ',';
 
   public CcgBinaryRule(HeadedSyntacticCategory leftSyntax, HeadedSyntacticCategory rightSyntax,
       HeadedSyntacticCategory returnSyntax, List<String> subjects, List<Integer> argumentNumbers,
@@ -78,36 +74,32 @@ public class CcgBinaryRule implements Serializable {
    * @return
    */
   public static CcgBinaryRule parseFrom(String line) {
-    try {
-      String[] chunks = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER,
-          CSVParser.NULL_CHARACTER).parseLine(line.trim());
-      Preconditions.checkArgument(chunks.length >= 1);
+    String[] chunks = new CsvParser(',', CsvParser.DEFAULT_QUOTE,
+        CsvParser.NULL_ESCAPE).parseLine(line.trim());
+    Preconditions.checkArgument(chunks.length >= 1);
 
-      System.out.println(Arrays.toString(chunks));
+    System.out.println(Arrays.toString(chunks));
 
-      String[] syntacticParts = chunks[0].split(" ");
-      Preconditions.checkArgument(syntacticParts.length == 3);
-      HeadedSyntacticCategory leftSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[0]);
-      HeadedSyntacticCategory rightSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
-      HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[2]);
+    String[] syntacticParts = chunks[0].split(" ");
+    Preconditions.checkArgument(syntacticParts.length == 3);
+    HeadedSyntacticCategory leftSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[0]);
+    HeadedSyntacticCategory rightSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
+    HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[2]);
 
-      List<String> subjects = Lists.newArrayList();
-      List<Integer> argNums = Lists.newArrayList();
-      List<Integer> objects = Lists.newArrayList();
-      if (chunks.length >= 2) {
-        for (int i = 1; i < chunks.length; i++) {
-          String[] newDeps = chunks[i].split(" ");
-          Preconditions.checkArgument(newDeps.length == 3);
-          subjects.add(newDeps[0]);
-          argNums.add(Integer.parseInt(newDeps[1]));
-          objects.add(Integer.parseInt(newDeps[2]));
-        }
+    List<String> subjects = Lists.newArrayList();
+    List<Integer> argNums = Lists.newArrayList();
+    List<Integer> objects = Lists.newArrayList();
+    if (chunks.length >= 2) {
+      for (int i = 1; i < chunks.length; i++) {
+        String[] newDeps = chunks[i].split(" ");
+        Preconditions.checkArgument(newDeps.length == 3);
+        subjects.add(newDeps[0]);
+        argNums.add(Integer.parseInt(newDeps[1]));
+        objects.add(Integer.parseInt(newDeps[2]));
       }
-
-      return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, subjects, argNums, objects);
-    } catch (IOException e) {
-      throw new IllegalArgumentException("Illegal binary rule string: " + line, e);
     }
+
+    return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, subjects, argNums, objects);
   }
 
   /**

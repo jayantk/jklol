@@ -99,7 +99,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * whose second value is the CCG category string. Lines beginning
    * with # are interpreted as comments and skipped over.
    * 
-   * @param lexiconLines
+   * @param unfilteredLexiconLines
+   * @param unfilteredRuleLines
+   * @param dependencyFeatures if not null, a list of files containing features of dependency structures. 
+   * @param allowComposition allow function composition in addition to other CCG rules.
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,

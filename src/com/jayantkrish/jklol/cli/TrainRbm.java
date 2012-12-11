@@ -157,7 +157,8 @@ public class TrainRbm extends AbstractCli {
     }
     
     // Add factors.
-    DiscreteVariable featureType = new DiscreteVariable("featureVar", Arrays.asList("TT"));
+    DiscreteVariable featureType = new DiscreteVariable("featureVar", 
+        Arrays.asList("TT", "TF", "FT", "FF"));
     VariableNumMap featureVar = VariableNumMap.singleton(
         observedNames.size() + hiddenNames.size() + 1, "featureVar", featureType);
     VariableNumMap vars = builder.getVariables();
@@ -168,11 +169,23 @@ public class TrainRbm extends AbstractCli {
         // Each factor encodes a single indicator for when both variables are 1.
         VariableNumMap factorVars = VariableNumMap.unionAll(featureVar, observed, hidden);
         Assignment trueAssignment = factorVars.outcomeArrayToAssignment("T", "T", "TT");
+        Assignment falseAssignment = factorVars.outcomeArrayToAssignment("F", "F", "FF");
         DiscreteLogLinearFactor factor = new DiscreteLogLinearFactor(observed.union(hidden), 
-            featureVar, TableFactor.pointDistribution(factorVars, trueAssignment));
+            featureVar, TableFactor.pointDistribution(factorVars, trueAssignment, falseAssignment));
         builder.addUnreplicatedFactor(observedName + "#" + hiddenName, factor);
       }
     }
+
+    for (String observedName : observedNames) {
+      VariableNumMap observed = vars.getVariablesByName(observedName);
+      builder.addUnreplicatedFactor(observedName, DiscreteLogLinearFactor.createIndicatorFactor(observed));
+    }
+
+    for (String hiddenName : hiddenNames) {
+      VariableNumMap hidden = vars.getVariablesByName(hiddenName);
+      builder.addUnreplicatedFactor(hiddenName, DiscreteLogLinearFactor.createIndicatorFactor(hidden));
+    }
+
     return builder.build();
   }
 }

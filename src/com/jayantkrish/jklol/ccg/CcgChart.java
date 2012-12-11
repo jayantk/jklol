@@ -8,6 +8,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;
 
 /**
@@ -92,7 +93,7 @@ public class CcgChart {
       CcgParser parser) {
     // Perform a heap sort on the array indexes paired with the
     // probabilities.
-    double[] probsCopy = Arrays.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
+    double[] probsCopy = ArrayUtils.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
     Integer[] chartEntryIndexes = new Integer[probabilities[spanStart][spanEnd].length];
     for (int i = 0; i < chartEntryIndexes.length; i++) {
       chartEntryIndexes[i] = i;

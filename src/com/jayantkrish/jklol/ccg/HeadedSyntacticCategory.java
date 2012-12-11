@@ -3,12 +3,12 @@ package com.jayantkrish.jklol.ccg;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
+import com.jayantkrish.jklol.util.ArrayUtils;
 
 /**
  * A semantic category augmented with semantic variables. These
@@ -58,8 +58,22 @@ public class HeadedSyntacticCategory implements Serializable {
    * @return
    */
   public static HeadedSyntacticCategory parseFrom(String typeString) {
-    Pattern pattern = Pattern.compile("\\{[^}]*\\}");
-    String syntacticString = pattern.matcher(typeString).replaceAll("");
+    // Strip variable numbers in curly braces, without using 
+    // regular expressions for GWT compatibility.
+    StringBuilder syntacticStringBuilder = new StringBuilder();
+    int nextBraceIndex = 0;
+    int braceIndex = typeString.indexOf("{", nextBraceIndex);
+    while (braceIndex != -1) {
+      syntacticStringBuilder.append(typeString.substring(nextBraceIndex, braceIndex));
+      nextBraceIndex = typeString.indexOf("}", braceIndex) + 1;
+      braceIndex = typeString.indexOf("{", nextBraceIndex);
+    }
+    syntacticStringBuilder.append(typeString.substring(nextBraceIndex, typeString.length()));
+    
+    // Pattern pattern = Pattern.compile("\\{[^}]*\\}");
+    // String syntacticString = pattern.matcher(typeString).replaceAll("");
+    
+    String syntacticString = syntacticStringBuilder.toString();
     SyntacticCategory syntax = SyntacticCategory.parseFrom(syntacticString);
     int[] semanticVariables = new int[syntax.getNumSubcategories()];
     int rootIndex = syntax.getNumReturnSubcategories();
@@ -120,7 +134,7 @@ public class HeadedSyntacticCategory implements Serializable {
    */
   public HeadedSyntacticCategory getArgumentType() {
     SyntacticCategory argumentSyntax = syntacticCategory.getArgument();
-    int[] argumentSemantics = Arrays.copyOfRange(semanticVariables, rootIndex + 1, semanticVariables.length);
+    int[] argumentSemantics = ArrayUtils.copyOfRange(semanticVariables, rootIndex + 1, semanticVariables.length);
     int argumentRoot = argumentSyntax.getNumReturnSubcategories();
     return new HeadedSyntacticCategory(argumentSyntax, argumentSemantics, argumentRoot);
   }
@@ -133,7 +147,7 @@ public class HeadedSyntacticCategory implements Serializable {
    */
   public HeadedSyntacticCategory getReturnType() {
     SyntacticCategory returnSyntax = syntacticCategory.getReturn();
-    int[] returnSemantics = Arrays.copyOf(semanticVariables, rootIndex);
+    int[] returnSemantics = ArrayUtils.copyOf(semanticVariables, rootIndex);
     int returnRoot = returnSyntax.getNumReturnSubcategories();
     return new HeadedSyntacticCategory(returnSyntax, returnSemantics, returnRoot);
   }
@@ -224,7 +238,7 @@ public class HeadedSyntacticCategory implements Serializable {
     }
 
     // Check that mapping contains no duplicate elements.
-    int[] sortedMapping = Arrays.copyOf(mapping, mapping.length);
+    int[] sortedMapping = ArrayUtils.copyOf(mapping, mapping.length);
     Arrays.sort(sortedMapping);
     for (int i = 1; i < sortedMapping.length; i++) {
       if (sortedMapping[i - 1] == sortedMapping[i]) {

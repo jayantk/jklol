@@ -10,7 +10,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class NullLogFunction extends AbstractLogFunction {
+public class NullLogFunction implements LogFunction {
   
   public NullLogFunction() { super(); }
 
@@ -32,4 +32,10 @@ public class NullLogFunction extends AbstractLogFunction {
 
   @Override
   public void notifyIterationEnd(int iteration) {}
+
+  @Override
+  public void startTimer(String timerName) {}
+
+  @Override
+  public double stopTimer(String timerName) { return 0; }
 }

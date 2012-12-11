@@ -191,7 +191,7 @@
   <!-- Target for compiling jklol to Javascript -->
 
   <!-- Configure path to GWT SDK -->
-  <property name="gwt.sdk" location="/home/jayantk/gwt/gwt-2.5.0" />
+  <property name="gwt.sdk" location="gwt_lib" />
   <property name="gwt.args" value="" />
 
   <path id="project.class.path">
@@ -229,9 +229,8 @@
     <java failonerror="true" fork="true" classname="com.google.gwt.dev.Compiler">
       <classpath>
         <pathelement location="${src-dir}"/>
+	<pathelement location="${lib-dir}"/>
         <path refid="project.class.path"/>
-        <pathelement location="/home/jayantk/gwt/gwt-2.5.0/validation-api-1.0.0.GA.jar" />
-        <pathelement location="/home/jayantk/gwt/gwt-2.5.0/validation-api-1.0.0.GA-sources.jar" />
       </classpath>
       <!-- add jvmarg -Xss16M or similar if you see a StackOverflowError -->
       <jvmarg value="-Xmx256M"/>

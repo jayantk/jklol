@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.util;
 
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -50,7 +49,7 @@ public class PermutationIterator implements Iterator<int[]> {
 
     if (numLeft == total) {
       numLeft--;
-      return Arrays.copyOf(permutation, permutation.length);
+      return ArrayUtils.copyOf(permutation, permutation.length);
     }
 
     // Find largest index j with a[j] < a[j+1]
@@ -84,7 +83,7 @@ public class PermutationIterator implements Iterator<int[]> {
     }
 
     numLeft--;
-    return Arrays.copyOf(permutation, permutation.length);
+    return ArrayUtils.copyOf(permutation, permutation.length);
   }
 
   @Override

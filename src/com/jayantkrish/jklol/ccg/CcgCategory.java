@@ -1,18 +1,16 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
-import au.com.bytecode.opencsv.CSVParser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
+import com.jayantkrish.jklol.util.CsvParser;
 
 /**
  * A CCG category composed of both a syntactic and semantic type.
@@ -90,15 +88,11 @@ public class CcgCategory implements Serializable {
    * @return
    */
   public static CcgCategory parseFrom(String categoryString) {
-    try {
-      String[] parts = new CSVParser(ENTRY_DELIMITER, CSVParser.DEFAULT_QUOTE_CHARACTER,
-          CSVParser.NULL_CHARACTER).parseLine(categoryString);
-      Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
-          categoryString);
-      return parseFrom(parts);
-    } catch (IOException e) {
-      throw new IllegalArgumentException("Invalid CCG category: " + categoryString, e);
-    }
+    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE,
+        CsvParser.NULL_ESCAPE).parseLine(categoryString);
+    Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
+        categoryString);
+    return parseFrom(parts);
   }
 
   public static CcgCategory parseFrom(String[] categoryParts) {

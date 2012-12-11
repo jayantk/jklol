@@ -53,7 +53,7 @@ public final class Factors {
     }
     List<Factor> otherFactors = Lists.newArrayList(factors.subList(0, biggestFactorIndex));
     otherFactors.addAll(factors.subList(biggestFactorIndex + 1, factors.size()));
-    
+
     return biggestFactor.product(otherFactors);
   }
 

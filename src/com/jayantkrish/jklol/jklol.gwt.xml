@@ -30,8 +30,9 @@
   <entry-point class='com.jayantkrish.jklol.gwt.JklolExporter'/>
 
   <!-- Specify the paths for translatable code                    -->
-  <source path='gwt'/>
+  <source path='ccg'/>
   <source path='cli'/>
+  <source path='gwt'/>
   <source path='models'/>
   <source path='inference'/>
   <source path='evaluation'/>

@@ -104,7 +104,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
   }
   
   private static class PrintTask implements Runnable {
-    
+
     private final String toPrint;
     
     public PrintTask(String toPrint) { 

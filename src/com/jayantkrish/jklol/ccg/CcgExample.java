@@ -1,15 +1,13 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-import au.com.bytecode.opencsv.CSVParser;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.util.CsvParser;
 
 /**
  * A training example for {@code CcgLoglikelihoodOracle}. Stores an input word
@@ -53,38 +51,34 @@ public class CcgExample {
    * @return
    */
   public static CcgExample parseFromString(String exampleString) {
-    try {
-      String[] parts = exampleString.split("###");
-      List<String> words = Arrays.asList(parts[0].split("\\s+"));
-      
-      Set<DependencyStructure> dependencies = Sets.newHashSet();
-      String[] dependencyParts = new CSVParser(CSVParser.DEFAULT_SEPARATOR, 
-          CSVParser.DEFAULT_QUOTE_CHARACTER, CSVParser.NULL_CHARACTER).parseLine(parts[1]);
-      for (int i = 0; i < dependencyParts.length; i++) {
-        if (dependencyParts[i].trim().length() == 0) {
-          continue;
-        }
-        String[] dep = dependencyParts[i].split("\\s+");
-        Preconditions.checkState(dep.length >= 5, "Illegal dependency string: " + dependencyParts[i]);
-        
-        dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
-            Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
-      }
+    String[] parts = exampleString.split("###");
+    List<String> words = Arrays.asList(parts[0].split("\\s+"));
 
-      List<LexiconEntry> lexiconEntries = null;
-      if (parts.length >= 3) {
-        // Parse out observed lexicon entries, if they are given.
-        String[] lexiconLabels = parts[2].split("@@@");
-        lexiconEntries = Lists.newArrayList();
-        for (int i = 0; i < lexiconLabels.length; i++) {
-          lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLabels[i]));
-        }
+    Set<DependencyStructure> dependencies = Sets.newHashSet();
+    String[] dependencyParts = new CsvParser(CsvParser.DEFAULT_SEPARATOR, 
+        CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(parts[1]);
+    for (int i = 0; i < dependencyParts.length; i++) {
+      if (dependencyParts[i].trim().length() == 0) {
+        continue;
       }
+      String[] dep = dependencyParts[i].split("\\s+");
+      Preconditions.checkState(dep.length >= 5, "Illegal dependency string: " + dependencyParts[i]);
 
-      return new CcgExample(words, dependencies, lexiconEntries);
-    } catch (IOException e) {
-      throw new IllegalArgumentException("Illegal example string: " + exampleString, e);
+      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
+          Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
     }
+
+    List<LexiconEntry> lexiconEntries = null;
+    if (parts.length >= 3) {
+      // Parse out observed lexicon entries, if they are given.
+      String[] lexiconLabels = parts[2].split("@@@");
+      lexiconEntries = Lists.newArrayList();
+      for (int i = 0; i < lexiconLabels.length; i++) {
+        lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLabels[i]));
+      }
+    }
+
+    return new CcgExample(words, dependencies, lexiconEntries);
   }
 
   public List<String> getWords() {

@@ -1,17 +1,15 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import au.com.bytecode.opencsv.CSVParser;
-
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
+import com.jayantkrish.jklol.util.CsvParser;
 
 public class CcgUnaryRule implements Serializable {
 
@@ -49,37 +47,33 @@ public class CcgUnaryRule implements Serializable {
    * @return
    */
   public static CcgUnaryRule parseFrom(String line) {
-    try {
-      String[] chunks = new CSVParser(CSVParser.DEFAULT_SEPARATOR,
-          CSVParser.DEFAULT_QUOTE_CHARACTER, CSVParser.NULL_CHARACTER).parseLine(line.trim());
-      Preconditions.checkArgument(chunks.length >= 1);
+    String[] chunks = new CsvParser(CsvParser.DEFAULT_SEPARATOR,
+        CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(line.trim());
+    Preconditions.checkArgument(chunks.length >= 1);
 
-      String[] syntacticParts = chunks[0].split(" ");
-      Preconditions.checkArgument(syntacticParts.length == 2);
-      HeadedSyntacticCategory inputSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[0]);
-      HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
+    String[] syntacticParts = chunks[0].split(" ");
+    Preconditions.checkArgument(syntacticParts.length == 2);
+    HeadedSyntacticCategory inputSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[0]);
+    HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
 
-      long[] unfilledDeps = new long[0];
-      if (chunks.length >= 2) {
-        throw new UnsupportedOperationException("Not yet implemented");
-        /*
-         * String[] newDeps = chunks[4].split(" ");
-         * Preconditions.checkArgument(newDeps.length == 3); long
-         * subjectNum = Long.parseLong(newDeps[0].substring(1)); long
-         * argNum = Long.parseLong(newDeps[1]); long objectNum =
-         * Long.parseLong(newDeps[2].substring(1)); unfilledDeps = new
-         * long[1];
-         * 
-         * unfilledDeps[0] =
-         * CcgParser.marshalUnfilledDependency(objectNum, argNum,
-         * subjectNum, 0, 0);
-         */
-      }
-
-      return new CcgUnaryRule(inputSyntax, returnSyntax);
-    } catch (IOException e) {
-      throw new IllegalArgumentException("Illegal unary rule string: " + line, e);
+    long[] unfilledDeps = new long[0];
+    if (chunks.length >= 2) {
+      throw new UnsupportedOperationException("Not yet implemented");
+      /*
+       * String[] newDeps = chunks[4].split(" ");
+       * Preconditions.checkArgument(newDeps.length == 3); long
+       * subjectNum = Long.parseLong(newDeps[0].substring(1)); long
+       * argNum = Long.parseLong(newDeps[1]); long objectNum =
+       * Long.parseLong(newDeps[2].substring(1)); unfilledDeps = new
+       * long[1];
+       * 
+       * unfilledDeps[0] =
+       * CcgParser.marshalUnfilledDependency(objectNum, argNum,
+       * subjectNum, 0, 0);
+       */
     }
+
+    return new CcgUnaryRule(inputSyntax, returnSyntax);
   }
 
   /**

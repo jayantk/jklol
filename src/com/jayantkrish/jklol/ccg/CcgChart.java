@@ -150,7 +150,8 @@ public class CcgChart {
       return CcgParse.forNonterminal(entry.getHeadedSyntax(),
           parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
-          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right);
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
+          entry.getCombinator());
     }
   }
 
@@ -292,11 +293,13 @@ public class CcgChart {
     private final int rightSpanStart;
     private final int rightSpanEnd;
     private final int rightChartIndex;
+    
+    private final Combinator combinator;
 
     public ChartEntry(HeadedSyntacticCategory syntax, CcgUnaryRule unaryRule, int[] assignmentVariableNums,
         int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
         long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
-        int rightSpanStart, int rightSpanEnd, int rightChartIndex) {
+        int rightSpanStart, int rightSpanEnd, int rightChartIndex, Combinator combinator) {
       this.syntax = Preconditions.checkNotNull(syntax);
       this.unaryRule = unaryRule;
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
@@ -314,6 +317,8 @@ public class CcgChart {
       this.rightSpanStart = rightSpanStart;
       this.rightSpanEnd = rightSpanEnd;
       this.rightChartIndex = rightChartIndex;
+      
+      this.combinator = combinator;
     }
 
     public ChartEntry(HeadedSyntacticCategory syntax, CcgCategory ccgCategory, CcgUnaryRule unaryRule,
@@ -337,6 +342,8 @@ public class CcgChart {
       this.rightSpanStart = -1;
       this.rightSpanEnd = -1;
       this.rightChartIndex = -1;
+      
+      this.combinator = null;
     }
 
     public HeadedSyntacticCategory getHeadedSyntax() {
@@ -452,6 +459,10 @@ public class CcgChart {
     public int getRightChartIndex() {
       return rightChartIndex;
     }
+    
+    public Combinator getCombinator() {
+      return combinator;
+    }
 
     @Override
     public String toString() {
@@ -460,40 +471,6 @@ public class CcgChart {
     }
   }
 
-  /**
-   * A semantic predicate paired with the index of the word that
-   * instantiated it. This class disambiguates between multiple
-   * distinct instantiations of a predicate in a sentence. Such
-   * instantiations occur, for example, when a single word occurs
-   * multiple times in the sentence.
-   * 
-   * @author jayant
-   */
-  public static class IndexedPredicate {
-    // The name of the predicate.
-    private final String predicate;
-
-    // The word index that created predicate.
-    private final int wordIndex;
-
-    public IndexedPredicate(String head, int wordIndex) {
-      this.predicate = head;
-      this.wordIndex = wordIndex;
-    }
-
-    public String getHead() {
-      return predicate;
-    }
-
-    public int getHeadIndex() {
-      return wordIndex;
-    }
-
-    @Override
-    public String toString() {
-      return predicate + ":" + wordIndex;
-    }
-  }
 
   /**
    * Filter for discarding portions of the CCG beam. Chart entries for

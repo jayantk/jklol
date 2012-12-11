@@ -7,7 +7,6 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
 public class CcgParse {
 
@@ -26,16 +25,17 @@ public class CcgParse {
   private final List<DependencyStructure> dependencies;
 
   // Probability represents the probability of the lexical entry if
-  // this is a
-  // terminal,
-  // otherwise it represents the probability of the generated
-  // dependencies.
+  // this is a terminal, otherwise it represents the probability of
+  // the generated dependencies.
   private final double probability;
   // Total probability of the parse subtree rooted at this node.
   private final double subtreeProbability;
 
+  // If this is a nonterminal, the subtrees combined to produce this
+  // tree.
   private final CcgParse left;
   private final CcgParse right;
+  private final Combinator combinator;
 
   /**
    * 
@@ -50,7 +50,7 @@ public class CcgParse {
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry, List<String> spannedWords,
       Set<IndexedPredicate> heads, List<DependencyStructure> dependencies, double probability,
-      CcgParse left, CcgParse right) {
+      CcgParse left, CcgParse right, Combinator combinator) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
     this.spannedWords = spannedWords;
@@ -61,9 +61,11 @@ public class CcgParse {
 
     this.left = left;
     this.right = right;
+    this.combinator = combinator;
 
     // Both left and right must agree on null/non-null.
     Preconditions.checkArgument((left == null) ^ (right == null) == false);
+    Preconditions.checkArgument(left == null || combinator != null);
 
     if (left != null) {
       this.subtreeProbability = left.getSubtreeProbability() * right.getSubtreeProbability() * probability;
@@ -89,12 +91,14 @@ public class CcgParse {
       Set<IndexedPredicate> heads, List<DependencyStructure> deps, List<String> spannedWords,
       double lexicalProbability) {
     return new CcgParse(syntax, lexiconEntry, spannedWords, heads, deps, lexicalProbability,
-        null, null);
+        null, null, null);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
-      List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left, CcgParse right) {
-    return new CcgParse(syntax, null, null, heads, dependencies, dependencyProbability, left, right);
+      List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left,
+      CcgParse right, Combinator combinator) {
+    return new CcgParse(syntax, null, null, heads, dependencies, dependencyProbability, left, right,
+        combinator);
   }
 
   /**
@@ -174,6 +178,16 @@ public class CcgParse {
   }
 
   /**
+   * Gets the combinator used to produce this tree from its left and
+   * right subtrees.
+   * 
+   * @return
+   */
+  public Combinator getCombinator() {
+    return combinator;
+  }
+
+  /**
    * Gets the probability of the entire subtree of the CCG parse
    * headed at this node.
    * 
@@ -226,7 +240,7 @@ public class CcgParse {
     }
     return deps;
   }
-  
+
   public Set<Integer> getWordIndexesProjectingDependencies() {
     List<DependencyStructure> deps = getAllDependencies();
     Set<Integer> wordIndexes = Sets.newHashSet();
@@ -239,7 +253,7 @@ public class CcgParse {
   /**
    * Gets all filled dependencies projected by the lexical category
    * for the word at {@code wordIndex}. Expects
-   * {@code 0 <= wordIndex < spannedWords.size()}. All returned 
+   * {@code 0 <= wordIndex < spannedWords.size()}. All returned
    * dependencies have {@code wordIndex} as their head word index.
    * 
    * @param wordIndex
@@ -255,7 +269,7 @@ public class CcgParse {
     }
     return filteredDeps;
   }
-  
+
   public List<DependencyStructure> getDependenciesWithObjectWord(int wordIndex) {
     List<DependencyStructure> deps = getAllDependencies();
     List<DependencyStructure> filteredDeps = Lists.newArrayList();

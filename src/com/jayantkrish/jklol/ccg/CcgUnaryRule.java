@@ -21,6 +21,8 @@ public class CcgUnaryRule implements Serializable {
   public CcgUnaryRule(HeadedSyntacticCategory inputSyntax, HeadedSyntacticCategory returnSyntax) {
     this.inputSyntax = Preconditions.checkNotNull(inputSyntax);
     this.returnSyntax = Preconditions.checkNotNull(returnSyntax);
+    
+    Preconditions.checkArgument(returnSyntax.isCanonicalForm());
 
     // Ensure that the return type has all of the variables in
     // inputSyntax.
@@ -56,9 +58,28 @@ public class CcgUnaryRule implements Serializable {
     HeadedSyntacticCategory inputSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[0]);
     HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
 
-    long[] unfilledDeps = new long[0];
+    // Ensure that the return syntactic type is in canonical form.
+    HeadedSyntacticCategory returnCanonical = returnSyntax.getCanonicalForm();
+    int[] originalToCanonical = returnSyntax.unifyVariables(returnSyntax.getUniqueVariables(), returnCanonical, new int[0]);
+
+    int[] inputVars = inputSyntax.getUniqueVariables();
+    int[] inputRelabeling = new int[inputVars.length];
+    int[] returnOriginalVars = returnSyntax.getUniqueVariables();
+    int nextUnassignedVar = Ints.max(returnCanonical.getUniqueVariables()) + 1;
+    for (int i = 0; i < inputVars.length; i++) {
+      int index = Ints.indexOf(returnOriginalVars, inputVars[i]);
+      if (index != -1) {
+        inputRelabeling[i] = originalToCanonical[index];
+      } else {
+        inputRelabeling[i] = nextUnassignedVar;
+        nextUnassignedVar++;
+      }
+    }
+    HeadedSyntacticCategory relabeledInput = inputSyntax.relabelVariables(inputVars, inputRelabeling);
+
     if (chunks.length >= 2) {
-      throw new UnsupportedOperationException("Not yet implemented");
+      throw new UnsupportedOperationException(
+          "Using unfilled dependencies with unary CCG rules is not yet implemented");
       /*
        * String[] newDeps = chunks[4].split(" ");
        * Preconditions.checkArgument(newDeps.length == 3); long
@@ -72,17 +93,27 @@ public class CcgUnaryRule implements Serializable {
        * subjectNum, 0, 0);
        */
     }
-
-    return new CcgUnaryRule(inputSyntax, returnSyntax);
+    return new CcgUnaryRule(relabeledInput, returnCanonical);
   }
 
   /**
-   * Gets the syntactic category which this rule can be applied to.
+   * Gets the syntactic category which this rule can be applied to. 
+   * The returned category may not be in canonical form. 
    * 
    * @return
    */
-  public SyntacticCategory getInputSyntacticCategory() {
-    return inputSyntax.getSyntax();
+  public HeadedSyntacticCategory getInputSyntacticCategory() {
+    return inputSyntax;
+  }
+  
+  /**
+   * Gets the syntactic category that results from applying this rule.
+   * The returned category may not be in canonical form.
+   * 
+   * @return
+   */
+  public HeadedSyntacticCategory getResultSyntacticCategory() {
+    return returnSyntax;
   }
 
   /**
@@ -139,7 +170,7 @@ public class CcgUnaryRule implements Serializable {
       return new ChartEntry(returnSyntax, this, returnVars, returnPredicateNums, returnIndexes,
           returnUnfilledDeps, entry.getDependencies(), entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
           entry.getLeftChartIndex(), entry.getRightSpanStart(), entry.getRightSpanEnd(),
-          entry.getRightChartIndex());
+          entry.getRightChartIndex(), entry.getCombinator());
     }
   }
 }

@@ -53,8 +53,8 @@ public class LexiconEntry {
     // Add the lexicon word sequence to the lexicon.
     String wordPart = parts[0];
     List<String> words = Arrays.asList(wordPart.split(" "));
-    return new LexiconEntry(words, CcgCategory.parseFrom(
-        ArrayUtils.copyOfRange(parts, 1, parts.length)));
+    CcgCategory category = CcgCategory.parseFrom(ArrayUtils.copyOfRange(parts, 1, parts.length));
+    return new LexiconEntry(words, category);
   }
 
   /**

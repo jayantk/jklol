@@ -47,8 +47,8 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Calculate the unconditional distribution over CCG parses.
     List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), beamSize, log);
     if (parses.size() == 0) {
-        // Search error: couldn't find any parses.
-        throw new ZeroProbabilityError();      
+      // Search error: couldn't find any parses.
+      throw new ZeroProbabilityError();      
     }
     log.stopTimer("update_gradient/input_marginal");
 

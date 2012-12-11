@@ -63,8 +63,7 @@ public class CcgParser implements Serializable {
   private static final int SUBJECT_WORD_IND_OFFSET = OBJECT_WORD_IND_OFFSET + WORD_IND_BITS;
 
   // Default names for the variables in the syntactic distribution
-  // built by
-  // buildSyntacticDistribution
+  // built by buildSyntacticDistribution
   public static final String LEFT_SYNTAX_VAR_NAME = "leftSyntax";
   public static final String RIGHT_SYNTAX_VAR_NAME = "rightSyntax";
   public static final String PARENT_SYNTAX_VAR_NAME = "parentSyntax";
@@ -527,11 +526,13 @@ public class CcgParser implements Serializable {
           for (HeadedSyntacticCategory rightType : rightTypes.keySet()) {
             Assignment assignment = leftSyntaxVar.outcomeArrayToAssignment(leftType).union(
                 rightSyntaxVar.outcomeArrayToAssignment(rightType));
-            Iterator<Outcome> results = syntaxDistribution.outcomePrefixIterator(assignment);
+            Iterator<Outcome> outcomeIter = syntaxDistribution.outcomePrefixIterator(assignment);
 
-            while (results.hasNext()) {
-              Combinator resultCombinator = (Combinator) results.next().getAssignment().getValue(
+            while (outcomeIter.hasNext()) {
+              Outcome outcome = outcomeIter.next();
+              Combinator resultCombinator = (Combinator) outcome.getAssignment().getValue(
                   parentSyntaxVar.getOnlyVariableNum());
+              double ruleProb = outcome.getProbability();
               HeadedSyntacticCategory resultSyntax = resultCombinator.getSyntax();
 
               for (Integer leftIndex : leftTypes.get(leftType)) {
@@ -604,7 +605,7 @@ public class CcgParser implements Serializable {
                       newAssignmentPredicateNums, newAssignmentIndexes, unfilledDepArray,
                       filledDepArray, spanStart, spanStart + i, leftIndex, spanStart + j, spanEnd,
                       rightIndex, resultCombinator);
-                  addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
+                  addChartEntryWithUnaryRules(result, chart, ruleProb * leftProb * rightProb, spanStart, spanEnd);
                 }
               }
             }

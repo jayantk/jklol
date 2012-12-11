@@ -13,6 +13,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -57,6 +58,16 @@ public class CcgParserTest extends TestCase {
   
   private static final String[] unaryRuleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}",
     "N{0} (N{1}/N{1}){0}"};
+  
+  // Syntactic CCG weights to set. All unlisted combinations get weight 1.0, all
+  // listed combinations get weight 1.0 + given weight
+  private static final String[][] syntacticCombinations = {
+    {"(N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0}", "(S{2}\\N{1}){2}"},
+    {"(NP{0}/(S{1}\\N{2}){1}){0}", "((S{0}\\N{1}){0}/N{2}){0}"},
+  };
+  private static final double[] syntacticCombinationWeights = {
+    2.0, -0.75
+  };
   
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
@@ -123,7 +134,7 @@ public class CcgParserTest extends TestCase {
     assertEquals("in", parse.getNodeDependencies().get(0).getHead());
     assertEquals(1, parse.getNodeDependencies().get(0).getArgIndex());
     assertEquals("people", parse.getNodeDependencies().get(0).getObject());
-    assertEquals(0.3 * 4 * 2 * 2, parse.getSubtreeProbability());
+    assertEquals(0.3 * 4 * 2 * 2 * 3, parse.getSubtreeProbability());
     assertEquals("people", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
 
     parse = parses.get(1);
@@ -140,7 +151,7 @@ public class CcgParserTest extends TestCase {
     assertTrue(heads.contains("that"));
     assertTrue(heads.contains("eat"));
 
-    assertEquals(0.3 * 4 * 2, parse.getSubtreeProbability());
+    assertEquals(0.3 * 4 * 2 * 3, parse.getSubtreeProbability());
   }
   
   public void testParseComposition() {
@@ -208,6 +219,9 @@ public class CcgParserTest extends TestCase {
       assertEquals(1, heads.size());
       assertEquals("about", Iterables.getOnlyElement(heads).getHead());
     }
+    
+    assertEquals(2.0, parses.get(0).getSubtreeProbability());
+    assertEquals(0.5, parses.get(1).getSubtreeProbability());
   }
   
   public void testParseComposition4() {
@@ -495,11 +509,23 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("special:compound", 1, "people"), 1.0);
     
-    DiscreteFactor syntaxDistribution = CcgParser.buildSyntacticDistribution(syntacticCategories,
-        binaryRules, allowComposition);
+    DiscreteFactor syntaxDistribution = CcgParser.buildSyntacticDistribution(syntacticCategories, binaryRules, allowComposition);
     VariableNumMap leftSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
+    VariableNumMap inputSyntaxVars = leftSyntaxVar.union(rightSyntaxVar); 
     VariableNumMap parentSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
+
+    Preconditions.checkState(syntacticCombinations.length == syntacticCombinationWeights.length);
+    for (int i = 0; i < syntacticCombinations.length; i++) {
+      HeadedSyntacticCategory leftSyntax = HeadedSyntacticCategory.parseFrom(syntacticCombinations[i][0]).getCanonicalForm();
+      HeadedSyntacticCategory rightSyntax = HeadedSyntacticCategory.parseFrom(syntacticCombinations[i][1]).getCanonicalForm();
+      DiscreteFactor combinationFactor = TableFactor.pointDistribution(inputSyntaxVars, 
+          inputSyntaxVars.outcomeArrayToAssignment(leftSyntax, rightSyntax)).product(syntacticCombinationWeights[i]);
+      
+      syntaxDistribution = syntaxDistribution.add(syntaxDistribution.product(combinationFactor));
+    }
+    
+    System.out.println(syntaxDistribution.getParameterDescription());
     
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),

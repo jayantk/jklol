@@ -112,6 +112,16 @@ public class TableFactorBuilder {
     }
     return builder;
   }
+  
+  public static TableFactorBuilder fromFactor(DiscreteFactor factor) {
+    TableFactorBuilder builder = new TableFactorBuilder(factor.getVars());
+    Iterator<Outcome> outcomeIter = factor.outcomeIterator();
+    while (outcomeIter.hasNext()) {
+      Outcome outcome = outcomeIter.next();
+      builder.setWeight(outcome.getAssignment(), outcome.getProbability());
+    }
+    return builder;
+  }
 
   /**
    * Gets the variables which this builder accepts assignments over.

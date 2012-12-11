@@ -88,7 +88,7 @@ public class CcgTrainingTest extends TestCase {
     assertEquals(2, parses.size());
     
     parses = parser.beamSearch(Arrays.asList("#", "2", "block"), 10);
-    assertEquals(3, parses.size());
+    assertEquals(4, parses.size());
   }
 
   public void testTrain() {

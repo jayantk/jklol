@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.ccg;
 import java.io.Serializable;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
 public class UnfilledDependency implements Serializable {
   private static final long serialVersionUID = 1L;

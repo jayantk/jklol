@@ -32,7 +32,6 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
   @Override
   public double accumulateGradient(SufficientStatistics gradient, CcgParser instantiatedParser,
       CcgExample example, LogFunction log) {
-
     // Gradient is the features of the correct CCG parse minus the
     // features of the best predicted parse.
     log.startTimer("update_gradient/input_parse");

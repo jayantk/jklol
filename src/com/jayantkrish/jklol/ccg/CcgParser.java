@@ -18,7 +18,6 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
-import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -89,10 +88,8 @@ public class CcgParser implements Serializable {
   private final VariableNumMap parentSyntaxVar;
   private final DiscreteFactor syntaxDistribution;
 
-  // Binary rules
-  private final List<CcgBinaryRule> binaryRules;
   // Unary type changing/raising rules.
-  private final Multimap<SyntacticCategory, CcgUnaryRule> applicableUnaryRuleMap;
+  private final Multimap<HeadedSyntacticCategory, CcgUnaryRule> applicableUnaryRuleMap;
   // All predicates used in CCG rules.
   private final Set<Long> predicatesInRules;
 
@@ -101,7 +98,7 @@ public class CcgParser implements Serializable {
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       DiscreteFactor dependencyDistribution, VariableNumMap leftSyntaxVar,
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
-      DiscreteFactor syntaxDistribution, List<CcgBinaryRule> binaryRules, List<CcgUnaryRule> unaryRules) {
+      DiscreteFactor syntaxDistribution, List<CcgUnaryRule> unaryRules) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -123,16 +120,16 @@ public class CcgParser implements Serializable {
         VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar, parentSyntaxVar)));
     this.syntaxDistribution = syntaxDistribution;
 
-    this.binaryRules = Preconditions.checkNotNull(binaryRules);
     this.applicableUnaryRuleMap = HashMultimap.create();
     for (CcgUnaryRule rule : unaryRules) {
-      applicableUnaryRuleMap.put(rule.getInputSyntacticCategory(), rule);
+      applicableUnaryRuleMap.put(rule.getInputSyntacticCategory().getCanonicalForm(), rule);
     }
 
     // Cache predicates in rules.
     predicatesInRules = Sets.newHashSet();
-    for (CcgBinaryRule rule : binaryRules) {
-      for (String predicate : rule.getSubjects()) {
+    List<Object> combinatorValues = parentSyntaxVar.getDiscreteVariables().get(0).getValues();
+    for (Object combinator : combinatorValues) {
+      for (String predicate : ((Combinator) combinator).getSubjects()) {
         predicatesInRules.add((long) dependencyHeadType.getValueIndex(predicate));
       }
     }
@@ -144,7 +141,8 @@ public class CcgParser implements Serializable {
   }
 
   public static DiscreteFactor buildSyntacticDistribution(
-      Iterable<HeadedSyntacticCategory> syntacticCategories, boolean allowComposition) {
+      Iterable<HeadedSyntacticCategory> syntacticCategories, Iterable<CcgBinaryRule> rules, 
+      boolean allowComposition) {
     // Compute the closure of syntactic categories, assuming the only
     // rule is function application.
     Set<HeadedSyntacticCategory> allCategories = Sets.newHashSet();
@@ -191,25 +189,48 @@ public class CcgParser implements Serializable {
         for (HeadedSyntacticCategory argumentCat : allCategories) {
           if (!functionCat.isAtomic() && !argumentCat.isAtomic() 
               && functionCat.getArgumentType().isUnifiableWith(argumentCat.getReturnType())) {
-            Direction direction = functionCat.getSyntax().getDirection();
-            Combinator combinator;
-            List<Object> outcome;
-            if (direction.equals(Direction.LEFT)) {
-              combinator = getCompositionCombinator(functionCat, argumentCat, true);
-              outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
-            } else if (direction.equals(Direction.RIGHT)) {
-              combinator = getCompositionCombinator(functionCat, argumentCat, false);
-              outcome = Arrays.<Object> asList(functionCat, argumentCat, combinator);
-            } else {
-              // Forward compatible error message, for handling
-              // Direction.BOTH if added.
-              throw new IllegalArgumentException("Unknown direction type: " + direction);
+            for (int i = 0; i < 2; i++) {
+              boolean argumentAsHead = i % 2 == 0;
+              Direction direction = functionCat.getSyntax().getDirection();
+              Combinator combinator;
+              List<Object> outcome;
+              if (direction.equals(Direction.LEFT)) {
+                combinator = getCompositionCombinator(functionCat, argumentCat, true, argumentAsHead);
+                outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
+              } else if (direction.equals(Direction.RIGHT)) {
+                combinator = getCompositionCombinator(functionCat, argumentCat, false, argumentAsHead);
+                outcome = Arrays.<Object> asList(functionCat, argumentCat, combinator);
+              } else {
+                // Forward compatible error message, for handling
+                // Direction.BOTH if added.
+                throw new IllegalArgumentException("Unknown direction type: " + direction);
+              }
+              if (!allCategories.contains(combinator.getSyntax())) {
+                // It is possible for function composition to return syntactic categories
+                // which are not members of the parser's set of valid syntactic categories.
+                // Such composition rules are discarded.
+                System.out.println("Discarding composition rule: " + outcome.get(0) + " " + outcome.get(1)
+                    + " -> " + combinator.getSyntax());
+              } else {
+                validOutcomes.add(outcome);
+                combinators.add(combinator);
+              }
             }
-            validOutcomes.add(outcome);
-            combinators.add(combinator);
           }
         }
       }
+    }
+
+    // Create entries for CCG binary rules.
+    for (CcgBinaryRule rule : rules) {
+      HeadedSyntacticCategory left = rule.getLeftSyntacticType().getCanonicalForm();
+      HeadedSyntacticCategory right = rule.getRightSyntacticType().getCanonicalForm();
+
+      Combinator combinator = getBinaryRuleCombinator(rule); 
+      List<Object> outcome = Arrays.<Object>asList(left.getCanonicalForm(),
+          right.getCanonicalForm(), combinator);
+      validOutcomes.add(outcome);
+      combinators.add(combinator);
     }
 
     // Build an indicator tensor for valid combinations of syntactic
@@ -244,15 +265,15 @@ public class CcgParser implements Serializable {
 
     if (argumentOnLeft) {
       return new Combinator(functionReturnType, argumentRelabeling, functionRelabeling,
-          resultRelabeling, resultRelabeling, unifiedVariables);
+          resultRelabeling, resultRelabeling, unifiedVariables, new String[0], new int[0], new int[0]);
     } else {
       return new Combinator(functionReturnType, functionRelabeling, argumentRelabeling,
-          resultRelabeling, resultRelabeling, unifiedVariables);
+          resultRelabeling, resultRelabeling, unifiedVariables, new String[0], new int[0], new int[0]);
     }
   }
   
   private static Combinator getCompositionCombinator(HeadedSyntacticCategory functionCat,
-      HeadedSyntacticCategory argumentCat, boolean argumentOnLeft) {
+      HeadedSyntacticCategory argumentCat, boolean argumentOnLeft, boolean argumentAsHead) {
     Preconditions.checkArgument(functionCat.getArgumentType().isUnifiableWith(argumentCat.getReturnType()));
     // Determine which syntactic category results from composing the
     // two input categories.
@@ -262,9 +283,10 @@ public class CcgParser implements Serializable {
     System.out.println("function: " + functionCat);
     System.out.println("argument: " + argumentCat);
     HeadedSyntacticCategory relabeledArgumentType = argumentCat.relabelVariables(argumentVars, argumentRelabeling);
+    int headVariable = argumentAsHead ? relabeledArgumentType.getRootVariable() : functionCat.getRootVariable();
     HeadedSyntacticCategory resultType = functionCat.getReturnType().addArgument(
         relabeledArgumentType.getArgumentType(), argumentCat.getDirection(), 
-        functionCat.getRootVariable());
+        headVariable);
 
     // Relabel the input assignments into the result type's variable
     // numbering.
@@ -282,11 +304,48 @@ public class CcgParser implements Serializable {
 
     if (argumentOnLeft) {
       return new Combinator(canonicalResultType, argumentCatRelabeling, functionCatRelabeling, 
-          resultUniqueVars, resultCatRelabeling, unifiedVariables);
+          resultUniqueVars, resultCatRelabeling, unifiedVariables, new String[0], new int[0], new int[0]);
     } else {
       return new Combinator(canonicalResultType, functionCatRelabeling, argumentCatRelabeling, 
-          resultUniqueVars, resultCatRelabeling, unifiedVariables);
+          resultUniqueVars, resultCatRelabeling, unifiedVariables, new String[0], new int[0], new int[0]);
     }
+  }
+  
+  private static Combinator getBinaryRuleCombinator(CcgBinaryRule rule) {
+    // Binary rules work by relabeling both the left and right categories 
+    // into a single, non-canonical set of variables.
+    HeadedSyntacticCategory left = rule.getLeftSyntacticType();
+    HeadedSyntacticCategory leftCanonical = left.getCanonicalForm();
+    HeadedSyntacticCategory right = rule.getRightSyntacticType();
+    HeadedSyntacticCategory rightCanonical = right.getCanonicalForm();
+    
+    int[] leftRelabelingArray = leftCanonical.unifyVariables(leftCanonical.getUniqueVariables(),
+        left, new int[0]);
+    int[] rightRelabelingArray = rightCanonical.unifyVariables(rightCanonical.getUniqueVariables(),
+        right, new int[0]);
+
+    Map<Integer, Integer> parentRelabeling = Maps.newHashMap();
+    HeadedSyntacticCategory parent = rule.getParentSyntacticType().getCanonicalForm(parentRelabeling);    
+    int[] parentOriginalVars = rule.getParentSyntacticType().getUniqueVariables();
+    int[] parentRelabelingArray = relabelingMapToArray(parentRelabeling, parentOriginalVars);
+    
+    int[] unifiedVariables = Ints.concat(leftRelabelingArray, rightRelabelingArray);
+    
+    System.out.println(rule);
+    System.out.println(Arrays.toString(leftRelabelingArray));
+    System.out.println(Arrays.toString(rightRelabelingArray));
+    System.out.println(Arrays.toString(parentRelabelingArray));
+
+    return new Combinator(parent, leftRelabelingArray, rightRelabelingArray, parentOriginalVars,
+        parentRelabelingArray, unifiedVariables, rule.getSubjects(), rule.getArgumentNumbers(), rule.getObjects());
+  }
+  
+  private static int[] relabelingMapToArray(Map<Integer, Integer> relabelingMap, int[] originalVars) {
+    int[] relabeling = new int[relabelingMap.size()];
+    for (int i = 0; i < relabeling.length; i++) {
+      relabeling[i] = relabelingMap.get(originalVars[i]);
+    }
+    return relabeling;
   }
 
   public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
@@ -519,6 +578,17 @@ public class CcgParser implements Serializable {
                   if (numDeps == -1) {
                     continue;
                   }
+                  // Fill any dependencies from the combinator itself.
+                  System.out.println("unfilled deps: " + Arrays.toString(longArrayToUnfilledDependencyArray(resultCombinator.getUnfilledDependencies(this, spanEnd))));
+                  numDeps = accumulateDependencies(resultCombinator.getUnfilledDependencies(this, spanEnd),
+                      resultCombinator.getUnifiedVariables(), newAssignmentVariableNums,
+                      newAssignmentPredicateNums, newAssignmentIndexes, depAccumulator,
+                      resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(), 
+                      resultSyntax.getUniqueVariables(), numDeps);
+                  if (numDeps == -1) {
+                    continue;
+                  }
+                  
                   long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
                   long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
 
@@ -532,7 +602,7 @@ public class CcgParser implements Serializable {
                   ChartEntry result = new ChartEntry(resultSyntax, null, newAssignmentVariableNums,
                       newAssignmentPredicateNums, newAssignmentIndexes, unfilledDepArray,
                       filledDepArray, spanStart, spanStart + i, leftIndex, spanStart + j, spanEnd,
-                      rightIndex);
+                      rightIndex, resultCombinator);
                   addChartEntryWithUnaryRules(result, chart, leftProb * rightProb, spanStart, spanEnd);
                 }
               }
@@ -616,7 +686,9 @@ public class CcgParser implements Serializable {
      * Arrays.toString(result.getDependencies()) + " " + totalProb);
      */
 
-    for (CcgUnaryRule unaryRule : applicableUnaryRuleMap.get(result.getSyntax())) {
+    System.out.println("headedSyntax: " + result.getHeadedSyntax());
+    for (CcgUnaryRule unaryRule : applicableUnaryRuleMap.get(result.getHeadedSyntax())) {
+      System.out.println("rule: " + unaryRule);
       ChartEntry unaryRuleResult = unaryRule.apply(result);
 
       if (unaryRuleResult != null) {
@@ -778,7 +850,7 @@ public class CcgParser implements Serializable {
     return dependencyTensor.dimKeyToKeyNum(new int[] { headNum, argNumNum, objectNum });
   }
 
-  private long unfilledDependencyToLong(UnfilledDependency dep) {
+  public long unfilledDependencyToLong(UnfilledDependency dep) {
     long argNum = dep.getArgumentIndex();
     long objectNum, objectWordInd, subjectNum, subjectWordInd;
 

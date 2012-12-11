@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgChart.IndexedPredicate;
 
 /**
  * A CCG category composed of both a syntactic and semantic type.

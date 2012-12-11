@@ -30,6 +30,7 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
+import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -546,9 +547,9 @@ public class CcgParser implements Serializable {
                       assignmentVariableAccumulator, assignmentPredicateAccumulator, assignmentIndexAccumulator, 0);
                   numAssignments = relabelAssignment(rightRoot, resultCombinator.getRightVariableRelabeling(),
                       assignmentVariableAccumulator, assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments);
-                  int[] newAssignmentVariableNums = Arrays.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
-                  int[] newAssignmentPredicateNums = Arrays.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
-                  int[] newAssignmentIndexes = Arrays.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
+                  int[] newAssignmentVariableNums = ArrayUtils.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
+                  int[] newAssignmentPredicateNums = ArrayUtils.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
+                  int[] newAssignmentIndexes = ArrayUtils.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
 
                   System.out.println("vars: " + Arrays.toString(newAssignmentVariableNums));
                   System.out.println("predicates: " + Arrays.toString(newAssignmentPredicateNums));
@@ -595,9 +596,9 @@ public class CcgParser implements Serializable {
                   numAssignments = filterAssignmentVariables(assignmentVariableAccumulator, assignmentPredicateAccumulator,
                       assignmentIndexAccumulator, resultCombinator.getResultOriginalVars(), 
                       resultCombinator.getResultVariableRelabeling(), numAssignments);
-                  newAssignmentVariableNums = Arrays.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
-                  newAssignmentPredicateNums = Arrays.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
-                  newAssignmentIndexes = Arrays.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
+                  newAssignmentVariableNums = ArrayUtils.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
+                  newAssignmentPredicateNums = ArrayUtils.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
+                  newAssignmentIndexes = ArrayUtils.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
 
                   ChartEntry result = new ChartEntry(resultSyntax, null, newAssignmentVariableNums,
                       newAssignmentPredicateNums, newAssignmentIndexes, unfilledDepArray,

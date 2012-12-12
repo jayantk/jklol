@@ -284,7 +284,7 @@ public class CcgParse {
   @Override
   public String toString() {
     if (left != null && right != null) {
-      return "<" + syntax.getSyntax() + ", " + left + ", " + right + ">";
+      return "<" + syntax.getSyntax() + " " + left + " " + right + ">";
     } else {
       return "<" + syntax.getSyntax() + ">";
     }

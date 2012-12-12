@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.CsvParser;
 
@@ -66,17 +65,13 @@ public class CcgExample {
           Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
     }
 
-    List<LexiconEntry> lexiconEntries = null;
+    // Parse out a CCG syntactic tree, if one is provided.
+    CcgSyntaxTree tree = null;
     if (parts.length >= 3) {
-      // Parse out observed lexicon entries, if they are given.
-      String[] lexiconLabels = parts[2].split("@@@");
-      lexiconEntries = Lists.newArrayList();
-      for (int i = 0; i < lexiconLabels.length; i++) {
-        lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLabels[i]));
-      }
+      tree = CcgSyntaxTree.parseFromString(parts[2]);
     }
 
-    return new CcgExample(words, dependencies, lexiconEntries);
+    return new CcgExample(words, dependencies, tree);
   }
 
   public List<String> getWords() {

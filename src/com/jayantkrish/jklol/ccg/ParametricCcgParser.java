@@ -449,12 +449,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       }
     }
 
-    if (example.hasLexiconEntries()) {
-      for (LexiconEntry lexiconEntry : example.getLexiconEntries()) {
-        if (!isValidLexiconEntry(lexiconEntry)) {
-          System.out.println(lexiconEntry);
+    if (example.hasSyntacticParse()) {
+      if (!isValidSyntacticParse(example.getSyntacticParse())) {
           return false;
-        }
       }
     }
     return true;
@@ -464,6 +461,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     return dependencyHeadVar.isValidOutcomeArray(dependency.getHead()) &&
         dependencyArgNumVar.isValidOutcomeArray(dependency.getArgIndex()) &&
         dependencyArgVar.isValidOutcomeArray(dependency.getObject());
+  }
+  
+  public boolean isValidSyntacticParse(CcgSyntaxTree syntacticParse) {
+    throw new UnsupportedOperationException("Not yet implemented.");
   }
 
   public boolean isValidLexiconEntry(LexiconEntry lexiconEntry) {

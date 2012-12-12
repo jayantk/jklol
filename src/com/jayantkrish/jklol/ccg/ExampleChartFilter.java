@@ -8,6 +8,13 @@ public class ExampleChartFilter implements ChartFilter {
 
   private final CcgExample example;
   
+  /*
+  private final Map<Integer, SyntacticCategory> binaryRuleResult;
+  private final Map<Integer, SyntacticCategory> unaryRuleResult;
+  */
+  
+  private static final int LEFT_SPAN_OFFSET = 100000;
+  
   public ExampleChartFilter(CcgExample example) {
     this.example = Preconditions.checkNotNull(example);
   }

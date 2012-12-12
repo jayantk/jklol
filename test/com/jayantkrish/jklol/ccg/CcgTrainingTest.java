@@ -46,17 +46,17 @@ public class CcgTrainingTest extends TestCase {
     "block , object###\", 1 1 pred:block 0\",\", 1 2 pred:object 2\"",
   };
   
-  private static final String[] trainingDataWithLexicon = {
-    "red block###pred:red 0 1 pred:block 1###\"red\",\"(N{1}/N{1}){0}\",\"0 pred:red\",\"pred:red 1 1\"@@@\"block\",\"N{0}\",\"0 pred:block\"",
-    "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1@@@green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1@@@block,N{0},0 pred:block",
+  private static final String[] trainingDataWithSyntax = {
+    "red block###pred:red 0 1 pred:block 1###<N <(N/N) red> <N block>>",
+    "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###<N <(N/N) red> <N <(N/N) green> <N block>>>",
     "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5###"
-    + "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1@@@block,N{0},0 pred:block@@@near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1,pred:near 2 2@@@the,(N{1}/N{1}){0},0 the@@@green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1@@@block,N{0},0 pred:block",
-    "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###\"#\",\"((N{1}/N{1}){2}/(N{1}/N{1}){2}){0}\",\"0 #\",\"# 1 2\"@@@2,(N{1}/N{1}){0},0 NUM,NUM 1 1@@@block,N{0},0 pred:block"
+    + "<N <N <(N/N) red> <N block>> <N\\N <(N\\N)/N near> <N <N/N the> <N <(N/N) red> <N block>>>>>",
+    "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) #> <(N/N) 2>> <N block>>"
   };
 
   private ParametricCcgParser family;
   private List<CcgExample> trainingExamples;
-  private List<CcgExample> trainingExamplesWithLexicon;
+  private List<CcgExample> trainingExamplesWithSyntax;
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
@@ -67,9 +67,9 @@ public class CcgTrainingTest extends TestCase {
       trainingExamples.add(CcgExample.parseFromString(trainingData[i]));
     }
     
-    trainingExamplesWithLexicon = Lists.newArrayList();
-    for (int i = 0; i < trainingDataWithLexicon.length; i++) {
-      trainingExamplesWithLexicon.add(CcgExample.parseFromString(trainingDataWithLexicon[i]));
+    trainingExamplesWithSyntax = Lists.newArrayList();
+    for (int i = 0; i < trainingDataWithSyntax.length; i++) {
+      trainingExamplesWithSyntax.add(CcgExample.parseFromString(trainingDataWithSyntax[i]));
     }
   }
 
@@ -97,11 +97,16 @@ public class CcgTrainingTest extends TestCase {
     assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
   }
 
-  public void testTrainWithLexicon() {
-    testZeroTrainingError(trainingExamplesWithLexicon);
+  public void testTrainWithSyntax() {
+    CcgParser parser = testZeroTrainingError(trainingExamplesWithSyntax);
+    
+    List<CcgParse> parses = parser.beamSearch(10, "the", "red", "block");
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
   }
   
-  public void testTrainPerceptronWithLexicon() {
+  public void testTrainPerceptronWithSyntax() {
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, 100);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1, 
         false, 0.0, new DefaultLogFunction());
@@ -112,11 +117,11 @@ public class CcgTrainingTest extends TestCase {
     initialParameters.perturb(0.01);
     
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, 
-        trainingExamplesWithLexicon);
+        trainingExamplesWithSyntax);
     CcgParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
 
-    assertZeroError(parser, trainingExamplesWithLexicon);
+    assertZeroError(parser, trainingExamplesWithSyntax);
   }
   
   private CcgParser testZeroTrainingError(List<CcgExample> examples) {

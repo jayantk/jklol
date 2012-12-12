@@ -98,7 +98,8 @@ public class SyntacticCategory implements Serializable {
     return minParenDepthIndex;
   }
 
-  private static SyntacticCategory parseSyntacticTypeStringHelper(String typeString) {
+  private static SyntacticCategory parseSyntacticTypeStringHelper(String initialTypeString) {
+    String typeString = initialTypeString.trim();
     if (categoryInternmentMap.containsKey(typeString)) {
       return categoryInternmentMap.get(typeString);
     }

@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -10,6 +12,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.NullOutputStream;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -439,6 +442,12 @@ public class CcgParserTest extends TestCase {
     }
   }
   
+  public void testSerialization() throws IOException {
+    ObjectOutputStream oos = new ObjectOutputStream(new NullOutputStream());
+    oos.writeObject(parserWithUnary);
+    oos.close();
+  }
+
   private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray, 
       String[] unaryRuleArray, double[] weights, boolean allowComposition) {
     Preconditions.checkArgument(lexicon.length == weights.length);

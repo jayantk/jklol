@@ -36,6 +36,7 @@ public class ParseCcg {
     // the command line. The format of testFile is the same as
     // expected by TrainCcg to train a CCG parser.
     OptionSpec<String> testFile = parser.accepts("test").withRequiredArg().ofType(String.class);
+    OptionSpec<Void> useCcgBankFormat = parser.accepts("useCcgBankFormat");
     OptionSet options = parser.parse(args);
 
     // Read the parser.
@@ -45,7 +46,7 @@ public class ParseCcg {
       // Parse all test examples.
       List<CcgExample> testExamples = Lists.newArrayList();
       for (String line : IoUtils.readLines(options.valueOf(testFile))) {
-        testExamples.add(CcgExample.parseFromString(line));
+        testExamples.add(CcgExample.parseFromString(line, options.has(useCcgBankFormat)));
       }
       CcgLoss loss = runTestSetEvaluation(ccgParser, testExamples, options.valueOf(beamSize));
       System.out.println(loss);

@@ -30,8 +30,10 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<String> trainingData;
   private OptionSpec<String> modelOutput;
   private OptionSpec<Integer> beamSize;
+  private OptionSpec<Void> useCcgBankFormat;
   private OptionSpec<Void> perceptron;
   private OptionSpec<Void> discardInvalid;
+  private OptionSpec<Void> ignoreSemantics;
 
   public TrainCcg() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE, 
@@ -45,8 +47,10 @@ public class TrainCcg extends AbstractCli {
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional options
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    useCcgBankFormat = parser.accepts("useCcgBankFormat");
     perceptron = parser.accepts("perceptron");
     discardInvalid = parser.accepts("discardInvalid");
+    ignoreSemantics = parser.accepts("ignoreSemantics");
   }
 
   @Override
@@ -54,13 +58,18 @@ public class TrainCcg extends AbstractCli {
     // Create the CCG parser from the provided options.
     ParametricCcgParser family = createCcgParser();
 
-    // Read in training data.
+    // Read in training data and confirm its validity.
+    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
     List<CcgExample> trainingExamples = Lists.newArrayList();
     int numDiscarded = 0;
     for (String line : IoUtils.readLines(options.valueOf(trainingData))) {
-      CcgExample example = CcgExample.parseFromString(line);
-      if (family.isValidExample(example)) {
-        trainingExamples.add(example);
+      CcgExample example = CcgExample.parseFromString(line, options.has(useCcgBankFormat));
+      if (parser.isPossibleExample(example)) {
+        if (!options.has(ignoreSemantics)) {          
+          trainingExamples.add(example);
+        } else {
+          trainingExamples.add(new CcgExample(example.getWords(), null, example.getSyntacticParse()));
+        }
       } else {
         Preconditions.checkState(options.has(discardInvalid), "Invalid example: %s", example);
         System.out.println("Discarding example: " + example);

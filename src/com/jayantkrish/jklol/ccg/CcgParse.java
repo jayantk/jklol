@@ -10,6 +10,7 @@ import com.google.common.collect.Sets;
 
 public class CcgParse {
 
+  // Syntactic category at the root of the parse tree.
   private final HeadedSyntacticCategory syntax;
 
   // The lexicon entry used to create this parse.
@@ -36,6 +37,14 @@ public class CcgParse {
   private final CcgParse left;
   private final CcgParse right;
   private final Combinator combinator;
+  
+  // If non-null, the unary rule applied to produce syntax, either
+  // from lexiconEntry (if this is a terminal) or from left and right
+  // (if this is a nonterminal).
+  private final CcgUnaryRule unaryRule;
+  
+  private final int spanStart;
+  private final int spanEnd;
 
   /**
    * 
@@ -50,7 +59,7 @@ public class CcgParse {
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry, List<String> spannedWords,
       Set<IndexedPredicate> heads, List<DependencyStructure> dependencies, double probability,
-      CcgParse left, CcgParse right, Combinator combinator) {
+      CcgParse left, CcgParse right, Combinator combinator, CcgUnaryRule unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
     this.spannedWords = spannedWords;
@@ -62,6 +71,10 @@ public class CcgParse {
     this.left = left;
     this.right = right;
     this.combinator = combinator;
+    
+    this.unaryRule = unaryRule;
+    this.spanStart = spanStart;
+    this.spanEnd = spanEnd;
 
     // Both left and right must agree on null/non-null.
     Preconditions.checkArgument((left == null) ^ (right == null) == false);
@@ -71,7 +84,7 @@ public class CcgParse {
       this.subtreeProbability = left.getSubtreeProbability() * right.getSubtreeProbability() * probability;
     } else {
       this.subtreeProbability = probability;
-    }
+    }    
   }
 
   /**
@@ -89,16 +102,16 @@ public class CcgParse {
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
       Set<IndexedPredicate> heads, List<DependencyStructure> deps, List<String> spannedWords,
-      double lexicalProbability) {
+      double lexicalProbability, CcgUnaryRule unaryRule, int spanStart, int spanEnd) {
     return new CcgParse(syntax, lexiconEntry, spannedWords, heads, deps, lexicalProbability,
-        null, null, null);
+        null, null, null, unaryRule, spanStart, spanEnd);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left,
-      CcgParse right, Combinator combinator) {
+      CcgParse right, Combinator combinator, CcgUnaryRule unaryRule, int spanStart, int spanEnd) {
     return new CcgParse(syntax, null, null, heads, dependencies, dependencyProbability, left, right,
-        combinator);
+        combinator, unaryRule, spanStart, spanEnd);
   }
 
   /**
@@ -122,6 +135,40 @@ public class CcgParse {
 
   public HeadedSyntacticCategory getHeadedSyntacticCategory() {
     return syntax;
+  }
+  
+  /**
+   * Gets the CCG unary rule applied to produce the syntactic category
+   * at the root of this parse. If {@code null}, no unary rule was applied.
+   * 
+   * @return
+   */
+  public CcgUnaryRule getUnaryRule() {
+    return unaryRule;
+  }
+  
+  /**
+   * Gets a representation of the syntactic structure of this parse,
+   * omitting all semantic information.
+   * 
+   * @return
+   */
+  public CcgSyntaxTree getSyntacticParse() {
+    SyntacticCategory originalSyntax = null;
+    if (unaryRule != null) {
+      originalSyntax = unaryRule.getInputSyntacticCategory().getSyntax();
+    } else {
+      originalSyntax = syntax.getSyntax();
+    }
+    
+    if (isTerminal()) {
+      return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax, spanStart, spanEnd, spannedWords);
+    } else {
+      CcgSyntaxTree leftTree = left.getSyntacticParse();
+      CcgSyntaxTree rightTree = right.getSyntacticParse();
+      
+      return CcgSyntaxTree.createNonterminal(syntax.getSyntax(), originalSyntax, leftTree, rightTree);
+    }
   }
 
   /**

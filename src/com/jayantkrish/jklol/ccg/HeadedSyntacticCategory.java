@@ -297,7 +297,6 @@ public class HeadedSyntacticCategory implements Serializable {
     // Check that mapping contains no duplicate elements.
     int[] sortedMapping = ArrayUtils.copyOf(mapping, mapping.length);
     Arrays.sort(sortedMapping);
-    System.out.println(Arrays.toString(sortedMapping));
     for (int i = 1; i < sortedMapping.length; i++) {
       if (sortedMapping[i] != -1 && sortedMapping[i - 1] == sortedMapping[i]) {
         return null;

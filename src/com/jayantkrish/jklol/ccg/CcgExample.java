@@ -21,13 +21,14 @@ public class CcgExample {
   private final Set<DependencyStructure> dependencies;
   // May be null, in which case the true syntactic structure is unobserved.
   private final CcgSyntaxTree syntacticParse;
-  
+
   /**
    * Create a new training example for a CCG parser.
    * 
    * @param words The input language to CCG parse.
    * @param dependencies The dependencies in the correct CCG parse of
-   * {@code words}.
+   * {@code words}. May be {@code null}, in which case the dependencies are 
+   * unobserved.
    * @param syntacticParse The syntactic structure of the correct CCG parse of
    * {@code words}. May be {@code null}, in which case the correct parse is 
    * treated as unobserved.
@@ -35,9 +36,15 @@ public class CcgExample {
   public CcgExample(List<String> words, Set<DependencyStructure> dependencies,
       CcgSyntaxTree syntacticParse) {
     this.words = Preconditions.checkNotNull(words);
-    this.dependencies = Preconditions.checkNotNull(dependencies);
-
+    this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
+    
+    if (syntacticParse != null) {
+      List<String> syntaxWords = syntacticParse.getAllSpannedWords();
+      Preconditions.checkArgument(syntaxWords.equals(words),
+          "CCG syntax tree and example must agree on words: \"%s\" vs \"%s\" %s", syntaxWords, 
+          words, syntacticParse);
+    }
   }
 
   /**
@@ -47,7 +54,7 @@ public class CcgExample {
    * @param exampleString
    * @return
    */
-  public static CcgExample parseFromString(String exampleString) {
+  public static CcgExample parseFromString(String exampleString, boolean syntaxInCcgBankFormat) {
     String[] parts = exampleString.split("###");
     List<String> words = Arrays.asList(parts[0].split("\\s+"));
 
@@ -68,7 +75,11 @@ public class CcgExample {
     // Parse out a CCG syntactic tree, if one is provided.
     CcgSyntaxTree tree = null;
     if (parts.length >= 3) {
-      tree = CcgSyntaxTree.parseFromString(parts[2]);
+      if (syntaxInCcgBankFormat) {
+        tree = CcgSyntaxTree.parseFromCcgBankString(parts[2]);
+      } else {
+        tree = CcgSyntaxTree.parseFromString(parts[2]);
+      }
     }
 
     return new CcgExample(words, dependencies, tree);
@@ -90,6 +101,10 @@ public class CcgExample {
   
   public CcgSyntaxTree getSyntacticParse() {
     return syntacticParse;
+  }
+  
+  public boolean hasDependencies() {
+    return dependencies != null;
   }
 
   public Set<DependencyStructure> getDependencies() {

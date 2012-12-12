@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
@@ -10,7 +11,9 @@ import com.google.common.base.Preconditions;
  * 
  * @author jayantk
  */
-public class Combinator {
+public class Combinator implements Serializable {
+  private static final long serialVersionUID = 1L;
+  
   private final HeadedSyntacticCategory syntax;
   private final int[] leftVariableRelabeling;
   private final int[] rightVariableRelabeling;

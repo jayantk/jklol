@@ -54,17 +54,26 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
     // Find parses with the correct syntactic structure and dependencies.
     log.startTimer("update_gradient/condition_parses_on_dependencies");
-    ChartFilter conditionalChartFilter = new ExampleChartFilter(example);
-    List<CcgParse> possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize,
+    // Condition parses on provided syntactic information, if any is provided.
+    List<CcgParse> possibleParses = null;
+    if (example.hasSyntacticParse()) {
+      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
+      possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize,
         conditionalChartFilter, log);
-    Set<DependencyStructure> observedDependencies = example.getDependencies();
-    List<CcgParse> correctParses = Lists.newArrayList();
-    for (CcgParse parse : possibleParses) {
-      if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
-        correctParses.add(parse);
+    } else {
+      possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize, log);
+    }
+    // Condition on true dependency structures, if provided.
+    List<CcgParse> correctParses = possibleParses;
+    if (example.hasDependencies()) {
+      Set<DependencyStructure> observedDependencies = example.getDependencies();
+      correctParses = Lists.newArrayList();
+      for (CcgParse parse : possibleParses) {
+        if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
+          correctParses.add(parse);
+        }
       }
     }
-    
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
       throw new ZeroProbabilityError();

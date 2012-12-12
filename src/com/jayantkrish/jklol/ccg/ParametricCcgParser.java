@@ -432,43 +432,4 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS), numFeatures));
     return sb.toString();
   }
-
-  /**
-   * Returns true if {@code example} can be used to train this model
-   * family.
-   * 
-   * @param example
-   * @return
-   */
-  public boolean isValidExample(CcgExample example) {
-    Set<DependencyStructure> dependencies = example.getDependencies();
-    for (DependencyStructure dependency : dependencies) {
-      if (!isValidDependency(dependency)) {
-        System.out.println(dependency);
-        return false;
-      }
-    }
-
-    if (example.hasSyntacticParse()) {
-      if (!isValidSyntacticParse(example.getSyntacticParse())) {
-          return false;
-      }
-    }
-    return true;
-  }
-
-  public boolean isValidDependency(DependencyStructure dependency) {
-    return dependencyHeadVar.isValidOutcomeArray(dependency.getHead()) &&
-        dependencyArgNumVar.isValidOutcomeArray(dependency.getArgIndex()) &&
-        dependencyArgVar.isValidOutcomeArray(dependency.getObject());
-  }
-  
-  public boolean isValidSyntacticParse(CcgSyntaxTree syntacticParse) {
-    throw new UnsupportedOperationException("Not yet implemented.");
-  }
-
-  public boolean isValidLexiconEntry(LexiconEntry lexiconEntry) {
-    return terminalVar.isValidOutcomeArray(lexiconEntry.getWords()) &&
-        ccgCategoryVar.isValidOutcomeArray(lexiconEntry.getCategory());
-  }
 }

@@ -137,7 +137,8 @@ public class CcgChart {
           parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
-          terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex]);
+          terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex],
+          entry.getUnaryRule(), spanStart, spanEnd);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
           entry.getLeftChartIndex(), parser);
@@ -151,7 +152,7 @@ public class CcgChart {
           parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
-          entry.getCombinator());
+          entry.getCombinator(), entry.getUnaryRule(), spanStart, spanEnd);
     }
   }
 

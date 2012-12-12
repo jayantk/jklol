@@ -12,7 +12,7 @@ import com.jayantkrish.jklol.util.CsvParser;
 /**
  * A training example for {@code CcgLoglikelihoodOracle}. Stores an input word
  * sequence and its expected set of dependencies. May optionally contain the
- * expected lexicon entries.
+ * expected syntactic structure.
  * 
  * @author jayant
  */
@@ -20,27 +20,25 @@ public class CcgExample {
 
   private final List<String> words;
   private final Set<DependencyStructure> dependencies;
-
-  // These may be null, in which case the lexical entries are
-  // not observed as part of the training example.
-  private final List<LexiconEntry> lexiconEntries;
-
+  // May be null, in which case the true syntactic structure is unobserved.
+  private final CcgSyntaxTree syntacticParse;
+  
   /**
    * Create a new training example for a CCG parser.
    * 
    * @param words The input language to CCG parse.
    * @param dependencies The dependencies in the correct CCG parse of
    * {@code words}.
-   * @param lexiconEntries The lexicon entries in the correct CCG parse of
-   * {@code words}. May be {@code null}, in which case the correct lexicon
-   * entries are treated as unobserved.
+   * @param syntacticParse The syntactic structure of the correct CCG parse of
+   * {@code words}. May be {@code null}, in which case the correct parse is 
+   * treated as unobserved.
    */
   public CcgExample(List<String> words, Set<DependencyStructure> dependencies,
-      List<LexiconEntry> lexiconEntries) {
+      CcgSyntaxTree syntacticParse) {
     this.words = Preconditions.checkNotNull(words);
     this.dependencies = Preconditions.checkNotNull(dependencies);
 
-    this.lexiconEntries = lexiconEntries;
+    this.syntacticParse = syntacticParse;
   }
 
   /**
@@ -86,23 +84,17 @@ public class CcgExample {
   }
 
   /**
-   * Returns {@code true} if the lexicon entries in the correct parse are
+   * Returns {@code true} if the syntactic structure of the correct parse is
    * observed.
    * 
    * @return
    */
-  public boolean hasLexiconEntries() {
-    return lexiconEntries != null;
+  public boolean hasSyntacticParse() {
+    return syntacticParse != null;
   }
-
-  /**
-   * Gets the lexicon entries used in the correct CCG parse of
-   * {@code getWords()}.
-   * 
-   * @return
-   */
-  public List<LexiconEntry> getLexiconEntries() {
-    return lexiconEntries;
+  
+  public CcgSyntaxTree getSyntacticParse() {
+    return syntacticParse;
   }
 
   public Set<DependencyStructure> getDependencies() {

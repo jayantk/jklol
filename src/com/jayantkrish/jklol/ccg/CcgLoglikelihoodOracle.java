@@ -6,6 +6,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -40,7 +41,6 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   @Override
   public double accumulateGradient(SufficientStatistics gradient, CcgParser instantiatedParser,
       CcgExample example, LogFunction log) {
-
     // Gradient is the feature expectations of all correct CCG parses, minus all
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
@@ -52,27 +52,24 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     }
     log.stopTimer("update_gradient/input_marginal");
 
-    List<CcgParse> correctParses = null;
-    if (!example.hasLexiconEntries()) {
-      log.startTimer("update_gradient/condition_parses_on_dependencies");
-      // If both the correct dependencies and lexicon entries are observed,
-      // we can compute the gradient without conditioning the predicted parses
-      // on the observed dependencies. If the lexicon entries are not observed,
-      // then we must condition.
-      correctParses = Lists.newArrayList();
-      Set<DependencyStructure> observedDependencies = example.getDependencies();
-      for (CcgParse parse : parses) {
-        if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
-          correctParses.add(parse);
-        }
+    // Find parses with the correct syntactic structure and dependencies.
+    log.startTimer("update_gradient/condition_parses_on_dependencies");
+    ChartFilter conditionalChartFilter = new ExampleChartFilter(example);
+    List<CcgParse> possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize,
+        conditionalChartFilter, log);
+    Set<DependencyStructure> observedDependencies = example.getDependencies();
+    List<CcgParse> correctParses = Lists.newArrayList();
+    for (CcgParse parse : possibleParses) {
+      if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
+        correctParses.add(parse);
       }
-
-      if (correctParses.size() == 0) {
-        // Search error: couldn't find any correct parses.
-        throw new ZeroProbabilityError();
-      }
-      log.stopTimer("update_gradient/condition_parses_on_dependencies");
     }
+    
+    if (correctParses.size() == 0) {
+      // Search error: couldn't find any correct parses.
+      throw new ZeroProbabilityError();
+    }
+    log.stopTimer("update_gradient/condition_parses_on_dependencies");
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the unconditional expected feature counts.
@@ -82,29 +79,16 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
           parse.getSubtreeProbability() / unconditionalPartitionFunction);
     }
 
-    // Add the truth-conditional expected feature counts.
-    double conditionalPartitionFunction = -1.0;
-    if (example.hasLexiconEntries()) {
-      // If both the correct dependencies and lexicon entries are observed, no
-      // inference is necessary. Simply increment the gradient using the correct
-      // answers.
-      // TODO: this partition function is wrong... Should be the probability
-      // of observing the given dependencies and lexicon entries.
-      conditionalPartitionFunction = 1.0;
-      family.incrementDependencySufficientStatistics(gradient, example.getDependencies(), 1.0);
-      family.incrementLexiconSufficientStatistics(gradient, example.getLexiconEntries(), 1.0);
-    } else {
-      // The correct lexicon entries were unobserved. In this case, we condition
-      // the parses produced by our beam search on the true dependencies (above) to
-      // compute (approximate) expected feature counts for the lexicon entries.
-      conditionalPartitionFunction = getPartitionFunction(correctParses);
-      for (CcgParse parse : correctParses) {
-        family.incrementSufficientStatistics(gradient, parse, parse.getSubtreeProbability() 
-            / conditionalPartitionFunction);
-      }
+    // Add conditional expected feature counts.
+    double conditionalPartitionFunction = getPartitionFunction(correctParses);
+    for (CcgParse parse : correctParses) {
+      family.incrementSufficientStatistics(gradient, parse, parse.getSubtreeProbability() 
+          / conditionalPartitionFunction);
     }
     log.stopTimer("update_gradient/increment_gradient");
 
+    // The difference in log partition functions is equivalent to the loglikelihood
+    // assigned to all correct parses.
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
   }
 

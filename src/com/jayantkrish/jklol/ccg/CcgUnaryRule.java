@@ -173,4 +173,9 @@ public class CcgUnaryRule implements Serializable {
           entry.getRightChartIndex(), entry.getCombinator());
     }
   }
+  
+  @Override
+  public String toString() {
+    return inputSyntax.toString() + " -> " + returnSyntax.toString();
+  }
 }

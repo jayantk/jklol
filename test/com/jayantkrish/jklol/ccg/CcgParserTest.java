@@ -80,8 +80,8 @@ public class CcgParserTest extends TestCase {
   private VariableNumMap semanticArgVar;
 
   public void setUp() {
-    parser = parseLexicon(lexicon, binaryRuleArray, new String[0], weights, false);
-    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[0], weights, true);
+    parser = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, false);
+    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, true);
     parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false);
   }
   
@@ -534,10 +534,14 @@ public class CcgParserTest extends TestCase {
       syntaxDistribution = syntaxDistribution.add(syntaxDistribution.product(combinationFactor));
     }
     
-    System.out.println(syntaxDistribution.getParameterDescription());
+    DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules, 
+        leftSyntaxVar.getDiscreteVariables().get(0));
+    VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
+    VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
     
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
-        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRules);
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
+        unaryRuleVar, unaryRuleDistribution);
   }
 }

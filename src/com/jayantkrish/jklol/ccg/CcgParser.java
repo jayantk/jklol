@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,9 @@ public class CcgParser implements Serializable {
   public static final String LEFT_SYNTAX_VAR_NAME = "leftSyntax";
   public static final String RIGHT_SYNTAX_VAR_NAME = "rightSyntax";
   public static final String PARENT_SYNTAX_VAR_NAME = "parentSyntax";
+  
+  public static final String UNARY_RULE_INPUT_VAR_NAME = "unaryRuleInputVar";
+  public static final String UNARY_RULE_VAR_NAME = "unaryRuleVar";
 
   // Member variables ////////////////////////////////////
 
@@ -92,12 +96,15 @@ public class CcgParser implements Serializable {
   private final DiscreteFactor syntaxDistribution;
   
   // Weights on the syntactic category of the root of the CCG parse.
+  /*
   private final VariableNumMap rootSyntaxVar;
   private final DiscreteFactor rootSyntaxDistribution;
+  */
 
   // Unary type changing/raising rules.
-  private final DiscreteVariable unaryRuleInputVar;
-  private final DiscreteVariable unaryRuleVar;
+  private final VariableNumMap unaryRuleInputVar;
+  private final VariableNumMap unaryRuleVar;
+  private final int unaryRuleVarNum;
   private final DiscreteFactor unaryRuleFactor;
 
   // All predicates used in CCG rules.
@@ -111,8 +118,8 @@ public class CcgParser implements Serializable {
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       DiscreteFactor dependencyDistribution, VariableNumMap leftSyntaxVar,
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
-      DiscreteFactor syntaxDistribution, VariableNumMap rootSyntaxVar, 
-      DiscreteFactor rootSyntaxDistribution, List<CcgUnaryRule> unaryRules) {
+      DiscreteFactor syntaxDistribution, VariableNumMap unaryRuleInputVar, 
+      VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -131,17 +138,17 @@ public class CcgParser implements Serializable {
     Preconditions.checkArgument(dependencyHeadType.equals(dependencyArgType));
     this.dependencyTensor = dependencyDistribution.getWeights();
 
-    this.leftSyntaxVar = leftSyntaxVar;
-    this.rightSyntaxVar = rightSyntaxVar;
-    this.parentSyntaxVar = parentSyntaxVar;
+    this.leftSyntaxVar = Preconditions.checkNotNull(leftSyntaxVar);
+    this.rightSyntaxVar = Preconditions.checkNotNull(rightSyntaxVar);
+    this.parentSyntaxVar = Preconditions.checkNotNull(parentSyntaxVar);
     Preconditions.checkArgument(syntaxDistribution.getVars().equals(
         VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar, parentSyntaxVar)));
     this.syntaxDistribution = syntaxDistribution;
-
-    this.applicableUnaryRuleMap = HashMultimap.create();
-    for (CcgUnaryRule rule : unaryRules) {
-      applicableUnaryRuleMap.put(rule.getInputSyntacticCategory().getCanonicalForm(), rule);
-    }
+    
+    this.unaryRuleInputVar = Preconditions.checkNotNull(unaryRuleInputVar);
+    this.unaryRuleVar = Preconditions.checkNotNull(unaryRuleVar);
+    this.unaryRuleVarNum = unaryRuleVar.getOnlyVariableNum();
+    this.unaryRuleFactor = Preconditions.checkNotNull(unaryRuleFactor);
 
     // Cache predicates in rules.
     predicatesInRules = Sets.newHashSet();
@@ -151,8 +158,8 @@ public class CcgParser implements Serializable {
         predicatesInRules.add((long) dependencyHeadType.getValueIndex(predicate));
       }
     }
-    for (CcgUnaryRule rule : unaryRules) {
-      for (String predicate : rule.getSubjects()) {
+    for (Object rule : unaryRuleVar.getDiscreteVariables().get(0).getValues()) {
+      for (String predicate : ((CcgUnaryRule) rule).getSubjects()) {
         predicatesInRules.add((long) dependencyHeadType.getValueIndex(predicate));
       }
     }
@@ -366,6 +373,26 @@ public class CcgParser implements Serializable {
     return relabeling;
   }
   
+  public static DiscreteFactor buildUnaryRuleDistribution(Collection<CcgUnaryRule> unaryRules, 
+      DiscreteVariable syntaxVariableType) {
+    VariableNumMap unaryRuleInputVar = VariableNumMap.singleton(1,  UNARY_RULE_INPUT_VAR_NAME,
+        syntaxVariableType);
+
+    List<CcgUnaryRule> validRules = Lists.newArrayList(unaryRules);
+    DiscreteVariable unaryRuleVarType = new DiscreteVariable("unaryRuleType", validRules);
+    VariableNumMap unaryRuleVar = VariableNumMap.singleton(2, UNARY_RULE_VAR_NAME, 
+        unaryRuleVarType);
+
+    VariableNumMap unaryRuleVars = unaryRuleInputVar.union(unaryRuleVar);
+    TableFactorBuilder unaryRuleBuilder = new TableFactorBuilder(unaryRuleVars,
+        SparseTensorBuilder.getFactory());
+    for (CcgUnaryRule rule : unaryRules) {
+      unaryRuleBuilder.setWeightList(
+          Arrays.asList(rule.getInputSyntacticCategory().getCanonicalForm(), rule), 1.0);
+    }
+    return unaryRuleBuilder.build();
+  }
+  
   public boolean isPossibleDependencyStructure(DependencyStructure dependency) {
     Assignment assignment = Assignment.unionAll(
         dependencyHeadVar.outcomeArrayToAssignment(dependency.getHead()),
@@ -427,7 +454,12 @@ public class CcgParser implements Serializable {
     if (!preUnarySyntax.equals(result)) {
       boolean valid = false;
       for (HeadedSyntacticCategory headedInput : syntacticCategoryMap.get(preUnarySyntax)) {
-        for (CcgUnaryRule rule : applicableUnaryRuleMap.get(headedInput)) {
+        Assignment syntaxPrefixAssignment = unaryRuleInputVar.outcomeArrayToAssignment(headedInput); 
+        Iterator<Outcome> unaryRuleIter = unaryRuleFactor.outcomePrefixIterator(syntaxPrefixAssignment);
+        while (unaryRuleIter.hasNext()) {
+          Outcome outcome = unaryRuleIter.next();
+          CcgUnaryRule rule = (CcgUnaryRule) outcome.getAssignment().getValue(unaryRuleVarNum);
+
           if (rule.getResultSyntacticCategory().getSyntax().equals(result)) {
             valid = true;
             break;
@@ -504,8 +536,6 @@ public class CcgParser implements Serializable {
     calculateInsideBeam(chart, log);
     log.stopTimer("ccg_parse/calculate_inside_beam");
 
-    reweightTreeRoots(chart);
-    
     return decodeParsesForRoot(chart);
   }
 
@@ -742,41 +772,6 @@ public class CcgParser implements Serializable {
   }
 
   /**
-   * Identifies all elements of {@code entries} that accept an
-   * argument on {@code direction}, and returns a map from the
-   * argument type to the indexes of chart entries that accept that
-   * type.
-   * 
-   * @param entries
-   * @param numEntries
-   * @param direction
-   * @return
-   */
-  private Multimap<SyntacticCategory, Integer> aggregateByArgumentType(
-      ChartEntry[] entries, int numEntries, Direction direction) {
-    Multimap<SyntacticCategory, Integer> map = HashMultimap.create();
-    for (int i = 0; i < numEntries; i++) {
-      SyntacticCategory syntax = entries[i].getSyntax();
-      if (!syntax.isAtomic() && syntax.acceptsArgumentOn(direction)) {
-        map.put(syntax.getArgument(), i);
-      }
-    }
-    return map;
-  }
-
-  private Multimap<SyntacticCategory, Integer> aggregateByReturnType(ChartEntry[] entries,
-      int numEntries) {
-    Multimap<SyntacticCategory, Integer> map = HashMultimap.create();
-    for (int i = 0; i < numEntries; i++) {
-      SyntacticCategory syntax = entries[i].getSyntax();
-      if (!syntax.isAtomic()) {
-        map.put(syntax.getReturn(), i);
-      }
-    }
-    return map;
-  }
-
-  /**
    * Calculates the probability of any new dependencies in
    * {@code result}, then inserts it into {@code chart}. Also applies
    * any unary rules which match to result.
@@ -805,11 +800,15 @@ public class CcgParser implements Serializable {
      * Arrays.toString(result.getDependencies()) + " " + totalProb);
      */
 
-    for (CcgUnaryRule unaryRule : applicableUnaryRuleMap.get(result.getHeadedSyntax())) {
+    Assignment syntaxPrefixAssignment = unaryRuleInputVar.outcomeArrayToAssignment(result.getHeadedSyntax()); 
+    Iterator<Outcome> unaryRuleIter = unaryRuleFactor.outcomePrefixIterator(syntaxPrefixAssignment);
+    while (unaryRuleIter.hasNext()) {
+      Outcome outcome = unaryRuleIter.next();
+      CcgUnaryRule unaryRule = (CcgUnaryRule) outcome.getAssignment().getValue(unaryRuleVarNum);
+      double ruleProb = outcome.getProbability();
       ChartEntry unaryRuleResult = unaryRule.apply(result);
-
       if (unaryRuleResult != null) {
-        chart.addChartEntryForSpan(unaryRuleResult, totalProb, spanStart, spanEnd);
+        chart.addChartEntryForSpan(unaryRuleResult, totalProb * ruleProb, spanStart, spanEnd);
         /*
          * System.out.println(spanStart + "." + spanEnd + " " +
          * unaryRuleResult.getHeadedSyntax() + " " +

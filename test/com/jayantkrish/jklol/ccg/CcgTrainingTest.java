@@ -49,13 +49,13 @@ public class CcgTrainingTest extends TestCase {
   };
 
   private static final String[] trainingDataWithSyntax = {
-      "red block###pred:red 0 1 pred:block 1###<N <(N/N) red> <N block>>",
-      "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###<N <(N/N) red> <N <(N/N) green> <N block>>>",
-      "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5###"
-          + "<N <N <(N/N) red> <N block>> <N\\N <(N\\N)/N near> <N <N/N the> <N <(N/N) green> <N block>>>>>",
-      "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) #> <(N/N) 2>> <N block>>",
-      "the block is green###pred:equals 2 1 pred:block 1,pred:equals 2 2 pred:green 3###<S <N <(N/N) the> <N block>> <(S\\N) <(S\\N)/N is> <N green>>>",
-      "foo######<ABCD foo>"
+    "the block is green###pred:equals 2 1 pred:block 1,pred:equals 2 2 pred:green 3###<S <N <(N/N) the> <N block>> <(S\\N) <(S\\N)/N is> <N green>>>",
+    "red block###pred:red 0 1 pred:block 1###<N <(N/N) red> <N block>>",
+    "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###<N <(N/N) red> <N <(N/N) green> <N block>>>",
+    "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5###"
+        + "<N <N <(N/N) red> <N block>> <N\\N <(N\\N)/N near> <N <N/N the> <N <(N/N) green> <N block>>>>>",
+    "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) #> <(N/N) 2>> <N block>>",
+    "foo######<ABCD foo>"
   };
   
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
@@ -159,7 +159,7 @@ public class CcgTrainingTest extends TestCase {
 
   private CcgParser trainPerceptronParser(List<CcgExample> examples) {
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, 100);
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(20, 1, 1,
         false, 0.0, new DefaultLogFunction());
 
     // Ensure that this test is deterministic.
@@ -192,13 +192,13 @@ public class CcgTrainingTest extends TestCase {
     assertEquals("ABCD", parses.get(0).getSyntacticCategory().getValue());
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
 
-    /*
     parses = parser.beamSearch(10, "block");
     assertEquals(2, parses.size());
-    System.out.println(parses);
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
     assertTrue(parses.get(0).getSyntacticCategory().isAtomic());
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
-    */
   }
 
   private void assertZeroDependencyError(CcgParser parser, Iterable<CcgExample> examples) {

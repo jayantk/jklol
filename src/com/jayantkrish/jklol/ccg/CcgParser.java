@@ -94,18 +94,16 @@ public class CcgParser implements Serializable {
   private final VariableNumMap rightSyntaxVar;
   private final VariableNumMap parentSyntaxVar;
   private final DiscreteFactor syntaxDistribution;
-  
-  // Weights on the syntactic category of the root of the CCG parse.
-  /*
-  private final VariableNumMap rootSyntaxVar;
-  private final DiscreteFactor rootSyntaxDistribution;
-  */
 
   // Unary type changing/raising rules.
   private final VariableNumMap unaryRuleInputVar;
   private final VariableNumMap unaryRuleVar;
   private final int unaryRuleVarNum;
   private final DiscreteFactor unaryRuleFactor;
+
+  // Weights on the syntactic category of the root of the CCG parse.
+  private final VariableNumMap rootSyntaxVar;
+  private final DiscreteFactor rootSyntaxDistribution;
 
   // All predicates used in CCG rules.
   private final Set<Long> predicatesInRules;
@@ -119,7 +117,8 @@ public class CcgParser implements Serializable {
       DiscreteFactor dependencyDistribution, VariableNumMap leftSyntaxVar,
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       DiscreteFactor syntaxDistribution, VariableNumMap unaryRuleInputVar, 
-      VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor) {
+      VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap rootSyntaxVar,
+      DiscreteFactor rootSyntaxDistribution) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -149,6 +148,9 @@ public class CcgParser implements Serializable {
     this.unaryRuleVar = Preconditions.checkNotNull(unaryRuleVar);
     this.unaryRuleVarNum = unaryRuleVar.getOnlyVariableNum();
     this.unaryRuleFactor = Preconditions.checkNotNull(unaryRuleFactor);
+    
+    this.rootSyntaxVar = Preconditions.checkNotNull(rootSyntaxVar);
+    this.rootSyntaxDistribution = Preconditions.checkNotNull(rootSyntaxDistribution);
 
     // Cache predicates in rules.
     predicatesInRules = Sets.newHashSet();
@@ -536,7 +538,33 @@ public class CcgParser implements Serializable {
     calculateInsideBeam(chart, log);
     log.stopTimer("ccg_parse/calculate_inside_beam");
 
+    reweightRootEntries(chart);
+    
     return decodeParsesForRoot(chart);
+  }
+  
+  /**
+   * Updates entries in the beam for the root node with a factor for
+   * the root syntactic category.
+   * 
+   * @param chart
+   */
+  private void reweightRootEntries(CcgChart chart) {
+    int spanStart = 0;
+    int spanEnd = chart.size() - 1;
+    int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd); 
+    ChartEntry[] entries = Arrays.copyOf(chart.getChartEntriesForSpan(spanStart, spanEnd),
+        numChartEntries);
+    double[] probs = Arrays.copyOf(chart.getChartEntryProbsForSpan(spanStart, spanEnd),
+        numChartEntries);
+    
+    chart.clearChartEntriesForSpan(spanStart, spanEnd);
+    
+    for (int i = 0 ; i < entries.length; i++) {
+      ChartEntry entry = entries[i];
+      double rootProb = rootSyntaxDistribution.getUnnormalizedProbability(entry.getHeadedSyntax());
+      chart.addChartEntryForSpan(entry, probs[i] * rootProb, spanStart, spanEnd);
+    }
   }
 
   /**

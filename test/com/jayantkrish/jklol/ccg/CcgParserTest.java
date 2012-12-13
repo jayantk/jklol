@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
 
@@ -91,12 +92,12 @@ public class CcgParserTest extends TestCase {
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
 
-    assertEquals(1.0, parse.getNodeProbability());
+    assertEquals(2.0, parse.getNodeProbability());
     assertEquals(2.0, parse.getRight().getNodeProbability());
     System.out.println(parse.getRight().getLeft());
     assertEquals(4.0, parse.getRight().getLeft().getNodeProbability());
     assertEquals(0.5, parse.getLeft().getNodeProbability());
-    assertEquals(0.5 * 0.3 * 2.0 * 4.0, parse.getSubtreeProbability());
+    assertEquals(0.5 * 0.3 * 2.0 * 4.0 * 2.0, parse.getSubtreeProbability());
     
     assertEquals(5, parse.getAllDependencies().size());
     
@@ -253,7 +254,7 @@ public class CcgParserTest extends TestCase {
     // Both parses should have the same probability and dependencies.
     CcgParse parse = parses.get(0);
     System.out.println(parse.getAllDependencies());
-    assertEquals(0.3 * 2 * 2, parse.getSubtreeProbability());
+    assertEquals(0.3 * 2 * 2 * 2, parse.getSubtreeProbability());
     assertEquals(2, parse.getNodeDependencies().size());
     assertEquals("eat", parse.getNodeDependencies().get(0).getHead());
     String object = parse.getNodeDependencies().get(0).getObject(); 
@@ -337,7 +338,7 @@ public class CcgParserTest extends TestCase {
     System.out.println(parses.get(0).getAllDependencies());
 
     CcgParse parse = parses.get(0);
-    assertEquals(0.3 * 2, parse.getSubtreeProbability());
+    assertEquals(0.3 * 2 * 2, parse.getSubtreeProbability());
     assertEquals(2, parse.getAllDependencies().size());
   }
 
@@ -349,7 +350,11 @@ public class CcgParserTest extends TestCase {
 
     Set<String> syntaxTypes = Sets.newHashSet();
     for (CcgParse parse : parses) {
-      assertEquals(0.3 * 2, parse.getSubtreeProbability());
+      double expectedProb = 0.3 * 2;
+      if (parse.getSyntacticCategory().getValue().equals("S")) {
+        expectedProb *= 2;
+      }
+      assertEquals(expectedProb, parse.getSubtreeProbability());
       assertEquals(2, parse.getAllDependencies().size());
       syntaxTypes.add(parse.getSyntacticCategory().getValue());
     }
@@ -539,9 +544,15 @@ public class CcgParserTest extends TestCase {
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
     
+    DiscreteFactor rootDistribution = TableFactor.unity(leftSyntaxVar);
+    Assignment assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S{0}"));
+    rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
+    
+    System.out.println(rootDistribution.getParameterDescription());
+    
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
-        unaryRuleVar, unaryRuleDistribution);
+        unaryRuleVar, unaryRuleDistribution, leftSyntaxVar, rootDistribution);
   }
 }

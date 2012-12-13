@@ -8,10 +8,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
- * A syntactic category for a CCG, such as N/N. In addition to
- * representing function/argument information, these categories
- * contain head rules for deciding, after a function is applied, what
- * the head word of the resulting category is.
+ * A syntactic category for a CCG, such as N/N. These categories
+ * represent syntactic function/argument information. Each category is
+ * either atomic (e.g., N, S) or functional (e.g., N/N, (S\N)/N).
+ * Functional categories have an argument type to which they can be
+ * applied, and a return type which results from application.
  * 
  * @author jayant
  */

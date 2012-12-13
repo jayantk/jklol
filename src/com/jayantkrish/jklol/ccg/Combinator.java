@@ -14,7 +14,9 @@ import com.google.common.base.Preconditions;
 public class Combinator implements Serializable {
   private static final long serialVersionUID = 1L;
   
-  private final HeadedSyntacticCategory syntax;
+  private final int syntax;
+  private final int[] syntaxUniqueVars;
+
   private final int[] leftVariableRelabeling;
   private final int[] rightVariableRelabeling;
   private final int[] resultOriginalVars;
@@ -27,11 +29,12 @@ public class Combinator implements Serializable {
   // The variables each dependency accepts.
   private final int[] objects;
 
-
-  public Combinator(HeadedSyntacticCategory syntax, int[] leftVariableRelabeling,
+  public Combinator(int syntax, int[] syntaxUniqueVars, int[] leftVariableRelabeling,
       int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,
       int[] unifiedVariables, String[] subjects, int[] argumentNumbers, int[] objects) {
     this.syntax = syntax;
+    this.syntaxUniqueVars = syntaxUniqueVars;
+
     this.leftVariableRelabeling = leftVariableRelabeling;
     this.rightVariableRelabeling = rightVariableRelabeling;
     this.resultOriginalVars = resultOriginalVars;
@@ -45,8 +48,12 @@ public class Combinator implements Serializable {
     this.objects = objects;
   }
 
-  public HeadedSyntacticCategory getSyntax() {
+  public int getSyntax() {
     return syntax;
+  }
+  
+  public int[] getSyntaxUniqueVars() {
+    return syntaxUniqueVars;
   }
 
   public int[] getLeftVariableRelabeling() {
@@ -99,7 +106,8 @@ public class Combinator implements Serializable {
     result = prime * result + Arrays.hashCode(resultVariableRelabeling);
     result = prime * result + Arrays.hashCode(rightVariableRelabeling);
     result = prime * result + Arrays.hashCode(subjects);
-    result = prime * result + ((syntax == null) ? 0 : syntax.hashCode());
+    result = prime * result + syntax;
+    result = prime * result + Arrays.hashCode(syntaxUniqueVars);
     result = prime * result + Arrays.hashCode(unifiedVariables);
     return result;
   }
@@ -127,10 +135,9 @@ public class Combinator implements Serializable {
       return false;
     if (!Arrays.equals(subjects, other.subjects))
       return false;
-    if (syntax == null) {
-      if (other.syntax != null)
-        return false;
-    } else if (!syntax.equals(other.syntax))
+    if (syntax != other.syntax)
+      return false;
+    if (!Arrays.equals(syntaxUniqueVars, other.syntaxUniqueVars))
       return false;
     if (!Arrays.equals(unifiedVariables, other.unifiedVariables))
       return false;

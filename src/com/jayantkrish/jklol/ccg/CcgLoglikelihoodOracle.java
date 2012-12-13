@@ -67,8 +67,10 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     List<CcgParse> correctParses = possibleParses;
     if (example.hasDependencies()) {
       Set<DependencyStructure> observedDependencies = example.getDependencies();
+      System.out.println("observed deps: " + observedDependencies);
       correctParses = Lists.newArrayList();
       for (CcgParse parse : possibleParses) {
+        System.out.println("parse deps: " + parse.getAllDependencies());
         if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
           correctParses.add(parse);
         }

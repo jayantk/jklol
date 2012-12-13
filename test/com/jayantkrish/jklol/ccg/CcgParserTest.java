@@ -42,7 +42,9 @@ public class CcgParserTest extends TestCase {
     "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
     "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1",
     "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1",
-    "*NOT_A_WORD*,(NP{0}/N{1}){0},0 *NOT_A_WORD*"};
+    "*NOT_A_WORD*,(NP{0}/N{1}){0},0 *NOT_A_WORD*",
+    "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 near,near 2 2",
+    "the,(N{0}/N{0}){1},1 the,the 1 0"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
@@ -53,7 +55,7 @@ public class CcgParserTest extends TestCase {
     1.0, 0.5,
     1.0, 1.0,
     0.5, 1.0,
-    1.0};
+    1.0, 1.0, 1.0};
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0}", 
     ";{2} (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  

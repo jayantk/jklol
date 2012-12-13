@@ -7,6 +7,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;
@@ -90,7 +91,7 @@ public class CcgChart {
   }
 
   public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses,
-      CcgParser parser) {
+      CcgParser parser, DiscreteVariable syntaxVarType) {
     // Perform a heap sort on the array indexes paired with the
     // probabilities.
     double[] probsCopy = ArrayUtils.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
@@ -105,7 +106,8 @@ public class CcgChart {
     int numChartEntries = getNumChartEntriesForSpan(spanStart, spanEnd);
     while (numChartEntries > 0) {
       if (numChartEntries <= numParses) {
-        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0], parser));
+        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0], 
+            parser, syntaxVarType));
       }
 
       HeapUtils.removeMin(chartEntryIndexes, probsCopy, numChartEntries);
@@ -126,30 +128,32 @@ public class CcgChart {
    * @return
    */
   private CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex,
-      CcgParser parser) {
+      CcgParser parser, DiscreteVariable syntaxVarType) {
     ChartEntry entry = chart[spanStart][spanEnd][beamIndex];
 
     // System.out.println(spanStart + "." + spanEnd + "." + beamIndex
     // + "   " + entry) ;
+    HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(
+        entry.getHeadedSyntax());
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(entry.getHeadedSyntax(), entry.getLexiconEntry(),
-          parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
+      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(),
+          parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
           terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex],
           entry.getUnaryRule(), spanStart, spanEnd);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
-          entry.getLeftChartIndex(), parser);
+          entry.getLeftChartIndex(), parser, syntaxVarType);
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
-          entry.getRightChartIndex(), parser);
+          entry.getRightChartIndex(), parser, syntaxVarType);
 
       double nodeProb = probabilities[spanStart][spanEnd][beamIndex] /
           (left.getSubtreeProbability() * right.getSubtreeProbability());
 
-      return CcgParse.forNonterminal(entry.getHeadedSyntax(),
-          parser.variableToIndexedPredicateArray(entry.getHeadedSyntax().getRootVariable(),
+      return CcgParse.forNonterminal(syntax,
+          parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
           entry.getCombinator(), entry.getUnaryRule(), spanStart, spanEnd);
@@ -208,8 +212,8 @@ public class CcgChart {
    * @param spanEnd
    */
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, 
-      int spanEnd) {
-    if ((entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd)) && 
+      int spanEnd, DiscreteVariable syntaxVarType) {
+    if ((entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType)) && 
         probability != Double.NEGATIVE_INFINITY) {
       offerEntry(entry, probability, spanStart, spanEnd);
     }
@@ -260,8 +264,10 @@ public class CcgChart {
    * @author jayant
    */
   public static class ChartEntry {
-    // The syntactic category of the root of the parse span.
-    private final HeadedSyntacticCategory syntax;
+    // The syntactic category of the root of the parse span,
+    // encoded as an integer.
+    private final int syntax;
+    private final int[] syntaxUniqueVars;
 
     // If non-null, this unary rule was applied at this entry to
     // produce syntax from the original category.
@@ -297,11 +303,12 @@ public class CcgChart {
     
     private final Combinator combinator;
 
-    public ChartEntry(HeadedSyntacticCategory syntax, CcgUnaryRule unaryRule, int[] assignmentVariableNums,
+    public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgUnaryRule unaryRule, int[] assignmentVariableNums,
         int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
         long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex, Combinator combinator) {
-      this.syntax = Preconditions.checkNotNull(syntax);
+      this.syntax = syntax;
+      this.syntaxUniqueVars = syntaxUniqueVars;
       this.unaryRule = unaryRule;
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
       this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
@@ -322,10 +329,11 @@ public class CcgChart {
       this.combinator = combinator;
     }
 
-    public ChartEntry(HeadedSyntacticCategory syntax, CcgCategory ccgCategory, CcgUnaryRule unaryRule,
+    public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, CcgUnaryRule unaryRule,
         int[] assignmentVariableNums, int[] assignmentPredicateNums, int[] assignmentIndexes,
         long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
-      this.syntax = Preconditions.checkNotNull(syntax);
+      this.syntax = syntax;
+      this.syntaxUniqueVars = syntaxUniqueVars;
       this.unaryRule = unaryRule;
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
       this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
@@ -347,12 +355,12 @@ public class CcgChart {
       this.combinator = null;
     }
 
-    public HeadedSyntacticCategory getHeadedSyntax() {
+    public int getHeadedSyntax() {
       return syntax;
     }
-
-    public SyntacticCategory getSyntax() {
-      return syntax.getSyntax();
+    
+    public int[] getHeadedSyntaxUniqueVars() {
+      return syntaxUniqueVars;
     }
 
     /**
@@ -377,7 +385,7 @@ public class CcgChart {
      * @return
      */
     public int[] getAssignmentVariableNumsRelabeled(int[] relabeling) {
-      int[] uniqueVars = syntax.getUniqueVariables();
+      int[] uniqueVars = syntaxUniqueVars;
       int[] relabeledAssignmentVariableNums = new int[assignmentVariableNums.length];
       Arrays.fill(relabeledAssignmentVariableNums, -1);
       for (int i = 0; i < assignmentVariableNums.length; i++) {
@@ -404,7 +412,7 @@ public class CcgChart {
     }
 
     public long[] getUnfilledDependenciesRelabeled(int[] relabeling) {
-      int[] uniqueVars = syntax.getUniqueVariables();
+      int[] uniqueVars = syntaxUniqueVars;
       long[] relabeledUnfilledDependencies = new long[unfilledDependencies.length];
       for (int i = 0; i < unfilledDependencies.length; i++) {
         long unfilledDependency = unfilledDependencies[i];
@@ -467,7 +475,7 @@ public class CcgChart {
 
     @Override
     public String toString() {
-      return "[" + Arrays.toString(assignmentPredicateNums) + ":" + syntax.getSyntax().toString()
+      return "[" + Arrays.toString(assignmentPredicateNums) + ":" + syntax
           + " " + Arrays.toString(deps) + " " + Arrays.toString(unfilledDependencies) + "]";
     }
   }
@@ -480,6 +488,7 @@ public class CcgChart {
    * @author jayantk
    */
   public static interface ChartFilter {
-    public boolean apply(ChartEntry entry, int spanStart, int spanEnd);
+    public boolean apply(ChartEntry entry, int spanStart, int spanEnd,
+        DiscreteVariable syntaxVarType);
   }
 }

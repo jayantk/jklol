@@ -9,6 +9,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class CcgUnaryRule implements Serializable {
@@ -146,8 +147,9 @@ public class CcgUnaryRule implements Serializable {
     return Collections.emptyList();
   }
 
-  public ChartEntry apply(ChartEntry entry) {
-    HeadedSyntacticCategory entrySyntax = entry.getHeadedSyntax();
+  public ChartEntry apply(ChartEntry entry, DiscreteVariable syntaxVarType) {
+    HeadedSyntacticCategory entrySyntax = (HeadedSyntacticCategory) syntaxVarType
+        .getValue(entry.getHeadedSyntax());
 
     // Relabel entry's dependencies and variables to match the
     // assignments in the return type.
@@ -162,13 +164,16 @@ public class CcgUnaryRule implements Serializable {
     int[] returnIndexes = entry.getAssignmentIndexes();
     long[] returnUnfilledDeps = entry.getUnfilledDependenciesRelabeled(patternToChart);
 
+    int returnSyntaxInd = syntaxVarType.getValueIndex(returnSyntax);
     if (entry.isTerminal()) {
-      return new ChartEntry(returnSyntax, entry.getLexiconEntry(), this, returnVars,
-          returnPredicateNums, returnIndexes, returnUnfilledDeps, entry.getDependencies(),
-          entry.getLeftSpanStart(), entry.getLeftSpanEnd());
+      return new ChartEntry(returnSyntaxInd, returnSyntax.getUniqueVariables(), 
+          entry.getLexiconEntry(), this, returnVars, returnPredicateNums, returnIndexes,
+          returnUnfilledDeps, entry.getDependencies(), entry.getLeftSpanStart(), 
+          entry.getLeftSpanEnd());
     } else {
-      return new ChartEntry(returnSyntax, this, returnVars, returnPredicateNums, returnIndexes,
-          returnUnfilledDeps, entry.getDependencies(), entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
+      return new ChartEntry(returnSyntaxInd, returnSyntax.getUniqueVariables(), this,
+          returnVars, returnPredicateNums, returnIndexes, returnUnfilledDeps, 
+          entry.getDependencies(), entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
           entry.getLeftChartIndex(), entry.getRightSpanStart(), entry.getRightSpanEnd(),
           entry.getRightChartIndex(), entry.getCombinator());
     }

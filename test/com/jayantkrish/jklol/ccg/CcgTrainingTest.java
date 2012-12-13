@@ -115,7 +115,7 @@ public class CcgTrainingTest extends TestCase {
 
   public void testTrainLoglikelihoodWithSyntax() {
     CcgParser parser = trainLoglikelihoodParser(trainingExamplesWithSyntax);
-    assertZeroDependencyError(parser, trainingExamples);
+    assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
@@ -186,14 +186,14 @@ public class CcgTrainingTest extends TestCase {
     assertTrue(bestParse.getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
     
     // Check that weights are being learned for unary rules.
-    parses = parser.beamSearch(10, "foo");
+    parses = parser.beamSearch(100, "foo");
     assertEquals(3, parses.size());
     System.out.println(parses);
     assertNull(parses.get(0).getUnaryRule());
     assertEquals("ABCD", parses.get(0).getSyntacticCategory().getValue());
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
 
-    parses = parser.beamSearch(10, "block");
+    parses = parser.beamSearch(100, "block");
     assertEquals(2, parses.size());
     for (CcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse);
@@ -206,15 +206,11 @@ public class CcgTrainingTest extends TestCase {
     // Test that zero training error is achieved.
     for (CcgExample example : examples) {
       List<CcgParse> parses = parser.beamSearch(example.getWords(), 100);
-      CcgParse bestParse = null;
-      for (CcgParse parse : parses) {
-        if (parse.getSyntacticCategory().isAtomic()) {
-          bestParse = parse;
-          break;
-        }
-      }
+      CcgParse bestParse = parses.get(0);
 
       System.out.println(example.getWords() + " " + bestParse);
+      System.out.println(example.getDependencies());
+      System.out.println(bestParse.getAllDependencies());
       assertEquals(example.getDependencies(), Sets.newHashSet(bestParse.getAllDependencies()));
     }
   }

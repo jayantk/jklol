@@ -5,6 +5,7 @@ import java.util.Map;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 
 /**
  * Filters chart entries to agree with a given syntactic tree. This
@@ -41,15 +42,18 @@ public class SyntacticChartFilter implements ChartFilter {
   }
 
   @Override
-  public boolean apply(ChartEntry entry, int spanStart, int spanEnd) {
+  public boolean apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
     int mapIndex = (spanStart * SPAN_START_OFFSET) + spanEnd;
 
     if (!binaryRuleResult.containsKey(mapIndex)) {
       return false;
     }
 
+    SyntacticCategory syntax = ((HeadedSyntacticCategory) syntaxVarType.getValue(
+        entry.getHeadedSyntax())).getSyntax();
+    
     SyntacticCategory expectedRootSyntax = unaryRuleResult.get(mapIndex);
-    if (!entry.getSyntax().equals(expectedRootSyntax)) {
+    if (!syntax.equals(expectedRootSyntax)) {
       return false;
     }
 

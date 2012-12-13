@@ -416,6 +416,15 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           unaryRuleAssignment, count);
     }
   }
+  
+  public void incrementRootSyntaxSufficientStatistics(SufficientStatistics parameters,
+      HeadedSyntacticCategory category, double count) {
+    SufficientStatistics rootParameters = parameters.coerceToList()
+        .getStatisticByName(ROOT_SYNTAX_PARAMETERS);
+    
+    Assignment assignment = rootSyntaxVar.outcomeArrayToAssignment(category);
+    rootSyntaxFamily.incrementSufficientStatisticsFromAssignment(rootParameters, assignment, count);
+  }
 
   /**
    * Increments {@code gradient} by
@@ -452,6 +461,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     incrementDependencySufficientStatistics(gradient, parse.getAllDependencies(), count);
     // Update syntactic combination parameters. (Both unary and binary rules)
     incrementSyntaxSufficientStatistics(gradient, parse, count);
+    incrementRootSyntaxSufficientStatistics(gradient, parse.getHeadedSyntacticCategory(), count);
     // Update terminal distribution parameters.
     incrementLexiconSufficientStatistics(gradient, parse.getSpannedLexiconEntries(), count);
   }

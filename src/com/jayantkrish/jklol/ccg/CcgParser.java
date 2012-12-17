@@ -582,9 +582,9 @@ public class CcgParser implements Serializable {
     int spanStart = 0;
     int spanEnd = chart.size() - 1;
     int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd); 
-    ChartEntry[] entries = Arrays.copyOf(chart.getChartEntriesForSpan(spanStart, spanEnd),
+    ChartEntry[] entries = copyChartEntryArray(chart.getChartEntriesForSpan(spanStart, spanEnd),
         numChartEntries);
-    double[] probs = Arrays.copyOf(chart.getChartEntryProbsForSpan(spanStart, spanEnd),
+    double[] probs = ArrayUtils.copyOf(chart.getChartEntryProbsForSpan(spanStart, spanEnd),
         numChartEntries);
     
     chart.clearChartEntriesForSpan(spanStart, spanEnd);
@@ -595,6 +595,14 @@ public class CcgParser implements Serializable {
       double rootProb = rootSyntaxTensor.get(entry.getHeadedSyntax());
       chart.addChartEntryForSpan(entry, probs[i] * rootProb, spanStart, spanEnd, syntaxVarType);
     }
+  }
+  
+  private ChartEntry[] copyChartEntryArray(ChartEntry[] entries, int numEntries) {
+    ChartEntry[] returnValue = new ChartEntry[numEntries];
+    for (int i = 0; i < numEntries; i++) {
+      returnValue[i] = entries[i];
+    }
+    return returnValue;
   }
 
   /**
@@ -768,9 +776,6 @@ public class CcgParser implements Serializable {
                       assignmentVariableAccumulator, assignmentPredicateAccumulator, assignmentIndexAccumulator, 0);
                   numAssignments = relabelAssignment(rightRoot, resultCombinator.getRightVariableRelabeling(),
                       assignmentVariableAccumulator, assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments);
-                  int[] newAssignmentVariableNums = ArrayUtils.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
-                  int[] newAssignmentPredicateNums = ArrayUtils.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
-                  int[] newAssignmentIndexes = ArrayUtils.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
 
                   // Relabel and fill dependencies from the left and
                   // right chart entries.
@@ -781,16 +786,16 @@ public class CcgParser implements Serializable {
 
                   int numDeps = 0;
                   numDeps = accumulateDependencies(leftUnfilledDependenciesRelabeled,
-                      resultCombinator.getUnifiedVariables(), newAssignmentVariableNums,
-                      newAssignmentPredicateNums, newAssignmentIndexes, depAccumulator,
+                      resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
+                      assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
                       resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(),
                       resultSyntaxUniqueVars, numDeps);
                   if (numDeps == -1) {
                     continue;
                   }
                   numDeps = accumulateDependencies(rightUnfilledDependenciesRelabeled,
-                      resultCombinator.getUnifiedVariables(), newAssignmentVariableNums,
-                      newAssignmentPredicateNums, newAssignmentIndexes, depAccumulator,
+                      resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
+                      assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
                       resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(), 
                       resultSyntaxUniqueVars, numDeps);
                   if (numDeps == -1) {
@@ -798,8 +803,8 @@ public class CcgParser implements Serializable {
                   }
                   // Fill any dependencies from the combinator itself.
                   numDeps = accumulateDependencies(resultCombinator.getUnfilledDependencies(this, spanEnd),
-                      resultCombinator.getUnifiedVariables(), newAssignmentVariableNums,
-                      newAssignmentPredicateNums, newAssignmentIndexes, depAccumulator,
+                      resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
+                      assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
                       resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(), 
                       resultSyntaxUniqueVars, numDeps);
                   if (numDeps == -1) {
@@ -812,9 +817,9 @@ public class CcgParser implements Serializable {
                   numAssignments = filterAssignmentVariables(assignmentVariableAccumulator, assignmentPredicateAccumulator,
                       assignmentIndexAccumulator, resultCombinator.getResultOriginalVars(), 
                       resultCombinator.getResultVariableRelabeling(), numAssignments);
-                  newAssignmentVariableNums = ArrayUtils.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
-                  newAssignmentPredicateNums = ArrayUtils.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
-                  newAssignmentIndexes = ArrayUtils.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
+                  int[] newAssignmentVariableNums = ArrayUtils.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
+                  int[] newAssignmentPredicateNums = ArrayUtils.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
+                  int[] newAssignmentIndexes = ArrayUtils.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
 
                   ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars, 
                       null, newAssignmentVariableNums, newAssignmentPredicateNums, newAssignmentIndexes,
@@ -947,7 +952,7 @@ public class CcgParser implements Serializable {
    */
   private int accumulateDependencies(long[] unfilledDependencies, int[] variablesToUnify,
       int[] assignmentVariableNums, int[] assignmentPredicateNums, int[] assignmentIndexes,
-      long[] depAccumulator, int[] returnOriginalVars, int[] returnVarsRelabeling, 
+      int assignmentLength, long[] depAccumulator, int[] returnOriginalVars, int[] returnVarsRelabeling, 
       int[] returnVariableNums, int numDeps) {
 
     /*
@@ -964,7 +969,8 @@ public class CcgParser implements Serializable {
 
       boolean depWasFilled = false;
       if (Ints.contains(variablesToUnify, objectArgNum)) {
-        for (int i = 0; i < assignmentVariableNums.length; i++) {
+        System.out.println(Arrays.toString(assignmentVariableNums));
+        for (int i = 0; i < assignmentLength; i++) {
           if (assignmentVariableNums[i] == objectArgNum) {
             // Create a new filled dependency by substituting in the
             // current object.

@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.gwt;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.timepedia.exporter.client.Export;
@@ -74,9 +73,11 @@ public class ExportTest implements Exportable {
     "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
     "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1",
     "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1"};
+    
+    String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
 
     ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
-        Arrays.asList(lexicon), Collections.<String>emptyList(), null, true);
+        Arrays.asList(lexicon), Arrays.asList(rules), null, true);
     CcgParser parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
     
     List<CcgParse> parses = parser.beamSearch(10, input.split(" "));

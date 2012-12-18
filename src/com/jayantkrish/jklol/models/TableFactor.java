@@ -7,6 +7,7 @@ import java.util.List;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -18,7 +19,7 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.CsvParser;
+import com.jayantkrish.jklol.util.IoUtils;
 
 /**
  * A discrete probability distibution whose unnormalized probabilities
@@ -202,6 +203,20 @@ public class TableFactor extends DiscreteFactor {
     }
     System.out.println(varList);
     return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments);
+  }
+  
+  public static TableFactor fromDelimitedFile(Iterable<String> lines, String delimiter) {
+    String firstLine = Iterables.getFirst(lines, null);
+    int numVars = firstLine.split(",").length - 1;
+    List<VariableNumMap> vars = Lists.newArrayList();
+    for (int i = 0; i < numVars; i++) {
+      DiscreteVariable curVarType = new DiscreteVariable("varType-" + i, 
+          IoUtils.readColumnFromDelimitedLines(lines, i, delimiter));
+      VariableNumMap curVar = VariableNumMap.singleton(i, "varType-" + i, curVarType);
+      vars.add(curVar);
+    }
+
+    return fromDelimitedFile(vars, lines, delimiter, false);
   }
 
   // //////////////////////////////////////////////////////////////////////////////

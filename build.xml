@@ -5,6 +5,7 @@
   <property name="tst-dir" location="test" />
   <property name="perf-dir" location="performance" />
   <property name="doc-dir" location="javadoc" />
+  <property name="java-build-dir" location="build" />
   <!-- locations for natively compiled files -->
   <property name="object-dir" location="obj" />
   <property name="bin-dir" location="bin" />
@@ -38,7 +39,7 @@
   <!-- delete all output from compilation -->
 
   <target name="clean">
-    <delete dir="build" />
+    <delete dir="${java-build-dir}" />
     <delete dir="${object-dir}" />
     <delete dir="${bin-dir}" />
     <delete file="jklol.jar" />
@@ -49,19 +50,19 @@
   <!-- compilation targets -->
   
   <target name="compile">
-    <mkdir dir="build" />
-    <javac sourcepath="" srcdir="${src-dir}" destdir="build" debug="on"
+    <mkdir dir="${java-build-dir}" />
+    <javac sourcepath="" srcdir="${src-dir}" destdir="${java-build-dir}" debug="on"
            excludes="com/jayantkrish/jklol/gwt/**">
       <classpath refid="classpath.base"/>
     </javac>
   </target>
 
   <target name="compile-test" depends="compile">
-    <mkdir dir="build" />
-    <javac srcdir="${tst-dir}" destdir="build" debug="on">
+    <mkdir dir="${java-build-dir}" />
+    <javac srcdir="${tst-dir}" destdir="${java-build-dir}" debug="on">
       <classpath refid="classpath.test"/>
     </javac>
-    <javac srcdir="${perf-dir}" destdir="build" debug="on">
+    <javac srcdir="${perf-dir}" destdir="${java-build-dir}" debug="on">
       <classpath refid="classpath.test"/>
     </javac>
   </target>
@@ -119,7 +120,7 @@
   <!-- create a jar file -->
 
   <target name="jar" depends="compile">
-    <jar destfile="jklol.jar" basedir="build" />
+    <jar destfile="jklol.jar" basedir="${java-build-dir}" />
   </target>
 
   <!-- targets for compiling jklol to a native application using gcj -->

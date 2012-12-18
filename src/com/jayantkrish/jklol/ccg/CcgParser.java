@@ -196,6 +196,9 @@ public class CcgParser implements Serializable {
       }
     }
     DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategory", allCategories);
+    for (int i = 0; i < syntaxType.numValues(); i++) {
+      System.out.println(i + " " + syntaxType.getValue(i));
+    }
     
     Set<List<Object>> validOutcomes = Sets.newHashSet();
     Set<Combinator> combinators = Sets.newHashSet();
@@ -285,7 +288,9 @@ public class CcgParser implements Serializable {
       syntaxDistributionBuilder.setWeight(syntaxVars.outcomeToAssignment(outcome), 1.0);
     }
 
-    return syntaxDistributionBuilder.build();
+    DiscreteFactor syntaxDistribution = syntaxDistributionBuilder.build();
+    System.out.println(syntaxDistribution.getParameterDescription());
+    return syntaxDistribution;
   }
 
   private static Combinator getApplicationCombinator(HeadedSyntacticCategory functionCat,
@@ -673,6 +678,10 @@ public class CcgParser implements Serializable {
         }
       }
     }
+    
+    for (int i = 0; i < terminals.size(); i++) {
+      // System.out.println(i + "." + i + " : " + chart.getNumChartEntriesForSpan(i, i));
+    }
 
     // Sparsify the dependency tensor for faster parsing.
     long[] keyNums = Longs.toArray(possiblePredicates);
@@ -748,17 +757,20 @@ public class CcgParser implements Serializable {
             int[] keyPrefix = new int[] { leftType, rightType };
             long keyNumPrefix = syntaxDistributionTensor.dimKeyPrefixToKeyNum(keyPrefix);
             int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
+            int tensorSize = syntaxDistributionTensor.size();
             int[] dimSizes = syntaxDistributionTensor.getDimensionSizes();
             int keyDimSize = dimSizes[dimSizes.length - 1];
-            if (index == -1 || index >= syntaxDistributionTensor.size()) {
+            if (index == -1 || index >= tensorSize) {
               continue;
             }
             long maxKeyNum = keyNumPrefix + keyDimSize;
             long curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
-            while (curKeyNum < maxKeyNum && index < keyDimSize) {
+            // System.out.println("  " + curKeyNum + " " + maxKeyNum + " " + index);
+            while (curKeyNum < maxKeyNum && index < tensorSize) {
               Combinator resultCombinator = (Combinator) combinatorVarType.getValue(
                   (int) (curKeyNum - keyNumPrefix));
               double ruleProb = syntaxDistributionTensor.getByIndex(index);
+              // System.out.println("  " + resultCombinator);
               
               int resultSyntax = resultCombinator.getSyntax();
               int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
@@ -831,7 +843,7 @@ public class CcgParser implements Serializable {
               
               // Advance the iterator over rules.
               index++;
-              if (index < keyDimSize) {
+              if (index < tensorSize) {
                 curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
               }
             }
@@ -969,7 +981,6 @@ public class CcgParser implements Serializable {
 
       boolean depWasFilled = false;
       if (Ints.contains(variablesToUnify, objectArgNum)) {
-        System.out.println(Arrays.toString(assignmentVariableNums));
         for (int i = 0; i < assignmentLength; i++) {
           if (assignmentVariableNums[i] == objectArgNum) {
             // Create a new filled dependency by substituting in the

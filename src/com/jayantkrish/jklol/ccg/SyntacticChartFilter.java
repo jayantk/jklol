@@ -44,15 +44,16 @@ public class SyntacticChartFilter implements ChartFilter {
   @Override
   public boolean apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
     int mapIndex = (spanStart * SPAN_START_OFFSET) + spanEnd;
-
     if (!binaryRuleResult.containsKey(mapIndex)) {
       return false;
     }
 
-    SyntacticCategory syntax = ((HeadedSyntacticCategory) syntaxVarType.getValue(
-        entry.getHeadedSyntax())).getSyntax();
-    
+    HeadedSyntacticCategory headedSyntax = (HeadedSyntacticCategory) syntaxVarType.getValue(
+        entry.getHeadedSyntax()); 
+    SyntacticCategory syntax = headedSyntax.getSyntax();    
     SyntacticCategory expectedRootSyntax = unaryRuleResult.get(mapIndex);
+    System.out.println(" " + spanStart + "." + spanEnd + " : " + headedSyntax + " " + expectedRootSyntax);
+
     if (!syntax.equals(expectedRootSyntax)) {
       return false;
     }

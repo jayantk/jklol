@@ -214,7 +214,7 @@ public class CcgChart {
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, 
       int spanEnd, DiscreteVariable syntaxVarType) {
     if ((entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType)) && 
-        probability != Double.NEGATIVE_INFINITY) {
+        probability != 0.0) {
       offerEntry(entry, probability, spanStart, spanEnd);
     }
   }

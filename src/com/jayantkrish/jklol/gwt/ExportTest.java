@@ -56,23 +56,14 @@ public class ExportTest implements Exportable {
     return sb.toString();
   }
   
-  public static String testParseCcg(String input) {
-    String[] lexicon = {"I,N{0},0 I", "people,N{0},0 people", "berries,N{0},0 berries", "houses,N{0},0 houses",
-    "eat,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2", "that,((N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0},0 that,that 1 1,that 2 2", 
-    "quickly,(((S{1}\\N{2}){1}/N{3}){1}/((S{1}\\N{2}){1}/N{3}){1}){0},0 quickly,quickly 1 1", 
-    "in,((N{1}\\N{1}){0}/N{2}){0},0 in,in 1 1,in 2 2",
-    "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 amazingly,amazingly 1 2",
-    "tasty,(N{1}/N{1}){0},0 tasty,tasty 1 1",
-    "in,(((S{1}\\N{2}){1}\\(S{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 1,in 2 3",
-    "and,((N{1}\\N{1}){0}/N{1}){0},0 and", 
-    "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},0 almost,almost 1 2",
-    "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
-    "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
-    ";,;{0},0 ;", "or,conj{0},0 or",
-    "about,(N{0}/(S{1}\\N{2}){1}){0},0 about,about 1 1", 
-    "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
-    "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1",
-    "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1"};
+  public static String testParseCcg(String input) {    
+    String[] lexicon = {"block,N{0},0 pred:block", "object,N{0},0 pred:block",
+      "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1", "green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1",
+      "green,N{0},0 pred:green", "the,(N{1}/N{1}){0},0 the", "a,(N{1}/N{1}){0},0 a",
+      "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1,pred:near 2 2",
+      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 pred:near,pred:near 2 2",
+      "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 1",
+      "is,((S{0}\\N{1}){0}/N{2}){0},0 pred:equals,pred:equals 1 1,pred:equals 2 2"};
     
     String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
 

@@ -679,9 +679,11 @@ public class CcgParser implements Serializable {
       }
     }
     
+    /*
     for (int i = 0; i < terminals.size(); i++) {
-      // System.out.println(i + "." + i + " : " + chart.getNumChartEntriesForSpan(i, i));
+      System.out.println(i + "." + i + " : " + chart.getNumChartEntriesForSpan(i, i));
     }
+    */
 
     // Sparsify the dependency tensor for faster parsing.
     long[] keyNums = Longs.toArray(possiblePredicates);

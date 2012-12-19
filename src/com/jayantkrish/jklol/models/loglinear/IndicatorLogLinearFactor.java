@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * {@code DiscreteLogLinearFactor}, since it only allows indicator features.
  * However, it uses a more efficient encoding of features that enables it to
  * work with larger feature tensors.
- * 
+ * <p>
  * {@code IndicatorLogLinearFactor} can represent sparse factors (with 0
  * probability outcomes) through a set of initial weights for the returned
  * factor. Each initial weight should be set to either 0 or 1, and outcomes with

@@ -11,9 +11,9 @@ import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
 public class GradientReducer<M, E> extends SimpleReducer<GradientEvaluation> {
   
   private final LogFunction log;
-  private final GradientOracle<M, E> oracle;
+  private final GradientOracle<M, ? super E> oracle;
   
-  public GradientReducer(GradientOracle<M, E> oracle, LogFunction log) {
+  public GradientReducer(GradientOracle<M, ? super E> oracle, LogFunction log) {
     this.oracle = oracle;
     this.log = log;
   }

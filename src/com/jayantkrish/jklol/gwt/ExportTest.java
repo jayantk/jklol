@@ -7,13 +7,13 @@ import org.timepedia.exporter.client.Export;
 import org.timepedia.exporter.client.ExportPackage;
 import org.timepedia.exporter.client.Exportable;
 
+import com.google.gwt.core.client.JsArrayMixed;
 import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.cli.ModelUtils;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.probdb.Query;
 
 @Export()
 @ExportPackage("jklol")
@@ -57,21 +57,12 @@ public class ExportTest implements Exportable {
   }
   
   public static String testParseCcg(String input) {    
-    String[] lexicon = {"block,N{0},0 pred:block", "object,N{0},0 pred:block",
-      "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1", "green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1",
-      "green,N{0},0 pred:green", "the,(N{1}/N{1}){0},0 the", "a,(N{1}/N{1}){0},0 a",
-      "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1,pred:near 2 2",
-      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 pred:near,pred:near 2 2",
-      "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 1",
-      "is,((S{0}\\N{1}){0}/N{2}){0},0 pred:equals,pred:equals 1 1,pred:equals 2 2"};
-    
-    String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
-
-    ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
-        Arrays.asList(lexicon), Arrays.asList(rules), null, true);
-    CcgParser parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
-    
-    List<CcgParse> parses = parser.beamSearch(10, input.split(" "));
-    return parses.get(0).getAllDependencies().toString();
+    return NoExportHelpers.parseCcg(input).getAllDependencies().toString();
+  }
+  
+  public static int[] parseCcgAndRunQuery(String input, int[] entities, String[] tableNames, JsArrayMixed tables) {
+    CcgParse parse = NoExportHelpers.parseCcg(input);
+    Query query = NoExportHelpers.convertParseToQuery(parse);
+    return NoExportHelpers.runDatabaseQuery(query, entities, tableNames, tables);
   }
 }

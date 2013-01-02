@@ -39,7 +39,8 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
   }
 
   @Override
-  public <A, B, C> C mapReduce(Collection<? extends A> items, Mapper<A, B> mapper, Reducer<B, C> reducer) {
+  public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
+      Collection<? extends A> items, D mapper, E reducer) {
     if (items.size() == 1) {
       // Run all computation in this thread, which is faster given only a small number of items.
       C accumulator = reducer.getInitialValue();

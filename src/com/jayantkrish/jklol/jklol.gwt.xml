@@ -38,6 +38,7 @@
   <source path='evaluation'/>
   <source path='training'/>
   <source path='util'/>
+  <source path='probdb'/>
   <source path='tensor'/>
   <source path='parallel'/>
 

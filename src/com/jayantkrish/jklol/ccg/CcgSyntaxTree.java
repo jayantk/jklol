@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.util.ArrayUtils;
 
 public class CcgSyntaxTree {
@@ -103,7 +104,7 @@ public class CcgSyntaxTree {
   }
 
   public static CcgSyntaxTree parseFromCcgBankString(String treeString) {
-    return parseFromCcgBankString(treeString, 0);
+    return correctCcgBankConj(parseFromCcgBankString(treeString, 0));
   }
   
   private static CcgSyntaxTree parseFromCcgBankString(String treeString, int numWordsOnLeft) {
@@ -159,11 +160,80 @@ public class CcgSyntaxTree {
       return CcgSyntaxTree.createNonterminal(rootCat, rootCat, leftTree, rightTree);
     }
   }
+  
+  private static CcgSyntaxTree correctCcgBankConj(CcgSyntaxTree origTree) {
+    if (origTree.isTerminal()) {
+      return origTree;
+    } else {
+      CcgSyntaxTree leftTree = correctCcgBankConj(origTree.getLeft());
+      CcgSyntaxTree rightTree = correctCcgBankConj(origTree.getRight());
+      
+      SyntacticCategory leftRoot = leftTree.getRootSyntax();
+      SyntacticCategory rightRoot = rightTree.getRootSyntax();
+      
+      if (isConj(leftRoot)) {
+        // Move the application of any unary rules down so they apply before the conjunction.
+        if (!origTree.getRootSyntax().equals(origTree.getPreUnaryRuleSyntax())) {
+          rightTree = rightTree.updateRootSyntax(origTree.getRootSyntax());
+          rightRoot = rightTree.getRootSyntax();
+        }
+
+        SyntacticCategory expectedCat = SyntacticCategory.createFunctional(Direction.LEFT, rightRoot, rightRoot);
+        System.out.println("left: " + leftRoot + " right: " + rightRoot + " expected: " + expectedCat);
+        return CcgSyntaxTree.createNonterminal(expectedCat, expectedCat, leftTree, rightTree);
+      } else if (isConj(rightRoot)) {
+        // Move the application of any unary rules down so they apply before the conjunction.
+        if (!origTree.getRootSyntax().equals(origTree.getPreUnaryRuleSyntax())) {
+          leftTree = leftTree.updateRootSyntax(origTree.getRootSyntax());
+          leftRoot = leftTree.getRootSyntax();
+        }
+        
+        SyntacticCategory expectedCat = SyntacticCategory.createFunctional(Direction.RIGHT, leftRoot, leftRoot);
+        System.out.println("left: " + leftRoot + " right: " + rightRoot + " expected: " + expectedCat);
+        return CcgSyntaxTree.createNonterminal(expectedCat, expectedCat, leftTree, rightTree);
+      }
+      
+      if (isPunc(leftRoot) && !origTree.getPreUnaryRuleSyntax().equals(rightRoot)) {
+        System.out.println("punc fix: " + leftRoot + " right: " + rightRoot + " origRoot: " + origTree.getPreUnaryRuleSyntax());
+        if (origTree.getPreUnaryRuleSyntax().equals(origTree.getRootSyntax())) {
+          return CcgSyntaxTree.createNonterminal(rightRoot, rightRoot, leftTree, rightTree);
+        } else {
+          return CcgSyntaxTree.createNonterminal(origTree.getRootSyntax(), rightRoot, leftTree, rightTree);
+        }
+      } else if (isPunc(rightRoot) && !origTree.getPreUnaryRuleSyntax().equals(leftRoot)) {
+        System.out.println("punc fix: " + leftRoot + " right: " + rightRoot + " origRoot: " + origTree.getPreUnaryRuleSyntax());
+        if (origTree.getPreUnaryRuleSyntax().equals(origTree.getRootSyntax())) {
+          return CcgSyntaxTree.createNonterminal(leftRoot, leftRoot, leftTree, rightTree);
+        } else {
+          return CcgSyntaxTree.createNonterminal(origTree.getRootSyntax(), leftRoot, leftTree, rightTree);
+        }
+      }
+      
+      return CcgSyntaxTree.createNonterminal(origTree.getRootSyntax(), 
+          origTree.getPreUnaryRuleSyntax(), leftTree, rightTree);
+    }
+  }
+  
+  private static boolean isConj(SyntacticCategory syntax) {
+    return syntax.isAtomic() && syntax.getValue().equals("conj");
+  }
+  
+  private static boolean isPunc(SyntacticCategory syntax) {
+    return syntax.isAtomic() && syntax.getValue().equals(",");
+  }
 
   public SyntacticCategory getRootSyntax() {
     return syntax;
   }
   
+  public CcgSyntaxTree updateRootSyntax(SyntacticCategory newRoot) {
+    if (isTerminal()) {
+      return CcgSyntaxTree.createTerminal(newRoot, originalSyntax, spanStart, spanEnd, words);
+    } else {
+      return CcgSyntaxTree.createNonterminal(newRoot, originalSyntax, left, right);
+    }
+  }
+
   public SyntacticCategory getPreUnaryRuleSyntax() {
     return originalSyntax;
   }

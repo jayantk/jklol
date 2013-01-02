@@ -8,12 +8,16 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.parallel.Mapper;
+import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -77,81 +81,11 @@ public class ParseCcg {
     }
   }
 
-  public static CcgLoss runTestSetEvaluation(CcgParser ccgParser, Iterable<CcgExample> testExamples,
+  public static CcgLoss runTestSetEvaluation(CcgParser ccgParser, Collection<CcgExample> testExamples,
       int beamSize) {
-    int labeledTp = 0, labeledFp = 0, labeledFn = 0, unlabeledTp = 0, unlabeledFp = 0, unlabeledFn = 0;
-    int numParsed = 0, numExamples = 0;
-    for (CcgExample example : testExamples) {
-      List<CcgParse> parses = ccgParser.beamSearch(example.getWords(), beamSize);
-      System.out.println("SENT: " + example.getWords());
-      printCcgParses(parses, 1, false);
-
-      if (parses.size() > 0) {
-        List<DependencyStructure> predictedDeps = parses.get(0).getAllDependencies();
-        Set<DependencyStructure> trueDeps = example.getDependencies();
-        System.out.println("Predicted: ");
-        for (DependencyStructure dep : predictedDeps) {
-          if (trueDeps.contains(dep)) {
-            System.out.println(dep);
-          } else {
-            System.out.println(dep + "\tINCORRECT");
-          }
-        }
-
-        System.out.println("Missing true dependencies:");
-        for (DependencyStructure dep : trueDeps) {
-          if (!predictedDeps.contains(dep)) {
-            System.out.println(dep);
-          }
-        }
-
-        // Compute the correct / incorrect labeled dependencies for
-        // the current example.
-        Set<DependencyStructure> incorrectDeps = Sets.newHashSet(predictedDeps);
-        incorrectDeps.removeAll(trueDeps);
-        Set<DependencyStructure> correctDeps = Sets.newHashSet(predictedDeps);
-        correctDeps.retainAll(trueDeps);
-        int correct = correctDeps.size();
-        int falsePositive = predictedDeps.size() - correctDeps.size();
-        int falseNegative = trueDeps.size() - correctDeps.size();
-        System.out.println();
-        double precision = ((double) correct) / (correct + falsePositive);
-        double recall = ((double) correct) / (correct + falseNegative);
-        System.out.println("Labeled Precision: " + precision);
-        System.out.println("Labeled Recall: " + recall);
-
-        // Update the labeled dependency score accumulators for the
-        // whole data set.
-        labeledTp += correct;
-        labeledFp += falsePositive;
-        labeledFn += falseNegative;
-
-        // Compute the correct / incorrect unlabeled dependencies.
-        Set<DependencyStructure> unlabeledPredicted = stripDependencyLabels(predictedDeps);
-        trueDeps = stripDependencyLabels(trueDeps);
-        incorrectDeps = Sets.newHashSet(unlabeledPredicted);
-        incorrectDeps.removeAll(trueDeps);
-        correctDeps = Sets.newHashSet(unlabeledPredicted);
-        correctDeps.retainAll(trueDeps);
-        correct = correctDeps.size();
-        falsePositive = unlabeledPredicted.size() - correctDeps.size();
-        falseNegative = trueDeps.size() - correctDeps.size();
-        precision = ((double) correct) / (correct + falsePositive);
-        recall = ((double) correct) / (correct + falseNegative);
-        System.out.println("Unlabeled Precision: " + precision);
-        System.out.println("Unlabeled Recall: " + recall);
-
-        unlabeledTp += correct;
-        unlabeledFp += falsePositive;
-        unlabeledFn += falseNegative;
-
-        numParsed += 1;
-      }
-      numExamples++;
-    }
-
-    return new CcgLoss(labeledTp, labeledFp, labeledFn, unlabeledTp, unlabeledFp, unlabeledFn,
-        numParsed, numExamples);
+    CcgLossMapper mapper = new CcgLossMapper(ccgParser, beamSize);
+    CcgLossReducer reducer = new CcgLossReducer();
+    return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
   }
 
   private static Set<DependencyStructure> stripDependencyLabels(Collection<DependencyStructure> dependencies) {
@@ -268,6 +202,13 @@ public class ParseCcg {
     public int getNumExamples() {
       return numExamples;
     }
+    
+    public CcgLoss add(CcgLoss loss) {
+      return new CcgLoss(labeledTruePositives + loss.labeledTruePositives, labeledFalsePositives + loss.labeledFalsePositives,
+          labeledFalseNegatives + loss.labeledFalseNegatives, unlabeledTruePositives + loss.unlabeledTruePositives,
+          unlabeledFalsePositives + loss.unlabeledFalsePositives, unlabeledFalseNegatives + loss.unlabeledFalseNegatives, 
+          numExamplesParsed + loss.numExamplesParsed, numExamples + loss.numExamples);
+    }
 
     @Override
     public String toString() {
@@ -276,6 +217,103 @@ public class ParseCcg {
           + "\nUnlabeled Precision: " + getUnlabeledDependencyPrecision() + "\nUnlabeled Recall: "
           + getUnlabeledDependencyRecall() + "\nUnlabeled F Score: " + getUnlabeledDependencyFScore()
           + "\nCoverage: " + getCoverage();
+    }
+  }
+  
+  public static class CcgLossMapper extends Mapper<CcgExample, CcgLoss> {
+    
+    private final CcgParser parser;
+    private final int beamSize;
+    
+    public CcgLossMapper(CcgParser parser, int beamSize) {
+      this.parser = Preconditions.checkNotNull(parser);
+      this.beamSize = beamSize;
+    }
+    
+    @Override
+    public CcgLoss map(CcgExample example) {
+      int labeledTp = 0, labeledFp = 0, labeledFn = 0, unlabeledTp = 0, unlabeledFp = 0, unlabeledFn = 0;
+      int numParsed = 0, numExamples = 0;
+      List<CcgParse> parses = parser.beamSearch(example.getWords(), beamSize);
+      System.out.println("SENT: " + example.getWords());
+      printCcgParses(parses, 1, false);
+
+      if (parses.size() > 0) {
+        List<DependencyStructure> predictedDeps = parses.get(0).getAllDependencies();
+        Set<DependencyStructure> trueDeps = example.getDependencies();
+        System.out.println("Predicted: ");
+        for (DependencyStructure dep : predictedDeps) {
+          if (trueDeps.contains(dep)) {
+            System.out.println(dep);
+          } else {
+            System.out.println(dep + "\tINCORRECT");
+          }
+        }
+
+        System.out.println("Missing true dependencies:");
+        for (DependencyStructure dep : trueDeps) {
+          if (!predictedDeps.contains(dep)) {
+            System.out.println(dep);
+          }
+        }
+
+        // Compute the correct / incorrect labeled dependencies for
+        // the current example.
+        Set<DependencyStructure> incorrectDeps = Sets.newHashSet(predictedDeps);
+        incorrectDeps.removeAll(trueDeps);
+        Set<DependencyStructure> correctDeps = Sets.newHashSet(predictedDeps);
+        correctDeps.retainAll(trueDeps);
+        int correct = correctDeps.size();
+        int falsePositive = predictedDeps.size() - correctDeps.size();
+        int falseNegative = trueDeps.size() - correctDeps.size();
+        System.out.println();
+        double precision = ((double) correct) / (correct + falsePositive);
+        double recall = ((double) correct) / (correct + falseNegative);
+        System.out.println("Labeled Precision: " + precision);
+        System.out.println("Labeled Recall: " + recall);
+
+        // Update the labeled dependency score accumulators for the
+        // whole data set.
+        labeledTp += correct;
+        labeledFp += falsePositive;
+        labeledFn += falseNegative;
+
+        // Compute the correct / incorrect unlabeled dependencies.
+        Set<DependencyStructure> unlabeledPredicted = stripDependencyLabels(predictedDeps);
+        trueDeps = stripDependencyLabels(trueDeps);
+        incorrectDeps = Sets.newHashSet(unlabeledPredicted);
+        incorrectDeps.removeAll(trueDeps);
+        correctDeps = Sets.newHashSet(unlabeledPredicted);
+        correctDeps.retainAll(trueDeps);
+        correct = correctDeps.size();
+        falsePositive = unlabeledPredicted.size() - correctDeps.size();
+        falseNegative = trueDeps.size() - correctDeps.size();
+        precision = ((double) correct) / (correct + falsePositive);
+        recall = ((double) correct) / (correct + falseNegative);
+        System.out.println("Unlabeled Precision: " + precision);
+        System.out.println("Unlabeled Recall: " + recall);
+
+        unlabeledTp += correct;
+        unlabeledFp += falsePositive;
+        unlabeledFn += falseNegative;
+
+        numParsed += 1;
+      }
+
+      return new CcgLoss(labeledTp, labeledFp, labeledFn, unlabeledTp, unlabeledFp, unlabeledFn,
+          numParsed, 1);
+    }
+  }
+  
+  public static class CcgLossReducer extends SimpleReducer<CcgLoss> {
+    @Override
+    public CcgLoss getInitialValue() {
+      return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    @Override
+    public CcgLoss reduce(CcgLoss item, CcgLoss accumulated) {
+      return accumulated.add(item);
     }
   }
 }

@@ -3,9 +3,11 @@ package com.jayantkrish.jklol.ccg;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
@@ -52,10 +54,10 @@ public class CcgUnaryRule implements Serializable {
   public static CcgUnaryRule parseFrom(String line) {
     String[] chunks = new CsvParser(CsvParser.DEFAULT_SEPARATOR,
         CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(line.trim());
-    Preconditions.checkArgument(chunks.length >= 1);
+    Preconditions.checkArgument(chunks.length >= 1, "Illegal unary rule string: %s", line);
 
     String[] syntacticParts = chunks[0].split(" ");
-    Preconditions.checkArgument(syntacticParts.length == 2);
+    Preconditions.checkArgument(syntacticParts.length == 2, "Illegal unary rule string: %s", line);
     HeadedSyntacticCategory inputSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[0]);
     HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
 
@@ -150,6 +152,12 @@ public class CcgUnaryRule implements Serializable {
   public ChartEntry apply(ChartEntry entry, DiscreteVariable syntaxVarType) {
     HeadedSyntacticCategory entrySyntax = (HeadedSyntacticCategory) syntaxVarType
         .getValue(entry.getHeadedSyntax());
+    Map<Integer, String> assignedFeatures = Maps.newHashMap();
+    Map<Integer, String> otherAssignedFeatures = Maps.newHashMap();
+    Map<Integer, Integer> relabeledFeatures = Maps.newHashMap();
+
+    Preconditions.checkArgument(entrySyntax.isUnifiableWith(inputSyntax, assignedFeatures, 
+        otherAssignedFeatures, relabeledFeatures));
 
     // Relabel entry's dependencies and variables to match the
     // assignments in the return type.
@@ -164,7 +172,8 @@ public class CcgUnaryRule implements Serializable {
     int[] returnIndexes = entry.getAssignmentIndexes();
     long[] returnUnfilledDeps = entry.getUnfilledDependenciesRelabeled(patternToChart);
 
-    int returnSyntaxInd = syntaxVarType.getValueIndex(returnSyntax);
+    int returnSyntaxInd =  syntaxVarType.getValueIndex(returnSyntax.assignFeatures(otherAssignedFeatures,
+        Collections.<Integer, Integer>emptyMap()));
     if (entry.isTerminal()) {
       return new ChartEntry(returnSyntaxInd, returnSyntax.getUniqueVariables(), 
           entry.getLexiconEntry(), this, returnVars, returnPredicateNums, returnIndexes,

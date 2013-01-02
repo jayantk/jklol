@@ -27,23 +27,23 @@ public class CcgParserTest extends TestCase {
   CcgParser parser, parserWithComposition, parserWithUnary;
   
   private static final String[] lexicon = {"I,N{0},0 I", "people,N{0},0 people", "berries,N{0},0 berries", "houses,N{0},0 houses",
-    "eat,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2", "that,((N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0},0 that,that 1 1,that 2 2", 
-    "quickly,(((S{1}\\N{2}){1}/N{3}){1}/((S{1}\\N{2}){1}/N{3}){1}){0},0 quickly,quickly 1 1", 
+    "eat,((S[b]{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2", "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},0 that,that 1 1,that 2 2", 
+    "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},0 quickly,quickly 1 1", 
     "in,((N{1}\\N{1}){0}/N{2}){0},0 in,in 1 1,in 2 2",
     "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 amazingly,amazingly 1 2",
     "tasty,(N{1}/N{1}){0},0 tasty,tasty 1 1",
-    "in,(((S{1}\\N{2}){1}\\(S{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 1,in 2 3",
+    "in,(((S[1]{1}\\N{2}){1}\\(S[1]{1}\\N{2}){1}){0}/N{3}){0},0 in,in 1 1,in 2 3",
     "and,((N{1}\\N{1}){0}/N{1}){0},0 and", 
     "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},0 almost,almost 1 2",
-    "is,((S{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
-    "directed,((S{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
+    "is,((S[b]{0}\\N{1}){0}/N{2}){0},0 is,is 1 1, is 2 2", 
+    "directed,((S[b]{0}\\N{1}){0}/N{2}){0},0 directed,directed 1 2,directed 2 1",
     ";,;{0},0 ;", "or,conj{0},0 or",
-    "about,(NP{0}/(S{1}\\N{2}){1}){0},0 about,about 1 1", 
-    "eating,((S{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
-    "rapidly,((S{1}\\N{2}){1}/(S{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1",
+    "about,(NP{0}/(S[1]{1}\\N{2}){1}){0},0 about,about 1 1", 
+    "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},0 eat,eat 1 1,eat 2 2",
+    "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},0 rapidly,rapidly 1 1",
     "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1",
     "*NOT_A_WORD*,(NP{0}/N{1}){0},0 *NOT_A_WORD*",
-    "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 near,near 2 2",
+    "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},0 near,near 2 2",
     "the,(N{0}/N{0}){1},1 the,the 1 0"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
@@ -58,18 +58,18 @@ public class CcgParserTest extends TestCase {
     1.0, 1.0, 1.0};
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0}", 
-    ";{2} (S{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
-    "conj{2} (S{0}\\N{1}){0} ((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}",
+    ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
+    "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2}",
     "\"N{0} N{1} N{1}\",\"special:compound 1 0\",\"special:compound 2 1\""};
   
-  private static final String[] unaryRuleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}",
-    "N{0} (N{1}/N{1}){0}"};
+  private static final String[] unaryRuleArray = {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
+    "N{0} (N{1}/N{1}){0}", "((S[0]{0}\\N{1}){0}/N{2}){0} ((S[0]{0}/NP{1}){0}/NP{2}){0}" };
   
   // Syntactic CCG weights to set. All unlisted combinations get weight 1.0, all
   // listed combinations get weight 1.0 + given weight
   private static final String[][] syntacticCombinations = {
-    {"(N{1}\\N{1}){0}/(S{2}\\N{1}){2}){0}", "(S{2}\\N{1}){2}"},
-    {"(NP{0}/(S{1}\\N{2}){1}){0}", "((S{0}\\N{1}){0}/N{2}){0}"},
+    {"(N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0}", "(S[b]{2}\\N{1}){2}"},
+    {"(NP{0}/(S[1]{1}\\N{2}){1}){0}", "((S[ng]{0}\\N{1}){0}/N{2}){0}"},
   };
   private static final double[] syntacticCombinationWeights = {
     2.0, -0.75
@@ -174,7 +174,7 @@ public class CcgParserTest extends TestCase {
         new DependencyStructure("rapidly", 0, "eat", 1, 1));
     assertEquals(expectedDeps, deps);
     
-    SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S\\N)/N");
+    SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S[b]\\N)/N");
     assertEquals(expectedSyntax, parse.getSyntacticCategory());
   }
 
@@ -191,7 +191,7 @@ public class CcgParserTest extends TestCase {
         new DependencyStructure("amazingly", 1, "tasty", 2, 1));
     assertEquals(expectedDeps, deps);
     
-    SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S\\N)/N");
+    SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S[b]\\N)/N");
     assertEquals(expectedSyntax, parse.getSyntacticCategory());
     System.out.println(parse.getHeadedSyntacticCategory());
     
@@ -350,7 +350,7 @@ public class CcgParserTest extends TestCase {
     
     assertEquals(3, parses.size());
 
-    Set<String> syntaxTypes = Sets.newHashSet();
+    Set<SyntacticCategory> syntaxTypes = Sets.newHashSet();
     for (CcgParse parse : parses) {
       double expectedProb = 0.3 * 2;
       if (parse.getSyntacticCategory().getValue().equals("S")) {
@@ -358,9 +358,10 @@ public class CcgParserTest extends TestCase {
       }
       assertEquals(expectedProb, parse.getSubtreeProbability());
       assertEquals(2, parse.getAllDependencies().size());
-      syntaxTypes.add(parse.getSyntacticCategory().getValue());
+      syntaxTypes.add(parse.getSyntacticCategory());
     }
-    Set<String> expectedTypes = Sets.newHashSet("N", "S");
+    Set<SyntacticCategory> expectedTypes = Sets.newHashSet(SyntacticCategory.parseFrom("N"),
+        SyntacticCategory.parseFrom("S[b]"));
     assertEquals(expectedTypes, syntaxTypes);
   }
    
@@ -378,13 +379,23 @@ public class CcgParserTest extends TestCase {
     Set<String> expectedHeads = Sets.newHashSet("people", "berries");
     assertEquals(expectedHeads, heads);
   }
-
+  
   public void testBinaryRulesConj2() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("or", "directed", "houses"), 10);
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    assertEquals(SyntacticCategory.parseFrom("((S[b]\\N)\\(S[b]\\N))"), 
+        parse.getSyntacticCategory());
+  }
+
+  public void testBinaryRulesConj3() {
     List<CcgParse> parses = parser.beamSearch(
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
     
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
+    System.out.println(parse);
     
     Set<String> heads = Sets.newHashSet();
     for (IndexedPredicate pred : parse.getSemanticHeads()) {
@@ -400,6 +411,8 @@ public class CcgParserTest extends TestCase {
         new DependencyStructure("directed", 4, "people", 0, 2),
         new DependencyStructure("directed", 4, "houses", 5, 1));
     assertEquals(expectedDeps, deps);
+    
+    assertEquals(SyntacticCategory.parseFrom("S[b]"), parse.getSyntacticCategory());
   }
       
   public void testBinaryRulesNounCompound() {
@@ -447,6 +460,22 @@ public class CcgParserTest extends TestCase {
       Set<DependencyStructure> trueDeps = Sets.newHashSet(parse.getAllDependencies());
       assertTrue(trueDeps.containsAll(expectedDeps));
     }
+  }
+  
+  public void testParseUnaryRules3() {
+    List<CcgParse> parses = parserWithUnary.beamSearch(
+        Arrays.asList("eat"), 10);
+    
+    System.out.println(parses);
+    assertEquals(2, parses.size());
+    Set<SyntacticCategory> expectedCats = Sets.newHashSet(
+        SyntacticCategory.parseFrom("(S[b]\\N)/N"), SyntacticCategory.parseFrom("((S[b]/NP)/NP)"));
+    
+    Set<SyntacticCategory> actualCats = Sets.newHashSet();
+    for (CcgParse parse : parses) {
+      actualCats.add(parse.getSyntacticCategory());
+    }
+    assertEquals(expectedCats, actualCats);
   }
   
   public void testSerialization() throws IOException {
@@ -547,7 +576,9 @@ public class CcgParserTest extends TestCase {
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
     
     DiscreteFactor rootDistribution = TableFactor.unity(leftSyntaxVar);
-    Assignment assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S{0}"));
+    Assignment assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S[b]{0}"));
+    rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
+    assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S[ng]{0}"));
     rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
     
     System.out.println(rootDistribution.getParameterDescription());

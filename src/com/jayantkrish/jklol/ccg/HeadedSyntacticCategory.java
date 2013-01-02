@@ -29,12 +29,13 @@ public class HeadedSyntacticCategory implements Serializable {
   // where the ith entry represents the variable for the i'th
   // subcategory in an in-order traversal of syntacticCategory.
   private final int[] semanticVariables;
+
   // Position of the root node in semanticVariables.
   private final int rootIndex;
 
-  public HeadedSyntacticCategory(SyntacticCategory syntacticCategory,
-      int[] semanticVariables, int rootIndex) {
-    this.syntacticCategory = syntacticCategory;
+  public HeadedSyntacticCategory(SyntacticCategory syntacticCategory, int[] semanticVariables,
+      int rootIndex) {        
+    this.syntacticCategory = Preconditions.checkNotNull(syntacticCategory);
     this.semanticVariables = semanticVariables;
     this.rootIndex = rootIndex;
   }
@@ -49,43 +50,53 @@ public class HeadedSyntacticCategory implements Serializable {
    * elements will be assigned to semantic variable 0, which typically
    * denotes the head of the syntactic category.
    * <p>
-   * If a category contains {@code n} semantic variables, they must be
-   * numbered {@code 0,1,...,n-1}.
+   * Furthermore, components of the category string may be annotated 
+   * with syntactic subcategorization features in square braces ([]).
+   * These features may be passed to other syntactic variables via 
+   * unification during parsing, in the same fashion as semantic 
+   * variables. If included, these features must be placed before 
+   * the semantic variable number, e.g., N[athlete]{1}.    
    * <p>
    * Examples:<br>
    * that := ((N{1}\N{1}){0}/(S\N{1})){0} <br>
    * very := ((N{1}/N{1}){2}/(N{1}/N{1}){2}){0}
+   * going := ((S[ing]{0}\N{1}){0}/N{2}){0}
    * 
    * @param typeString
    * @return
    */
   public static HeadedSyntacticCategory parseFrom(String typeString) {
-    // Strip variable numbers in curly braces, without using 
+    // Strip variable numbers and features, without using 
     // regular expressions for GWT compatibility.
-    StringBuilder syntacticStringBuilder = new StringBuilder();
-    int nextBraceIndex = 0;
-    int braceIndex = typeString.indexOf("{", nextBraceIndex);
-    while (braceIndex != -1) {
-      syntacticStringBuilder.append(typeString.substring(nextBraceIndex, braceIndex));
-      nextBraceIndex = typeString.indexOf("}", braceIndex) + 1;
-      braceIndex = typeString.indexOf("{", nextBraceIndex);
-    }
-    syntacticStringBuilder.append(typeString.substring(nextBraceIndex, typeString.length()));
-    
-    // Pattern pattern = Pattern.compile("\\{[^}]*\\}");
-    // String syntacticString = pattern.matcher(typeString).replaceAll("");
-    
-    String syntacticString = syntacticStringBuilder.toString();
+    String syntacticString = stripBracketedExpression(typeString, "{", "}");
+
     SyntacticCategory syntax = SyntacticCategory.parseFrom(syntacticString);
     int[] semanticVariables = new int[syntax.getNumSubcategories()];
-    int rootIndex = syntax.getNumReturnSubcategories();
-
     parseSemanticVariables(syntax, typeString, semanticVariables, 0);
+
+    int rootIndex = syntax.getNumReturnSubcategories();
     return new HeadedSyntacticCategory(syntax, semanticVariables, rootIndex);
   }
+  
+  private static String stripBracketedExpression(String string, String leftBracket, 
+      String rightBracket) {
+    Preconditions.checkArgument(leftBracket.length() == 1);
+    Preconditions.checkArgument(rightBracket.length() == 1);
 
-  private static void parseSemanticVariables(SyntacticCategory category,
-      String typeString, int[] semanticVariables, int firstFillableIndex) {
+    StringBuilder syntacticStringBuilder = new StringBuilder();
+    int nextBraceIndex = 0;
+    int braceIndex = string.indexOf(leftBracket, nextBraceIndex);
+    while (braceIndex != -1) {
+      syntacticStringBuilder.append(string.substring(nextBraceIndex, braceIndex));
+      nextBraceIndex = string.indexOf(rightBracket, braceIndex) + 1;
+      braceIndex = string.indexOf(leftBracket, nextBraceIndex);
+    }
+    syntacticStringBuilder.append(string.substring(nextBraceIndex, string.length()));
+    return syntacticStringBuilder.toString();
+  }
+
+  private static void parseSemanticVariables(SyntacticCategory category, String typeString,
+      int[] semanticVariables, int firstFillableIndex) {
     int curIndex;
     if (!category.isAtomic()) {
       curIndex = firstFillableIndex + category.getNumReturnSubcategories();
@@ -101,7 +112,7 @@ public class HeadedSyntacticCategory implements Serializable {
         "Illegal headed syntactic category: %s", typeString);
     semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
         lastLeftBraceIndex + 1, lastRightBraceIndex));
-
+    
     if (!category.isAtomic()) {
       int splitIndex = SyntacticCategory.findSlashIndex(typeString);
 
@@ -135,6 +146,28 @@ public class HeadedSyntacticCategory implements Serializable {
   public boolean isCanonicalForm() {
     return getCanonicalForm().equals(this);
   }
+  
+  private int[] canonicalizeVariableArray(int[] variableArray, Map<Integer, Integer> relabeling) {
+    int[] relabeledVariables = new int[variableArray.length];
+    for (int i = 0; i < variableArray.length; i++) {
+      int curVar = variableArray[i];
+      if (curVar == -1) {
+        relabeledVariables[i] = -1;
+        continue;
+      }
+      
+      int relabeledVar = -1;
+      if (!relabeling.containsKey(curVar)) {
+        relabeledVar = relabeling.size();
+        relabeling.put(curVar, relabeling.size());
+      } else {
+        relabeledVar = relabeling.get(curVar);
+      }
+
+      relabeledVariables[i] = relabeledVar;
+    }
+    return relabeledVariables;
+  }
 
   /**
    * Gets a canonical representation of this category that treats each
@@ -149,20 +182,8 @@ public class HeadedSyntacticCategory implements Serializable {
    */
   public HeadedSyntacticCategory getCanonicalForm(Map<Integer, Integer> relabeling) {
     Preconditions.checkArgument(relabeling.size() == 0);
-    int[] relabeledVariables = new int[semanticVariables.length];
-    for (int i = 0; i < semanticVariables.length; i++) {
-      int curVar = semanticVariables[i];
-      int relabeledVar = -1;
-      if (!relabeling.containsKey(curVar)) {
-        relabeledVar = relabeling.size();
-        relabeling.put(curVar, relabeling.size());
-      } else {
-        relabeledVar = relabeling.get(curVar);
-      }
-
-      relabeledVariables[i] = relabeledVar;
-    }
-    return new HeadedSyntacticCategory(syntacticCategory, relabeledVariables, rootIndex);
+    int[] relabeledVariables = canonicalizeVariableArray(semanticVariables, relabeling);
+    return new HeadedSyntacticCategory(syntacticCategory.getCanonicalForm(), relabeledVariables, rootIndex);
   }
 
   /**
@@ -182,7 +203,7 @@ public class HeadedSyntacticCategory implements Serializable {
   public boolean isAtomic() {
     return syntacticCategory.isAtomic();
   }
-
+  
   /**
    * Gets the syntactic type and semantic variable assignments to the
    * argument type of this category.
@@ -217,16 +238,15 @@ public class HeadedSyntacticCategory implements Serializable {
    * 
    * @param argument
    * @param direction
-   * @param headVarNum
+   * @param rootVarNum
    * @return
    */
   public HeadedSyntacticCategory addArgument(HeadedSyntacticCategory argument, Direction direction,
-      int headVarNum) {
+      int rootVarNum) {
     SyntacticCategory newCategory = syntacticCategory.addArgument(argument.getSyntax(), direction);
-    int[] newSemantics = Ints.concat(semanticVariables, new int[] { headVarNum },
+    int[] newSemantics = Ints.concat(semanticVariables, new int[] { rootVarNum },
         argument.semanticVariables);
     int newRoot = semanticVariables.length;
-
     return new HeadedSyntacticCategory(newCategory, newSemantics, newRoot);
   }
 
@@ -238,6 +258,10 @@ public class HeadedSyntacticCategory implements Serializable {
    */
   public int getRootVariable() {
     return semanticVariables[rootIndex];
+  }
+  
+  public String getRootFeature() {
+    return syntacticCategory.getRootFeature();
   }
 
   public HeadedSyntacticCategory relabelVariables(int[] currentVars, int[] relabeledVars) {
@@ -271,7 +295,7 @@ public class HeadedSyntacticCategory implements Serializable {
    * @return
    */
   public int[] unifyVariables(int[] uniqueVars, HeadedSyntacticCategory other, int[] assignedVars) {
-    Preconditions.checkArgument(syntacticCategory.isUnifiableWith(other.getSyntax()));
+    Preconditions.checkArgument(other.isUnifiableWith(this), "Not unifiable: " + this + " and " + other);
     int[] otherSemanticVariables = other.semanticVariables;
     Preconditions.checkArgument(otherSemanticVariables.length == semanticVariables.length);
 
@@ -317,7 +341,42 @@ public class HeadedSyntacticCategory implements Serializable {
   }
   
   public boolean isUnifiableWith(HeadedSyntacticCategory other) {
-    return getCanonicalForm().equals(other.getCanonicalForm());
+    Map<Integer, String> myAssignedVariables = Maps.newHashMap();
+    Map<Integer, String> otherAssignedVariables = Maps.newHashMap();
+    Map<Integer, Integer> variableRelabeling = Maps.newHashMap();
+
+    return isUnifiableWith(other, myAssignedVariables, otherAssignedVariables, variableRelabeling); 
+  }
+  
+  public boolean isUnifiableWith(HeadedSyntacticCategory other, Map<Integer, String> assignedFeatures,
+       Map<Integer, String> otherAssignedFeatures, Map<Integer, Integer> relabeledFeatures) {
+    HeadedSyntacticCategory thisCanonical = getCanonicalForm();
+    HeadedSyntacticCategory otherCanonical = other.getCanonicalForm();
+
+    if (!(thisCanonical.rootIndex == otherCanonical.rootIndex)) {
+      return false;
+    } else if (!thisCanonical.syntacticCategory.isUnifiableWith(otherCanonical.syntacticCategory, 
+        assignedFeatures, otherAssignedFeatures, relabeledFeatures)) {
+      return false;
+    } else if (!Arrays.equals(thisCanonical.semanticVariables, otherCanonical.semanticVariables)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  public HeadedSyntacticCategory assignFeatures(Map<Integer, String> assignedFeatures,
+      Map<Integer, Integer> relabeledFeatures) {
+    return new HeadedSyntacticCategory(syntacticCategory.assignFeatures(
+        assignedFeatures, relabeledFeatures), semanticVariables, rootIndex);
+  }
+  
+  public Set<HeadedSyntacticCategory> getSubcategories(Set<String> featureValues) {
+    Set<HeadedSyntacticCategory> subcategories = Sets.newHashSet();
+    for (SyntacticCategory newSyntax : syntacticCategory.getSubcategories(featureValues)) {
+      subcategories.add(new HeadedSyntacticCategory(newSyntax, semanticVariables, rootIndex));
+    }
+    return subcategories;
   }
 
   /**
@@ -338,14 +397,15 @@ public class HeadedSyntacticCategory implements Serializable {
 
     return uniqueVarsArray;
   }
-
+  
   @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result + rootIndex;
     result = prime * result + Arrays.hashCode(semanticVariables);
-    result = prime * result + ((syntacticCategory == null) ? 0 : syntacticCategory.hashCode());
+    result = prime * result
+        + ((syntacticCategory == null) ? 0 : syntacticCategory.hashCode());
     return result;
   }
 
@@ -372,18 +432,30 @@ public class HeadedSyntacticCategory implements Serializable {
 
   @Override
   public String toString() {
+    StringBuilder sb = new StringBuilder();
     if (syntacticCategory.isAtomic()) {
-      return syntacticCategory.toString() + "{" + semanticVariables[rootIndex] + "}";
+      sb.append(syntacticCategory.getValue());
     } else {
-      StringBuilder sb = new StringBuilder();
       sb.append("(");
       sb.append(getReturnType());
       sb.append(syntacticCategory.getDirection());
       sb.append(getArgumentType());
-      sb.append("){");
-      sb.append(semanticVariables[rootIndex]);
-      sb.append("}");
-      return sb.toString();
+      sb.append(")");
     }
+
+    if (syntacticCategory.getRootFeature() != SyntacticCategory.DEFAULT_FEATURE_VALUE) {
+      sb.append("[");
+      sb.append(syntacticCategory.getRootFeature());
+      sb.append("]");
+    } else if (syntacticCategory.getRootFeatureVariable() != -1) {
+      sb.append("[");
+      sb.append(syntacticCategory.getRootFeatureVariable());
+      sb.append("]");
+    }
+
+    sb.append("{");
+    sb.append(semanticVariables[rootIndex]);
+    sb.append("}");
+    return sb.toString();
   }
 }

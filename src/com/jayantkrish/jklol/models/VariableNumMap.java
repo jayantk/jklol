@@ -590,6 +590,19 @@ public class VariableNumMap implements Serializable {
     newNames.put(num, name);
     return new VariableNumMap(newVarMap, newNames);
   }
+  
+  public VariableNumMap relabelVariableNums(int[] relabeling) {
+    int[] variableNums = getVariableNumsArray();
+    Preconditions.checkArgument(variableNums.length == relabeling.length);
+
+    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+    BiMap<Integer, String> newNames = HashBiMap.create();
+    for (int i = 0; i < variableNums.length; i++) {
+      newVarMap.put(relabeling[i], varMap.get(variableNums[i]));
+      newNames.put(relabeling[i], names.get(variableNums[i]));
+    }
+    return new VariableNumMap(newVarMap, newNames);
+  }
 
   /**
    * Gets the {@code numVariables} in this with the lowest variable

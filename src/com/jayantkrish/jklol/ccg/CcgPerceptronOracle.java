@@ -51,7 +51,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
 
     System.out.println("num predicted: " + parses.size());
     if (bestPredictedParse == null) {
-      // Search error: couldn't find any parses with atomic category heads.
+      System.out.println("Search error (Predicted): " + example.getWords());
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/unconditional_max_marginal");
@@ -75,6 +75,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     System.out.println("num correct: " + possibleParses.size());
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
+      System.out.println("Search error (Correct): " + example.getWords());
       throw new ZeroProbabilityError();
     }        
     log.stopTimer("update_gradient/conditional_max_marginal");

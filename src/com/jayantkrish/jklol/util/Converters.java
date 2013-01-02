@@ -6,7 +6,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**
- * Static utility methods for manipulating {@link Converter}s.
+ * Static utility methods for manipulating {@link Converter} instances.
  * 
  * @author jayantk
  */

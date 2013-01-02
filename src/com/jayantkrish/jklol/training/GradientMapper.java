@@ -13,10 +13,10 @@ import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
  */
 public class GradientMapper<M, E> extends Mapper<E, GradientEvaluation> {
   private final M instantiatedModel;
-  private final GradientOracle<M, E> oracle;
+  private final GradientOracle<M, ? super E> oracle;
   private final LogFunction log;
 
-  public GradientMapper(M instantiatedModel, GradientOracle<M, E> oracle, LogFunction log) {
+  public GradientMapper(M instantiatedModel, GradientOracle<M, ? super E> oracle, LogFunction log) {
     this.instantiatedModel = instantiatedModel;
     this.oracle = oracle;
     this.log = log;

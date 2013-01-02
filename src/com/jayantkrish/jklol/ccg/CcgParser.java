@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.ccg;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -103,6 +105,8 @@ public class CcgParser implements Serializable {
   private final VariableNumMap unaryRuleVar;
   private final int unaryRuleVarNum;
   private final DiscreteFactor unaryRuleFactor;
+  private final DiscreteVariable unaryRuleVarType;
+  private final Tensor unaryRuleTensor;
 
   // Weights on the syntactic category of the root of the CCG parse.
   private final VariableNumMap rootSyntaxVar;
@@ -154,6 +158,8 @@ public class CcgParser implements Serializable {
     this.unaryRuleVar = Preconditions.checkNotNull(unaryRuleVar);
     this.unaryRuleVarNum = unaryRuleVar.getOnlyVariableNum();
     this.unaryRuleFactor = Preconditions.checkNotNull(unaryRuleFactor);
+    this.unaryRuleVarType = unaryRuleVar.getDiscreteVariables().get(0);
+    this.unaryRuleTensor = unaryRuleFactor.getWeights();
     
     this.rootSyntaxVar = Preconditions.checkNotNull(rootSyntaxVar);
     this.rootSyntaxDistribution = Preconditions.checkNotNull(rootSyntaxDistribution);
@@ -182,16 +188,21 @@ public class CcgParser implements Serializable {
   public static DiscreteFactor buildSyntacticDistribution(
       Iterable<HeadedSyntacticCategory> syntacticCategories, Iterable<CcgBinaryRule> rules, 
       boolean allowComposition) {
+    Set<String> featureValues = Sets.newHashSet();
+    for (HeadedSyntacticCategory cat : syntacticCategories) {
+      getAllFeatureValues(cat.getSyntax(), featureValues);
+    }
+    
     // Compute the closure of syntactic categories, assuming the only
-    // rule is function application.
+    // operations are function application and feature assignment.
     Set<HeadedSyntacticCategory> allCategories = Sets.newHashSet();
     for (HeadedSyntacticCategory cat : syntacticCategories) {
       Preconditions.checkArgument(cat.isCanonicalForm());
-      allCategories.add(cat);
+      allCategories.addAll(cat.getSubcategories(featureValues));
 
       while (!cat.getSyntax().isAtomic()) {
-        allCategories.add(cat.getArgumentType().getCanonicalForm());
-        allCategories.add(cat.getReturnType().getCanonicalForm());
+        allCategories.addAll(cat.getArgumentType().getCanonicalForm().getSubcategories(featureValues));
+        allCategories.addAll(cat.getReturnType().getCanonicalForm().getSubcategories(featureValues));
         cat = cat.getReturnType();
       }
     }
@@ -244,7 +255,7 @@ public class CcgParser implements Serializable {
               } else if (direction.equals(Direction.RIGHT)) {
                 combinator = getCompositionCombinator(functionCat, argumentCat, false,
                     argumentAsHead, syntaxType);
-                outcome = Arrays.<Object> asList(functionCat, argumentCat, combinator);
+                outcome = Arrays.<Object>asList(functionCat, argumentCat, combinator);
               } else {
                 // Forward compatible error message, for handling
                 // Direction.BOTH if added.
@@ -264,16 +275,25 @@ public class CcgParser implements Serializable {
       }
     }
     
+    // Find which syntactic categories are unifiable with each other. This map is used to
+    // determine which categories binary and unary rules may be applied to.
+    SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> unifiabilityMap = buildUnifiabilityMap(allCategories);
+    
     // Create entries for CCG binary rules.
     for (CcgBinaryRule rule : rules) {
-      HeadedSyntacticCategory left = rule.getLeftSyntacticType().getCanonicalForm();
-      HeadedSyntacticCategory right = rule.getRightSyntacticType().getCanonicalForm();
+      HeadedSyntacticCategory leftCanon = rule.getLeftSyntacticType().getCanonicalForm();
+      HeadedSyntacticCategory rightCanon = rule.getRightSyntacticType().getCanonicalForm();
 
-      Combinator combinator = getBinaryRuleCombinator(rule, syntaxType); 
-      List<Object> outcome = Arrays.<Object>asList(left.getCanonicalForm(),
-          right.getCanonicalForm(), combinator);
-      validOutcomes.add(outcome);
-      combinators.add(combinator);
+      for (HeadedSyntacticCategory left : unifiabilityMap.get(leftCanon)) {
+        for (HeadedSyntacticCategory right : unifiabilityMap.get(rightCanon)) {
+          Combinator combinator = getBinaryRuleCombinator(left, right, rule, syntaxType);
+          if (combinator != null) {
+            List<Object> outcome = Arrays.<Object>asList(left, right, combinator);
+            validOutcomes.add(outcome);
+            combinators.add(combinator);
+          }
+        }
+      }
     }
 
     // Build an indicator tensor for valid combinations of syntactic
@@ -292,10 +312,35 @@ public class CcgParser implements Serializable {
     System.out.println(syntaxDistribution.getParameterDescription());
     return syntaxDistribution;
   }
+  
+  private static void getAllFeatureValues(SyntacticCategory category, Set<String> values) {
+     values.add(category.getRootFeature());
+     if (!category.isAtomic()) {
+       getAllFeatureValues(category.getArgument(), values);
+       getAllFeatureValues(category.getReturn(), values);
+     }
+  }
+  
+  private static SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> buildUnifiabilityMap(
+      Iterable<HeadedSyntacticCategory> categories) {
+    SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> unifiabilityMap = HashMultimap.create();
+    for (HeadedSyntacticCategory cat1 : categories) {
+      for (HeadedSyntacticCategory cat2 : categories) {
+        if (cat1.isUnifiableWith(cat2)) {
+          unifiabilityMap.put(cat1, cat2);
+        }
+      }
+    }
+    return unifiabilityMap;
+  }
 
   private static Combinator getApplicationCombinator(HeadedSyntacticCategory functionCat,
       HeadedSyntacticCategory argumentCat, boolean argumentOnLeft, DiscreteVariable syntaxVarType) {
-    Preconditions.checkArgument(functionCat.getArgumentType().isUnifiableWith(argumentCat));
+    Map<Integer, String> assignedFeatures = Maps.newHashMap();
+    Map<Integer, String> otherAssignedFeatures = Maps.newHashMap();
+    Map<Integer, Integer> relabeledFeatures = Maps.newHashMap();
+    Preconditions.checkArgument(functionCat.getArgumentType().isUnifiableWith(argumentCat,
+        assignedFeatures, otherAssignedFeatures, relabeledFeatures));
 
     HeadedSyntacticCategory functionReturnType = functionCat.getReturnType();
     HeadedSyntacticCategory functionArgumentType = functionCat.getArgumentType();
@@ -306,6 +351,10 @@ public class CcgParser implements Serializable {
     int[] functionRelabeling = functionCat.getUniqueVariables();
     int[] resultRelabeling = functionReturnType.getUniqueVariables(); 
     int[] unifiedVariables = functionArgumentType.getUniqueVariables();
+    
+    // The return type may need to inherit some semantic features from
+    // argument. Identify said features and update the return type.
+    functionReturnType = functionReturnType.assignFeatures(assignedFeatures, relabeledFeatures);
 
     int functionReturnTypeInt = syntaxVarType.getValueIndex(functionReturnType);
     int[] functionReturnTypeVars = functionReturnType.getUniqueVariables();
@@ -323,18 +372,23 @@ public class CcgParser implements Serializable {
   private static Combinator getCompositionCombinator(HeadedSyntacticCategory functionCat,
       HeadedSyntacticCategory argumentCat, boolean argumentOnLeft, boolean argumentAsHead,
       DiscreteVariable syntaxVarType) {
-    Preconditions.checkArgument(functionCat.getArgumentType().isUnifiableWith(argumentCat.getReturnType()));
+    Map<Integer, String> assignedFeatures = Maps.newHashMap();
+    Map<Integer, String> otherAssignedFeatures = Maps.newHashMap();
+    Map<Integer, Integer> relabeledFeatures = Maps.newHashMap();
+    Preconditions.checkArgument(functionCat.getArgumentType().isUnifiableWith(argumentCat.getReturnType(),
+        assignedFeatures, otherAssignedFeatures, relabeledFeatures));
     // Determine which syntactic category results from composing the
     // two input categories.
     int[] argumentVars = argumentCat.getUniqueVariables();
     int[] argumentRelabeling = argumentCat.getReturnType().unifyVariables(argumentVars, 
         functionCat.getArgumentType(), functionCat.getUniqueVariables());
 
-    HeadedSyntacticCategory relabeledArgumentType = argumentCat.relabelVariables(argumentVars, argumentRelabeling);
+    HeadedSyntacticCategory relabeledArgumentType = argumentCat.relabelVariables(argumentVars, argumentRelabeling)
+        .assignFeatures(otherAssignedFeatures, Collections.<Integer, Integer>emptyMap());
     int headVariable = argumentAsHead ? relabeledArgumentType.getRootVariable() : functionCat.getRootVariable();
-    HeadedSyntacticCategory resultType = functionCat.getReturnType().addArgument(
-        relabeledArgumentType.getArgumentType(), argumentCat.getDirection(), 
-        headVariable);
+    HeadedSyntacticCategory resultType = functionCat.assignFeatures(assignedFeatures, relabeledFeatures)
+        .getReturnType().addArgument(relabeledArgumentType.getArgumentType(), argumentCat.getDirection(), 
+            headVariable);
 
     // Relabel the input assignments into the result type's variable
     // numbering.
@@ -372,24 +426,56 @@ public class CcgParser implements Serializable {
     }
   }
   
-  private static Combinator getBinaryRuleCombinator(CcgBinaryRule rule, DiscreteVariable syntaxVarType) {
+  private static Combinator getBinaryRuleCombinator(HeadedSyntacticCategory leftCanonical, 
+      HeadedSyntacticCategory rightCanonical, CcgBinaryRule rule, DiscreteVariable syntaxVarType) {
     // Binary rules work by relabeling both the left and right categories 
     // into a single, non-canonical set of variables.
     HeadedSyntacticCategory left = rule.getLeftSyntacticType();
-    HeadedSyntacticCategory leftCanonical = left.getCanonicalForm();
     HeadedSyntacticCategory right = rule.getRightSyntacticType();
-    HeadedSyntacticCategory rightCanonical = right.getCanonicalForm();
     
+    // Identify assignments to the feature variables of left and canonical,
+    // then combine them into a single assignment which applies to the return
+    // type.
+    Map<Integer, String> leftAssignedFeatures = Maps.newHashMap();
+    Map<Integer, String> leftOtherAssignedFeatures = Maps.newHashMap();
+    Map<Integer, Integer> leftRelabeledFeatures = Maps.newHashMap();
+    Preconditions.checkArgument(leftCanonical.isUnifiableWith(left, leftAssignedFeatures,
+        leftOtherAssignedFeatures, leftRelabeledFeatures));
+    
+    Map<Integer, String> rightAssignedFeatures = Maps.newHashMap();
+    Map<Integer, String> rightOtherAssignedFeatures = Maps.newHashMap();
+    Map<Integer, Integer> rightRelabeledFeatures = Maps.newHashMap();
+    Preconditions.checkArgument(rightCanonical.isUnifiableWith(right, rightAssignedFeatures,
+        rightOtherAssignedFeatures, rightRelabeledFeatures));
+    
+    Set<Integer> assignedVars = Sets.newHashSet(leftOtherAssignedFeatures.keySet());
+    assignedVars.addAll(rightOtherAssignedFeatures.keySet());
+    Map<Integer, String> combinedAssignedFeatures = Maps.newHashMap();
+    for (int varNum : assignedVars) {
+      String leftVal = leftOtherAssignedFeatures.get(varNum);
+      String rightVal = rightOtherAssignedFeatures.get(varNum);
+      
+      if (leftVal != null && rightVal != null && !(leftVal.equals(rightVal))) {
+        // Failure: the two input categories must produce the same assignment to all 
+        // feature variables. 
+        return null;
+      } else {
+        combinedAssignedFeatures.put(varNum, (leftVal != null) ? leftVal : rightVal);
+      }
+    }
+
     int[] leftRelabelingArray = leftCanonical.unifyVariables(leftCanonical.getUniqueVariables(),
         left, new int[0]);
     int[] rightRelabelingArray = rightCanonical.unifyVariables(rightCanonical.getUniqueVariables(),
         right, new int[0]);
 
     Map<Integer, Integer> parentRelabeling = Maps.newHashMap();
-    HeadedSyntacticCategory parent = rule.getParentSyntacticType().getCanonicalForm(parentRelabeling);    
+    HeadedSyntacticCategory parent = rule.getParentSyntacticType().assignFeatures(
+        combinedAssignedFeatures, Collections.<Integer, Integer>emptyMap())
+        .getCanonicalForm(parentRelabeling);
     int[] parentOriginalVars = rule.getParentSyntacticType().getUniqueVariables();
     int[] parentRelabelingArray = relabelingMapToArray(parentRelabeling, parentOriginalVars);
-    
+
     int[] unifiedVariables = Ints.concat(leftRelabelingArray, rightRelabelingArray);
     
     int parentInt = syntaxVarType.getValueIndex(parent);
@@ -409,6 +495,10 @@ public class CcgParser implements Serializable {
   
   public static DiscreteFactor buildUnaryRuleDistribution(Collection<CcgUnaryRule> unaryRules, 
       DiscreteVariable syntaxVariableType) {
+
+    @SuppressWarnings("unchecked")
+    SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> unifiabilityMap = 
+        buildUnifiabilityMap(((Iterable<HeadedSyntacticCategory>)(Iterable<?>) syntaxVariableType.getValues()));
     VariableNumMap unaryRuleInputVar = VariableNumMap.singleton(1,  UNARY_RULE_INPUT_VAR_NAME,
         syntaxVariableType);
 
@@ -421,11 +511,42 @@ public class CcgParser implements Serializable {
     TableFactorBuilder unaryRuleBuilder = new TableFactorBuilder(unaryRuleVars,
         SparseTensorBuilder.getFactory());
     for (CcgUnaryRule rule : unaryRules) {
-      unaryRuleBuilder.setWeightList(
-          Arrays.asList(rule.getInputSyntacticCategory().getCanonicalForm(), rule), 1.0);
+      for (HeadedSyntacticCategory cat : unifiabilityMap.get(
+          rule.getInputSyntacticCategory().getCanonicalForm())) {
+        unaryRuleBuilder.setWeightList(Arrays.asList(cat, rule), 1.0);
+      }
     }
     return unaryRuleBuilder.build();
   }
+
+  /*
+  public static DiscreteFactor buildAllowableCombinations(DiscreteFactor binaryRuleFactor,
+      DiscreteFactor unaryRuleFactor, DiscreteVariable syntaxVariableType) {
+    Set<List<Object>> allowableCombinations = Sets.newHashSet();
+    for (Object leftObject : syntaxVariableType.getValues()) {
+      HeadedSyntacticCategory leftSyntax = (HeadedSyntacticCategory) leftObject;
+      for (Object rightObject : syntaxVariableType.getValues()) {
+        HeadedSyntacticCategory rightSyntax = (HeadedSyntacticCategory) rightObject;
+        
+        Iterator<Outcome> leftUnaryRuleIter = unaryRuleFactor.outcomePrefixIterator(
+            unaryRuleInputVar.outcomeArrayToAssignment(leftSyntax));
+        while (leftUnaryRuleIter.hasNext()) {
+          Outcome leftOutcome = leftUnaryRuleIter.next();
+          HeadedSyntacticCategory leftRaisedType = leftUnaryRule.apply(leftSyntax);
+          Iterator<Outcome> rightUnaryRuleIter = unaryRuleFactor.outcomePrefixIterator(
+            unaryRuleInputVar.outcomeArrayToAssignment(rightSyntax));
+          while (rightUnaryRuleIter.hasNext()) {
+            Outcome rightOutcome = rightUnaryRuleIter.next();
+            HeadedSyntacticCategory rightRaisedType = rightUnaryRule.apply(rightSyntax);
+            
+            Assignment assignment = syntaxVars.outcomeArrayToAssignment(leftRaisedType, rightRaisedType);
+            
+          }
+        }
+      }
+    }
+  }
+  */
   
   public boolean isPossibleDependencyStructure(DependencyStructure dependency) {
     Assignment assignment = Assignment.unionAll(
@@ -565,7 +686,7 @@ public class CcgParser implements Serializable {
     CcgChart chart = new CcgChart(terminals, beamSize, beamFilter);
 
     log.startTimer("ccg_parse/initialize_chart");
-    initializeChart(terminals, chart);
+    initializeChart(terminals, chart, log);
     log.stopTimer("ccg_parse/initialize_chart");
 
     log.startTimer("ccg_parse/calculate_inside_beam");
@@ -648,7 +769,7 @@ public class CcgParser implements Serializable {
    * @param terminals
    * @param chart
    */
-  public void initializeChart(List<String> terminals, CcgChart chart) {
+  public void initializeChart(List<String> terminals, CcgChart chart, LogFunction log) {
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
     // Identify all possible assignments to the dependency head and
@@ -668,7 +789,7 @@ public class CcgParser implements Serializable {
 
             // Add all possible chart entries to the ccg chart.
             ChartEntry entry = ccgCategoryToChartEntry(category, i, j);
-            addChartEntryWithUnaryRules(entry, chart, bestOutcome.getProbability(), i, j);
+            addChartEntryWithUnaryRules(entry, chart, bestOutcome.getProbability(), i, j, log);
 
             // Identify possible predicates.
             for (int assignmentPredicateNum : entry.getAssignmentPredicateNums()) {
@@ -733,9 +854,9 @@ public class CcgParser implements Serializable {
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
     long[] depAccumulator = new long[20];
-    int[] assignmentVariableAccumulator = new int[20];
-    int[] assignmentPredicateAccumulator = new int[20];
-    int[] assignmentIndexAccumulator = new int[20];
+    int[] assignmentVariableAccumulator = new int[50];
+    int[] assignmentPredicateAccumulator = new int[50];
+    int[] assignmentIndexAccumulator = new int[50];
     
     Tensor syntaxDistributionTensor = syntaxDistribution.getWeights();
 
@@ -753,27 +874,28 @@ public class CcgParser implements Serializable {
         int numRightTrees = chart.getNumChartEntriesForSpan(spanStart + j, spanEnd);
         Multimap<Integer, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
 
-        log.startTimer("ccg_parse/beam_loop");
-        for (Integer leftType : leftTypes.keySet()) {
-          for (Integer rightType : rightTypes.keySet()) {
-            int[] keyPrefix = new int[] { leftType, rightType };
-            long keyNumPrefix = syntaxDistributionTensor.dimKeyPrefixToKeyNum(keyPrefix);
-            int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
-            int tensorSize = syntaxDistributionTensor.size();
-            int[] dimSizes = syntaxDistributionTensor.getDimensionSizes();
-            int keyDimSize = dimSizes[dimSizes.length - 1];
-            if (index == -1 || index >= tensorSize) {
-              continue;
-            }
-            long maxKeyNum = keyNumPrefix + keyDimSize;
-            long curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
-            // System.out.println("  " + curKeyNum + " " + maxKeyNum + " " + index);
-            while (curKeyNum < maxKeyNum && index < tensorSize) {
+        int[] key = new int[1];
+        // log.startTimer("ccg_parse/beam_loop");
+        for (int leftType : leftTypes.keySet()) {
+          key[0] = leftType;
+          long keyNumPrefix = syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
+          int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
+          long[] dimensionOffsets = syntaxDistributionTensor.getDimensionOffsets();
+          int tensorSize = syntaxDistributionTensor.size();
+          if (index == -1 || index >= tensorSize) {
+            continue;
+          }
+          long maxKeyNum = keyNumPrefix + dimensionOffsets[0];
+          long curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
+          
+          while (curKeyNum < maxKeyNum && index < tensorSize) {
+            int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
+            if (rightTypes.containsKey(rightType)) {
               Combinator resultCombinator = (Combinator) combinatorVarType.getValue(
-                  (int) (curKeyNum - keyNumPrefix));
+                  (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
               double ruleProb = syntaxDistributionTensor.getByIndex(index);
               // System.out.println("  " + resultCombinator);
-              
+
               int resultSyntax = resultCombinator.getSyntax();
               int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
 
@@ -824,7 +946,7 @@ public class CcgParser implements Serializable {
                   if (numDeps == -1) {
                     continue;
                   }
-                  
+
                   long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
                   long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
 
@@ -839,19 +961,21 @@ public class CcgParser implements Serializable {
                       null, newAssignmentVariableNums, newAssignmentPredicateNums, newAssignmentIndexes,
                       unfilledDepArray, filledDepArray, spanStart, spanStart + i, leftIndex, 
                       spanStart + j, spanEnd, rightIndex, resultCombinator);
-                  addChartEntryWithUnaryRules(result, chart, ruleProb * leftProb * rightProb, spanStart, spanEnd);
+                  // log.startTimer("ccg_parse/add_chart_entry_with_unary_rules");
+                  addChartEntryWithUnaryRules(result, chart, ruleProb * leftProb * rightProb, spanStart, spanEnd, log);
+                  // log.stopTimer("ccg_parse/add_chart_entry_with_unary_rules");
                 }
               }
-              
-              // Advance the iterator over rules.
-              index++;
-              if (index < tensorSize) {
-                curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
-              }
+            }
+
+            // Advance the iterator over rules.
+            index++;
+            if (index < tensorSize) {
+              curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
             }
           }
         }
-        log.stopTimer("ccg_parse/beam_loop");
+        // log.stopTimer("ccg_parse/beam_loop");
       }
     }
   }
@@ -877,7 +1001,8 @@ public class CcgParser implements Serializable {
    * @param spanEnd
    */
   public void addChartEntryWithUnaryRules(ChartEntry result, CcgChart chart, double leftRightProb,
-      int spanStart, int spanEnd) {
+      int spanStart, int spanEnd, LogFunction log) {
+    // log.startTimer("ccg_parse/dep_probs");
     // Get the probabilities of the generated dependencies.
     double depProb = 1.0;
     Tensor currentParseTensor = chart.getDependencyTensor();
@@ -888,18 +1013,28 @@ public class CcgParser implements Serializable {
 
     double totalProb = leftRightProb * depProb;
     chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
+    // log.stopTimer("ccg_parse/dep_probs");
     /*
      * System.out.println(spanStart + "." + spanEnd + " " +
      * result.getHeadedSyntax() + " " +
      * Arrays.toString(result.getDependencies()) + " " + totalProb);
      */
-    Assignment syntaxPrefixAssignment = unaryRuleInputVar.outcomeArrayToAssignment(
-        ((HeadedSyntacticCategory) syntaxVarType.getValue(result.getHeadedSyntax()))); 
-    Iterator<Outcome> unaryRuleIter = unaryRuleFactor.outcomePrefixIterator(syntaxPrefixAssignment);
-    while (unaryRuleIter.hasNext()) {
-      Outcome outcome = unaryRuleIter.next();
-      CcgUnaryRule unaryRule = (CcgUnaryRule) outcome.getAssignment().getValue(unaryRuleVarNum);
-      double ruleProb = outcome.getProbability();
+    // log.startTimer("ccg_parse/unary_rules");
+    int headedSyntax = result.getHeadedSyntax();
+    long keyNumPrefix = unaryRuleTensor.dimKeyPrefixToKeyNum(new int[] {headedSyntax});
+    int index = unaryRuleTensor.getNearestIndex(keyNumPrefix);
+    int tensorSize = unaryRuleTensor.size();
+    if (index == -1 || index >= tensorSize) {
+      return;
+    }
+    long[] dimensionOffsets = unaryRuleTensor.getDimensionOffsets();
+    long maxKeyNum = keyNumPrefix + dimensionOffsets[0];
+    long curKeyNum = unaryRuleTensor.indexToKeyNum(index);
+    
+    while (curKeyNum < maxKeyNum && index < tensorSize) {
+      int unaryRuleIndex = (int) (curKeyNum % dimensionOffsets[0]);
+      CcgUnaryRule unaryRule = (CcgUnaryRule) unaryRuleVarType.getValue(unaryRuleIndex);
+      double ruleProb = unaryRuleTensor.getByIndex(index);
       ChartEntry unaryRuleResult = unaryRule.apply(result, syntaxVarType);
       if (unaryRuleResult != null) {
         chart.addChartEntryForSpan(unaryRuleResult, totalProb * ruleProb, spanStart, spanEnd,
@@ -910,7 +1045,14 @@ public class CcgParser implements Serializable {
          * unaryRuleResult.getDependencies() + " " + totalProb);
          */
       }
+      
+      // Advance the iterator over unary rules.
+      index++;
+      if (index < tensorSize) {
+        curKeyNum = unaryRuleTensor.indexToKeyNum(index);
+      }
     }
+    // log.stopTimer("ccg_parse/unary_rules");
   }
 
   private int relabelAssignment(ChartEntry entry, int[] relabeling, int[] variableAccumulator,

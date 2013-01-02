@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
 
 /**
@@ -109,7 +110,7 @@ public class StochasticGradientTrainer {
       log.startTimer("compute_gradient_(serial)");
       int iterSearchErrors = 0;
       GradientEvaluation oracleResult = executor.mapReduce(batchData,
-          new GradientMapper<M, E>(currentModel, oracle, log), new GradientReducer<M, E>(oracle, log));
+          new GradientMapper<M, T>(currentModel, oracle, log), new GradientReducer<M, T>(oracle, log));
 
       iterSearchErrors = oracleResult.getSearchErrors();
       SufficientStatistics gradient = oracleResult.getGradient();

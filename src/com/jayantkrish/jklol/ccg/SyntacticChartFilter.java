@@ -52,7 +52,7 @@ public class SyntacticChartFilter implements ChartFilter {
         entry.getHeadedSyntax()); 
     SyntacticCategory syntax = headedSyntax.getSyntax();    
     SyntacticCategory expectedRootSyntax = unaryRuleResult.get(mapIndex);
-    System.out.println(" " + spanStart + "." + spanEnd + " : " + headedSyntax + " " + expectedRootSyntax);
+    // System.out.println(" " + spanStart + "." + spanEnd + " : " + headedSyntax + " " + expectedRootSyntax);
 
     if (!syntax.equals(expectedRootSyntax)) {
       return false;

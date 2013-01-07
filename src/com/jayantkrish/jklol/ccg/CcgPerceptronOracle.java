@@ -41,14 +41,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // Calculate the best predicted parse, i.e., the highest weight parse
     // without conditioning on the true parse.
     List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), beamSize, log);
-    CcgParse bestPredictedParse = null;
-    for (CcgParse parse : parses) {
-      if (parse.getSyntacticCategory().isAtomic()) {
-        bestPredictedParse = parse;
-        break;
-      }
-    }
-
+    CcgParse bestPredictedParse = parses.size() > 0 ? parses.get(0) : null;
     System.out.println("num predicted: " + parses.size());
     if (bestPredictedParse == null) {
       System.out.println("Search error (Predicted): " + example.getWords());
@@ -57,7 +50,6 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     log.stopTimer("update_gradient/unconditional_max_marginal");
 
     log.startTimer("update_gradient/conditional_max_marginal");
-    System.out.println(example.getSyntacticParse());
     ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
     List<CcgParse> possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize,
         conditionalChartFilter, log);
@@ -79,6 +71,8 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
       throw new ZeroProbabilityError();
     }        
     log.stopTimer("update_gradient/conditional_max_marginal");
+    System.out.println("best predicted: " + bestPredictedParse + " " + bestPredictedParse.getSubtreeProbability());
+    System.out.println("best correct: " + bestCorrectParse + " " + bestCorrectParse.getSubtreeProbability());
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the predicted feature counts.

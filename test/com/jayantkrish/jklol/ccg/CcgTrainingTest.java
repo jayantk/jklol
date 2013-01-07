@@ -10,7 +10,6 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
-import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * Regression tests for training CCG parsers from dependency
@@ -139,12 +138,6 @@ public class CcgTrainingTest extends TestCase {
   public void testTrainPerceptronSyntaxOnly() {
     CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly);
     assertTrainedParserUsesSyntax(parser);
-
-    List<CcgParse> parses = filterNonAtomicParses(parser.beamSearch(10, "object", "near", "block"));
-    // The two parses differ only in the semantics of near, which is
-    // unconstrained in the training data.
-    assertEquals(2, parses.size());
-    assertEquals(parses.get(0).getSubtreeProbability(), parses.get(1).getSubtreeProbability(), 0.1);
   }
 
   private CcgParser trainLoglikelihoodParser(List<CcgExample> examples) {
@@ -160,14 +153,10 @@ public class CcgTrainingTest extends TestCase {
 
   private CcgParser trainPerceptronParser(List<CcgExample> examples) {
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, 100);
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(20, 1, 1,
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(21, 1, 1,
         false, 0.0, new DefaultLogFunction());
 
-    // Ensure that this test is deterministic.
-    Pseudorandom.get().setSeed(1);
     SufficientStatistics initialParameters = oracle.initializeGradient();
-    initialParameters.perturb(0.00001);
-
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     CcgParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));

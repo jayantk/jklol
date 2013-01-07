@@ -55,6 +55,8 @@ public class SyntacticCategory implements Serializable {
   // feature variable.
   private final String featureValue;
   private final int featureVariable;
+  
+  private final int cachedHashCode;
 
   private static final Map<String, SyntacticCategory> categoryInternmentMap =
       Maps.newHashMap();
@@ -73,6 +75,8 @@ public class SyntacticCategory implements Serializable {
     Preconditions.checkArgument(featureValue == DEFAULT_FEATURE_VALUE || !featureValue.equals(DEFAULT_FEATURE_VALUE));
     this.featureValue = Preconditions.checkNotNull(featureValue);
     this.featureVariable = featureVariable;
+    
+    this.cachedHashCode = cacheHashCode();
   }
 
   public static SyntacticCategory createFunctional(Direction direction, SyntacticCategory returnType,
@@ -464,8 +468,7 @@ public class SyntacticCategory implements Serializable {
     }
   }
 
-  @Override
-  public int hashCode() {
+  private int cacheHashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result
@@ -478,6 +481,11 @@ public class SyntacticCategory implements Serializable {
         + ((returnType == null) ? 0 : returnType.hashCode());
     result = prime * result + ((value == null) ? 0 : value.hashCode());
     return result;
+  }
+  
+  @Override
+  public int hashCode() {
+    return cachedHashCode;
   }
 
   @Override

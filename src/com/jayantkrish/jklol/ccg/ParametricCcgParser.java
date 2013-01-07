@@ -407,11 +407,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     
     // Increment unary rule parameters.
     if (parse.getUnaryRule() != null) {
-      CcgUnaryRule rule = parse.getUnaryRule();
+      UnaryCombinator rule = parse.getUnaryRule();
       SufficientStatistics unaryRuleGradient = gradient.coerceToList().getStatisticByName(UNARY_RULE_PARAMETERS);
       Assignment unaryRuleAssignment = unaryRuleInputVar.outcomeArrayToAssignment(
-          rule.getInputSyntacticCategory().getCanonicalForm()).union(
-              unaryRuleVar.outcomeArrayToAssignment(parse.getUnaryRule()));
+          rule.getInputType()).union(unaryRuleVar.outcomeArrayToAssignment(rule));
       unaryRuleFamily.incrementSufficientStatisticsFromAssignment(unaryRuleGradient,
           unaryRuleAssignment, count);
     }

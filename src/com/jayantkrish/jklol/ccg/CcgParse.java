@@ -41,7 +41,7 @@ public class CcgParse {
   // If non-null, the unary rule applied to produce syntax, either
   // from lexiconEntry (if this is a terminal) or from left and right
   // (if this is a nonterminal).
-  private final CcgUnaryRule unaryRule;
+  private final UnaryCombinator unaryRule;
   
   private final int spanStart;
   private final int spanEnd;
@@ -59,7 +59,7 @@ public class CcgParse {
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry, List<String> spannedWords,
       Set<IndexedPredicate> heads, List<DependencyStructure> dependencies, double probability,
-      CcgParse left, CcgParse right, Combinator combinator, CcgUnaryRule unaryRule, int spanStart, int spanEnd) {
+      CcgParse left, CcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
     this.spannedWords = spannedWords;
@@ -102,14 +102,14 @@ public class CcgParse {
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
       Set<IndexedPredicate> heads, List<DependencyStructure> deps, List<String> spannedWords,
-      double lexicalProbability, CcgUnaryRule unaryRule, int spanStart, int spanEnd) {
+      double lexicalProbability, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     return new CcgParse(syntax, lexiconEntry, spannedWords, heads, deps, lexicalProbability,
         null, null, null, unaryRule, spanStart, spanEnd);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left,
-      CcgParse right, Combinator combinator, CcgUnaryRule unaryRule, int spanStart, int spanEnd) {
+      CcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     return new CcgParse(syntax, null, null, heads, dependencies, dependencyProbability, left, right,
         combinator, unaryRule, spanStart, spanEnd);
   }
@@ -143,7 +143,7 @@ public class CcgParse {
    * 
    * @return
    */
-  public CcgUnaryRule getUnaryRule() {
+  public UnaryCombinator getUnaryRule() {
     return unaryRule;
   }
   
@@ -156,7 +156,7 @@ public class CcgParse {
   public CcgSyntaxTree getSyntacticParse() {
     SyntacticCategory originalSyntax = null;
     if (unaryRule != null) {
-      originalSyntax = unaryRule.getInputSyntacticCategory().getSyntax();
+      originalSyntax = unaryRule.getUnaryRule().getInputSyntacticCategory().getSyntax();
     } else {
       originalSyntax = syntax.getSyntax();
     }

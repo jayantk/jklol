@@ -61,7 +61,7 @@ public class SyntacticChartFilter implements ChartFilter {
     SyntacticCategory expectedPreUnarySyntax = binaryRuleResult.get(mapIndex);
     if (!expectedRootSyntax.equals(expectedPreUnarySyntax)) {
       return entry.getUnaryRule() != null &&
-          entry.getUnaryRule().getInputSyntacticCategory().getSyntax().equals(expectedPreUnarySyntax);
+          entry.getUnaryRule().getInputType().getSyntax().equals(expectedPreUnarySyntax);
     } else {
       return entry.getUnaryRule() == null;
     }

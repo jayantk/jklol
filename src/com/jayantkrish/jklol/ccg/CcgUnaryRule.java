@@ -3,15 +3,11 @@ package com.jayantkrish.jklol.ccg;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class CcgUnaryRule implements Serializable {
@@ -149,45 +145,39 @@ public class CcgUnaryRule implements Serializable {
     return Collections.emptyList();
   }
 
-  public ChartEntry apply(ChartEntry entry, DiscreteVariable syntaxVarType) {
-    HeadedSyntacticCategory entrySyntax = (HeadedSyntacticCategory) syntaxVarType
-        .getValue(entry.getHeadedSyntax());
-    Map<Integer, String> assignedFeatures = Maps.newHashMap();
-    Map<Integer, String> otherAssignedFeatures = Maps.newHashMap();
-    Map<Integer, Integer> relabeledFeatures = Maps.newHashMap();
-
-    Preconditions.checkArgument(entrySyntax.isUnifiableWith(inputSyntax, assignedFeatures, 
-        otherAssignedFeatures, relabeledFeatures));
-
-    // Relabel entry's dependencies and variables to match the
-    // assignments in the return type.
-    int[] patternToChart = entrySyntax.unifyVariables(entrySyntax.getUniqueVariables(), inputSyntax,
-        new int[0]);
-    if (patternToChart == null) {
-      return null;
-    }
-
-    int[] returnVars = entry.getAssignmentVariableNumsRelabeled(patternToChart);
-    int[] returnPredicateNums = entry.getAssignmentPredicateNums();
-    int[] returnIndexes = entry.getAssignmentIndexes();
-    long[] returnUnfilledDeps = entry.getUnfilledDependenciesRelabeled(patternToChart);
-
-    int returnSyntaxInd =  syntaxVarType.getValueIndex(returnSyntax.assignFeatures(otherAssignedFeatures,
-        Collections.<Integer, Integer>emptyMap()));
-    if (entry.isTerminal()) {
-      return new ChartEntry(returnSyntaxInd, returnSyntax.getUniqueVariables(), 
-          entry.getLexiconEntry(), this, returnVars, returnPredicateNums, returnIndexes,
-          returnUnfilledDeps, entry.getDependencies(), entry.getLeftSpanStart(), 
-          entry.getLeftSpanEnd());
-    } else {
-      return new ChartEntry(returnSyntaxInd, returnSyntax.getUniqueVariables(), this,
-          returnVars, returnPredicateNums, returnIndexes, returnUnfilledDeps, 
-          entry.getDependencies(), entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
-          entry.getLeftChartIndex(), entry.getRightSpanStart(), entry.getRightSpanEnd(),
-          entry.getRightChartIndex(), entry.getCombinator());
-    }
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result
+        + ((inputSyntax == null) ? 0 : inputSyntax.hashCode());
+    result = prime * result
+        + ((returnSyntax == null) ? 0 : returnSyntax.hashCode());
+    return result;
   }
-  
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CcgUnaryRule other = (CcgUnaryRule) obj;
+    if (inputSyntax == null) {
+      if (other.inputSyntax != null)
+        return false;
+    } else if (!inputSyntax.equals(other.inputSyntax))
+      return false;
+    if (returnSyntax == null) {
+      if (other.returnSyntax != null)
+        return false;
+    } else if (!returnSyntax.equals(other.returnSyntax))
+      return false;
+    return true;
+  }
+
   @Override
   public String toString() {
     return inputSyntax.toString() + " -> " + returnSyntax.toString();

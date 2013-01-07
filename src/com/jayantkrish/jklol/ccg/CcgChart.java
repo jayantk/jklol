@@ -271,7 +271,7 @@ public class CcgChart {
 
     // If non-null, this unary rule was applied at this entry to
     // produce syntax from the original category.
-    private final CcgUnaryRule unaryRule;
+    private final UnaryCombinator unaryRule;
 
     // An assignment to the semantic variables given by syntax.
     // Each value is both a predicate and its index in the sentence.
@@ -303,7 +303,7 @@ public class CcgChart {
     
     private final Combinator combinator;
 
-    public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgUnaryRule unaryRule, int[] assignmentVariableNums,
+    public ChartEntry(int syntax, int[] syntaxUniqueVars, UnaryCombinator unaryRule, int[] assignmentVariableNums,
         int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
         long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex, Combinator combinator) {
@@ -329,7 +329,7 @@ public class CcgChart {
       this.combinator = combinator;
     }
 
-    public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, CcgUnaryRule unaryRule,
+    public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, UnaryCombinator unaryRule,
         int[] assignmentVariableNums, int[] assignmentPredicateNums, int[] assignmentIndexes,
         long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
       this.syntax = syntax;
@@ -369,7 +369,7 @@ public class CcgChart {
      * 
      * @return
      */
-    public CcgUnaryRule getUnaryRule() {
+    public UnaryCombinator getUnaryRule() {
       return unaryRule;
     }
 
@@ -471,6 +471,20 @@ public class CcgChart {
     
     public Combinator getCombinator() {
       return combinator;
+    }
+    
+    public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars, UnaryCombinator unaryRuleCombinator, 
+        int[] newVars, int[] newPredicates, int[] newIndexes, long[] newUnfilledDeps, long[] newFilledDeps) {
+      Preconditions.checkState(unaryRule == null);
+      if (isTerminal()) {
+        return new ChartEntry(resultSyntax, resultUniqueVars, lexiconEntry, 
+            unaryRuleCombinator, newVars, newPredicates, newIndexes, 
+            newUnfilledDeps, newFilledDeps,  leftSpanStart, leftSpanEnd);
+      } else {
+        return new ChartEntry(resultSyntax, resultUniqueVars, unaryRuleCombinator,
+            newVars, newPredicates, newIndexes, newUnfilledDeps, newFilledDeps,  leftSpanStart, 
+            leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator);
+      }
     }
 
     @Override

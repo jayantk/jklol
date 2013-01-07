@@ -25,12 +25,15 @@ import com.jayantkrish.jklol.probdb.TableQuery;
 public class NoExportHelpers {
 
   public static CcgParse parseCcg(String input) {
-    String[] lexicon = {"block,N{0},0 pred:block", "object,N{0},0 pred:block",
-        "triangle,N{0},0 pred:triangle", "cube,N{0},0 pred:cube", "ground,N{0},0 pred:ground",
+    String[] lexicon = {"block,N{0},0 pred:block", "blocks,N{0},0 pred:block",
+        "one,N{0},0 pred:block", "ones,N{0},0 pred:block",
+        "object,N{0},0 pred:block", "objects,N{0},0 pred:block",
+        "triangle,N{0},0 pred:triangle", "triangles,N{0},0 pred:triangle", "cube,N{0},0 pred:cube", 
+        "cubes,N{0},0 pred:cube", "ground,N{0},0 pred:ground",
         "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1", "green,(N{1}/N{1}){0},0 pred:lime,pred:lime 1 1",
         "blue,(N{1}/N{1}){0},0 pred:blue,pred:blue 1 1", "yellow,(N{1}/N{1}){0},0 pred:yellow,pred:yellow 1 1",
         "pink,(N{1}/N{1}){0},0 pred:deeppink,pred:deeppink 1 1", "orange,(N{1}/N{1}){0},0 pred:orange,pred:orange 1 1",
-        "green,N{0},0 pred:green", "the,(N{1}/N{1}){0},0 the", "a,(N{1}/N{1}){0},0 a",
+        "green,N{0},0 pred:green", "the,(N{1}/N{1}){0},0 pred:true,pred:true 1 1", "a,(N{1}/N{1}){0},0 pred:true,pred:true 1 1",
         "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1,pred:near 2 2",
         "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 pred:near,pred:near 2 2",
         "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 1",
@@ -39,7 +42,7 @@ public class NoExportHelpers {
     String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
 
     ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
-        Arrays.asList(lexicon), Arrays.asList(rules), null, true);
+        Arrays.asList(lexicon), Arrays.asList(rules), null, false);
     CcgParser parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
     
     List<CcgParse> parses = parser.beamSearch(10, input.split(" "));

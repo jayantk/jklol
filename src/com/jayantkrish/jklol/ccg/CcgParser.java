@@ -173,7 +173,7 @@ public class CcgParser implements Serializable {
       }
     }
     for (Object rule : unaryRuleVar.getDiscreteVariables().get(0).getValues()) {
-      for (String predicate : ((CcgUnaryRule) rule).getSubjects()) {
+      for (String predicate : ((UnaryCombinator) rule).getUnaryRule().getSubjects()) {
         predicatesInRules.add((long) dependencyHeadType.getValueIndex(predicate));
       }
     }
@@ -495,27 +495,50 @@ public class CcgParser implements Serializable {
   
   public static DiscreteFactor buildUnaryRuleDistribution(Collection<CcgUnaryRule> unaryRules, 
       DiscreteVariable syntaxVariableType) {
-
     @SuppressWarnings("unchecked")
     SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> unifiabilityMap = 
         buildUnifiabilityMap(((Iterable<HeadedSyntacticCategory>)(Iterable<?>) syntaxVariableType.getValues()));
-    VariableNumMap unaryRuleInputVar = VariableNumMap.singleton(1,  UNARY_RULE_INPUT_VAR_NAME,
-        syntaxVariableType);
 
-    List<CcgUnaryRule> validRules = Lists.newArrayList(unaryRules);
-    DiscreteVariable unaryRuleVarType = new DiscreteVariable("unaryRuleType", validRules);
+    Set<List<Object>> validOutcomes = Sets.newHashSet();
+    Set<UnaryCombinator> validCombinators = Sets.newHashSet();
+    for (CcgUnaryRule rule : unaryRules) {
+      for (HeadedSyntacticCategory cat : unifiabilityMap.get(
+          rule.getInputSyntacticCategory().getCanonicalForm())) {
+        
+        Map<Integer, String> assignedFeatures = Maps.newHashMap();
+        Map<Integer, String> otherAssignedFeatures = Maps.newHashMap();
+        Map<Integer, Integer> relabeledFeatures = Maps.newHashMap();
+
+        Preconditions.checkArgument(cat.isUnifiableWith(rule.getInputSyntacticCategory(),
+            assignedFeatures, otherAssignedFeatures, relabeledFeatures));
+
+        int[] patternToChart = cat.unifyVariables(cat.getUniqueVariables(),
+            rule.getInputSyntacticCategory(), new int[0]);
+
+        HeadedSyntacticCategory returnType = rule.getResultSyntacticCategory().assignFeatures(
+            otherAssignedFeatures, Collections.<Integer, Integer>emptyMap());
+        int resultAsInt = syntaxVariableType.getValueIndex(returnType);
+        UnaryCombinator combinator = new UnaryCombinator(cat, resultAsInt,
+            returnType.getUniqueVariables(), patternToChart, rule);
+        
+        validOutcomes.add(Arrays.<Object>asList(cat, combinator));
+        validCombinators.add(combinator);
+      }
+    }
+    
+    DiscreteVariable unaryRuleVarType = new DiscreteVariable("unaryRuleType", validCombinators);
     VariableNumMap unaryRuleVar = VariableNumMap.singleton(2, UNARY_RULE_VAR_NAME, 
         unaryRuleVarType);
+    VariableNumMap unaryRuleInputVar = VariableNumMap.singleton(1,  UNARY_RULE_INPUT_VAR_NAME,
+        syntaxVariableType);
 
     VariableNumMap unaryRuleVars = unaryRuleInputVar.union(unaryRuleVar);
     TableFactorBuilder unaryRuleBuilder = new TableFactorBuilder(unaryRuleVars,
         SparseTensorBuilder.getFactory());
-    for (CcgUnaryRule rule : unaryRules) {
-      for (HeadedSyntacticCategory cat : unifiabilityMap.get(
-          rule.getInputSyntacticCategory().getCanonicalForm())) {
-        unaryRuleBuilder.setWeightList(Arrays.asList(cat, rule), 1.0);
-      }
+    for (List<Object> outcome : validOutcomes) {
+      unaryRuleBuilder.setWeightList(outcome, 1.0);
     }
+
     return unaryRuleBuilder.build();
   }
 
@@ -1033,9 +1056,16 @@ public class CcgParser implements Serializable {
     
     while (curKeyNum < maxKeyNum && index < tensorSize) {
       int unaryRuleIndex = (int) (curKeyNum % dimensionOffsets[0]);
-      CcgUnaryRule unaryRule = (CcgUnaryRule) unaryRuleVarType.getValue(unaryRuleIndex);
+      UnaryCombinator unaryRuleCombinator = (UnaryCombinator) unaryRuleVarType.getValue(unaryRuleIndex);
       double ruleProb = unaryRuleTensor.getByIndex(index);
-      ChartEntry unaryRuleResult = unaryRule.apply(result, syntaxVarType);
+      
+      int[] relabeledVars = result.getAssignmentVariableNumsRelabeled(unaryRuleCombinator.getVariableRelabeling());
+      long[] relabeledUnfilledDeps = result.getUnfilledDependenciesRelabeled(unaryRuleCombinator.getVariableRelabeling());
+      
+      ChartEntry unaryRuleResult = result.applyUnaryRule(unaryRuleCombinator.getSyntax(), 
+          unaryRuleCombinator.getSyntaxUniqueVars(),  unaryRuleCombinator, 
+          relabeledVars, result.getAssignmentPredicateNums(), result.getAssignmentIndexes(),
+          relabeledUnfilledDeps, result.getDependencies()); 
       if (unaryRuleResult != null) {
         chart.addChartEntryForSpan(unaryRuleResult, totalProb * ruleProb, spanStart, spanEnd,
             syntaxVarType);

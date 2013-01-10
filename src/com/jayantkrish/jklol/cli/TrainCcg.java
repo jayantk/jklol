@@ -65,7 +65,7 @@ public class TrainCcg extends AbstractCli {
     for (String line : IoUtils.readLines(options.valueOf(trainingData))) {
       CcgExample example = CcgExample.parseFromString(line, options.has(useCcgBankFormat));
       if (parser.isPossibleExample(example)) {
-        if (!options.has(ignoreSemantics)) {          
+        if (!options.has(ignoreSemantics)) {
           trainingExamples.add(example);
         } else {
           trainingExamples.add(new CcgExample(example.getWords(), null, example.getSyntacticParse()));

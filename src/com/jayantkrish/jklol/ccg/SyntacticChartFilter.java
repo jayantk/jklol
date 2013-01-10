@@ -50,7 +50,7 @@ public class SyntacticChartFilter implements ChartFilter {
 
     HeadedSyntacticCategory headedSyntax = (HeadedSyntacticCategory) syntaxVarType.getValue(
         entry.getHeadedSyntax()); 
-    SyntacticCategory syntax = headedSyntax.getSyntax();    
+    SyntacticCategory syntax = headedSyntax.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);    
     SyntacticCategory expectedRootSyntax = unaryRuleResult.get(mapIndex);
     // System.out.println(" " + spanStart + "." + spanEnd + " : " + headedSyntax + " " + expectedRootSyntax);
 
@@ -61,7 +61,8 @@ public class SyntacticChartFilter implements ChartFilter {
     SyntacticCategory expectedPreUnarySyntax = binaryRuleResult.get(mapIndex);
     if (!expectedRootSyntax.equals(expectedPreUnarySyntax)) {
       return entry.getUnaryRule() != null &&
-          entry.getUnaryRule().getInputType().getSyntax().equals(expectedPreUnarySyntax);
+          entry.getUnaryRule().getInputType().getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE)
+          .equals(expectedPreUnarySyntax);
     } else {
       return entry.getUnaryRule() == null;
     }

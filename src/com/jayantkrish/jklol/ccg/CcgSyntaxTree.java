@@ -104,9 +104,10 @@ public class CcgSyntaxTree {
   }
 
   public static CcgSyntaxTree parseFromCcgBankString(String treeString) {
-    return correctCcgBankConj(parseFromCcgBankString(treeString, 0));
+    // return correctCcgBankConj(parseFromCcgBankString(treeString, 0));
+    return parseFromCcgBankString(treeString, 0);
   }
-  
+
   private static CcgSyntaxTree parseFromCcgBankString(String treeString, int numWordsOnLeft) {
     int curDepth = 0;
     boolean withinAngleBrackets = false;
@@ -176,8 +177,8 @@ public class CcgSyntaxTree {
         if (!origTree.getRootSyntax().equals(origTree.getPreUnaryRuleSyntax())) {
           rightTree = rightTree.updateRootSyntax(origTree.getRootSyntax());
           rightRoot = rightTree.getRootSyntax();
-        }
 
+        }
         SyntacticCategory expectedCat = SyntacticCategory.createFunctional(Direction.LEFT, rightRoot, rightRoot);
         System.out.println("left: " + leftRoot + " right: " + rightRoot + " expected: " + expectedCat);
         return CcgSyntaxTree.createNonterminal(expectedCat, expectedCat, leftTree, rightTree);

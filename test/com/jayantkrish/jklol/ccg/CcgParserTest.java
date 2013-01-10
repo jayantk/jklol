@@ -44,7 +44,8 @@ public class CcgParserTest extends TestCase {
     "colorful,(N{1}/N{1}){0},0 colorful,colorful 1 1",
     "*NOT_A_WORD*,(NP{0}/N{1}){0},0 *NOT_A_WORD*",
     "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},0 near,near 2 2",
-    "the,(N{0}/N{0}){1},1 the,the 1 0"};
+    "the,(N{0}/N{0}){1},1 the,the 1 0",
+    "exactly,(S[1]{1}/S[1]{1}){0},0 exactly,exactly 1 1"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 
@@ -55,7 +56,7 @@ public class CcgParserTest extends TestCase {
     1.0, 0.5,
     1.0, 1.0,
     0.5, 1.0,
-    1.0, 1.0, 1.0};
+    1.0, 1.0, 1.0, 1.0};
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0}", 
     ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
@@ -245,6 +246,15 @@ public class CcgParserTest extends TestCase {
     for (CcgParse parse : parses) {
       assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
     }
+  }
+  
+  public void testParseComposition5() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(
+        Arrays.asList("exactly", "eat"), 10);
+    assertEquals(1, parses.size());
+    
+    assertEquals(HeadedSyntacticCategory.parseFrom("((S[b]{0}\\N{1}){0}/N{2}){0}"),
+        parses.get(0).getHeadedSyntacticCategory());
   }
 
   public void testParseHeadUnification() {

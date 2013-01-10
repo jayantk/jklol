@@ -113,6 +113,6 @@ public class CcgExample {
 
   @Override
   public String toString() {
-    return words + " " + dependencies;
+    return words + " " + dependencies + " " + syntacticParse;
   }
 }

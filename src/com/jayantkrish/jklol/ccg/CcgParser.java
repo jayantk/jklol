@@ -181,7 +181,8 @@ public class CcgParser implements Serializable {
     this.syntacticCategoryMap = HashMultimap.create();
     for (Object syntacticCategory : leftSyntaxVar.getDiscreteVariables().get(0).getValues()) {
       HeadedSyntacticCategory headedCat = (HeadedSyntacticCategory) syntacticCategory;
-      syntacticCategoryMap.put(headedCat.getSyntax(), headedCat);
+      syntacticCategoryMap.put(headedCat.getSyntax()
+          .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE), headedCat);
     }
   }
 
@@ -198,11 +199,11 @@ public class CcgParser implements Serializable {
     Set<HeadedSyntacticCategory> allCategories = Sets.newHashSet();
     for (HeadedSyntacticCategory cat : syntacticCategories) {
       Preconditions.checkArgument(cat.isCanonicalForm());
-      allCategories.addAll(cat.getSubcategories(featureValues));
+      allCategories.addAll(canonicalizeCategories(cat.getSubcategories(featureValues)));
 
       while (!cat.getSyntax().isAtomic()) {
-        allCategories.addAll(cat.getArgumentType().getCanonicalForm().getSubcategories(featureValues));
-        allCategories.addAll(cat.getReturnType().getCanonicalForm().getSubcategories(featureValues));
+        allCategories.addAll(canonicalizeCategories(cat.getArgumentType().getCanonicalForm().getSubcategories(featureValues)));
+        allCategories.addAll(canonicalizeCategories(cat.getReturnType().getCanonicalForm().getSubcategories(featureValues)));
         cat = cat.getReturnType();
       }
     }
@@ -241,40 +242,50 @@ public class CcgParser implements Serializable {
       // Compute function composition rules.
       for (HeadedSyntacticCategory functionCat : allCategories) {
         for (HeadedSyntacticCategory argumentCat : allCategories) {
-          if (!functionCat.isAtomic() && !argumentCat.isAtomic() 
-              && functionCat.getArgumentType().isUnifiableWith(argumentCat.getReturnType())) {
-            for (int i = 0; i < 2; i++) {
-              boolean argumentAsHead = i % 2 == 0;
-              Direction direction = functionCat.getSyntax().getDirection();
-              Combinator combinator;
-              List<Object> outcome;
-              if (direction.equals(Direction.LEFT)) {
-                combinator = getCompositionCombinator(functionCat, argumentCat, true,
-                    argumentAsHead, syntaxType);
-                outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
-              } else if (direction.equals(Direction.RIGHT)) {
-                combinator = getCompositionCombinator(functionCat, argumentCat, false,
-                    argumentAsHead, syntaxType);
-                outcome = Arrays.<Object>asList(functionCat, argumentCat, combinator);
-              } else {
-                // Forward compatible error message, for handling
-                // Direction.BOTH if added.
-                throw new IllegalArgumentException("Unknown direction type: " + direction);
-              }
-              
-              if (combinator != null) {
-                // It is possible for function composition to return syntactic categories
-                // which are not members of the parser's set of valid syntactic categories.
-                // Such composition rules are discarded.
-                validOutcomes.add(outcome);
-                combinators.add(combinator);
+          if (!functionCat.isAtomic()) {
+            // Find any return categories of argumentCat with which functionCat
+            // may be composed.
+            HeadedSyntacticCategory returnType = argumentCat;
+            int depth = 0;
+            while (!returnType.isAtomic()) {
+              returnType = returnType.getReturnType();
+              depth++;
+
+              if (functionCat.getArgumentType().isUnifiableWith(returnType)) {
+                for (int i = 0; i < 2; i++) {
+                  boolean argumentAsHead = i % 2 == 0;
+                  Direction direction = functionCat.getSyntax().getDirection();
+                  Combinator combinator;
+                  List<Object> outcome;
+                  if (direction.equals(Direction.LEFT)) {
+                    combinator = getCompositionCombinator(functionCat, argumentCat, returnType, depth, 
+                        true, argumentAsHead, syntaxType);
+                    outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
+                  } else if (direction.equals(Direction.RIGHT)) {
+                    combinator = getCompositionCombinator(functionCat, argumentCat, returnType, depth, 
+                        false, argumentAsHead, syntaxType);
+                    outcome = Arrays.<Object>asList(functionCat, argumentCat, combinator);
+                  } else {
+                    // Forward compatible error message, for handling
+                    // Direction.BOTH if added.
+                    throw new IllegalArgumentException("Unknown direction type: " + direction);
+                  }
+
+                  if (combinator != null) {
+                    // It is possible for function composition to return syntactic categories
+                    // which are not members of the parser's set of valid syntactic categories.
+                    // Such composition rules are discarded.
+                    validOutcomes.add(outcome);
+                    combinators.add(combinator);
+                  }
+                }
               }
             }
           }
         }
       }
     }
-    
+
     // Find which syntactic categories are unifiable with each other. This map is used to
     // determine which categories binary and unary rules may be applied to.
     SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> unifiabilityMap = buildUnifiabilityMap(allCategories);
@@ -319,6 +330,14 @@ public class CcgParser implements Serializable {
        getAllFeatureValues(category.getArgument(), values);
        getAllFeatureValues(category.getReturn(), values);
      }
+  }
+  
+  private static List<HeadedSyntacticCategory> canonicalizeCategories(Iterable<HeadedSyntacticCategory> cats) {
+    List<HeadedSyntacticCategory> canonicalCats = Lists.newArrayList();
+    for (HeadedSyntacticCategory cat : cats) {
+      canonicalCats.add(cat.getCanonicalForm());
+    }
+    return canonicalCats;
   }
   
   private static SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> buildUnifiabilityMap(
@@ -370,25 +389,36 @@ public class CcgParser implements Serializable {
   }
   
   private static Combinator getCompositionCombinator(HeadedSyntacticCategory functionCat,
-      HeadedSyntacticCategory argumentCat, boolean argumentOnLeft, boolean argumentAsHead,
+      HeadedSyntacticCategory argumentCat, HeadedSyntacticCategory argumentReturnCat, 
+      int argumentReturnDepth, boolean argumentOnLeft, boolean argumentAsHead, 
       DiscreteVariable syntaxVarType) {
     Map<Integer, String> assignedFeatures = Maps.newHashMap();
     Map<Integer, String> otherAssignedFeatures = Maps.newHashMap();
     Map<Integer, Integer> relabeledFeatures = Maps.newHashMap();
-    Preconditions.checkArgument(functionCat.getArgumentType().isUnifiableWith(argumentCat.getReturnType(),
+    Preconditions.checkArgument(functionCat.getArgumentType().isUnifiableWith(argumentReturnCat,
         assignedFeatures, otherAssignedFeatures, relabeledFeatures));
+
     // Determine which syntactic category results from composing the
     // two input categories.
     int[] argumentVars = argumentCat.getUniqueVariables();
-    int[] argumentRelabeling = argumentCat.getReturnType().unifyVariables(argumentVars, 
+    int[] argumentRelabeling = argumentReturnCat.unifyVariables(argumentVars, 
         functionCat.getArgumentType(), functionCat.getUniqueVariables());
-
-    HeadedSyntacticCategory relabeledArgumentType = argumentCat.relabelVariables(argumentVars, argumentRelabeling)
-        .assignFeatures(otherAssignedFeatures, Collections.<Integer, Integer>emptyMap());
-    int headVariable = argumentAsHead ? relabeledArgumentType.getRootVariable() : functionCat.getRootVariable();
+    HeadedSyntacticCategory relabeledArgumentType = argumentCat.relabelVariables(argumentVars,
+        argumentRelabeling).assignFeatures(otherAssignedFeatures, 
+            Collections.<Integer, Integer>emptyMap());
     HeadedSyntacticCategory resultType = functionCat.assignFeatures(assignedFeatures, relabeledFeatures)
-        .getReturnType().addArgument(relabeledArgumentType.getArgumentType(), argumentCat.getDirection(), 
-            headVariable);
+        .getReturnType();
+    for (int i = argumentReturnDepth; i > 0; i--) {
+      HeadedSyntacticCategory curArg = relabeledArgumentType;
+      int headVariable = argumentAsHead ? relabeledArgumentType.getRootVariable() : functionCat.getRootVariable();
+      for (int j = 0; j < (i - 1); j++) {
+        curArg = curArg.getReturnType();
+        headVariable = curArg.getRootVariable();
+      }
+      Direction curDirection = curArg.getDirection();
+      curArg = curArg.getArgumentType();
+      resultType = resultType.addArgument(curArg, curDirection, headVariable);
+    }
 
     // Relabel the input assignments into the result type's variable
     // numbering.
@@ -408,8 +438,6 @@ public class CcgParser implements Serializable {
       // It is possible for function composition to return syntactic categories
       // which are not members of the parser's set of valid syntactic categories.
       // Such composition rules are discarded.
-      System.out.println("Discarding composition rule: " + functionCat + " " + argumentCat
-          + " -> " + canonicalResultType);
       return null;
     }
 
@@ -590,7 +618,8 @@ public class CcgParser implements Serializable {
         Outcome bestOutcome = iterator.next();
         CcgCategory lexicalEntry = (CcgCategory) bestOutcome.getAssignment().getValue(
             ccgCategoryVar.getOnlyVariableNum());
-        if (lexicalEntry.getSyntax().getSyntax().equals(category)) {
+        if (lexicalEntry.getSyntax().getSyntax().assignAllFeatures(
+            SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(category)) {
           return true;
         }
       }
@@ -613,8 +642,9 @@ public class CcgParser implements Serializable {
               parentSyntaxVar.getOnlyVariableNum());
           HeadedSyntacticCategory parentCategory = (HeadedSyntacticCategory)
               syntaxVarType.getValue(resultCombinator.getSyntax());
-          
-          if (parentCategory.getSyntax().equals(parent)) {
+
+          if (parentCategory.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE)
+              .equals(parent)) {
             return true;
           }
         }
@@ -638,9 +668,10 @@ public class CcgParser implements Serializable {
         Iterator<Outcome> unaryRuleIter = unaryRuleFactor.outcomePrefixIterator(syntaxPrefixAssignment);
         while (unaryRuleIter.hasNext()) {
           Outcome outcome = unaryRuleIter.next();
-          CcgUnaryRule rule = (CcgUnaryRule) outcome.getAssignment().getValue(unaryRuleVarNum);
+          CcgUnaryRule rule = ((UnaryCombinator) outcome.getAssignment().getValue(unaryRuleVarNum)).getUnaryRule();
 
-          if (rule.getResultSyntacticCategory().getSyntax().equals(result)) {
+          if (rule.getResultSyntacticCategory().getSyntax()
+              .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(result)) {
             valid = true;
             break;
           }

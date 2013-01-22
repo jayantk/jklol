@@ -76,9 +76,10 @@ public class CcgParser implements Serializable {
 
   // Member variables ////////////////////////////////////
 
-  // Weights and word -> ccg category mappings for the lexicon
-  // (terminals).
+  // Weights and word / pos tag -> ccg category mappings for the 
+  // lexicon (terminals).
   private final VariableNumMap terminalVar;
+  private final VariableNumMap terminalPosVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;
 
@@ -118,8 +119,8 @@ public class CcgParser implements Serializable {
   // Mapping from unheaded syntactic categories to headed syntactic categories.
   private final Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap;
 
-  public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
-      DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar,
+  public CcgParser(VariableNumMap terminalVar, VariableNumMap terminalPosVar, 
+      VariableNumMap ccgCategoryVar, DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       DiscreteFactor dependencyDistribution, VariableNumMap leftSyntaxVar,
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
@@ -127,8 +128,12 @@ public class CcgParser implements Serializable {
       VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap rootSyntaxVar,
       DiscreteFactor rootSyntaxDistribution) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
+    this.terminalPosVar = Preconditions.checkNotNull(terminalPosVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
+    VariableNumMap expectedTerminalVars = VariableNumMap.unionAll(terminalVar, terminalPosVar, 
+        ccgCategoryVar);
+    Preconditions.checkArgument(expectedTerminalVars.equals(terminalDistribution.getVars()));
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(
         VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, dependencyArgVar)));
@@ -569,35 +574,6 @@ public class CcgParser implements Serializable {
 
     return unaryRuleBuilder.build();
   }
-
-  /*
-  public static DiscreteFactor buildAllowableCombinations(DiscreteFactor binaryRuleFactor,
-      DiscreteFactor unaryRuleFactor, DiscreteVariable syntaxVariableType) {
-    Set<List<Object>> allowableCombinations = Sets.newHashSet();
-    for (Object leftObject : syntaxVariableType.getValues()) {
-      HeadedSyntacticCategory leftSyntax = (HeadedSyntacticCategory) leftObject;
-      for (Object rightObject : syntaxVariableType.getValues()) {
-        HeadedSyntacticCategory rightSyntax = (HeadedSyntacticCategory) rightObject;
-        
-        Iterator<Outcome> leftUnaryRuleIter = unaryRuleFactor.outcomePrefixIterator(
-            unaryRuleInputVar.outcomeArrayToAssignment(leftSyntax));
-        while (leftUnaryRuleIter.hasNext()) {
-          Outcome leftOutcome = leftUnaryRuleIter.next();
-          HeadedSyntacticCategory leftRaisedType = leftUnaryRule.apply(leftSyntax);
-          Iterator<Outcome> rightUnaryRuleIter = unaryRuleFactor.outcomePrefixIterator(
-            unaryRuleInputVar.outcomeArrayToAssignment(rightSyntax));
-          while (rightUnaryRuleIter.hasNext()) {
-            Outcome rightOutcome = rightUnaryRuleIter.next();
-            HeadedSyntacticCategory rightRaisedType = rightUnaryRule.apply(rightSyntax);
-            
-            Assignment assignment = syntaxVars.outcomeArrayToAssignment(leftRaisedType, rightRaisedType);
-            
-          }
-        }
-      }
-    }
-  }
-  */
   
   public boolean isPossibleDependencyStructure(DependencyStructure dependency) {
     Assignment assignment = Assignment.unionAll(
@@ -734,13 +710,19 @@ public class CcgParser implements Serializable {
   public List<CcgParse> beamSearch(int beamSize, String... terminals) {
     return beamSearch(Arrays.asList(terminals), beamSize);
   }
-
+  
   public List<CcgParse> beamSearch(List<String> terminals, int beamSize, ChartFilter beamFilter,
       LogFunction log) {
-    CcgChart chart = new CcgChart(terminals, beamSize, beamFilter);
+    List<String> posTags = Collections.nCopies(terminals.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+    return beamSearch(terminals, posTags, beamSize, beamFilter, log);
+  }
+
+  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
+      ChartFilter beamFilter, LogFunction log) {
+    CcgChart chart = new CcgChart(terminals, posTags, beamSize, beamFilter);
 
     log.startTimer("ccg_parse/initialize_chart");
-    initializeChart(terminals, chart, log);
+    initializeChart(terminals, posTags, chart, log);
     log.stopTimer("ccg_parse/initialize_chart");
 
     log.startTimer("ccg_parse/calculate_inside_beam");
@@ -823,7 +805,9 @@ public class CcgParser implements Serializable {
    * @param terminals
    * @param chart
    */
-  public void initializeChart(List<String> terminals, CcgChart chart, LogFunction log) {
+  public void initializeChart(List<String> terminals, List<String> posTags, CcgChart chart,
+      LogFunction log) {
+    Preconditions.checkArgument(terminals.size() == posTags.size());
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
     // Identify all possible assignments to the dependency head and
@@ -836,7 +820,9 @@ public class CcgParser implements Serializable {
       for (int j = i; j < terminals.size(); j++) {
         if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
-          Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+          Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(j));
+          Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(
+              assignment.union(posAssignment));
           while (iterator.hasNext()) {
             Outcome bestOutcome = iterator.next();
             CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);

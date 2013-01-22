@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
@@ -32,27 +33,29 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public int size() {
-    return logWeights.size();
+    long size = logWeights.getMaxKeyNum();
+    Preconditions.checkArgument(size < Integer.MAX_VALUE);
+    return (int) size;
   }
 
   @Override
   public double getByIndex(int index) {
-    return Math.exp(logWeights.getByIndex(index));
+    return Math.exp(logWeights.get((long) index));
   }
 
   @Override
   public double getLogByIndex(int index) {
-    return logWeights.getByIndex(index);
+    return logWeights.get((long) index);
   }
 
   @Override
   public int keyNumToIndex(long keyNum) {
-    return logWeights.keyNumToIndex(keyNum);
+    return (int) keyNum;
   }
 
   @Override 
   public long indexToKeyNum(int index) {
-    return logWeights.indexToKeyNum(index);
+    return (long) index;
   }
 
   @Override

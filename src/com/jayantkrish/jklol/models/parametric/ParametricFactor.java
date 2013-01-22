@@ -58,6 +58,9 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    * point distribution at {@code assignment}, and increments
    * {@code sufficientStatistics} with the statistics. {@count} is the number of
    * times that {@code assignment} has been observed.
+   * <p>
+   * {@code assignment} must contain all of the variables in this factor,
+   * and may contain additional assignments.
    * 
    * @param statistics
    * @param assignment

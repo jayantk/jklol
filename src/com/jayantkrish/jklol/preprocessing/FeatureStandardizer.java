@@ -1,8 +1,11 @@
 package com.jayantkrish.jklol.preprocessing;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Collection;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -48,20 +51,42 @@ public class FeatureStandardizer implements Serializable {
 
   /**
    * Estimates standardization parameters (empirical feature means and
-   * variances) from {@code featureFactor}.
+   * variances) from {@code featureFactor}. Each assignment to the 
+   * non-feature variables in {@code featureFactor} corresponds to a 
+   * feature vector.
    * 
    * @param featureFactor
    * @param featureVariableNum
-   * @param biasFeature
+   * @param biasFeature If {@code null} no bias feature is used.
    * @return
    */
   public static FeatureStandardizer estimateFrom(DiscreteFactor featureFactor, int featureVariableNum,
       Assignment biasFeature) {
-    DiscreteFactor means = getMeans(featureFactor, featureVariableNum);
-    DiscreteFactor variances = getVariances(featureFactor, featureVariableNum);
+    return FeatureStandardizer.estimateFrom(Arrays.asList(featureFactor), featureVariableNum, biasFeature);
+  }
+
+  /**
+   * Estimates standardization parameters (empirical feature means and
+   * variances) from {@code featureFactors}. Each element of {@code featureFactors}
+   * behaves like an independent set of feature vector observations; if these
+   * factors contain variables other than the feature variable, then each
+   * assignment to these variables defines a single feature vector.
+   * 
+   * @param featureFactor
+   * @param featureVariableNum
+   * @param biasFeature If {@code null} no bias feature is used.
+   * @return
+   */
+  public static FeatureStandardizer estimateFrom(Collection<DiscreteFactor> featureFactors, 
+      int featureVariableNum, Assignment biasFeature) {
+    Preconditions.checkArgument(featureFactors.size() > 0);
+    
+    DiscreteFactor means = getMeans(featureFactors, featureVariableNum);
+    DiscreteFactor variances = getVariances(featureFactors, featureVariableNum);
     DiscreteFactor stdDev = new TableFactor(variances.getVars(), variances.getWeights().elementwiseSqrt());
     
-    VariableNumMap featureVariable = featureFactor.getVars().intersection(featureVariableNum);
+    VariableNumMap featureVariable = Iterables.getFirst(featureFactors, null).getVars()
+        .intersection(featureVariableNum);
     DiscreteFactor offset = null;
     if (biasFeature == null || biasFeature.size() == 0) {
       offset = TableFactor.zero(featureVariable);
@@ -92,10 +117,37 @@ public class FeatureStandardizer implements Serializable {
    * @return
    */
   public static DiscreteFactor getMeans(DiscreteFactor featureFactor, int featureVariableNum) {
-    VariableNumMap nonFeatureVars = featureFactor.getVars().remove(featureVariableNum);
-    int numEntries = nonFeatureVars.getNumberOfPossibleAssignments();
+    return getMeans(Arrays.asList(featureFactor), featureVariableNum);
+  }
+  
+  /**
+   * Gets the mean value of each assignment to {@code featureVariableNum} in
+   * {@code featureFactors}. Each factor in {@code featureFactors} must have
+   * the same variable type at index {@code featureVariableNum}.
+   * 
+   * @param featureFactors
+   * @param featureVariableNum
+   * @return
+   */
+  public static DiscreteFactor getMeans(Collection<DiscreteFactor> featureFactors,
+      int featureVariableNum) {
+    Preconditions.checkArgument(featureFactors.size() > 0);
+    DiscreteFactor sums = null;
+    int numEntries = 0;
+    for (DiscreteFactor featureFactor : featureFactors) {
+      // Calculate the number of feature vectors contained in this factor.
+      VariableNumMap nonFeatureVars = featureFactor.getVars().remove(featureVariableNum);
+      numEntries += nonFeatureVars.getNumberOfPossibleAssignments();
+      
+      DiscreteFactor featureSums = featureFactor.marginalize(nonFeatureVars);
+      if (sums == null) {
+        sums = featureSums;
+      } else {
+        sums = sums.add(featureSums);
+      }
+    }
 
-    return featureFactor.marginalize(nonFeatureVars).product(1.0 / numEntries).coerceToDiscrete();
+    return sums.product(1.0 / numEntries);    
   }
 
   /**
@@ -107,15 +159,38 @@ public class FeatureStandardizer implements Serializable {
    * @return
    */
   public static DiscreteFactor getVariances(DiscreteFactor featureFactor, int featureVariableNum) {
-    VariableNumMap nonFeatureVars = featureFactor.getVars().remove(featureVariableNum);
-    int numEntries = nonFeatureVars.getNumberOfPossibleAssignments();
+    return getVariances(Arrays.asList(featureFactor), featureVariableNum);
+  }
 
-    DiscreteFactor means = getMeans(featureFactor, featureVariableNum);
-    DiscreteFactor sumSquare = featureFactor.product(featureFactor).marginalize(nonFeatureVars)
-        .coerceToDiscrete();
+  /**
+   * Gets the variance of the values of each assignment to
+   * {@code featureVariableNum} in {@code featureFactors}.
+   * 
+   * @param featureFactors
+   * @param featureVariableNum
+   * @return
+   */
+  public static DiscreteFactor getVariances(Collection<DiscreteFactor> featureFactors,
+      int featureVariableNum) {
+    DiscreteFactor means = getMeans(featureFactors, featureVariableNum);
     
-    return sumSquare.add(means.product(means).product(-1.0 * numEntries))
-        .product(1.0 / numEntries).coerceToDiscrete();
+    DiscreteFactor sumSquares = null;
+    int numEntries = 0;
+    for (DiscreteFactor featureFactor : featureFactors) {
+      VariableNumMap nonFeatureVars = featureFactor.getVars().remove(featureVariableNum);
+      numEntries += nonFeatureVars.getNumberOfPossibleAssignments();
+
+      DiscreteFactor factorSumSquares = featureFactor.product(featureFactor)
+          .marginalize(nonFeatureVars);
+      if (sumSquares == null) {
+        sumSquares = factorSumSquares;
+      } else {
+        sumSquares = sumSquares.add(factorSumSquares);
+      }
+    }
+    
+    return sumSquares.add(means.product(means).product(-1.0 * numEntries))
+        .product(1.0 / numEntries);
   }
 
   /**

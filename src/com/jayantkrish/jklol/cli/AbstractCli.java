@@ -94,13 +94,15 @@ public abstract class AbstractCli {
   private OptionSpec<String> ccgLexicon;
   private OptionSpec<String> ccgRules;
   private OptionSpec<String> ccgDependencyFeatures;
+  private OptionSpec<String> ccgPosTagSet;
   private OptionSpec<Void> ccgApplicationOnly;
 
   /**
    * Creates a command line program that accepts the specified set of
    * options.
    * 
-   * @param opts any optional option sets to accept
+   * @param opts
+   *          any optional option sets to accept
    */
   public AbstractCli(CommonOptions... opts) {
     this.opts = Sets.newHashSet(opts);
@@ -109,8 +111,9 @@ public abstract class AbstractCli {
   /**
    * Runs the program, parsing any options from {@code args}.
    * 
-   * @param args arguments to the program, in the same format as
-   * provided by {@code main}.
+   * @param args
+   *          arguments to the program, in the same format as provided
+   *          by {@code main}.
    */
   public void run(String[] args) {
     // Add and parse options.
@@ -158,15 +161,17 @@ public abstract class AbstractCli {
    * Adds subclass-specific options to {@code parser}. Subclasses must
    * implement this method in order to accept class-specific options.
    * 
-   * @param parser option parser to which additional command-line
-   * options should be added.
+   * @param parser
+   *          option parser to which additional command-line options
+   *          should be added.
    */
   public abstract void initializeOptions(OptionParser parser);
 
   /**
    * Runs the program using parsed {@code options}.
    * 
-   * @param options option values passed to the program
+   * @param options
+   *          option values passed to the program
    */
   public abstract void run(OptionSet options);
 
@@ -223,6 +228,8 @@ public abstract class AbstractCli {
           .withRequiredArg().ofType(String.class);
       ccgDependencyFeatures = parser.accepts("dependencyFeatures",
           "CSV file containing features of dependency structures.").withRequiredArg().ofType(String.class);
+      ccgPosTagSet = parser.accepts("posTagSet", "Set of POS tags accepted by the CCG parser.")
+          .withRequiredArg().ofType(String.class);
       ccgApplicationOnly = parser.accepts("applicationOnly",
           "Use only function application during parsing, i.e., no composition.");
     }
@@ -249,7 +256,7 @@ public abstract class AbstractCli {
    * {@link CommonOptions#STOCHASTIC_GRADIENT} to the constructor.
    * 
    * @return a stochastic gradient trainer configured using any
-   * command-line options passed to the program
+   *         command-line options passed to the program
    */
   protected StochasticGradientTrainer createStochasticGradientTrainer(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.STOCHASTIC_GRADIENT));
@@ -269,7 +276,7 @@ public abstract class AbstractCli {
 
     return trainer;
   }
-  
+
   protected ParametricCcgParser createCcgParser() {
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
@@ -277,7 +284,9 @@ public abstract class AbstractCli {
         : Collections.<String> emptyList();
     List<String> dependencyFeatures = parsedOptions.has(ccgDependencyFeatures) ? 
         IoUtils.readLines(parsedOptions.valueOf(ccgDependencyFeatures)) : null;
+    Set<String> posTagSet = parsedOptions.has(ccgPosTagSet) ? 
+        Sets.newHashSet(IoUtils.readLines(parsedOptions.valueOf(ccgPosTagSet))) : null;
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, dependencyFeatures,
-        !parsedOptions.has(ccgApplicationOnly));
+        posTagSet, !parsedOptions.has(ccgApplicationOnly));
   }
 }

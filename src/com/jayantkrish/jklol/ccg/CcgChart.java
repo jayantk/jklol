@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.util.HeapUtils;
 public class CcgChart {
 
   private final List<String> terminals;
+  private final List<String> posTags;
   private final int beamSize;
 
   private final ChartEntry[][][] chart;
@@ -38,12 +39,15 @@ public class CcgChart {
    * search trying to parse {@code terminals}.
    * 
    * @param terminals
+   * @param posTags
    * @param beamSize
    * @param entryFilter filter for discarding portions of the beam.
    * May be {@code null}, in which case all beam entries are retained.
    */
-  public CcgChart(List<String> terminals, int beamSize, ChartFilter entryFilter) {
+  public CcgChart(List<String> terminals, List<String> posTags, int beamSize,
+      ChartFilter entryFilter) {
     this.terminals = ImmutableList.copyOf(terminals);
+    this.posTags = ImmutableList.copyOf(posTags);
     this.beamSize = beamSize;
     this.dependencyTensor = null;
 
@@ -137,7 +141,7 @@ public class CcgChart {
         entry.getHeadedSyntax());
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(),
+      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), posTags.get(spanEnd),
           parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),

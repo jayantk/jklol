@@ -149,7 +149,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
   }
   
   public void testLogLinearTraining() {
-    Predictor<Assignment, Assignment> predictor = runTrainerTest(new LoglikelihoodOracle(cfgModel, new JunctionTree()));
+    Predictor<Assignment, Assignment> predictor = runTrainerTest(new LoglikelihoodOracle(cfgModel, new JunctionTree())); 
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       ParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));

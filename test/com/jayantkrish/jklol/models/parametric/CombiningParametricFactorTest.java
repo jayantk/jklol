@@ -17,7 +17,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class CombiningParametricFactorTest extends TestCase {
 
   VariableNumMap vars;
-  DiscreteLogLinearFactor f,g,h;
+  DiscreteLogLinearFactor f,g;
   CombiningParametricFactor factor;
   ListSufficientStatistics stats;
   
@@ -42,10 +42,9 @@ public class CombiningParametricFactorTest extends TestCase {
     featureBuilder.setWeight(1.0, "T", "F", "*F");
 
     g = new DiscreteLogLinearFactor(vars, featureVar, featureBuilder.build());
-    
-    h = DiscreteLogLinearFactor.createIndicatorFactor(vars.intersection(1));
-    factor = new CombiningParametricFactor(vars,
-        Arrays.asList("indicators", "falses", "var1indicator"), Arrays.asList(f, g, h));
+
+    factor = new CombiningParametricFactor(vars, Arrays.asList("indicators", "falses"),
+        Arrays.asList(f, g));
     
     stats = factor.getNewSufficientStatistics().coerceToList();
     factor.incrementSufficientStatisticsFromAssignment(stats, 
@@ -56,11 +55,10 @@ public class CombiningParametricFactorTest extends TestCase {
   
   public void testGetModelFromParameters() {
     Factor f = factor.getModelFromParameters(stats);
-    System.out.println(f.getParameterDescription());
-    assertEquals(2.0, f.getUnnormalizedLogProbability("F", "F"), TOLERANCE);
-    assertEquals(3.0, f.getUnnormalizedLogProbability("F", "T"), TOLERANCE);
-    assertEquals(2.0, f.getUnnormalizedLogProbability("T", "F"), TOLERANCE);
-    assertEquals(4.0, f.getUnnormalizedLogProbability("T", "T"), TOLERANCE);
+    assertEquals(1.0, f.getUnnormalizedLogProbability("F", "F"), TOLERANCE);
+    assertEquals(2.0, f.getUnnormalizedLogProbability("F", "T"), TOLERANCE);
+    assertEquals(0.0, f.getUnnormalizedLogProbability("T", "F"), TOLERANCE);
+    assertEquals(2.0, f.getUnnormalizedLogProbability("T", "T"), TOLERANCE);
   }
   
   public void testIncrementSufficientStatisticsFromMarginal() {
@@ -70,13 +68,10 @@ public class CombiningParametricFactorTest extends TestCase {
     factor.incrementSufficientStatisticsFromMarginal(stats, marginal, Assignment.EMPTY,
         1, 2);
 
-    System.out.println("foo");
-    System.out.println(factor.getParameterDescription(stats));
-    
     Factor f = factor.getModelFromParameters(stats);
-    assertEquals(2.5, f.getUnnormalizedLogProbability("F", "F"), TOLERANCE);
-    assertEquals(3.0, f.getUnnormalizedLogProbability("F", "T"), TOLERANCE);
-    assertEquals(4.0, f.getUnnormalizedLogProbability("T", "F"), TOLERANCE);
-    assertEquals(5.5, f.getUnnormalizedLogProbability("T", "T"), TOLERANCE);
+    assertEquals(1.5, f.getUnnormalizedLogProbability("F", "F"), TOLERANCE);
+    assertEquals(2.0, f.getUnnormalizedLogProbability("F", "T"), TOLERANCE);
+    assertEquals(1.0, f.getUnnormalizedLogProbability("T", "F"), TOLERANCE);
+    assertEquals(2.5, f.getUnnormalizedLogProbability("T", "T"), TOLERANCE);
   }
 }

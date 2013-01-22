@@ -188,7 +188,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
           .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       terminalFactor.incrementSufficientStatisticsFromAssignment(terminalStatistics, terminalRule,
           weight);
-      System.out.println(weight + " " + terminalRule);
+      // System.out.println(weight + " " + terminalRule);
     } else {
       Assignment nonterminalRule = parentVar.outcomeArrayToAssignment(tree.getRoot())
           .union(leftVar.outcomeArrayToAssignment(tree.getLeft().getRoot()))
@@ -196,7 +196,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
           .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       nonterminalFactor.incrementSufficientStatisticsFromAssignment(nonterminalStatistics,
           nonterminalRule, weight);
-      System.out.println(weight + " " + nonterminalRule);
+      // System.out.println(weight + " " + nonterminalRule);
       accumulateSufficientStatistics(tree.getLeft(), nonterminalStatistics, terminalStatistics, weight);
       accumulateSufficientStatistics(tree.getRight(), nonterminalStatistics, terminalStatistics, weight);
     }

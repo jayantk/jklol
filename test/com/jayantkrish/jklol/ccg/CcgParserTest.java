@@ -77,7 +77,6 @@ public class CcgParserTest extends TestCase {
   };
   
   private VariableNumMap terminalVar;
-  private VariableNumMap posTagVar;
   private VariableNumMap ccgCategoryVar;
   
   private VariableNumMap semanticHeadVar;
@@ -537,20 +536,16 @@ public class CcgParserTest extends TestCase {
     // Build the terminal distribution.
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories);
     DiscreteVariable wordType = new DiscreteVariable("words", words);
-    DiscreteVariable posType = new DiscreteVariable("pos", 
-        Lists.newArrayList(ParametricCcgParser.DEFAULT_POS_TAG));
 
     terminalVar = VariableNumMap.singleton(0, "words", wordType);
-    posTagVar = VariableNumMap.singleton(1, "posTag", posType);
-    ccgCategoryVar = VariableNumMap.singleton(2, "ccgCategory", ccgCategoryType);
-    VariableNumMap vars = VariableNumMap.unionAll(terminalVar, posTagVar, ccgCategoryVar);
+    ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
+    VariableNumMap vars = terminalVar.union(ccgCategoryVar);
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < categories.size(); i++) {
       int commaInd = lexicon[i].indexOf(",");
       List<String> wordList = Arrays.asList(lexicon[i].substring(0, commaInd));
-      String posTag = ParametricCcgParser.DEFAULT_POS_TAG;
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
-      terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, posTag, category), weights[i]);
+      terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, category), weights[i]);
     }
 
     // Build the dependency distribution.
@@ -598,7 +593,7 @@ public class CcgParserTest extends TestCase {
     
     System.out.println(rootDistribution.getParameterDescription());
     
-    return new CcgParser(terminalVar, posTagVar, ccgCategoryVar, terminalBuilder.build(),
+    return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, leftSyntaxVar, rootDistribution);

@@ -30,12 +30,9 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
       List<? extends ParametricFactor> parametricFactors) { 
     super(variables);
     Preconditions.checkArgument(parametricFactors.size() == factorNames.size());
-    VariableNumMap factorVars = VariableNumMap.emptyMap();
     for (ParametricFactor factor : parametricFactors) {
-      Preconditions.checkArgument(variables.containsAll(factor.getVars()));
-      factorVars = factorVars.union(factor.getVars());
+      Preconditions.checkArgument(factor.getVars().equals(variables));
     }
-    Preconditions.checkArgument(factorVars.equals(variables));
     
     this.parametricFactors = ImmutableList.copyOf(parametricFactors);
     this.factorNames = ImmutableList.copyOf(factorNames);
@@ -47,14 +44,10 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
 
     List<Factor> factors = Lists.newArrayList();
     for (int i = 0; i < parametricFactors.size(); i++) {
-      Factor factor = parametricFactors.get(i).getModelFromParameters(parameterList.get(i));
-      factors.add(factor);
-      System.out.println(factor.getParameterDescription());
+      factors.add(parametricFactors.get(i).getModelFromParameters(parameterList.get(i)));
     }
-
-    Factor result = Factors.product(factors);
-    System.out.println(result.getParameterDescription());
-    return result;
+    
+    return Factors.product(factors);
   }
 
   @Override
@@ -103,10 +96,8 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     List<SufficientStatistics> parameterList = getParameterList(statistics);
     for (int i = 0; i < parametricFactors.size(); i++) {
-      Factor componentMarginal = marginal.marginalize(getVars().removeAll(
-          parametricFactors.get(i).getVars()));
       parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(parameterList.get(i),
-          componentMarginal, conditionalAssignment, count, partitionFunction);
+          marginal, conditionalAssignment, count, partitionFunction);
     }
   }
 

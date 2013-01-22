@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.models.parametric;
 
 import java.util.Iterator;
-import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;

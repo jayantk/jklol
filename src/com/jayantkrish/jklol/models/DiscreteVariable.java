@@ -99,7 +99,7 @@ public class DiscreteVariable implements Variable, Serializable {
 
   /**
    * Get an integer index which represents the passed in value. Throws a
-   * NoSuchElement exception if value is not among the set of values this
+   * {@code NoSuchElementException} if value is not among the set of values this
    * variable can be assigned.
    */
   public int getValueIndex(Object value) {

@@ -27,24 +27,40 @@ import com.jayantkrish.jklol.util.IoUtils;
  * 
  * @author jayant
  */
-public class ParseCcg {
+public class ParseCcg extends AbstractCli {
+  
+  private OptionSpec<String> model;
+  
+  private OptionSpec<Integer> beamSize;
+  private OptionSpec<Integer> numParses;
+  private OptionSpec<Void> atomic;
+  
+  private OptionSpec<String> testFile;
+  private OptionSpec<Void> useCcgBankFormat;
+  
+  public ParseCcg() {
+    super(CommonOptions.MAP_REDUCE);
+  }
 
-  public static void main(String[] args) {
-    OptionParser parser = new OptionParser();
+  @Override
+  public void initializeOptions(OptionParser parser) {
     // Required arguments.
-    OptionSpec<String> model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
+    model = parser.accepts("model", "File containing serialized CCG parser.").withRequiredArg()
+        .ofType(String.class).required();
     // Optional arguments
-    OptionSpec<Integer> beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
-    OptionSpec<Integer> numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
-    OptionSpec<Void> atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
-    // If provided, running this program computes test error using the
-    // given file. Otherwise, this program parses a string provided on
-    // the command line. The format of testFile is the same as
-    // expected by TrainCcg to train a CCG parser.
-    OptionSpec<String> testFile = parser.accepts("test").withRequiredArg().ofType(String.class);
-    OptionSpec<Void> useCcgBankFormat = parser.accepts("useCcgBankFormat");
-    OptionSet options = parser.parse(args);
+    beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
+    atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
 
+    testFile = parser.accepts("test", "If provided, running this program computes test error using " +
+    		"the given file. Otherwise, this program parses a string provided on the command line. " +
+        "The format of testFile is the same as expected by TrainCcg to train a CCG parser.")
+        .withRequiredArg().ofType(String.class);
+    useCcgBankFormat = parser.accepts("useCcgBankFormat", "Reads the parses in testFile in CCGbank format.");
+  }
+
+  @Override
+  public void run(OptionSet options) {
     // Read the parser.
     CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
 
@@ -65,6 +81,11 @@ public class ParseCcg {
     }
 
     System.exit(0);
+  }
+  
+
+  public static void main(String[] args) {
+    new ParseCcg().run(args);
   }
   
   public static void printCcgParses(List<CcgParse> parses, int numParses, boolean onlyPrintAtomic) {

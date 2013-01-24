@@ -58,6 +58,11 @@ public class DiscreteVariable implements Variable, Serializable {
     List<String> values = IoUtils.readColumnFromDelimitedFile(filename, columnNumber, delimiter);
     return new DiscreteVariable(variableName, values);
   }
+  
+  @Override
+  public String getName() {
+    return name;
+  }
 
   @Override
   public Object getArbitraryValue() {

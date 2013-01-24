@@ -21,6 +21,11 @@ public class RealVariable implements Variable {
 	public int numDimensions() {
 		return numDimensions;
 	}
+	
+	@Override
+	public String getName() {
+	  return "real";
+	}
 
 	@Override
 	public Object getArbitraryValue() {

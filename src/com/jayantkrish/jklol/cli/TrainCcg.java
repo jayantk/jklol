@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cli;
 
 import java.util.List;
+import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -55,20 +56,37 @@ public class TrainCcg extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
+    // Read in all of the provided training examples.
+    List<CcgExample> unfilteredTrainingExamples = Lists.newArrayList();
+    int numDiscarded = 0;
+    for (String line : IoUtils.readLines(options.valueOf(trainingData))) {
+      CcgExample example = CcgExample.parseFromString(line, options.has(useCcgBankFormat));
+      if (!options.has(ignoreSemantics)) {
+        unfilteredTrainingExamples.add(example);
+      } else {
+        unfilteredTrainingExamples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
+            example.getSyntacticParse()));
+      }
+    }
+
+    Set<String> posTags = CcgExample.getPosTagVocabulary(unfilteredTrainingExamples);
+    System.out.println(posTags.size() + " POS tags");
+
     // Create the CCG parser from the provided options.
-    ParametricCcgParser family = createCcgParser();
+    System.out.println("Creating ParametricCcgParser.");
+    ParametricCcgParser family = createCcgParser(posTags);
+    System.out.println("Done creating ParametricCcgParser.");
 
     // Read in training data and confirm its validity.
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
     List<CcgExample> trainingExamples = Lists.newArrayList();
-    int numDiscarded = 0;
-    for (String line : IoUtils.readLines(options.valueOf(trainingData))) {
-      CcgExample example = CcgExample.parseFromString(line, options.has(useCcgBankFormat));
+    for (CcgExample example : unfilteredTrainingExamples) {
       if (parser.isPossibleExample(example)) {
         if (!options.has(ignoreSemantics)) {
           trainingExamples.add(example);
         } else {
-          trainingExamples.add(new CcgExample(example.getWords(), null, example.getSyntacticParse()));
+          trainingExamples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
+              example.getSyntacticParse()));
         }
       } else {
         Preconditions.checkState(options.has(discardInvalid), "Invalid example: %s", example);
@@ -76,9 +94,10 @@ public class TrainCcg extends AbstractCli {
         numDiscarded++;
       }
     }
+
     System.out.println(trainingExamples.size() + " training examples.");
     System.out.println(numDiscarded + " discarded training examples.");
-
+    
     // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
     if (options.has(perceptron)) {

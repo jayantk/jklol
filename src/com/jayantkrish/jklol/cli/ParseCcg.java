@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cli;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -15,6 +16,7 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
+import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -57,7 +59,8 @@ public class ParseCcg {
     } else {
       // Parse a string from the command line.
       List<String> sentenceToParse = options.nonOptionArguments();
-      List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, options.valueOf(beamSize));
+      List<String> posTags = Collections.nCopies(sentenceToParse.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+      List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, posTags, options.valueOf(beamSize));
       printCcgParses(parses, options.valueOf(numParses), options.has(atomic));
     }
 
@@ -234,7 +237,7 @@ public class ParseCcg {
     public CcgLoss map(CcgExample example) {
       int labeledTp = 0, labeledFp = 0, labeledFn = 0, unlabeledTp = 0, unlabeledFp = 0, unlabeledFn = 0;
       int numParsed = 0, numExamples = 0;
-      List<CcgParse> parses = parser.beamSearch(example.getWords(), beamSize);
+      List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags(), beamSize);
       System.out.println("SENT: " + example.getWords());
       printCcgParses(parses, 1, false);
 

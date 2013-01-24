@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.gwt;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -45,7 +46,9 @@ public class NoExportHelpers {
         Arrays.asList(lexicon), Arrays.asList(rules), null, null, false);
     CcgParser parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
     
-    List<CcgParse> parses = parser.beamSearch(10, input.split(" "));
+    List<String> words = Arrays.asList(input.split(" "));
+    List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+    List<CcgParse> parses = parser.beamSearch(words, posTags, 10);
     return parses.get(0);
   }
   

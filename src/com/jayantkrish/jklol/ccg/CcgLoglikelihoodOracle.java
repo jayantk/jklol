@@ -45,7 +45,8 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
     // Calculate the unconditional distribution over CCG parses.
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), beamSize, log);
+    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), 
+        beamSize, log);
     if (parses.size() == 0) {
       // Search error: couldn't find any parses.
       throw new ZeroProbabilityError();      
@@ -58,10 +59,10 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     List<CcgParse> possibleParses = null;
     if (example.hasSyntacticParse()) {
       ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
-      possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize,
+      possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
         conditionalChartFilter, log);
     } else {
-      possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize, log);
+      possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize, log);
     }
     // Condition on true dependency structures, if provided.
     List<CcgParse> correctParses = possibleParses;

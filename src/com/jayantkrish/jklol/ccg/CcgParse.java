@@ -19,9 +19,9 @@ public class CcgParse {
   // The words spanned by this portion of the parse tree.
   // Non-null only when this is a terminal.
   private final List<String> spannedWords;
-  // The POS tag assigned to the rightmost word in this
-  // nonterminal. Non-null only when this is a terminal.
-  private final String posTag;
+  // The POS tag assigned to the words spanned by this tree.
+  // Non-null only when this is a terminal.
+  private final List<String> posTags;
 
   // The semantic heads of this part.
   private final Set<IndexedPredicate> heads;
@@ -40,12 +40,12 @@ public class CcgParse {
   private final CcgParse left;
   private final CcgParse right;
   private final Combinator combinator;
-  
+
   // If non-null, the unary rule applied to produce syntax, either
   // from lexiconEntry (if this is a terminal) or from left and right
   // (if this is a nonterminal).
   private final UnaryCombinator unaryRule;
-  
+
   private final int spanStart;
   private final int spanEnd;
 
@@ -54,7 +54,7 @@ public class CcgParse {
    * @param syntax
    * @param lexiconEntry
    * @param spannedWords
-   * @param posTag
+   * @param posTags
    * @param heads
    * @param dependencies
    * @param probability
@@ -62,13 +62,13 @@ public class CcgParse {
    * @param right
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> spannedWords, String posTag, Set<IndexedPredicate> heads, 
+      List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
       Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
     this.spannedWords = spannedWords;
-    this.posTag = posTag;
+    this.posTags = posTags;
     this.heads = Preconditions.checkNotNull(heads);
     this.dependencies = Preconditions.checkNotNull(dependencies);
 
@@ -77,7 +77,7 @@ public class CcgParse {
     this.left = left;
     this.right = right;
     this.combinator = combinator;
-    
+
     this.unaryRule = unaryRule;
     this.spanStart = spanStart;
     this.spanEnd = spanEnd;
@@ -90,7 +90,7 @@ public class CcgParse {
       this.subtreeProbability = left.getSubtreeProbability() * right.getSubtreeProbability() * probability;
     } else {
       this.subtreeProbability = probability;
-    }    
+    }
   }
 
   /**
@@ -100,7 +100,7 @@ public class CcgParse {
    * 
    * @param syntax
    * @param lexiconEntry
-   * @param posTag
+   * @param posTags
    * @param heads
    * @param deps
    * @param spannedWords
@@ -108,10 +108,10 @@ public class CcgParse {
    * @return
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      String posTag, Set<IndexedPredicate> heads, List<DependencyStructure> deps, 
-      List<String> spannedWords, double lexicalProbability, UnaryCombinator unaryRule, 
+      List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
+      List<String> spannedWords, double lexicalProbability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd) {
-    return new CcgParse(syntax, lexiconEntry, spannedWords, posTag, heads, deps, 
+    return new CcgParse(syntax, lexiconEntry, spannedWords, posTags, heads, deps,
         lexicalProbability, null, null, null, unaryRule, spanStart, spanEnd);
   }
 
@@ -144,17 +144,18 @@ public class CcgParse {
   public HeadedSyntacticCategory getHeadedSyntacticCategory() {
     return syntax;
   }
-  
+
   /**
    * Gets the CCG unary rule applied to produce the syntactic category
-   * at the root of this parse. If {@code null}, no unary rule was applied.
+   * at the root of this parse. If {@code null}, no unary rule was
+   * applied.
    * 
    * @return
    */
   public UnaryCombinator getUnaryRule() {
     return unaryRule;
   }
-  
+
   /**
    * Gets a representation of the syntactic structure of this parse,
    * omitting all semantic information.
@@ -168,13 +169,13 @@ public class CcgParse {
     } else {
       originalSyntax = syntax.getSyntax();
     }
-    
+
     if (isTerminal()) {
-      return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax, spanStart, spanEnd, spannedWords);
+      return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax, spanStart, spanEnd, spannedWords, posTags);
     } else {
       CcgSyntaxTree leftTree = left.getSyntacticParse();
       CcgSyntaxTree rightTree = right.getSyntacticParse();
-      
+
       return CcgSyntaxTree.createNonterminal(syntax.getSyntax(), originalSyntax, leftTree, rightTree);
     }
   }
@@ -184,13 +185,32 @@ public class CcgParse {
    * 
    * @return
    */
-  public List<String> getSpannedWords() {
+  public List<String> getWords() {
     return spannedWords;
   }
-  
+
   public List<String> getSpannedPosTags() {
     if (isTerminal()) {
-      return Arrays.asList(posTag);
+      return posTags;
+    } else {
+      List<String> tags = Lists.newArrayList();
+      tags.addAll(left.getSpannedPosTags());
+      tags.addAll(right.getSpannedPosTags());
+      return tags;
+    }
+  }
+
+  /**
+   * Returns one POS tag per lexicon entry. Differs from
+   * {@link #getSpannedPosTags()} because lexicon entries may
+   * span multiple words. In these cases, only the last tag in 
+   * the spanned sequence is included in the returned list.
+   * 
+   * @return
+   */
+  public List<String> getSpannedPosTagsByLexiconEntry() {
+    if (isTerminal()) {
+      return Arrays.asList(posTags.get(posTags.size() - 1));
     } else {
       List<String> tags = Lists.newArrayList();
       tags.addAll(left.getSpannedPosTags());

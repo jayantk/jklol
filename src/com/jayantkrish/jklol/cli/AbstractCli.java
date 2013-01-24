@@ -125,13 +125,24 @@ public abstract class AbstractCli {
       errorMessage = e.getMessage();
     }
 
+    boolean printHelp = false;
     if (errorMessage != null) {
+      // If an error occurs, the options don't parse.
+      // Therefore, we must manually check if the help option was given.
+      for (int i = 0; i < args.length; i++) {
+        if (args[i].equals("--help")) {
+          printHelp = true;
+        }
+      }
+    }
+
+    if (errorMessage != null && !printHelp) {
       System.out.println(errorMessage);
       System.out.println("Try --help for more information about options.");
       System.exit(0);
     }
 
-    if (parsedOptions.has(helpOpt)) {
+    if (printHelp || parsedOptions.has(helpOpt)) {
       // If a help option is given, print help then quit.
       try {
         parser.printHelpOn(System.out);

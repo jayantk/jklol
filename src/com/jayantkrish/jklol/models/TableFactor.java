@@ -63,6 +63,8 @@ public class TableFactor extends DiscreteFactor {
     for (int i = 0; i < assignments.length; i++) {
       builder.setWeight(assignments[i], 1.0);
     }
+    // TODO: support for implicit repmat of the assignments.
+    
     return builder.build();
   }
 

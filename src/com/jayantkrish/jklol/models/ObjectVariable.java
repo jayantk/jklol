@@ -16,6 +16,11 @@ public class ObjectVariable implements Variable, Serializable {
   public ObjectVariable(Class<?> type) {
     this.type = type;
   }
+  
+  @Override
+  public String getName() {
+    return type.getName();
+  }
 
   @Override
   public Object getArbitraryValue() {

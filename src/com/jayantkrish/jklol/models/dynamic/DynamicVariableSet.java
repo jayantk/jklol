@@ -310,6 +310,20 @@ public class DynamicVariableSet implements Serializable {
     return new DynamicVariableSet(fixedVariables.addMapping(variableIndex, name, variable),
         plateNames, plates, maximumReplications);
   }
+  
+  /**
+   * Returns a copy of {@code this} with an additional fixed variables. The
+   * added variables use the names and numbers provided in {@code variables}.
+   * 
+   * @param variables
+   * @return
+   */
+  public DynamicVariableSet addFixedVariables(VariableNumMap variables) {
+    Preconditions.checkArgument(!fixedVariables.containsAny(variables.getVariableNums()));
+    
+    return new DynamicVariableSet(fixedVariables.union(variables), plateNames, plates,
+        maximumReplications);
+  }
 
   public DynamicVariableSet addPlate(String plateName, DynamicVariableSet plateVariables,
       int plateMaxReplications) {

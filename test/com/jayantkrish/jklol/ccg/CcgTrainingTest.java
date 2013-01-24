@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
@@ -48,14 +49,14 @@ public class CcgTrainingTest extends TestCase {
   };
 
   private static final String[] trainingDataWithSyntax = {
-    "the block is green###pred:equals 2 1 pred:block 1,pred:equals 2 2 pred:green 3###<S <N <(N/N) the> <N block>> <(S\\N) <(S\\N)/N is> <N green>>>",
-    "red block###pred:red 0 1 pred:block 1###<N <(N/N) red> <N block>>",
-    "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###<N <(N/N) red> <N <(N/N) green> <N block>>>",
+    "the block is green###pred:equals 2 1 pred:block 1,pred:equals 2 2 pred:green 3###<S <N <(N/N) DT the> <N NN block>> <(S\\N) <(S\\N)/N VB is> <N NN green>>>",
+    "red block###pred:red 0 1 pred:block 1###<N <(N/N) JJ red> <N NN block>>",
+    "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###<N <(N/N) JJ red> <N <(N/N) JJ green> <N NN block>>>",
     "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5###"
-        + "<N <N <(N/N) red> <N block>> <N\\N <(N\\N)/N near> <N <N/N the> <N <(N/N) green> <N block>>>>>",
-    "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) #> <(N/N) 2>> <N block>>",
-    "foo######<ABCD foo>",
-    "block######<N block>"
+        + "<N <N <(N/N) JJ red> <N NN block>> <N\\N <(N\\N)/N IN near> <N <N/N DT the> <N <(N/N) JJ green> <N NN block>>>>>",
+    "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) JJ #> <(N/N) JJ 2>> <N NN block>>",
+    "foo######<ABCD NN foo>",
+    "block######<N NN block>"
   };
   
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
@@ -64,13 +65,11 @@ public class CcgTrainingTest extends TestCase {
   private List<CcgExample> trainingExamples;
   private List<CcgExample> trainingExamplesWithSyntax;
   private List<CcgExample> trainingExamplesSyntaxOnly;
+  private Set<String> posTags;
 
   private static final double TOLERANCE = 1e-10;
 
   public void setUp() {
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        null, true);
-
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {
       trainingExamples.add(CcgExample.parseFromString(trainingData[i], false));
@@ -80,11 +79,17 @@ public class CcgTrainingTest extends TestCase {
     for (int i = 0; i < trainingDataWithSyntax.length; i++) {
       trainingExamplesWithSyntax.add(CcgExample.parseFromString(trainingDataWithSyntax[i], false));
     }
+    posTags = CcgExample.getPosTagVocabulary(trainingExamplesWithSyntax);
+    posTags.add(ParametricCcgParser.DEFAULT_POS_TAG);
 
     trainingExamplesSyntaxOnly = Lists.newArrayList();
     for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
-      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getWords(), null, syntaxExample.getSyntacticParse()));
+      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getWords(), syntaxExample.getPosTags(),
+          null, syntaxExample.getSyntacticParse()));
     }
+    
+    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
+        null, posTags, true);
   }
 
   public void testParseFromLexicon() {
@@ -122,7 +127,8 @@ public class CcgTrainingTest extends TestCase {
     CcgParser parser = trainLoglikelihoodParser(trainingExamplesSyntaxOnly);
     assertTrainedParserUsesSyntax(parser);
 
-    List<CcgParse> parses = filterNonAtomicParses(parser.beamSearch(10, "object", "near", "block"));
+    List<CcgParse> parses = filterNonAtomicParses(parser.beamSearch(
+        Arrays.asList("object", "near", "block"), 10));
     // The two parses differ only in the semantics of near, which is
     // unconstrained in the training data.
     assertEquals(2, parses.size());
@@ -164,7 +170,8 @@ public class CcgTrainingTest extends TestCase {
   }
 
   private void assertTrainedParserUsesSyntax(CcgParser parser) {
-    List<CcgParse> parses = filterNonAtomicParses(parser.beamSearch(10, "the", "red", "block"));
+    List<CcgParse> parses = filterNonAtomicParses(parser.beamSearch(Arrays.asList("the", "red", "block"), 
+        Arrays.asList("DT", "NN", "NN"), 10));
 
     // Check that syntactic information is being used in the learned
     // parser.
@@ -175,14 +182,14 @@ public class CcgTrainingTest extends TestCase {
     assertTrue(bestParse.getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
     
     // Check that weights are being learned for unary rules.
-    parses = parser.beamSearch(100, "foo");
+    parses = parser.beamSearch(Arrays.asList("foo"), Arrays.asList("NN"), 100);
     assertEquals(3, parses.size());
     System.out.println(parses);
     assertNull(parses.get(0).getUnaryRule());
     assertEquals("ABCD", parses.get(0).getSyntacticCategory().getValue());
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
 
-    parses = parser.beamSearch(100, "block");
+    parses = parser.beamSearch(Arrays.asList("block"), Arrays.asList("NN"), 100);
     assertEquals(2, parses.size());
     for (CcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse);
@@ -194,7 +201,7 @@ public class CcgTrainingTest extends TestCase {
   private void assertZeroDependencyError(CcgParser parser, Iterable<CcgExample> examples) {
     // Test that zero training error is achieved.
     for (CcgExample example : examples) {
-      List<CcgParse> parses = parser.beamSearch(example.getWords(), 100);
+      List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags(), 100);
       CcgParse bestParse = parses.get(0);
 
       System.out.println(example.getWords() + " " + bestParse);

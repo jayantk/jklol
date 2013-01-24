@@ -40,7 +40,8 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     log.startTimer("update_gradient/unconditional_max_marginal");
     // Calculate the best predicted parse, i.e., the highest weight parse
     // without conditioning on the true parse.
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), beamSize, log);
+    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(),
+        beamSize, null, log);
     CcgParse bestPredictedParse = parses.size() > 0 ? parses.get(0) : null;
     System.out.println("num predicted: " + parses.size());
     if (bestPredictedParse == null) {
@@ -51,8 +52,8 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
 
     log.startTimer("update_gradient/conditional_max_marginal");
     ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
-    List<CcgParse> possibleParses = instantiatedParser.beamSearch(example.getWords(), beamSize,
-        conditionalChartFilter, log);
+    List<CcgParse> possibleParses = instantiatedParser.beamSearch(example.getWords(),
+        example.getPosTags(), beamSize, conditionalChartFilter, log);
     CcgParse bestCorrectParse = possibleParses.size() > 0 ? possibleParses.get(0) : null;
     if (example.hasDependencies()) {
       Set<DependencyStructure> observedDependencies = example.getDependencies();

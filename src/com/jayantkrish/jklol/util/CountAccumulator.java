@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.util;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
@@ -14,7 +15,8 @@ import com.google.common.collect.Multimap;
  * 
  * @author jayantk
  */
-public class CountAccumulator<T> {
+public class CountAccumulator<T> implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final DefaultHashMap<T, Double> counts;
   private double totalCount;

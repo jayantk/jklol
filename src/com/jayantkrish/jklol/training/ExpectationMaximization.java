@@ -30,12 +30,16 @@ public class ExpectationMaximization {
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
 
+      log.startTimer("e_step");
       M model = oracle.instantiateModel(parameters);
       List<O> expectations = executor.mapReduce(trainingDataList, 
           new ExpectationMapper<M, E, O>(model, oracle, log), Reducers.<O>getAggregatingListReducer());
+      log.stopTimer("e_step");
 
+      log.startTimer("m_step");
       parameters = oracle.maximizeParameters(expectations, parameters, log);
-      
+      log.stopTimer("m_step");
+
       log.notifyIterationEnd(i);
     }
     

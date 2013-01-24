@@ -118,14 +118,20 @@ public abstract class AbstractCli {
     initializeCommonOptions(parser);
     initializeOptions(parser);
 
-    boolean printHelp = false;
+    String errorMessage = null;
     try {
       parsedOptions = parser.parse(args);
     } catch (OptionException e) {
-      printHelp = true;
+      errorMessage = e.getMessage();
     }
 
-    if (printHelp || parsedOptions.has(helpOpt)) {
+    if (errorMessage != null) {
+      System.out.println(errorMessage);
+      System.out.println("Try --help for more information about options.");
+      System.exit(0);
+    }
+
+    if (parsedOptions.has(helpOpt)) {
       // If a help option is given, print help then quit.
       try {
         parser.printHelpOn(System.out);
@@ -269,15 +275,15 @@ public abstract class AbstractCli {
 
     return trainer;
   }
-  
-  protected ParametricCcgParser createCcgParser() {
+
+  protected ParametricCcgParser createCcgParser(Set<String> posTagSet) {
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
-    List<String> dependencyFeatures = parsedOptions.has(ccgDependencyFeatures) ? 
+    List<String> dependencyFeatures = parsedOptions.has(ccgDependencyFeatures) ?
         IoUtils.readLines(parsedOptions.valueOf(ccgDependencyFeatures)) : null;
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, dependencyFeatures,
-        !parsedOptions.has(ccgApplicationOnly));
+        posTagSet, !parsedOptions.has(ccgApplicationOnly));
   }
 }

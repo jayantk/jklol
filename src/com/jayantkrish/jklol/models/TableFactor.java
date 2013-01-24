@@ -67,6 +67,10 @@ public class TableFactor extends DiscreteFactor {
     
     return builder.build();
   }
+  
+  public static TableFactor vector(VariableNumMap vars, Assignment[] assignments, double[] values) {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
 
   /**
    * Gets a {@code TableFactor} over {@code vars} which assigns unit weight to

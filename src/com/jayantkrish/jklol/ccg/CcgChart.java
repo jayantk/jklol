@@ -20,6 +20,12 @@ import com.jayantkrish.jklol.util.HeapUtils;
 public class CcgChart {
 
   private final List<String> terminals;
+  private final List<String> posTags;
+  
+  // Number of punctuation marks / verbs to the left of each word index.
+  private final int[] puncCount;
+  private final int[] verbCount;
+
   private final int beamSize;
 
   private final ChartEntry[][][] chart;
@@ -38,16 +44,29 @@ public class CcgChart {
    * search trying to parse {@code terminals}.
    * 
    * @param terminals
+   * @param posTags
+   * @param puncCount
+   * @param verbCount
    * @param beamSize
    * @param entryFilter filter for discarding portions of the beam.
    * May be {@code null}, in which case all beam entries are retained.
    */
-  public CcgChart(List<String> terminals, int beamSize, ChartFilter entryFilter) {
+  public CcgChart(List<String> terminals, List<String> posTags, int[] puncCount,
+      int[] verbCount, int beamSize, ChartFilter entryFilter) {
     this.terminals = ImmutableList.copyOf(terminals);
+    this.posTags = ImmutableList.copyOf(posTags);
+    int n = terminals.size();
+
+    this.puncCount = puncCount;
+    this.verbCount = verbCount;
+    
+    Preconditions.checkArgument(posTags.size() == n);
+    Preconditions.checkArgument(puncCount.length == n);
+    Preconditions.checkArgument(verbCount.length == n);
+    
     this.beamSize = beamSize;
     this.dependencyTensor = null;
 
-    int n = terminals.size();
     this.chart = new ChartEntry[n][n][beamSize + 1];
     this.probabilities = new double[n][n][beamSize + 1];
     this.chartSizes = new int[n * n];
@@ -63,6 +82,24 @@ public class CcgChart {
    */
   public int size() {
     return terminals.size();
+  }
+
+  /**
+   * Gets the number of punctuation marks to the left of each word position.
+   * 
+   * @return
+   */
+  public int[] getPunctuationCounts() {
+    return puncCount;
+  }
+  
+  /**
+   * Gets the number of verbs to the left of each word position.
+   * 
+   * @return
+   */
+  public int[] getVerbCounts() {
+    return verbCount;
   }
 
   public int getBeamSize() {
@@ -137,7 +174,7 @@ public class CcgChart {
         entry.getHeadedSyntax());
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(),
+      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), posTags.subList(spanStart, spanEnd +1),
           parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),

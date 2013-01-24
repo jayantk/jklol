@@ -756,6 +756,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int[] newDimensions = new int[numDimensions()];
     int[] dimensionNums = getDimensionNumbers();
     for (int i = 0; i < dimensionNums.length; i++) {
+      Preconditions.checkArgument(relabeling.containsKey(dimensionNums[i]), 
+          "Dimension %s not in relabeling %s", dimensionNums[i], relabeling);
       newDimensions[i] = relabeling.get(dimensionNums[i]);
     }
     return relabelDimensions(newDimensions);

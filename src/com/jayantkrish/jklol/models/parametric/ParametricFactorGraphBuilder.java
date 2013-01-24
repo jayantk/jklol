@@ -63,6 +63,10 @@ public class ParametricFactorGraphBuilder {
   public void addVariable(String name, Variable variable) {
     variables = variables.addFixedVariable(name, variable);
   }
+  
+  public void addVariables(VariableNumMap newVariables) {
+    variables = variables.addFixedVariables(newVariables);
+  }
 
   public void addPlate(String plateName, DynamicVariableSet plateVariables, int maxReplications) {
     variables = variables.addPlate(plateName, variables, maxReplications);

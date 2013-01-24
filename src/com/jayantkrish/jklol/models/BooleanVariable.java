@@ -5,6 +5,11 @@ package com.jayantkrish.jklol.models;
 public class BooleanVariable implements Variable {
 
   @Override
+  public String getName() {
+    return "boolean";
+  }
+  
+  @Override
   public Object getArbitraryValue() {
     return false;
   }

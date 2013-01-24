@@ -461,8 +461,8 @@ public class VariableNumMap implements Serializable {
   private void checkCompatibility(VariableNumMap other) {
     for (Integer key : other.getVariableNums()) {
       if (varMap.containsKey(key)
-          && (varMap.get(key) != other.varMap.get(key) || !names.get(key).equals(
-              other.names.get(key)))) {
+          && (!names.get(key).equals(other.names.get(key)) ||
+              !varMap.get(key).getName().equals(other.varMap.get(key).getName()))) {
         throw new IllegalArgumentException(
             "Conflicting number -> (name, variable) mapping! This object: "
                 + this + " other object: " + other);

@@ -51,12 +51,25 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final ParametricFactor terminalFamily;
+  
+  private final VariableNumMap terminalPosVar;
+  private final VariableNumMap terminalSyntaxVar;
+  private final ParametricFactor terminalPosFamily;
 
   private final VariableNumMap dependencyHeadVar;
   private final VariableNumMap dependencyArgNumVar;
   private final VariableNumMap dependencyArgVar;
   private final ParametricFactor dependencyFamily;
   
+  private final VariableNumMap wordDistanceVar;
+  private final ParametricFactor wordDistanceFamily;
+  private final VariableNumMap puncDistanceVar;
+  private final ParametricFactor puncDistanceFamily;
+  private final Set<String> puncTagSet;
+  private final VariableNumMap verbDistanceVar;
+  private final ParametricFactor verbDistanceFamily;
+  private final Set<String> verbTagSet;
+
   private final VariableNumMap leftSyntaxVar;
   private final VariableNumMap rightSyntaxVar;
   private final VariableNumMap parentSyntaxVar;
@@ -73,11 +86,17 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * Name of the parameter vector governing lexicon entries.
    */
   public static final String TERMINAL_PARAMETERS = "terminals";
+  
+  public static final String TERMINAL_POS_PARAMETERS = "terminalPos";
 
   /**
    * Name of the parameter vector governing dependency structures.
    */
   public static final String DEPENDENCY_PARAMETERS = "dependencies";
+  
+  public static final String WORD_DISTANCE_PARAMETERS = "wordDistance";
+  public static final String PUNC_DISTANCE_PARAMETERS = "puncDistance";
+  public static final String VERB_DISTANCE_PARAMETERS = "verbDistance";
   
   /**
    * Name of the parameter vector governing combinations of 
@@ -89,11 +108,30 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   
   public static final String INPUT_DEPENDENCY_PARAMETERS = "inputFeatures";
   public static final String INDICATOR_DEPENDENCY_PARAMETERS = "indicatorFeatures";
+  
+  /**
+   * Default part-of-speech tag. 
+   */
+  public static final String DEFAULT_POS_TAG = "UNK-POS";
+  
+  /**
+   * Default part-of-speech tags that qualify as punctuation.
+   */
+  public static final Set<String> DEFAULT_PUNC_TAGS = Sets.newHashSet(",", ":", ";", ".");
+
+  /**
+   * Default part-of-speech tags that qualify as verbs.
+   */
+  public static final Set<String> DEFAULT_VERB_TAGS = Sets.newHashSet("VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
 
   public ParametricCcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
-      ParametricFactor terminalFamily, VariableNumMap dependencyHeadVar,
+      ParametricFactor terminalFamily, VariableNumMap terminalPosVar,
+      VariableNumMap terminalSyntaxVar, ParametricFactor terminalPosFamily, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
-      ParametricFactor dependencyFamily, VariableNumMap leftSyntaxVar, 
+      ParametricFactor dependencyFamily, VariableNumMap wordDistanceVar,
+      ParametricFactor wordDistanceFamily, VariableNumMap puncDistanceVar,
+      ParametricFactor puncDistanceFamily, Set<String> puncTagSet, VariableNumMap verbDistanceVar,
+      ParametricFactor verbDistanceFamily, Set<String> verbTagSet, VariableNumMap leftSyntaxVar, 
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar, 
       ParametricFactor syntaxFamily, VariableNumMap unaryRuleInputVar,
       VariableNumMap unaryRuleVar, ParametricFactor unaryRuleFamily, 
@@ -102,11 +140,24 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalFamily = Preconditions.checkNotNull(terminalFamily);
     
+    this.terminalPosVar = Preconditions.checkNotNull(terminalPosVar);
+    this.terminalSyntaxVar = Preconditions.checkNotNull(terminalSyntaxVar);
+    this.terminalPosFamily = Preconditions.checkNotNull(terminalPosFamily);
+
     this.dependencyHeadVar = Preconditions.checkNotNull(dependencyHeadVar);
     this.dependencyArgNumVar = Preconditions.checkNotNull(dependencyArgNumVar);
     this.dependencyArgVar = Preconditions.checkNotNull(dependencyArgVar);
     this.dependencyFamily = Preconditions.checkNotNull(dependencyFamily);
     
+    this.wordDistanceVar = wordDistanceVar;
+    this.wordDistanceFamily = wordDistanceFamily;
+    this.puncDistanceVar = puncDistanceVar;
+    this.puncDistanceFamily = puncDistanceFamily;
+    this.puncTagSet = puncTagSet;
+    this.verbDistanceVar = verbDistanceVar;
+    this.verbDistanceFamily = verbDistanceFamily;
+    this.verbTagSet = verbTagSet;
+
     this.leftSyntaxVar = Preconditions.checkNotNull(leftSyntaxVar);
     this.rightSyntaxVar = Preconditions.checkNotNull(rightSyntaxVar);
     this.parentSyntaxVar = Preconditions.checkNotNull(parentSyntaxVar);
@@ -129,13 +180,17 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * 
    * @param unfilteredLexiconLines
    * @param unfilteredRuleLines
-   * @param dependencyFeatures if not null, a list of files containing features of dependency structures. 
-   * @param allowComposition allow function composition in addition to other CCG rules.
+   * @param dependencyFeatures if not null, a list of files containing 
+   * features of dependency structures.
+   * @param posTagSet set of POS tags in the data. If null, 
+   * ParametricCcgParser.DEFAULT_POS_TAG is the only POS tag.
+   * @param allowComposition allow function composition in addition to 
+   * other CCG rules.
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
       Iterable<String> unfilteredRuleLines, Iterable<String> dependencyFeatures,
-      boolean allowComposition) {
+      Set<String> posTagSet, boolean allowComposition) {
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
     for (String line : unfilteredRuleLines) {
@@ -195,24 +250,43 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates,
           maxNumArgs);
     }
+            
+    // Create features over ways to combine syntactic categories.
+    DiscreteFactor syntacticDistribution = CcgParser.buildSyntacticDistribution(syntacticCategories, binaryRules, allowComposition);
+    VariableNumMap leftSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
+    VariableNumMap rightSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
+    VariableNumMap parentSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
+    IndicatorLogLinearFactor parametricSyntacticDistribution = new IndicatorLogLinearFactor(
+        syntacticDistribution.getVars(), syntacticDistribution);
 
     // Build the terminal distribution. This maps word sequences to
     // CCG categories, with one possible mapping per entry in the
     // lexicon.
-    DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories.items());
     DiscreteVariable wordType = new DiscreteVariable("words", words.items());
+    DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories.items());
 
     VariableNumMap terminalVar = VariableNumMap.singleton(0, "words", wordType);
     VariableNumMap ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
-    VariableNumMap vars = terminalVar.union(ccgCategoryVar);
-    TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+    VariableNumMap terminalWordVars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
+
+    TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalWordVars, SparseTensorBuilder.getFactory());
     for (String lexiconLine : lexiconLines) {
       LexiconEntry lexiconEntry = LexiconEntry.parseLexiconEntry(lexiconLine);
-      terminalBuilder.setWeight(vars.outcomeArrayToAssignment(lexiconEntry.getWords(),
+      terminalBuilder.setWeight(terminalWordVars.outcomeArrayToAssignment(lexiconEntry.getWords(),
           lexiconEntry.getCategory()), 1.0);
     }
-    ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(vars,
+    ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(terminalWordVars,
         terminalBuilder.build());
+
+    // Build a distribution over parts of speech and syntactic categories, 
+    // for smoothing the terminal distribution. 
+    posTagSet = posTagSet != null ? posTagSet : Sets.newHashSet(DEFAULT_POS_TAG);
+    DiscreteVariable posType = new DiscreteVariable("pos", posTagSet);
+    DiscreteVariable ccgSyntaxType = leftSyntaxVar.getDiscreteVariables().get(0);
+    VariableNumMap posVar = VariableNumMap.singleton(0, "pos", posType);
+    VariableNumMap terminalSyntaxVar = VariableNumMap.singleton(1, "terminalSyntax", ccgSyntaxType);
+    VariableNumMap terminalPosVars = VariableNumMap.unionAll(posVar, terminalSyntaxVar);
+    ParametricFactor terminalPosParametricFactor = new DenseIndicatorLogLinearFactor(terminalPosVars);
 
     // Create variables for representing the CCG parser's dependency structures.  
     DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", 
@@ -229,7 +303,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap semanticHeadVar = VariableNumMap.singleton(0, "semanticHead", semanticPredicateType);
     VariableNumMap semanticArgNumVar = VariableNumMap.singleton(1, "semanticArgNum", argumentNums);
     VariableNumMap semanticArgVar = VariableNumMap.singleton(2, "semanticArg", semanticPredicateType);
-    vars = VariableNumMap.unionAll(semanticHeadVar, semanticArgNumVar, semanticArgVar);
+    VariableNumMap vars = VariableNumMap.unionAll(semanticHeadVar, semanticArgNumVar, semanticArgVar);
     
     // Create features over dependency structures.
     ParametricFactor dependencyIndicatorFactor = new DenseIndicatorLogLinearFactor(vars);
@@ -263,13 +337,16 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       dependencyParametricFactor = dependencyIndicatorFactor; 
     }
     
-    // Create features over ways to combine syntactic categories.
-    DiscreteFactor syntacticDistribution = CcgParser.buildSyntacticDistribution(syntacticCategories, binaryRules, allowComposition);
-    VariableNumMap leftSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
-    VariableNumMap rightSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
-    VariableNumMap parentSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
-    IndicatorLogLinearFactor parametricSyntacticDistribution = new IndicatorLogLinearFactor(
-        syntacticDistribution.getVars(), syntacticDistribution);
+    // Create features over argument distances for each predicate.
+    VariableNumMap distancePredicateVars = semanticHeadVar.union(semanticArgNumVar);
+    VariableNumMap wordDistanceVar = VariableNumMap.singleton(2, "wordDistance", CcgParser.wordDistanceVarType);
+    VariableNumMap puncDistanceVar = VariableNumMap.singleton(2, "puncDistance", CcgParser.puncDistanceVarType);
+    VariableNumMap verbDistanceVar = VariableNumMap.singleton(2, "verbDistance", CcgParser.verbDistanceVarType);
+    ParametricFactor wordDistanceFactor = new DenseIndicatorLogLinearFactor(distancePredicateVars.union(wordDistanceVar));
+    ParametricFactor puncDistanceFactor = new DenseIndicatorLogLinearFactor(distancePredicateVars.union(puncDistanceVar));
+    ParametricFactor verbDistanceFactor = new DenseIndicatorLogLinearFactor(distancePredicateVars.union(verbDistanceVar));
+    Set<String> puncTagSet = DEFAULT_PUNC_TAGS;
+    Set<String> verbTagSet = DEFAULT_VERB_TAGS;
     
     // Create root syntax factor.
     DiscreteLogLinearFactor parametricRootDistribution = DiscreteLogLinearFactor
@@ -284,10 +361,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         unaryRuleInputVar.union(unaryRuleVar), unaryRuleDistribution);
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
-        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyParametricFactor,
-        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, parametricSyntacticDistribution,
-        unaryRuleInputVar, unaryRuleVar, parametricUnaryRuleDistribution, leftSyntaxVar,
-        parametricRootDistribution);
+        posVar, terminalSyntaxVar, terminalPosParametricFactor, semanticHeadVar, semanticArgNumVar,
+        semanticArgVar, dependencyParametricFactor, wordDistanceVar, wordDistanceFactor, 
+        puncDistanceVar, puncDistanceFactor, puncTagSet, verbDistanceVar,
+        verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
+        parametricSyntacticDistribution, unaryRuleInputVar, unaryRuleVar, 
+        parametricUnaryRuleDistribution, leftSyntaxVar, parametricRootDistribution);
   }
 
   /**
@@ -325,16 +404,22 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public SufficientStatistics getNewSufficientStatistics() {
     SufficientStatistics terminalParameters = terminalFamily.getNewSufficientStatistics();
+    SufficientStatistics terminalPosParameters = terminalPosFamily.getNewSufficientStatistics();
     SufficientStatistics dependencyParameters = dependencyFamily.getNewSufficientStatistics();
+    SufficientStatistics wordDistanceParameters = wordDistanceFamily.getNewSufficientStatistics();
+    SufficientStatistics puncDistanceParameters = puncDistanceFamily.getNewSufficientStatistics();
+    SufficientStatistics verbDistanceParameters = verbDistanceFamily.getNewSufficientStatistics();
     SufficientStatistics syntaxParameters = syntaxFamily.getNewSufficientStatistics();
     SufficientStatistics unaryRuleParameters = unaryRuleFamily.getNewSufficientStatistics();
     SufficientStatistics rootSyntaxParameters = rootSyntaxFamily.getNewSufficientStatistics();
 
     return new ListSufficientStatistics(
-        Arrays.asList(TERMINAL_PARAMETERS, DEPENDENCY_PARAMETERS, SYNTAX_PARAMETERS,
-            UNARY_RULE_PARAMETERS, ROOT_SYNTAX_PARAMETERS),
-        Arrays.asList(terminalParameters, dependencyParameters, syntaxParameters,
-            unaryRuleParameters, rootSyntaxParameters));
+        Arrays.asList(TERMINAL_PARAMETERS, TERMINAL_POS_PARAMETERS, 
+            DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS, PUNC_DISTANCE_PARAMETERS, VERB_DISTANCE_PARAMETERS, 
+            SYNTAX_PARAMETERS, UNARY_RULE_PARAMETERS, ROOT_SYNTAX_PARAMETERS),
+        Arrays.asList(terminalParameters, terminalPosParameters, dependencyParameters, wordDistanceParameters,
+            puncDistanceParameters, verbDistanceParameters, syntaxParameters, unaryRuleParameters,
+            rootSyntaxParameters));
   }
 
   /**
@@ -348,8 +433,18 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     ListSufficientStatistics parameterList = parameters.coerceToList();
     DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(
         parameterList.getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
+    DiscreteFactor terminalPosDistribution = terminalPosFamily.getModelFromParameters(
+        parameterList.getStatisticByName(TERMINAL_POS_PARAMETERS)).coerceToDiscrete();
     DiscreteFactor dependencyDistribution = dependencyFamily.getModelFromParameters(
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS)).coerceToDiscrete();
+    
+    DiscreteFactor wordDistanceDistribution = wordDistanceFamily.getModelFromParameters(
+        parameterList.getStatisticByName(WORD_DISTANCE_PARAMETERS)).coerceToDiscrete();
+    DiscreteFactor puncDistanceDistribution = puncDistanceFamily.getModelFromParameters(
+        parameterList.getStatisticByName(PUNC_DISTANCE_PARAMETERS)).coerceToDiscrete();
+    DiscreteFactor verbDistanceDistribution = verbDistanceFamily.getModelFromParameters(
+        parameterList.getStatisticByName(VERB_DISTANCE_PARAMETERS)).coerceToDiscrete();
+    
     DiscreteFactor syntaxDistribution = syntaxFamily.getModelFromParameters(
         parameterList.getStatisticByName(SYNTAX_PARAMETERS)).coerceToDiscrete();
     DiscreteFactor unaryRuleDistribution = unaryRuleFamily.getModelFromParameters(
@@ -358,7 +453,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parameterList.getStatisticByName(ROOT_SYNTAX_PARAMETERS)).coerceToDiscrete();
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
+        terminalPosVar, terminalSyntaxVar, terminalPosDistribution, 
         dependencyHeadVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution,
+        wordDistanceVar, wordDistanceDistribution, puncDistanceVar, puncDistanceDistribution,
+        puncTagSet, verbDistanceVar, verbDistanceDistribution, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, 
         unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, rootSyntaxVar, 
         rootSyntaxDistribution);
@@ -374,15 +472,45 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @param count
    */
   public void incrementDependencySufficientStatistics(SufficientStatistics gradient,
-      Collection<DependencyStructure> dependencies, double count) {
+      List<String> posTags, Collection<DependencyStructure> dependencies, double count) {
+    
+    int[] puncCounts = CcgParser.computeDistanceCounts(posTags, puncTagSet);
+    int[] verbCounts = CcgParser.computeDistanceCounts(posTags, verbTagSet);
+    
     SufficientStatistics dependencyGradient = gradient.coerceToList().getStatisticByName(DEPENDENCY_PARAMETERS);
+    SufficientStatistics wordDistanceGradient = gradient.coerceToList().getStatisticByName(WORD_DISTANCE_PARAMETERS);
+    SufficientStatistics puncDistanceGradient = gradient.coerceToList().getStatisticByName(PUNC_DISTANCE_PARAMETERS);
+    SufficientStatistics verbDistanceGradient = gradient.coerceToList().getStatisticByName(VERB_DISTANCE_PARAMETERS);
     for (DependencyStructure dependency : dependencies) {
-      Assignment assignment = Assignment.unionAll(
+      Assignment predicateAssignment = Assignment.unionAll(
           dependencyHeadVar.outcomeArrayToAssignment(dependency.getHead()),
-          dependencyArgNumVar.outcomeArrayToAssignment(dependency.getArgIndex()),
+          dependencyArgNumVar.outcomeArrayToAssignment(dependency.getArgIndex()));
+      Assignment assignment = predicateAssignment.union(
           dependencyArgVar.outcomeArrayToAssignment(dependency.getObject()));
 
       dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient, assignment, count);
+      
+      // Update distance parameters.
+      int headWordIndex = dependency.getHeadWordIndex();
+      int objectWordIndex = dependency.getObjectWordIndex();
+      int wordDistance = CcgParser.computeWordDistance(headWordIndex, objectWordIndex);
+      int puncDistance = CcgParser.computeArrayDistance(puncCounts, headWordIndex, objectWordIndex);
+      int verbDistance = CcgParser.computeArrayDistance(verbCounts, headWordIndex, objectWordIndex);
+      
+      Assignment wordDistanceAssignment = predicateAssignment.union(
+          wordDistanceVar.outcomeArrayToAssignment(wordDistance));
+      wordDistanceFamily.incrementSufficientStatisticsFromAssignment(wordDistanceGradient,
+          wordDistanceAssignment, count);
+      
+      Assignment puncDistanceAssignment = predicateAssignment.union(
+          puncDistanceVar.outcomeArrayToAssignment(puncDistance));
+      puncDistanceFamily.incrementSufficientStatisticsFromAssignment(puncDistanceGradient,
+          puncDistanceAssignment, count);
+      
+      Assignment verbDistanceAssignment = predicateAssignment.union(
+          verbDistanceVar.outcomeArrayToAssignment(verbDistance));
+      verbDistanceFamily.incrementSufficientStatisticsFromAssignment(verbDistanceGradient,
+          verbDistanceAssignment, count);
     }
   }
   
@@ -431,17 +559,27 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * {@code lexiconEntries}.
    * 
    * @param gradient
-   * @param dependencies
+   * @param lexiconEntries
+   * @param posTags
    * @param count
    */
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      Collection<LexiconEntry> lexiconEntries, double count) {
+      List<LexiconEntry> lexiconEntries, List<String> posTags, double count) {
+    Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
     SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
-    for (LexiconEntry lexiconEntry : lexiconEntries) {
+    SufficientStatistics terminalPosGradient = gradient.coerceToList().getStatisticByName(TERMINAL_POS_PARAMETERS);
+    int numEntries = lexiconEntries.size();
+    for (int i = 0; i < numEntries; i++) {
+      LexiconEntry lexiconEntry = lexiconEntries.get(i);
       Assignment assignment = Assignment.unionAll(
           terminalVar.outcomeArrayToAssignment(lexiconEntry.getWords()),
           ccgCategoryVar.outcomeArrayToAssignment(lexiconEntry.getCategory()));
       terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient, assignment, count);
+      
+      Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(i)).union(
+          terminalSyntaxVar.outcomeArrayToAssignment(lexiconEntry.getCategory().getSyntax()));
+      terminalPosFamily.incrementSufficientStatisticsFromAssignment(terminalPosGradient,
+          posAssignment, count);
     }
   }
 
@@ -456,13 +594,15 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public void incrementSufficientStatistics(SufficientStatistics gradient, CcgParse parse,
       double count) {
-    // Update the dependency structure parameters.
-    incrementDependencySufficientStatistics(gradient, parse.getAllDependencies(), count);
+    // Update the dependency structure parameters, including distance parameters.
+    incrementDependencySufficientStatistics(gradient, parse.getSpannedPosTags(),
+        parse.getAllDependencies(), count);
     // Update syntactic combination parameters. (Both unary and binary rules)
     incrementSyntaxSufficientStatistics(gradient, parse, count);
     incrementRootSyntaxSufficientStatistics(gradient, parse.getHeadedSyntacticCategory(), count);
     // Update terminal distribution parameters.
-    incrementLexiconSufficientStatistics(gradient, parse.getSpannedLexiconEntries(), count);
+    incrementLexiconSufficientStatistics(gradient, parse.getSpannedLexiconEntries(),
+        parse.getSpannedPosTagsByLexiconEntry(), count);
   }
 
   public String getParameterDescription(SufficientStatistics parameters) {
@@ -484,12 +624,22 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     StringBuilder sb = new StringBuilder();
     sb.append(terminalFamily.getParameterDescription(
         parameterList.getStatisticByName(TERMINAL_PARAMETERS), numFeatures));
+    sb.append(terminalPosFamily.getParameterDescription(
+        parameterList.getStatisticByName(TERMINAL_POS_PARAMETERS), numFeatures));
     sb.append(syntaxFamily.getParameterDescription(
         parameterList.getStatisticByName(SYNTAX_PARAMETERS), numFeatures));
     sb.append(unaryRuleFamily.getParameterDescription(
         parameterList.getStatisticByName(UNARY_RULE_PARAMETERS), numFeatures));
     sb.append(dependencyFamily.getParameterDescription(
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS), numFeatures));
+    
+    sb.append(wordDistanceFamily.getParameterDescription(
+        parameterList.getStatisticByName(WORD_DISTANCE_PARAMETERS), numFeatures));
+    sb.append(puncDistanceFamily.getParameterDescription(
+        parameterList.getStatisticByName(PUNC_DISTANCE_PARAMETERS), numFeatures));
+    sb.append(verbDistanceFamily.getParameterDescription(
+        parameterList.getStatisticByName(VERB_DISTANCE_PARAMETERS), numFeatures));
+    
     sb.append(rootSyntaxFamily.getParameterDescription(
         parameterList.getStatisticByName(ROOT_SYNTAX_PARAMETERS), numFeatures));
 

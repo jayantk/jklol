@@ -76,11 +76,17 @@ public class CcgParser implements Serializable {
 
   // Member variables ////////////////////////////////////
 
-  // Weights and word -> ccg category mappings for the lexicon
-  // (terminals).
+  // Weights and word -> ccg category mappings for the 
+  // lexicon (terminals).
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;
+
+  // Weights and pos tag -> syntactic category mappings for the 
+  // lexicon (terminals).
+  private final VariableNumMap terminalPosVar;
+  private final VariableNumMap terminalSyntaxVar;
+  private final DiscreteFactor terminalPosDistribution;
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -90,6 +96,37 @@ public class CcgParser implements Serializable {
   private final DiscreteVariable dependencyHeadType; 
   private final DiscreteVariable dependencyArgNumType;
   private final Tensor dependencyTensor;
+
+  // Weights on the distance between predicates and their arguments,
+  // measured in terms of number of words, punctuation symbols, and 
+  // verbs. Each of these factors contains dependencyHeadVar and 
+  // dependencyArgNumVar, in addition to the corresponding distance
+  // variable.
+  private final VariableNumMap wordDistanceVar;
+  private final DiscreteFactor wordDistanceFactor;
+  private final Tensor wordDistanceTensor;
+  
+  private final VariableNumMap puncDistanceVar;
+  private final DiscreteFactor puncDistanceFactor;
+  private final Tensor puncDistanceTensor;
+  private final Set<String> puncTagSet;
+  
+  private final VariableNumMap verbDistanceVar;
+  private final DiscreteFactor verbDistanceFactor;
+  private final Tensor verbDistanceTensor;
+  private final Set<String> verbTagSet;
+ 
+  public static final int MAX_WORD_DISTANCE = 3;
+  public static final DiscreteVariable wordDistanceVarType;
+  public static final int MAX_PUNC_DISTANCE = 3;
+  public static final DiscreteVariable puncDistanceVarType;
+  public static final int MAX_VERB_DISTANCE = 3;
+  public static final DiscreteVariable verbDistanceVarType;
+  static {
+    wordDistanceVarType = DiscreteVariable.sequence("wordDistance", MAX_WORD_DISTANCE + 1);
+    puncDistanceVarType = DiscreteVariable.sequence("puncDistance", MAX_PUNC_DISTANCE + 1);
+    verbDistanceVarType = DiscreteVariable.sequence("verbDistance", MAX_VERB_DISTANCE + 1);
+  }
 
   // Weights on syntactic structures.
   private final VariableNumMap leftSyntaxVar;
@@ -118,10 +155,14 @@ public class CcgParser implements Serializable {
   // Mapping from unheaded syntactic categories to headed syntactic categories.
   private final Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap;
 
-  public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
-      DiscreteFactor terminalDistribution, VariableNumMap dependencyHeadVar,
+  public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, 
+      DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar, 
+      DiscreteFactor terminalPosDistribution, VariableNumMap dependencyHeadVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
-      DiscreteFactor dependencyDistribution, VariableNumMap leftSyntaxVar,
+      DiscreteFactor dependencyDistribution, VariableNumMap wordDistanceVar,
+      DiscreteFactor wordDistanceFactor, VariableNumMap puncDistanceVar,
+      DiscreteFactor puncDistanceFactor, Set<String> puncTagSet, VariableNumMap verbDistanceVar,
+      DiscreteFactor verbDistanceFactor, Set<String> verbTagSet, VariableNumMap leftSyntaxVar, 
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       DiscreteFactor syntaxDistribution, VariableNumMap unaryRuleInputVar, 
       VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap rootSyntaxVar,
@@ -129,6 +170,14 @@ public class CcgParser implements Serializable {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
+    VariableNumMap expectedTerminalVars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
+    Preconditions.checkArgument(expectedTerminalVars.equals(terminalDistribution.getVars()));
+    
+    this.terminalPosVar = Preconditions.checkNotNull(terminalPosVar);
+    this.terminalSyntaxVar = Preconditions.checkNotNull(terminalSyntaxVar);
+    this.terminalPosDistribution = Preconditions.checkNotNull(terminalPosDistribution);
+    VariableNumMap expectedTerminalPosVars = terminalPosVar.union(terminalSyntaxVar);
+    Preconditions.checkArgument(expectedTerminalPosVars.equals(terminalPosDistribution.getVars()));
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(
         VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, dependencyArgVar)));
@@ -143,6 +192,26 @@ public class CcgParser implements Serializable {
     DiscreteVariable dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
     Preconditions.checkArgument(dependencyHeadType.equals(dependencyArgType));
     this.dependencyTensor = dependencyDistribution.getWeights();
+    
+    this.wordDistanceVar = wordDistanceVar;
+    this.wordDistanceFactor = wordDistanceFactor;
+    VariableNumMap expectedWordVars = VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, wordDistanceVar);
+    Preconditions.checkArgument(expectedWordVars.equals(wordDistanceFactor.getVars()));
+    this.wordDistanceTensor = wordDistanceFactor.getWeights();
+    
+    this.puncDistanceVar = puncDistanceVar;
+    this.puncDistanceFactor = puncDistanceFactor;
+    VariableNumMap expectedPuncVars = VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, puncDistanceVar);
+    Preconditions.checkArgument(expectedPuncVars.equals(puncDistanceFactor.getVars()));
+    this.puncDistanceTensor = puncDistanceFactor.getWeights();
+    this.puncTagSet = puncTagSet;
+    
+    this.verbDistanceVar = verbDistanceVar;
+    this.verbDistanceFactor = verbDistanceFactor;
+    VariableNumMap expectedVerbVars = VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, verbDistanceVar);
+    Preconditions.checkArgument(expectedVerbVars.equals(verbDistanceFactor.getVars()));
+    this.verbDistanceTensor = verbDistanceFactor.getWeights();
+    this.verbTagSet = verbTagSet;
 
     this.leftSyntaxVar = Preconditions.checkNotNull(leftSyntaxVar);
     this.rightSyntaxVar = Preconditions.checkNotNull(rightSyntaxVar);
@@ -569,35 +638,6 @@ public class CcgParser implements Serializable {
 
     return unaryRuleBuilder.build();
   }
-
-  /*
-  public static DiscreteFactor buildAllowableCombinations(DiscreteFactor binaryRuleFactor,
-      DiscreteFactor unaryRuleFactor, DiscreteVariable syntaxVariableType) {
-    Set<List<Object>> allowableCombinations = Sets.newHashSet();
-    for (Object leftObject : syntaxVariableType.getValues()) {
-      HeadedSyntacticCategory leftSyntax = (HeadedSyntacticCategory) leftObject;
-      for (Object rightObject : syntaxVariableType.getValues()) {
-        HeadedSyntacticCategory rightSyntax = (HeadedSyntacticCategory) rightObject;
-        
-        Iterator<Outcome> leftUnaryRuleIter = unaryRuleFactor.outcomePrefixIterator(
-            unaryRuleInputVar.outcomeArrayToAssignment(leftSyntax));
-        while (leftUnaryRuleIter.hasNext()) {
-          Outcome leftOutcome = leftUnaryRuleIter.next();
-          HeadedSyntacticCategory leftRaisedType = leftUnaryRule.apply(leftSyntax);
-          Iterator<Outcome> rightUnaryRuleIter = unaryRuleFactor.outcomePrefixIterator(
-            unaryRuleInputVar.outcomeArrayToAssignment(rightSyntax));
-          while (rightUnaryRuleIter.hasNext()) {
-            Outcome rightOutcome = rightUnaryRuleIter.next();
-            HeadedSyntacticCategory rightRaisedType = rightUnaryRule.apply(rightSyntax);
-            
-            Assignment assignment = syntaxVars.outcomeArrayToAssignment(leftRaisedType, rightRaisedType);
-            
-          }
-        }
-      }
-    }
-  }
-  */
   
   public boolean isPossibleDependencyStructure(DependencyStructure dependency) {
     Assignment assignment = Assignment.unionAll(
@@ -723,24 +763,38 @@ public class CcgParser implements Serializable {
    * @param log
    * @return {@code beamSize} best parses for {@code terminals}.
    */
-  public List<CcgParse> beamSearch(List<String> terminals, int beamSize, LogFunction log) {
-    return beamSearch(terminals, beamSize, null, log);
+  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize, LogFunction log) {
+    return beamSearch(terminals, posTags, beamSize, null, log);
   }
-
+  
+  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize) {
+    return beamSearch(terminals, posTags, beamSize, new NullLogFunction());
+  }
+  
   public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
-    return beamSearch(terminals, beamSize, new NullLogFunction());
+    List<String> posTags = Collections.nCopies(terminals.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+    return beamSearch(terminals, posTags, beamSize, new NullLogFunction());
   }
 
-  public List<CcgParse> beamSearch(int beamSize, String... terminals) {
-    return beamSearch(Arrays.asList(terminals), beamSize);
-  }
+  /**
+   * 
+   * @param terminals
+   * @param posTags
+   * @param beamSize
+   * @param beamFilter May be {@code null}, in which case all beam entries are retained.
+   * @param log
+   * @return
+   */
+  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
+      ChartFilter beamFilter, LogFunction log) {
+    int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
+    int[] verbCounts = computeDistanceCounts(posTags, verbTagSet);
+    CcgChart chart = new CcgChart(terminals, posTags, puncCounts, verbCounts, beamSize, beamFilter);
 
-  public List<CcgParse> beamSearch(List<String> terminals, int beamSize, ChartFilter beamFilter,
-      LogFunction log) {
-    CcgChart chart = new CcgChart(terminals, beamSize, beamFilter);
-
+    System.out.println(terminals);
+    System.out.println(posTags);
     log.startTimer("ccg_parse/initialize_chart");
-    initializeChart(terminals, chart, log);
+    initializeChart(terminals, posTags, chart, log);
     log.stopTimer("ccg_parse/initialize_chart");
 
     log.startTimer("ccg_parse/calculate_inside_beam");
@@ -752,6 +806,35 @@ public class CcgParser implements Serializable {
     return decodeParsesForRoot(chart);
   }
   
+  public static int[] computeDistanceCounts(List<String> posTags, Set<String> tagSet) {
+    int[] counts = new int[posTags.size()];
+    int count = 0;
+
+    for (int i = 0; i < posTags.size(); i++) {
+      if (tagSet.contains(posTags.get(i))) {
+        count++;
+      }
+      counts[i] = count;
+    }
+    return counts;
+  }
+  
+  public static int computeArrayDistance(int[] counts, int word1Index, int word2Index) {
+    int leftWordIndex = word1Index < word2Index ? word1Index : word2Index;
+    int rightWordIndex = word1Index < word2Index ? word2Index : word1Index;
+    int distance = leftWordIndex != rightWordIndex ? counts[rightWordIndex - 1] - counts[leftWordIndex] : 0;
+
+    return Math.min(distance, CcgParser.MAX_PUNC_DISTANCE);
+  }
+  
+  public static int computeWordDistance(int word1Index, int word2Index) {
+    int leftWordIndex = word1Index < word2Index ? word1Index : word2Index;
+    int rightWordIndex = word1Index < word2Index ? word2Index : word1Index;
+    int distance = leftWordIndex != rightWordIndex ? (rightWordIndex - 1) - leftWordIndex : 0;
+
+    return Math.min(distance, CcgParser.MAX_WORD_DISTANCE);
+  }
+
   /**
    * Updates entries in the beam for the root node with a factor for
    * the root syntactic category.
@@ -823,7 +906,9 @@ public class CcgParser implements Serializable {
    * @param terminals
    * @param chart
    */
-  public void initializeChart(List<String> terminals, CcgChart chart, LogFunction log) {
+  public void initializeChart(List<String> terminals, List<String> posTags, CcgChart chart,
+      LogFunction log) {
+    Preconditions.checkArgument(terminals.size() == posTags.size());
     Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
     // Identify all possible assignments to the dependency head and
@@ -835,15 +920,26 @@ public class CcgParser implements Serializable {
     for (int i = 0; i < terminals.size(); i++) {
       for (int j = i; j < terminals.size(); j++) {
         if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
+          Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(j));
+
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
           Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
           while (iterator.hasNext()) {
             Outcome bestOutcome = iterator.next();
             CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
+            
+            // Look up how likely this syntactic entry is to occur with this part
+            // of speech.
+            double posProb = 1.0;
+            // TODO: this check should be made unnecessary by preprocessing.
+            if (terminalPosVar.isValidAssignment(posAssignment)) {
+              posProb = terminalPosDistribution.getUnnormalizedProbability(posAssignment.union(
+                terminalSyntaxVar.outcomeArrayToAssignment(category.getSyntax())));
+            }
 
             // Add all possible chart entries to the ccg chart.
             ChartEntry entry = ccgCategoryToChartEntry(category, i, j);
-            addChartEntryWithUnaryRules(entry, chart, bestOutcome.getProbability(), i, j, log);
+            addChartEntryWithUnaryRules(entry, chart, bestOutcome.getProbability() * posProb, i, j, log);
 
             // Identify possible predicates.
             for (int assignmentPredicateNum : entry.getAssignmentPredicateNums()) {
@@ -1060,9 +1156,34 @@ public class CcgParser implements Serializable {
     // Get the probabilities of the generated dependencies.
     double depProb = 1.0;
     Tensor currentParseTensor = chart.getDependencyTensor();
-    for (long dep : result.getDependencies()) {
-      long depNum = dependencyLongToTensorKeyNum(dep);
+    int[] puncCounts = chart.getPunctuationCounts();
+    int[] verbCounts = chart.getVerbCounts();
+    for (long depLong : result.getDependencies()) {
+      // Compute the keyNum containing the weight for depLong
+      // in dependencyTensor.
+      int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+      int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+      int argNumNum = dependencyArgNumType.getValueIndex(
+          (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK));
+      long depNum = dependencyTensor.dimKeyToKeyNum(new int[] { headNum, argNumNum, objectNum });
+
+      // Get the probability of this predicate-argument combination.
       depProb *= currentParseTensor.get(depNum);
+      
+      // Compute distance features.
+      int subjectWordIndex = (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+      int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+      
+      int wordDistance = computeWordDistance(subjectWordIndex, objectWordIndex);
+      int puncDistance = computeArrayDistance(puncCounts, subjectWordIndex, objectWordIndex);
+      int verbDistance = computeArrayDistance(verbCounts, subjectWordIndex, objectWordIndex);
+      
+      long wordDistanceKeyNum = wordDistanceTensor.dimKeyToKeyNum(new int[] {headNum, argNumNum, wordDistance});
+      depProb *= wordDistanceTensor.get(wordDistanceKeyNum);
+      long puncDistanceKeyNum = puncDistanceTensor.dimKeyToKeyNum(new int[] {headNum, argNumNum, puncDistance});
+      depProb *= puncDistanceTensor.get(puncDistanceKeyNum);
+      long verbDistanceKeyNum = verbDistanceTensor.dimKeyToKeyNum(new int[] {headNum, argNumNum, verbDistance});
+      depProb *= verbDistanceTensor.get(verbDistanceKeyNum);
     }
 
     double totalProb = leftRightProb * depProb;
@@ -1242,23 +1363,6 @@ public class CcgParser implements Serializable {
 
   // Methods for efficiently encoding dependencies as longs
   // //////////////////////////////
-
-  /**
-   * Computes the {@code keyNum} containing the weight for {@code dep}
-   * in {@code dependencyTensor}.
-   * 
-   * @param dep
-   * @return
-   */
-  private long dependencyLongToTensorKeyNum(long depLong) {
-    int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
-    int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
-
-    int argNumNum = dependencyArgNumType.getValueIndex(
-        (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK));
-
-    return dependencyTensor.dimKeyToKeyNum(new int[] { headNum, argNumNum, objectNum });
-  }
 
   public long unfilledDependencyToLong(UnfilledDependency dep) {
     long argNum = dep.getArgumentIndex();

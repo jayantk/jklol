@@ -182,6 +182,11 @@ public class CfgParser implements Serializable {
    */
   @SuppressWarnings("unchecked")
   public List<ParseTree> beamSearch(List<?> terminals) {
+    if (terminals.size() == 0) {
+      // Zero size inputs occur because unknown words may be automatically skipped.
+      return Collections.emptyList();
+    }
+    
     BeamSearchParseChart chart = new BeamSearchParseChart((List<Object>) terminals, beamSize);
 
     // Construct an encoding for mapping partial parse trees to longs. Using an

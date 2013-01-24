@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.util;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -12,9 +13,10 @@ import com.google.common.collect.Maps;
  * DefaultHashMap is a HashMap with a default value for
  * keys not found in it. Mostly useful for accumulation.
  */
-public class DefaultHashMap<K, V> {
+public class DefaultHashMap<K, V> implements Serializable {
+  private static final long serialVersionUID = 1L;
 
-	private Supplier<V> defaultValue;
+  private Supplier<V> defaultValue;
 	private Map<K, V> map;
 
 	public DefaultHashMap(V defaultValue) {

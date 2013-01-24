@@ -300,6 +300,17 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public DenseTensor sumOutDimensions(int[] dimensionsToEliminate) {
     return sumOutDimensions(Ints.asList(dimensionsToEliminate));
   }
+  
+  @Override
+  public Tensor logSumOutDimensions(Collection<Integer> dimensionsToEliminate) {
+    return AbstractTensor.logSumOutDimensions(this, dimensionsToEliminate);
+  }
+
+  @Override 
+  public Tensor logSumOutDimensions(int[] dimensionsToEliminate) {
+    return AbstractTensor.logSumOutDimensions(this, Ints.asList(dimensionsToEliminate));
+  }
+
 
   @Override
   public DenseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate) {

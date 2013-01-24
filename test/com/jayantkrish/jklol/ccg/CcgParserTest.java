@@ -79,6 +79,9 @@ public class CcgParserTest extends TestCase {
   private VariableNumMap terminalVar;
   private VariableNumMap ccgCategoryVar;
   
+  private VariableNumMap posTagVar;
+  private VariableNumMap terminalSyntaxVar;
+  
   private VariableNumMap semanticHeadVar;
   private VariableNumMap semanticArgNumVar;
   private VariableNumMap semanticArgVar;
@@ -258,8 +261,8 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseHeadUnification() {
-    List<CcgParse> parses = parser.beamSearch(10, 
-        "people", "and", "houses", "eat", "berries", "and", "berries");
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("people", "and", "houses", "eat", "berries", "and", "berries"), 10); 
     
     assertEquals(1, parses.size());
 
@@ -536,10 +539,12 @@ public class CcgParserTest extends TestCase {
     // Build the terminal distribution.
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories);
     DiscreteVariable wordType = new DiscreteVariable("words", words);
+    DiscreteVariable posType = new DiscreteVariable("pos", 
+        Lists.newArrayList(ParametricCcgParser.DEFAULT_POS_TAG));
 
     terminalVar = VariableNumMap.singleton(0, "words", wordType);
     ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
-    VariableNumMap vars = terminalVar.union(ccgCategoryVar);
+    VariableNumMap vars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < categories.size(); i++) {
       int commaInd = lexicon[i].indexOf(",");
@@ -547,7 +552,7 @@ public class CcgParserTest extends TestCase {
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, category), weights[i]);
     }
-
+    
     // Build the dependency distribution.
     DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates);
     DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(1, 2, 3));
@@ -580,21 +585,41 @@ public class CcgParserTest extends TestCase {
       syntaxDistribution = syntaxDistribution.add(syntaxDistribution.product(combinationFactor));
     }
     
+    // Distribution over unary rules.
     DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules, 
         leftSyntaxVar.getDiscreteVariables().get(0));
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
     
+    // Distribution over the root of the tree.
     DiscreteFactor rootDistribution = TableFactor.unity(leftSyntaxVar);
     Assignment assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S[b]{0}"));
     rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
     assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S[ng]{0}"));
     rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
+
+    // Distribution over pos tags and terminal syntactic types,
+    // for smoothing sparse word counts.
+    posTagVar = VariableNumMap.singleton(0, "posTag", posType);
+    terminalSyntaxVar = VariableNumMap.singleton(1, "terminalSyntax", leftSyntaxVar.getDiscreteVariables().get(0));
+    DiscreteFactor posDistribution = TableFactor.unity(posTagVar.union(terminalSyntaxVar));
     
-    System.out.println(rootDistribution.getParameterDescription());
-    
+    // Distribution over predicate-argument distances.
+    VariableNumMap distancePredicateVars = semanticHeadVar.union(semanticArgNumVar);
+    VariableNumMap wordDistanceVar = VariableNumMap.singleton(2, "wordDistance", CcgParser.wordDistanceVarType);
+    VariableNumMap puncDistanceVar = VariableNumMap.singleton(2, "puncDistance", CcgParser.puncDistanceVarType);
+    VariableNumMap verbDistanceVar = VariableNumMap.singleton(2, "verbDistance", CcgParser.verbDistanceVarType);
+    DiscreteFactor wordDistanceFactor = TableFactor.unity(distancePredicateVars.union(wordDistanceVar));
+    DiscreteFactor puncDistanceFactor = TableFactor.unity(distancePredicateVars.union(puncDistanceVar));
+    DiscreteFactor verbDistanceFactor = TableFactor.unity(distancePredicateVars.union(verbDistanceVar));
+    Set<String> puncTagSet = ParametricCcgParser.DEFAULT_PUNC_TAGS;
+    Set<String> verbTagSet = ParametricCcgParser.DEFAULT_VERB_TAGS;
+
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
+        posTagVar, terminalSyntaxVar, posDistribution,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
+        wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet, 
+        verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, leftSyntaxVar, rootDistribution);
   }

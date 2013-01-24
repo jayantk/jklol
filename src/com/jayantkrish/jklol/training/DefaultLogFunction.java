@@ -61,6 +61,11 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 	
 	@Override
+	public void logMessage(Object message) {
+	  print(message.toString());
+	}
+	
+	@Override
 	public void logParameters(int iteration, SufficientStatistics parameters, 
 	    ParametricFamily<?> family) {}
 

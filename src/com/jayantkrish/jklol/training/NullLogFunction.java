@@ -21,6 +21,9 @@ public class NullLogFunction implements LogFunction {
   public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {}
   
   @Override
+  public void logMessage(Object message) {};
+  
+  @Override
   public void logParameters(int iteration, SufficientStatistics parameters, 
       ParametricFamily<?> family) {}
   

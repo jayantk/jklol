@@ -15,6 +15,8 @@ public interface LogFunction {
 
   public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph);
   
+  public void logMessage(Object message); 
+  
   public void logParameters(int iteration, SufficientStatistics parameters, 
       ParametricFamily<?> family);
 

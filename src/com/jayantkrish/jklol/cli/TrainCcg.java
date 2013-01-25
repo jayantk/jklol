@@ -7,8 +7,6 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -57,18 +55,8 @@ public class TrainCcg extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Read in all of the provided training examples.
-    List<CcgExample> unfilteredTrainingExamples = Lists.newArrayList();
-    int numDiscarded = 0;
-    for (String line : IoUtils.readLines(options.valueOf(trainingData))) {
-      CcgExample example = CcgExample.parseFromString(line, options.has(useCcgBankFormat));
-      if (!options.has(ignoreSemantics)) {
-        unfilteredTrainingExamples.add(example);
-      } else {
-        unfilteredTrainingExamples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
-            example.getSyntacticParse()));
-      }
-    }
-
+    List<CcgExample> unfilteredTrainingExamples = CcgExample.readExamplesFromFile(
+        options.valueOf(trainingData), options.has(useCcgBankFormat), options.has(ignoreSemantics));
     Set<String> posTags = CcgExample.getPosTagVocabulary(unfilteredTrainingExamples);
     System.out.println(posTags.size() + " POS tags");
 
@@ -79,23 +67,10 @@ public class TrainCcg extends AbstractCli {
 
     // Read in training data and confirm its validity.
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
-    List<CcgExample> trainingExamples = Lists.newArrayList();
-    for (CcgExample example : unfilteredTrainingExamples) {
-      if (parser.isPossibleExample(example)) {
-        if (!options.has(ignoreSemantics)) {
-          trainingExamples.add(example);
-        } else {
-          trainingExamples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
-              example.getSyntacticParse()));
-        }
-      } else {
-        Preconditions.checkState(options.has(discardInvalid), "Invalid example: %s", example);
-        System.out.println("Discarding example: " + example);
-        numDiscarded++;
-      }
-    }
-
+    List<CcgExample> trainingExamples = parser.filterExampleCollection(unfilteredTrainingExamples,
+        !options.has(discardInvalid));
     System.out.println(trainingExamples.size() + " training examples.");
+    int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");
     
     // Train the model.

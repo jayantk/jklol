@@ -6,8 +6,10 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.CsvParser;
+import com.jayantkrish.jklol.util.IoUtils;
 
 /**
  * A training example for {@code CcgLoglikelihoodOracle}. Stores an
@@ -96,6 +98,29 @@ public class CcgExample {
     }
 
     return new CcgExample(words, posTags, dependencies, tree);
+  }
+
+  /**
+   * Reads in a collection of examples stored one per line in {@code filename}.
+   * 
+   * @param filename
+   * @param useCcgBankFormat
+   * @param ignoreSemantics
+   * @return
+   */
+  public static List<CcgExample> readExamplesFromFile(String filename, boolean useCcgBankFormat,
+      boolean ignoreSemantics) {
+    List<CcgExample> examples = Lists.newArrayList();
+    for (String line : IoUtils.readLines(filename)) {
+      CcgExample example = CcgExample.parseFromString(line, useCcgBankFormat);
+      if (ignoreSemantics) {
+        examples.add(example);
+      } else {
+        examples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
+            example.getSyntacticParse()));
+      }
+    }
+    return examples;
   }
 
   /**

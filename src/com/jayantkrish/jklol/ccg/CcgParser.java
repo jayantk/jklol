@@ -73,6 +73,9 @@ public class CcgParser implements Serializable {
   
   public static final String UNARY_RULE_INPUT_VAR_NAME = "unaryRuleInputVar";
   public static final String UNARY_RULE_VAR_NAME = "unaryRuleVar";
+  
+  public static final String UNKNOWN_WORD = "-unk-";
+  public static final String UNKNOWN_WORD_CAP = "-Unk-";
 
   // Member variables ////////////////////////////////////
 
@@ -750,6 +753,30 @@ public class CcgParser implements Serializable {
     }
     return true;
   }
+  
+  /**
+   * Checks whether each example in {@code examples} can be produced
+   * by this parser. If {@code errorOnInvalidExample = true}, then this
+   * method throws an error if an invalid example is encountered. Otherwise,
+   * invalid examples are simply filtered out of the returned examples.
+   * 
+   * @param examples
+   * @param errorOnInvalidExample
+   * @return
+   */
+  public List<CcgExample> filterExampleCollection(Iterable<CcgExample> examples,
+      boolean errorOnInvalidExample) {
+    List<CcgExample> filteredExamples = Lists.newArrayList();
+    for (CcgExample example : examples) {
+      if (isPossibleExample(example)) {
+        filteredExamples.add(example);
+      } else {
+        Preconditions.checkState(!errorOnInvalidExample, "Invalid example: %s", example);
+        System.out.println("Discarding example: " + example);
+      }
+    }
+    return filteredExamples;
+  }
 
   /**
    * Performs a beam search to find the best CCG parses of
@@ -919,43 +946,43 @@ public class CcgParser implements Serializable {
     int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
     for (int i = 0; i < terminals.size(); i++) {
       for (int j = i; j < terminals.size(); j++) {
-        if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
-          Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(j));
+        List<String> terminalValue = terminals.subList(i, j + 1);
+        if (!terminalListValue.canTakeValue(terminalValue)) {
+          if (i != j) {
+            continue;
+          } else {
+            terminalValue = Arrays.asList(UNKNOWN_WORD);
+          }
+        }
 
-          Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
-          Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
-          while (iterator.hasNext()) {
-            Outcome bestOutcome = iterator.next();
-            CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
-            
-            // Look up how likely this syntactic entry is to occur with this part
-            // of speech.
-            double posProb = 1.0;
-            // TODO: this check should be made unnecessary by preprocessing.
-            if (terminalPosVar.isValidAssignment(posAssignment)) {
-              posProb = terminalPosDistribution.getUnnormalizedProbability(posAssignment.union(
+        Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(j));
+        Assignment assignment = terminalVar.outcomeArrayToAssignment(terminalValue);
+        Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+        while (iterator.hasNext()) {
+          Outcome bestOutcome = iterator.next();
+          CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
+
+          // Look up how likely this syntactic entry is to occur with this part
+          // of speech.
+          double posProb = 1.0;
+          // TODO: this check should be made unnecessary by preprocessing.
+          if (terminalPosVar.isValidAssignment(posAssignment)) {
+            posProb = terminalPosDistribution.getUnnormalizedProbability(posAssignment.union(
                 terminalSyntaxVar.outcomeArrayToAssignment(category.getSyntax())));
-            }
+          }
 
-            // Add all possible chart entries to the ccg chart.
-            ChartEntry entry = ccgCategoryToChartEntry(category, i, j);
-            addChartEntryWithUnaryRules(entry, chart, bestOutcome.getProbability() * posProb, i, j, log);
+          // Add all possible chart entries to the ccg chart.
+          ChartEntry entry = ccgCategoryToChartEntry(category, i, j);
+          addChartEntryWithUnaryRules(entry, chart, bestOutcome.getProbability() * posProb, i, j, log);
 
-            // Identify possible predicates.
-            for (int assignmentPredicateNum : entry.getAssignmentPredicateNums()) {
-              possiblePredicates.add((long) assignmentPredicateNum);
-            }
+          // Identify possible predicates.
+          for (int assignmentPredicateNum : entry.getAssignmentPredicateNums()) {
+            possiblePredicates.add((long) assignmentPredicateNum);
           }
         }
       }
     }
     
-    /*
-    for (int i = 0; i < terminals.size(); i++) {
-      System.out.println(i + "." + i + " : " + chart.getNumChartEntriesForSpan(i, i));
-    }
-    */
-
     // Sparsify the dependency tensor for faster parsing.
     long[] keyNums = Longs.toArray(possiblePredicates);
     double[] values = new double[keyNums.length];

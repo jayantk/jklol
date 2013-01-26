@@ -64,7 +64,7 @@ public abstract class AbstractCli {
      * Enables options for constructing a CCG parser, e.g., by
      * providing a lexicon and CCG rules.
      */
-    PARAMETRIC_CCG_PARSER
+    PARAMETRIC_CCG_PARSER,
   };
 
   private final Set<CommonOptions> opts;
@@ -165,8 +165,12 @@ public abstract class AbstractCli {
     System.out.println("");
 
     // Run the program.
+    long startTime = System.currentTimeMillis();
     processOptions(parsedOptions);
     run(parsedOptions);
+    long endTime = System.currentTimeMillis();
+    double timeElapsed = ((double) (startTime - endTime)) / 1000; 
+    System.out.println("Total time elapsed: " + timeElapsed + " seconds");
 
     System.exit(0);
   }

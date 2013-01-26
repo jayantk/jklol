@@ -811,7 +811,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     // Map each key of this into a key of the relabeled tensor.
     long[] resultKeyInts = transformKeyNums(keyNums, indexOffsets, sortedIndexOffsets, newOrder);
 
-    sortOutcomeTable(resultKeyInts, resultValues, 0, values.length);
+    ArrayUtils.sortKeyValuePairs(resultKeyInts, resultValues, 0, values.length);
     return new SparseTensor(sortedDims, sortedSizes, resultKeyInts, resultValues);
   }
 
@@ -836,58 +836,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 
-  /**
-   * Quicksorts the section of {@code keyNums} from {@code startInd} (inclusive)
-   * to {@code endInd} (not inclusive), simultaneously swapping the
-   * corresponding entries of {@code values}.
-   */
-  private static void sortOutcomeTable(long[] keyNums, double[] values,
-      int startInd, int endInd) {
-    // Base case.
-    if (startInd == endInd) {
-      return;
-    }
-
-    // Choose pivot.
-    int pivotInd = (int) (Math.random() * (endInd - startInd)) + startInd;
-
-    // Perform swaps to partition array around the pivot.
-    swap(keyNums, values, startInd, pivotInd);
-    pivotInd = startInd;
-
-    for (int i = startInd + 1; i < endInd; i++) {
-      if (keyNums[i] < keyNums[pivotInd]) {
-        swap(keyNums, values, pivotInd, pivotInd + 1);
-        if (i != pivotInd + 1) {
-          swap(keyNums, values, pivotInd, i);
-        }
-        pivotInd++;
-      }
-    }
-
-    // Recursively sort the subcomponents of the arrays.
-    sortOutcomeTable(keyNums, values, startInd, pivotInd);
-    sortOutcomeTable(keyNums, values, pivotInd + 1, endInd);
-  }
-
-  /**
-   * Swaps the keyNums and values at {@code i} with those at {@code j}.
-   * 
-   * @param keyNums
-   * @param values
-   * @param i
-   * @param j
-   */
-  private static void swap(long[] keyNums, double[] values, int i, int j) {
-    long keySwap = keyNums[i];
-    keyNums[i] = keyNums[j];
-    keyNums[j] = keySwap;
-
-    double swapValue = values[i];
-    values[i] = values[j];
-    values[j] = swapValue;
-  }
-
+ 
   @Override
   public long[] getLargestValues(int n) {
     long[] largestKeyIndexes = HeapUtils.findLargestItemIndexes(values, n);
@@ -1008,7 +957,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       long[] keyNums, double[] values) {
     long[] keyNumsCopy = ArrayUtils.copyOf(keyNums, keyNums.length);
     double[] valuesCopy = ArrayUtils.copyOf(values, values.length);
-    sortOutcomeTable(keyNumsCopy, valuesCopy, 0, keyNums.length);
+    ArrayUtils.sortKeyValuePairs(keyNumsCopy, valuesCopy, 0, keyNums.length);
 
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNumsCopy, valuesCopy);
   }

@@ -951,7 +951,12 @@ public class CcgParser implements Serializable {
           if (i != j) {
             continue;
           } else {
-            terminalValue = Arrays.asList(UNKNOWN_WORD);
+            String value = terminalValue.get(0);
+            if (value.equals(value.toLowerCase())) {
+              terminalValue = Arrays.asList(UNKNOWN_WORD);
+            } else {
+              terminalValue = Arrays.asList(UNKNOWN_WORD_CAP);
+            }
           }
         }
 

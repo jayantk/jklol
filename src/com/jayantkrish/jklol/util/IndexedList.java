@@ -18,7 +18,7 @@ import com.google.common.collect.Lists;
  * where each element has a unique numerical index and element lookups
  * can be performed in expected constant time.
  */ 
-public class IndexedList<T> implements Iterable<T>, Serializable {
+public class IndexedList<T> implements Iterable<T>, Serializable, Dictionary<T> {
 
   private static final long serialVersionUID = -6977660130834159257L;
   
@@ -61,6 +61,7 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 	 * Add a new element to this set. Note that there can only be a single
 	 * copy of any given item in the list.
 	 */
+	@Override	
 	public void add(T item) {
 		if (itemIndex.containsKey(item)) {
 			// Items can only be added once
@@ -72,7 +73,8 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 
 	/**
 	 * Add each element of a set of elements to this list.
-	 */ 
+	 */
+	@Override
 	public void addAll(Iterable<T> items) {
 		for (T item : items) {
 			add(item);

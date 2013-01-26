@@ -9,7 +9,7 @@ import com.google.common.primitives.Ints;
 
 public class IntMultimapTest extends TestCase {
   
-  IntMultimap map;
+  IntMultimap map, badMap;
   
   @Override
   public void setUp() {
@@ -19,7 +19,18 @@ public class IntMultimapTest extends TestCase {
     map.put(0, 5);
     map.put(7, 3);
     map.put(7, 4);
+    map.put(7, 5);
+    map.put(7, 6);
     map.put(0, 2);
+    
+    badMap = IntMultimap.create();
+    for (int i = 0; i < 1000; i++) {
+      badMap.put(0, i);
+    }
+  }
+  
+  public void testBadMap() {
+    badMap.get(0);
   }
   
   public void testClear() {
@@ -39,7 +50,7 @@ public class IntMultimapTest extends TestCase {
     assertTrue(map.containsEntry(2, 3));
     assertTrue(map.containsEntry(7, 4));
     assertTrue(map.containsEntry(7, 3));
-    assertFalse(map.containsEntry(7, 5));
+    assertFalse(map.containsEntry(7, 8));
 
     assertTrue(map.containsKey(0));
     assertFalse(map.containsKey(6));
@@ -60,17 +71,17 @@ public class IntMultimapTest extends TestCase {
     expectedValues = Sets.newHashSet();
     assertEquals(expectedValues, values);
 
-    assertEquals(map.size(), 5);
+    assertEquals(map.size(), 7);
     
     map.put(6, 2);
     map.putAll(9, Ints.asList(6, 7));
     
-    assertEquals(map.size(), 8);
+    assertEquals(map.size(), 10);
 
     assertTrue(map.containsEntry(6, 2));
     assertTrue(map.containsKey(6));
     assertFalse(map.containsEntry(6, 3));
-    assertEquals(map.size(), 8);
+    assertEquals(10, map.size());
     
     values = Sets.newHashSet(map.get(6));
     expectedValues = Sets.newHashSet(2);

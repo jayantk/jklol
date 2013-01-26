@@ -172,6 +172,10 @@ public class ArrayUtils {
    * sorts the section of {@code keys} from {@code startInd}
    * (inclusive) to {@code endInd} (not inclusive), simultaneously
    * swapping the corresponding entries of {@code values}.
+   * <p>
+   * {@code values} are treated like secondary keys during the sort.
+   * If multiple entries in {@code keys} have the same value, these
+   * keys are sorted by their values.
    * 
    * @param keys
    * @param values
@@ -180,8 +184,6 @@ public class ArrayUtils {
    */
   public static void sortKeyValuePairs(int[] keys, int[] values,
       int startInd, int endInd) {
-    // TODO: check that case with duplicate keys works. What if all of keys is the same number?
-    
     // Base case.
     if (startInd == endInd) {
       return;
@@ -195,7 +197,7 @@ public class ArrayUtils {
     pivotInd = startInd;
 
     for (int i = startInd + 1; i < endInd; i++) {
-      if (keys[i] < keys[pivotInd]) {
+      if (keys[i] < keys[pivotInd] || (keys[i] == keys[pivotInd] && values[i] < values[pivotInd])) {
         swap(keys, values, pivotInd, pivotInd + 1);
         if (i != pivotInd + 1) {
           swap(keys, values, pivotInd, i);

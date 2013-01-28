@@ -52,6 +52,7 @@ public class TrainLinearClassifier extends AbstractCli {
     featureVectorFile = parser.accepts("features").withRequiredArg().ofType(String.class).required();
     labelFile = parser.accepts("labels").withRequiredArg().ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+
     // Optional options
     delimiterOption = parser.accepts("delimiter").withRequiredArg().ofType(String.class)
         .defaultsTo(",");

@@ -169,7 +169,7 @@ public abstract class AbstractCli {
     processOptions(parsedOptions);
     run(parsedOptions);
     long endTime = System.currentTimeMillis();
-    double timeElapsed = ((double) (startTime - endTime)) / 1000; 
+    double timeElapsed = ((double) (endTime - startTime)) / 1000; 
     System.out.println("Total time elapsed: " + timeElapsed + " seconds");
 
     System.exit(0);

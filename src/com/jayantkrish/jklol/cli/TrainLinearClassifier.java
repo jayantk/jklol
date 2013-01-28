@@ -6,13 +6,25 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Example;
+import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.ObjectVariable;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.MaxMarginOracle;
+import com.jayantkrish.jklol.training.MaxMarginOracle.HammingCost;
+import com.jayantkrish.jklol.training.OracleAdapter;
+import com.jayantkrish.jklol.training.StochasticGradientTrainer;
+import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -22,10 +34,13 @@ import com.jayantkrish.jklol.util.IoUtils;
  */
 public class TrainLinearClassifier extends AbstractCli {
   
-  private OptionSpec<String> inputData;
-  private OptionSpec<String> labelData;
+  private OptionSpec<String> featureVectorFile;
+  private OptionSpec<String> labelFile;
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> delimiterOption;
+  
+  private static final String INPUT_VAR_NAME = "x";
+  private static final String OUTPUT_VAR_NAME = "y";
   
   public TrainLinearClassifier() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
@@ -34,30 +49,70 @@ public class TrainLinearClassifier extends AbstractCli {
   @Override
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
-    inputData = parser.accepts("input").withRequiredArg().ofType(String.class).required();
-    labelData = parser.accepts("labels").withRequiredArg().ofType(String.class).required();
+    featureVectorFile = parser.accepts("features").withRequiredArg().ofType(String.class).required();
+    labelFile = parser.accepts("labels").withRequiredArg().ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional options
     delimiterOption = parser.accepts("delimiter").withRequiredArg().ofType(String.class)
-        .required().defaultsTo(",");
+        .defaultsTo(",");
   }
 
   @Override
   public void run(OptionSet options) {
     String delimiter = options.valueOf(delimiterOption);
+    // The first column of both files is the set of example IDs.
+    List<String> exampleIds = IoUtils.readUniqueColumnValuesFromDelimitedFile(
+        options.valueOf(featureVectorFile), 0, delimiter);
     List<String> featureNames = IoUtils.readUniqueColumnValuesFromDelimitedFile(
-        options.valueOf(inputData), 1, delimiter);
+        options.valueOf(featureVectorFile), 1, delimiter);
     List<String> labelNames = IoUtils.readUniqueColumnValuesFromDelimitedFile(
-        options.valueOf(labelData), 1, delimiter);
+        options.valueOf(labelFile), 1, delimiter);
+
+    DiscreteVariable exampleIdType = new DiscreteVariable("exampleIds", exampleIds);
+    DiscreteVariable featureVarType = new DiscreteVariable("features", featureNames);
+    ParametricFactorGraph family = buildModel(featureVarType, labelNames);
+    VariableNumMap inputVar = family.getVariables().getFixedVariables().getVariablesByName(INPUT_VAR_NAME);
+    VariableNumMap outputVar = family.getVariables().getFixedVariables().getVariablesByName(OUTPUT_VAR_NAME);
+
+    // Read in the training data
+    VariableNumMap exampleVar = VariableNumMap.singleton(0, "exampleIds", exampleIdType);
+    VariableNumMap featureVar = VariableNumMap.singleton(1, "features", featureVarType);
+    VariableNumMap featureVectorVars = exampleVar.union(featureVar);
+    TableFactor featureVectors = TableFactor.fromDelimitedFile(featureVectorVars, 
+        IoUtils.readLines(options.valueOf(featureVectorFile)), delimiter, false);
     
-    ParametricFactorGraph family = buildModel(featureNames, labelNames);
+    List<Example<Assignment, Assignment>> trainingData = Lists.newArrayList();
+    for (String line : IoUtils.readLines(options.valueOf(labelFile))) {
+      String[] parts = line.split(",");
+      Preconditions.checkArgument(parts.length == 2, "Invalid label line: " + line);
+      
+      Assignment exampleIdAssignment = exampleVar.outcomeArrayToAssignment(parts[0]);
+      Tensor featureVector = featureVectors.conditional(exampleIdAssignment).getWeights();
+      
+      Assignment inputAssignment = inputVar.outcomeArrayToAssignment(featureVector);
+      Assignment outputAssignment = outputVar.outcomeArrayToAssignment(parts[1]);
+      trainingData.add(Example.create(inputAssignment, outputAssignment));
+    }
+
+    // Train the model.
+    MaxMarginOracle oracle = new MaxMarginOracle(family, new HammingCost(), new JunctionTree());
+    SufficientStatistics parameters = family.getNewSufficientStatistics();
+    
+    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
+    parameters = trainer.train(OracleAdapter.createAssignmentAdapter(oracle), parameters, trainingData);
+
+    // Serialize the trained model to disk.
+    DynamicFactorGraph factorGraph = family.getModelFromParameters(parameters);
+    IoUtils.serializeObjectToFile(factorGraph, options.valueOf(modelOutput));
+    
+    System.out.println(family.getParameterDescription(parameters));
   }
   
   public static void main(String[] args) {
     new TrainLinearClassifier().run(args);
   }
   
-  private ParametricFactorGraph buildModel(List<String> features, 
+  private ParametricFactorGraph buildModel(DiscreteVariable featureVar, 
       List<String> outputLabels) {
     // A linear classifier is represented as a parametric factor graph with
     // two variables: an input variable (x) whose values are feature vectors
@@ -72,12 +127,6 @@ public class TrainLinearClassifier extends AbstractCli {
     builder.addVariable("y", outputVar);
     VariableNumMap x = builder.getVariables().getVariablesByName("x");
     VariableNumMap y = builder.getVariables().getVariablesByName("y");
-
-    // Define the names of the features used in the classifier. Our classifier
-    // will expect input vectors of dimension features.size(). This DiscreteVariable 
-    // maps each feature name to an index in the feature vector; it can also 
-    // be used to construct the input vectors.
-    DiscreteVariable featureVar = new DiscreteVariable("features", features);
 
     // A ConditionalLogLinearFactor represents a trainable linear classifier
     // (yes, the name is terrible). Just copy this definition, replacing x, y

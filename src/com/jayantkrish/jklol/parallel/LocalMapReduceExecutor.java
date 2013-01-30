@@ -21,7 +21,6 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
 
   private final int batchesPerThread;
   private final int numThreads;
-  private final ExecutorService executor;
   
   /**
    * Constructs an executor that processes batches of items using a fixed number
@@ -35,12 +34,13 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
   public LocalMapReduceExecutor(int numThreads, int batchesPerThread) {
     this.numThreads = numThreads;
     this.batchesPerThread = batchesPerThread;
-    this.executor = Executors.newFixedThreadPool(numThreads);
   }
 
   @Override
   public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
       Collection<? extends A> items, D mapper, E reducer) {
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+
     if (items.size() == 1) {
       // Run all computation in this thread, which is faster given only a small number of items.
       C accumulator = reducer.getInitialValue();
@@ -81,6 +81,8 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
       e.getCause().printStackTrace();
       throw new RuntimeException(e);
     }
+    executor.shutdown();
+
     return accumulator;
   }
 

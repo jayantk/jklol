@@ -29,12 +29,16 @@ public class FeatureStandardizer implements Serializable {
   private final DiscreteFactor means;
   private final DiscreteFactor inverseStdDevs;
   private final DiscreteFactor finalOffset;
+  
+  private final double rescalingFactor;
 
   public FeatureStandardizer(DiscreteFactor means, DiscreteFactor inverseStdDevs,
-      DiscreteFactor finalOffset) {
+      DiscreteFactor finalOffset, double rescalingFactor) {
     this.means = Preconditions.checkNotNull(means);
     this.inverseStdDevs = Preconditions.checkNotNull(inverseStdDevs);
     this.finalOffset = Preconditions.checkNotNull(finalOffset);
+    
+    this.rescalingFactor = rescalingFactor;
   }
   
   public DiscreteFactor getMeans() {
@@ -58,11 +62,14 @@ public class FeatureStandardizer implements Serializable {
    * @param featureFactor
    * @param featureVariableNum
    * @param biasFeature If {@code null} no bias feature is used.
+   * @param rescalingFactor amount by which to multiply each feature vector after 
+   * standardization.
    * @return
    */
   public static FeatureStandardizer estimateFrom(DiscreteFactor featureFactor, int featureVariableNum,
-      Assignment biasFeature) {
-    return FeatureStandardizer.estimateFrom(Arrays.asList(featureFactor), featureVariableNum, biasFeature);
+      Assignment biasFeature, double rescalingFactor) {
+    return FeatureStandardizer.estimateFrom(Arrays.asList(featureFactor), featureVariableNum,
+        biasFeature, rescalingFactor);
   }
 
   /**
@@ -75,10 +82,12 @@ public class FeatureStandardizer implements Serializable {
    * @param featureFactor
    * @param featureVariableNum
    * @param biasFeature If {@code null} no bias feature is used.
+   * @param rescalingFactor amount by which to multiply each feature vector after 
+   * standardization.
    * @return
    */
   public static FeatureStandardizer estimateFrom(Collection<DiscreteFactor> featureFactors, 
-      int featureVariableNum, Assignment biasFeature) {
+      int featureVariableNum, Assignment biasFeature, double rescalingFactor) {
     Preconditions.checkArgument(featureFactors.size() > 0);
     
     DiscreteFactor means = getMeans(featureFactors, featureVariableNum);
@@ -94,7 +103,7 @@ public class FeatureStandardizer implements Serializable {
       offset = TableFactor.pointDistribution(featureVariable, biasFeature);
     }
 
-    return new FeatureStandardizer(means, stdDev.inverse(), offset);
+    return new FeatureStandardizer(means, stdDev.inverse(), offset, rescalingFactor);
   }
 
   /**
@@ -105,7 +114,8 @@ public class FeatureStandardizer implements Serializable {
    * @return
    */
   public DiscreteFactor apply(DiscreteFactor featureFactor) {
-    return featureFactor.add(means.product(-1.0)).product(inverseStdDevs).add(finalOffset);
+    return featureFactor.add(means.product(-1.0)).product(inverseStdDevs).add(finalOffset)
+        .product(rescalingFactor);
   }
 
   /**

@@ -108,7 +108,7 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 	 */ 
 	public T get(int index) {
 		if (index >= items.size() || index < 0) {
-			throw new IndexOutOfBoundsException();
+			throw new IndexOutOfBoundsException("size: " + items.size() + " index: " + index);
 		}
 		return items.get(index);
 	}

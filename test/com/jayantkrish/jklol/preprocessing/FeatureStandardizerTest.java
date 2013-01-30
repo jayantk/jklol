@@ -68,7 +68,7 @@ public class FeatureStandardizerTest extends TestCase {
   
   public void testEstimateFrom1() {
     FeatureStandardizer standardizer = FeatureStandardizer.estimateFrom(featureFactor, features.getOnlyVariableNum(), 
-        features.outcomeArrayToAssignment("bias"));
+        features.outcomeArrayToAssignment("bias"), 1.0);
     
     DiscreteFactor means = standardizer.getMeans();
     assertEquals(0.0, means.getUnnormalizedProbability("f1"));
@@ -89,7 +89,7 @@ public class FeatureStandardizerTest extends TestCase {
   public void testEstimateFrom2() {
     FeatureStandardizer standardizer = FeatureStandardizer.estimateFrom(
         Arrays.asList(featureFactor, featureFactor2), features.getOnlyVariableNum(), 
-        features.outcomeArrayToAssignment("bias"));
+        features.outcomeArrayToAssignment("bias"), 1.0);
     
     DiscreteFactor means = standardizer.getMeans();
     assertEquals(1.0 / 12.0, means.getUnnormalizedProbability("f1"), TOLERANCE);
@@ -108,18 +108,18 @@ public class FeatureStandardizerTest extends TestCase {
   
   public void testApply() {
     FeatureStandardizer standardizer = FeatureStandardizer.estimateFrom(featureFactor, features.getOnlyVariableNum(), 
-        features.outcomeArrayToAssignment("bias"));
+        features.outcomeArrayToAssignment("bias"), 2.0);
     
     DiscreteFactor standardized = standardizer.apply(featureFactor);
     
-    assertEquals(1.0, standardized.getUnnormalizedProbability("A", "T", "f1"));
-    assertEquals(-1.0, standardized.getUnnormalizedProbability("B", "T", "f1"));
-    assertEquals(1.0, standardized.getUnnormalizedProbability("A", "F", "bias"));
-    assertEquals(1.0, standardized.getUnnormalizedProbability("B", "T", "bias"));
+    assertEquals(2.0, standardized.getUnnormalizedProbability("A", "T", "f1"));
+    assertEquals(-2.0, standardized.getUnnormalizedProbability("B", "T", "f1"));
+    assertEquals(2.0, standardized.getUnnormalizedProbability("A", "F", "bias"));
+    assertEquals(2.0, standardized.getUnnormalizedProbability("B", "T", "bias"));
     
-    assertEquals((2.0 - (1.0 / 3.0)) * 0.801783726, standardized.getUnnormalizedProbability("A", "F", "f2"), 0.00001);
-    assertEquals((-1.0 - (1.0 / 3.0)) * 0.801783726, standardized.getUnnormalizedProbability("B", "T", "f2"), 0.00001);
-    assertEquals((-1.0 / 3.0) * 0.801783726, standardized.getUnnormalizedProbability("C", "T", "f2"), 0.00001);
+    assertEquals((2.0 - (1.0 / 3.0)) * 0.801783726 * 2, standardized.getUnnormalizedProbability("A", "F", "f2"), 0.00001);
+    assertEquals((-1.0 - (1.0 / 3.0)) * 0.801783726 * 2, standardized.getUnnormalizedProbability("B", "T", "f2"), 0.00001);
+    assertEquals((-1.0 / 3.0) * 0.801783726 * 2, standardized.getUnnormalizedProbability("C", "T", "f2"), 0.00001);
   }
 
   /*

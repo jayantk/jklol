@@ -9,12 +9,15 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.Example;
+import com.jayantkrish.jklol.evaluation.FactorGraphPredictor;
+import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPredictor;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
@@ -37,7 +40,9 @@ public class TrainLinearClassifier extends AbstractCli {
   private OptionSpec<String> featureVectorFile;
   private OptionSpec<String> labelFile;
   private OptionSpec<String> modelOutput;
+  
   private OptionSpec<String> delimiterOption;
+  private OptionSpec<Void> printTrainingError;
   
   private static final String INPUT_VAR_NAME = "x";
   private static final String OUTPUT_VAR_NAME = "y";
@@ -56,6 +61,8 @@ public class TrainLinearClassifier extends AbstractCli {
     // Optional options
     delimiterOption = parser.accepts("delimiter").withRequiredArg().ofType(String.class)
         .defaultsTo(",");
+    
+    printTrainingError = parser.accepts("printTrainingError");
   }
 
   @Override
@@ -103,10 +110,22 @@ public class TrainLinearClassifier extends AbstractCli {
     parameters = trainer.train(OracleAdapter.createAssignmentAdapter(oracle), parameters, trainingData);
 
     // Serialize the trained model to disk.
-    DynamicFactorGraph factorGraph = family.getModelFromParameters(parameters);
+    FactorGraph factorGraph = family.getModelFromParameters(parameters).getFactorGraph(DynamicAssignment.EMPTY);
     IoUtils.serializeObjectToFile(factorGraph, options.valueOf(modelOutput));
     
     System.out.println(family.getParameterDescription(parameters));
+    
+    if (options.has(printTrainingError)) {
+      SimpleFactorGraphPredictor predictor = new FactorGraphPredictor.SimpleFactorGraphPredictor(
+          factorGraph, outputVar, new JunctionTree());
+      for (Example<Assignment, Assignment> example : trainingData) {
+        Assignment input = example.getInput();
+        Assignment prediction = predictor.apply(input);
+        System.out.println("INPUT: " + input);
+        System.out.println("PREDICTION: " + prediction);
+        System.out.println("OUTPUT: " + example.getOutput());
+      }
+    }
   }
   
   public static void main(String[] args) {

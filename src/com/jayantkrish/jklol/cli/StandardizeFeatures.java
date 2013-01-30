@@ -58,7 +58,7 @@ public class StandardizeFeatures {
       columnIndex = numColumns + columnIndex;
     }
    
-    FeatureStandardizer standardizer = FeatureStandardizer.estimateFrom(factor, columnIndex, Assignment.EMPTY);
+    FeatureStandardizer standardizer = FeatureStandardizer.estimateFrom(factor, columnIndex, Assignment.EMPTY, 1.0);
     DiscreteFactor standardizedFeatures = standardizer.apply(factor);
 
     System.out.println(standardizedFeatures.toCsv());

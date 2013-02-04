@@ -346,6 +346,19 @@ public abstract class DiscreteFactor extends AbstractFactor {
     }
     return sb.toString();
   }
+  
+  public String toCsv(String linePrefix) {
+    StringBuilder sb = new StringBuilder();
+    Iterator<Outcome> iter = outcomeIterator();
+    while (iter.hasNext()) {
+      Outcome outcome = iter.next();
+      sb.append(linePrefix + outcome.toCsv());
+      if (iter.hasNext()) {
+        sb.append("\n");
+      }
+    }
+    return sb.toString();
+  }
 
   @Override
   public String getParameterDescription() {

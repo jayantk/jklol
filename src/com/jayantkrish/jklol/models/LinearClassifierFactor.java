@@ -34,11 +34,13 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
   private final int[] inputVarNums;
   private final VariableNumMap outputVars;
   private final VariableNumMap conditionalVars;
+  
+  private final DiscreteVariable featureDictionary;
 
   private final Tensor logWeights;
 
   public LinearClassifierFactor(VariableNumMap inputVar, VariableNumMap outputVars,
-      Tensor logWeights) {
+      DiscreteVariable featureDictionary, Tensor logWeights) {
     super(inputVar.union(outputVars));
     Preconditions.checkArgument(inputVar.size() == 1);
     Preconditions.checkArgument(inputVar.union(outputVars).containsAll(
@@ -48,12 +50,13 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     this.inputVar = inputVar;
     this.inputVarNums = new int[] { inputVar.getOnlyVariableNum() };
     this.outputVars = outputVars;
+    this.featureDictionary = featureDictionary;
     this.conditionalVars = VariableNumMap.emptyMap();
     this.logWeights = logWeights;
   }
   
   public LinearClassifierFactor(VariableNumMap inputVar, VariableNumMap outputVars, 
-      VariableNumMap conditionalVars, Tensor logWeights) {
+      VariableNumMap conditionalVars, DiscreteVariable featureDictionary, Tensor logWeights) {
     super(inputVar.union(outputVars));
     Preconditions.checkArgument(inputVar.size() == 1);
     Preconditions.checkArgument(inputVar.union(outputVars).containsAll(
@@ -64,6 +67,7 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     this.inputVar = Preconditions.checkNotNull(inputVar);
     this.inputVarNums = new int[] { inputVar.getOnlyVariableNum() };
     this.outputVars = Preconditions.checkNotNull(outputVars);
+    this.featureDictionary = featureDictionary;
     this.conditionalVars = Preconditions.checkNotNull(conditionalVars);
     this.logWeights = logWeights;
   }
@@ -104,6 +108,10 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
     return outputVars;
   }
   
+  public DiscreteVariable getFeatureVariableType() {
+    return featureDictionary;
+  }
+  
   private Tensor getOutputLogProbTensor(Tensor inputFeatureVector) {
     Tensor logProbs = logWeights.innerProduct(inputFeatureVector.relabelDimensions(inputVarNums));
 
@@ -135,7 +143,8 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
   @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
     return new LinearClassifierFactor(relabeling.apply(inputVar), relabeling.apply(outputVars),
-        relabeling.apply(conditionalVars), logWeights.relabelDimensions(relabeling.getVariableIndexReplacementMap()));
+        relabeling.apply(conditionalVars), featureDictionary, logWeights.relabelDimensions(
+            relabeling.getVariableIndexReplacementMap()));
   }
 
   @Override

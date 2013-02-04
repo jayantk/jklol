@@ -11,6 +11,9 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.evaluation.FactorGraphPredictor;
 import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPredictor;
+import com.jayantkrish.jklol.evaluation.LossFunctions;
+import com.jayantkrish.jklol.evaluation.LossFunctions.PrecisionRecall;
+import com.jayantkrish.jklol.evaluation.Predictor.Prediction;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
@@ -44,8 +47,8 @@ public class TrainLinearClassifier extends AbstractCli {
   private OptionSpec<String> delimiterOption;
   private OptionSpec<Void> printTrainingError;
   
-  private static final String INPUT_VAR_NAME = "x";
-  private static final String OUTPUT_VAR_NAME = "y";
+  public static final String INPUT_VAR_NAME = "x";
+  public static final String OUTPUT_VAR_NAME = "y";
   
   public TrainLinearClassifier() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
@@ -61,7 +64,7 @@ public class TrainLinearClassifier extends AbstractCli {
     // Optional options
     delimiterOption = parser.accepts("delimiter").withRequiredArg().ofType(String.class)
         .defaultsTo(",");
-    
+
     printTrainingError = parser.accepts("printTrainingError");
   }
 
@@ -87,21 +90,10 @@ public class TrainLinearClassifier extends AbstractCli {
     VariableNumMap featureVar = VariableNumMap.singleton(1, "features", featureVarType);
     VariableNumMap featureVectorVars = exampleVar.union(featureVar);
     TableFactor featureVectors = TableFactor.fromDelimitedFile(featureVectorVars, 
-        IoUtils.readLines(options.valueOf(featureVectorFile)), delimiter, false);
+        IoUtils.readLines(options.valueOf(featureVectorFile)), delimiter, false);    
+    List<Example<Assignment, Assignment>> trainingData = constructClassificationData(
+        IoUtils.readLines(options.valueOf(labelFile)), exampleVar, featureVectors, inputVar, outputVar);
     
-    List<Example<Assignment, Assignment>> trainingData = Lists.newArrayList();
-    for (String line : IoUtils.readLines(options.valueOf(labelFile))) {
-      String[] parts = line.split(",");
-      Preconditions.checkArgument(parts.length == 2, "Invalid label line: " + line);
-      
-      Assignment exampleIdAssignment = exampleVar.outcomeArrayToAssignment(parts[0]);
-      Tensor featureVector = featureVectors.conditional(exampleIdAssignment).getWeights();
-      
-      Assignment inputAssignment = inputVar.outcomeArrayToAssignment(featureVector);
-      Assignment outputAssignment = outputVar.outcomeArrayToAssignment(parts[1]);
-      trainingData.add(Example.create(inputAssignment, outputAssignment));
-    }
-
     // Train the model.
     MaxMarginOracle oracle = new MaxMarginOracle(family, new HammingCost(), new JunctionTree());
     SufficientStatistics parameters = family.getNewSufficientStatistics();
@@ -112,20 +104,51 @@ public class TrainLinearClassifier extends AbstractCli {
     // Serialize the trained model to disk.
     FactorGraph factorGraph = family.getModelFromParameters(parameters).getFactorGraph(DynamicAssignment.EMPTY);
     IoUtils.serializeObjectToFile(factorGraph, options.valueOf(modelOutput));
-    
+
     System.out.println(family.getParameterDescription(parameters));
     
     if (options.has(printTrainingError)) {
-      SimpleFactorGraphPredictor predictor = new FactorGraphPredictor.SimpleFactorGraphPredictor(
-          factorGraph, outputVar, new JunctionTree());
-      for (Example<Assignment, Assignment> example : trainingData) {
-        Assignment input = example.getInput();
-        Assignment prediction = predictor.apply(input);
-        System.out.println("INPUT: " + input);
-        System.out.println("PREDICTION: " + prediction);
-        System.out.println("OUTPUT: " + example.getOutput());
-      }
+      logError(trainingData, factorGraph);
     }
+  }
+  
+  public static List<Example<Assignment, Assignment>> constructClassificationData(Iterable<String> labelLines,
+      VariableNumMap exampleVar, TableFactor featureVectors, VariableNumMap inputVar, VariableNumMap outputVar) {
+    List<Example<Assignment, Assignment>> trainingData = Lists.newArrayList();
+    for (String line : labelLines) {
+      String[] parts = line.split(",");
+      Preconditions.checkArgument(parts.length == 2, "Invalid label line: " + line);
+
+      Assignment exampleIdAssignment = exampleVar.outcomeArrayToAssignment(parts[0]);
+      Tensor featureVector = featureVectors.conditional(exampleIdAssignment).getWeights();
+
+      Assignment inputAssignment = inputVar.outcomeArrayToAssignment(featureVector);
+      Assignment outputAssignment = outputVar.outcomeArrayToAssignment(parts[1]);
+      trainingData.add(Example.create(inputAssignment, outputAssignment));
+    }
+    return trainingData;
+  }
+  
+  public static void logError(List<Example<Assignment, Assignment>> data, FactorGraph classifier) {
+    SimpleFactorGraphPredictor predictor = new FactorGraphPredictor.SimpleFactorGraphPredictor(
+        classifier, classifier.getVariables().getVariablesByName(OUTPUT_VAR_NAME), new JunctionTree());
+    
+    PrecisionRecall<Object> loss = LossFunctions.newPrecisionRecall();
+    for (Example<Assignment, Assignment> example : data) {
+      Assignment input = example.getInput();
+      Assignment output = example.getOutput();
+      Prediction<Assignment, Assignment> prediction = predictor.getBestPrediction(input);
+
+      // System.out.println("INPUT: " + input);
+      System.out.println("PREDICTION: " + prediction.getBestPrediction());
+      System.out.println("OUTPUT: " + output);
+      
+      boolean predictionBoolean = prediction.getBestPrediction().getOnlyValue().equals("T");
+      boolean outputBoolean = output.getOnlyValue().equals("T");
+      loss.accumulatePrediction(predictionBoolean, outputBoolean, prediction.getBestPredictionScore());
+    }
+    
+    System.out.println(loss);
   }
   
   public static void main(String[] args) {

@@ -35,7 +35,7 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
    * Evaluates the loss of {@code predictor} on the test data contained in this
    * evaluation. This method is useful when training is unnecessary or more
    * complicated than simply running on the trainer on training data.
-   *  ex
+   * 
    * @param predictor
    * @param lossFunctions
    */

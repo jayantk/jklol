@@ -35,8 +35,10 @@ public class LinearClassifierFactorTest extends TestCase {
       weightBuilder.put(new int[] {i / 4, i % 4}, i);
     }
     
-    factor = new LinearClassifierFactor(inputVar, outputVar, weightBuilder.build());
-    normedFactor = new LinearClassifierFactor(inputVar, outputVar, outputVar, weightBuilder.build());
+    factor = new LinearClassifierFactor(inputVar, outputVar,
+        DiscreteVariable.sequence("features", 4), weightBuilder.build());
+    normedFactor = new LinearClassifierFactor(inputVar, outputVar, outputVar,
+        DiscreteVariable.sequence("features", 4), weightBuilder.build());
     
     SparseTensorBuilder inputBuilder = new SparseTensorBuilder(new int[] {1}, new int[] {3});
     inputBuilder.put(new int[] {0}, 1);

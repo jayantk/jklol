@@ -197,7 +197,6 @@ public class TableFactor extends DiscreteFactor {
     for (Integer varNum : vars.getVariableNums()) {
       varList.add(vars.intersection(varNum));
     }
-    System.out.println(varList);
     return fromDelimitedFile(varList, inputConverters, lines, delimiter, ignoreInvalidAssignments);    
   }
   
@@ -207,7 +206,6 @@ public class TableFactor extends DiscreteFactor {
     for (Integer varNum : vars.getVariableNums()) {
       varList.add(vars.intersection(varNum));
     }
-    System.out.println(varList);
     return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments);
   }
   

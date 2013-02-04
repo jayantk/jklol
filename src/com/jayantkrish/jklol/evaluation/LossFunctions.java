@@ -235,7 +235,9 @@ public class LossFunctions {
       int totalPositives = (truePositives + falsePositives);
       int totalGoldPositives = (truePositives + falseNegatives);
       return "precision: " + getPrecision() + " (" + truePositives + "/" + totalPositives +
-          "), recall: " + getRecall() + " (" + truePositives + "/" + totalGoldPositives + ")";
+          "), recall: " + getRecall() + " (" + truePositives + "/" + totalGoldPositives + "), tp: "
+          + truePositives + ", fp: " + falsePositives + ", tn: " + trueNegatives + ", fn: "
+          + falseNegatives;
     }
   }
 

@@ -78,7 +78,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public Factor getModelFromParameters(SufficientStatistics parameters) {
-    return new LinearClassifierFactor(inputVar, outputVars, conditionalVars, 
+    return new LinearClassifierFactor(inputVar, outputVars, conditionalVars, featureDictionary, 
         getWeightTensorFromStatistics(parameters));
   }
   

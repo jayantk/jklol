@@ -152,5 +152,13 @@ public interface Predictor<I, O> extends Function<I, O> {
         return null;
       }
     }
+    
+    public double getBestPredictionScore() {
+      if (predictions.size() > 0) {
+        return scores[0];
+      } else {
+        return Double.NEGATIVE_INFINITY;
+      }
+    }
   }
 }

@@ -7,6 +7,8 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.util.CsvParser;
 
 /**
@@ -34,6 +36,10 @@ public class CcgBinaryRule implements Serializable {
   private final HeadedSyntacticCategory rightSyntax;
   private final HeadedSyntacticCategory parentSyntax;
 
+  // Logical form for this rule. The logical form is a function of
+  // type (left lf -> (right lf -> result))
+  private final LambdaExpression logicalForm;
+
   // Unfilled dependencies created by this rule.
   private final String[] subjects;
   private final int[] argumentNumbers;
@@ -41,11 +47,13 @@ public class CcgBinaryRule implements Serializable {
   private final int[] objects;
 
   public CcgBinaryRule(HeadedSyntacticCategory leftSyntax, HeadedSyntacticCategory rightSyntax,
-      HeadedSyntacticCategory returnSyntax, List<String> subjects, List<Integer> argumentNumbers,
-      List<Integer> objects) {
+      HeadedSyntacticCategory returnSyntax, LambdaExpression logicalForm, List<String> subjects,
+      List<Integer> argumentNumbers, List<Integer> objects) {
     this.leftSyntax = leftSyntax;
     this.rightSyntax = rightSyntax;
     this.parentSyntax = returnSyntax;
+
+    this.logicalForm = logicalForm;
 
     this.subjects = subjects.toArray(new String[0]);
     this.argumentNumbers = Ints.toArray(argumentNumbers);
@@ -58,6 +66,7 @@ public class CcgBinaryRule implements Serializable {
    * <ul>
    * <li>The headed syntactic categories to combine and return:
    * <code>(left syntax) (right syntax) (return syntax)</code>
+   * <li>(optional) Logical form for the rule.
    * <li>(optional) Additional unfilled dependencies, in standard
    * format:
    * <code>(predicate) (argument number) (argument variable)</code>
@@ -82,11 +91,18 @@ public class CcgBinaryRule implements Serializable {
     HeadedSyntacticCategory rightSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
     HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[2]);
 
+    LambdaExpression logicalForm = null;
+    if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
+      logicalForm = (LambdaExpression) (new ExpressionParser()).parseSingleExpression(chunks[1]);
+      Preconditions.checkArgument(logicalForm.getArguments().size() == 2, 
+          "Illegal logical form for binary rule: " + logicalForm);
+    }
+
     List<String> subjects = Lists.newArrayList();
     List<Integer> argNums = Lists.newArrayList();
     List<Integer> objects = Lists.newArrayList();
-    if (chunks.length >= 2) {
-      for (int i = 1; i < chunks.length; i++) {
+    if (chunks.length >= 3) {
+      for (int i = 2; i < chunks.length; i++) {
         String[] newDeps = chunks[i].split(" ");
         Preconditions.checkArgument(newDeps.length == 3);
         subjects.add(newDeps[0]);
@@ -95,7 +111,8 @@ public class CcgBinaryRule implements Serializable {
       }
     }
 
-    return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, subjects, argNums, objects);
+    return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, logicalForm,
+        subjects, argNums, objects);
   }
 
   /**
@@ -121,13 +138,24 @@ public class CcgBinaryRule implements Serializable {
   }
 
   /**
-   * Gets the syntactic type that is produced by this rule. The returned
-   * type may not be in canonical form.
+   * Gets the syntactic type that is produced by this rule. The
+   * returned type may not be in canonical form.
    * 
    * @return
    */
   public HeadedSyntacticCategory getParentSyntacticType() {
     return parentSyntax;
+  }
+
+  /**
+   * Gets a lambda calculus representation of the function of this
+   * operation. The returned function accepts two arguments: the left
+   * and right logical forms, in that order.
+   * 
+   * @return
+   */
+  public LambdaExpression getLogicalForm() {
+    return logicalForm;
   }
 
   /**
@@ -159,7 +187,7 @@ public class CcgBinaryRule implements Serializable {
   public int[] getObjects() {
     return objects;
   }
-  
+
   @Override
   public String toString() {
     return leftSyntax + " " + rightSyntax + " -> " + parentSyntax + ", " + Arrays.toString(subjects);

@@ -8,6 +8,8 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class CcgUnaryRule implements Serializable {
@@ -16,11 +18,18 @@ public class CcgUnaryRule implements Serializable {
 
   private final HeadedSyntacticCategory inputSyntax;
   private final HeadedSyntacticCategory returnSyntax;
+  
+  private final LambdaExpression logicalForm;
 
-  public CcgUnaryRule(HeadedSyntacticCategory inputSyntax, HeadedSyntacticCategory returnSyntax) {
+  public CcgUnaryRule(HeadedSyntacticCategory inputSyntax, HeadedSyntacticCategory returnSyntax,
+      LambdaExpression logicalForm) {
     this.inputSyntax = Preconditions.checkNotNull(inputSyntax);
     this.returnSyntax = Preconditions.checkNotNull(returnSyntax);
     
+    this.logicalForm = logicalForm;
+    Preconditions.checkArgument(logicalForm == null || logicalForm.getArguments().size() == 1,
+        "Illegal logical form for unary rule: " + logicalForm);
+
     Preconditions.checkArgument(returnSyntax.isCanonicalForm());
 
     // Ensure that the return type has all of the variables in
@@ -76,7 +85,12 @@ public class CcgUnaryRule implements Serializable {
     }
     HeadedSyntacticCategory relabeledInput = inputSyntax.relabelVariables(inputVars, inputRelabeling);
 
-    if (chunks.length >= 2) {
+    LambdaExpression logicalForm = null;
+    if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
+      logicalForm = (LambdaExpression) (new ExpressionParser()).parseSingleExpression(chunks[1]);
+    }
+
+    if (chunks.length >= 3) {
       throw new UnsupportedOperationException(
           "Using unfilled dependencies with unary CCG rules is not yet implemented");
       /*
@@ -92,7 +106,7 @@ public class CcgUnaryRule implements Serializable {
        * subjectNum, 0, 0);
        */
     }
-    return new CcgUnaryRule(relabeledInput, returnCanonical);
+    return new CcgUnaryRule(relabeledInput, returnCanonical, logicalForm);
   }
 
   /**
@@ -113,6 +127,18 @@ public class CcgUnaryRule implements Serializable {
    */
   public HeadedSyntacticCategory getResultSyntacticCategory() {
     return returnSyntax;
+  }
+  
+  /**
+   * Gets the logical form associated with this operation. This logical
+   * is a function of the input category's logical form, and returns
+   * the logical form for the output category. Returns {@code null} if
+   * no logical form is associated with this operation.
+   * 
+   * @return
+   */
+  public LambdaExpression getLogicalForm() {
+    return logicalForm;
   }
 
   /**

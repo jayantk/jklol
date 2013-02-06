@@ -50,8 +50,9 @@ public class CcgParse {
   // (if this is a nonterminal).
   private final UnaryCombinator unaryRule;
 
-  // Portion of the sentence spanned by this tree. Both spanStart and 
-  // spanEnd are inclusive indexes, (i.e., a tree spanning one word has
+  // Portion of the sentence spanned by this tree. Both spanStart and
+  // spanEnd are inclusive indexes, (i.e., a tree spanning one word
+  // has
   // spanStart == spanEnd).
   private final int spanStart;
   private final int spanEnd;
@@ -186,13 +187,30 @@ public class CcgParse {
       return CcgSyntaxTree.createNonterminal(syntax.getSyntax(), originalSyntax, leftTree, rightTree);
     }
   }
-  
+
   /**
    * Gets the logical form for this CCG parse.
    * 
    * @return
    */
   public Expression getLogicalForm() {
+    Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
+    if (unaryRule == null) {
+      return preUnaryLogicalForm;
+    } else if (preUnaryLogicalForm == null || unaryRule.getUnaryRule().getLogicalForm() == null) {
+      return null;
+    } else {
+      return unaryRule.getUnaryRule().getLogicalForm().reduce(Arrays.asList(preUnaryLogicalForm));
+    }
+  }
+
+  /**
+   * Gets the logical form for this parse without applying the unary
+   * rule (if any) at the root.
+   * 
+   * @return
+   */
+  private Expression getPreUnaryLogicalForm() {
     if (isTerminal()) {
       return lexiconEntry.getLogicalForm();
     } else {
@@ -202,41 +220,52 @@ public class CcgParse {
       Expression leftLogicalForm = left.getLogicalForm();
       Expression rightLogicalForm = right.getLogicalForm();
 
+      /*
       System.out.println(left.getSemanticHeads());
       System.out.println(leftLogicalForm);
       System.out.println(right.getSemanticHeads());
       System.out.println(rightLogicalForm);
       System.out.println(dependencies);
       System.out.println(combinator);
+      */
 
       Expression result = null;
       if (leftLogicalForm != null && rightLogicalForm != null) {
 
-        Expression functionLogicalForm = null;
-        Expression argumentLogicalForm = null;
-        if (combinator.isArgumentOnLeft()) {
-          functionLogicalForm = rightLogicalForm;
-          argumentLogicalForm = leftLogicalForm;
+        if (combinator.getBinaryRule() != null) {
+          LambdaExpression combinatorExpression = combinator.getBinaryRule().getLogicalForm();
+          if (combinatorExpression != null) {
+            result = combinatorExpression.reduce(Arrays.asList(leftLogicalForm, rightLogicalForm));
+          }
         } else {
-          functionLogicalForm = leftLogicalForm;
-          argumentLogicalForm = rightLogicalForm;
-        }
+          // Function application or composition.
+          Expression functionLogicalForm = null;
+          Expression argumentLogicalForm = null;
+          if (combinator.isArgumentOnLeft()) {
+            functionLogicalForm = rightLogicalForm;
+            argumentLogicalForm = leftLogicalForm;
+          } else {
+            functionLogicalForm = leftLogicalForm;
+            argumentLogicalForm = rightLogicalForm;
+          }
 
-        LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm;
-        ConstantExpression functionArgument = functionAsLambda.getArguments().get(0);
-        int numArgsToKeep = combinator.getArgumentReturnDepth();
-        if (numArgsToKeep == 0) {
-          // Function application.
-          result = functionAsLambda.reduceArgument(functionArgument, argumentLogicalForm);
-        } else {
-          // Composition.
-          LambdaExpression argumentAsLambda = (LambdaExpression) argumentLogicalForm;
-          List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
+          LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm;
+          ConstantExpression functionArgument = functionAsLambda.getArguments().get(0);
+          int numArgsToKeep = combinator.getArgumentReturnDepth();
+          if (numArgsToKeep == 0) {
+            // Function application.
+            result = functionAsLambda.reduceArgument(functionArgument, argumentLogicalForm);
+          } else {
+            // Composition.
+            LambdaExpression argumentAsLambda = (LambdaExpression) argumentLogicalForm;
+            List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
 
-          result = functionAsLambda.reduceArgument(functionArgument, new ApplicationExpression(argumentAsLambda, remainingArgs));
-          result = new LambdaExpression(remainingArgs, result);
+            result = functionAsLambda.reduceArgument(functionArgument, new ApplicationExpression(argumentAsLambda, remainingArgs));
+            result = new LambdaExpression(remainingArgs, result);
+          }
         }
       }
+      // System.out.println("result: " + result);
       return result;
     }
   }
@@ -263,9 +292,9 @@ public class CcgParse {
 
   /**
    * Returns one POS tag per lexicon entry. Differs from
-   * {@link #getSpannedPosTags()} because lexicon entries may
-   * span multiple words. In these cases, only the last tag in 
-   * the spanned sequence is included in the returned list.
+   * {@link #getSpannedPosTags()} because lexicon entries may span
+   * multiple words. In these cases, only the last tag in the spanned
+   * sequence is included in the returned list.
    * 
    * @return
    */
@@ -362,7 +391,7 @@ public class CcgParse {
   public Set<IndexedPredicate> getSemanticHeads() {
     return heads;
   }
-  
+
   public Set<Integer> getHeadWordIndexes() {
     Set<Integer> indexes = Sets.newHashSet();
     for (IndexedPredicate head : heads) {
@@ -434,84 +463,6 @@ public class CcgParse {
       }
     }
     return filteredDeps;
-  }
-  
-  private Expression initializeEvaluatedLogicalForm2() {
-    if (isTerminal()) {
-      return lexiconEntry.getLogicalForm();
-    } else {
-      if (getSemanticHeads().size() == 0) {
-        return null;
-      }
-      // Get the expression which is the head of this parse
-      int parseHeadWordIndex = getSemanticHeads().iterator().next().getHeadIndex();
-      Expression result = getLfFromWordIndex(parseHeadWordIndex);
-      if (result == null) {
-        return null;
-      }
-
-      Expression leftLogicalForm = left.getLogicalForm();
-      Expression rightLogicalForm = right.getLogicalForm();
-
-      // Use the head words of the two parses to filter out long range
-      // dependencies.
-      /*
-      Set<Integer> validHeads = Sets.newHashSet(left.getHeadWordIndexes());
-      validHeads.addAll(right.getHeadWordIndexes());
-      */
-
-      for (DependencyStructure dep : dependencies) {
-        int headIndex = dep.getHeadWordIndex();
-        int objectIndex = dep.getObjectWordIndex();
-        int argumentNumber = dep.getArgIndex();
-        
-        // if (validHeads.contains(headIndex) && validHeads.contains(objectIndex)) {
-          Expression headLf = getLfFromWordIndex(headIndex);
-          Expression objectLf = getLfFromWordIndex(objectIndex);
-          System.out.println("  headIndex: " + parseHeadWordIndex + " " + getSemanticHeads());
-          System.out.println("  dep: " + dep);
-          System.out.println("Head lf: " + headLf);
-          System.out.println("Object lf: " + objectLf);
-          if (headLf != null && objectLf != null) {
-            ConstantExpression constant = new ConstantExpression("$" + argumentNumber);
-            if (headIndex == parseHeadWordIndex) {
-              LambdaExpression resultAsLambda = (LambdaExpression) result;
-              result = resultAsLambda.reduceArgument(constant, objectLf);
-            } else if (objectIndex == parseHeadWordIndex) {
-              LambdaExpression headAsLambda = (LambdaExpression) headLf;
-              result = headAsLambda.reduceArgument(constant, result);
-            }
-          }
-      // }
-      }
-
-      System.out.println(left.getSemanticHeads());
-      System.out.println(leftLogicalForm);
-      System.out.println(right.getSemanticHeads());
-      System.out.println(rightLogicalForm);
-      System.out.println(dependencies);
-
-      return result;
-    }
-  }
-
-  
-  private Expression getLfFromWordIndex(int index) {
-    /*
-    Preconditions.checkArgument(spanStart <= index);
-    Preconditions.checkArgument(index <= spanEnd);
-
-    if (evaluatedLogicalForm != null || isTerminal()) {
-      return evaluatedLogicalForm;
-    } else {
-      if (index <= left.spanEnd) {
-        return left.getLfFromWordIndex(index);
-      } else {
-        return right.getLfFromWordIndex(index);
-      }
-    }
-    */
-    throw new UnsupportedOperationException("foo");
   }
 
   @Override

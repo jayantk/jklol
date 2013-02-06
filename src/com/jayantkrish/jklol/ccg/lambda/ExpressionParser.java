@@ -78,7 +78,7 @@ public class ExpressionParser {
         return new LambdaExpression(variables, body);
       } else if (constantName.equals("and")) {
         return new CommutativeOperator(constant, subexpressions.subList(1, subexpressions.size()));
-      } else if (constantName.equals("exists") || constantName.equals("forall")) {
+      } else if (constantName.equals("exists")) {
         List<ConstantExpression> variables = Lists.newArrayList();
         for (int i = 1; i < subexpressions.size() - 1; i++) {
           variables.add((ConstantExpression) subexpressions.get(i));

@@ -35,18 +35,18 @@ public class CcgParserTest extends TestCase {
     "berries,N{0},berries,0 berries", 
     "houses,N{0},houses,0 houses",
     "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2", 
-    "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
-    "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
+    "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
+    "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
     "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},,0 quickly,quickly 1 1", 
     "in,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda c (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
     "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 amazingly,amazingly 1 2",
     "tasty,(N{1}/N{1}){0},(lambda $1 (lambda e (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
     "in,(((S[1]{1}\\N{2}){1}\\(S[1]{1}\\N{2}){1}){0}/N{3}){0},,0 in,in 1 1,in 2 3",
-    "and,((N{1}\\N{1}){0}/N{1}){0},,0 and", 
+    "and,((N{1}\\N{1}){0}/N{1}){0},,0 and",
     "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},,0 almost,almost 1 2",
     "is,((S[b]{0}\\N{1}){0}/N{2}){0},,0 is,is 1 1, is 2 2", 
     "directed,((S[b]{0}\\N{1}){0}/N{2}){0},,0 directed,directed 1 2,directed 2 1",
-    ";,;{0},,0 ;", "or,conj{0},,0 or",
+    ";,;{0},;,0 ;", "or,conj{0},word:or,0 or",
     "about,(NP{0}/(S[1]{1}\\N{2}){1}){0},,0 about,about 1 1", 
     "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},,0 eat,eat 1 1,eat 2 2",
     "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},,0 rapidly,rapidly 1 1",
@@ -67,11 +67,12 @@ public class CcgParserTest extends TestCase {
     0.5, 1.0,
     1.0, 1.0, 1.0, 1.0};
 
-  private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0}", 
-    ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", "conj{1} N{0} (N{0}\\N{0}){1}",  
+  private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)", 
+    ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", 
+    "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall pred (list $R $0) (pred x)))))",  
     "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2}",
-    "\"N{0} N{1} N{1}\",\"special:compound 1 0\",\"special:compound 2 1\""};
-  
+    "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"special:compound 1 0\",\"special:compound 2 1\""};
+
   private static final String[] unaryRuleArray = {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
     "N{0} (N{1}/N{1}){0}", "((S[0]{0}\\N{1}){0}/N{2}){0} ((S[0]{0}/NP{1}){0}/NP{2}){0}" };
   
@@ -100,7 +101,7 @@ public class CcgParserTest extends TestCase {
     parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, true);
     parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false);
     parserWithUnaryAndComposition = parseLexicon(lexicon, binaryRuleArray,
-        new String[] {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}"}, weights, true);
+        new String[] {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))"}, weights, true);
     
     exp = new ExpressionParser();
   }
@@ -196,6 +197,21 @@ public class CcgParserTest extends TestCase {
       }
     }
   }
+      
+  public void testParseLogicalFormApplication2() {
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList(
+        "I", "that", "eat", "berries"), 10);
+    
+    assertEquals(1, parses.size());
+
+    Expression expectedLf = exp.parseSingleExpression("(lambda x (exists a b (and (I x) (equals a x) (berries b) (eat a b))))");    
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+      System.out.println(parse.getAllDependencies());
+      System.out.println(parse.getLogicalForm().simplify());
+      assertEquals(expectedLf, parse.getLogicalForm().simplify());
+    }
+  }
   
   public void testParseLogicalFormComposition() {
     List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
@@ -209,6 +225,58 @@ public class CcgParserTest extends TestCase {
       System.out.println(parse.getLogicalForm().simplify());
       assertEquals(expectedLf, parse.getLogicalForm().simplify());
     }
+  }
+  
+  public void testParseLogicalFormBinaryRule() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+        ";", "berries"), 10);
+    assertEquals(1, parses.size());
+    assertEquals(null, parses.get(0).getLogicalForm());
+  }
+  
+  public void testParseLogicalFormBinaryRule2() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+        "berries", ";"), 10);
+    assertEquals(1, parses.size());
+    Expression expectedLf = exp.parseSingleExpression("berries");
+    assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
+  }
+  
+  public void testParseLogicalFormBinaryRule3() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+        "people", "berries"), 10);
+    assertEquals(1, parses.size());
+    Expression expectedLf = exp.parseSingleExpression("(lambda j (exists k (and (people k) (berries j) (special:compound k j))))");
+    assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
+  }
+  
+  public void testParseLogicalFormConjunction() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+        "I", "eat", "people", "or", "berries"), 10);
+    assertEquals(1, parses.size());
+    System.out.println(parses.get(0));
+    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (I a) (forall pred (list berries people) (pred b)) (eat a b)))");
+    assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
+  }
+
+  public void testParseLogicalFormUnary() {
+    List<CcgParse> parses = parserWithUnaryAndComposition.beamSearch(Arrays.asList(
+        "berries", "that", "I", "eat"), 10);
+
+    assertEquals(4, parses.size());
+    Expression expectedLf = exp.parseSingleExpression("(lambda x (exists a b (and (berries x) (I a) (equals b x) (eat a b))))");
+    boolean foundN = false;
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+      System.out.println(parse.getAllDependencies());
+      String root = parse.getSyntacticCategory().getValue();
+      if (root != null && root.equals("N")) {
+        assertEquals(expectedLf, parse.getLogicalForm().simplify());
+        System.out.println(parse.getLogicalForm().simplify());
+        foundN = true;
+      }
+    }
+    assertTrue(foundN);
   }
 
   public void testParseComposition() {

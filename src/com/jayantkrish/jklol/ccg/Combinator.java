@@ -29,13 +29,18 @@ public class Combinator implements Serializable {
   // The variables each dependency accepts.
   private final int[] objects;
 
+  // Backpointer information for the combinator, describing
+  // the CCG operation which created it.
   private final boolean isArgumentOnLeft;
   private int argumentReturnDepth;
+  // May be null, in which case the combinator did not originate
+  // from a binary rule.
+  private CcgBinaryRule binaryRule;
 
   public Combinator(int syntax, int[] syntaxUniqueVars, int[] leftVariableRelabeling,
       int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,
       int[] unifiedVariables, String[] subjects, int[] argumentNumbers, int[] objects,
-      boolean isArgumentOnLeft, int argumentReturnDepth) {
+      boolean isArgumentOnLeft, int argumentReturnDepth, CcgBinaryRule binaryRule) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
 
@@ -53,6 +58,7 @@ public class Combinator implements Serializable {
 
     this.isArgumentOnLeft = isArgumentOnLeft;
     this.argumentReturnDepth = argumentReturnDepth;
+    this.binaryRule = binaryRule;
   }
 
   public int getSyntax() {
@@ -112,10 +118,13 @@ public class Combinator implements Serializable {
   public int getArgumentReturnDepth() {
     return argumentReturnDepth;
   }
+  
+  public CcgBinaryRule getBinaryRule() {
+    return binaryRule;
+  }
 
   @Override
   public String toString() {
     return syntax + ":" + Arrays.toString(subjects) + " " + isArgumentOnLeft;
   }
-
 }

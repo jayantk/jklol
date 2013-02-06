@@ -183,7 +183,6 @@ public class CcgCategory implements Serializable {
     List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList();
     List<Integer> argumentRoots = Lists.newArrayList();
     List<ConstantExpression> argumentVariables = Lists.newArrayList();
-    System.out.println(syntax);
     while (!syntax.isAtomic()) {
       HeadedSyntacticCategory argument = syntax.getArgumentType();
       argumentCats.add(argument);
@@ -191,8 +190,12 @@ public class CcgCategory implements Serializable {
       argumentVariables.add(varMap.get(argument.getRootVariable()));
       syntax = syntax.getReturnType();
     }
-
-    System.out.println(syntax + " " + argumentVariables);
+    Set<Integer> argumentRootSet = Sets.newHashSet(argumentRoots);
+    if (argumentRootSet.size() < argumentRoots.size()) {
+      // Multiple arguments bind the same semantic variable. Again,
+      // it's not clear what the logical form should do here.
+      return null;
+    }
 
     Expression body = null;
     int argumentIndex = argumentRoots.indexOf(syntax.getRootVariable());
@@ -210,7 +213,10 @@ public class CcgCategory implements Serializable {
         body = new ApplicationExpression(varMap.get(argumentIndex), argumentArguments);
       }
     } else {
-      body = new ConstantExpression("$" + syntax.getRootVariable());
+      // It's not clear what the body of the logical form should be in this case.
+
+      return null;
+      // body = new ConstantExpression("$" + syntax.getRootVariable());
     }
     return new LambdaExpression(argumentVariables, body);
   }

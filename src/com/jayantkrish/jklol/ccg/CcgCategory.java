@@ -11,8 +11,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
+import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.util.CsvParser;
 
 /**
@@ -122,6 +125,8 @@ public class CcgCategory implements Serializable {
     Expression logicalForm = null;
     if (categoryParts[1].trim().length() > 0) {
       logicalForm = (new ExpressionParser()).parseSingleExpression(categoryParts[1]);
+    } else {
+      logicalForm = induceLogicalFormFromSyntax(syntax);
     }
 
     // Create an empty assignment to each variable in the syntactic
@@ -166,6 +171,48 @@ public class CcgCategory implements Serializable {
     }
 
     return new CcgCategory(syntax, logicalForm, subjects, argumentNumbers, objects, values);
+  }
+  
+  private static Expression induceLogicalFormFromSyntax(HeadedSyntacticCategory syntax) {
+    int[] syntaxVarNums = syntax.getUniqueVariables();
+    Map<Integer, ConstantExpression> varMap = Maps.newHashMap();
+    for (int i = 0; i < syntaxVarNums.length; i++) {
+      varMap.put(i, new ConstantExpression("$" + syntaxVarNums[i]));
+    }
+
+    List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList();
+    List<Integer> argumentRoots = Lists.newArrayList();
+    List<ConstantExpression> argumentVariables = Lists.newArrayList();
+    System.out.println(syntax);
+    while (!syntax.isAtomic()) {
+      HeadedSyntacticCategory argument = syntax.getArgumentType();
+      argumentCats.add(argument);
+      argumentRoots.add(argument.getRootVariable());
+      argumentVariables.add(varMap.get(argument.getRootVariable()));
+      syntax = syntax.getReturnType();
+    }
+
+    System.out.println(syntax + " " + argumentVariables);
+
+    Expression body = null;
+    int argumentIndex = argumentRoots.indexOf(syntax.getRootVariable());
+    if (argumentIndex != -1) {
+      HeadedSyntacticCategory argument = argumentCats.get(argumentIndex);
+      if (argument.isAtomic()) {
+        body = varMap.get(argumentIndex);
+      } else {
+        List<Expression> argumentArguments = Lists.newArrayList();
+        while (!argument.isAtomic()) {
+          argumentArguments.add(varMap.get(argument.getArgumentType().getRootVariable()));
+          argument = argument.getReturnType();
+        }
+        
+        body = new ApplicationExpression(varMap.get(argumentIndex), argumentArguments);
+      }
+    } else {
+      body = new ConstantExpression("$" + syntax.getRootVariable());
+    }
+    return new LambdaExpression(argumentVariables, body);
   }
 
   /**

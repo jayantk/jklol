@@ -1,19 +1,39 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Set;
 
+/**
+ * A LISP-style S-expression.
+ * 
+ * @author jayantk
+ */
 public interface Expression extends Serializable {
 
-  public List<Expression> getSubexpressions();
+  /**
+   * Gets the set of unbound variables in this expression.
+   * 
+   * @return
+   */
+  Set<ConstantExpression> getFreeVariables();
   
-  public Expression substitute(ConstantExpression constant, Expression replacement);
+  void getFreeVariables(Set<ConstantExpression> accumulator);
+
+  /**
+   * Replaces the free variable named {@code constant} by
+   * {@code replacement}.
+   * 
+   * @param constant
+   * @param replacement
+   * @return
+   */
+  Expression substitute(ConstantExpression constant, Expression replacement);
+
+  Expression simplify();
 
   @Override
-  public int hashCode();
-  
+  int hashCode();
+
   @Override
-  public boolean equals(Object o);
-  
-  public Expression simplify();
+  boolean equals(Object o);
 }

@@ -1,34 +1,55 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-public class LambdaExpression implements Expression {
+public class LambdaExpression extends AbstractExpression {
   private static final long serialVersionUID = 1L;
 
   private final List<ConstantExpression> argumentVariables;
   private final Expression body;
-  
+
   public LambdaExpression(List<ConstantExpression> argumentVariables, Expression body) {
     this.argumentVariables = ImmutableList.copyOf(argumentVariables);
     this.body = Preconditions.checkNotNull(body);
   }
-    
+
+  /**
+   * Returns the body of the function, i.e., the code that gets
+   * executed when the function is invoked.
+   * 
+   * @return
+   */
+  public Expression getBody() {
+    return body;
+  }
+  
+  /**
+   * Gets the variables which are arguments to the function.
+   * 
+   * @return
+   */
+  public List<ConstantExpression> getArguments() {
+    return argumentVariables;
+  }
+
   public Expression reduce(List<Expression> argumentValues) {
     Preconditions.checkArgument(argumentValues.size() == argumentVariables.size());
     Expression substitutedBody = body;
-    for (int i = 0; i < argumentVariables.size(); i++) {      
+    for (int i = 0; i < argumentVariables.size(); i++) {
       substitutedBody = substitutedBody.substitute(argumentVariables.get(i),
           argumentValues.get(i));
     }
     return substitutedBody;
   }
-  
+
   public Expression reduceArgument(ConstantExpression argumentVariable, Expression value) {
-    System.out.println(" reducing: " + argumentVariable);
+    Preconditions.checkArgument(argumentVariables.contains(argumentVariable));
+
     List<ConstantExpression> remainingArguments = Lists.newArrayList();
     Expression substitutedBody = body;
     for (int i = 0; i < argumentVariables.size(); i++) {
@@ -38,8 +59,7 @@ public class LambdaExpression implements Expression {
         remainingArguments.add(argumentVariables.get(i));
       }
     }
-    System.out.println("  new body: " + substitutedBody);
-    
+
     if (remainingArguments.size() > 0) {
       return new LambdaExpression(remainingArguments, substitutedBody);
     } else {
@@ -48,11 +68,9 @@ public class LambdaExpression implements Expression {
   }
 
   @Override
-  public List<Expression> getSubexpressions() {
-    List<Expression> subexpressions = Lists.newArrayList();
-    subexpressions.addAll(argumentVariables);
-    subexpressions.add(body);
-    return subexpressions;
+  public void getFreeVariables(Set<ConstantExpression> accumulator) {
+    body.getFreeVariables(accumulator);
+    accumulator.removeAll(argumentVariables);
   }
 
   @Override
@@ -64,13 +82,13 @@ public class LambdaExpression implements Expression {
       return this;
     }
   }
-  
+
   @Override
   public Expression simplify() {
     Expression simplifiedBody = body.simplify();
     return new LambdaExpression(argumentVariables, simplifiedBody);
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
@@ -79,7 +97,7 @@ public class LambdaExpression implements Expression {
       sb.append(" ");
       sb.append(argument.toString());
     }
-    
+
     sb.append(" ");
     sb.append(body.toString());
     sb.append(")");

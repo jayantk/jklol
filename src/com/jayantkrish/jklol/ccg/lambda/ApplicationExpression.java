@@ -1,30 +1,44 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 public class ApplicationExpression extends AbstractExpression {
   private static final long serialVersionUID = 1L;
   
-  public ApplicationExpression(List<Expression> subexpressions) {
-    super(subexpressions);
+  private final List<Expression> subexpressions;
+
+  public ApplicationExpression(List<? extends Expression> subexpressions) {
     Preconditions.checkArgument(subexpressions.size() >= 1);
+    this.subexpressions = ImmutableList.copyOf(subexpressions);
+  }
+  
+  public ApplicationExpression(Expression function, List<? extends Expression> arguments) {
+    this.subexpressions = Lists.newArrayList(function);
+    this.subexpressions.addAll(arguments);
   }
   
   public Expression getFunction() {
-    return getSubexpressions().get(0);
+    return subexpressions.get(0);
   }
   
   public List<Expression> getArguments() {
-    List<Expression> subexpressions = getSubexpressions();
     return subexpressions.subList(1, subexpressions.size());
+  }
+
+  @Override
+  public void getFreeVariables(Set<ConstantExpression> accumulator) {
+    for (Expression subexpression : subexpressions) {
+      subexpression.getFreeVariables(accumulator);
+    }
   }
   
   @Override
   public Expression substitute(ConstantExpression constant, Expression replacement) {
-    List<Expression> subexpressions = getSubexpressions();
     List<Expression> substituted = Lists.newArrayList();
     for (Expression subexpression : subexpressions) {
       substituted.add(subexpression.substitute(constant, replacement));
@@ -38,10 +52,11 @@ public class ApplicationExpression extends AbstractExpression {
     // First simplify all arguments
     List<Expression> simplifiedArguments = Lists.newArrayList();
     List<Expression> arguments = getArguments();
+
     for (Expression argument : arguments) {
-      simplifiedArguments.add(argument.simplify());
+      simplifiedArguments.add(argument.simplify()); 
     }
-    
+
     Expression function = getFunction().simplify();
     if (function instanceof LambdaExpression) {
       LambdaExpression lambdaFunction = (LambdaExpression) function;
@@ -70,8 +85,7 @@ public class ApplicationExpression extends AbstractExpression {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((getArguments() == null) ? 0 : getArguments().hashCode());
-    result = prime * result + ((getFunction() == null) ? 0 : getFunction().hashCode());
+    result = prime * result + ((subexpressions == null) ? 0 : subexpressions.hashCode());
     return result;
   }
 
@@ -84,15 +98,10 @@ public class ApplicationExpression extends AbstractExpression {
     if (getClass() != obj.getClass())
       return false;
     ApplicationExpression other = (ApplicationExpression) obj;
-    if (getArguments() == null) {
-      if (other.getArguments() != null)
+    if (subexpressions == null) {
+      if (other.subexpressions != null)
         return false;
-    } else if (!getArguments().equals(other.getArguments()))
-      return false;
-    if (getFunction() == null) {
-      if (other.getFunction() != null)
-        return false;
-    } else if (!getFunction().equals(other.getFunction()))
+    } else if (!subexpressions.equals(other.subexpressions))
       return false;
     return true;
   }

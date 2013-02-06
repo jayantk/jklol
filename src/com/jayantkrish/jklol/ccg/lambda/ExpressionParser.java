@@ -13,11 +13,18 @@ public class ExpressionParser {
   private static final ConstantExpression CLOSE_PAREN = new ConstantExpression(")");
 
   public ExpressionParser() {}
+  
+  private List<String> tokenize(String expression) {
+    String transformedExpression = expression.replaceAll("([()])", " $1 ");
+    return Arrays.asList(transformedExpression.trim().split("\\s+"));
+  }
 
   public Expression parseSingleExpression(String expression) {
-    String transformedExpression = expression.replaceAll("([()])", " $1 ");
-    List<String> tokens = Arrays.asList(transformedExpression.trim().split("\\s+"));
-    return parseSingleExpression(tokens);
+    return parseSingleExpression(tokenize(expression));
+  }
+  
+  public List<Expression> parse(String expressions) {
+    return parse(tokenize(expressions));
   }
 
   public Expression parseSingleExpression(List<String> tokenizedExpressionString) {
@@ -61,15 +68,23 @@ public class ExpressionParser {
     
     if (subexpressions.size() > 0 && subexpressions.get(0) instanceof ConstantExpression) {
       ConstantExpression constant = (ConstantExpression) subexpressions.get(0);
-      if (constant.getName().equals("lambda")) {
+      String constantName = constant.getName();
+      if (constantName.equals("lambda")) {
         List<ConstantExpression> variables = Lists.newArrayList();
         for (int i = 1; i < subexpressions.size() - 1; i++) {
           variables.add((ConstantExpression) subexpressions.get(i));
         }
         Expression body = subexpressions.get(subexpressions.size() - 1);
         return new LambdaExpression(variables, body);
-      } else if (constant.getName().equals("and")) {
-        return new CommutativeExpression(constant, subexpressions.subList(1, subexpressions.size()));
+      } else if (constantName.equals("and")) {
+        return new CommutativeOperator(constant, subexpressions.subList(1, subexpressions.size()));
+      } else if (constantName.equals("exists") || constantName.equals("forall")) {
+        List<ConstantExpression> variables = Lists.newArrayList();
+        for (int i = 1; i < subexpressions.size() - 1; i++) {
+          variables.add((ConstantExpression) subexpressions.get(i));
+        }
+        Expression body = subexpressions.get(subexpressions.size() - 1);
+        return new QuantifierExpression(constantName, variables, body);
       }
     }
     return new ApplicationExpression(subexpressions);

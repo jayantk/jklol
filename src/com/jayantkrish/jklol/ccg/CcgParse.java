@@ -7,6 +7,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
@@ -30,9 +31,6 @@ public class CcgParse {
   private final Set<IndexedPredicate> heads;
   // The semantic dependencies instantiated at this node in the parse.
   private final List<DependencyStructure> dependencies;
-  
-  // Partially evaluated logical forms at this node.
-  private final Expression evaluatedLogicalForm;
 
   // Probability represents the probability of the lexical entry if
   // this is a terminal, otherwise it represents the probability of
@@ -100,8 +98,6 @@ public class CcgParse {
     } else {
       this.subtreeProbability = probability;
     }
-    
-    this.evaluatedLogicalForm = initializeEvaluatedLogicalForm();
   }
 
   /**
@@ -197,27 +193,52 @@ public class CcgParse {
    * @return
    */
   public Expression getLogicalForm() {
-    return evaluatedLogicalForm;
-    /*
-    List<Expression> expressions = Lists.newArrayList();
-    for (IndexedPredicate head : heads) {
-      Expression expression = getLfFromWordIndex(head.getHeadIndex());
-      if (expression != null) {
-        expressions.add(expression);
-      }
-    }
-
-    if (expressions.size() == 0) {
-      return null;
-    } else if (expressions.size() == 1) {
-      return expressions.get(0);
+    if (isTerminal()) {
+      return lexiconEntry.getLogicalForm();
     } else {
-      ConstantExpression andExpr = new ConstantExpression("and");
-      List<Expression> subexpressions = Lists.<Expression>newArrayList(andExpr);
-      subexpressions.addAll(expressions);
-      return new ApplicationExpression(subexpressions);
-    } 
-    */
+      if (getSemanticHeads().size() == 0) {
+        return null;
+      }
+      Expression leftLogicalForm = left.getLogicalForm();
+      Expression rightLogicalForm = right.getLogicalForm();
+
+      System.out.println(left.getSemanticHeads());
+      System.out.println(leftLogicalForm);
+      System.out.println(right.getSemanticHeads());
+      System.out.println(rightLogicalForm);
+      System.out.println(dependencies);
+      System.out.println(combinator);
+
+      Expression result = null;
+      if (leftLogicalForm != null && rightLogicalForm != null) {
+
+        Expression functionLogicalForm = null;
+        Expression argumentLogicalForm = null;
+        if (combinator.isArgumentOnLeft()) {
+          functionLogicalForm = rightLogicalForm;
+          argumentLogicalForm = leftLogicalForm;
+        } else {
+          functionLogicalForm = leftLogicalForm;
+          argumentLogicalForm = rightLogicalForm;
+        }
+
+        LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm;
+        ConstantExpression functionArgument = functionAsLambda.getArguments().get(0);
+        int numArgsToKeep = combinator.getArgumentReturnDepth();
+        if (numArgsToKeep == 0) {
+          // Function application.
+          result = functionAsLambda.reduceArgument(functionArgument, argumentLogicalForm);
+        } else {
+          // Composition.
+          LambdaExpression argumentAsLambda = (LambdaExpression) argumentLogicalForm;
+          List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
+
+          result = functionAsLambda.reduceArgument(functionArgument, new ApplicationExpression(argumentAsLambda, remainingArgs));
+          result = new LambdaExpression(remainingArgs, result);
+        }
+      }
+      return result;
+    }
   }
 
   /**
@@ -415,7 +436,7 @@ public class CcgParse {
     return filteredDeps;
   }
   
-  private Expression initializeEvaluatedLogicalForm() {
+  private Expression initializeEvaluatedLogicalForm2() {
     if (isTerminal()) {
       return lexiconEntry.getLogicalForm();
     } else {
@@ -431,7 +452,7 @@ public class CcgParse {
 
       Expression leftLogicalForm = left.getLogicalForm();
       Expression rightLogicalForm = right.getLogicalForm();
-      
+
       // Use the head words of the two parses to filter out long range
       // dependencies.
       /*
@@ -474,7 +495,9 @@ public class CcgParse {
     }
   }
 
+  
   private Expression getLfFromWordIndex(int index) {
+    /*
     Preconditions.checkArgument(spanStart <= index);
     Preconditions.checkArgument(index <= spanEnd);
 
@@ -487,6 +510,8 @@ public class CcgParse {
         return right.getLfFromWordIndex(index);
       }
     }
+    */
+    throw new UnsupportedOperationException("foo");
   }
 
   @Override

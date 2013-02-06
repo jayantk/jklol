@@ -15,6 +15,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.NullOutputStream;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -27,15 +28,17 @@ public class CcgParserTest extends TestCase {
 
   CcgParser parser, parserWithComposition, parserWithUnary, parserWithUnaryAndComposition;
   
+  ExpressionParser exp;
+  
   private static final String[] lexicon = {"I,N{0},I,0 I", 
     "people,N{0},people,0 people", 
     "berries,N{0},berries,0 berries", 
     "houses,N{0},houses,0 houses",
-    "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $1 $2 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2", 
+    "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2", 
     "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
     "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
     "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},,0 quickly,quickly 1 1", 
-    "in,((N{1}\\N{1}){0}/N{2}){0},(lambda $1 $2 (lambda c (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
+    "in,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda c (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
     "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 amazingly,amazingly 1 2",
     "tasty,(N{1}/N{1}){0},(lambda $1 (lambda e (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
     "in,(((S[1]{1}\\N{2}){1}\\(S[1]{1}\\N{2}){1}){0}/N{3}){0},,0 in,in 1 1,in 2 3",
@@ -47,7 +50,7 @@ public class CcgParserTest extends TestCase {
     "about,(NP{0}/(S[1]{1}\\N{2}){1}){0},,0 about,about 1 1", 
     "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},,0 eat,eat 1 1,eat 2 2",
     "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},,0 rapidly,rapidly 1 1",
-    "colorful,(N{1}/N{1}){0},,0 colorful,colorful 1 1",
+    "colorful,(N{1}/N{1}){0},(lambda $1 (lambda e (and (colorful e) ($1 e)))),0 colorful,colorful 1 1",
     "*NOT_A_WORD*,(NP{0}/N{1}){0},,0 *NOT_A_WORD*",
     "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},,0 near,near 2 2",
     "the,(N{0}/N{0}){1},,1 the,the 1 0",
@@ -98,6 +101,8 @@ public class CcgParserTest extends TestCase {
     parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false);
     parserWithUnaryAndComposition = parseLexicon(lexicon, binaryRuleArray,
         new String[] {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}"}, weights, true);
+    
+    exp = new ExpressionParser();
   }
   
   public void testParse() {
@@ -172,9 +177,14 @@ public class CcgParserTest extends TestCase {
     assertEquals(0.3 * 4 * 2 * 3, parse.getSubtreeProbability());
   }
   
-  public void testParseLogicalForm() {
-    List<CcgParse> parses = parserWithUnaryAndComposition.beamSearch(Arrays.asList(
-      "tasty", "tasty", "berries", "that", "I", "quickly", "eat"), 10);
+  public void testParseLogicalFormApplication() {
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList(
+       "I", "quickly", "eat", "berries"), 10);
+    
+    assertEquals(1, parses.size());
+    
+    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (I a) (berries b) (eat a b)))");
+    assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
 
     for (CcgParse parse : parses) {
       System.out.println(parse);
@@ -184,6 +194,20 @@ public class CcgParserTest extends TestCase {
         System.out.println("lf: " + lf);
         System.out.println("simple lf: " + lf.simplify());
       }
+    }
+  }
+  
+  public void testParseLogicalFormComposition() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+        "the", "colorful", "tasty"), 10);
+    assertEquals(8, parses.size());
+    
+    Expression expectedLf = exp.parseSingleExpression("(lambda $1 (lambda e (and (colorful e) (tasty e) ($1 e))))");    
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+      System.out.println(parse.getAllDependencies());
+      System.out.println(parse.getLogicalForm().simplify());
+      assertEquals(expectedLf, parse.getLogicalForm().simplify());
     }
   }
 

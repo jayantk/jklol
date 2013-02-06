@@ -1,11 +1,10 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 
-public class ConstantExpression implements Expression {
+public class ConstantExpression extends AbstractExpression {
   private static final long serialVersionUID = 1L;
   
   private final String name;
@@ -18,11 +17,10 @@ public class ConstantExpression implements Expression {
     return name;
   }
   
-  @Override
-  public List<Expression> getSubexpressions() {
-    return Collections.emptyList();
+  public void getFreeVariables(Set<ConstantExpression> accumulator) {
+    accumulator.add(this);
   }
-  
+
   @Override
   public Expression substitute(ConstantExpression constant, Expression replacement) {
     if (this.equals(constant)) {

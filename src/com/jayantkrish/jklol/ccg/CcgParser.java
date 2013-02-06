@@ -452,11 +452,11 @@ public class CcgParser implements Serializable {
     if (argumentOnLeft) {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, argumentRelabeling, 
           functionRelabeling, resultRelabeling, resultRelabeling, unifiedVariables, 
-          new String[0], new int[0], new int[0]);
+          new String[0], new int[0], new int[0], argumentOnLeft, 0);
     } else {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionRelabeling,
           argumentRelabeling, resultRelabeling, resultRelabeling, unifiedVariables, new String[0],
-          new int[0], new int[0]);
+          new int[0], new int[0], argumentOnLeft, 0);
     }
   }
   
@@ -518,11 +518,11 @@ public class CcgParser implements Serializable {
     if (argumentOnLeft) {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, argumentCatRelabeling,
           functionCatRelabeling, resultUniqueVars, resultCatRelabeling, unifiedVariables,
-          new String[0], new int[0], new int[0]);
+          new String[0], new int[0], new int[0], argumentOnLeft, argumentReturnDepth);
     } else {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionCatRelabeling,
           argumentCatRelabeling, resultUniqueVars, resultCatRelabeling, unifiedVariables, 
-          new String[0], new int[0], new int[0]);
+          new String[0], new int[0], new int[0], argumentOnLeft, argumentReturnDepth);
     }
   }
   
@@ -582,7 +582,7 @@ public class CcgParser implements Serializable {
     int[] parentVars = parent.getUniqueVariables();
     return new Combinator(parentInt, parentVars, leftRelabelingArray, rightRelabelingArray,
         parentOriginalVars, parentRelabelingArray, unifiedVariables, rule.getSubjects(),
-        rule.getArgumentNumbers(), rule.getObjects());
+        rule.getArgumentNumbers(), rule.getObjects(), false, -1);
   }
   
   private static int[] relabelingMapToArray(Map<Integer, Integer> relabelingMap, int[] originalVars) {

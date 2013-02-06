@@ -7,6 +7,8 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 
 public class CcgParse {
 
@@ -27,6 +29,9 @@ public class CcgParse {
   private final Set<IndexedPredicate> heads;
   // The semantic dependencies instantiated at this node in the parse.
   private final List<DependencyStructure> dependencies;
+  
+  // Partially evaluated logical forms at this node.
+  private final Expression evaluatedLogicalForm;
 
   // Probability represents the probability of the lexical entry if
   // this is a terminal, otherwise it represents the probability of
@@ -46,6 +51,9 @@ public class CcgParse {
   // (if this is a nonterminal).
   private final UnaryCombinator unaryRule;
 
+  // Portion of the sentence spanned by this tree. Both spanStart and 
+  // spanEnd are inclusive indexes, (i.e., a tree spanning one word has
+  // spanStart == spanEnd).
   private final int spanStart;
   private final int spanEnd;
 
@@ -91,6 +99,8 @@ public class CcgParse {
     } else {
       this.subtreeProbability = probability;
     }
+    
+    this.evaluatedLogicalForm = initializeEvaluatedLogicalForm();
   }
 
   /**
@@ -178,6 +188,35 @@ public class CcgParse {
 
       return CcgSyntaxTree.createNonterminal(syntax.getSyntax(), originalSyntax, leftTree, rightTree);
     }
+  }
+  
+  /**
+   * Gets the logical form for this CCG parse.
+   * 
+   * @return
+   */
+  public Expression getLogicalForm() {
+    return evaluatedLogicalForm;
+    /*
+    List<Expression> expressions = Lists.newArrayList();
+    for (IndexedPredicate head : heads) {
+      Expression expression = getLfFromWordIndex(head.getHeadIndex());
+      if (expression != null) {
+        expressions.add(expression);
+      }
+    }
+
+    if (expressions.size() == 0) {
+      return null;
+    } else if (expressions.size() == 1) {
+      return expressions.get(0);
+    } else {
+      ConstantExpression andExpr = new ConstantExpression("and");
+      List<Expression> subexpressions = Lists.<Expression>newArrayList(andExpr);
+      subexpressions.addAll(expressions);
+      return new ApplicationExpression(subexpressions);
+    } 
+    */
   }
 
   /**
@@ -301,6 +340,14 @@ public class CcgParse {
   public Set<IndexedPredicate> getSemanticHeads() {
     return heads;
   }
+  
+  public Set<Integer> getHeadWordIndexes() {
+    Set<Integer> indexes = Sets.newHashSet();
+    for (IndexedPredicate head : heads) {
+      indexes.add(head.getHeadIndex());
+    }
+    return indexes;
+  }
 
   /**
    * Returns dependency structures that were filled by the rule
@@ -318,12 +365,12 @@ public class CcgParse {
    * @return
    */
   public List<DependencyStructure> getAllDependencies() {
-    List<DependencyStructure> deps = Lists.newArrayList(dependencies);
-
+    List<DependencyStructure> deps = Lists.newArrayList();
     if (!isTerminal()) {
       deps.addAll(left.getAllDependencies());
       deps.addAll(right.getAllDependencies());
     }
+    deps.addAll(dependencies);
     return deps;
   }
 
@@ -365,6 +412,72 @@ public class CcgParse {
       }
     }
     return filteredDeps;
+  }
+  
+  private Expression initializeEvaluatedLogicalForm() {
+    if (isTerminal()) {
+      return lexiconEntry.getLogicalForm();
+    } else {
+      // Get the expression which is the head of this parse
+      int parseHeadWordIndex = getSemanticHeads().iterator().next().getHeadIndex();
+      Expression result = getLfFromWordIndex(parseHeadWordIndex);
+      if (result == null) {
+        return null;
+      }
+
+      Expression leftLogicalForm = left.getLogicalForm();
+      Expression rightLogicalForm = right.getLogicalForm();
+      
+      // Use the head words of the two parses to filter out long range
+      // dependencies.
+      /*
+      Set<Integer> validHeads = Sets.newHashSet(left.getHeadWordIndexes());
+      validHeads.addAll(right.getHeadWordIndexes());
+      */
+
+      for (DependencyStructure dep : dependencies) {
+        int headIndex = dep.getHeadWordIndex();
+        int objectIndex = dep.getObjectWordIndex();
+        int argumentNumber = dep.getArgIndex();
+        
+        // if (validHeads.contains(headIndex) && validHeads.contains(objectIndex)) {
+          Expression headLf = getLfFromWordIndex(headIndex);
+          Expression objectLf = getLfFromWordIndex(objectIndex);
+
+          if (headLf != null && objectLf != null) {
+            ConstantExpression constant = new ConstantExpression("$" + argumentNumber);
+            if (headIndex == parseHeadWordIndex) {
+              result = result.substitute(constant, objectLf);
+            } else if (objectIndex == parseHeadWordIndex) {
+              result = headLf.substitute(constant, result);
+            }
+          }
+        // }
+      }
+
+      System.out.println(left.getSemanticHeads());
+      System.out.println(leftLogicalForm);
+      System.out.println(right.getSemanticHeads());
+      System.out.println(rightLogicalForm);
+      System.out.println(dependencies);
+
+      return result;
+    }
+  }
+
+  private Expression getLfFromWordIndex(int index) {
+    Preconditions.checkArgument(spanStart <= index);
+    Preconditions.checkArgument(index <= spanEnd);
+
+    if (evaluatedLogicalForm != null || isTerminal()) {
+      return evaluatedLogicalForm;
+    } else {
+      if (index <= left.spanEnd) {
+        return left.getLfFromWordIndex(index);
+      } else {
+        return right.getLfFromWordIndex(index);
+      }
+    }
   }
 
   @Override

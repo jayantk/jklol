@@ -28,6 +28,10 @@ public class Combinator implements Serializable {
   private final int[] argumentNumbers;
   // The variables each dependency accepts.
   private final int[] objects;
+  
+  public static enum Type {
+    LEFT_APPLICATION, RIGHT_APPLICATION, LEFT_COMPOSITION, RIGHT_COMPOSITION
+  }
 
   public Combinator(int syntax, int[] syntaxUniqueVars, int[] leftVariableRelabeling,
       int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,

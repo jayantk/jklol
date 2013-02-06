@@ -11,6 +11,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.util.CsvParser;
 
 /**
@@ -40,6 +42,9 @@ public class CcgCategory implements Serializable {
   // The syntactic type of this category
   private final HeadedSyntacticCategory syntax;
 
+  // The logical form for this category. May be null.
+  private final Expression logicalForm;
+
   // The semantic dependencies of this category, both filled and
   // unfilled.
   private final List<String> subjects;
@@ -55,9 +60,19 @@ public class CcgCategory implements Serializable {
 
   private static final char ENTRY_DELIMITER = ',';
 
-  public CcgCategory(HeadedSyntacticCategory syntax, List<String> subjects,
+  /**
+   * 
+   * @param syntax
+   * @param logicalForm
+   * @param subjects
+   * @param argumentNumbers
+   * @param objects
+   * @param variableAssignments
+   */
+  public CcgCategory(HeadedSyntacticCategory syntax, Expression logicalForm, List<String> subjects,
       List<Integer> argumentNumbers, List<Integer> objects, List<Set<String>> variableAssignments) {
     this.syntax = Preconditions.checkNotNull(syntax);
+    this.logicalForm = logicalForm;
 
     this.subjects = ImmutableList.copyOf(subjects);
     this.argumentNumbers = ImmutableList.copyOf(argumentNumbers);
@@ -73,6 +88,8 @@ public class CcgCategory implements Serializable {
    * <ol>
    * <li>Syntactic type, formatted as for a
    * {@link HeadedSyntacticCategory}.
+   * <li>Logical form, formatted as for {@link ExpressionParser}. May
+   * be the empty string, in which case no logical form is used.
    * <li>A list of variable assignments or unfilled dependencies:
    * <ul>
    * <li>Variable assignments are of the format
@@ -101,7 +118,12 @@ public class CcgCategory implements Serializable {
     HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom(categoryParts[0]);
     Map<Integer, Integer> relabeling = Maps.newHashMap();
     syntax = syntax.getCanonicalForm(relabeling);
-    
+
+    Expression logicalForm = null;
+    if (categoryParts[1].trim().length() > 0) {
+      logicalForm = (new ExpressionParser()).parseSingleExpression(categoryParts[1]);
+    }
+
     // Create an empty assignment to each variable in the syntactic
     // category.
     List<Set<String>> values = Lists.newArrayList();
@@ -115,7 +137,7 @@ public class CcgCategory implements Serializable {
 
     // Parse any value assignments to variables and unfilled
     // dependencies.
-    for (int i = 1; i < categoryParts.length; i++) {
+    for (int i = 2; i < categoryParts.length; i++) {
       if (categoryParts[i].trim().length() == 0) {
         continue;
       }
@@ -125,8 +147,8 @@ public class CcgCategory implements Serializable {
           "Invalid CCG semantic part: \"%s\".", categoryParts[i]);
       if (parts.length == 2) {
         int originalVarNum = Integer.parseInt(parts[0]);
-        Preconditions.checkArgument(relabeling.containsKey(originalVarNum), 
-            "Illegal assignment \"%s\" for syntactic category %s", categoryParts[i], 
+        Preconditions.checkArgument(relabeling.containsKey(originalVarNum),
+            "Illegal assignment \"%s\" for syntactic category %s", categoryParts[i],
             categoryParts[0]);
         int varNum = relabeling.get(originalVarNum);
         String value = parts[1];
@@ -135,14 +157,15 @@ public class CcgCategory implements Serializable {
         subjects.add(parts[0]);
         argumentNumbers.add(Integer.parseInt(parts[1]));
         int originalVarNum = Integer.parseInt(parts[2]);
-        Preconditions.checkArgument(relabeling.containsKey(originalVarNum), 
-            "Illegal dependency \"%s\" for syntactic category %s", categoryParts[i], 
+        Preconditions.checkArgument(relabeling.containsKey(originalVarNum),
+            "Illegal dependency \"%s\" for syntactic category %s", categoryParts[i],
             categoryParts[0]);
         int objectVarNum = relabeling.get(originalVarNum);
         objects.add(objectVarNum);
       }
     }
-    return new CcgCategory(syntax, subjects, argumentNumbers, objects, values);
+
+    return new CcgCategory(syntax, logicalForm, subjects, argumentNumbers, objects, values);
   }
 
   /**
@@ -152,6 +175,10 @@ public class CcgCategory implements Serializable {
    */
   public HeadedSyntacticCategory getSyntax() {
     return syntax;
+  }
+  
+  public Expression getLogicalForm() {
+    return logicalForm;
   }
 
   /**
@@ -237,10 +264,16 @@ public class CcgCategory implements Serializable {
   }
 
   @Override
+  public String toString() {
+    return getSemanticHeads() + ":" + syntax.toString();
+  }
+
+  @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
     result = prime * result + ((argumentNumbers == null) ? 0 : argumentNumbers.hashCode());
+    result = prime * result + ((logicalForm == null) ? 0 : logicalForm.hashCode());
     result = prime * result + ((objects == null) ? 0 : objects.hashCode());
     result = prime * result + ((subjects == null) ? 0 : subjects.hashCode());
     result = prime * result + ((syntax == null) ? 0 : syntax.hashCode());
@@ -261,6 +294,11 @@ public class CcgCategory implements Serializable {
       if (other.argumentNumbers != null)
         return false;
     } else if (!argumentNumbers.equals(other.argumentNumbers))
+      return false;
+    if (logicalForm == null) {
+      if (other.logicalForm != null)
+        return false;
+    } else if (!logicalForm.equals(other.logicalForm))
       return false;
     if (objects == null) {
       if (other.objects != null)
@@ -283,10 +321,5 @@ public class CcgCategory implements Serializable {
     } else if (!variableAssignments.equals(other.variableAssignments))
       return false;
     return true;
-  }
-
-  @Override
-  public String toString() {
-    return getSemanticHeads() + ":" + syntax.toString();
   }
 }

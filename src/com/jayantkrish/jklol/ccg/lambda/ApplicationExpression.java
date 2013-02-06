@@ -45,7 +45,7 @@ public class ApplicationExpression extends AbstractExpression {
     Expression function = getFunction().simplify();
     if (function instanceof LambdaExpression) {
       LambdaExpression lambdaFunction = (LambdaExpression) function;
-      return lambdaFunction.reduce(simplifiedArguments);
+      return lambdaFunction.reduce(simplifiedArguments).simplify();
     } else {
       List<Expression> subexpressions = Lists.newArrayList(function);
       subexpressions.addAll(simplifiedArguments);

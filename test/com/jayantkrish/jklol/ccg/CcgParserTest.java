@@ -14,6 +14,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.NullOutputStream;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -24,18 +25,19 @@ import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
 
-  CcgParser parser, parserWithComposition, parserWithUnary;
+  CcgParser parser, parserWithComposition, parserWithUnary, parserWithUnaryAndComposition;
   
   private static final String[] lexicon = {"I,N{0},I,0 I", 
     "people,N{0},people,0 people", 
     "berries,N{0},berries,0 berries", 
     "houses,N{0},houses,0 houses",
-    "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(and ($1 a) ($2 b) (eat a b)),0 eat,eat 1 1,eat 2 2", 
-    "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},,0 that,that 1 1,that 2 2", 
+    "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $1 $2 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2", 
+    "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
+    "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
     "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},,0 quickly,quickly 1 1", 
-    "in,((N{1}\\N{1}){0}/N{2}){0},(and ($1 c) ($2 d) (in c d)),0 in,in 1 1,in 2 2",
+    "in,((N{1}\\N{1}){0}/N{2}){0},(lambda $1 $2 (lambda c (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
     "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 amazingly,amazingly 1 2",
-    "tasty,(N{1}/N{1}){0},(and (tasty e) ($1 e)),0 tasty,tasty 1 1",
+    "tasty,(N{1}/N{1}){0},(lambda $1 (lambda e (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
     "in,(((S[1]{1}\\N{2}){1}\\(S[1]{1}\\N{2}){1}){0}/N{3}){0},,0 in,in 1 1,in 2 3",
     "and,((N{1}\\N{1}){0}/N{1}){0},,0 and", 
     "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},,0 almost,almost 1 2",
@@ -52,7 +54,7 @@ public class CcgParserTest extends TestCase {
     "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
-    0.3, 1.0, 
+    0.3, 1.0, 1.0, 
     1.0, 1.0,
     1.0, 1.0,
     0.5, 1.0, 2.0,
@@ -94,6 +96,8 @@ public class CcgParserTest extends TestCase {
     parser = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, false);
     parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, true);
     parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false);
+    parserWithUnaryAndComposition = parseLexicon(lexicon, binaryRuleArray,
+        new String[] {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}"}, weights, true);
   }
   
   public void testParse() {
@@ -169,11 +173,17 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testParseLogicalForm() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("I", "that", "eat", "tasty", "berries"), 10);
+    List<CcgParse> parses = parserWithUnaryAndComposition.beamSearch(Arrays.asList(
+      "tasty", "tasty", "berries", "that", "I", "quickly", "eat"), 10);
 
     for (CcgParse parse : parses) {
-      System.out.println("lf: " + parse.getLogicalForm());
-      System.out.println("simple lf: " + parse.getLogicalForm().simplify());
+      System.out.println(parse);
+      System.out.println(parse.getAllDependencies());
+      Expression lf = parse.getLogicalForm();
+      if (lf != null) {
+        System.out.println("lf: " + lf);
+        System.out.println("simple lf: " + lf.simplify());
+      }
     }
   }
 

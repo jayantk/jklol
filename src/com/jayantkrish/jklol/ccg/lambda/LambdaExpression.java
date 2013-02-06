@@ -26,6 +26,26 @@ public class LambdaExpression implements Expression {
     }
     return substitutedBody;
   }
+  
+  public Expression reduceArgument(ConstantExpression argumentVariable, Expression value) {
+    System.out.println(" reducing: " + argumentVariable);
+    List<ConstantExpression> remainingArguments = Lists.newArrayList();
+    Expression substitutedBody = body;
+    for (int i = 0; i < argumentVariables.size(); i++) {
+      if (argumentVariables.get(i).equals(argumentVariable)) {
+        substitutedBody = substitutedBody.substitute(argumentVariables.get(i), value);
+      } else {
+        remainingArguments.add(argumentVariables.get(i));
+      }
+    }
+    System.out.println("  new body: " + substitutedBody);
+    
+    if (remainingArguments.size() > 0) {
+      return new LambdaExpression(remainingArguments, substitutedBody);
+    } else {
+      return substitutedBody;
+    }
+  }
 
   @Override
   public List<Expression> getSubexpressions() {
@@ -37,8 +57,12 @@ public class LambdaExpression implements Expression {
 
   @Override
   public Expression substitute(ConstantExpression constant, Expression replacement) {
-    Expression substitution = body.substitute(constant, replacement);
-    return new LambdaExpression(argumentVariables, substitution);
+    if (!argumentVariables.contains(constant)) {
+      Expression substitution = body.substitute(constant, replacement);
+      return new LambdaExpression(argumentVariables, substitution);
+    } else {
+      return this;
+    }
   }
   
   @Override

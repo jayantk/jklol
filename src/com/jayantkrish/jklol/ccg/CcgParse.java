@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 
 public class CcgParse {
 
@@ -418,6 +419,9 @@ public class CcgParse {
     if (isTerminal()) {
       return lexiconEntry.getLogicalForm();
     } else {
+      if (getSemanticHeads().size() == 0) {
+        return null;
+      }
       // Get the expression which is the head of this parse
       int parseHeadWordIndex = getSemanticHeads().iterator().next().getHeadIndex();
       Expression result = getLfFromWordIndex(parseHeadWordIndex);
@@ -443,16 +447,21 @@ public class CcgParse {
         // if (validHeads.contains(headIndex) && validHeads.contains(objectIndex)) {
           Expression headLf = getLfFromWordIndex(headIndex);
           Expression objectLf = getLfFromWordIndex(objectIndex);
-
+          System.out.println("  headIndex: " + parseHeadWordIndex + " " + getSemanticHeads());
+          System.out.println("  dep: " + dep);
+          System.out.println("Head lf: " + headLf);
+          System.out.println("Object lf: " + objectLf);
           if (headLf != null && objectLf != null) {
             ConstantExpression constant = new ConstantExpression("$" + argumentNumber);
             if (headIndex == parseHeadWordIndex) {
-              result = result.substitute(constant, objectLf);
+              LambdaExpression resultAsLambda = (LambdaExpression) result;
+              result = resultAsLambda.reduceArgument(constant, objectLf);
             } else if (objectIndex == parseHeadWordIndex) {
-              result = headLf.substitute(constant, result);
+              LambdaExpression headAsLambda = (LambdaExpression) headLf;
+              result = headAsLambda.reduceArgument(constant, result);
             }
           }
-        // }
+      // }
       }
 
       System.out.println(left.getSemanticHeads());

@@ -111,7 +111,7 @@ public class ParseCcg extends AbstractCli {
           System.out.println("---");
         }
         System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
-        System.out.println("SYN: " + parses.get(i).getSyntacticCategory());
+        System.out.println("SYN: " + parses.get(i).getSyntacticParse());
         Expression logicalForm = parses.get(i).getLogicalForm();
         if (logicalForm != null) {
           logicalForm = logicalForm.simplify();

@@ -197,6 +197,10 @@ public class CcgCategory implements Serializable {
       return null;
     }
 
+    if (argumentCats.size() == 0 && !syntax.getSyntax().getValue().equals("S")) {
+      return new ConstantExpression("unknown");
+    }
+
     Expression body = null;
     int argumentIndex = argumentRoots.indexOf(syntax.getRootVariable());
     if (argumentIndex != -1) {

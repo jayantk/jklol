@@ -23,19 +23,19 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 public class CcgTrainingTest extends TestCase {
 
   private static final String[] lexicon = {
-      "block,N{0},0 pred:block", "object,N{0},0 pred:object",
-      "red,(N{1}/N{1}){0},0 pred:red,pred:red 1 1", "green,(N{1}/N{1}){0},0 pred:green,pred:green 1 1",
-      "green,N{0},0 pred:green", "the,(N{1}/N{1}){0},0 the", "a,(N{1}/N{1}){0},0 the",
-      "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:close,pred:close 1 1,pred:close 2 2",
-      "near,((N{1}\\N{1}){0}/N{2}){0},0 pred:near,pred:near 1 1,pred:near 2 2",
-      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},0 pred:near,pred:near 2 2",
-      "near,(PP{0}/N{1}){0},0 pred:near,pred:near 2 1",
-      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 pred:almost,pred:almost 1 2",
-      "is,((S{0}\\N{1}){0}/N{2}){0},0 pred:equals,pred:equals 1 1,pred:equals 2 2",
-      "\",\",((N{1}\\N{1}){0}/N{2}){0},\"0 ,\",\", 1 1\",\", 2 2\"",
-      "2,N{0},0 NUM", "2,(N{1}/N{1}){0},0 NUM,NUM 1 1",
-      "\"#\",(N{1}/N{1}){0},0 #,# 1 1", "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},0 #,# 1 2",
-      "foo,ABC{0},0 foo", "foo,ABCD{0},0 foo"
+      "block,N{0},,0 pred:block", "object,N{0},,0 pred:object",
+      "red,(N{1}/N{1}){0},,0 pred:red,pred:red 1 1", "green,(N{1}/N{1}){0},,0 pred:green,pred:green 1 1",
+      "green,N{0},,0 pred:green", "the,(N{1}/N{1}){0},,0 the", "a,(N{1}/N{1}){0},,0 the",
+      "near,((N{1}\\N{1}){0}/N{2}){0},,0 pred:close,pred:close 1 1,pred:close 2 2",
+      "near,((N{1}\\N{1}){0}/N{2}){0},,0 pred:near,pred:near 1 1,pred:near 2 2",
+      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},,0 pred:near,pred:near 2 2",
+      "near,(PP{0}/N{1}){0},,0 pred:near,pred:near 2 1",
+      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 pred:almost,pred:almost 1 2",
+      "is,((S{0}\\N{1}){0}/N{2}){0},,0 pred:equals,pred:equals 1 1,pred:equals 2 2",
+      "\",\",((N{1}\\N{1}){0}/N{2}){0},,\"0 ,\",\", 1 1\",\", 2 2\"",
+      "2,N{0},,0 NUM", "2,(N{1}/N{1}){0},,0 NUM,NUM 1 1",
+      "\"#\",(N{1}/N{1}){0},,0 #,# 1 1", "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
+      "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo"
   };
 
   private static final String[] trainingData = {

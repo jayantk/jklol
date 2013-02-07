@@ -39,13 +39,13 @@ public class LambdaExpression extends AbstractExpression {
 
   public Expression reduce(List<Expression> argumentValues) {
     Preconditions.checkArgument(argumentValues.size() <= argumentVariables.size());
-    
+
     Expression substitutedBody = body;
     for (int i = 0; i < argumentValues.size(); i++) {
       substitutedBody = substitutedBody.substitute(argumentVariables.get(i),
           argumentValues.get(i));
     }
-    
+
     if (argumentValues.size() == argumentVariables.size()) {
       return substitutedBody;
     } else {

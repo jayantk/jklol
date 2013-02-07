@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -34,6 +35,7 @@ public class ParseCcg extends AbstractCli {
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Integer> numParses;
   private OptionSpec<Void> atomic;
+  private OptionSpec<Void> pos;
   
   private OptionSpec<String> testFile;
   private OptionSpec<Void> useCcgBankFormat;
@@ -51,6 +53,7 @@ public class ParseCcg extends AbstractCli {
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
+    pos = parser.accepts("pos", "Treat input as POS-tagged text, in the format word/POS.");
 
     testFile = parser.accepts("test", "If provided, running this program computes test error using " +
     		"the given file. Otherwise, this program parses a string provided on the command line. " +
@@ -74,8 +77,20 @@ public class ParseCcg extends AbstractCli {
       System.out.println(loss);
     } else {
       // Parse a string from the command line.
-      List<String> sentenceToParse = options.nonOptionArguments();
-      List<String> posTags = Collections.nCopies(sentenceToParse.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+      List<String> input = options.nonOptionArguments();
+      List<String> sentenceToParse = Lists.newArrayList();
+      List<String> posTags = Lists.newArrayList();
+      if (options.has(pos)) {
+        for (String token : input) {
+          String[] chunks = token.split("/");
+          sentenceToParse.add(chunks[0]);
+          posTags.add(chunks[1]);
+        }
+      } else {
+        sentenceToParse = input;
+        posTags = Collections.nCopies(sentenceToParse.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+      }
+
       List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, posTags, options.valueOf(beamSize));
       printCcgParses(parses, options.valueOf(numParses), options.has(atomic));
     }
@@ -97,6 +112,11 @@ public class ParseCcg extends AbstractCli {
         }
         System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
         System.out.println("SYN: " + parses.get(i).getSyntacticCategory());
+        Expression logicalForm = parses.get(i).getLogicalForm();
+        if (logicalForm != null) {
+          logicalForm = logicalForm.simplify();
+        }
+        System.out.println("LF: " + logicalForm);
         System.out.println("DEPS: " + parses.get(i).getAllDependencies());
         System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
         System.out.println("PROB: " + parses.get(i).getSubtreeProbability());

@@ -948,6 +948,8 @@ public class CcgParser implements Serializable {
       for (int j = i; j < terminals.size(); j++) {
         List<String> terminalValue = terminals.subList(i, j + 1);
         if (!terminalListValue.canTakeValue(terminalValue)) {
+          continue;
+          /*
           if (i != j) {
             continue;
           } else {
@@ -958,6 +960,7 @@ public class CcgParser implements Serializable {
               terminalValue = Arrays.asList(UNKNOWN_WORD_CAP);
             }
           }
+          */
         }
 
         Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(j));

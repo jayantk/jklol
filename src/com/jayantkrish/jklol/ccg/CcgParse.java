@@ -303,8 +303,8 @@ public class CcgParse {
       return Arrays.asList(posTags.get(posTags.size() - 1));
     } else {
       List<String> tags = Lists.newArrayList();
-      tags.addAll(left.getSpannedPosTags());
-      tags.addAll(right.getSpannedPosTags());
+      tags.addAll(left.getSpannedPosTagsByLexiconEntry());
+      tags.addAll(right.getSpannedPosTagsByLexiconEntry());
       return tags;
     }
   }

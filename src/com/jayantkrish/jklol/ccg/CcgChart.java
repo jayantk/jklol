@@ -174,7 +174,7 @@ public class CcgChart {
         entry.getHeadedSyntax());
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), posTags.subList(spanStart, spanEnd +1),
+      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTriggerWords(), posTags.subList(spanStart, spanEnd +1),
           parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
@@ -328,6 +328,10 @@ public class CcgChart {
     // is saved to track which lexicon entries are used in a parse,
     // for parameter estimation purposes.
     private final CcgCategory lexiconEntry;
+    // If this is a terminal, this contains the words used to trigger
+    // the category. This may be different from the words in the sentence,
+    // if the original words were not part of the lexicon.
+    private final List<String> lexiconTriggerWords;
 
     // Backpointer information
     private final int leftSpanStart;
@@ -353,6 +357,7 @@ public class CcgChart {
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
 
       this.lexiconEntry = null;
+      this.lexiconTriggerWords = null;
       this.deps = Preconditions.checkNotNull(deps);
 
       this.leftSpanStart = leftSpanStart;
@@ -366,9 +371,9 @@ public class CcgChart {
       this.combinator = combinator;
     }
 
-    public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, UnaryCombinator unaryRule,
-        int[] assignmentVariableNums, int[] assignmentPredicateNums, int[] assignmentIndexes,
-        long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
+    public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, List<String> terminalWords,
+        UnaryCombinator unaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums, 
+        int[] assignmentIndexes, long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
       this.syntax = syntax;
       this.syntaxUniqueVars = syntaxUniqueVars;
       this.unaryRule = unaryRule;
@@ -378,6 +383,7 @@ public class CcgChart {
       this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
 
       this.lexiconEntry = ccgCategory;
+      this.lexiconTriggerWords = terminalWords;
       this.deps = Preconditions.checkNotNull(deps);
 
       // Use the leftSpan to represent the spanned terminal.
@@ -473,6 +479,10 @@ public class CcgChart {
     public CcgCategory getLexiconEntry() {
       return lexiconEntry;
     }
+    
+    public List<String> getLexiconTriggerWords() {
+      return lexiconTriggerWords;
+    }
 
     public long[] getDependencies() {
       return deps;
@@ -510,13 +520,14 @@ public class CcgChart {
       return combinator;
     }
     
-    public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars, UnaryCombinator unaryRuleCombinator, 
-        int[] newVars, int[] newPredicates, int[] newIndexes, long[] newUnfilledDeps, long[] newFilledDeps) {
+    public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
+        UnaryCombinator unaryRuleCombinator, int[] newVars, int[] newPredicates,
+        int[] newIndexes, long[] newUnfilledDeps, long[] newFilledDeps) {
       Preconditions.checkState(unaryRule == null);
       if (isTerminal()) {
-        return new ChartEntry(resultSyntax, resultUniqueVars, lexiconEntry, 
-            unaryRuleCombinator, newVars, newPredicates, newIndexes, 
-            newUnfilledDeps, newFilledDeps,  leftSpanStart, leftSpanEnd);
+        return new ChartEntry(resultSyntax, resultUniqueVars, lexiconEntry, lexiconTriggerWords,
+            unaryRuleCombinator, newVars, newPredicates, newIndexes, newUnfilledDeps, 
+            newFilledDeps,  leftSpanStart, leftSpanEnd);
       } else {
         return new ChartEntry(resultSyntax, resultUniqueVars, unaryRuleCombinator,
             newVars, newPredicates, newIndexes, newUnfilledDeps, newFilledDeps,  leftSpanStart, 

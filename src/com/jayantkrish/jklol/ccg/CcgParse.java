@@ -20,6 +20,10 @@ public class CcgParse {
   // The lexicon entry used to create this parse.
   // Non-null only when this is a terminal.
   private final CcgCategory lexiconEntry;
+  // The words in the terminal distribution that triggered lexiconEntry.
+  // May be different from spannedWords if spannedWords is not in
+  // the parser's lexicon.
+  private final List<String> lexiconTriggerWords;
   // The words spanned by this portion of the parse tree.
   // Non-null only when this is a terminal.
   private final List<String> spannedWords;
@@ -70,11 +74,12 @@ public class CcgParse {
    * @param right
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
+      List<String> lexiconTriggerWords, List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
       Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
+    this.lexiconTriggerWords = lexiconTriggerWords;
     this.spannedWords = spannedWords;
     this.posTags = posTags;
     this.heads = Preconditions.checkNotNull(heads);
@@ -108,6 +113,7 @@ public class CcgParse {
    * 
    * @param syntax
    * @param lexiconEntry
+   * @param lexiconTriggerWords
    * @param posTags
    * @param heads
    * @param deps
@@ -116,17 +122,17 @@ public class CcgParse {
    * @return
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
+      List<String> lexiconTriggerWords, List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
       List<String> spannedWords, double lexicalProbability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd) {
-    return new CcgParse(syntax, lexiconEntry, spannedWords, posTags, heads, deps,
+    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, deps,
         lexicalProbability, null, null, null, unaryRule, spanStart, spanEnd);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left,
       CcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
-    return new CcgParse(syntax, null, null, null, heads, dependencies, dependencyProbability, left,
+    return new CcgParse(syntax, null, null, null, null, heads, dependencies, dependencyProbability, left,
         right, combinator, unaryRule, spanStart, spanEnd);
   }
 
@@ -278,6 +284,14 @@ public class CcgParse {
   public List<String> getWords() {
     return spannedWords;
   }
+  
+  /**
+   * The result is null unless this is a terminal in the parse tree.
+   * @return 
+   */
+  public List<String> getLexiconTriggerWords() {
+    return lexiconTriggerWords;
+  }
 
   public List<String> getSpannedPosTags() {
     if (isTerminal()) {
@@ -317,7 +331,7 @@ public class CcgParse {
    */
   public List<LexiconEntry> getSpannedLexiconEntries() {
     if (isTerminal()) {
-      return Arrays.asList(new LexiconEntry(spannedWords, lexiconEntry));
+      return Arrays.asList(new LexiconEntry(lexiconTriggerWords, lexiconEntry));
     } else {
       List<LexiconEntry> lexiconEntries = Lists.newArrayList();
       lexiconEntries.addAll(left.getSpannedLexiconEntries());

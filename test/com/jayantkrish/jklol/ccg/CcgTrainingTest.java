@@ -35,7 +35,10 @@ public class CcgTrainingTest extends TestCase {
       "\",\",((N{1}\\N{1}){0}/N{2}){0},,\"0 ,\",\", 1 1\",\", 2 2\"",
       "2,N{0},,0 NUM", "2,(N{1}/N{1}){0},,0 NUM,NUM 1 1",
       "\"#\",(N{1}/N{1}){0},,0 #,# 1 1", "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
-      "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo"
+      "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo",
+      "UNK-JJ,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
+      "UNK-JJ,N{0},,0 pred:unk-jj",
+      "UNK-JJ,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
   };
 
   private static final String[] trainingData = {
@@ -56,7 +59,8 @@ public class CcgTrainingTest extends TestCase {
         + "<N <N <(N/N) JJ red> <N NN block>> <N\\N <(N\\N)/N IN near> <N <N/N DT the> <N <(N/N) JJ green> <N NN block>>>>>",
     "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) JJ #> <(N/N) JJ 2>> <N NN block>>",
     "foo######<ABCD NN foo>",
-    "block######<N NN block>"
+    "block######<N NN block>",
+    "not_in_lexicon block###pred:unk-jj 0 1 pred:block 1###<N <(N/N) JJ not_in_lexicon> <N NN block>>"
   };
   
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
@@ -196,6 +200,14 @@ public class CcgTrainingTest extends TestCase {
     }
     assertTrue(parses.get(0).getSyntacticCategory().isAtomic());
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
+    
+    // Check that backoff to POS tags works properly.
+    parses = parser.beamSearch(Arrays.asList("another_new_word", "block"), Arrays.asList("JJ", "NN"), 100);
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
+    assertEquals(3, parses.size());
+    assertTrue(parses.get(0).getSyntacticCategory().equals(SyntacticCategory.parseFrom("N")));
   }
 
   private void assertZeroDependencyError(CcgParser parser, Iterable<CcgExample> examples) {

@@ -80,8 +80,9 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
       e.printStackTrace();
       e.getCause().printStackTrace();
       throw new RuntimeException(e);
+    } finally {
+      executor.shutdown();
     }
-    executor.shutdown();
 
     return accumulator;
   }

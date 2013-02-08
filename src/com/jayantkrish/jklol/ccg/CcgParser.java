@@ -987,7 +987,7 @@ public class CcgParser implements Serializable {
           }
 
           // Add all possible chart entries to the ccg chart.
-          ChartEntry entry = ccgCategoryToChartEntry(category, i, j);
+          ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, i, j);
           addChartEntryWithUnaryRules(entry, chart, bestOutcome.getProbability() * posProb, i, j, log);
 
           // Identify possible predicates.
@@ -1016,7 +1016,8 @@ public class CcgParser implements Serializable {
     chart.setDependencyTensor(smallDependencyTensor);
   }
 
-  private ChartEntry ccgCategoryToChartEntry(CcgCategory result, int spanStart, int spanEnd) {
+  private ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
+      int spanStart, int spanEnd) {
     // Assign each predicate in this category a unique word index.
     List<Integer> variableNums = Lists.newArrayList();
     List<Integer> predicateNums = Lists.newArrayList();
@@ -1039,7 +1040,7 @@ public class CcgParser implements Serializable {
     long[] depArray = unfilledDependencyArrayToLongArray(deps);
 
     int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
-    return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), result,
+    return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), result, terminalWords,
         null, Ints.toArray(variableNums), Ints.toArray(predicateNums), Ints.toArray(indexes),
         unfilledDepArray, depArray, spanStart, spanEnd);
   }

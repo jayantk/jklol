@@ -20,9 +20,9 @@ public class ExpressionParserTest extends TestCase {
   public void testParse() {
     Expression result = parser.parseSingleExpression("(and (/m/abc x) (/m/bcd y) /m/cde)");
     
-    assertTrue(result instanceof ApplicationExpression);
-    ApplicationExpression application = (ApplicationExpression) result;
-    assertEquals("and", ((ConstantExpression) application.getFunction()).getName());
+    assertTrue(result instanceof CommutativeOperator);
+    CommutativeOperator application = (CommutativeOperator) result;
+    assertEquals("and", ((ConstantExpression) application.getOperatorName()).getName());
     assertEquals(3, application.getArguments().size());
     
     System.out.println(application);

@@ -17,7 +17,6 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -112,11 +111,13 @@ public class ParseCcg extends AbstractCli {
         }
         System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
         System.out.println("SYN: " + parses.get(i).getSyntacticParse());
+        /*
         Expression logicalForm = parses.get(i).getLogicalForm();
         if (logicalForm != null) {
           logicalForm = logicalForm.simplify();
         }
         System.out.println("LF: " + logicalForm);
+        */
         System.out.println("DEPS: " + parses.get(i).getAllDependencies());
         System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
         System.out.println("PROB: " + parses.get(i).getSubtreeProbability());

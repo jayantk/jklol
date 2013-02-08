@@ -74,8 +74,7 @@ public class CcgParser implements Serializable {
   public static final String UNARY_RULE_INPUT_VAR_NAME = "unaryRuleInputVar";
   public static final String UNARY_RULE_VAR_NAME = "unaryRuleVar";
   
-  public static final String UNKNOWN_WORD = "-unk-";
-  public static final String UNKNOWN_WORD_CAP = "-Unk-";
+  public static final String UNKNOWN_WORD_PREFIX = "UNK-";
 
   // Member variables ////////////////////////////////////
 
@@ -652,25 +651,37 @@ public class CcgParser implements Serializable {
         dependencyDistribution.getUnnormalizedLogProbability(assignment) != Double.NEGATIVE_INFINITY;
   }
   
-  public boolean isPossibleLexiconEntry(List<String> words, SyntacticCategory category) {
-    if (terminalVar.isValidOutcomeArray(words)) {
-      Assignment assignment = terminalVar.outcomeArrayToAssignment(words);
+  public boolean isPossibleLexiconEntry(List<String> words, List<String> posTags, SyntacticCategory category) {
+    Preconditions.checkArgument(words.size() == posTags.size());
+    
+    List<List<String>> terminalOutcomes = Lists.newArrayList();
+    terminalOutcomes.add(words);
+    if (words.size() == 1) {
+      List<String> posTagBackoff = Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(0));
+      terminalOutcomes.add(posTagBackoff);
+    }
+    
+    for (List<String> terminalOutcome : terminalOutcomes) {
+      if (terminalVar.isValidOutcomeArray(terminalOutcome)) {
+        Assignment assignment = terminalVar.outcomeArrayToAssignment(terminalOutcome);
 
-      Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
-      while (iterator.hasNext()) {
-        Outcome bestOutcome = iterator.next();
-        CcgCategory lexicalEntry = (CcgCategory) bestOutcome.getAssignment().getValue(
-            ccgCategoryVar.getOnlyVariableNum());
-        if (lexicalEntry.getSyntax().getSyntax().assignAllFeatures(
-            SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(category)) {
-          return true;
+        Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+        while (iterator.hasNext()) {
+          Outcome bestOutcome = iterator.next();
+          CcgCategory lexicalEntry = (CcgCategory) bestOutcome.getAssignment().getValue(
+              ccgCategoryVar.getOnlyVariableNum());
+          if (lexicalEntry.getSyntax().getSyntax().assignAllFeatures(
+              SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(category)) {
+            return true;
+          }
         }
       }
     }
+
     System.out.println("No such lexicon entry: " + words + " -> " + category);
     return false;
   }
-  
+
   public boolean isPossibleBinaryRule(SyntacticCategory left, SyntacticCategory right,
       SyntacticCategory parent) {
     for (HeadedSyntacticCategory leftHeaded : syntacticCategoryMap.get(left)) {
@@ -728,7 +739,7 @@ public class CcgParser implements Serializable {
     }
     
     if (tree.isTerminal()) {
-      return isPossibleLexiconEntry(tree.getWords(), tree.getPreUnaryRuleSyntax());
+      return isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), tree.getPreUnaryRuleSyntax());
     } else {
       return isPossibleBinaryRule(tree.getLeft().getRootSyntax(), tree.getRight().getRootSyntax(),
           tree.getPreUnaryRuleSyntax()) && isPossibleSyntacticTree(tree.getLeft()) 
@@ -948,19 +959,15 @@ public class CcgParser implements Serializable {
       for (int j = i; j < terminals.size(); j++) {
         List<String> terminalValue = terminals.subList(i, j + 1);
         if (!terminalListValue.canTakeValue(terminalValue)) {
-          continue;
-          /*
           if (i != j) {
             continue;
           } else {
-            String value = terminalValue.get(0);
-            if (value.equals(value.toLowerCase())) {
-              terminalValue = Arrays.asList(UNKNOWN_WORD);
-            } else {
-              terminalValue = Arrays.asList(UNKNOWN_WORD_CAP);
+            terminalValue = Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(i));
+            if (!terminalListValue.canTakeValue(terminalValue)) {
+              // Unknown word and unknown pos tag. Parser will fail.
+              continue;
             }
           }
-          */
         }
 
         Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(j));

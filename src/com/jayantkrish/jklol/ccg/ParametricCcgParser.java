@@ -178,7 +178,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @param dependencyFeatures if not null, a list of files containing
    * features of dependency structures.
    * @param posTagSet set of POS tags in the data. If null,
-   * ParametricCcgParser.DEFAULT_POS_TAG is the only POS tag.
+   * {@code ParametricCcgParser.DEFAULT_POS_TAG} is the only POS tag.
    * @param allowComposition allow function composition in addition to
    * other CCG rules.
    * @return

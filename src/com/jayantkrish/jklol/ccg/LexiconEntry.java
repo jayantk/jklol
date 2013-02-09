@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.CsvParser;
 
@@ -52,7 +53,12 @@ public class LexiconEntry {
 
     // Add the lexicon word sequence to the lexicon.
     String wordPart = parts[0];
-    List<String> words = Arrays.asList(wordPart.split(" "));
+    List<String> words = Lists.newArrayList();
+    String[] wordArray = wordPart.split(" ");
+    for (int i = 0; i < wordArray.length; i++) {
+      words.add(wordArray[i].intern());
+    }
+
     CcgCategory category = CcgCategory.parseFrom(ArrayUtils.copyOfRange(parts, 1, parts.length));
     return new LexiconEntry(words, category);
   }

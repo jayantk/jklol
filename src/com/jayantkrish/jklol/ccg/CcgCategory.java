@@ -156,10 +156,10 @@ public class CcgCategory implements Serializable {
             "Illegal assignment \"%s\" for syntactic category %s", categoryParts[i],
             categoryParts[0]);
         int varNum = relabeling.get(originalVarNum);
-        String value = parts[1];
+        String value = parts[1].intern();
         values.get(varNum).add(value);
       } else if (parts.length == 3) {
-        subjects.add(parts[0]);
+        subjects.add(parts[0].intern());
         argumentNumbers.add(Integer.parseInt(parts[1]));
         int originalVarNum = Integer.parseInt(parts[2]);
         Preconditions.checkArgument(relabeling.containsKey(originalVarNum),

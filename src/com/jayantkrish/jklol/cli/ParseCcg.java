@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -35,6 +36,7 @@ public class ParseCcg extends AbstractCli {
   private OptionSpec<Integer> numParses;
   private OptionSpec<Void> atomic;
   private OptionSpec<Void> pos;
+  private OptionSpec<Void> printLf;
   
   private OptionSpec<String> testFile;
   private OptionSpec<Void> useCcgBankFormat;
@@ -53,6 +55,7 @@ public class ParseCcg extends AbstractCli {
     numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
     pos = parser.accepts("pos", "Treat input as POS-tagged text, in the format word/POS.");
+    printLf = parser.accepts("printLf", "Print logical forms for the generated parses.");
 
     testFile = parser.accepts("test", "If provided, running this program computes test error using " +
     		"the given file. Otherwise, this program parses a string provided on the command line. " +
@@ -91,7 +94,7 @@ public class ParseCcg extends AbstractCli {
       }
 
       List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, posTags, options.valueOf(beamSize));
-      printCcgParses(parses, options.valueOf(numParses), options.has(atomic));
+      printCcgParses(parses, options.valueOf(numParses), options.has(atomic), options.has(printLf));
     }
 
     System.exit(0);
@@ -102,7 +105,7 @@ public class ParseCcg extends AbstractCli {
     new ParseCcg().run(args);
   }
   
-  public static void printCcgParses(List<CcgParse> parses, int numParses, boolean onlyPrintAtomic) {
+  public static void printCcgParses(List<CcgParse> parses, int numParses, boolean onlyPrintAtomic, boolean printLf) {
     int numPrinted = 0;
     for (int i = 0; i < parses.size() && numPrinted < numParses; i++) {
       if (!onlyPrintAtomic || parses.get(i).getSyntacticCategory().isAtomic()) {
@@ -111,13 +114,15 @@ public class ParseCcg extends AbstractCli {
         }
         System.out.println("HEAD: " + parses.get(i).getSemanticHeads());
         System.out.println("SYN: " + parses.get(i).getSyntacticParse());
-        /*
-        Expression logicalForm = parses.get(i).getLogicalForm();
-        if (logicalForm != null) {
-          logicalForm = logicalForm.simplify();
+
+        if (printLf) {
+          Expression logicalForm = parses.get(i).getLogicalForm();
+          if (logicalForm != null) {
+            logicalForm = logicalForm.simplify();
+          }
+          System.out.println("LF: " + logicalForm);
         }
-        System.out.println("LF: " + logicalForm);
-        */
+
         System.out.println("DEPS: " + parses.get(i).getAllDependencies());
         System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
         System.out.println("PROB: " + parses.get(i).getSubtreeProbability());
@@ -281,7 +286,7 @@ public class ParseCcg extends AbstractCli {
       int numParsed = 0, numExamples = 0;
       List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags(), beamSize);
       System.out.println("SENT: " + example.getWords());
-      printCcgParses(parses, 1, false);
+      printCcgParses(parses, 1, false, false);
 
       if (parses.size() > 0) {
         List<DependencyStructure> predictedDeps = parses.get(0).getAllDependencies();

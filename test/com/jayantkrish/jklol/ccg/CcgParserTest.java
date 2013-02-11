@@ -30,7 +30,7 @@ public class CcgParserTest extends TestCase {
   
   ExpressionParser exp;
   
-  private static final String[] lexicon = {"I,N{0},I,0 I", 
+  private static final String[] lexicon = {"i,N{0},i,0 i", 
     "people,N{0},people,0 people", 
     "berries,N{0},berries,0 berries", 
     "houses,N{0},houses,0 houses",
@@ -51,7 +51,7 @@ public class CcgParserTest extends TestCase {
     "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},,0 eat,eat 1 1,eat 2 2",
     "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},,0 rapidly,rapidly 1 1",
     "colorful,(N{1}/N{1}){0},(lambda $1 (lambda e (and (colorful e) ($1 e)))),0 colorful,colorful 1 1",
-    "*NOT_A_WORD*,(NP{0}/N{1}){0},,0 *NOT_A_WORD*",
+    "*not_a_word*,(NP{0}/N{1}){0},,0 *not_a_word*",
     "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},,0 near,near 2 2",
     "the,(N{0}/N{0}){1},,1 the,the 1 0",
     "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1"};
@@ -107,8 +107,7 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testParse() {
-    List<CcgParse> parses = parser.beamSearch(
-        Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
 
@@ -123,13 +122,13 @@ public class CcgParserTest extends TestCase {
     
     assertEquals("eat", parse.getNodeDependencies().get(0).getHead());
     assertEquals(1, parse.getNodeDependencies().get(0).getArgIndex());
-    assertEquals("I", parse.getNodeDependencies().get(0).getObject());
+    assertEquals("i", parse.getNodeDependencies().get(0).getObject());
     assertEquals("quickly", parse.getRight().getLeft().getAllDependencies().get(0).getHead());
     assertEquals(1, parse.getRight().getLeft().getAllDependencies().get(0).getArgIndex());
     assertEquals("eat", parse.getRight().getLeft().getAllDependencies().get(0).getObject());
     
     assertEquals("eat", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
-    assertEquals("I", Iterables.getOnlyElement(parse.getLeft().getSemanticHeads()).getHead());
+    assertEquals("i", Iterables.getOnlyElement(parse.getLeft().getSemanticHeads()).getHead());
     
     List<DependencyStructure> eatDeps = parse.getDependenciesWithHeadWord(2);
     assertEquals(2, eatDeps.size());
@@ -180,11 +179,11 @@ public class CcgParserTest extends TestCase {
   
   public void testParseLogicalFormApplication() {
     List<CcgParse> parses = parser.beamSearch(Arrays.asList(
-       "I", "quickly", "eat", "berries"), 10);
+       "i", "quickly", "eat", "berries"), 10);
     
     assertEquals(1, parses.size());
     
-    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (I a) (berries b) (eat a b)))");
+    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (i a) (berries b) (eat a b)))");
     assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
 
     for (CcgParse parse : parses) {
@@ -200,11 +199,11 @@ public class CcgParserTest extends TestCase {
       
   public void testParseLogicalFormApplication2() {
     List<CcgParse> parses = parser.beamSearch(Arrays.asList(
-        "I", "that", "eat", "berries"), 10);
+        "i", "that", "eat", "berries"), 10);
     
     assertEquals(1, parses.size());
 
-    Expression expectedLf = exp.parseSingleExpression("(lambda x (exists a b (and (I x) (equals a x) (berries b) (eat a b))))");    
+    Expression expectedLf = exp.parseSingleExpression("(lambda x (exists a b (and (i x) (equals a x) (berries b) (eat a b))))");    
     for (CcgParse parse : parses) {
       System.out.println(parse);
       System.out.println(parse.getAllDependencies());
@@ -252,19 +251,19 @@ public class CcgParserTest extends TestCase {
   
   public void testParseLogicalFormConjunction() {
     List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
-        "I", "eat", "people", "or", "berries"), 10);
+        "i", "eat", "people", "or", "berries"), 10);
     assertEquals(1, parses.size());
     System.out.println(parses.get(0));
-    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (I a) (forall pred (list berries people) (pred b)) (eat a b)))");
+    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (i a) (forall pred (list berries people) (pred b)) (eat a b)))");
     assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
   }
 
   public void testParseLogicalFormUnary() {
     List<CcgParse> parses = parserWithUnaryAndComposition.beamSearch(Arrays.asList(
-        "berries", "that", "I", "eat"), 10);
+        "berries", "that", "i", "eat"), 10);
 
-    assertEquals(4, parses.size());
-    Expression expectedLf = exp.parseSingleExpression("(lambda x (exists a b (and (berries x) (I a) (equals b x) (eat a b))))");
+    assertEquals(2, parses.size());
+    Expression expectedLf = exp.parseSingleExpression("(lambda x (exists a b (and (berries x) (i a) (equals b x) (eat a b))))");
     boolean foundN = false;
     for (CcgParse parse : parses) {
       System.out.println(parse);
@@ -351,11 +350,11 @@ public class CcgParserTest extends TestCase {
   
   public void testParseComposition4() {
     List<CcgParse> parses = parserWithComposition.beamSearch(
-        Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
+        Arrays.asList("i", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
     assertEquals(3, parses.size());
     
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("eat", 2, "I", 0, 1),
+        new DependencyStructure("eat", 2, "i", 0, 1),
         new DependencyStructure("eat", 2, "berries", 5, 2),
         new DependencyStructure("quickly", 1, "eat", 2, 1),
         new DependencyStructure("amazingly", 3, "tasty", 4, 1),
@@ -563,6 +562,10 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = parserWithUnary.beamSearch(
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
 
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+    }
+    
     assertEquals(2, parses.size());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
         new DependencyStructure("eat", 1, "people", 0, 1),
@@ -578,7 +581,7 @@ public class CcgParserTest extends TestCase {
   public void testParseUnaryRules2() {
     List<CcgParse> parses = parserWithUnary.beamSearch(
         Arrays.asList("people", "eat", "people", "berries"), 10);
-
+    
     assertEquals(4, parses.size());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
         new DependencyStructure("eat", 1, "people", 0, 1),
@@ -684,11 +687,14 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("special:compound", 1, "people"), 1.0);
     
-    DiscreteFactor syntaxDistribution = CcgParser.buildSyntacticDistribution(syntacticCategories, binaryRules, allowComposition);
+    DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
+    DiscreteFactor syntaxDistribution = CcgParser.buildBinaryDistribution(syntaxType, binaryRules, allowComposition);
     VariableNumMap leftSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
     VariableNumMap inputSyntaxVars = leftSyntaxVar.union(rightSyntaxVar); 
     VariableNumMap parentSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
+    
+    //System.out.println(terminalBuilder.build().getParameterDescription());
 
     Preconditions.checkState(syntacticCombinations.length == syntacticCombinationWeights.length);
     for (int i = 0; i < syntacticCombinations.length; i++) {
@@ -705,6 +711,11 @@ public class CcgParserTest extends TestCase {
         leftSyntaxVar.getDiscreteVariables().get(0));
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
+    
+    DiscreteFactor compiledSyntaxDistribution = CcgParser.compileUnaryAndBinaryRules(unaryRuleDistribution, 
+        syntaxDistribution, syntaxType);
+    VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
+        CcgParser.PARENT_MOVE_SYNTAX_VAR_NAME);
     
     // Distribution over the root of the tree.
     DiscreteFactor rootDistribution = TableFactor.unity(leftSyntaxVar);
@@ -736,6 +747,7 @@ public class CcgParserTest extends TestCase {
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet, 
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
-        unaryRuleVar, unaryRuleDistribution, leftSyntaxVar, rootDistribution);
+        unaryRuleVar, unaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
+        leftSyntaxVar, rootDistribution);
   }
 }

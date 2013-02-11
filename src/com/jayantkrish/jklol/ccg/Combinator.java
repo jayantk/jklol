@@ -118,7 +118,7 @@ public class Combinator implements Serializable {
   public int getArgumentReturnDepth() {
     return argumentReturnDepth;
   }
-  
+
   public CcgBinaryRule getBinaryRule() {
     return binaryRule;
   }
@@ -126,5 +126,66 @@ public class Combinator implements Serializable {
   @Override
   public String toString() {
     return syntax + ":" + Arrays.toString(subjects) + " " + isArgumentOnLeft;
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + Arrays.hashCode(argumentNumbers);
+    result = prime * result + argumentReturnDepth;
+    result = prime * result + ((binaryRule == null) ? 0 : binaryRule.hashCode());
+    result = prime * result + (isArgumentOnLeft ? 1231 : 1237);
+    result = prime * result + Arrays.hashCode(leftVariableRelabeling);
+    result = prime * result + Arrays.hashCode(objects);
+    result = prime * result + Arrays.hashCode(resultOriginalVars);
+    result = prime * result + Arrays.hashCode(resultVariableRelabeling);
+    result = prime * result + Arrays.hashCode(rightVariableRelabeling);
+    result = prime * result + Arrays.hashCode(subjects);
+    result = prime * result + syntax;
+    result = prime * result + Arrays.hashCode(syntaxUniqueVars);
+    result = prime * result + Arrays.hashCode(unifiedVariables);
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    Combinator other = (Combinator) obj;
+    if (!Arrays.equals(argumentNumbers, other.argumentNumbers))
+      return false;
+    if (argumentReturnDepth != other.argumentReturnDepth)
+      return false;
+    if (binaryRule == null) {
+      if (other.binaryRule != null)
+        return false;
+    } else if (!binaryRule.equals(other.binaryRule))
+      return false;
+    if (isArgumentOnLeft != other.isArgumentOnLeft)
+      return false;
+    if (!Arrays.equals(leftVariableRelabeling, other.leftVariableRelabeling))
+      return false;
+    if (!Arrays.equals(objects, other.objects))
+      return false;
+    if (!Arrays.equals(resultOriginalVars, other.resultOriginalVars))
+      return false;
+    if (!Arrays.equals(resultVariableRelabeling, other.resultVariableRelabeling))
+      return false;
+    if (!Arrays.equals(rightVariableRelabeling, other.rightVariableRelabeling))
+      return false;
+    if (!Arrays.equals(subjects, other.subjects))
+      return false;
+    if (syntax != other.syntax)
+      return false;
+    if (!Arrays.equals(syntaxUniqueVars, other.syntaxUniqueVars))
+      return false;
+    if (!Arrays.equals(unifiedVariables, other.unifiedVariables))
+      return false;
+    return true;
   }
 }

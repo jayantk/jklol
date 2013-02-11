@@ -73,6 +73,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final VariableNumMap unaryRuleInputVar;
   private final VariableNumMap unaryRuleVar;
   private final ParametricFactor unaryRuleFamily;
+  
+  private final VariableNumMap searchMoveVar;
+  private final DiscreteFactor compiledSyntaxDistribution;
 
   private final VariableNumMap rootSyntaxVar;
   private final ParametricFactor rootSyntaxFamily;
@@ -130,6 +133,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       ParametricFactor syntaxFamily, VariableNumMap unaryRuleInputVar,
       VariableNumMap unaryRuleVar, ParametricFactor unaryRuleFamily,
+      VariableNumMap searchMoveVar, DiscreteFactor compiledSyntaxDistribution,
       VariableNumMap rootSyntaxVar, ParametricFactor rootSyntaxFamily) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
@@ -162,6 +166,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.unaryRuleVar = Preconditions.checkNotNull(unaryRuleVar);
     this.unaryRuleFamily = Preconditions.checkNotNull(unaryRuleFamily);
 
+    this.searchMoveVar = Preconditions.checkNotNull(searchMoveVar);
+    this.compiledSyntaxDistribution = Preconditions.checkNotNull(compiledSyntaxDistribution);
+    
     this.rootSyntaxVar = Preconditions.checkNotNull(rootSyntaxVar);
     this.rootSyntaxFamily = Preconditions.checkNotNull(rootSyntaxFamily);
   }
@@ -186,6 +193,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
       Iterable<String> unfilteredRuleLines, Iterable<String> dependencyFeatures,
       Set<String> posTagSet, boolean allowComposition) {
+    System.out.println("Reading lexicon and rules...");
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
     for (String line : unfilteredRuleLines) {
@@ -245,14 +253,28 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates,
           maxNumArgs);
     }
-
+    
     // Create features over ways to combine syntactic categories.
-    DiscreteFactor syntacticDistribution = CcgParser.buildSyntacticDistribution(syntacticCategories, binaryRules, allowComposition);
-    VariableNumMap leftSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
-    VariableNumMap rightSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
-    VariableNumMap parentSyntaxVar = syntacticDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
+    System.out.println("Building syntactic distribution...");
+    DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
+    DiscreteFactor binaryRuleDistribution = CcgParser.buildBinaryDistribution(syntaxType, binaryRules, allowComposition);
+    VariableNumMap leftSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
+    VariableNumMap rightSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
+    VariableNumMap parentSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
     IndicatorLogLinearFactor parametricSyntacticDistribution = new IndicatorLogLinearFactor(
-        syntacticDistribution.getVars(), syntacticDistribution);
+        binaryRuleDistribution.getVars(), binaryRuleDistribution);
+    
+    // Create features over unary rules.
+    DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules, syntaxType);
+    VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
+    VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
+    IndicatorLogLinearFactor parametricUnaryRuleDistribution = new IndicatorLogLinearFactor(
+        unaryRuleInputVar.union(unaryRuleVar), unaryRuleDistribution);
+    
+    DiscreteFactor compiledSyntaxDistribution = CcgParser.compileUnaryAndBinaryRules(unaryRuleDistribution,
+        binaryRuleDistribution, syntaxType);
+    VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
+        CcgParser.PARENT_MOVE_SYNTAX_VAR_NAME);
 
     // Build the terminal distribution. This maps word sequences to
     // CCG categories, with one possible mapping per entry in the
@@ -267,15 +289,19 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalWordVars, SparseTensorBuilder.getFactory());
     for (String lexiconLine : lexiconLines) {
       LexiconEntry lexiconEntry = LexiconEntry.parseLexiconEntry(lexiconLine);
-      terminalBuilder.setWeight(terminalWordVars.outcomeArrayToAssignment(lexiconEntry.getWords(),
+      List<String> lexiconWords = lexiconEntry.getWords();
+      for (String word : lexiconWords) {
+        Preconditions.checkArgument(word.toLowerCase().equals(word), "Lexicon entry is not lowercased: " + lexiconEntry);
+      }
+      
+      terminalBuilder.setWeight(terminalWordVars.outcomeArrayToAssignment(lexiconWords,
           lexiconEntry.getCategory()), 1.0);
     }
     ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(terminalWordVars,
         terminalBuilder.build());
 
     // Build a distribution over parts of speech and syntactic
-    // categories,
-    // for smoothing the terminal distribution.
+    // categories, for smoothing the terminal distribution.
     posTagSet = posTagSet != null ? posTagSet : Sets.newHashSet(DEFAULT_POS_TAG);
     DiscreteVariable posType = new DiscreteVariable("pos", posTagSet);
     DiscreteVariable ccgSyntaxType = leftSyntaxVar.getDiscreteVariables().get(0);
@@ -349,21 +375,14 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     DiscreteLogLinearFactor parametricRootDistribution = DiscreteLogLinearFactor
         .createIndicatorFactor(leftSyntaxVar);
 
-    // Create features over unary rules.
-    DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules,
-        leftSyntaxVar.getDiscreteVariables().get(0));
-    VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
-    VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
-    IndicatorLogLinearFactor parametricUnaryRuleDistribution = new IndicatorLogLinearFactor(
-        unaryRuleInputVar.union(unaryRuleVar), unaryRuleDistribution);
-
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         posVar, terminalSyntaxVar, terminalPosParametricFactor, semanticHeadVar, semanticArgNumVar,
         semanticArgVar, dependencyParametricFactor, wordDistanceVar, wordDistanceFactor,
         puncDistanceVar, puncDistanceFactor, puncTagSet, verbDistanceVar,
         verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
         parametricSyntacticDistribution, unaryRuleInputVar, unaryRuleVar,
-        parametricUnaryRuleDistribution, leftSyntaxVar, parametricRootDistribution);
+        parametricUnaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution, 
+        leftSyntaxVar, parametricRootDistribution);
   }
 
   /**
@@ -455,8 +474,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         wordDistanceVar, wordDistanceDistribution, puncDistanceVar, puncDistanceDistribution,
         puncTagSet, verbDistanceVar, verbDistanceDistribution, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution,
-        unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, rootSyntaxVar,
-        rootSyntaxDistribution);
+        unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, searchMoveVar, 
+        compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution);
   }
 
   /**

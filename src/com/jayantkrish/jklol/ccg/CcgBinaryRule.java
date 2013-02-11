@@ -192,4 +192,56 @@ public class CcgBinaryRule implements Serializable {
   public String toString() {
     return leftSyntax + " " + rightSyntax + " -> " + parentSyntax + ", " + Arrays.toString(subjects);
   }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + Arrays.hashCode(argumentNumbers);
+    result = prime * result + ((leftSyntax == null) ? 0 : leftSyntax.hashCode());
+    result = prime * result + ((logicalForm == null) ? 0 : logicalForm.hashCode());
+    result = prime * result + Arrays.hashCode(objects);
+    result = prime * result + ((parentSyntax == null) ? 0 : parentSyntax.hashCode());
+    result = prime * result + ((rightSyntax == null) ? 0 : rightSyntax.hashCode());
+    result = prime * result + Arrays.hashCode(subjects);
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CcgBinaryRule other = (CcgBinaryRule) obj;
+    if (!Arrays.equals(argumentNumbers, other.argumentNumbers))
+      return false;
+    if (leftSyntax == null) {
+      if (other.leftSyntax != null)
+        return false;
+    } else if (!leftSyntax.equals(other.leftSyntax))
+      return false;
+    if (logicalForm == null) {
+      if (other.logicalForm != null)
+        return false;
+    } else if (!logicalForm.equals(other.logicalForm))
+      return false;
+    if (!Arrays.equals(objects, other.objects))
+      return false;
+    if (parentSyntax == null) {
+      if (other.parentSyntax != null)
+        return false;
+    } else if (!parentSyntax.equals(other.parentSyntax))
+      return false;
+    if (rightSyntax == null) {
+      if (other.rightSyntax != null)
+        return false;
+    } else if (!rightSyntax.equals(other.rightSyntax))
+      return false;
+    if (!Arrays.equals(subjects, other.subjects))
+      return false;
+    return true;
+  }
 }

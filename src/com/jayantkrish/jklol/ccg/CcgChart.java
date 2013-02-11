@@ -179,12 +179,21 @@ public class CcgChart {
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
           terminals.subList(spanStart, spanEnd + 1), probabilities[spanStart][spanEnd][beamIndex],
-          entry.getUnaryRule(), spanStart, spanEnd);
+          entry.getRootUnaryRule(), spanStart, spanEnd);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
           entry.getLeftChartIndex(), parser, syntaxVarType);
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
           entry.getRightChartIndex(), parser, syntaxVarType);
+      
+      if (entry.getLeftUnaryRule() != null) {
+        left = left.addUnaryRule(entry.getLeftUnaryRule(), (HeadedSyntacticCategory) 
+            syntaxVarType.getValue(entry.getLeftUnaryRule().getSyntax()));
+      }
+      if (entry.getRightUnaryRule() != null) {
+        right = right.addUnaryRule(entry.getRightUnaryRule(), (HeadedSyntacticCategory) 
+            syntaxVarType.getValue(entry.getRightUnaryRule().getSyntax()));
+      }
 
       double nodeProb = probabilities[spanStart][spanEnd][beamIndex] /
           (left.getSubtreeProbability() * right.getSubtreeProbability());
@@ -193,7 +202,7 @@ public class CcgChart {
           parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
-          entry.getCombinator(), entry.getUnaryRule(), spanStart, spanEnd);
+          entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
     }
   }
 
@@ -308,7 +317,12 @@ public class CcgChart {
 
     // If non-null, this unary rule was applied at this entry to
     // produce syntax from the original category.
-    private final UnaryCombinator unaryRule;
+    private final UnaryCombinator rootUnaryRule;
+    
+    // If non-null, these rules were applied to the left / right 
+    // chart entries before the binary rule that produced this entry.
+    private final UnaryCombinator leftUnaryRule;
+    private final UnaryCombinator rightUnaryRule;
 
     // An assignment to the semantic variables given by syntax.
     // Each value is both a predicate and its index in the sentence.
@@ -344,13 +358,18 @@ public class CcgChart {
     
     private final Combinator combinator;
 
-    public ChartEntry(int syntax, int[] syntaxUniqueVars, UnaryCombinator unaryRule, int[] assignmentVariableNums,
-        int[] assignmentPredicateNums, int[] assignmentIndexes, long[] unfilledDependencies,
+    public ChartEntry(int syntax, int[] syntaxUniqueVars, UnaryCombinator rootUnaryRule, UnaryCombinator leftUnaryRule, 
+        UnaryCombinator rightUnaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums, 
+        int[] assignmentIndexes, long[] unfilledDependencies,
         long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex, Combinator combinator) {
       this.syntax = syntax;
       this.syntaxUniqueVars = syntaxUniqueVars;
-      this.unaryRule = unaryRule;
+      
+      this.rootUnaryRule = rootUnaryRule;
+      this.leftUnaryRule = leftUnaryRule;
+      this.rightUnaryRule = rightUnaryRule;
+      
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
       this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
       this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
@@ -372,11 +391,15 @@ public class CcgChart {
     }
 
     public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, List<String> terminalWords,
-        UnaryCombinator unaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums, 
+        UnaryCombinator rootUnaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums, 
         int[] assignmentIndexes, long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
       this.syntax = syntax;
       this.syntaxUniqueVars = syntaxUniqueVars;
-      this.unaryRule = unaryRule;
+      
+      this.rootUnaryRule = rootUnaryRule;
+      this.leftUnaryRule = null;
+      this.rightUnaryRule = null;
+
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
       this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
       this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
@@ -412,8 +435,16 @@ public class CcgChart {
      * 
      * @return
      */
-    public UnaryCombinator getUnaryRule() {
-      return unaryRule;
+    public UnaryCombinator getRootUnaryRule() {
+      return rootUnaryRule;
+    }
+
+    public UnaryCombinator getLeftUnaryRule() {
+      return leftUnaryRule;
+    }
+
+    public UnaryCombinator getRightUnaryRule() {
+      return rightUnaryRule;
     }
 
     public int[] getAssignmentVariableNums() {
@@ -523,13 +554,13 @@ public class CcgChart {
     public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
         UnaryCombinator unaryRuleCombinator, int[] newVars, int[] newPredicates,
         int[] newIndexes, long[] newUnfilledDeps, long[] newFilledDeps) {
-      Preconditions.checkState(unaryRule == null);
+      Preconditions.checkState(rootUnaryRule == null);
       if (isTerminal()) {
         return new ChartEntry(resultSyntax, resultUniqueVars, lexiconEntry, lexiconTriggerWords,
             unaryRuleCombinator, newVars, newPredicates, newIndexes, newUnfilledDeps, 
             newFilledDeps,  leftSpanStart, leftSpanEnd);
       } else {
-        return new ChartEntry(resultSyntax, resultUniqueVars, unaryRuleCombinator,
+        return new ChartEntry(resultSyntax, resultUniqueVars, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
             newVars, newPredicates, newIndexes, newUnfilledDeps, newFilledDeps,  leftSpanStart, 
             leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator);
       }

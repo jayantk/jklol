@@ -172,13 +172,17 @@ public class CcgUnaryRule implements Serializable {
   }
 
   @Override
+  public String toString() {
+    return inputSyntax.toString() + " -> " + returnSyntax.toString();
+  }
+
+  @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result
-        + ((inputSyntax == null) ? 0 : inputSyntax.hashCode());
-    result = prime * result
-        + ((returnSyntax == null) ? 0 : returnSyntax.hashCode());
+    result = prime * result + ((inputSyntax == null) ? 0 : inputSyntax.hashCode());
+    result = prime * result + ((logicalForm == null) ? 0 : logicalForm.hashCode());
+    result = prime * result + ((returnSyntax == null) ? 0 : returnSyntax.hashCode());
     return result;
   }
 
@@ -196,16 +200,16 @@ public class CcgUnaryRule implements Serializable {
         return false;
     } else if (!inputSyntax.equals(other.inputSyntax))
       return false;
+    if (logicalForm == null) {
+      if (other.logicalForm != null)
+        return false;
+    } else if (!logicalForm.equals(other.logicalForm))
+      return false;
     if (returnSyntax == null) {
       if (other.returnSyntax != null)
         return false;
     } else if (!returnSyntax.equals(other.returnSyntax))
       return false;
     return true;
-  }
-
-  @Override
-  public String toString() {
-    return inputSyntax.toString() + " -> " + returnSyntax.toString();
   }
 }

@@ -49,11 +49,9 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
     for (int i = 0; i < parametricFactors.size(); i++) {
       Factor factor = parametricFactors.get(i).getModelFromParameters(parameterList.get(i));
       factors.add(factor);
-      System.out.println(factor.getParameterDescription());
     }
 
     Factor result = Factors.product(factors);
-    System.out.println(result.getParameterDescription());
     return result;
   }
 

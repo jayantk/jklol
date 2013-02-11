@@ -20,16 +20,19 @@ public class SyntacticChartFilter implements ChartFilter {
   private final Map<Integer, SyntacticCategory> binaryRuleResult;
   private final Map<Integer, SyntacticCategory> unaryRuleResult;
 
+  private final CcgSyntaxTree parse;
+
   private static final int SPAN_START_OFFSET = 100000;
 
   public SyntacticChartFilter(CcgSyntaxTree syntacticParse) {
     this.binaryRuleResult = Maps.newHashMap();
     this.unaryRuleResult = Maps.newHashMap();
+    this.parse = syntacticParse;
 
     populateRuleMaps(syntacticParse);
   }
 
-  private final void populateRuleMaps(CcgSyntaxTree parse) {
+  private void populateRuleMaps(CcgSyntaxTree parse) {
     int mapIndex = (parse.getSpanStart() * SPAN_START_OFFSET) + parse.getSpanEnd();
 
     binaryRuleResult.put(mapIndex, parse.getPreUnaryRuleSyntax());
@@ -60,11 +63,11 @@ public class SyntacticChartFilter implements ChartFilter {
 
     SyntacticCategory expectedPreUnarySyntax = binaryRuleResult.get(mapIndex);
     if (!expectedRootSyntax.equals(expectedPreUnarySyntax)) {
-      return entry.getUnaryRule() != null &&
-          entry.getUnaryRule().getInputType().getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE)
+      return entry.getRootUnaryRule() != null &&
+          entry.getRootUnaryRule().getInputType().getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE)
           .equals(expectedPreUnarySyntax);
     } else {
-      return entry.getUnaryRule() == null;
+      return entry.getRootUnaryRule() == null;
     }
   }
 }

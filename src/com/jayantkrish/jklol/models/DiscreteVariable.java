@@ -92,6 +92,14 @@ public class DiscreteVariable implements Variable, Serializable {
     return values.items();
   }
 
+  public <T> List<T> getValuesWithCast(Class<T> clazz) {
+    List<T> castedValues = Lists.newArrayList();
+    for (Object value : values) {
+      castedValues.add(clazz.cast(value));
+    }
+    return castedValues;
+  }
+
   /**
    * Get the value of this enum with the passed-in index.
    * 

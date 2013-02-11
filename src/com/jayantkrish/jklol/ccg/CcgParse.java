@@ -478,6 +478,11 @@ public class CcgParse {
     }
     return filteredDeps;
   }
+  
+  public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
+    return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
+        dependencies, probability, left, right, combinator, rule, spanStart, spanEnd);
+  }
 
   @Override
   public String toString() {

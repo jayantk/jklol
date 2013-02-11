@@ -5,7 +5,6 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -51,7 +50,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     log.stopTimer("update_gradient/unconditional_max_marginal");
 
     log.startTimer("update_gradient/conditional_max_marginal");
-    ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
+    SyntacticChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
     List<CcgParse> possibleParses = instantiatedParser.beamSearch(example.getWords(),
         example.getPosTags(), beamSize, conditionalChartFilter, log);
     CcgParse bestCorrectParse = possibleParses.size() > 0 ? possibleParses.get(0) : null;
@@ -69,6 +68,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
       System.out.println("Search error (Correct): " + example.getWords());
+      // System.out.println("Search error cause: " + conditionalChartFilter.analyzeParseFailure());
       throw new ZeroProbabilityError();
     }        
     log.stopTimer("update_gradient/conditional_max_marginal");

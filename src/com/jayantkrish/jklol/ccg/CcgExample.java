@@ -113,7 +113,7 @@ public class CcgExample {
     List<CcgExample> examples = Lists.newArrayList();
     for (String line : IoUtils.readLines(filename)) {
       CcgExample example = CcgExample.parseFromString(line, useCcgBankFormat);
-      if (ignoreSemantics) {
+      if (!ignoreSemantics) {
         examples.add(example);
       } else {
         examples.add(new CcgExample(example.getWords(), example.getPosTags(), null,

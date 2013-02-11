@@ -57,7 +57,7 @@ public class SyntacticCategory implements Serializable {
   private final String featureValue;
   private final int featureVariable;
   
-  private final int cachedHashCode;
+  private int cachedHashCode;
 
   private static final Map<String, SyntacticCategory> categoryInternmentMap =
       Maps.newHashMap();
@@ -70,14 +70,11 @@ public class SyntacticCategory implements Serializable {
     this.direction = direction;
     this.returnType = returnType;
     this.argumentType = argumentType;
-    Preconditions.checkArgument(featureValue == DEFAULT_FEATURE_VALUE || featureVariable == -1);
-    // Ensure that DEFAULT_FEATURE_VALUE can be checked using == instead 
-    // of .equals  
-    Preconditions.checkArgument(featureValue == DEFAULT_FEATURE_VALUE || !featureValue.equals(DEFAULT_FEATURE_VALUE));
+    Preconditions.checkArgument(featureValue.equals(DEFAULT_FEATURE_VALUE) || featureVariable == -1);
     this.featureValue = Preconditions.checkNotNull(featureValue);
     this.featureVariable = featureVariable;
-    
-    this.cachedHashCode = cacheHashCode();
+
+    this.cachedHashCode = 0;
   }
 
   public static SyntacticCategory createFunctional(Direction direction, SyntacticCategory returnType,
@@ -537,6 +534,9 @@ public class SyntacticCategory implements Serializable {
   
   @Override
   public int hashCode() {
+    if (cachedHashCode == 0) {
+      cachedHashCode = cacheHashCode();
+    }
     return cachedHashCode;
   }
 

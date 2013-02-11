@@ -36,9 +36,9 @@ public class CcgTrainingTest extends TestCase {
       "2,N{0},,0 NUM", "2,(N{1}/N{1}){0},,0 NUM,NUM 1 1",
       "\"#\",(N{1}/N{1}){0},,0 #,# 1 1", "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
       "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo",
-      "UNK-JJ,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
-      "UNK-JJ,N{0},,0 pred:unk-jj",
-      "UNK-JJ,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
+      "unk-jj,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
+      "unk-jj,N{0},,0 pred:unk-jj",
+      "unk-jj,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
   };
 
   private static final String[] trainingData = {
@@ -167,6 +167,7 @@ public class CcgTrainingTest extends TestCase {
         false, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
+    initialParameters.perturb(0.01);
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     CcgParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));

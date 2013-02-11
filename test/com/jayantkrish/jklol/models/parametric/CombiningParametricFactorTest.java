@@ -18,7 +18,7 @@ public class CombiningParametricFactorTest extends TestCase {
 
   VariableNumMap vars;
   DiscreteLogLinearFactor f,g,h;
-  CombiningParametricFactor factor;
+  CombiningParametricFactor factor, factor2;
   ListSufficientStatistics stats;
   
   private static final double TOLERANCE = 1e-10;
@@ -45,7 +45,10 @@ public class CombiningParametricFactorTest extends TestCase {
     
     h = DiscreteLogLinearFactor.createIndicatorFactor(vars.intersection(1));
     factor = new CombiningParametricFactor(vars,
-        Arrays.asList("indicators", "falses", "var1indicator"), Arrays.asList(f, g, h));
+        Arrays.asList("indicators", "falses", "var1indicator"), Arrays.asList(f, g, h), false);
+    
+    factor2 = new CombiningParametricFactor(vars,
+        Arrays.asList("indicators", "falses", "var1indicator"), Arrays.asList(f, g, h), true);
     
     stats = factor.getNewSufficientStatistics().coerceToList();
     factor.incrementSufficientStatisticsFromAssignment(stats, 
@@ -62,7 +65,16 @@ public class CombiningParametricFactorTest extends TestCase {
     assertEquals(2.0, f.getUnnormalizedLogProbability("T", "F"), TOLERANCE);
     assertEquals(4.0, f.getUnnormalizedLogProbability("T", "T"), TOLERANCE);
   }
-  
+
+  public void testGetModelFromParametersFactored() {
+    Factor f = factor2.getModelFromParameters(stats);
+    System.out.println(f.getParameterDescription());
+    assertEquals(2.0, f.getUnnormalizedLogProbability("F", "F"), TOLERANCE);
+    assertEquals(3.0, f.getUnnormalizedLogProbability("F", "T"), TOLERANCE);
+    assertEquals(2.0, f.getUnnormalizedLogProbability("T", "F"), TOLERANCE);
+    assertEquals(4.0, f.getUnnormalizedLogProbability("T", "T"), TOLERANCE);
+  }
+
   public void testIncrementSufficientStatisticsFromMarginal() {
     List<String> marginalList = Arrays.asList("F,F,0", "F,T,0", "T,F,1", "T,T,1");
     Factor marginal = TableFactor.fromDelimitedFile(vars, marginalList, ",", false);

@@ -14,6 +14,8 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
+import com.jayantkrish.jklol.ccg.CcgFileFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgRuleSchema;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
@@ -297,8 +299,8 @@ public abstract class AbstractCli {
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
-    List<String> dependencyFeatures = parsedOptions.has(ccgDependencyFeatures) ?
-        IoUtils.readLines(parsedOptions.valueOf(ccgDependencyFeatures)) : null;
+    CcgFeatureFactory dependencyFeatures = parsedOptions.has(ccgDependencyFeatures) ?
+        new CcgFileFeatureFactory(IoUtils.readLines(parsedOptions.valueOf(ccgDependencyFeatures))) : null;
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, dependencyFeatures,
         posTagSet, !parsedOptions.has(ccgApplicationOnly), rules);
   }

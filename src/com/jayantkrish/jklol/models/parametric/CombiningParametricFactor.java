@@ -7,7 +7,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.Factors;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.FactoredTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -24,10 +27,12 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
   private static final long serialVersionUID = 1L;
 
   private final List<String> factorNames;
-  private final List<? extends ParametricFactor> parametricFactors; 
+  private final List<? extends ParametricFactor> parametricFactors;
+  
+  private final boolean returnFactoredTensor;
 
   public CombiningParametricFactor(VariableNumMap variables, List<String> factorNames,
-      List<? extends ParametricFactor> parametricFactors) { 
+      List<? extends ParametricFactor> parametricFactors, boolean returnFactoredTensor) { 
     super(variables);
     Preconditions.checkArgument(parametricFactors.size() == factorNames.size());
     VariableNumMap factorVars = VariableNumMap.emptyMap();
@@ -39,6 +44,7 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
     
     this.parametricFactors = ImmutableList.copyOf(parametricFactors);
     this.factorNames = ImmutableList.copyOf(factorNames);
+    this.returnFactoredTensor = returnFactoredTensor;
   }
 
   @Override
@@ -50,9 +56,20 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
       Factor factor = parametricFactors.get(i).getModelFromParameters(parameterList.get(i));
       factors.add(factor);
     }
-
-    Factor result = Factors.product(factors);
-    return result;
+    
+    if (!returnFactoredTensor) {
+      return Factors.product(factors);
+    } else {
+      VariableNumMap allVars = VariableNumMap.emptyMap();
+      List<Tensor> tensors = Lists.newArrayList();
+      for (Factor factor : factors) {
+        allVars = allVars.union(factor.getVars());
+        tensors.add(factor.coerceToDiscrete().getWeights());
+      }
+      
+      return new TableFactor(allVars, new FactoredTensor(allVars.getVariableNumsArray(), 
+          allVars.getVariableSizes(), tensors));
+    }
   }
 
   @Override

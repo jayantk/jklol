@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -17,13 +15,11 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
-import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
@@ -31,7 +27,6 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
-import com.jayantkrish.jklol.util.StringUtils;
 
 /**
  * Parameterized CCG grammar. This class instantiates CCG parsers
@@ -73,7 +68,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final VariableNumMap unaryRuleInputVar;
   private final VariableNumMap unaryRuleVar;
   private final ParametricFactor unaryRuleFamily;
-  
+
   private final VariableNumMap searchMoveVar;
   private final DiscreteFactor compiledSyntaxDistribution;
 
@@ -103,9 +98,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public static final String SYNTAX_PARAMETERS = "syntax";
   public static final String UNARY_RULE_PARAMETERS = "unaryRules";
   public static final String ROOT_SYNTAX_PARAMETERS = "rootSyntax";
-
-  public static final String INPUT_DEPENDENCY_PARAMETERS = "inputFeatures";
-  public static final String INDICATOR_DEPENDENCY_PARAMETERS = "indicatorFeatures";
 
   /**
    * Default part-of-speech tag.
@@ -168,7 +160,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     this.searchMoveVar = Preconditions.checkNotNull(searchMoveVar);
     this.compiledSyntaxDistribution = Preconditions.checkNotNull(compiledSyntaxDistribution);
-    
+
     this.rootSyntaxVar = Preconditions.checkNotNull(rootSyntaxVar);
     this.rootSyntaxFamily = Preconditions.checkNotNull(rootSyntaxFamily);
   }
@@ -182,8 +174,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * 
    * @param unfilteredLexiconLines
    * @param unfilteredRuleLines
-   * @param dependencyFeatures if not null, a list of files containing
-   * features of dependency structures.
+   * @param featureFactory if not null, a factory for building the
+   * parser's feature sets
    * @param posTagSet set of POS tags in the data. If null,
    * {@code ParametricCcgParser.DEFAULT_POS_TAG} is the only POS tag.
    * @param allowComposition allow function composition in addition to
@@ -191,7 +183,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
-      Iterable<String> unfilteredRuleLines, Iterable<String> dependencyFeatures,
+      Iterable<String> unfilteredRuleLines, CcgFeatureFactory featureFactory,
       Set<String> posTagSet, boolean allowComposition, Iterable<CcgRuleSchema> allowedCombinationRules) {
     System.out.println("Reading lexicon and rules...");
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
@@ -335,35 +327,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap vars = VariableNumMap.unionAll(semanticHeadVar, semanticArgNumVar, semanticArgVar);
 
     // Create features over dependency structures.
-    ParametricFactor dependencyIndicatorFactor = new DenseIndicatorLogLinearFactor(vars);
     ParametricFactor dependencyParametricFactor;
-    if (dependencyFeatures != null) {
-      DiscreteVariable dependencyFeatureVarType = new DiscreteVariable("dependencyFeatures",
-          StringUtils.readColumnFromDelimitedLines(dependencyFeatures, 3, ","));
-      System.out.println(dependencyFeatureVarType.getValues());
-      VariableNumMap dependencyFeatureVar = VariableNumMap.singleton(3,
-          "dependencyFeatures", dependencyFeatureVarType);
-      VariableNumMap featureFactorVars = vars.union(dependencyFeatureVar);
-
-      List<Function<String, ?>> converters = Lists.newArrayList();
-      converters.add(Functions.<String> identity());
-      converters.add(new Function<String, Integer>() {
-        public Integer apply(String input) {
-          return Integer.parseInt(input);
-        }
-      });
-      converters.add(Functions.<String> identity());
-      converters.add(Functions.<String> identity());
-      TableFactor dependencyFeatureTable = TableFactor.fromDelimitedFile(featureFactorVars,
-          converters, dependencyFeatures, ",", true);
-      DiscreteLogLinearFactor dependencyFeatureFactor = new DiscreteLogLinearFactor(vars,
-          dependencyFeatureVar, dependencyFeatureTable);
-
-      dependencyParametricFactor = new CombiningParametricFactor(vars,
-          Arrays.asList(INPUT_DEPENDENCY_PARAMETERS, INDICATOR_DEPENDENCY_PARAMETERS),
-          Arrays.asList(dependencyFeatureFactor, dependencyIndicatorFactor));
+    if (featureFactory != null) {
+      dependencyParametricFactor = featureFactory.getDependencyFeatures(semanticHeadVar,
+          semanticArgNumVar, semanticArgVar);
     } else {
-      dependencyParametricFactor = dependencyIndicatorFactor;
+      dependencyParametricFactor = new DenseIndicatorLogLinearFactor(vars);
     }
 
     // Create features over argument distances for each predicate.
@@ -480,7 +449,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         wordDistanceVar, wordDistanceDistribution, puncDistanceVar, puncDistanceDistribution,
         puncTagSet, verbDistanceVar, verbDistanceDistribution, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution,
-        unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, searchMoveVar, 
+        unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, searchMoveVar,
         compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution);
   }
 

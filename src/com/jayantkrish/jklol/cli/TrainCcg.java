@@ -7,10 +7,12 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
+import com.jayantkrish.jklol.ccg.CcgRuleSchema;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -33,6 +35,7 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Void> perceptron;
   private OptionSpec<Void> discardInvalid;
   private OptionSpec<Void> ignoreSemantics;
+  private OptionSpec<Void> onlyObservedBinaryRules;
 
   public TrainCcg() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE, 
@@ -50,6 +53,7 @@ public class TrainCcg extends AbstractCli {
     perceptron = parser.accepts("perceptron");
     discardInvalid = parser.accepts("discardInvalid");
     ignoreSemantics = parser.accepts("ignoreSemantics");
+    onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
   }
 
   @Override
@@ -59,10 +63,18 @@ public class TrainCcg extends AbstractCli {
         options.valueOf(trainingData), options.has(useCcgBankFormat), options.has(ignoreSemantics));
     Set<String> posTags = CcgExample.getPosTagVocabulary(unfilteredTrainingExamples);
     System.out.println(posTags.size() + " POS tags");
+    
+    Set<CcgRuleSchema> observedRules = null;
+    if (options.has(onlyObservedBinaryRules)) {
+      observedRules = Sets.newHashSet();
+      for (CcgExample example : unfilteredTrainingExamples) {
+        observedRules.addAll(example.getSyntacticParse().getObservedBinaryRules());
+      }
+    }
 
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
-    ParametricCcgParser family = createCcgParser(posTags);
+    ParametricCcgParser family = createCcgParser(posTags, observedRules);
     System.out.println("Done creating ParametricCcgParser.");
 
     // Read in training data and confirm its validity.

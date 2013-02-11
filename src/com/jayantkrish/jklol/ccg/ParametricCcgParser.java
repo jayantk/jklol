@@ -192,7 +192,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
       Iterable<String> unfilteredRuleLines, Iterable<String> dependencyFeatures,
-      Set<String> posTagSet, boolean allowComposition) {
+      Set<String> posTagSet, boolean allowComposition, Iterable<CcgRuleSchema> allowedCombinationRules) {
     System.out.println("Reading lexicon and rules...");
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
@@ -257,13 +257,19 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     // Create features over ways to combine syntactic categories.
     System.out.println("Building syntactic distribution...");
     DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
-    DiscreteFactor binaryRuleDistribution = CcgParser.buildBinaryDistribution(syntaxType, binaryRules, allowComposition);
+    DiscreteFactor binaryRuleDistribution = null;
+    if (allowedCombinationRules == null) {
+      binaryRuleDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
+    } else {
+      binaryRuleDistribution = CcgParser.buildRestrictedBinaryDistribution(syntaxType, allowedCombinationRules, binaryRules,
+          allowComposition);
+    }
     VariableNumMap leftSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
     VariableNumMap parentSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
     IndicatorLogLinearFactor parametricSyntacticDistribution = new IndicatorLogLinearFactor(
         binaryRuleDistribution.getVars(), binaryRuleDistribution);
-    
+
     // Create features over unary rules.
     DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules, syntaxType);
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
@@ -484,6 +490,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * structures in {@code dependencies}.
    * 
    * @param gradient
+   * @param posTags
    * @param dependencies
    * @param count
    */

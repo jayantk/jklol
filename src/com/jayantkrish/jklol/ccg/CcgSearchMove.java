@@ -15,14 +15,21 @@ public class CcgSearchMove implements Serializable {
   private final long leftUnaryKeyNum;
   private final long rightUnaryKeyNum;
   
+  private final int[] leftRelabeling;
+  private final int[] rightRelabeling;
+  
   public CcgSearchMove(Combinator binaryCombinator, UnaryCombinator leftUnary, UnaryCombinator rightUnary,
-      long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum) {
+      long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum, int[] leftRelabeling,
+      int[] rightRelabeling) {
     this.binaryCombinator = Preconditions.checkNotNull(binaryCombinator);
     this.leftUnary = leftUnary;
     this.rightUnary = rightUnary;
     this.binaryCombinatorKeyNum = binaryCombinatorKeyNum;
     this.leftUnaryKeyNum = leftUnaryKeyNum;
     this.rightUnaryKeyNum = rightUnaryKeyNum;
+    
+    this.leftRelabeling = Preconditions.checkNotNull(leftRelabeling);
+    this.rightRelabeling = Preconditions.checkNotNull(rightRelabeling);
     
     Preconditions.checkArgument(leftUnary != null || leftUnaryKeyNum == -1);
     Preconditions.checkArgument(rightUnary != null || rightUnaryKeyNum == -1);
@@ -50,6 +57,14 @@ public class CcgSearchMove implements Serializable {
 
   public long getRightUnaryKeyNum() {
     return rightUnaryKeyNum;
+  }
+  
+  public int[] getLeftRelabeling() {
+    return leftRelabeling;
+  }
+  
+  public int[] getRightRelabeling() {
+    return rightRelabeling;
   }
 
   @Override

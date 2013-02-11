@@ -39,6 +39,7 @@ public class CcgTrainingTest extends TestCase {
       "unk-jj,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
       "unk-jj,N{0},,0 pred:unk-jj",
       "unk-jj,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
+      "that,((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0},,0 that,that 1 1,that 2 2"
   };
 
   private static final String[] trainingData = {
@@ -53,6 +54,8 @@ public class CcgTrainingTest extends TestCase {
 
   private static final String[] trainingDataWithSyntax = {
     "the block is green###pred:equals 2 1 pred:block 1,pred:equals 2 2 pred:green 3###<S <N <(N/N) DT the> <N NN block>> <(S\\N) <(S\\N)/N VB is> <N NN green>>>",
+    "block that block is###that 1 1 pred:block 0,that 1 2 pred:equals 3,pred:equals 3 1 pred:block 2,pred:equals 3 2 pred:block 0###"
+        + "<N <N NN block> <(N\\N) <((N\\N)/(S/N)) NN that> <(S/N) <(S/(S\\N)_N NN block> <(S\\N)/N VB is>>>> ",
     "red block###pred:red 0 1 pred:block 1###<N <(N/N) JJ red> <N NN block>>",
     "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###<N <(N/N) JJ red> <N <(N/N) JJ green> <N NN block>>>",
     "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5###"
@@ -93,7 +96,40 @@ public class CcgTrainingTest extends TestCase {
     }
     
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        null, posTags, true);
+        null, posTags, true, null);
+  }
+  
+  public void testSyntacticChartFilter1() {
+    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    CcgExample example = trainingExamplesSyntaxOnly.get(0);
+    
+    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
+    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction());
+    
+    for (CcgParse correct : correctParses) {
+      System.out.println(correct);
+    }
+    
+    assertEquals(1, correctParses.size());
+  }
+  
+  public void testSyntacticChartFilter2() {
+    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    CcgExample example = trainingExamplesSyntaxOnly.get(1);
+    System.out.println("expected: " + example.getSyntacticParse());
+    List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags(), 10);
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+    }
+
+    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
+    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction());
+    
+    for (CcgParse correct : correctParses) {
+      System.out.println(correct);
+    }
+    
+    assertEquals(1, correctParses.size());
   }
 
   public void testParseFromLexicon() {

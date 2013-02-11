@@ -2,10 +2,12 @@ package com.jayantkrish.jklol.ccg;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.ArrayUtils;
 
 public class CcgSyntaxTree {
@@ -88,13 +90,25 @@ public class CcgSyntaxTree {
     Preconditions.checkState(size >= 0 || size <= 2);
     if (size == 0) {
       String[] parts = treeString.trim().split(" ");
+
       String syntaxPart = parts[0];
+      SyntacticCategory rootCat = null;
+      SyntacticCategory preUnaryCat = null;
+      if (syntaxPart.trim().contains("_")) {
+        String[] syntaxPartParts = syntaxPart.split("_");
+        rootCat = SyntacticCategory.parseFrom(syntaxPartParts[0]);
+        preUnaryCat = SyntacticCategory.parseFrom(syntaxPartParts[1]);
+      } else {
+        rootCat = SyntacticCategory.parseFrom(syntaxPart);
+        preUnaryCat = rootCat;
+      }
+      
       int numWords = (parts.length - 1)/ 2;
       List<String> posTags = Arrays.asList(ArrayUtils.copyOfRange(parts, 1, 1 + numWords));
       List<String> words = Arrays.asList(ArrayUtils.copyOfRange(parts, 1 + numWords, 1 + (numWords*2)));
       Preconditions.checkState(posTags.size() == words.size());
-      SyntacticCategory rootCat = SyntacticCategory.parseFrom(syntaxPart);
-      return CcgSyntaxTree.createTerminal(rootCat, rootCat, numWordsOnLeft, 
+
+      return CcgSyntaxTree.createTerminal(rootCat, preUnaryCat, numWordsOnLeft, 
           numWordsOnLeft + words.size() - 1, words, posTags);
     } if (size == 1) {
       return parseFromString(treeString.substring(treeStartIndexes.get(0) + 1, treeEndIndexes.get(0)),
@@ -104,9 +118,20 @@ public class CcgSyntaxTree {
           treeEndIndexes.get(0)), numWordsOnLeft);
       CcgSyntaxTree rightTree = parseFromString(treeString.substring(treeStartIndexes.get(1) + 1,
           treeEndIndexes.get(1)), leftTree.getSpanEnd() + 1);
+      
       String syntaxPart = treeString.substring(0, treeStartIndexes.get(0));
-      SyntacticCategory rootCat = SyntacticCategory.parseFrom(syntaxPart);
-      return CcgSyntaxTree.createNonterminal(rootCat, rootCat, leftTree, rightTree);
+      SyntacticCategory rootCat = null;
+      SyntacticCategory preUnaryCat = null;
+      if (syntaxPart.trim().contains("_")) {
+        String[] syntaxPartParts = syntaxPart.split("_");
+        rootCat = SyntacticCategory.parseFrom(syntaxPartParts[0]);
+        preUnaryCat = SyntacticCategory.parseFrom(syntaxPartParts[1]);
+      } else {
+        rootCat = SyntacticCategory.parseFrom(syntaxPart);
+        preUnaryCat = rootCat;
+      }
+
+      return CcgSyntaxTree.createNonterminal(rootCat, preUnaryCat, leftTree, rightTree);
     }
   }
 
@@ -188,6 +213,10 @@ public class CcgSyntaxTree {
     return originalSyntax;
   }
   
+  public boolean hasUnaryRule() {
+    return !syntax.equals(originalSyntax);
+  }
+  
   public boolean isTerminal() {
     return left == null;
   }
@@ -244,6 +273,20 @@ public class CcgSyntaxTree {
   
   public int getSpanEnd() {
     return spanEnd;
+  }
+  
+  public Set<CcgRuleSchema> getObservedBinaryRules() {
+    Set<CcgRuleSchema> rules = Sets.newHashSet();
+    getObservedBinaryRules(rules);
+    return rules;
+  }
+  
+  private void getObservedBinaryRules(Set<CcgRuleSchema> rules) {
+    if (!isTerminal()) {
+      rules.add(new CcgRuleSchema(left.getRootSyntax(), right.getRootSyntax(), getPreUnaryRuleSyntax()));
+      left.getObservedBinaryRules(rules);
+      right.getObservedBinaryRules(rules);
+    }
   }
   
   @Override

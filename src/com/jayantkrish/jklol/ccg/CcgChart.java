@@ -21,10 +21,10 @@ public class CcgChart {
 
   private final List<String> terminals;
   private final List<String> posTags;
-  
-  // Number of punctuation marks / verbs to the left of each word index.
-  private final int[] puncCount;
-  private final int[] verbCount;
+
+  private final int[] wordDistances;
+  private final int[] puncDistances;
+  private final int[] verbDistances;
 
   private final int beamSize;
 
@@ -36,6 +36,9 @@ public class CcgChart {
   // This is a subset of all parser weights, which is precomputed
   // to make lookups more efficient during parsing.
   private Tensor dependencyTensor;
+  private Tensor wordDistanceTensor;
+  private Tensor puncDistanceTensor;
+  private Tensor verbDistanceTensor;
 
   private final ChartFilter entryFilter;
 
@@ -51,19 +54,21 @@ public class CcgChart {
    * @param entryFilter filter for discarding portions of the beam.
    * May be {@code null}, in which case all beam entries are retained.
    */
-  public CcgChart(List<String> terminals, List<String> posTags, int[] puncCount,
-      int[] verbCount, int beamSize, ChartFilter entryFilter) {
+  public CcgChart(List<String> terminals, List<String> posTags, int[] wordDistances,
+      int[] puncDistances, int[] verbDistances, int beamSize, ChartFilter entryFilter) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.posTags = ImmutableList.copyOf(posTags);
     int n = terminals.size();
 
-    this.puncCount = puncCount;
-    this.verbCount = verbCount;
-    
+    this.wordDistances = wordDistances;
+    this.puncDistances = puncDistances;
+    this.verbDistances = verbDistances;
+
     Preconditions.checkArgument(posTags.size() == n);
-    Preconditions.checkArgument(puncCount.length == n);
-    Preconditions.checkArgument(verbCount.length == n);
-    
+    Preconditions.checkArgument(wordDistances.length == n * n);
+    Preconditions.checkArgument(puncDistances.length == n * n);
+    Preconditions.checkArgument(verbDistances.length == n * n);
+
     this.beamSize = beamSize;
     this.dependencyTensor = null;
 
@@ -83,23 +88,23 @@ public class CcgChart {
   public int size() {
     return terminals.size();
   }
+  
+  public int[] getWordDistances() {
+    return wordDistances;
+  }
 
   /**
-   * Gets the number of punctuation marks to the left of each word position.
+   * Gets an array containing the distance (number of punctuation
+   * marks) between every two terminal indexes.
    * 
    * @return
    */
-  public int[] getPunctuationCounts() {
-    return puncCount;
+  public int[] getPunctuationDistances() {
+    return puncDistances;
   }
-  
-  /**
-   * Gets the number of verbs to the left of each word position.
-   * 
-   * @return
-   */
-  public int[] getVerbCounts() {
-    return verbCount;
+
+  public int[] getVerbDistances() {
+    return verbDistances;
   }
 
   public int getBeamSize() {
@@ -117,6 +122,18 @@ public class CcgChart {
     this.dependencyTensor = tensor;
   }
 
+  public void setWordDistanceTensor(Tensor tensor) {
+    this.wordDistanceTensor = tensor;
+  }
+
+  public void setPuncDistanceTensor(Tensor tensor) {
+    this.puncDistanceTensor = tensor;
+  }
+
+  public void setVerbDistanceTensor(Tensor tensor) {
+    this.verbDistanceTensor = tensor;
+  }
+
   /**
    * Gets the subset of all parser weights which may be used in this
    * parse.
@@ -125,6 +142,18 @@ public class CcgChart {
    */
   public Tensor getDependencyTensor() {
     return dependencyTensor;
+  }
+
+  public Tensor getWordDistanceTensor() {
+    return wordDistanceTensor;
+  }
+
+  public Tensor getPuncDistanceTensor() {
+    return puncDistanceTensor;
+  }
+
+  public Tensor getVerbDistanceTensor() {
+    return verbDistanceTensor;
   }
 
   public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses,
@@ -143,7 +172,7 @@ public class CcgChart {
     int numChartEntries = getNumChartEntriesForSpan(spanStart, spanEnd);
     while (numChartEntries > 0) {
       if (numChartEntries <= numParses) {
-        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0], 
+        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0],
             parser, syntaxVarType));
       }
 
@@ -174,7 +203,7 @@ public class CcgChart {
         entry.getHeadedSyntax());
 
     if (entry.isTerminal()) {
-      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTriggerWords(), posTags.subList(spanStart, spanEnd +1),
+      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTriggerWords(), posTags.subList(spanStart, spanEnd + 1),
           parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
               entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
@@ -185,13 +214,13 @@ public class CcgChart {
           entry.getLeftChartIndex(), parser, syntaxVarType);
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
           entry.getRightChartIndex(), parser, syntaxVarType);
-      
+
       if (entry.getLeftUnaryRule() != null) {
-        left = left.addUnaryRule(entry.getLeftUnaryRule(), (HeadedSyntacticCategory) 
+        left = left.addUnaryRule(entry.getLeftUnaryRule(), (HeadedSyntacticCategory)
             syntaxVarType.getValue(entry.getLeftUnaryRule().getSyntax()));
       }
       if (entry.getRightUnaryRule() != null) {
-        right = right.addUnaryRule(entry.getRightUnaryRule(), (HeadedSyntacticCategory) 
+        right = right.addUnaryRule(entry.getRightUnaryRule(), (HeadedSyntacticCategory)
             syntaxVarType.getValue(entry.getRightUnaryRule().getSyntax()));
       }
 
@@ -257,9 +286,9 @@ public class CcgChart {
    * @param spanStart
    * @param spanEnd
    */
-  public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart, 
+  public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
-    if ((entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType)) && 
+    if ((entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType)) &&
         probability != 0.0) {
       offerEntry(entry, probability, spanStart, spanEnd);
     }
@@ -318,8 +347,8 @@ public class CcgChart {
     // If non-null, this unary rule was applied at this entry to
     // produce syntax from the original category.
     private final UnaryCombinator rootUnaryRule;
-    
-    // If non-null, these rules were applied to the left / right 
+
+    // If non-null, these rules were applied to the left / right
     // chart entries before the binary rule that produced this entry.
     private final UnaryCombinator leftUnaryRule;
     private final UnaryCombinator rightUnaryRule;
@@ -343,7 +372,8 @@ public class CcgChart {
     // for parameter estimation purposes.
     private final CcgCategory lexiconEntry;
     // If this is a terminal, this contains the words used to trigger
-    // the category. This may be different from the words in the sentence,
+    // the category. This may be different from the words in the
+    // sentence,
     // if the original words were not part of the lexicon.
     private final List<String> lexiconTriggerWords;
 
@@ -355,21 +385,21 @@ public class CcgChart {
     private final int rightSpanStart;
     private final int rightSpanEnd;
     private final int rightChartIndex;
-    
+
     private final Combinator combinator;
 
-    public ChartEntry(int syntax, int[] syntaxUniqueVars, UnaryCombinator rootUnaryRule, UnaryCombinator leftUnaryRule, 
-        UnaryCombinator rightUnaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums, 
+    public ChartEntry(int syntax, int[] syntaxUniqueVars, UnaryCombinator rootUnaryRule, UnaryCombinator leftUnaryRule,
+        UnaryCombinator rightUnaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums,
         int[] assignmentIndexes, long[] unfilledDependencies,
         long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
         int rightSpanStart, int rightSpanEnd, int rightChartIndex, Combinator combinator) {
       this.syntax = syntax;
       this.syntaxUniqueVars = syntaxUniqueVars;
-      
+
       this.rootUnaryRule = rootUnaryRule;
       this.leftUnaryRule = leftUnaryRule;
       this.rightUnaryRule = rightUnaryRule;
-      
+
       this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
       this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
       this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
@@ -386,16 +416,16 @@ public class CcgChart {
       this.rightSpanStart = rightSpanStart;
       this.rightSpanEnd = rightSpanEnd;
       this.rightChartIndex = rightChartIndex;
-      
+
       this.combinator = combinator;
     }
 
     public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, List<String> terminalWords,
-        UnaryCombinator rootUnaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums, 
+        UnaryCombinator rootUnaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums,
         int[] assignmentIndexes, long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
       this.syntax = syntax;
       this.syntaxUniqueVars = syntaxUniqueVars;
-      
+
       this.rootUnaryRule = rootUnaryRule;
       this.leftUnaryRule = null;
       this.rightUnaryRule = null;
@@ -417,14 +447,14 @@ public class CcgChart {
       this.rightSpanStart = -1;
       this.rightSpanEnd = -1;
       this.rightChartIndex = -1;
-      
+
       this.combinator = null;
     }
 
     public int getHeadedSyntax() {
       return syntax;
     }
-    
+
     public int[] getHeadedSyntaxUniqueVars() {
       return syntaxUniqueVars;
     }
@@ -510,7 +540,7 @@ public class CcgChart {
     public CcgCategory getLexiconEntry() {
       return lexiconEntry;
     }
-    
+
     public List<String> getLexiconTriggerWords() {
       return lexiconTriggerWords;
     }
@@ -546,22 +576,22 @@ public class CcgChart {
     public int getRightChartIndex() {
       return rightChartIndex;
     }
-    
+
     public Combinator getCombinator() {
       return combinator;
     }
-    
+
     public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
         UnaryCombinator unaryRuleCombinator, int[] newVars, int[] newPredicates,
         int[] newIndexes, long[] newUnfilledDeps, long[] newFilledDeps) {
       Preconditions.checkState(rootUnaryRule == null);
       if (isTerminal()) {
         return new ChartEntry(resultSyntax, resultUniqueVars, lexiconEntry, lexiconTriggerWords,
-            unaryRuleCombinator, newVars, newPredicates, newIndexes, newUnfilledDeps, 
-            newFilledDeps,  leftSpanStart, leftSpanEnd);
+            unaryRuleCombinator, newVars, newPredicates, newIndexes, newUnfilledDeps,
+            newFilledDeps, leftSpanStart, leftSpanEnd);
       } else {
         return new ChartEntry(resultSyntax, resultUniqueVars, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
-            newVars, newPredicates, newIndexes, newUnfilledDeps, newFilledDeps,  leftSpanStart, 
+            newVars, newPredicates, newIndexes, newUnfilledDeps, newFilledDeps, leftSpanStart,
             leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator);
       }
     }
@@ -572,7 +602,6 @@ public class CcgChart {
           + " " + Arrays.toString(deps) + " " + Arrays.toString(unfilledDependencies) + "]";
     }
   }
-
 
   /**
    * Filter for discarding portions of the CCG beam. Chart entries for

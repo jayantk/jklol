@@ -486,10 +486,15 @@ public class CcgParse {
 
   @Override
   public String toString() {
+    String syntaxString = syntax.getSyntax().toString();
+    if (unaryRule != null) {
+      syntaxString += "_" + unaryRule.getUnaryRule().getInputSyntacticCategory().getSyntax();
+    }
+
     if (left != null && right != null) {
-      return "<" + syntax.getSyntax() + " " + left + " " + right + ">";
+      return "<" + syntaxString + " " + left + " " + right + ">";
     } else {
-      return "<" + syntax.getSyntax() + ">";
+      return "<" + syntaxString + ">";
     }
   }
 }

@@ -109,6 +109,14 @@ public class DiscreteVariable implements Variable, Serializable {
   public Object getValue(int index) {
     return values.get(index);
   }
+  
+  public Object[] getValueArray(int[] indexes) {
+    Object[] valueArray = new Object[indexes.length];
+    for (int i = 0; i < indexes.length; i++) {
+      valueArray[i] = getValue(indexes[i]);
+    }
+    return valueArray;
+  }
 
   /**
    * Get an integer index which represents the passed in value. Throws a

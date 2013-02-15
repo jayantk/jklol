@@ -69,6 +69,7 @@ public class CombiningParametricFactorTest extends TestCase {
   public void testGetModelFromParametersFactored() {
     Factor f = factor2.getModelFromParameters(stats);
     System.out.println(f.getParameterDescription());
+    System.out.println(f.coerceToDiscrete().getWeights());
     assertEquals(2.0, f.getUnnormalizedLogProbability("F", "F"), TOLERANCE);
     assertEquals(3.0, f.getUnnormalizedLogProbability("F", "T"), TOLERANCE);
     assertEquals(2.0, f.getUnnormalizedLogProbability("T", "F"), TOLERANCE);

@@ -387,6 +387,24 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       }
     }
   }
+  
+  public VariableNumMap getTerminalVar() {
+    return terminalVar;
+  }
+  
+  public VariableNumMap getCcgCategoryVar() {
+    return ccgCategoryVar;
+  }
+  
+  public ParametricCcgParser replaceTerminalFamily(ParametricFactor newTerminalFamily) {
+    return new ParametricCcgParser(terminalVar, ccgCategoryVar, newTerminalFamily, 
+        terminalPosVar, terminalSyntaxVar, terminalPosFamily, dependencyHeadVar, 
+        dependencyArgNumVar, dependencyArgVar, dependencyFamily, wordDistanceVar,
+        wordDistanceFamily, puncDistanceVar, puncDistanceFamily, puncTagSet,
+        verbDistanceVar, verbDistanceFamily, verbTagSet, leftSyntaxVar,
+        rightSyntaxVar, parentSyntaxVar, syntaxFamily, unaryRuleInputVar, unaryRuleVar,
+        unaryRuleFamily, searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxFamily);
+  }
 
   /**
    * Gets a new all-zero parameter vector.
@@ -558,21 +576,32 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
       List<LexiconEntry> lexiconEntries, List<String> posTags, double count) {
     Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
-    SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
-    SufficientStatistics terminalPosGradient = gradient.coerceToList().getStatisticByName(TERMINAL_POS_PARAMETERS);
     int numEntries = lexiconEntries.size();
     for (int i = 0; i < numEntries; i++) {
       LexiconEntry lexiconEntry = lexiconEntries.get(i);
-      Assignment assignment = Assignment.unionAll(
-          terminalVar.outcomeArrayToAssignment(lexiconEntry.getWords()),
-          ccgCategoryVar.outcomeArrayToAssignment(lexiconEntry.getCategory()));
-      terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient, assignment, count);
-
-      Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTags.get(i)).union(
-          terminalSyntaxVar.outcomeArrayToAssignment(lexiconEntry.getCategory().getSyntax()));
-      terminalPosFamily.incrementSufficientStatisticsFromAssignment(terminalPosGradient,
-          posAssignment, count);
+      incrementLexiconSufficientStatistics(gradient, lexiconEntry, count);
+      incrementPosSufficientStatistics(gradient, posTags.get(i), 
+          lexiconEntry.getCategory().getSyntax(), count);
     }
+  }
+  
+  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, 
+      LexiconEntry entry, double count) {
+    SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
+    Assignment assignment = Assignment.unionAll(
+          terminalVar.outcomeArrayToAssignment(entry.getWords()),
+          ccgCategoryVar.outcomeArrayToAssignment(entry.getCategory()));
+    terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
+        assignment, count);
+  }
+
+  public void incrementPosSufficientStatistics(SufficientStatistics gradient, String posTag,
+      HeadedSyntacticCategory syntax, double count) {
+    SufficientStatistics terminalPosGradient = gradient.coerceToList().getStatisticByName(TERMINAL_POS_PARAMETERS);
+    Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTag).union(
+        terminalSyntaxVar.outcomeArrayToAssignment(syntax));
+    terminalPosFamily.incrementSufficientStatisticsFromAssignment(terminalPosGradient,
+        posAssignment, count);
   }
 
   /**

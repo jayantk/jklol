@@ -66,6 +66,21 @@ public class CcgSearchMove implements Serializable {
   public int[] getRightRelabeling() {
     return rightRelabeling;
   }
+  
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    if (leftUnary != null) {
+      sb.append(leftUnary);
+    }
+    if (rightUnary != null) {
+      sb.append(" ");
+      sb.append(rightUnary);
+    }
+    sb.append(" ");
+    sb.append(binaryCombinator);
+    return sb.toString();
+  }
 
   @Override
   public int hashCode() {

@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -25,20 +26,22 @@ public class SyntacticChartFilter implements ChartFilter {
 
   private final CcgSyntaxTree parse;
 
+  private final SyntacticCompatibilityFunction compatibilityFunction;
+
   private static final int SPAN_START_OFFSET = 100000;
 
-  public SyntacticChartFilter(CcgSyntaxTree syntacticParse) {
+  public SyntacticChartFilter(CcgSyntaxTree syntacticParse,
+      SyntacticCompatibilityFunction compatibilityFunction) {
     this.binaryRuleResult = Maps.newHashMap();
     this.leftUnaryRuleResult = Maps.newHashMap();
     this.rightUnaryRuleResult = Maps.newHashMap();
     this.expectedPostUnaryRoot = syntacticParse.getRootSyntax();
-    
+
     this.parse = syntacticParse;
 
+    this.compatibilityFunction = Preconditions.checkNotNull(compatibilityFunction);
+
     populateRuleMaps(syntacticParse);
-    
-    System.out.println(leftUnaryRuleResult);
-    System.out.println(rightUnaryRuleResult);
   }
 
   private void populateRuleMaps(CcgSyntaxTree parse) {
@@ -88,7 +91,7 @@ public class SyntacticChartFilter implements ChartFilter {
     } else if (entry.getLeftUnaryRule() != null) {
       return false;
     }
-    
+
     if (rightUnaryRuleResult.containsKey(mapIndex)) {
       SyntacticCategory expectedRight = rightUnaryRuleResult.get(mapIndex);
       if (entry.getRightUnaryRule() == null || !isSyntaxCompatible(expectedRight, entry.getRightUnaryRule().getSyntax(), syntaxVarType)) {
@@ -98,13 +101,64 @@ public class SyntacticChartFilter implements ChartFilter {
       return false;
     }
 
+    System.out.println(spanStart + " " + spanEnd + " " + syntaxVarType.getValue(entry.getHeadedSyntax()));
     return true;
+  }
+
+  /**
+   * This method doesn't modify {@code chart}.
+   */
+  @Override
+  public void applyToTerminals(CcgChart chart) {
   }
 
   private boolean isSyntaxCompatible(SyntacticCategory expected, int actual, DiscreteVariable syntaxType) {
     HeadedSyntacticCategory headedSyntax = (HeadedSyntacticCategory) syntaxType.getValue(actual);
-    SyntacticCategory syntax = headedSyntax.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);
-    
-    return expected.equals(syntax);
+    return compatibilityFunction.apply(expected, headedSyntax);
+  }
+
+  /**
+   * Predicate for determining whether a headed syntactic category is
+   * equivalent to a given syntactic category.
+   * 
+   * @author jayantk
+   */
+  public interface SyntacticCompatibilityFunction {
+    boolean apply(SyntacticCategory expected, HeadedSyntacticCategory actual);
+  }
+
+  /**
+   * Checks compatibility by assigning all features in the headed
+   * category to the default value.
+   * 
+   * @author jayantk
+   */
+  public static class DefaultCompatibilityFunction implements SyntacticCompatibilityFunction {
+    @Override
+    public boolean apply(SyntacticCategory expected, HeadedSyntacticCategory actual) {
+      SyntacticCategory syntax = actual.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);
+      return expected.equals(syntax);
+    }
+  }
+
+  /**
+   * Checks compatibility using a map from each un-headed syntactic
+   * category to headed syntactic categories.
+   * 
+   * @author jayantk
+   */
+  public static class MapCompatibilityFunction implements SyntacticCompatibilityFunction {
+    private final SetMultimap<SyntacticCategory, HeadedSyntacticCategory> categoryMarkup;
+
+    public MapCompatibilityFunction(SetMultimap<SyntacticCategory, HeadedSyntacticCategory> categoryMarkup) {
+      this.categoryMarkup = Preconditions.checkNotNull(categoryMarkup);
+      
+      // TODO: check for canonical form.
+    }
+
+    @Override
+    public boolean apply(SyntacticCategory expected, HeadedSyntacticCategory actual) {
+      return categoryMarkup.containsKey(expected) && categoryMarkup.get(expected).contains(actual);
+    }
   }
 }

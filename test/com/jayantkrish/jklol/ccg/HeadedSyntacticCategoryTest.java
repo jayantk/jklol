@@ -20,6 +20,9 @@ public class HeadedSyntacticCategoryTest extends TestCase {
   
   String noParens = "S[ng]{0}\\N[num]{1}";
   
+  String prep = "((NP{1}\\NP{1}){0}/NP{2}){0}";
+  String prepCanonical = "((NP{0}\\NP{0}){1}/NP{2}){1}";
+  
   public void testParseFrom() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(transVerb);
     
@@ -69,6 +72,14 @@ public class HeadedSyntacticCategoryTest extends TestCase {
 
     assertEquals(canonicalCat, cat.getCanonicalForm());
   }
+  
+  public void testCanonicalize3() {
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(prep);
+    HeadedSyntacticCategory canonicalCat = HeadedSyntacticCategory.parseFrom(prepCanonical);
+
+    assertEquals(canonicalCat, cat.getCanonicalForm());
+  }
+
   
   public void testUnify() {
     HeadedSyntacticCategory verbCat = HeadedSyntacticCategory.parseFrom(transVerb);

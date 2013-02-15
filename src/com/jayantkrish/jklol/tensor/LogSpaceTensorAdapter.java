@@ -29,12 +29,14 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public LogSpaceTensorAdapter(Tensor logWeights) {
     super(logWeights.getDimensionNumbers(), logWeights.getDimensionSizes());
     this.logWeights = logWeights;
+    // This tensor assumes that indexes are the same as keynums,
+    // so 
+    Preconditions.checkArgument(logWeights.getMaxKeyNum() < Integer.MAX_VALUE);
   }
 
   @Override
   public int size() {
     long size = logWeights.getMaxKeyNum();
-    Preconditions.checkArgument(size < Integer.MAX_VALUE);
     return (int) size;
   }
 

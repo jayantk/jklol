@@ -9,7 +9,7 @@ import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
+import com.jayantkrish.jklol.tensor.SparseLogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -33,7 +33,7 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public Factor getModelFromParameters(SufficientStatistics parameters) {
-    return new TableFactor(getVars(), new LogSpaceTensorAdapter(getFeatureWeights(parameters)));
+    return new TableFactor(getVars(), new SparseLogSpaceTensorAdapter(getFeatureWeights(parameters)));
   }
 
   @Override

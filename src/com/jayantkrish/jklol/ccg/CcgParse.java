@@ -158,6 +158,10 @@ public class CcgParse {
   public HeadedSyntacticCategory getHeadedSyntacticCategory() {
     return syntax;
   }
+  
+  public boolean hasUnaryRule() {
+    return unaryRule != null;
+  }
 
   /**
    * Gets the CCG unary rule applied to produce the syntactic category
@@ -348,6 +352,20 @@ public class CcgParse {
   public CcgCategory getLexiconEntry() {
     return lexiconEntry;
   }
+  
+  public CcgCategory getLexiconEntryForWordIndex(int index) {
+    Preconditions.checkArgument(spanStart <= index && index <= spanEnd, 
+        "Illegal word index: %s (current span: %s,%s)", index, spanStart, spanEnd);
+    if (isTerminal()) {
+      return lexiconEntry;
+    } else {
+      if (index <= left.spanEnd) {
+        return left.getLexiconEntryForWordIndex(index);
+      } else {
+        return right.getLexiconEntryForWordIndex(index);
+      }
+    }
+  }
 
   /**
    * Gets the left subtree of this parse.
@@ -486,9 +504,9 @@ public class CcgParse {
 
   @Override
   public String toString() {
-    String syntaxString = syntax.getSyntax().toString();
+    String syntaxString = syntax.toString();
     if (unaryRule != null) {
-      syntaxString += "_" + unaryRule.getUnaryRule().getInputSyntacticCategory().getSyntax();
+      syntaxString += "_" + unaryRule.getUnaryRule().getInputSyntacticCategory();
     }
 
     if (left != null && right != null) {

@@ -81,9 +81,9 @@ public class ParseCcg extends AbstractCli {
       List<CcgExample> testExamples = Lists.newArrayList();
       if (options.has(discardInvalid)) {
         for (CcgExample example : unfilteredTestExamples) {
-          if (ccgParser.isPossibleSyntacticTree(example.getSyntacticParse())) {
+          // if (ccgParser.isPossibleSyntacticTree(example.getSyntacticParse())) {
             testExamples.add(example);
-          }
+            // }
         }
       } else {
         testExamples = unfilteredTestExamples;

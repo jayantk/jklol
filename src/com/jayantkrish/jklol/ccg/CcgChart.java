@@ -7,6 +7,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.ArrayUtils;
@@ -39,6 +40,10 @@ public class CcgChart {
   private Tensor wordDistanceTensor;
   private Tensor puncDistanceTensor;
   private Tensor verbDistanceTensor;
+
+  // The syntactic category combinations that will be considered
+  // while parsing this sentence.
+  private DiscreteFactor syntaxDistribution;
 
   private final ChartFilter entryFilter;
 
@@ -89,6 +94,14 @@ public class CcgChart {
     return terminals.size();
   }
   
+  public List<String> getWords() {
+    return terminals;
+  }
+  
+  public List<String> getPosTags() {
+    return posTags;
+  }
+
   public int[] getWordDistances() {
     return wordDistances;
   }
@@ -134,6 +147,10 @@ public class CcgChart {
     this.verbDistanceTensor = tensor;
   }
 
+  public void setSyntaxDistribution(DiscreteFactor syntaxDistribution) {
+    this.syntaxDistribution = syntaxDistribution;
+  }
+
   /**
    * Gets the subset of all parser weights which may be used in this
    * parse.
@@ -154,6 +171,16 @@ public class CcgChart {
 
   public Tensor getVerbDistanceTensor() {
     return verbDistanceTensor;
+  }
+
+  public DiscreteFactor getSyntaxDistribution() {
+    return syntaxDistribution;
+  }
+
+  public void applyChartFilterToTerminals() {
+    if (entryFilter != null) {
+      entryFilter.applyToTerminals(this);
+    }
   }
 
   public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses,
@@ -288,8 +315,7 @@ public class CcgChart {
    */
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
-    if ((entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType)) &&
-        probability != 0.0) {
+    if (probability != 0.0 && (entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType))) {
       offerEntry(entry, probability, spanStart, spanEnd);
     }
   }
@@ -323,6 +349,14 @@ public class CcgChart {
           chartSizes[spanEnd + (terminals.size() * spanStart)]);
       chartSizes[spanEnd + (terminals.size() * spanStart)]--;
     }
+  }
+
+  public static ChartEntry[] copyChartEntryArray(ChartEntry[] entries, int numEntries) {
+    ChartEntry[] returnValue = new ChartEntry[numEntries];
+    for (int i = 0; i < numEntries; i++) {
+      returnValue[i] = entries[i];
+    }
+    return returnValue;
   }
 
   /**
@@ -610,7 +644,33 @@ public class CcgChart {
    * @author jayantk
    */
   public static interface ChartFilter {
+
+    /**
+     * Returns {@code true} if {@code entry} is a valid chart entry
+     * for the indicated span. If this method returns {@code false},
+     * the given entry will be discarded (i.e., not included in the
+     * search).
+     * 
+     * @param entry
+     * @param spanStart
+     * @param spanEnd
+     * @param syntaxVarType
+     * @return
+     */
     public boolean apply(ChartEntry entry, int spanStart, int spanEnd,
         DiscreteVariable syntaxVarType);
+
+    /**
+     * Updates {@code chart} based on the set of possible terminals.
+     * This method can be used to restrict the CCG search space based
+     * on the words which actually appear in a sentence.
+     * <p>
+     * When this method is called, {@code chart} is initialized with
+     * the terminal symbols (i.e., the words) and the possible lexicon
+     * entries for each word.
+     * 
+     * @param chart
+     */
+    public void applyToTerminals(CcgChart chart);
   }
 }

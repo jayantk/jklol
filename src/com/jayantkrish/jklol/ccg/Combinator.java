@@ -125,7 +125,11 @@ public class Combinator implements Serializable {
 
   @Override
   public String toString() {
-    return syntax + ":" + Arrays.toString(subjects) + " " + isArgumentOnLeft;
+    if (binaryRule != null) {
+      return binaryRule.toString();
+    } else {
+      return syntax + ":" + Arrays.toString(subjects) + " " + isArgumentOnLeft;
+    }
   }
 
   @Override

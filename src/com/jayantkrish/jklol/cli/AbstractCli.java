@@ -15,7 +15,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
-import com.jayantkrish.jklol.ccg.CcgFileFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgRuleSchema;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
@@ -74,30 +73,30 @@ public abstract class AbstractCli {
   private OptionSet parsedOptions;
 
   // Help options.
-  private OptionSpec<Void> helpOpt;
+  protected OptionSpec<Void> helpOpt;
 
   // Always available options.
   // Seed the random number generator
-  private OptionSpec<Long> randomSeed;
+  protected OptionSpec<Long> randomSeed;
 
   // Stochastic gradient options.
-  private OptionSpec<Integer> sgdIterations;
-  private OptionSpec<Integer> sgdBatchSize;
-  private OptionSpec<Integer> sgdLogInterval;
-  private OptionSpec<Double> sgdInitialStep;
-  private OptionSpec<Void> sgdNoDecayStepSize;
-  private OptionSpec<Double> sgdL2Regularization;
-  private OptionSpec<Void> sgdBrief;
+  protected OptionSpec<Integer> sgdIterations;
+  protected OptionSpec<Integer> sgdBatchSize;
+  protected OptionSpec<Integer> sgdLogInterval;
+  protected OptionSpec<Double> sgdInitialStep;
+  protected OptionSpec<Void> sgdNoDecayStepSize;
+  protected OptionSpec<Double> sgdL2Regularization;
+  protected OptionSpec<Void> sgdBrief;
 
   // Map reduce options.
-  private OptionSpec<Integer> mrMaxThreads;
-  private OptionSpec<Integer> mrMaxBatchesPerThread;
+  protected OptionSpec<Integer> mrMaxThreads;
+  protected OptionSpec<Integer> mrMaxBatchesPerThread;
 
   // CCG parser options
-  private OptionSpec<String> ccgLexicon;
-  private OptionSpec<String> ccgRules;
-  private OptionSpec<String> ccgDependencyFeatures;
-  private OptionSpec<Void> ccgApplicationOnly;
+  protected OptionSpec<String> ccgLexicon;
+  protected OptionSpec<String> ccgRules;
+  protected OptionSpec<String> ccgDependencyFeatures;
+  protected OptionSpec<Void> ccgApplicationOnly;
 
   /**
    * Creates a command line program that accepts the specified set of
@@ -245,8 +244,6 @@ public abstract class AbstractCli {
       ccgRules = parser.accepts("rules",
           "Binary and unary rules to use during CCG parsing, in addition to function application and composition.")
           .withRequiredArg().ofType(String.class);
-      ccgDependencyFeatures = parser.accepts("dependencyFeatures",
-          "CSV file containing features of dependency structures.").withRequiredArg().ofType(String.class);
       ccgApplicationOnly = parser.accepts("applicationOnly",
           "Use only function application during parsing, i.e., no composition.");
     }
@@ -294,14 +291,13 @@ public abstract class AbstractCli {
     return trainer;
   }
 
-  protected ParametricCcgParser createCcgParser(Set<String> posTagSet, Set<CcgRuleSchema> rules) {
+  protected ParametricCcgParser createCcgParser(Set<String> posTagSet, Set<CcgRuleSchema> rules,
+      CcgFeatureFactory featureFactory) {
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
-    CcgFeatureFactory dependencyFeatures = parsedOptions.has(ccgDependencyFeatures) ?
-        new CcgFileFeatureFactory(IoUtils.readLines(parsedOptions.valueOf(ccgDependencyFeatures))) : null;
-    return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, dependencyFeatures,
+    return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
         posTagSet, !parsedOptions.has(ccgApplicationOnly), rules);
   }
 }

@@ -7,6 +7,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
+import com.jayantkrish.jklol.ccg.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -20,11 +21,18 @@ import com.jayantkrish.jklol.training.LogFunction;
 public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExample> {
 
   private final ParametricCcgParser family;
+
+  // Mapping from un-headed syntactic parses to headed 
+  // syntactic parses.
+  private final SyntacticCompatibilityFunction compatibilityFunction;
+  
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
 
-  public CcgLoglikelihoodOracle(ParametricCcgParser family, int beamSize) {
+  public CcgLoglikelihoodOracle(ParametricCcgParser family, 
+      SyntacticCompatibilityFunction compatibilityFunction, int beamSize) {
     this.family = Preconditions.checkNotNull(family);
+    this.compatibilityFunction = Preconditions.checkNotNull(compatibilityFunction);
     this.beamSize = beamSize;
   }
 
@@ -58,7 +66,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Condition parses on provided syntactic information, if any is provided.
     List<CcgParse> possibleParses = null;
     if (example.hasSyntacticParse()) {
-      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
+      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse(), compatibilityFunction);
       possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
         conditionalChartFilter, log);
     } else {

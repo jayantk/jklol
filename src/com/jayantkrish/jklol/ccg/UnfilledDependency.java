@@ -137,7 +137,11 @@ public class UnfilledDependency implements Serializable {
   
   @Override
   public String toString() {
-    return getSubject() + " " + subjectArgIndex + " " + objectArgumentIndex;
+    if (hasObject()) {
+      return getSubject() + " " + subjectArgIndex + " " + getObject();
+    } else {
+      return getSubject() + " " + subjectArgIndex + " " + objectArgumentIndex;
+    }
   }
 
   @Override

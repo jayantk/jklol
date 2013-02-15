@@ -3,6 +3,8 @@ package com.jayantkrish.jklol.ccg;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -14,14 +16,18 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.NullOutputStream;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
+import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
@@ -608,6 +614,41 @@ public class CcgParserTest extends TestCase {
     }
     assertEquals(expectedCats, actualCats);
   }
+
+  public void testChartFilterApply() {
+    ChartFilter filter = new TestChartFilter();
+    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("I", "eat", "berries", "in", "people", "houses"), 
+        Collections.nCopies(6, ParametricCcgParser.DEFAULT_POS_TAG), 10, filter, new NullLogFunction());
+
+    // The filter disallows the verb modifier syntactic category for "in" 
+    SyntacticCategory expected = SyntacticCategory.parseFrom("(N\\N)/N");
+    for (CcgParse parse : parses) {
+      assertEquals(expected, parse.getLexiconEntryForWordIndex(3).getSyntax().getSyntax());
+    }
+  }
+  
+  public void testChartFilterApplyToTerminals() {
+    ChartFilter filter = new TestChartFilter();
+    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("berries", "in", "people", "houses"), 
+        Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG), 10, filter, new NullLogFunction());
+    
+    for (CcgParse parse : parses) {
+      assertNoNounCompound(parse);
+    }
+  }
+  
+  private void assertNoNounCompound(CcgParse parse) {
+    SyntacticCategory noun = SyntacticCategory.parseFrom("N");
+    
+    if (!parse.isTerminal()) {
+      assertFalse(parse.getLeft().getHeadedSyntacticCategory().getSyntax().equals(noun) &&
+          parse.getRight().getHeadedSyntacticCategory().getSyntax().equals(noun) &&
+          !parse.getLeft().hasUnaryRule() && !parse.getRight().hasUnaryRule());
+      
+      assertNoNounCompound(parse.getLeft());
+      assertNoNounCompound(parse.getRight());
+    }
+  }
   
   public void testSerialization() throws IOException {
     ObjectOutputStream oos = new ObjectOutputStream(new NullOutputStream());
@@ -749,5 +790,45 @@ public class CcgParserTest extends TestCase {
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
         leftSyntaxVar, rootDistribution);
+  }
+  
+  private static class TestChartFilter implements ChartFilter {
+
+    @Override
+    public boolean apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
+      if (spanStart == 3 && spanEnd == 5) {
+        HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
+        return syntax.getSyntax().equals(SyntacticCategory.parseFrom("N\\N"));
+      }
+      return true;
+    }
+
+    @Override
+    public void applyToTerminals(CcgChart chart) {
+      DiscreteFactor syntaxDistribution = chart.getSyntaxDistribution();
+      VariableNumMap vars = syntaxDistribution.getVars();
+      TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+      
+      Iterator<Outcome> syntaxIter = syntaxDistribution.outcomeIterator();
+      while (syntaxIter.hasNext()) {
+        Outcome outcome = syntaxIter.next();
+        CcgSearchMove move = (CcgSearchMove) outcome.getAssignment().getValues().get(2);
+        
+        CcgBinaryRule rule = move.getBinaryCombinator().getBinaryRule();
+        if (rule != null) {
+          String[] subjects = rule.getSubjects();
+          for (int i =0; i < subjects.length; i++) {
+            if (subjects[i].equals("special:compound")) {
+              builder.setWeight(outcome.getAssignment(), -1.0);
+            }
+          }
+        }
+      }      
+      DiscreteFactor syntaxDelta = builder.build();
+      System.out.println(syntaxDelta.getParameterDescription());
+     
+      DiscreteFactor updatedSyntaxDistribution = syntaxDistribution.add(syntaxDelta);
+      chart.setSyntaxDistribution(updatedSyntaxDistribution);
+    }
   }
 }

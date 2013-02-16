@@ -1,10 +1,12 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
-public class ConstantExpression extends AbstractExpression {
+public class ConstantExpression extends AbstractExpression implements Comparable<ConstantExpression> {
   private static final long serialVersionUID = 1L;
   
   private final String name;
@@ -12,13 +14,42 @@ public class ConstantExpression extends AbstractExpression {
   public ConstantExpression(String name) {
     this.name = Preconditions.checkNotNull(name);
   }
+
+  public static ConstantExpression generateUniqueVariable() {
+    // TODO: just use a counter. (worried about serialization)
+    int random = (int) (Math.random() * 1000000.0);
+    return new ConstantExpression("var" + random);
+  }
   
+  public static List<ConstantExpression> generateUniqueVariables(int num) {
+    List<ConstantExpression> vars = Lists.newArrayList();
+    for (int i = 0; i< num; i++) {
+      vars.add(generateUniqueVariable());
+    }
+    return vars;
+  }
+
   public String getName() {
     return name;
   }
   
+  @Override
   public void getFreeVariables(Set<ConstantExpression> accumulator) {
     accumulator.add(this);
+  }
+  
+  @Override
+  public void getBoundVariables(Set<ConstantExpression> accumulator) {
+    // No bound variables.
+  }
+  
+  @Override
+  public ConstantExpression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
+    if (this.equals(variable)) {
+      return replacement;
+    } else {
+      return this;
+    }
   }
 
   @Override
@@ -33,6 +64,14 @@ public class ConstantExpression extends AbstractExpression {
   @Override
   public Expression simplify() {
     return this;
+  }
+  
+  @Override
+  public boolean functionallyEquals(Expression other) {
+    if (other instanceof ConstantExpression) {
+      return ((ConstantExpression) other).name.equals(name);
+    }
+    return false;
   }
 
   @Override
@@ -63,5 +102,10 @@ public class ConstantExpression extends AbstractExpression {
     } else if (!name.equals(other.name))
       return false;
     return true;
+  }
+
+  @Override
+  public int compareTo(ConstantExpression other) {
+    return name.compareTo(other.name);
   }
 }

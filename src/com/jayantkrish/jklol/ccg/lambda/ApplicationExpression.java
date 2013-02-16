@@ -36,7 +36,23 @@ public class ApplicationExpression extends AbstractExpression {
       subexpression.getFreeVariables(accumulator);
     }
   }
+
+  @Override
+  public void getBoundVariables(Set<ConstantExpression> accumulator) {
+    for (Expression subexpression : subexpressions) {
+      subexpression.getBoundVariables(accumulator);
+    }
+  }
   
+  public Expression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
+    List<Expression> substituted = Lists.newArrayList();
+    for (Expression subexpression : subexpressions) {
+      substituted.add(subexpression.renameVariable(variable, replacement));
+    }
+
+    return new ApplicationExpression(substituted);
+  }
+
   @Override
   public Expression substitute(ConstantExpression constant, Expression replacement) {
     List<Expression> substituted = Lists.newArrayList();
@@ -66,6 +82,23 @@ public class ApplicationExpression extends AbstractExpression {
       subexpressions.addAll(simplifiedArguments);
       return new ApplicationExpression(subexpressions);
     }
+  }
+  
+  @Override
+  public boolean functionallyEquals(Expression expression) {
+    if (expression instanceof ApplicationExpression) {
+      ApplicationExpression other = (ApplicationExpression) expression;
+      List<Expression> otherSubexpressions = other.subexpressions;
+      if (otherSubexpressions.size() == subexpressions.size()) {
+        for (int i = 0; i < subexpressions.size(); i++) {
+          if (!otherSubexpressions.get(i).functionallyEquals(subexpressions.get(i))) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

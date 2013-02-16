@@ -75,7 +75,7 @@ public class CcgParserTest extends TestCase {
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)", 
     ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", 
-    "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall pred (list $R $0) (pred x)))))",  
+    "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x)))))",  
     "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2}",
     "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"special:compound 1 0\",\"special:compound 2 1\""};
 
@@ -214,10 +214,10 @@ public class CcgParserTest extends TestCase {
       System.out.println(parse);
       System.out.println(parse.getAllDependencies());
       System.out.println(parse.getLogicalForm().simplify());
-      assertEquals(expectedLf, parse.getLogicalForm().simplify());
+      assertTrue(expectedLf.functionallyEquals(parse.getLogicalForm().simplify()));
     }
   }
-  
+
   public void testParseLogicalFormComposition() {
     List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
         "the", "colorful", "tasty"), 10);
@@ -228,7 +228,7 @@ public class CcgParserTest extends TestCase {
       System.out.println(parse);
       System.out.println(parse.getAllDependencies());
       System.out.println(parse.getLogicalForm().simplify());
-      assertEquals(expectedLf, parse.getLogicalForm().simplify());
+      assertTrue(expectedLf.functionallyEquals(parse.getLogicalForm().simplify()));
     }
   }
   
@@ -260,7 +260,7 @@ public class CcgParserTest extends TestCase {
         "i", "eat", "people", "or", "berries"), 10);
     assertEquals(1, parses.size());
     System.out.println(parses.get(0));
-    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (i a) (forall pred (list berries people) (pred b)) (eat a b)))");
+    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (i a) (forall (pred (set berries people)) (pred b)) (eat a b)))");
     assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
   }
 
@@ -276,7 +276,7 @@ public class CcgParserTest extends TestCase {
       System.out.println(parse.getAllDependencies());
       String root = parse.getSyntacticCategory().getValue();
       if (root != null && root.equals("N")) {
-        assertEquals(expectedLf, parse.getLogicalForm().simplify());
+        assertTrue(expectedLf.functionallyEquals(parse.getLogicalForm().simplify()));
         System.out.println(parse.getLogicalForm().simplify());
         foundN = true;
       }

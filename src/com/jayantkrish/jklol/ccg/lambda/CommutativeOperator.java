@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -34,9 +35,27 @@ public class CommutativeOperator extends AbstractExpression {
 
   @Override
   public void getFreeVariables(Set<ConstantExpression> accumulator) {
+    operatorName.getFreeVariables(accumulator);
     for (Expression argument : arguments) {
       argument.getFreeVariables(accumulator);
     }
+  }
+
+  @Override
+  public void getBoundVariables(Set<ConstantExpression> accumulator) {
+    operatorName.getBoundVariables(accumulator);
+    for (Expression argument : arguments) {
+      argument.getBoundVariables(accumulator);
+    }
+  }
+
+  @Override
+  public Expression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
+    List<Expression> substituted = Lists.newArrayList();
+    for (Expression subexpression : arguments) {
+      substituted.add(subexpression.renameVariable(variable, replacement));
+    }
+    return new CommutativeOperator(operatorName.renameVariable(variable, replacement), substituted);
   }
 
   @Override
@@ -57,7 +76,9 @@ public class CommutativeOperator extends AbstractExpression {
       
       // Push quantifiers outside of logical operators.
       if (simplifiedArgument instanceof QuantifierExpression) {
-        QuantifierExpression quantifierArgument = ((QuantifierExpression) simplifiedArgument); 
+        QuantifierExpression quantifierArgument = ((QuantifierExpression) simplifiedArgument);
+        // Avoid variable name collisions.
+        quantifierArgument = (QuantifierExpression) quantifierArgument.freshenVariables(quantifierArgument.getBoundVariables());
         wrappingQuantifiers.add(quantifierArgument);
         simplified.add(quantifierArgument.getBody());
       } else {
@@ -82,10 +103,51 @@ public class CommutativeOperator extends AbstractExpression {
     Expression result = new CommutativeOperator(operatorName, resultClauses);
     // Wrap the result with the appropriate quantifiers.
     for (QuantifierExpression quantifier : wrappingQuantifiers) {
-      result = new QuantifierExpression(quantifier.getQuantifierName(), quantifier.getBoundVariables(), result);
+      result = new QuantifierExpression(quantifier.getQuantifierName(), 
+          Lists.newArrayList(quantifier.getBoundVariables()), result);
     }
 
     return result;
+  }
+  
+  @Override
+  public boolean functionallyEquals(Expression other) {
+    if (other instanceof CommutativeOperator) {
+      CommutativeOperator otherOp = (CommutativeOperator) other;
+      if (otherOp.getOperatorName().functionallyEquals(operatorName)) {
+        // The order of the arguments to this operator doesn't matter.
+        List<Expression> otherArguments = otherOp.getArguments();
+        if (arguments.size() != otherArguments.size()) {
+          // Can't find a mapping between differently sized argument sets.
+          return false;
+        }
+
+        boolean[] otherArgumentUsed = new boolean[otherArguments.size()];
+        Arrays.fill(otherArgumentUsed, false);
+        for (Expression argument : arguments) {
+          boolean foundArg = false;
+
+          for (int i = 0; i < otherArguments.size(); i++) {
+            if (otherArgumentUsed[i]) {
+              continue;
+            }
+            Expression otherArgument = otherArguments.get(i);
+            if (argument.functionallyEquals(otherArgument)) {
+              otherArgumentUsed[i] = true;
+              foundArg = true;
+              break;
+            }
+          }
+          
+          if (!foundArg) {
+            return false;
+          }
+        }
+        // All arguments were matched with a unique otherArgument.
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

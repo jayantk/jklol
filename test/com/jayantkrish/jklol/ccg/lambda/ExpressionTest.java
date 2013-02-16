@@ -11,12 +11,20 @@ public class ExpressionTest extends TestCase {
 
   ExpressionParser parser;
   
+  ApplicationExpression application;
+  CommutativeOperator op;
+  LambdaExpression lf;
+  QuantifierExpression exists;
+  
   public void setUp() {
     parser = new ExpressionParser();
+    application = (ApplicationExpression) parser.parseSingleExpression("(foo (a b) (c a))");
+    op = (CommutativeOperator) parser.parseSingleExpression("(and (a b) (c a) ((foo) d))");
+    lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (foo (a b) (c a)))");
+    exists = (QuantifierExpression) parser.parseSingleExpression("(exists a c (foo (a b) (c a)))");
   }
-
+  
   public void testApplication() {
-    ApplicationExpression application = (ApplicationExpression) parser.parseSingleExpression("(foo (a b) (c a))");
     Expression function = parser.parseSingleExpression("foo");
     List<Expression> arguments = parser.parse("(a b) (c a)");
     Set<Expression> freeVariables = Sets.newHashSet(parser.parse("foo a b c"));
@@ -39,8 +47,6 @@ public class ExpressionTest extends TestCase {
   }
   
   public void testLambda() {
-    LambdaExpression lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (foo (a b) (c a)))");
-    
     Expression body = parser.parseSingleExpression("(foo (a b) (c a))");
     List<Expression> arguments = parser.parse("a c");
     Set<Expression> freeVariables = Sets.newHashSet(parser.parse("foo b"));
@@ -61,11 +67,53 @@ public class ExpressionTest extends TestCase {
     assertEquals(freeVariables, result.getFreeVariables());
   }
   
+  public void testLambdaReduction() {
+    LambdaExpression lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (exists d e (foo (a b e) (c a))))");
+    
+    List<Expression> arguments = parser.parse("(e f) (lambda g g)");
+    Expression result = lf.reduce(arguments);
+    Expression expected = parser.parseSingleExpression("(exists d x (foo ((e f) b x) ((lambda g g) (e f))))");
+    assertTrue(expected.functionallyEquals(result));
+  }
+  
+  public void testLambdaReduction2() {
+    LambdaExpression lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (lambda d e (foo (a b e) (c a))))");
+    
+    List<Expression> arguments = parser.parse("(e f) (lambda d d)");
+    Expression result = lf.reduce(arguments);
+    Expression expected = parser.parseSingleExpression("(lambda d x (foo ((e f) b x) ((lambda d d) (e f))))");
+    assertTrue(expected.functionallyEquals(result));
+  }
+  
+  public void testLambdaReduction3() {
+    LambdaExpression lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (lambda d e (foo (a b e) (c a))))");
+
+    List<Expression> arguments = parser.parse("a c");
+    List<Expression> values = parser.parse("(e f) (lambda d d)");
+    Expression result = lf.reduceArgument((ConstantExpression) arguments.get(1), values.get(1));
+    Expression expected = parser.parseSingleExpression("(lambda a (lambda d e (foo (a b e) ((lambda d d) a))))");
+    assertEquals(expected, result);
+    
+    result = lf.reduceArgument((ConstantExpression) arguments.get(0), values.get(0));
+    expected = parser.parseSingleExpression("(lambda c (lambda d x (foo ((e f) b x) (c (e f)))))");
+    assertTrue(expected.functionallyEquals(result));
+  }
+
+  public void testLambdaReduction4() {
+    LambdaExpression lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (forall (d (set e a)) (foo (d b) a c)))");
+
+    List<Expression> arguments = parser.parse("(e f) (lambda f (d f))");
+    Expression result = lf.reduce(arguments);
+    Expression expected = parser.parseSingleExpression("(forall (x (set e (e f))) (foo (x b) (e f) (lambda f (d f))))");
+
+    assertTrue(expected.functionallyEquals(result));
+  }
+
   public void testQuantifier() {
     QuantifierExpression qf = (QuantifierExpression) parser.parseSingleExpression("(exists a c (foo (a b) (c a)))");
     
     Expression body = parser.parseSingleExpression("(foo (a b) (c a))");
-    List<Expression> arguments = parser.parse("a c");
+    Set<Expression> arguments = Sets.newHashSet(parser.parse("a c"));
     Set<Expression> freeVariables = Sets.newHashSet(parser.parse("foo b"));
     assertEquals(body, qf.getBody());
     assertEquals(arguments, qf.getBoundVariables());
@@ -77,6 +125,36 @@ public class ExpressionTest extends TestCase {
     Expression simplified = expression.simplify();
     
     Expression expected = parser.parseSingleExpression("(exists y (and (a b) (bar z y)))");
-    assertEquals(expected, simplified);
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+  
+  public void testSimplifyQuantifier() {
+    Expression expression = parser.parseSingleExpression("(exists a b (and (exists c b (b c)) b))");
+    Expression simplified = expression.simplify();
+    
+    Expression expected = parser.parseSingleExpression("(exists a b c d (and (d c) b))");
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+  
+  public void testFunctionallyEquals() {
+    assertTrue(application.functionallyEquals(application));
+  }
+  
+  public void testFunctionallyEqualsCommutative() {
+    Expression expression = parser.parseSingleExpression("(and (c a) ((foo) d) (a b))");
+    assertTrue(expression.functionallyEquals(op));
+    assertTrue(op.functionallyEquals(expression));
+  }
+  
+  public void testFunctionallyEqualsLambda() {
+    Expression expression = parser.parseSingleExpression("(lambda d g (foo (d b) (g d)))");
+    assertTrue(expression.functionallyEquals(lf));
+    assertTrue(lf.functionallyEquals(expression));
+  }
+  
+  public void testFunctionallyEqualsExists() {
+    Expression expression = parser.parseSingleExpression("(exists g d (foo (g b) (d g)))");
+    assertTrue(expression.functionallyEquals(exists));
+    assertTrue(exists.functionallyEquals(expression));
   }
 }

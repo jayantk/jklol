@@ -173,7 +173,7 @@ public class CcgCategory implements Serializable {
     return new CcgCategory(syntax, logicalForm, subjects, argumentNumbers, objects, values);
   }
   
-  private static Expression induceLogicalFormFromSyntax(HeadedSyntacticCategory syntax) {
+  public static Expression induceLogicalFormFromSyntax(HeadedSyntacticCategory syntax) {
     int[] syntaxVarNums = syntax.getUniqueVariables();
     Map<Integer, ConstantExpression> varMap = Maps.newHashMap();
     for (int i = 0; i < syntaxVarNums.length; i++) {
@@ -192,36 +192,81 @@ public class CcgCategory implements Serializable {
     }
     Set<Integer> argumentRootSet = Sets.newHashSet(argumentRoots);
     if (argumentRootSet.size() < argumentRoots.size()) {
-      // Multiple arguments bind the same semantic variable. Again,
-      // it's not clear what the logical form should do here.
+      // Multiple arguments bind the same semantic variable.
+      // It's not clear what the logical form should do here.
       return null;
     }
 
     if (argumentCats.size() == 0 && !syntax.getSyntax().getValue().equals("S")) {
+      // Some sort of unknown noun or something.
       return new ConstantExpression("unknown");
     }
 
     Expression body = null;
     int argumentIndex = argumentRoots.indexOf(syntax.getRootVariable());
-    if (argumentIndex != -1) {
-      HeadedSyntacticCategory argument = argumentCats.get(argumentIndex);
-      if (argument.isAtomic()) {
-        body = varMap.get(argumentIndex);
-      } else {
-        List<Expression> argumentArguments = Lists.newArrayList();
-        while (!argument.isAtomic()) {
-          argumentArguments.add(varMap.get(argument.getArgumentType().getRootVariable()));
-          argument = argument.getReturnType();
-        }
-        
-        body = new ApplicationExpression(varMap.get(argumentIndex), argumentArguments);
-      }
-    } else {
-      // It's not clear what the body of the logical form should be in this case.
-
+    if (argumentIndex == -1) {
+      // It's not clear what the body of the logical form should be here.
       return null;
-      // body = new ConstantExpression("$" + syntax.getRootVariable());
     }
+    
+    List<Expression> argumentArguments = Lists.newArrayList();
+    int argumentRoot = argumentRoots.get(argumentIndex);
+    Set<Integer> usedVariables = Sets.newHashSet();
+    usedVariables.add(argumentRoot);
+    HeadedSyntacticCategory argument = argumentCats.get(argumentIndex);
+    if (argument.isAtomic()) {
+      body = argumentVariables.get(argumentIndex);
+    } else {
+      while (!argument.isAtomic()) {
+        int argumentArgumentRoot = argument.getArgumentType().getRootVariable();
+        usedVariables.add(argumentArgumentRoot);
+        argumentArguments.add(varMap.get(argumentArgumentRoot));
+        argument = argument.getReturnType();
+      }
+      body = new ApplicationExpression(argumentVariables.get(argumentIndex), argumentArguments);
+    }
+
+    // See if there are any other arguments to the category whose
+    // argument variables unify with the return value.
+    /*
+    if (argument.getSyntax().getValue().startsWith("N")) {
+      ConstantExpression var1 = new ConstantExpression("x");
+      ConstantExpression var2 = new ConstantExpression("y");
+      Expression equalsExpression = new LambdaExpression(Arrays.asList(var2), new ApplicationExpression(
+          new ConstantExpression("equals"), Arrays.asList(var1, var2)));
+      for (int i = 0; i < argumentRoots.size(); i++) {
+        int otherArgumentRoot = argumentRoots.get(i);
+        if (!usedVariables.contains(otherArgumentRoot)) {
+          HeadedSyntacticCategory argumentCat = argumentCats.get(i);
+
+          List<Integer> argumentArgumentRoots = Lists.newArrayList();
+          if (!argumentCat.isAtomic()) {
+            HeadedSyntacticCategory cat = argumentCat.getArgumentType();
+            argumentArgumentRoots.add(cat.getRootVariable());
+            argumentCat = argumentCat.getReturnType();
+          }
+
+          if (argumentCat.getSyntax().getValue().equals("S") && 
+              usedVariables.containsAll(argumentArgumentRoots)) {
+            ConstantExpression sentenceVariable = argumentVariables.get(i); 
+            Expression sentenceExpression = null;
+            if (argumentArgumentRoots.size() > 0) {
+              List<ConstantExpression> argumentVars = Lists.newArrayList();
+              for (int j = 0; j < argumentArgumentRoots.size(); j++) {
+                argumentVars.add(varMap.get(argumentArgumentRoots.get(j)));
+              }
+              sentenceExpression = new ApplicationExpression(sentenceVariable, equalsExpression);
+            } else {
+              sentenceExpression = sentenceVariable;
+            }
+            body = new CommutativeOperator(new ConstantExpression("and"),
+                Arrays.asList(body, sentenceExpression));
+          }
+        }
+      }
+    }
+    */
+
     return new LambdaExpression(argumentVariables, body);
   }
 

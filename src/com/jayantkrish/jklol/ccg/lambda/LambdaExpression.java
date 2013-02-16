@@ -39,11 +39,21 @@ public class LambdaExpression extends AbstractExpression {
 
   public Expression reduce(List<Expression> argumentValues) {
     Preconditions.checkArgument(argumentValues.size() <= argumentVariables.size());
-
+    
     Expression substitutedBody = body;
     for (int i = 0; i < argumentValues.size(); i++) {
-      substitutedBody = substitutedBody.substitute(argumentVariables.get(i),
-          argumentValues.get(i));
+      Expression argumentValue = argumentValues.get(i);
+      Set<ConstantExpression> argumentFreeVars = argumentValue.getFreeVariables();
+      Set<ConstantExpression> boundVars = substitutedBody.getBoundVariables();
+
+      for (ConstantExpression boundVar : boundVars) {
+        if (argumentFreeVars.contains(boundVar)) {
+          // Rename the bound variable to avoid a variable name collision.
+          ConstantExpression newBoundVarName = ConstantExpression.generateUniqueVariable();
+          substitutedBody = substitutedBody.renameVariable(boundVar, newBoundVarName);
+        }
+      }
+      substitutedBody = substitutedBody.substitute(argumentVariables.get(i), argumentValue);
     }
 
     if (argumentValues.size() == argumentVariables.size()) {
@@ -60,6 +70,17 @@ public class LambdaExpression extends AbstractExpression {
     Expression substitutedBody = body;
     for (int i = 0; i < argumentVariables.size(); i++) {
       if (argumentVariables.get(i).equals(argumentVariable)) {
+        Set<ConstantExpression> argumentFreeVars = value.getFreeVariables();
+        Set<ConstantExpression> boundVars = substitutedBody.getBoundVariables();
+
+        for (ConstantExpression boundVar : boundVars) {
+          if (argumentFreeVars.contains(boundVar)) {
+            // Rename the bound variable to avoid a variable name collision.
+            ConstantExpression newBoundVarName = ConstantExpression.generateUniqueVariable();
+            substitutedBody = substitutedBody.renameVariable(boundVar, newBoundVarName);
+          }
+        }
+
         substitutedBody = substitutedBody.substitute(argumentVariables.get(i), value);
       } else {
         remainingArguments.add(argumentVariables.get(i));
@@ -78,6 +99,23 @@ public class LambdaExpression extends AbstractExpression {
     body.getFreeVariables(accumulator);
     accumulator.removeAll(argumentVariables);
   }
+  
+  @Override
+  public void getBoundVariables(Set<ConstantExpression> accumulator) {
+    body.getBoundVariables(accumulator);
+    accumulator.addAll(argumentVariables);
+  }
+
+  @Override
+  public LambdaExpression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
+    List<ConstantExpression> substitutedArguments = Lists.newArrayList();
+    for (ConstantExpression boundVariable : argumentVariables) {
+      substitutedArguments.add(boundVariable.renameVariable(variable, replacement));
+    }
+    Expression substitutedBody = body.renameVariable(variable, replacement);
+
+    return new LambdaExpression(substitutedArguments, substitutedBody);
+  }
 
   @Override
   public Expression substitute(ConstantExpression constant, Expression replacement) {
@@ -93,6 +131,27 @@ public class LambdaExpression extends AbstractExpression {
   public Expression simplify() {
     Expression simplifiedBody = body.simplify();
     return new LambdaExpression(argumentVariables, simplifiedBody);
+  }
+
+  @Override
+  public boolean functionallyEquals(Expression expression) {
+    if (expression instanceof LambdaExpression) {
+      LambdaExpression other = (LambdaExpression) expression;
+      List<ConstantExpression> otherArguments = other.getArguments();
+      if (otherArguments.size() == argumentVariables.size()) {
+        // Functions are equal if both 
+        LambdaExpression otherSubstituted = other;
+        LambdaExpression substituted = this;
+        for (int i = 0; i < otherArguments.size(); i++) {
+          ConstantExpression newVar = ConstantExpression.generateUniqueVariable();
+          otherSubstituted = otherSubstituted.renameVariable(otherArguments.get(i), newVar);
+          substituted = substituted.renameVariable(argumentVariables.get(i), newVar);
+        }
+
+        return substituted.body.functionallyEquals(otherSubstituted.body);
+      }
+    }
+    return false;
   }
 
   @Override

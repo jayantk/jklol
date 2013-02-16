@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Stack;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 public class ExpressionParser {
@@ -78,6 +79,8 @@ public class ExpressionParser {
         return new LambdaExpression(variables, body);
       } else if (constantName.equals("and")) {
         return new CommutativeOperator(constant, subexpressions.subList(1, subexpressions.size()));
+      } else if (constantName.equals("set")) {
+        return new CommutativeOperator(constant, subexpressions.subList(1, subexpressions.size()));
       } else if (constantName.equals("exists")) {
         List<ConstantExpression> variables = Lists.newArrayList();
         for (int i = 1; i < subexpressions.size() - 1; i++) {
@@ -85,6 +88,16 @@ public class ExpressionParser {
         }
         Expression body = subexpressions.get(subexpressions.size() - 1);
         return new QuantifierExpression(constantName, variables, body);
+      } else if (constantName.equals("forall")) {
+        List<ConstantExpression> variables = Lists.newArrayList();
+        List<Expression> values = Lists.newArrayList();
+        for (int i = 1; i < subexpressions.size() - 1; i++) {
+          ApplicationExpression app = (ApplicationExpression) subexpressions.get(i);
+          variables.add((ConstantExpression) app.getFunction());
+          values.add(Iterables.getOnlyElement(app.getArguments()));
+        }
+        Expression body = subexpressions.get(subexpressions.size() - 1);
+        return new ForAllExpression(variables, values, body);
       }
     }
     return new ApplicationExpression(subexpressions);

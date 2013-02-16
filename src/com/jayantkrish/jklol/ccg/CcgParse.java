@@ -213,6 +213,31 @@ public class CcgParse {
       return unaryRule.getUnaryRule().getLogicalForm().reduce(Arrays.asList(preUnaryLogicalForm));
     }
   }
+  
+  public List<SpannedExpression> getSpannedLogicalForms() {
+    List<SpannedExpression> spannedExpressions = Lists.newArrayList();
+    getSpannedLogicalFormsHelper(spannedExpressions);
+    return spannedExpressions;
+  }
+
+  private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions) {
+    Expression logicalForm = getLogicalForm();
+    if (logicalForm != null) {
+      spannedExpressions.add(new SpannedExpression(logicalForm.simplify(), spanStart, spanEnd));
+    } else {
+      Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
+      if (preUnaryLogicalForm != null) {
+        spannedExpressions.add(new SpannedExpression(preUnaryLogicalForm.simplify(),
+            spanStart, spanEnd));
+        return;
+      } else {
+        if (!isTerminal()) {
+          left.getSpannedLogicalFormsHelper(spannedExpressions);
+          right.getSpannedLogicalFormsHelper(spannedExpressions);
+        }
+      }
+    }
+  }
 
   /**
    * Gets the logical form for this parse without applying the unary
@@ -259,19 +284,36 @@ public class CcgParse {
             argumentLogicalForm = rightLogicalForm;
           }
 
-          LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm;
+          LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm.simplify();
           ConstantExpression functionArgument = functionAsLambda.getArguments().get(0);
           int numArgsToKeep = combinator.getArgumentReturnDepth();
           if (numArgsToKeep == 0) {
             // Function application.
-            result = functionAsLambda.reduceArgument(functionArgument, argumentLogicalForm);
+            int numArguments = functionAsLambda.getArguments().size(); 
+            if (numArguments > 1) {
+              List<ConstantExpression> remainingArguments = ConstantExpression.generateUniqueVariables(numArguments - 1);
+              List<Expression> arguments = Lists.newArrayList(argumentLogicalForm);
+              arguments.addAll(remainingArguments);
+              result = new LambdaExpression(remainingArguments, new ApplicationExpression(functionAsLambda, arguments));
+            } else {
+              result = new ApplicationExpression(functionAsLambda, Arrays.asList(argumentLogicalForm));
+            }
           } else {
             // Composition.
             LambdaExpression argumentAsLambda = (LambdaExpression) argumentLogicalForm;
             List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
+            List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
 
-            result = functionAsLambda.reduceArgument(functionArgument, new ApplicationExpression(argumentAsLambda, remainingArgs));
-            result = new LambdaExpression(remainingArgs, result);
+            List<Expression> functionArguments = Lists.newArrayList();
+            functionArguments.add(new ApplicationExpression(argumentAsLambda, remainingArgsRenamed));
+            List<ConstantExpression> newFunctionArgs = ConstantExpression.generateUniqueVariables(functionAsLambda.getArguments().size() - 1);
+            functionArguments.addAll(newFunctionArgs);
+
+            result = new ApplicationExpression(functionAsLambda, functionArguments);
+            if (newFunctionArgs.size() > 0) {
+              result = new LambdaExpression(newFunctionArgs, result);
+            }
+            result = new LambdaExpression(remainingArgsRenamed, result);
           }
         }
       }
@@ -513,6 +555,35 @@ public class CcgParse {
       return "<" + syntaxString + " " + left + " " + right + ">";
     } else {
       return "<" + syntaxString + ">";
+    }
+  }
+  
+  public static class SpannedExpression {
+    private final Expression expression;
+    private final int spanStart;
+    private final int spanEnd;
+
+    public SpannedExpression(Expression expression, int spanStart, int spanEnd) {
+      this.expression = Preconditions.checkNotNull(expression);
+      this.spanStart = spanStart;
+      this.spanEnd = spanEnd;
+    }
+    
+    public Expression getExpression() {
+      return expression;
+    }
+    
+    public int getSpanStart() {
+      return spanStart;
+    }
+    
+    public int getSpanEnd() {
+      return spanEnd;
+    }
+    
+    @Override
+    public String toString() {
+      return spanStart + "," + spanEnd + ": " + expression.toString();
     }
   }
 }

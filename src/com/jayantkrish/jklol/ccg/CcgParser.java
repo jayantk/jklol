@@ -11,7 +11,6 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -26,7 +25,6 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
-import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -1265,42 +1263,49 @@ public class CcgParser implements Serializable {
       LogFunction log, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, 
       DiscreteFactor terminalDistribution, boolean useUnknownWords) {
     Preconditions.checkArgument(terminals.size() == posTags.size());
-    Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
 
     List<String> preprocessedTerminals = preprocessInput(terminals);
-
-    int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
     for (int i = 0; i < preprocessedTerminals.size(); i++) {
       for (int j = i; j < preprocessedTerminals.size(); j++) {
         List<String> terminalValue = preprocessedTerminals.subList(i, j + 1);
-        if (!terminalListValue.canTakeValue(terminalValue)) {
-          if (i != j || !useUnknownWords) {
-            continue;
-          } else {
-            terminalValue = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(i)));
-            if (!terminalListValue.canTakeValue(terminalValue)) {
-              // Unknown word and unknown pos tag. Parser will fail.
-              continue;
-            }
-          }
-        }
-
-        Assignment assignment = terminalVar.outcomeArrayToAssignment(terminalValue);
-        Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
-        while (iterator.hasNext()) {
-          Outcome bestOutcome = iterator.next();
-          CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
-
-          // Look up how likely this syntactic entry is to occur with
-          // this part of speech.
-          double posProb = getTerminalPosProbability(posTags.get(i), category.getSyntax());
-
-          // Add all possible chart entries to the ccg chart.
-          ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, i, j);
-          addChartEntryWithDependencies(entry, chart, bestOutcome.getProbability() * posProb, i, j, log);
+        String posTag = posTags.get(j);
+        int numAdded = addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, 
+            log, terminalVar, ccgCategoryVar, terminalDistribution);
+        if (numAdded == 0 && i == j && useUnknownWords) {
+          // Backoff to POS tags if the input is unknown.
+          terminalValue = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(i)));
+          addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, log, 
+              terminalVar, ccgCategoryVar, terminalDistribution);
         }
       }
     }
+  }
+  
+  private int addChartEntriesForTerminal(List<String> terminalValue, String posTag,
+      int spanStart, int spanEnd, CcgChart chart, LogFunction log, 
+      VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, DiscreteFactor terminalDistribution) {
+    int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
+    Assignment assignment = terminalVar.outcomeArrayToAssignment(terminalValue);
+    if (!terminalVar.isValidAssignment(assignment)) {
+      return 0;
+    }
+
+    Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+    int numEntries = 0;
+    while (iterator.hasNext()) {
+      Outcome bestOutcome = iterator.next();
+      CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
+
+      // Look up how likely this syntactic entry is to occur with
+      // this part of speech.
+      double posProb = getTerminalPosProbability(posTag, category.getSyntax());
+
+      // Add all possible chart entries to the ccg chart.
+      ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, spanStart, spanEnd);
+      addChartEntryWithDependencies(entry, chart, bestOutcome.getProbability() * posProb, spanStart, spanEnd, log);
+      numEntries++;
+    }
+    return numEntries;
   }
 
   public double getTerminalPosProbability(String posTag, HeadedSyntacticCategory syntax) {

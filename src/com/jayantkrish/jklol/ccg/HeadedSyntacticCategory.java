@@ -451,7 +451,7 @@ public class HeadedSyntacticCategory implements Serializable {
       sb.append(")");
     }
 
-    if (syntacticCategory.getRootFeature() != SyntacticCategory.DEFAULT_FEATURE_VALUE) {
+    if (!syntacticCategory.getRootFeature().equals(SyntacticCategory.DEFAULT_FEATURE_VALUE)) {
       sb.append("[");
       sb.append(syntacticCategory.getRootFeature());
       sb.append("]");

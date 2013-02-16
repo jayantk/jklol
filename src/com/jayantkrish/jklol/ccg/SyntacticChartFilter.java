@@ -100,8 +100,6 @@ public class SyntacticChartFilter implements ChartFilter {
     } else if (entry.getRightUnaryRule() != null) {
       return false;
     }
-
-    System.out.println(spanStart + " " + spanEnd + " " + syntaxVarType.getValue(entry.getHeadedSyntax()));
     return true;
   }
 

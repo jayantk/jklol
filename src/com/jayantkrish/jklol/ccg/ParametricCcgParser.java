@@ -395,7 +395,11 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public VariableNumMap getCcgCategoryVar() {
     return ccgCategoryVar;
   }
-  
+
+  public DiscreteVariable getPredicateVar() {
+    return dependencyHeadVar.getDiscreteVariables().get(0);
+  }
+
   public ParametricCcgParser replaceTerminalFamily(ParametricFactor newTerminalFamily) {
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, newTerminalFamily, 
         terminalPosVar, terminalSyntaxVar, terminalPosFamily, dependencyHeadVar, 

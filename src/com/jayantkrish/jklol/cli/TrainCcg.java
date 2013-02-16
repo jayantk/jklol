@@ -8,6 +8,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
@@ -19,7 +20,6 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticChartFilter.DefaultCompatibilityFunction;
-import com.jayantkrish.jklol.ccg.SyntacticChartFilter.MapCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -73,22 +73,7 @@ public class TrainCcg extends AbstractCli {
         options.valueOf(trainingData), options.has(useCcgBankFormat), options.has(ignoreSemantics));
     Set<String> posTags = CcgExample.getPosTagVocabulary(unfilteredTrainingExamples);
     System.out.println(posTags.size() + " POS tags");
-    
-    // Determine how annotated syntactic parses will be matched against
-    // predicted parses.
-    SetMultimap<SyntacticCategory, HeadedSyntacticCategory> syntaxMultimap = null;
-    SyntacticCompatibilityFunction compatibilityFunction = null;
-    if (options.has(syntaxMap)) {
-      syntaxMultimap = readSyntaxMap(options.valueOf(syntaxMap));
-      System.out.println("Syntactic category map: ");
-      for (SyntacticCategory cat : syntaxMultimap.keys()) {
-        System.out.println(cat + " " + syntaxMultimap.get(cat));
-      }
-      compatibilityFunction = new MapCompatibilityFunction(syntaxMultimap);
-    } else {
-      compatibilityFunction = new DefaultCompatibilityFunction();
-    }
-    
+
     Set<CcgRuleSchema> observedRules = null;
     if (options.has(onlyObservedBinaryRules)) {
       observedRules = Sets.newHashSet();
@@ -106,7 +91,8 @@ public class TrainCcg extends AbstractCli {
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
 
     System.out.println(parser.getSyntaxDistribution().getParameterDescription());
-    
+
+    Multimap<SyntacticCategory, HeadedSyntacticCategory> syntaxMultimap = parser.getSyntacticCategoryMap();
     List<CcgExample> trainingExamples = parser.filterExampleCollection(unfilteredTrainingExamples,
         !options.has(discardInvalid), syntaxMultimap);
     System.out.println(trainingExamples.size() + " training examples.");
@@ -115,6 +101,7 @@ public class TrainCcg extends AbstractCli {
     
     // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
+    SyntacticCompatibilityFunction compatibilityFunction = new DefaultCompatibilityFunction();
     if (options.has(perceptron)) {
       oracle = new CcgPerceptronOracle(family, null, compatibilityFunction, options.valueOf(beamSize));
     } else {

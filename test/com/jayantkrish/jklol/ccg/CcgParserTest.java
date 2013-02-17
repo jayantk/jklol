@@ -118,11 +118,11 @@ public class CcgParserTest extends TestCase {
     CcgParse parse = parses.get(0);
 
     assertEquals(2.0, parse.getNodeProbability());
-    assertEquals(2.0, parse.getRight().getNodeProbability());
+    assertEquals(4.0, parse.getRight().getNodeProbability());
     System.out.println(parse.getRight().getLeft());
     assertEquals(4.0, parse.getRight().getLeft().getNodeProbability());
     assertEquals(0.5, parse.getLeft().getNodeProbability());
-    assertEquals(0.5 * 0.3 * 2.0 * 4.0 * 2.0, parse.getSubtreeProbability());
+    assertEquals(0.5 * 0.3 * 4.0 * 4.0 * 2.0, parse.getSubtreeProbability());
     
     assertEquals(5, parse.getAllDependencies().size());
     
@@ -163,7 +163,7 @@ public class CcgParserTest extends TestCase {
     assertEquals("in", parse.getNodeDependencies().get(0).getHead());
     assertEquals(1, parse.getNodeDependencies().get(0).getArgIndex());
     assertEquals("people", parse.getNodeDependencies().get(0).getObject());
-    assertEquals(0.3 * 4 * 2 * 2 * 3, parse.getSubtreeProbability());
+    assertEquals(0.3 * 4 * 2 * 2 * 3 * 4, parse.getSubtreeProbability());
     assertEquals("people", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
 
     parse = parses.get(1);
@@ -180,7 +180,7 @@ public class CcgParserTest extends TestCase {
     assertTrue(heads.contains("that"));
     assertTrue(heads.contains("eat"));
 
-    assertEquals(0.3 * 4 * 2 * 3, parse.getSubtreeProbability());
+    assertEquals(0.3 * 4 * 2 * 3 * 4, parse.getSubtreeProbability());
   }
   
   public void testParseLogicalFormApplication() {
@@ -350,8 +350,8 @@ public class CcgParserTest extends TestCase {
       assertEquals("about", Iterables.getOnlyElement(heads).getHead());
     }
     
-    assertEquals(2.0, parses.get(0).getSubtreeProbability());
-    assertEquals(0.5, parses.get(1).getSubtreeProbability());
+    assertEquals(2.0 * 4, parses.get(0).getSubtreeProbability());
+    assertEquals(0.5 * 4, parses.get(1).getSubtreeProbability());
   }
   
   public void testParseComposition4() {
@@ -389,7 +389,7 @@ public class CcgParserTest extends TestCase {
     // Both parses should have the same probability and dependencies.
     CcgParse parse = parses.get(0);
     System.out.println(parse.getAllDependencies());
-    assertEquals(0.3 * 2 * 2 * 2, parse.getSubtreeProbability());
+    assertEquals(0.3 * 2 * 2 * 2 * 4 * 2, parse.getSubtreeProbability());
     assertEquals(2, parse.getNodeDependencies().size());
     assertEquals("eat", parse.getNodeDependencies().get(0).getHead());
     String object = parse.getNodeDependencies().get(0).getObject(); 
@@ -473,7 +473,7 @@ public class CcgParserTest extends TestCase {
     System.out.println(parses.get(0).getAllDependencies());
 
     CcgParse parse = parses.get(0);
-    assertEquals(0.3 * 2 * 2, parse.getSubtreeProbability());
+    assertEquals(0.3 * 2 * 2 * 4, parse.getSubtreeProbability());
     assertEquals(2, parse.getAllDependencies().size());
   }
 
@@ -485,7 +485,7 @@ public class CcgParserTest extends TestCase {
 
     Set<SyntacticCategory> syntaxTypes = Sets.newHashSet();
     for (CcgParse parse : parses) {
-      double expectedProb = 0.3 * 2;
+      double expectedProb = 0.3 * 2 * 4;
       if (parse.getSyntacticCategory().getValue().equals("S")) {
         expectedProb *= 2;
       }
@@ -781,6 +781,13 @@ public class CcgParserTest extends TestCase {
     DiscreteFactor verbDistanceFactor = TableFactor.unity(distancePredicateVars.union(verbDistanceVar));
     Set<String> puncTagSet = ParametricCcgParser.DEFAULT_PUNC_TAGS;
     Set<String> verbTagSet = ParametricCcgParser.DEFAULT_VERB_TAGS;
+    
+    VariableNumMap wordDistanceVars = wordDistanceFactor.getVars();
+    TableFactorBuilder wordFactorBuilder = TableFactorBuilder.fromFactor(wordDistanceFactor);
+    wordFactorBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", 2, 0), 3.0);
+    wordFactorBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", 2, 1), 2.0);
+    wordFactorBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", 2, 2), 1.0);
+    wordDistanceFactor = wordFactorBuilder.build();
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         posTagVar, terminalSyntaxVar, posDistribution,

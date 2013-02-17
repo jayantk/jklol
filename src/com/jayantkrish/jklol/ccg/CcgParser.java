@@ -1259,8 +1259,8 @@ public class CcgParser implements Serializable {
    * @param terminalDistribution
    * @param terminalPosDistribution
    */
-  public void initializeChartWithDistribution(List<String> terminals, List<String> posTags, CcgChart chart,
-      LogFunction log, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, 
+  public void initializeChartWithDistribution(List<String> terminals, List<String> posTags,
+      CcgChart chart, LogFunction log, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, 
       DiscreteFactor terminalDistribution, boolean useUnknownWords) {
     Preconditions.checkArgument(terminals.size() == posTags.size());
 
@@ -1302,7 +1302,8 @@ public class CcgParser implements Serializable {
 
       // Add all possible chart entries to the ccg chart.
       ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, spanStart, spanEnd);
-      addChartEntryWithDependencies(entry, chart, bestOutcome.getProbability() * posProb, spanStart, spanEnd, log);
+      chart.addChartEntryForSpan(entry, bestOutcome.getProbability() * posProb,
+          spanStart, spanEnd, syntaxVarType);
       numEntries++;
     }
     return numEntries;
@@ -1343,9 +1344,11 @@ public class CcgParser implements Serializable {
     double[] values = new double[keyNums.length];
     Arrays.fill(values, 1.0);
 
-    int headVarNum = dependencyTensor.getDimensionNumbers()[0];
-    int argVarNum = dependencyTensor.getDimensionNumbers()[2];
-    int predVarSize = dependencyTensor.getDimensionSizes()[0];
+    int[] dependencyDimensionNumbers = dependencyTensor.getDimensionNumbers();
+    int[] dependencyDimensionSizes = dependencyTensor.getDimensionSizes();
+    int headVarNum = dependencyDimensionNumbers[0];
+    int argVarNum = dependencyDimensionNumbers[2];
+    int predVarSize = dependencyDimensionSizes[0];
 
     SparseTensor keyIndicator = SparseTensor.fromUnorderedKeyValues(new int[] { headVarNum },
         new int[] { predVarSize }, keyNums, values);
@@ -1361,6 +1364,43 @@ public class CcgParser implements Serializable {
     chart.setWordDistanceTensor(smallWordDistanceTensor);
     chart.setPuncDistanceTensor(smallPuncDistanceTensor);
     chart.setVerbDistanceTensor(smallVerbDistanceTensor);
+    
+    // Compile out the distance probabilities to be a function of the word indexes.
+    int[] wordDistances = chart.getWordDistances();
+    int[] puncDistances = chart.getPunctuationDistances();
+    int[] verbDistances = chart.getVerbDistances();
+    int[] indexArgNums = new int[] {dependencyDimensionNumbers[0], dependencyDimensionNumbers[1],
+        dependencyDimensionNumbers[1] + 1, dependencyDimensionNumbers[1] + 2};
+    int[] indexArgSizes = new int[] {dependencyDimensionSizes[0], dependencyDimensionSizes[1],
+        numTerminals, numTerminals};
+    SparseTensorBuilder indexDistanceBuilder = new SparseTensorBuilder(indexArgNums, indexArgSizes);
+    int[] key = new int[4];
+    for (int subjectIndex = 0; subjectIndex < numTerminals; subjectIndex++) {
+      key[2] = subjectIndex;
+      for (int objectIndex = 0; objectIndex < numTerminals; objectIndex++) {
+        key[3] = objectIndex;
+        for (int i = 0; i < keyNums.length; i++) {
+          key[0] = (int) keyNums[i];
+          for (int j = 0; j < dependencyDimensionSizes[1]; j++) {
+            key[1] = j;
+            
+            int distanceIndex = (subjectIndex * numTerminals) +  objectIndex;
+            int wordDistance = wordDistances[distanceIndex];
+            int puncDistance = puncDistances[distanceIndex];
+            int verbDistance = verbDistances[distanceIndex];
+
+            double prob = 1.0;
+            prob *= smallWordDistanceTensor.getByDimKey(key[0], key[1], wordDistance);
+            prob *= smallPuncDistanceTensor.getByDimKey(key[0], key[1], puncDistance);
+            prob *= smallVerbDistanceTensor.getByDimKey(key[0], key[1], verbDistance);
+            
+            indexDistanceBuilder.put(key, prob);
+          }
+        }
+      }
+    }
+    
+    chart.setWordIndexWeightTensor(indexDistanceBuilder.build());
   }
 
   public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
@@ -1575,14 +1615,8 @@ public class CcgParser implements Serializable {
     // Get the probabilities of the generated dependencies.
     double depProb = 1.0;
     Tensor currentParseTensor = chart.getDependencyTensor();
-    Tensor currentWordTensor = chart.getWordDistanceTensor();
-    Tensor currentPuncTensor = chart.getPuncDistanceTensor();
-    Tensor currentVerbTensor = chart.getVerbDistanceTensor();
-
-    int[] wordDistances = chart.getWordDistances();
-    int[] puncDistances = chart.getPunctuationDistances();
-    int[] verbDistances = chart.getVerbDistances();
-    int numTerminals = chart.size();
+    Tensor wordIndexWeightTensor = chart.getWordIndexWeightTensor();
+    long[] wordIndexOffsets = wordIndexWeightTensor.getDimensionOffsets();
 
     long[] resultDependencies = result.getDependencies();
     for (int i = 0; i < resultDependencies.length; i++) {
@@ -1615,23 +1649,11 @@ public class CcgParser implements Serializable {
       int subjectWordIndex = (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
       int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
 
-      // log.startTimer("chart_entry/compute_distance");
-      int distanceIndex = (subjectWordIndex * numTerminals) +  objectWordIndex;
-      int wordDistance = wordDistances[distanceIndex];
-      int puncDistance = puncDistances[distanceIndex];
-      int verbDistance = verbDistances[distanceIndex];
-      // log.stopTimer("chart_entry/compute_distance");
-
-      // log.startTimer("chart_entry/lookup_distance");
-      long distanceKeyNumBase = (headNum * distanceHeadOffset) + (argNumNum * distanceArgNumOffset);
-      long wordDistanceKeyNum = distanceKeyNumBase + (wordDistance * distanceDistanceOffset);
-      depProb *= currentWordTensor.get(wordDistanceKeyNum);
-      long puncDistanceKeyNum = distanceKeyNumBase + (puncDistance * distanceDistanceOffset);
-      depProb *= currentPuncTensor.get(puncDistanceKeyNum);
-      long verbDistanceKeyNum = distanceKeyNumBase + (verbDistance * distanceDistanceOffset);
-      depProb *= currentVerbTensor.get(verbDistanceKeyNum);
-      // log.stopTimer("chart_entry/lookup_distance");
-      // System.out.println(longToUnfilledDependency(depLong) + " " + depProb);
+      long indexKeyNum = (headNum * wordIndexOffsets[0]) + (argNumNum * wordIndexOffsets[1])
+          + (subjectWordIndex * wordIndexOffsets[2]) + (objectWordIndex * wordIndexOffsets[3]);
+      double indexProb = wordIndexWeightTensor.get(indexKeyNum);
+      depProb *= indexProb;
+      // System.out.println(indexProb + " " + headNum + " " + argNumNum + " " + subjectWordIndex + " " + objectWordIndex);
     }
 
     double totalProb = leftRightProb * depProb;

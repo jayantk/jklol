@@ -40,6 +40,10 @@ public class CcgChart {
   private Tensor wordDistanceTensor;
   private Tensor puncDistanceTensor;
   private Tensor verbDistanceTensor;
+  
+  // Compilation of distance weights, indexed by word location in
+  // the sentence.
+  private Tensor wordIndexWeightTensor;
 
   // The syntactic category combinations that will be considered
   // while parsing this sentence.
@@ -146,6 +150,10 @@ public class CcgChart {
   public void setVerbDistanceTensor(Tensor tensor) {
     this.verbDistanceTensor = tensor;
   }
+  
+  public void setWordIndexWeightTensor(Tensor tensor) {
+    wordIndexWeightTensor = tensor;
+  }
 
   public void setSyntaxDistribution(DiscreteFactor syntaxDistribution) {
     this.syntaxDistribution = syntaxDistribution;
@@ -171,6 +179,10 @@ public class CcgChart {
 
   public Tensor getVerbDistanceTensor() {
     return verbDistanceTensor;
+  }
+  
+  public Tensor getWordIndexWeightTensor() {
+    return wordIndexWeightTensor;
   }
 
   public DiscreteFactor getSyntaxDistribution() {

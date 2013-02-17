@@ -60,7 +60,8 @@ public class CcgParserTest extends TestCase {
     "*not_a_word*,(NP{0}/N{1}){0},,0 *not_a_word*",
     "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},,0 near,near 2 2",
     "the,(N{0}/N{0}){1},,1 the,the 1 0",
-    "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1"};
+    "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1",
+    "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0"};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 1.0, 
@@ -71,7 +72,7 @@ public class CcgParserTest extends TestCase {
     1.0, 0.5,
     1.0, 1.0,
     0.5, 1.0,
-    1.0, 1.0, 1.0, 1.0};
+    1.0, 1.0, 1.0, 1.0, 1.0};
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)", 
     ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", 
@@ -181,6 +182,14 @@ public class CcgParserTest extends TestCase {
     assertTrue(heads.contains("eat"));
 
     assertEquals(0.3 * 4 * 2 * 3 * 4, parse.getSubtreeProbability());
+  }
+  
+  public void testParse3() {
+    List<CcgParse> parses = parser.beamSearch(
+        Arrays.asList("green", "people"), 10);
+    
+    assertEquals(1, parses.size());
+    assertEquals(2.0, parses.get(0).getSubtreeProbability());
   }
   
   public void testParseLogicalFormApplication() {
@@ -672,6 +681,7 @@ public class CcgParserTest extends TestCase {
       for (String head : Iterables.concat(category.getAssignment())) {
         semanticPredicates.addAll(Arrays.asList(head));
       }
+      semanticPredicates.addAll(category.getSubjects());
       syntacticCategories.add(category.getSyntax());
     }
 
@@ -727,6 +737,7 @@ public class CcgParserTest extends TestCase {
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("quickly", 1, "eat"), 3.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
     dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("special:compound", 1, "people"), 1.0);
+    dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("green_(N{0}/N{0}){1}", 1, "people"), 1.0);
     
     DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
     DiscreteFactor syntaxDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);

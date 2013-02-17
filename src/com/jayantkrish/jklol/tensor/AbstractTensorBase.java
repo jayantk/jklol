@@ -45,7 +45,7 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
    * 
    * @param sizes
    */
-  protected static final long[] computeIndexOffsets(int[] sizes) {
+  public static final long[] computeIndexOffsets(int[] sizes) {
     long[] indexOffsets = new long[sizes.length];
     for (int i = sizes.length - 1; i >= 0; i--) {
       if (i == sizes.length - 1) {

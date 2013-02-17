@@ -26,6 +26,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.AbstractTensorBase;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -1274,7 +1275,7 @@ public class CcgParser implements Serializable {
         if (numAdded == 0 && i == j && useUnknownWords) {
           // Backoff to POS tags if the input is unknown.
           terminalValue = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(i)));
-          addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, log, 
+          numAdded = addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, log, 
               terminalVar, ccgCategoryVar, terminalDistribution);
         }
       }
@@ -1334,6 +1335,9 @@ public class CcgParser implements Serializable {
           // Identify possible predicates.
           for (int assignmentPredicateNum : entries[i].getAssignmentPredicateNums()) {
             possiblePredicates.add((long) assignmentPredicateNum);
+          } 
+          for (long unfilledDep : entries[i].getUnfilledDependencies()) {
+            possiblePredicates.add(((unfilledDep >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM);
           }
         }
       }
@@ -1373,16 +1377,21 @@ public class CcgParser implements Serializable {
         dependencyDimensionNumbers[1] + 1, dependencyDimensionNumbers[1] + 2};
     int[] indexArgSizes = new int[] {dependencyDimensionSizes[0], dependencyDimensionSizes[1],
         numTerminals, numTerminals};
-    SparseTensorBuilder indexDistanceBuilder = new SparseTensorBuilder(indexArgNums, indexArgSizes);
-    int[] key = new int[4];
+    
+    long[] indexDistanceKeyNums = new long[numTerminals * numTerminals * keyNums.length * dependencyDimensionSizes[1]];
+    double[] indexDistanceValues = new double[numTerminals * numTerminals * keyNums.length * dependencyDimensionSizes[1]];
+    int tensorIndex = 0;
+    long keyNum = 0;
+    int[] dimensionNumbers = new int[] {dependencyDimensionNumbers[0], dependencyDimensionNumbers[1],
+        dependencyDimensionNumbers[1] + 1, dependencyDimensionNumbers[1] + 2};
+    int[] dimensionSizes = new int[] {predVarSize, dependencyDimensionSizes[1], numTerminals, numTerminals};
+    long[] keyOffsets = AbstractTensorBase.computeIndexOffsets(dimensionSizes);
     for (int subjectIndex = 0; subjectIndex < numTerminals; subjectIndex++) {
-      key[2] = subjectIndex;
       for (int objectIndex = 0; objectIndex < numTerminals; objectIndex++) {
-        key[3] = objectIndex;
         for (int i = 0; i < keyNums.length; i++) {
-          key[0] = (int) keyNums[i];
           for (int j = 0; j < dependencyDimensionSizes[1]; j++) {
-            key[1] = j;
+            keyNum = ((long) subjectIndex) * keyOffsets[2] + ((long) objectIndex) * keyOffsets[3]
+                + ((long) keyNums[i]) * keyOffsets[0] + ((long) j) * keyOffsets[1];
             
             int distanceIndex = (subjectIndex * numTerminals) +  objectIndex;
             int wordDistance = wordDistances[distanceIndex];
@@ -1390,17 +1399,21 @@ public class CcgParser implements Serializable {
             int verbDistance = verbDistances[distanceIndex];
 
             double prob = 1.0;
-            prob *= smallWordDistanceTensor.getByDimKey(key[0], key[1], wordDistance);
-            prob *= smallPuncDistanceTensor.getByDimKey(key[0], key[1], puncDistance);
-            prob *= smallVerbDistanceTensor.getByDimKey(key[0], key[1], verbDistance);
+            prob *= smallWordDistanceTensor.getByDimKey((int) keyNums[i], j, wordDistance);
+            prob *= smallPuncDistanceTensor.getByDimKey((int) keyNums[i], j, puncDistance);
+            prob *= smallVerbDistanceTensor.getByDimKey((int) keyNums[i], j, verbDistance);
             
-            indexDistanceBuilder.put(key, prob);
+            indexDistanceKeyNums[tensorIndex] = keyNum;
+            indexDistanceValues[tensorIndex] = prob;
+            tensorIndex++;
           }
         }
       }
     }
-    
-    chart.setWordIndexWeightTensor(indexDistanceBuilder.build());
+    Preconditions.checkState(tensorIndex == indexDistanceKeyNums.length);
+    Tensor indexDistanceTensor = SparseTensor.fromUnorderedKeyValues(
+        dimensionNumbers, dimensionSizes, indexDistanceKeyNums, indexDistanceValues);
+    chart.setWordIndexWeightTensor(indexDistanceTensor);
   }
 
   public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
@@ -1649,11 +1662,10 @@ public class CcgParser implements Serializable {
       int subjectWordIndex = (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
       int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
 
-      long indexKeyNum = (headNum * wordIndexOffsets[0]) + (argNumNum * wordIndexOffsets[1])
-          + (subjectWordIndex * wordIndexOffsets[2]) + (objectWordIndex * wordIndexOffsets[3]);
+      long indexKeyNum = ((long) headNum * wordIndexOffsets[0]) + ((long) argNumNum * wordIndexOffsets[1])
+          + ((long) subjectWordIndex * wordIndexOffsets[2]) + ((long) objectWordIndex * wordIndexOffsets[3]);
       double indexProb = wordIndexWeightTensor.get(indexKeyNum);
       depProb *= indexProb;
-      // System.out.println(indexProb + " " + headNum + " " + argNumNum + " " + subjectWordIndex + " " + objectWordIndex);
     }
 
     double totalProb = leftRightProb * depProb;
@@ -1850,7 +1862,6 @@ public class CcgParser implements Serializable {
   }
 
   public long predicateToLong(String predicate) {
-    System.out.println(predicate + " " + dependencyHeadType.canTakeValue(predicate));
     if (dependencyHeadType.canTakeValue(predicate)) {
       return dependencyHeadType.getValueIndex(predicate);
     } else {

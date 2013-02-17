@@ -55,6 +55,10 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
     DiscreteVariable featureNameDictionary = new DiscreteVariable("indicator features", assignments);
     this.featureVars = VariableNumMap.singleton(0, "features", featureNameDictionary);  
   }
+  
+  public static IndicatorLogLinearFactor createDenseFactor(VariableNumMap variables) {
+    return new IndicatorLogLinearFactor(variables, TableFactor.unity(variables));
+  }
 
   public DiscreteFactor getFeatureValues() {
     return initialWeights;

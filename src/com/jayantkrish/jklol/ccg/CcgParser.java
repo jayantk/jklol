@@ -1092,8 +1092,8 @@ public class CcgParser implements Serializable {
     
     chart.applyChartFilterToTerminals();
 
-    // Prune dependencies, etc., which will not be used 
-    // while parsing this sentence.
+    // Sparsifying the dependencies actually slows the code down.
+    // (Possibly a cache issue?)
     sparsifyDependencyDistribution(chart);
 
     log.startTimer("ccg_parse/calculate_inside_beam");
@@ -1131,6 +1131,11 @@ public class CcgParser implements Serializable {
     chart.setPuncDistanceTensor(puncDistanceTensor);
     chart.setVerbDistanceTensor(verbDistanceTensor);
     chart.setSyntaxDistribution(compiledSyntaxDistribution);
+
+    System.out.println("dependency tensor: " + dependencyTensor.size());
+    System.out.println(wordDistanceTensor.size());
+    System.out.println(puncDistanceTensor.size());
+    System.out.println(verbDistanceTensor.size());
 
     return chart;
   }
@@ -1333,6 +1338,9 @@ public class CcgParser implements Serializable {
           // Identify possible predicates.
           for (int assignmentPredicateNum : entries[i].getAssignmentPredicateNums()) {
             possiblePredicates.add((long) assignmentPredicateNum);
+          }
+          for (long depLong : entries[i].getUnfilledDependencies()){
+            possiblePredicates.add(((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM);
           }
         }
       }

@@ -340,9 +340,15 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap wordDistanceVar = VariableNumMap.singleton(2, "wordDistance", CcgParser.wordDistanceVarType);
     VariableNumMap puncDistanceVar = VariableNumMap.singleton(2, "puncDistance", CcgParser.puncDistanceVarType);
     VariableNumMap verbDistanceVar = VariableNumMap.singleton(2, "verbDistance", CcgParser.verbDistanceVarType);
+    /*
     ParametricFactor wordDistanceFactor = new DenseIndicatorLogLinearFactor(distancePredicateVars.union(wordDistanceVar));
     ParametricFactor puncDistanceFactor = new DenseIndicatorLogLinearFactor(distancePredicateVars.union(puncDistanceVar));
     ParametricFactor verbDistanceFactor = new DenseIndicatorLogLinearFactor(distancePredicateVars.union(verbDistanceVar));
+    */
+    ParametricFactor wordDistanceFactor = IndicatorLogLinearFactor.createDenseFactor(distancePredicateVars.union(wordDistanceVar));
+    ParametricFactor puncDistanceFactor = IndicatorLogLinearFactor.createDenseFactor(distancePredicateVars.union(puncDistanceVar));
+    ParametricFactor verbDistanceFactor = IndicatorLogLinearFactor.createDenseFactor(distancePredicateVars.union(verbDistanceVar));
+
     Set<String> puncTagSet = DEFAULT_PUNC_TAGS;
     Set<String> verbTagSet = DEFAULT_VERB_TAGS;
 

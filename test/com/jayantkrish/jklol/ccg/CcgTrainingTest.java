@@ -97,7 +97,7 @@ public class CcgTrainingTest extends TestCase {
     }
     
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        null, posTags, true, null);
+        null, posTags, true, null, false);
   }
   
   public void testSyntacticChartFilter1() {

@@ -298,6 +298,6 @@ public abstract class AbstractCli {
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
-        posTagSet, !parsedOptions.has(ccgApplicationOnly), rules);
+        posTagSet, !parsedOptions.has(ccgApplicationOnly), rules, false);
   }
 }

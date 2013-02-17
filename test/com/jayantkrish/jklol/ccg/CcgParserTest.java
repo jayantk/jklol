@@ -724,7 +724,7 @@ public class CcgParserTest extends TestCase {
     
     // Build the dependency distribution.
     DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates);
-    DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(1, 2, 3));
+    DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(0, 1, 2, 3));
 
     semanticHeadVar = VariableNumMap.singleton(0, "semanticHead", semanticPredicateType);
     semanticArgNumVar = VariableNumMap.singleton(1, "semanticArgNum", argumentNums);
@@ -807,7 +807,7 @@ public class CcgParserTest extends TestCase {
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
-        leftSyntaxVar, rootDistribution);
+        leftSyntaxVar, rootDistribution, false);
   }
   
   private static class TestChartFilter implements ChartFilter {

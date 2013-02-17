@@ -161,6 +161,8 @@ public class CcgParser implements Serializable {
 
   // All predicates used in CCG rules.
   private final Set<Long> predicatesInRules;
+  
+  private final boolean allowWordSkipping;
 
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
@@ -173,7 +175,8 @@ public class CcgParser implements Serializable {
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       DiscreteFactor binaryRuleDistribution, VariableNumMap unaryRuleInputVar,
       VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap searchMoveVar,
-      DiscreteFactor compiledSyntaxDistribution, VariableNumMap rootSyntaxVar, DiscreteFactor rootSyntaxDistribution) {
+      DiscreteFactor compiledSyntaxDistribution, VariableNumMap rootSyntaxVar, DiscreteFactor rootSyntaxDistribution,
+      boolean allowWordSkipping) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -196,6 +199,13 @@ public class CcgParser implements Serializable {
     this.dependencyDistribution = dependencyDistribution;
     this.dependencyHeadType = dependencyHeadVar.getDiscreteVariables().get(0);
     this.dependencyArgNumType = dependencyArgNumVar.getDiscreteVariables().get(0);
+    // TODO: This check can be made unnecessary by fixing the representation
+    // of unfilled dependencies as longs. Right now, the representation requires
+    // this condition to hold.
+    for (int i = 0; i < dependencyArgNumType.numValues(); i++) {
+      Preconditions.checkArgument(dependencyArgNumType.getValue(i) == (Integer) i);
+    }
+
     DiscreteVariable dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
     Preconditions.checkArgument(dependencyHeadType.equals(dependencyArgType));
     this.dependencyTensor = dependencyDistribution.getWeights();
@@ -265,6 +275,11 @@ public class CcgParser implements Serializable {
         predicatesInRules.add((long) dependencyHeadType.getValueIndex(predicate));
       }
     }
+    
+    this.allowWordSkipping = allowWordSkipping;
+    // Not yet implemented, but flag exists for forward compatibility of 
+    // serializable format.
+    Preconditions.checkArgument(!allowWordSkipping);
   }
 
   public static DiscreteVariable buildSyntacticCategoryDictionary(Iterable<HeadedSyntacticCategory> syntacticCategories) {
@@ -1132,10 +1147,12 @@ public class CcgParser implements Serializable {
     chart.setVerbDistanceTensor(verbDistanceTensor);
     chart.setSyntaxDistribution(compiledSyntaxDistribution);
 
+    /*
     System.out.println("dependency tensor: " + dependencyTensor.size());
     System.out.println(wordDistanceTensor.size());
     System.out.println(puncDistanceTensor.size());
     System.out.println(verbDistanceTensor.size());
+    */
 
     return chart;
   }
@@ -1437,7 +1454,7 @@ public class CcgParser implements Serializable {
         Multimap<Integer, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
 
         int[] key = new int[1];
-        // log.startTimer("ccg_parse/beam_loop");
+        log.startTimer("ccg_parse/beam_loop");
         for (int leftType : leftTypes.keySet()) {
           key[0] = leftType;
           long keyNumPrefix = syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
@@ -1462,9 +1479,9 @@ public class CcgParser implements Serializable {
                 Combinator resultCombinator = searchMove.getBinaryCombinator();
                 // double ruleProb =
                 // syntaxDistributionTensor.getByIndex(index);
-                // log.startTimer("ccg_parse/beam_loop/binary");
+                log.startTimer("ccg_parse/beam_loop/binary");
                 double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
-                // log.stopTimer("ccg_parse/beam_loop/binary");
+                log.stopTimer("ccg_parse/beam_loop/binary");
 
                 int resultSyntax = resultCombinator.getSyntax();
                 int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
@@ -1473,25 +1490,25 @@ public class CcgParser implements Serializable {
                   ChartEntry leftRoot = leftTrees[leftIndex];
                   double leftProb = leftProbs[leftIndex];
 
-                  // log.startTimer("ccg_parse/beam_loop/unary");
+                  log.startTimer("ccg_parse/beam_loop/unary");
                   long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
                   if (leftUnaryKeyNum != -1) {
                     leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
                   }
-                  // log.stopTimer("ccg_parse/beam_loop/unary");
+                  log.stopTimer("ccg_parse/beam_loop/unary");
 
                   for (Integer rightIndex : rightTypes.get(rightType)) {
                     ChartEntry rightRoot = rightTrees[rightIndex];
                     double rightProb = rightProbs[rightIndex];
 
-                    // log.startTimer("ccg_parse/beam_loop/unary");
+                    log.startTimer("ccg_parse/beam_loop/unary");
                     long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
                     if (rightUnaryKeyNum != -1) {
                       rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
                     }
-                    // log.stopTimer("ccg_parse/beam_loop/unary");
+                    log.stopTimer("ccg_parse/beam_loop/unary");
 
-                    // log.startTimer("ccg_parse/beam_loop/relabel");
+                    log.startTimer("ccg_parse/beam_loop/relabel");
                     // Relabel assignments from the left and right chart
                     // entries.
                     int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftRelabeling(),
@@ -1537,9 +1554,9 @@ public class CcgParser implements Serializable {
 
                     long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
                     long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
+                    log.stopTimer("ccg_parse/beam_loop/relabel");
 
-                    // log.stopTimer("ccg_parse/beam_loop/relabel");
-
+                    log.startTimer("ccg_parse/beam_loop/create_assignment_and_chart");
                     numAssignments = filterAssignmentVariables(assignmentVariableAccumulator, assignmentPredicateAccumulator,
                         assignmentIndexAccumulator, resultCombinator.getResultOriginalVars(),
                         resultCombinator.getResultVariableRelabeling(), numAssignments);
@@ -1551,8 +1568,9 @@ public class CcgParser implements Serializable {
                         null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVariableNums,
                         newAssignmentPredicateNums, newAssignmentIndexes, unfilledDepArray, filledDepArray,
                         spanStart, spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
-                    // log.startTimer("ccg_parse/beam_loop/dependencies");
-
+                    log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
+                    
+                    log.startTimer("ccg_parse/beam_loop/dependencies");
                     // Get the probabilities of the generated dependencies.
                     double depProb = 1.0;
                     double curDepProb = 1.0;
@@ -1567,8 +1585,7 @@ public class CcgParser implements Serializable {
                       // in dependencyTensor.
                       int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
                       int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
-                      int argNumNum = dependencyArgNumType.getValueIndex(
-                          (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK));
+                      int argNumNum = (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
 
                       long depNum = (headNum * dependencyHeadOffset) + (argNumNum * dependencyArgNumOffset)
                           + objectNum * dependencyObjectOffset;
@@ -1576,7 +1593,6 @@ public class CcgParser implements Serializable {
                       // Get the probability of this predicate-argument combination.
                       // log.startTimer("chart_entry/dependency_prob");
                       curDepProb = currentDependencyTensor.get(depNum);
-
                       // log.stopTimer("chart_entry/dependency_prob");
 
                       // Compute distance features.
@@ -1606,10 +1622,12 @@ public class CcgParser implements Serializable {
                       depCache = depLong;
                       depProbCache = curDepProb;
                     }
+                    log.stopTimer("ccg_parse/beam_loop/dependencies");
 
+                    log.startTimer("chart_entry/add_chart_entry");
                     double totalProb = ruleProb * leftProb * rightProb * depProb;
                     chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
-                    // log.stopTimer("ccg_parse/beam_loop/dependencies");
+                    log.stopTimer("chart_entry/add_chart_entry");
                   }
                 }
               }
@@ -1622,7 +1640,7 @@ public class CcgParser implements Serializable {
             }
           }
         }
-        // log.stopTimer("ccg_parse/beam_loop");
+        log.stopTimer("ccg_parse/beam_loop");
       }
     }
   }

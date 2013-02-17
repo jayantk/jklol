@@ -81,11 +81,11 @@ public class ForAllExpression extends AbstractExpression {
 
   @Override
   public Expression simplify() {
-    List<Expression> simplifiedValues = Lists.newArrayList();
+    List<Expression> simplifiedRestrictions = Lists.newArrayList();
     for (int i = 0; i < restrictions.size(); i++) {
-      simplifiedValues.add(restrictions.get(i).simplify());
+      simplifiedRestrictions.add(restrictions.get(i).simplify());
     }
-    return new ForAllExpression(boundVariables, restrictions, body.simplify());
+    return new ForAllExpression(boundVariables, simplifiedRestrictions, body.simplify());
   }
 
   @Override

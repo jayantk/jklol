@@ -136,6 +136,14 @@ public class ExpressionTest extends TestCase {
     assertTrue(expected.functionallyEquals(simplified));
   }
   
+  public void testSimplifyForAll() {
+    Expression expression = parser.parseSingleExpression("(forall (a (set b ((lambda x x) d))) (and (exists c b (b c)) b))");
+    Expression simplified = expression.simplify();
+    
+    Expression expected = parser.parseSingleExpression("(forall (a (set b d)) (exists c x (and (x c) b)))");
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+  
   public void testFunctionallyEquals() {
     assertTrue(application.functionallyEquals(application));
   }

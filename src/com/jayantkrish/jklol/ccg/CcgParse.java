@@ -285,7 +285,6 @@ public class CcgParse {
           }
 
           LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm.simplify();
-          ConstantExpression functionArgument = functionAsLambda.getArguments().get(0);
           int numArgsToKeep = combinator.getArgumentReturnDepth();
           if (numArgsToKeep == 0) {
             // Function application.

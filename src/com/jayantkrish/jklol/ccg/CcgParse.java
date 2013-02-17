@@ -249,9 +249,6 @@ public class CcgParse {
     if (isTerminal()) {
       return lexiconEntry.getLogicalForm();
     } else {
-      if (getSemanticHeads().size() == 0) {
-        return null;
-      }
       Expression leftLogicalForm = left.getLogicalForm();
       Expression rightLogicalForm = right.getLogicalForm();
 

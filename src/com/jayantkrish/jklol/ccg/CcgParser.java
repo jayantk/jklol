@@ -1101,9 +1101,9 @@ public class CcgParser implements Serializable {
     System.out.println(terminals);
     System.out.println(posTags);
 
-    log.startTimer("ccg_parse/initialize_chart");
+    // log.startTimer("ccg_parse/initialize_chart");
     initializeChart(terminals, posTags, chart, log);
-    log.stopTimer("ccg_parse/initialize_chart");
+    // log.stopTimer("ccg_parse/initialize_chart");
     
     chart.applyChartFilterToTerminals();
 
@@ -1111,9 +1111,9 @@ public class CcgParser implements Serializable {
     // (Possibly a cache issue?)
     sparsifyDependencyDistribution(chart);
 
-    log.startTimer("ccg_parse/calculate_inside_beam");
+    // log.startTimer("ccg_parse/calculate_inside_beam");
     calculateInsideBeam(chart, log);
-    log.stopTimer("ccg_parse/calculate_inside_beam");
+    // log.stopTimer("ccg_parse/calculate_inside_beam");
 
     reweightRootEntries(chart);
 
@@ -1454,7 +1454,7 @@ public class CcgParser implements Serializable {
         Multimap<Integer, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
 
         int[] key = new int[1];
-        log.startTimer("ccg_parse/beam_loop");
+        // log.startTimer("ccg_parse/beam_loop");
         for (int leftType : leftTypes.keySet()) {
           key[0] = leftType;
           long keyNumPrefix = syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
@@ -1479,9 +1479,9 @@ public class CcgParser implements Serializable {
                 Combinator resultCombinator = searchMove.getBinaryCombinator();
                 // double ruleProb =
                 // syntaxDistributionTensor.getByIndex(index);
-                log.startTimer("ccg_parse/beam_loop/binary");
+                // log.startTimer("ccg_parse/beam_loop/binary");
                 double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
-                log.stopTimer("ccg_parse/beam_loop/binary");
+                // log.stopTimer("ccg_parse/beam_loop/binary");
 
                 int resultSyntax = resultCombinator.getSyntax();
                 int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
@@ -1490,25 +1490,25 @@ public class CcgParser implements Serializable {
                   ChartEntry leftRoot = leftTrees[leftIndex];
                   double leftProb = leftProbs[leftIndex];
 
-                  log.startTimer("ccg_parse/beam_loop/unary");
+                  // log.startTimer("ccg_parse/beam_loop/unary");
                   long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
                   if (leftUnaryKeyNum != -1) {
                     leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
                   }
-                  log.stopTimer("ccg_parse/beam_loop/unary");
+                  // log.stopTimer("ccg_parse/beam_loop/unary");
 
                   for (Integer rightIndex : rightTypes.get(rightType)) {
                     ChartEntry rightRoot = rightTrees[rightIndex];
                     double rightProb = rightProbs[rightIndex];
 
-                    log.startTimer("ccg_parse/beam_loop/unary");
+                    // log.startTimer("ccg_parse/beam_loop/unary");
                     long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
                     if (rightUnaryKeyNum != -1) {
                       rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
                     }
-                    log.stopTimer("ccg_parse/beam_loop/unary");
+                    // log.stopTimer("ccg_parse/beam_loop/unary");
 
-                    log.startTimer("ccg_parse/beam_loop/relabel");
+                    // log.startTimer("ccg_parse/beam_loop/relabel");
                     // Relabel assignments from the left and right chart
                     // entries.
                     int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftRelabeling(),
@@ -1554,9 +1554,9 @@ public class CcgParser implements Serializable {
 
                     long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
                     long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
-                    log.stopTimer("ccg_parse/beam_loop/relabel");
+                    // log.stopTimer("ccg_parse/beam_loop/relabel");
 
-                    log.startTimer("ccg_parse/beam_loop/create_assignment_and_chart");
+                    // log.startTimer("ccg_parse/beam_loop/create_assignment_and_chart");
                     numAssignments = filterAssignmentVariables(assignmentVariableAccumulator, assignmentPredicateAccumulator,
                         assignmentIndexAccumulator, resultCombinator.getResultOriginalVars(),
                         resultCombinator.getResultVariableRelabeling(), numAssignments);
@@ -1568,9 +1568,9 @@ public class CcgParser implements Serializable {
                         null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVariableNums,
                         newAssignmentPredicateNums, newAssignmentIndexes, unfilledDepArray, filledDepArray,
                         spanStart, spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
-                    log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
+                    // log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
                     
-                    log.startTimer("ccg_parse/beam_loop/dependencies");
+                    // log.startTimer("ccg_parse/beam_loop/dependencies");
                     // Get the probabilities of the generated dependencies.
                     double depProb = 1.0;
                     double curDepProb = 1.0;
@@ -1622,12 +1622,12 @@ public class CcgParser implements Serializable {
                       depCache = depLong;
                       depProbCache = curDepProb;
                     }
-                    log.stopTimer("ccg_parse/beam_loop/dependencies");
+                    // log.stopTimer("ccg_parse/beam_loop/dependencies");
 
-                    log.startTimer("chart_entry/add_chart_entry");
+                    // log.startTimer("chart_entry/add_chart_entry");
                     double totalProb = ruleProb * leftProb * rightProb * depProb;
                     chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
-                    log.stopTimer("chart_entry/add_chart_entry");
+                    // log.stopTimer("chart_entry/add_chart_entry");
                   }
                 }
               }
@@ -1640,7 +1640,7 @@ public class CcgParser implements Serializable {
             }
           }
         }
-        log.stopTimer("ccg_parse/beam_loop");
+        // log.stopTimer("ccg_parse/beam_loop");
       }
     }
   }

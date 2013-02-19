@@ -214,6 +214,28 @@ public class CcgParse {
     }
   }
   
+  /**
+   * Returns the logical form for the smallest subtree of the parse which
+   * completely contains the given span.
+   * 
+   * @param spanStart
+   * @param spanEnd
+   * @return
+   */
+  public Expression getLogicalFormForSpan(int spanStart, int spanEnd) {
+    if (isTerminal()) {
+      return getLogicalForm();
+    } else {
+      if (left.spanStart <= spanStart && left.spanEnd >= spanEnd) {
+        return left.getLogicalFormForSpan(spanStart, spanEnd);
+      } else if (right.spanStart <= spanStart && right.spanEnd >= spanEnd) {
+        return right.getLogicalFormForSpan(spanStart, spanEnd);
+      } else {
+        return getLogicalForm();
+      }
+    }
+  }
+
   public List<SpannedExpression> getSpannedLogicalForms() {
     List<SpannedExpression> spannedExpressions = Lists.newArrayList();
     getSpannedLogicalFormsHelper(spannedExpressions);
@@ -297,6 +319,7 @@ public class CcgParse {
           } else {
             // Composition.
             LambdaExpression argumentAsLambda = (LambdaExpression) argumentLogicalForm;
+            System.out.println("argument: " + argumentAsLambda);
             List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
             List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
 

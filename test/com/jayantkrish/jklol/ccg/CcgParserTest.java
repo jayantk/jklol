@@ -32,7 +32,7 @@ import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
 
-  CcgParser parser, parserWithComposition, parserWithUnary, parserWithUnaryAndComposition;
+  CcgParser parser, parserWithComposition, parserWithUnary, parserWithUnaryAndComposition, parserWordSkip;
   
   ExpressionParser exp;
   
@@ -104,11 +104,13 @@ public class CcgParserTest extends TestCase {
   private VariableNumMap semanticArgVar;
 
   public void setUp() {
-    parser = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, false);
-    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, true);
-    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false);
+    parser = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, false, false);
+    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, true, false);
+    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false, false);
     parserWithUnaryAndComposition = parseLexicon(lexicon, binaryRuleArray,
-        new String[] {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))"}, weights, true);
+        new String[] {"N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))"}, weights, true, false);
+    
+    parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] {"FOO{0} FOO{0}"}, weights, false, true);
     
     exp = new ExpressionParser();
   }
@@ -666,7 +668,7 @@ public class CcgParserTest extends TestCase {
   }
 
   private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray, 
-      String[] unaryRuleArray, double[] weights, boolean allowComposition) {
+      String[] unaryRuleArray, double[] weights, boolean allowComposition, boolean allowWordSkipping) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
     Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
@@ -807,7 +809,7 @@ public class CcgParserTest extends TestCase {
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
-        leftSyntaxVar, rootDistribution, false);
+        leftSyntaxVar, rootDistribution, allowWordSkipping);
   }
   
   private static class TestChartFilter implements ChartFilter {

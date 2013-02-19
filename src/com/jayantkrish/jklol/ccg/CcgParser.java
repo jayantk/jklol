@@ -275,11 +275,8 @@ public class CcgParser implements Serializable {
         predicatesInRules.add((long) dependencyHeadType.getValueIndex(predicate));
       }
     }
-    
+
     this.allowWordSkipping = allowWordSkipping;
-    // Not yet implemented, but flag exists for forward compatibility of 
-    // serializable format.
-    Preconditions.checkArgument(!allowWordSkipping);
   }
 
   public static DiscreteVariable buildSyntacticCategoryDictionary(Iterable<HeadedSyntacticCategory> syntacticCategories) {
@@ -1442,7 +1439,8 @@ public class CcgParser implements Serializable {
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j is for forward compatibility for skipping terminal
       // symbols.
-      for (int j = i + 1; j < i + 2; j++) {
+      int maxInd = allowWordSkipping ? spanEnd - spanStart : i + 2; 
+      for (int j = i + 1; j < maxInd; j++) {
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
         int numLeftTrees = chart.getNumChartEntriesForSpan(spanStart, spanStart + i);

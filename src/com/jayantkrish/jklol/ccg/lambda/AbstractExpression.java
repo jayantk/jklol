@@ -28,7 +28,7 @@ public abstract class AbstractExpression implements Expression {
     getBoundVariables(variables);
     return variables;
   }
-  
+
   @Override
   public Expression renameVariables(List<ConstantExpression> variables,
       List<ConstantExpression> replacements) {

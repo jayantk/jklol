@@ -37,17 +37,43 @@ public class ForAllExpression extends AbstractExpression {
   public List<Expression> getRestrictions() {
     return restrictions;
   }
+  
+  public Expression expandQuantifier() {
+    Preconditions.checkState(boundVariables.size() == 1, "Not implemented for more than 1 variable");
+    
+    ConstantExpression boundVar = boundVariables.get(0);
+    CommutativeOperator set = (CommutativeOperator) restrictions.get(0);
+    List<Expression> clauses = Lists.newArrayList();
+    for (Expression arg : set.getArguments()) {
+      clauses.add(body.substitute(boundVar, arg));
+    }
+
+    return new CommutativeOperator(new ConstantExpression("and"), clauses);
+  }
 
   @Override
   public void getFreeVariables(Set<ConstantExpression> accumulator) {
     body.getFreeVariables(accumulator);
+    for (Expression restriction : restrictions) {
+      restriction.getFreeVariables(accumulator);
+    }
+
     accumulator.removeAll(boundVariables);
   }
 
   @Override
   public void getBoundVariables(Set<ConstantExpression> accumulator) {
     body.getBoundVariables(accumulator);
+    for (Expression restriction : restrictions) {
+      restriction.getBoundVariables(accumulator);
+    }
+
     accumulator.addAll(boundVariables);
+  }
+  
+  @Override
+  public List<ConstantExpression> getLocallyBoundVariables() {
+    return boundVariables;
   }
 
   @Override
@@ -85,6 +111,21 @@ public class ForAllExpression extends AbstractExpression {
     for (int i = 0; i < restrictions.size(); i++) {
       simplifiedRestrictions.add(restrictions.get(i).simplify());
     }
+    
+    Expression simplifiedBody = body.simplify();
+    if (simplifiedBody instanceof ForAllExpression) {
+      ForAllExpression forall = (ForAllExpression) simplifiedBody;
+      ForAllExpression relabeled = (ForAllExpression) forall.freshenVariables(boundVariables);
+
+      List<ConstantExpression> newBoundVariables = Lists.newArrayList(boundVariables);
+      newBoundVariables.addAll(relabeled.getLocallyBoundVariables());
+      
+      List<Expression> newRestrictions = Lists.newArrayList(restrictions);
+      newRestrictions.addAll(relabeled.getRestrictions());
+
+      return new ForAllExpression(newBoundVariables, newRestrictions, relabeled.getBody());
+    }
+
     return new ForAllExpression(boundVariables, simplifiedRestrictions, body.simplify());
   }
 

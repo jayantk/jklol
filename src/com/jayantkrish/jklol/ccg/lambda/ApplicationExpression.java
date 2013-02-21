@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -44,6 +45,11 @@ public class ApplicationExpression extends AbstractExpression {
     }
   }
   
+  @Override
+  public List<ConstantExpression> getLocallyBoundVariables() {
+    return Collections.emptyList();
+  }
+
   public Expression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
     List<Expression> substituted = Lists.newArrayList();
     for (Expression subexpression : subexpressions) {
@@ -83,7 +89,30 @@ public class ApplicationExpression extends AbstractExpression {
       return new ApplicationExpression(subexpressions);
     }
   }
-  
+
+  /*
+  @Override
+  public Expression expandUniversalQuantifiers() {
+    // First simplify all arguments
+    List<Expression> simplifiedArguments = Lists.newArrayList();
+    List<Expression> arguments = getArguments();
+
+    for (Expression argument : arguments) {
+      simplifiedArguments.add(argument.expandUniversalQuantifiers()); 
+    }
+
+    Expression function = getFunction().simplify();
+    if (function instanceof LambdaExpression) {
+      LambdaExpression lambdaFunction = (LambdaExpression) function;
+      return lambdaFunction.reduce(simplifiedArguments).simplify();
+    } else {
+      List<Expression> subexpressions = Lists.newArrayList(function);
+      subexpressions.addAll(simplifiedArguments);
+      return new ApplicationExpression(subexpressions);
+    }
+  }
+  */
+
   @Override
   public boolean functionallyEquals(Expression expression) {
     if (expression instanceof ApplicationExpression) {

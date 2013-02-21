@@ -234,7 +234,8 @@ public class CcgParserTest extends TestCase {
         "the", "colorful", "tasty"), 10);
     assertEquals(8, parses.size());
     
-    Expression expectedLf = exp.parseSingleExpression("(lambda $1 (lambda e (and (colorful e) (tasty e) ($1 e))))");    
+    Expression expectedLf = exp.parseSingleExpression("(lambda $1 (lambda e (and (colorful e) (tasty e) ($1 e))))")
+        .simplify();    
     for (CcgParse parse : parses) {
       System.out.println(parse);
       System.out.println(parse.getAllDependencies());

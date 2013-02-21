@@ -35,6 +35,14 @@ public interface Expression extends Serializable {
   Set<ConstantExpression> getBoundVariables();
 
   void getBoundVariables(Set<ConstantExpression> accumulator);
+  
+  /**
+   * Gets variables bound by the root of this expression, not including
+   * any variables bound by subexpressions.
+   * 
+   * @return
+   */
+  List<ConstantExpression> getLocallyBoundVariables();
 
   Expression renameVariable(ConstantExpression variable, ConstantExpression replacement);
 

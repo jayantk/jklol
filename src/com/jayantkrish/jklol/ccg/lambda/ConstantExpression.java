@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -41,6 +42,11 @@ public class ConstantExpression extends AbstractExpression implements Comparable
   @Override
   public void getBoundVariables(Set<ConstantExpression> accumulator) {
     // No bound variables.
+  }
+  
+  @Override
+  public List<ConstantExpression> getLocallyBoundVariables() {
+    return Collections.emptyList();
   }
   
   @Override

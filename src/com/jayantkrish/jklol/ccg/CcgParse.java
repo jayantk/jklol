@@ -222,17 +222,21 @@ public class CcgParse {
    * @param spanEnd
    * @return
    */
-  public Expression getLogicalFormForSpan(int spanStart, int spanEnd) {
-    if (isTerminal()) {
-      return getLogicalForm();
-    } else {
+  public SpannedExpression getLogicalFormForSpan(int spanStart, int spanEnd) {
+    if (!isTerminal()) {
       if (left.spanStart <= spanStart && left.spanEnd >= spanEnd) {
         return left.getLogicalFormForSpan(spanStart, spanEnd);
       } else if (right.spanStart <= spanStart && right.spanEnd >= spanEnd) {
         return right.getLogicalFormForSpan(spanStart, spanEnd);
-      } else {
-        return getLogicalForm();
       }
+    }
+
+    // This is a terminal or the smallest portion of the tree containing the span.    
+    Expression lf = getPreUnaryLogicalForm();
+    if (lf != null) {
+      return new SpannedExpression(getLogicalForm(), this.spanStart, this.spanEnd);
+    } else {
+      return null;
     }
   }
 
@@ -246,18 +250,17 @@ public class CcgParse {
     Expression logicalForm = getLogicalForm();
     if (logicalForm != null) {
       spannedExpressions.add(new SpannedExpression(logicalForm.simplify(), spanStart, spanEnd));
-    } else {
-      Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
-      if (preUnaryLogicalForm != null) {
-        spannedExpressions.add(new SpannedExpression(preUnaryLogicalForm.simplify(),
-            spanStart, spanEnd));
-        return;
-      } else {
-        if (!isTerminal()) {
-          left.getSpannedLogicalFormsHelper(spannedExpressions);
-          right.getSpannedLogicalFormsHelper(spannedExpressions);
-        }
-      }
+    } 
+    Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
+
+    if (preUnaryLogicalForm != null) {
+      spannedExpressions.add(new SpannedExpression(preUnaryLogicalForm.simplify(),
+          spanStart, spanEnd));
+    }
+
+    if (!isTerminal()) {
+      left.getSpannedLogicalFormsHelper(spannedExpressions);
+      right.getSpannedLogicalFormsHelper(spannedExpressions);
     }
   }
 
@@ -285,7 +288,6 @@ public class CcgParse {
 
       Expression result = null;
       if (leftLogicalForm != null && rightLogicalForm != null) {
-
         if (combinator.getBinaryRule() != null) {
           LambdaExpression combinatorExpression = combinator.getBinaryRule().getLogicalForm();
           if (combinatorExpression != null) {
@@ -318,7 +320,7 @@ public class CcgParse {
             }
           } else {
             // Composition.
-            LambdaExpression argumentAsLambda = (LambdaExpression) argumentLogicalForm;
+            LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
             System.out.println("argument: " + argumentAsLambda);
             List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
             List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());

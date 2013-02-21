@@ -50,6 +50,11 @@ public class QuantifierExpression extends AbstractExpression {
   }
   
   @Override
+  public List<ConstantExpression> getLocallyBoundVariables() {
+    return boundVariables;
+  }
+
+  @Override
   public QuantifierExpression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
     List<ConstantExpression> substitutedBoundVariables = Lists.newArrayList();
     for (ConstantExpression boundVariable : boundVariables) {
@@ -73,20 +78,34 @@ public class QuantifierExpression extends AbstractExpression {
   @Override
   public Expression simplify() {
     Expression simplifiedBody = body.simplify();
-    
+
     if (simplifiedBody instanceof QuantifierExpression) {
       QuantifierExpression quant = (QuantifierExpression) simplifiedBody;
       if (quant.getQuantifierName().equals(quantifierName)) {
         // Group like quantifiers.
         QuantifierExpression relabeled = (QuantifierExpression) quant.freshenVariables(boundVariables);
         
-        List<ConstantExpression> newBoundVariables = Lists.newArrayList(relabeled.getBoundVariables());
+        List<ConstantExpression> newBoundVariables = Lists.newArrayList(relabeled.getLocallyBoundVariables());
         newBoundVariables.addAll(boundVariables);
         return new QuantifierExpression(quantifierName, newBoundVariables, relabeled.getBody());
       }
-    }
+    } else if (simplifiedBody instanceof ForAllExpression) {
+      ForAllExpression forall = (ForAllExpression) simplifiedBody;
+      forall = (ForAllExpression) forall.freshenVariables(boundVariables);
+      
+      Expression newBody = new QuantifierExpression(quantifierName, boundVariables, forall.getBody());
+      return new ForAllExpression(forall.getLocallyBoundVariables(), forall.getRestrictions(), newBody);
+    } 
+      
     return new QuantifierExpression(quantifierName, boundVariables, simplifiedBody);
   }
+
+  /*
+  @Override
+  public Expression rescopeUniversalQuantifiers() {
+    body.rescopeUniversalQuantifiers()
+  }
+  */
 
   @Override
   public boolean functionallyEquals(Expression expression) {

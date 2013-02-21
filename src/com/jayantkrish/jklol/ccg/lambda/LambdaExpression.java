@@ -105,7 +105,12 @@ public class LambdaExpression extends AbstractExpression {
     body.getBoundVariables(accumulator);
     accumulator.addAll(argumentVariables);
   }
-
+  
+  @Override
+  public List<ConstantExpression> getLocallyBoundVariables() {
+    return getArguments();
+  }
+  
   @Override
   public LambdaExpression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
     List<ConstantExpression> substitutedArguments = Lists.newArrayList();
@@ -130,6 +135,13 @@ public class LambdaExpression extends AbstractExpression {
   @Override
   public Expression simplify() {
     Expression simplifiedBody = body.simplify();
+    if (simplifiedBody instanceof LambdaExpression) {
+      LambdaExpression bodyAsLambda = (LambdaExpression) simplifiedBody;
+      List<ConstantExpression> argumentList = Lists.newArrayList(argumentVariables);
+      argumentList.addAll(bodyAsLambda.getArguments());
+      
+      return new LambdaExpression(argumentList, bodyAsLambda.getBody());
+    }
     return new LambdaExpression(argumentVariables, simplifiedBody);
   }
 

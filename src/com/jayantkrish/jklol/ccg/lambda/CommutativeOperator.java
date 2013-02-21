@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -48,6 +49,11 @@ public class CommutativeOperator extends AbstractExpression {
       argument.getBoundVariables(accumulator);
     }
   }
+  
+  @Override
+  public List<ConstantExpression> getLocallyBoundVariables() {
+    return Collections.emptyList();
+  }
 
   @Override
   public Expression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
@@ -71,6 +77,7 @@ public class CommutativeOperator extends AbstractExpression {
   public Expression simplify() {
     List<Expression> simplified = Lists.newArrayList();
     List<QuantifierExpression> wrappingQuantifiers = Lists.newArrayList();
+    List<ForAllExpression> wrappingUniversals = Lists.newArrayList();
     for (Expression subexpression : arguments) {
       Expression simplifiedArgument = subexpression.simplify();
       
@@ -78,12 +85,18 @@ public class CommutativeOperator extends AbstractExpression {
       if (simplifiedArgument instanceof QuantifierExpression) {
         QuantifierExpression quantifierArgument = ((QuantifierExpression) simplifiedArgument);
         // Avoid variable name collisions.
-        quantifierArgument = (QuantifierExpression) quantifierArgument.freshenVariables(quantifierArgument.getBoundVariables());
+        quantifierArgument = (QuantifierExpression) quantifierArgument.freshenVariables(quantifierArgument.getLocallyBoundVariables());
         wrappingQuantifiers.add(quantifierArgument);
         simplified.add(quantifierArgument.getBody());
+      } else if (simplifiedArgument instanceof ForAllExpression) {
+        ForAllExpression forAll = ((ForAllExpression) simplifiedArgument);
+        // Avoid variable name collisions.
+        forAll = (ForAllExpression) forAll.freshenVariables(forAll.getBoundVariables());
+        wrappingUniversals.add(forAll);
+        simplified.add(forAll.getBody());
       } else {
         simplified.add(simplifiedArgument);
-      }      
+      }
     }
 
     List<Expression> resultClauses = Lists.newArrayList();
@@ -102,12 +115,22 @@ public class CommutativeOperator extends AbstractExpression {
 
     Expression result = new CommutativeOperator(operatorName, resultClauses);
     // Wrap the result with the appropriate quantifiers.
+    
     for (QuantifierExpression quantifier : wrappingQuantifiers) {
-      result = new QuantifierExpression(quantifier.getQuantifierName(), 
-          Lists.newArrayList(quantifier.getBoundVariables()), result);
+      result = new QuantifierExpression(quantifier.getQuantifierName(),
+          quantifier.getLocallyBoundVariables(), result);
     }
 
-    return result;
+    for (ForAllExpression quantifier : wrappingUniversals) {
+      result = new ForAllExpression(quantifier.getLocallyBoundVariables(), 
+          quantifier.getRestrictions(), result);
+    }
+    
+    if (wrappingQuantifiers.size() > 0 || wrappingUniversals.size() > 0) {
+      return result.simplify();
+    } else {
+      return result;
+    }
   }
   
   @Override

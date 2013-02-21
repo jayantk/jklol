@@ -144,6 +144,48 @@ public class ExpressionTest extends TestCase {
     assertTrue(expected.functionallyEquals(simplified));
   }
   
+  public void testSimplifyForAllExists() {
+    Expression expression = parser.parseSingleExpression("(exists b c (forall (b (set d e)) (and (b c))))");
+    Expression simplified = expression.simplify();
+
+    Expression expected = parser.parseSingleExpression("(forall (new_b (set d e)) (exists b c (and (new_b c))))");
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+
+  public void testSimplifyConjunction() {
+    Expression expression = parser.parseSingleExpression("(exists a b (and (exists c (and c (lambda x x))) b))");
+    Expression expected = parser.parseSingleExpression("(exists a b c (and c (lambda x x) b))");
+    
+    System.out.println(expression.simplify());
+    
+    assertTrue(expected.functionallyEquals(expression.simplify()));
+  }
+  
+  public void testSimplifyConjunction2() {
+    Expression expression = parser.parseSingleExpression("(forall (a (b)) (and (forall (c (d)) (a (e)) (and c (lambda x x) a e c b)) b a))");
+    Expression expected = parser.parseSingleExpression("(forall (a (b)) (c (d)) (new_a (e)) (and c (lambda x x) new_a e c b b a))");
+
+    System.out.println(expression.simplify());
+    
+    assertTrue(expected.functionallyEquals(expression.simplify()));
+  }
+  
+  public void testExpandForAll() {
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression("(forall (b (set d e)) (exists g c (and (b c))))");
+    Expression expected = parser.parseSingleExpression("(and (exists g c (and (d c))) (exists g c (and (e c))))");
+    
+    assertEquals(expected, expression.expandQuantifier());
+  }
+  
+  public void testExpandForAll2() {
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression("(forall ($pred (set (lambda $z (exists $y (and (/m/0c7zf $z) (/m/03__y $y) (/location/location/contains $y $z)))) /m/0357_)) (exists $x ($pred $x)))");
+    Expression result = expression.expandQuantifier().simplify();
+    
+    Expression expected = parser.parseSingleExpression("(exists A B C (and (/m/0c7zf C) (/m/03__y B) (/location/location/contains B C) (/m/0357_ A)))");
+    System.out.println(result);
+    assertTrue(expected.functionallyEquals(result));
+  }
+  
   public void testFunctionallyEquals() {
     assertTrue(application.functionallyEquals(application));
   }

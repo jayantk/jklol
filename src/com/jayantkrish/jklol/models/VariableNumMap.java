@@ -948,6 +948,10 @@ public class VariableNumMap implements Serializable {
 
       return new VariableRelabeling(newVariableIndexMap, newVariableNameMap);
     }
+    
+    public static VariableRelabeling empty() {
+      return new VariableRelabeling(HashBiMap.<Integer, Integer>create(), HashBiMap.<String, String>create());
+    }
 
     /**
      * Constructs a relabeling from {@code domain} to {@code range} by

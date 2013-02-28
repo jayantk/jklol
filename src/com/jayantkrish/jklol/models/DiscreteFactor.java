@@ -222,7 +222,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     // See if the fast, tensor outer product implementation is usable.
     int[] myDims = getVars().getVariableNumsArray();
     int[] otherDims = other.getVars().getVariableNumsArray();
-    if (myDims[myDims.length - 1] < otherDims[0]) {
+    if (myDims.length == 0 || otherDims.length == 0 || myDims[myDims.length - 1] < otherDims[0]) {
       return new TableFactor(getVars().union(other.getVars()), 
           getWeights().outerProduct(otherAsDiscrete.getWeights()));
     }

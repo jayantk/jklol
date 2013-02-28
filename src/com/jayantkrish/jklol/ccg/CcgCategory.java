@@ -171,7 +171,7 @@ public class CcgCategory implements Serializable {
     return new CcgCategory(syntax, logicalForm, subjects, argumentNumbers, objects, values);
   }
   
-  public static Expression induceLogicalFormFromSyntax(String word, HeadedSyntacticCategory syntax) {
+  public static Expression induceLogicalFormFromSyntax(HeadedSyntacticCategory syntax) {
     int[] syntaxVarNums = syntax.getUniqueVariables();
     Map<Integer, ConstantExpression> varMap = Maps.newHashMap();
     for (int i = 0; i < syntaxVarNums.length; i++) {
@@ -197,7 +197,7 @@ public class CcgCategory implements Serializable {
 
     if (argumentCats.size() == 0 && !syntax.getSyntax().getValue().equals("S")) {
       // Some sort of unknown noun or something.
-      return new ConstantExpression(word);
+      return new ConstantExpression("unknown");
     }
 
     Expression body = null;
@@ -207,7 +207,7 @@ public class CcgCategory implements Serializable {
       return null;
     }
     
-    List<Expression> argumentArguments = Lists.newArrayList();u
+    List<Expression> argumentArguments = Lists.newArrayList();
     int argumentRoot = argumentRoots.get(argumentIndex);
     Set<Integer> usedVariables = Sets.newHashSet();
     usedVariables.add(argumentRoot);

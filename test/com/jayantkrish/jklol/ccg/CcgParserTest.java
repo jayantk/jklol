@@ -43,7 +43,7 @@ public class CcgParserTest extends TestCase {
     "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2", 
     "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
     "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
-    "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},,0 quickly,quickly 1 1", 
+    "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},(lambda $1 $1),0 quickly,quickly 1 1", 
     "in,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda c (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
     "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 amazingly,amazingly 1 2",
     "tasty,(N{1}/N{1}){0},(lambda $1 (lambda e (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
@@ -59,7 +59,7 @@ public class CcgParserTest extends TestCase {
     "colorful,(N{1}/N{1}){0},(lambda $1 (lambda e (and (colorful e) ($1 e)))),0 colorful,colorful 1 1",
     "*not_a_word*,(NP{0}/N{1}){0},,0 *not_a_word*",
     "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},,0 near,near 2 2",
-    "the,(N{0}/N{0}){1},,1 the,the 1 0",
+    "the,(N{0}/N{0}){1},(lambda $1 $1),1 the,the 1 0",
     "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1",
     "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0"};
   
@@ -272,8 +272,8 @@ public class CcgParserTest extends TestCase {
         "i", "eat", "people", "or", "berries"), 10);
     assertEquals(1, parses.size());
     System.out.println(parses.get(0));
-    Expression expectedLf = exp.parseSingleExpression("(exists a b (and (i a) (forall (pred (set berries people)) (pred b)) (eat a b)))");
-    assertEquals(expectedLf, parses.get(0).getLogicalForm().simplify());
+    Expression expectedLf = exp.parseSingleExpression("(forall (pred (set berries people)) (exists a b (and (i a) (pred b) (eat a b))))");
+    assertTrue(expectedLf.functionallyEquals(parses.get(0).getLogicalForm().simplify()));
   }
 
   public void testParseLogicalFormUnary() {

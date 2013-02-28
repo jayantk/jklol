@@ -395,6 +395,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     if (otherDimensionNums.length == 0) {
       // The two products coincide in this case.
       return elementwiseProduct(other);
+    } else if (dimensionNums.length == 0) {
+      return SparseTensor.copyOf(other.elementwiseProduct(this));
     }
 
     Preconditions.checkArgument(dimensionNums[dimensionNums.length - 1]
@@ -971,6 +973,23 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     values[0] = value;
 
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
+  }
+  
+  public static SparseTensor copyOf(Tensor tensor) { 
+    if (tensor instanceof SparseTensor) {
+      return (SparseTensor) tensor;
+    } else {
+      SparseTensorBuilder builder = new SparseTensorBuilder(tensor.getDimensionNumbers(),
+          tensor.getDimensionSizes());
+      double[] otherValues = tensor.getValues();
+      // TODO: this could be made a lot faster using fromUnorderedKeyValues
+      for (int i = 0; i < otherValues.length; i++) {
+        if (otherValues[i] != 0.0) {
+          builder.putByKeyNum(tensor.indexToKeyNum(i), otherValues[i]);
+        }
+      }
+      return builder.buildNoCopy();
+    }
   }
 
   // ///////////////////////////////////////////////////////////////////////////////

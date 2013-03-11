@@ -161,6 +161,7 @@ public class ExpressionTest extends TestCase {
     assertTrue(expected.functionallyEquals(expression.simplify()));
   }
   
+  /*
   public void testSimplifyConjunction2() {
     Expression expression = parser.parseSingleExpression("(forall (a (b)) (and (forall (c (d)) (a (e)) (and c (lambda x x) a e c b)) b a))");
     Expression expected = parser.parseSingleExpression("(forall (a (b)) (c (d)) (new_a (e)) (and c (lambda x x) new_a e c b b a))");
@@ -169,6 +170,7 @@ public class ExpressionTest extends TestCase {
     
     assertTrue(expected.functionallyEquals(expression.simplify()));
   }
+  */
   
   public void testExpandForAll() {
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression("(forall (b (set d e)) (exists g c (and (b c))))");

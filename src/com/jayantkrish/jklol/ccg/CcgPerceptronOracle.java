@@ -2,10 +2,8 @@ package com.jayantkrish.jklol.ccg;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.ccg.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
@@ -65,23 +63,20 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     log.stopTimer("update_gradient/unconditional_max_marginal");
 
     log.startTimer("update_gradient/conditional_max_marginal");
-    ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse(), compatibilityFunction);
-    if (searchFilter != null) {
-      conditionalChartFilter = new ConjunctionChartFilter(Arrays.asList(conditionalChartFilter, searchFilter));
-    }
 
-    List<CcgParse> possibleParses = instantiatedParser.beamSearch(example.getWords(),
-        example.getPosTags(), beamSize, conditionalChartFilter, log);
-    CcgParse bestCorrectParse = possibleParses.size() > 0 ? possibleParses.get(0) : null;
-    if (example.hasDependencies()) {
-      Set<DependencyStructure> observedDependencies = example.getDependencies();
-      for (CcgParse parse : possibleParses) {
-        if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
-          bestCorrectParse = parse;
-          break;
-        }
+    List<CcgParse> possibleParses = null; 
+    if (example.hasSyntacticParse()) {
+      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse(), compatibilityFunction);
+      if (searchFilter != null) {
+        conditionalChartFilter = new ConjunctionChartFilter(Arrays.asList(conditionalChartFilter, searchFilter));
       }
+      possibleParses = instantiatedParser.beamSearch(example.getWords(),
+          example.getPosTags(), beamSize, conditionalChartFilter, log);
+    } else {
+      possibleParses = parses;
     }
+    List<CcgParse> correctParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(example, possibleParses);
+    CcgParse bestCorrectParse = correctParses.size() > 0 ? correctParses.get(0) : null;
 
     System.out.println("num correct: " + possibleParses.size());
     if (bestCorrectParse == null) {

@@ -8,6 +8,8 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.util.CsvParser;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -23,10 +25,15 @@ public class CcgExample {
   private final List<String> words;
   private final List<String> posTags;
 
+  // May be null, in which case the true dependencies are
+  // unobserved.
   private final Set<DependencyStructure> dependencies;
   // May be null, in which case the true syntactic structure is
   // unobserved.
   private final CcgSyntaxTree syntacticParse;
+  // Expected logical form for the parse. May be null,
+  // in which case the true logical form is unobserved.
+  private final Expression logicalForm;
 
   /**
    * Create a new training example for a CCG parser.
@@ -40,14 +47,18 @@ public class CcgExample {
    * @param syntacticParse The syntactic structure of the correct CCG
    * parse of {@code words}. May be {@code null}, in which case the
    * correct parse is treated as unobserved.
+   * @param logicalForm The logical form of the correct CCG parse of
+   * {@code words}. May be {@code null}, in which case the correct
+   * value is treated as unobserved.
    */
   public CcgExample(List<String> words, List<String> posTags, Set<DependencyStructure> dependencies,
-      CcgSyntaxTree syntacticParse) {
+      CcgSyntaxTree syntacticParse, Expression logicalForm) {
     this.words = Preconditions.checkNotNull(words);
     this.posTags = Preconditions.checkNotNull(posTags);
     Preconditions.checkArgument(words.size() == posTags.size());
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
+    this.logicalForm = logicalForm;
 
     if (syntacticParse != null) {
       List<String> syntaxWords = syntacticParse.getAllSpannedWords();
@@ -86,7 +97,7 @@ public class CcgExample {
     // Parse out a CCG syntactic tree, if one is provided.
     CcgSyntaxTree tree = null;
     List<String> posTags = null;
-    if (parts.length >= 3) {
+    if (parts.length >= 3 && parts[2].length() > 0) {
       if (syntaxInCcgBankFormat) {
         tree = CcgSyntaxTree.parseFromCcgBankString(parts[2]);
       } else {
@@ -97,15 +108,23 @@ public class CcgExample {
       posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
     }
 
-    return new CcgExample(words, posTags, dependencies, tree);
+    // Parse out a logical form, if one is provided.
+    Expression logicalForm = null;
+    if (parts.length >= 4 && parts[3].length() > 0) {
+      logicalForm = (new ExpressionParser()).parseSingleExpression(parts[3]);
+    }
+
+    return new CcgExample(words, posTags, dependencies, tree, logicalForm);
   }
 
   /**
-   * Reads in a collection of examples stored one per line in {@code filename}.
+   * Reads in a collection of examples stored one per line in
+   * {@code filename}.
    * 
    * @param filename
    * @param useCcgBankFormat
-   * @param ignoreSemantics
+   * @param ignoreSemantics If {@code true}, annotated dependency
+   * structures are removed from the examples.
    * @return
    */
   public static List<CcgExample> readExamplesFromFile(String filename, boolean useCcgBankFormat,
@@ -117,7 +136,7 @@ public class CcgExample {
         examples.add(example);
       } else {
         examples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
-            example.getSyntacticParse()));
+            example.getSyntacticParse(), example.getLogicalForm()));
       }
     }
     return examples;
@@ -166,6 +185,14 @@ public class CcgExample {
 
   public Set<DependencyStructure> getDependencies() {
     return dependencies;
+  }
+
+  public boolean hasLogicalForm() {
+    return logicalForm != null;
+  }
+
+  public Expression getLogicalForm() {
+    return logicalForm;
   }
 
   @Override

@@ -24,17 +24,22 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 public class CcgTrainingTest extends TestCase {
 
   private static final String[] lexicon = {
-      "block,N{0},,0 pred:block", "object,N{0},,0 pred:object",
-      "red,(N{1}/N{1}){0},,0 pred:red,pred:red 1 1", "green,(N{1}/N{1}){0},,0 pred:green,pred:green 1 1",
-      "green,N{0},,0 pred:green", "the,(N{1}/N{1}){0},,0 the", "a,(N{1}/N{1}){0},,0 the",
-      "near,((N{1}\\N{1}){0}/N{2}){0},,0 pred:close,pred:close 1 1,pred:close 2 2",
-      "near,((N{1}\\N{1}){0}/N{2}){0},,0 pred:near,pred:near 1 1,pred:near 2 2",
-      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},,0 pred:near,pred:near 2 2",
-      "near,(PP{0}/N{1}){0},,0 pred:near,pred:near 2 1",
-      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 pred:almost,pred:almost 1 2",
-      "is,((S{0}\\N{1}){0}/N{2}){0},,0 pred:equals,pred:equals 1 1,pred:equals 2 2",
-      "\",\",((N{1}\\N{1}){0}/N{2}){0},,\"0 ,\",\", 1 1\",\", 2 2\"",
-      "2,N{0},,0 NUM", "2,(N{1}/N{1}){0},,0 NUM,NUM 1 1",
+      "block,N{0},(lambda x (pred:block x)),0 pred:block", 
+      "object,N{0},(lambda x (pred:object x)),0 pred:object",
+      "red,(N{1}/N{1}){0},(lambda $1 (lambda x (and ($1 x) (pred:red x)))),0 pred:red,pred:red 1 1",
+      "green,(N{1}/N{1}){0},(lambda $1 (lambda x (and ($1 x) (pred:green x)))),0 pred:green,pred:green 1 1",
+      "green,N{0},(lambda x (pred:green x)),0 pred:green", 
+      "the,(N{1}/N{1}){0},(lambda $1 $1),0 the", 
+      "a,(N{1}/N{1}){0},(lambda $1 $1),0 the",
+      "near,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda x (exists y (and ($1 x) (pred:close x y) ($2 y))))),0 pred:close,pred:close 1 1,pred:close 2 2",
+      "near,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda x (exists y (and ($1 x) (pred:near x y) ($2 y))))),0 pred:near,pred:near 1 1,pred:near 2 2",
+      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},(lambda $2 $1 ($1 (lambda x (exists y (and (pred:near x y) ($2 y)))))),0 pred:near,pred:near 2 2",
+      "near,(PP{0}/N{1}){0},(lambda $1 $1),0 pred:near,pred:near 2 1",
+      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},(lambda $1 (lambda x ((pred:almost $1) x))),0 pred:almost,pred:almost 1 2",
+      "is,((S{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists x y (and ($1 x) (pred:equals x y) ($2 y)))),0 pred:equals,pred:equals 1 1,pred:equals 2 2",
+      "\",\",((N{1}\\N{1}){0}/N{2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 x)))),\"0 ,\",\", 1 1\",\", 2 2\"",
+      "2,N{0},pred:num,0 NUM", 
+      "2,(N{1}/N{1}){0},,0 NUM,NUM 1 1",
       "\"#\",(N{1}/N{1}){0},,0 #,# 1 1", "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
       "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo",
       "unk-jj,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
@@ -44,13 +49,13 @@ public class CcgTrainingTest extends TestCase {
   };
 
   private static final String[] trainingData = {
-      "red block###pred:red 0 1 pred:block 1",
-      "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2",
-      "red object near the green block###pred:red 0 1 pred:object 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:object 1,pred:near 2 2 pred:block 5",
-      "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5",
-      "the kinda red block###pred:red 2 1 pred:block 3,pred:almost 1 1 pred:red 2",
-      "near the object is the red block###pred:near 0 2 pred:object 2,pred:equals 3 1 pred:near 0,pred:equals 3 2 pred:block 6,pred:red 5 1 pred:block 6",
-      "block , object###\", 1 1 pred:block 0\",\", 1 2 pred:object 2\"",
+      "red block###pred:red 0 1 pred:block 1######(lambda x (and (pred:red x) (pred:block x)))",
+      "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2######(lambda x (and (pred:red x) (pred:green x) (pred:block x)))",
+      "red object near the green block###pred:red 0 1 pred:object 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:object 1,pred:near 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:object x) (pred:near x y) (pred:green y) (pred:block y))))",
+      "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:block x) (pred:near x y) (pred:green y) (pred:block y))))",
+      "the kinda red block###pred:red 2 1 pred:block 3,pred:almost 1 1 pred:red 2######(lambda x (and (pred:block x) ((pred:almost pred:red) x)))",
+      "near the object is the red block###pred:near 0 2 pred:object 2,pred:equals 3 1 pred:near 0,pred:equals 3 2 pred:block 6,pred:red 5 1 pred:block 6######(exists x y z (and (pred:object x) (pred:near y x) (pred:equals y z) (pred:red z) (pred:block z)))",
+      "block , object###\", 1 1 pred:block 0\",\", 1 2 pred:object 2\"######(lambda x (and (pred:block x) (pred:object x)))",
   };
 
   private static final String[] trainingDataWithSyntax = {
@@ -73,6 +78,8 @@ public class CcgTrainingTest extends TestCase {
   private List<CcgExample> trainingExamples;
   private List<CcgExample> trainingExamplesWithSyntax;
   private List<CcgExample> trainingExamplesSyntaxOnly;
+  private List<CcgExample> trainingExamplesDepsOnly;
+  private List<CcgExample> trainingExamplesLfOnly;
   private Set<String> posTags;
 
   private static final double TOLERANCE = 1e-10;
@@ -81,6 +88,17 @@ public class CcgTrainingTest extends TestCase {
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {
       trainingExamples.add(CcgExample.parseFromString(trainingData[i], false));
+    }
+    
+    trainingExamplesLfOnly = Lists.newArrayList();
+    for (CcgExample example : trainingExamples) {
+      trainingExamplesLfOnly.add(new CcgExample(example.getWords(), example.getPosTags(), null, null, example.getLogicalForm()));
+    }
+    
+    trainingExamplesDepsOnly = Lists.newArrayList();
+    for (CcgExample example : trainingExamples) {
+      trainingExamplesDepsOnly.add(new CcgExample(example.getWords(), example.getPosTags(), example.getDependencies(), null,
+          null));
     }
 
     trainingExamplesWithSyntax = Lists.newArrayList();
@@ -93,9 +111,9 @@ public class CcgTrainingTest extends TestCase {
     trainingExamplesSyntaxOnly = Lists.newArrayList();
     for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
       trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getWords(), syntaxExample.getPosTags(),
-          null, syntaxExample.getSyntacticParse()));
+          null, syntaxExample.getSyntacticParse(), null));
     }
-    
+
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
         null, posTags, true, null, false);
   }
@@ -154,7 +172,14 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrainLoglikelihoodDependenciesOnly() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamples);
+    CcgParser parser = trainLoglikelihoodParser(trainingExamplesDepsOnly);
+    assertZeroDependencyError(parser, trainingExamples);
+    // Check that the resulting parameters are sensible.
+    assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
+  }
+  
+  public void testTrainLoglikelihoodLogicalFormOnly() {
+    CcgParser parser = trainLoglikelihoodParser(trainingExamplesLfOnly);
     assertZeroDependencyError(parser, trainingExamples);
     // Check that the resulting parameters are sensible.
     assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
@@ -176,6 +201,11 @@ public class CcgTrainingTest extends TestCase {
     // unconstrained in the training data.
     assertEquals(2, parses.size());
     assertEquals(parses.get(0).getSubtreeProbability(), parses.get(1).getSubtreeProbability(), TOLERANCE);
+  }
+
+  public void testTrainPerceptronLogicalFormOnly() {
+    CcgParser parser = trainPerceptronParser(trainingExamplesLfOnly);
+    assertZeroDependencyError(parser, trainingExamples);
   }
 
   public void testTrainPerceptronWithSyntax() {

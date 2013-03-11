@@ -8,6 +8,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.ccg.SyntacticChartFilter.SyntacticCompatibilityFunction;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -70,21 +71,12 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
         conditionalChartFilter, log);
     } else {
-      possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize, log);
+      possibleParses = Lists.newArrayList(parses);
     }
+
     // Condition on true dependency structures, if provided.
-    List<CcgParse> correctParses = possibleParses;
-    if (example.hasDependencies()) {
-      Set<DependencyStructure> observedDependencies = example.getDependencies();
-      System.out.println("observed deps: " + observedDependencies);
-      correctParses = Lists.newArrayList();
-      for (CcgParse parse : possibleParses) {
-        System.out.println("parse deps: " + parse.getAllDependencies());
-        if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
-          correctParses.add(parse);
-        }
-      }
-    }
+    List<CcgParse> correctParses = filterSemanticallyCompatibleParses(example, possibleParses);
+
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
       throw new ZeroProbabilityError();
@@ -110,6 +102,30 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // The difference in log partition functions is equivalent to the loglikelihood
     // assigned to all correct parses.
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
+  }
+  
+  public static List<CcgParse> filterSemanticallyCompatibleParses(CcgExample example,
+      Iterable<CcgParse> parses) {
+    List<CcgParse> correctParses = Lists.newArrayList();
+    Set<DependencyStructure> observedDependencies = example.getDependencies();
+    Expression observedLogicalForm = example.getLogicalForm();
+    for (CcgParse parse : parses) {
+      boolean compatible = true;
+      if (observedDependencies != null && !Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
+        compatible = false;
+      }
+      if (observedLogicalForm != null) {
+        Expression predictedLogicalForm = parse.getLogicalForm();
+        if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm)) {
+          compatible = false;
+        }
+      }
+
+      if (compatible) {
+        correctParses.add(parse);
+      }
+    }
+    return correctParses;
   }
 
   private double getPartitionFunction(List<CcgParse> parses) {

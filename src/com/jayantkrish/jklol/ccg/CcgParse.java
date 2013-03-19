@@ -286,6 +286,8 @@ public class CcgParse {
       System.out.println(combinator);
       */
 
+      System.out.println("left: " + leftLogicalForm);
+      System.out.println("right: " + rightLogicalForm);
       Expression result = null;
       if (leftLogicalForm != null && rightLogicalForm != null) {
         if (combinator.getBinaryRule() != null) {

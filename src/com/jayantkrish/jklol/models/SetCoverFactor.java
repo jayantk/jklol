@@ -185,7 +185,12 @@ public class SetCoverFactor extends AbstractFactor {
     return new SetCoverFactor(getVars(), requiredValues, 
         possibleValues, newInputVarFactors);
   }
-  
+
+  @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
   @Override
   public double size() {
     return Double.POSITIVE_INFINITY;

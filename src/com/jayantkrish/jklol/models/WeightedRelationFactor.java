@@ -248,6 +248,11 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
   }
 
   @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+  
+  @Override
   public Factor inverse() {
     throw new UnsupportedOperationException();
   }

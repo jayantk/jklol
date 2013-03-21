@@ -258,6 +258,11 @@ public class CfgFactor extends AbstractFactor {
   }
 
   @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public Assignment sample() {
     throw new UnsupportedOperationException("Cannot sample from CfgFactors");
   }

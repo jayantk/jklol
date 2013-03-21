@@ -8,18 +8,18 @@ import java.util.Set;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A {@code Factor} which only supports the {@code conditional} inference
- * operation. Such factors are useful in conditional models, where certain
- * inputs are always provided to the model. 
+ * A {@code Factor} which only supports the {@code conditional}
+ * inference operation. Such factors are useful in conditional models,
+ * where certain inputs are always provided to the model.
  * <p>
- * This abstract class implements the
- * operations which do not have to be implemented by conditional factors. All of
- * the implemented operations throw an exception when called.
+ * This abstract class implements the operations which do not have to
+ * be implemented by conditional factors. All of the implemented
+ * operations throw an exception when called.
  * 
  * @author jayant
  */
 public abstract class AbstractConditionalFactor extends AbstractFactor {
-  
+
   private static final long serialVersionUID = 389192415388880283L;
 
   public AbstractConditionalFactor(VariableNumMap vars) {
@@ -61,6 +61,11 @@ public abstract class AbstractConditionalFactor extends AbstractFactor {
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException();
+  }
+  
   @Override
   public Factor inverse() {
     throw new UnsupportedOperationException();

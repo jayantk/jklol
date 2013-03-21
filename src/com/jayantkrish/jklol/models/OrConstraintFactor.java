@@ -201,6 +201,11 @@ public class OrConstraintFactor extends AbstractFactor {
   }
 
   @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public double size() {
     // In a sense, this factor is a very large clique.
     return Double.POSITIVE_INFINITY;

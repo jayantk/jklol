@@ -9,7 +9,6 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
-import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
 
 /**

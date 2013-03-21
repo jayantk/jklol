@@ -130,6 +130,11 @@ public class FilterFactor extends AbstractFactor {
   public Factor product(double constant) {
     throw new UnsupportedOperationException();
   }
+      
+  @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   @Override
   public Factor inverse() {

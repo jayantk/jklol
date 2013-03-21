@@ -195,6 +195,11 @@ public class DiscreteObjectFactor extends AbstractFactor {
     }
     return new DiscreteObjectFactor(getVars(), newProbabilities);
   }
+  
+  @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   @Override
   public Factor inverse() {

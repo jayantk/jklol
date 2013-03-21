@@ -264,6 +264,8 @@ public interface Factor {
    * @return
    */
   public Factor product(double constant);
+  
+  public Factor outerProduct(Factor other);
 
   /**
    * Returns the inverse of this factor, that is a factor f such that

@@ -38,9 +38,9 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
 
   private final DynamicFactorGraph baseFactorGraph;
 
-  private List<ParametricFactor> parametricFactors;
-  private List<VariablePattern> factorPatterns;
-  private IndexedList<String> factorNames;
+  private final List<ParametricFactor> parametricFactors;
+  private final List<VariablePattern> factorPatterns;
+  private final IndexedList<String> factorNames;
 
   public ParametricFactorGraph(DynamicFactorGraph factorGraph,
       List<ParametricFactor> parametricFactors, List<VariablePattern> factorPatterns,

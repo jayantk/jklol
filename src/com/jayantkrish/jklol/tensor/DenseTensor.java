@@ -204,10 +204,10 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     if (otherDims.length == 0) {
       // Both tensor products coincide when the other tensor has no dimensions (is a scalar).
       return elementwiseProduct(other);
-    }
+    } 
     // All dimensions of this tensor must be smaller than the dimensions
     // of the other tensor.
-    Preconditions.checkArgument(myDims[myDims.length - 1] < otherDims[0]);
+    Preconditions.checkArgument(myDims.length == 0 || myDims[myDims.length - 1] < otherDims[0]);
     
     int[] newDims = Ints.concat(myDims, otherDims);
     int[] newSizes = Ints.concat(getDimensionSizes(), other.getDimensionSizes());

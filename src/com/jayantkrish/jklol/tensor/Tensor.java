@@ -237,7 +237,7 @@ public interface Tensor extends TensorBase, Serializable {
   /**
    * Same as {@link sumOutDimensions(Collection)}.
    */
-  Tensor sumOutDimensions(int[] dimensionsToEliminate);
+  Tensor sumOutDimensions(int... dimensionsToEliminate);
 
   /**
    * Sums out {@code dimensionsToEliminate} using the log addition

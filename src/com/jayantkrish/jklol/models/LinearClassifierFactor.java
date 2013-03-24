@@ -1,12 +1,8 @@
 package com.jayantkrish.jklol.models;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
-import com.jayantkrish.jklol.tensor.DenseTensor;
-import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -26,52 +22,38 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class LinearClassifierFactor extends AbstractConditionalFactor {
+public class LinearClassifierFactor extends ClassifierFactor {
 
   private static final long serialVersionUID = 7300787304056125779L;
   
-  private final VariableNumMap inputVar;
   private final int[] inputVarNums;
-  private final VariableNumMap outputVars;
   private final VariableNumMap conditionalVars;
-  
-  private final DiscreteVariable featureDictionary;
 
   private final Tensor logWeights;
 
   public LinearClassifierFactor(VariableNumMap inputVar, VariableNumMap outputVars,
       DiscreteVariable featureDictionary, Tensor logWeights) {
-    super(inputVar.union(outputVars));
-    Preconditions.checkArgument(inputVar.size() == 1);
+    super(inputVar, outputVars, featureDictionary);
     Preconditions.checkArgument(inputVar.union(outputVars).containsAll(
         Ints.asList(logWeights.getDimensionNumbers())));
     Preconditions.checkArgument(outputVars.getDiscreteVariables().size() == outputVars.size());
 
-    this.inputVar = inputVar;
     this.inputVarNums = new int[] { inputVar.getOnlyVariableNum() };
-    this.outputVars = outputVars;
-    this.featureDictionary = featureDictionary;
     this.conditionalVars = VariableNumMap.emptyMap();
     this.logWeights = logWeights;
   }
   
   public LinearClassifierFactor(VariableNumMap inputVar, VariableNumMap outputVars, 
       VariableNumMap conditionalVars, DiscreteVariable featureDictionary, Tensor logWeights) {
-    super(inputVar.union(outputVars));
-    Preconditions.checkArgument(inputVar.size() == 1);
+    super(inputVar, outputVars, featureDictionary);
     Preconditions.checkArgument(inputVar.union(outputVars).containsAll(
         Ints.asList(logWeights.getDimensionNumbers())));
-    Preconditions.checkArgument(outputVars.getDiscreteVariables().size() == outputVars.size());
     Preconditions.checkArgument(outputVars.containsAll(conditionalVars));
 
-    this.inputVar = Preconditions.checkNotNull(inputVar);
     this.inputVarNums = new int[] { inputVar.getOnlyVariableNum() };
-    this.outputVars = Preconditions.checkNotNull(outputVars);
-    this.featureDictionary = featureDictionary;
     this.conditionalVars = Preconditions.checkNotNull(conditionalVars);
     this.logWeights = logWeights;
   }
-
 
   /**
    * Gets the weights used by this linear classifier as a matrix. The dimensions
@@ -94,25 +76,14 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
    * @return
    */
   public Tensor getFeatureWeightsForClass(Assignment outputClass) {
-    int[] classIndexes = outputVars.assignmentToIntArray(outputClass);
-    int[] dimensionNums = Ints.toArray(outputVars.getVariableNums());
+    int[] classIndexes = getOutputVariables().assignmentToIntArray(outputClass);
+    int[] dimensionNums = Ints.toArray(getOutputVariables().getVariableNums());
 
     return logWeights.slice(dimensionNums, classIndexes);
   }
 
-  public VariableNumMap getInputVariable() {
-    return inputVar;
-  }
-
-  public VariableNumMap getOutputVariables() {
-    return outputVars;
-  }
-  
-  public DiscreteVariable getFeatureVariableType() {
-    return featureDictionary;
-  }
-  
-  private Tensor getOutputLogProbTensor(Tensor inputFeatureVector) {
+  @Override
+  protected Tensor getOutputLogProbTensor(Tensor inputFeatureVector) {
     Tensor logProbs = logWeights.innerProduct(inputFeatureVector.relabelDimensions(inputVarNums));
 
     if (conditionalVars.size() > 0) {
@@ -125,50 +96,9 @@ public class LinearClassifierFactor extends AbstractConditionalFactor {
   }
 
   @Override
-  public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
-    return Math.exp(getUnnormalizedLogProbability(assignment));
-  }
-
-  @Override
-  public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
-    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
-    int[] outputIndexes = outputVars.assignmentToIntArray(assignment);
-    
-    Tensor logProbs = getOutputLogProbTensor(inputFeatureVector);
-    return logProbs.getByDimKey(outputIndexes);
-  }
-
-  @Override
   public Factor relabelVariables(VariableRelabeling relabeling) {
-    return new LinearClassifierFactor(relabeling.apply(inputVar), relabeling.apply(outputVars),
-        relabeling.apply(conditionalVars), featureDictionary, logWeights.relabelDimensions(
+    return new LinearClassifierFactor(relabeling.apply(getInputVariable()), relabeling.apply(getOutputVariables()),
+        relabeling.apply(conditionalVars), getFeatureVariableType(), logWeights.relabelDimensions(
             relabeling.getVariableIndexReplacementMap()));
-  }
-
-  @Override
-  public Factor conditional(Assignment assignment) {
-    int inputVarNum = inputVar.getOnlyVariableNum();
-    List<Integer> outputVarNums = outputVars.getVariableNums();
-    // We can only condition on outputVars if we also condition on
-    // inputVar.
-    Preconditions.checkArgument(!assignment.containsAny(outputVarNums)
-        || assignment.contains(inputVarNum));
-
-    if (!assignment.contains(inputVarNum)) {
-      return this;
-    }
-
-    // Build a TableFactor over the outputVars based on the inputVar feature
-    // vector.
-    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
-    Tensor logProbs = getOutputLogProbTensor(inputFeatureVector);
-    TableFactor outputFactor = new TableFactor(outputVars,
-        new LogSpaceTensorAdapter(DenseTensor.copyOf(logProbs)));
-    
-    // Note that the assignment may contain more than just the input variable, hence
-    // the additional call to condition.
-    return outputFactor.conditional(assignment);
   }
 }

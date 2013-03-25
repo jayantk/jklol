@@ -57,4 +57,11 @@ public class AveragingBoostingFamily extends AbstractBoostingFactorFamily {
     Preconditions.checkState(mean.getVars().equals(getVariables()));
     return TensorSufficientStatistics.createSparse(mean.getVars(), mean.coerceToDiscrete().getWeights());
   }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
+    TableFactor weightFactor = new TableFactor(getVariables(), ((TensorSufficientStatistics) parameters).get());
+    List<Assignment> assignments = weightFactor.product(weightFactor).getMostLikelyAssignments(numFeatures);
+    return weightFactor.describeAssignments(assignments);
+  }
 }

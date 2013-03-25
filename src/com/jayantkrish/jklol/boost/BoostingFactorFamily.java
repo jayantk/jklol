@@ -35,4 +35,8 @@ public interface BoostingFactorFamily {
   void incrementGradient(FunctionalGradient gradient, Factor marginal, Assignment assignment);
   
   SufficientStatistics projectGradient(FunctionalGradient gradient);
+  
+  String getParameterDescription(SufficientStatistics parameters);
+  
+  String getParameterDescription(SufficientStatistics parameters, int numFeatures);
 }

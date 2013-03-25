@@ -5,8 +5,11 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.inference.MarginalSet;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.Factors;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
@@ -17,6 +20,7 @@ import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.Pair;
@@ -67,21 +71,31 @@ public class ParametricFactorGraphEnsemble implements Serializable {
 
   public DynamicFactorGraph getModelFromParameters(SufficientStatisticsEnsemble parameters) {
     List<SufficientStatistics> ensembleParameters = parameters.getStatistics();
-    // List<Double> ensembleWeights = parameters.getStatisticWeights();
+    List<Double> ensembleWeights = parameters.getStatisticWeights();
     List<PlateFactor> plateFactors = Lists.newArrayList();
     for (int i = 0; i < boostingFamilies.size(); i++) {
       BoostingFactorFamily family = boostingFamilies.get(i);
-      Factor result = null;
       
+      List<Factor> factors = Lists.newArrayList();
       for (int j = 0; j < ensembleParameters.size(); j++) {
-        Factor factor = family.getModelFromParameters(ensembleParameters.get(j).coerceToList().getStatistics().get(i));
-        
-        if (result == null) {
-          result = factor;
-        } else {
-          // TODO: incorporate ensemble weights.
-          result = result.product(factor);
+        factors.add(family.getModelFromParameters(ensembleParameters.get(j).coerceToList().getStatistics().get(i)));
+      }
+      
+      VariableNumMap conditionalVars = family.getConditionalVariables();
+      Factor result = null;
+      if (conditionalVars.size() == 0) {
+        // Incorporate ensemble weights.
+        List<Factor> reweightedFactors = Lists.newArrayList();
+        for (int j = 0; j < factors.size(); j++) {
+          DiscreteFactor reweightedFactor = factors.get(j).coerceToDiscrete();
+          Tensor logWeights = reweightedFactor.getWeights().elementwiseLog().elementwiseProduct(ensembleWeights.get(j));
+          reweightedFactors.add(new TableFactor(reweightedFactor.getVars(), logWeights.elementwiseExp()));
         }
+        result = Factors.product(factors);
+      } else {
+        // Conditional factors must have the ensemble weights incorporated lazily,
+        // after conditioning on an input.
+        result = new EnsembleConditionalFactor(family.getVariables(), factors, Doubles.toArray(ensembleWeights));
       }
 
       Preconditions.checkState(result != null);
@@ -160,11 +174,21 @@ public class ParametricFactorGraphEnsemble implements Serializable {
     return new ListSufficientStatistics(factorNames.items(), statistics);
   }
 
-  public String getParameterDescription(SufficientStatistics parameters) {
+  public String getParameterDescription(SufficientStatisticsEnsemble parameters) {
     return getParameterDescription(parameters, -1);
   }
 
-  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    throw new UnsupportedOperationException("Not yet implemented.");
+  public String getParameterDescription(SufficientStatisticsEnsemble parameters, int numFeatures) {
+    List<SufficientStatistics> ensembleParameters = parameters.getStatistics();
+    //List<Double> ensembleWeights = parameters.getStatisticWeights();
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < ensembleParameters.size(); i++) {
+      for (int j = 0; j < boostingFamilies.size(); j++)  {
+        BoostingFactorFamily family = boostingFamilies.get(j);
+        sb.append(family.getParameterDescription(ensembleParameters.get(i)
+            .coerceToList().getStatistics().get(j), numFeatures));
+      }
+    }
+    return sb.toString();
   }
 }

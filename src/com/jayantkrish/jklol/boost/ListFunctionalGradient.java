@@ -16,6 +16,10 @@ public class ListFunctionalGradient implements FunctionalGradient {
         
     Preconditions.checkState(names.size() == gradients.size());
   }
+  
+  public List<String> getGradientNames() {
+    return names.items();
+  }
 
   public List<FunctionalGradient> getGradientList() {
     return gradients;

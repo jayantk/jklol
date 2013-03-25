@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.boost;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 /**
  * Common implementations of basic {@code BoostingFactorFamily} methods.
@@ -33,5 +34,10 @@ public abstract class AbstractBoostingFactorFamily implements BoostingFactorFami
   @Override
   public VariableNumMap getUnconditionalVariables() {
     return unconditionalVars;
+  }
+  
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) {
+    return getParameterDescription(parameters, -1);
   }
 }

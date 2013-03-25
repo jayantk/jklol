@@ -32,7 +32,7 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
   }
   
   @Override
-  public Tensor sumOutDimensions(int[] dimensionsToEliminate) {
+  public Tensor sumOutDimensions(int... dimensionsToEliminate) {
     return sumOutDimensions(Ints.asList(dimensionsToEliminate));
   }
   

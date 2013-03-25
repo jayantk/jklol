@@ -185,6 +185,26 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   public SparseTensor retainKeys(Tensor indicatorTensor) {
     return elementwiseProduct(indicatorTensor);
   }
+  
+  @Override
+  public Tensor findKeysLargerThan(double thresholdValue) {
+    Preconditions.checkArgument(thresholdValue > 0.0);
+    long[] resultKeyNums = new long[keyNums.length];
+    double[] resultValues = new double[values.length];
+    
+    int resultInd = 0;    
+    int numKeys = keyNums.length;
+    for (int i = 0; i < numKeys; i++) {
+      if (values[i] > thresholdValue) {
+        resultKeyNums[resultInd] = keyNums[i];
+        resultValues[resultInd] = 1.0;
+        resultInd++;
+      }
+    }
+    
+    return resizeIntoTable(getDimensionNumbers(), getDimensionSizes(), 
+        resultKeyNums, resultValues, resultInd);
+  }
 
   /**
    * Elementwise multiplies {@code this} and {@code other}, returning the result

@@ -5,28 +5,62 @@ import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public class RegressionTreeTrainer {
-
   
-  public RegressionTree train(Tensor data, Tensor targets) {
-    Split split = findSplitForIndicatorFeatures(data, targets);
-    /*
-    int splitFeature = 
-    int featureDim = data.getDimensionNumbers()[1];
-    Tensor featureValues = data.slice(new int[] {featureDim}, new int[] {splitFeature});
-    
-    Tensor higherIndicators = featureValues.isGreaterThan()
-    */
-
-    return RegressionTree.createSplit(split.featureNum, split.splitValue, 
-        RegressionTree.createLeaf(split.lowerMean), RegressionTree.createLeaf(split.higherMean));
+  private final int maxDepth;
+  
+  public RegressionTreeTrainer(int maxDepth) {
+    this.maxDepth = maxDepth;
+    Preconditions.checkArgument(maxDepth >= 0);
   }
 
-  private static Split findSplitForIndicatorFeatures(Tensor data, Tensor targets) {
+  public RegressionTree train(Tensor data, Tensor targets) {
+    return trainHelper(data, targets, DenseTensor.constant(
+        targets.getDimensionNumbers(), targets.getDimensionSizes(), 1.0), 0);
+  }
+  
+  private RegressionTree trainHelper(Tensor data, Tensor targets, Tensor indicators, int curDepth) {
+    if (curDepth >= maxDepth) {
+      return fitLeaf(targets, indicators);
+    } else {
+      Split split = findSplitForIndicatorFeatures(data, targets, indicators);
+
+      int featureDim = data.getDimensionNumbers()[1];
+      Tensor featureValues = data.slice(new int[] {featureDim}, new int[] {split.featureNum});
+      Tensor higherIndicators = featureValues.findKeysLargerThan(split.splitValue);
+      Tensor lowerIndicators = indicators.elementwiseAddition(higherIndicators.elementwiseProduct(-1.0));
+      
+      int numHigher = (int) higherIndicators.sumOutDimensions(higherIndicators.getDimensionNumbers()).getByDimKey();
+      int numLower = (int) lowerIndicators.sumOutDimensions(lowerIndicators.getDimensionNumbers()).getByDimKey();
+      
+      if (numHigher == 0 || numLower == 0) {
+        // No split exists that partitions the data into two sets.
+        return fitLeaf(targets, indicators);
+      }
+
+      Tensor lowerData = data.elementwiseProduct(lowerIndicators);
+      Tensor lowerTargets = targets.elementwiseProduct(lowerIndicators);
+      Tensor higherData = data.elementwiseProduct(higherIndicators);
+      Tensor higherTargets = targets.elementwiseProduct(higherIndicators);
+
+      return RegressionTree.createSplit(split.featureNum, split.splitValue, 
+          trainHelper(lowerData, lowerTargets, lowerIndicators, curDepth + 1),
+          trainHelper(higherData, higherTargets, higherIndicators, curDepth + 1));
+    }
+  }
+  
+  private RegressionTree fitLeaf(Tensor targets, Tensor indicators) {
+    double numExamples = indicators.sumOutDimensions(indicators.getDimensionNumbers()).getByDimKey();
+    double sumOfExamples = targets.sumOutDimensions(targets.getDimensionNumbers()).getByDimKey();
+    return RegressionTree.createLeaf(sumOfExamples / numExamples);
+  }
+
+  private static Split findSplitForIndicatorFeatures(Tensor data, Tensor targets,
+      Tensor indicators) {
     Preconditions.checkArgument(data.getDimensionNumbers().length == 2);
     Preconditions.checkArgument(targets.getDimensionNumbers().length == 1);
 
     int dataDim = data.getDimensionNumbers()[0];
-    int numDataPoints = data.getDimensionSizes()[0];
+    int numDataPoints = (int) indicators.sumOutDimensions(indicators.getDimensionNumbers()).getByDimKey();
     int featureDim = data.getDimensionNumbers()[1];
     int numFeatures = data.getDimensionSizes()[1];
     // Assumption: data is indicator features.
@@ -53,13 +87,7 @@ public class RegressionTreeTrainer {
     Tensor featureZeroSquareLoss = featureZeroSumSquares.elementwiseAddition(
         featureZeroMeans.elementwiseProduct(featureZeroMeans).elementwiseProduct(
             featureZeroCounts.elementwiseProduct(-1.0)));
-    
-        /*
-    (x_i - m)^2 = x_i^2 - (2 x_i m) + m^2 = sum (x_i^2) - 2 (n * m^2) + n * m^2
-        = sum (x_i^2) - n * m^2
-        */
 
-    
     Tensor featureSquareLoss = featureOneSquareLoss.elementwiseAddition(featureZeroSquareLoss);
     
     long[] bestFeature = featureSquareLoss.elementwiseProduct(-1.0).getLargestValues(1);
@@ -67,7 +95,7 @@ public class RegressionTreeTrainer {
     return new Split(bestFeatureNum, 0.5, featureZeroMeans.getByDimKey(bestFeatureNum),
         featureOneMeans.getByDimKey(bestFeatureNum));
   }
-  
+
   private static class Split {
     public final int featureNum;
     public final double splitValue;

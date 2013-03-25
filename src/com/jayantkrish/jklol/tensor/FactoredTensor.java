@@ -58,6 +58,11 @@ public class FactoredTensor extends AbstractTensor {
   public Tensor retainKeys(Tensor indicatorTensor) {
     return this;
   }
+  
+  @Override
+  public Tensor findKeysLargerThan(double thresholdValue) {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
 
   @Override
   public Tensor elementwiseProduct(Tensor other) {

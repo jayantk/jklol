@@ -90,6 +90,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public Tensor retainKeys(Tensor indicatorTensor) {
     return new LogSpaceTensorAdapter(logWeights.retainKeys(indicatorTensor));
   }
+  
+  @Override
+  public Tensor findKeysLargerThan(double thresholdValue) {
+    return logWeights.findKeysLargerThan(Math.log(thresholdValue));
+  }
 
   @Override
   public Tensor elementwiseProduct(Tensor other) {

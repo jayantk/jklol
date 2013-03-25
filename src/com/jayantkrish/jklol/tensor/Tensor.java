@@ -58,6 +58,16 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor retainKeys(Tensor indicatorTensor);
+  
+  /**
+   * Finds the keys in this tensor whose values are larger than the 
+   * specified {@code thresholdValue}. The returned tensor is an indicator 
+   * tensor for these keys.
+   * 
+   * @param thresholdValue
+   * @return
+   */
+  Tensor findKeysLargerThan(double thresholdValue);
 
   /**
    * Returns the elementwise product of this with {@code other}.

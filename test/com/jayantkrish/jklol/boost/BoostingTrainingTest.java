@@ -31,7 +31,7 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class BoostingTrainingTest extends TestCase {
   
-  ParametricFactorGraphEnsemble sequenceModel, classifierModel;
+  ParametricFactorGraphEnsemble sequenceModel, classifierModel, classifierModel2;
   VariableNumMap x, y, all;
   
   List<Example<DynamicAssignment, DynamicAssignment>> classifierTrainingData;
@@ -44,6 +44,7 @@ public class BoostingTrainingTest extends TestCase {
   public void setUp() {
     ParametricFactorGraphEnsembleBuilder sequenceModelBuilder = new ParametricFactorGraphEnsembleBuilder();
     ParametricFactorGraphEnsembleBuilder classifierModelBuilder = new ParametricFactorGraphEnsembleBuilder();
+    ParametricFactorGraphEnsembleBuilder classifierModel2Builder = new ParametricFactorGraphEnsembleBuilder();
     // Create a plate for each input/output pair.
     DiscreteVariable outputVar = new DiscreteVariable("tf", Arrays.asList("F", "T"));
     ObjectVariable tensorVar = new ObjectVariable(Tensor.class);
@@ -52,16 +53,21 @@ public class BoostingTrainingTest extends TestCase {
         Arrays.asList("x", "y"), Arrays.<Variable>asList(tensorVar, outputVar)), 10);
     classifierModelBuilder.addPlate("plateVar", new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("x", "y"), Arrays.<Variable>asList(tensorVar, outputVar)), 10);
+    classifierModel2Builder.addPlate("plateVar", new VariableNumMap(Ints.asList(0, 1), 
+        Arrays.asList("x", "y"), Arrays.<Variable>asList(tensorVar, outputVar)), 10);
 
     // Factor connecting each x to the corresponding y.
     all = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.<Variable>asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    RegressionTreeBoostingFamily f = new RegressionTreeBoostingFamily(x, y, new RegressionTreeTrainer(), 
+    RegressionTreeBoostingFamily f = new RegressionTreeBoostingFamily(x, y, new RegressionTreeTrainer(1), 
+        featureVar, TableFactor.unity(y).getWeights());
+    RegressionTreeBoostingFamily f2 = new RegressionTreeBoostingFamily(x, y, new RegressionTreeTrainer(2), 
         featureVar, TableFactor.unity(y).getWeights());
     sequenceModelBuilder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
     classifierModelBuilder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+    classifierModel2Builder.addFactor("classifier", f2, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
@@ -71,6 +77,7 @@ public class BoostingTrainingTest extends TestCase {
 
     sequenceModel = sequenceModelBuilder.build();
     classifierModel = classifierModelBuilder.build();
+    classifierModel2 = classifierModel2Builder.build();
         
     // Construct some training data.
     List<Assignment> inputAssignments = Lists.newArrayList();
@@ -130,15 +137,23 @@ public class BoostingTrainingTest extends TestCase {
   }
   
   public void testBoostDecisionStump() {
+    runClassifierTest(classifierModel);
+  }
+  
+  public void testBoostRegressionTree() {
+    runClassifierTest(classifierModel2);
+  }
+
+  private void runClassifierTest(ParametricFactorGraphEnsemble pfg) {
     FunctionalGradientAscent ascent = new FunctionalGradientAscent(10, classifierTrainingData.size(),
         1.0, true, new DefaultLogFunction());
-    LoglikelihoodBoostingOracle oracle = new LoglikelihoodBoostingOracle(classifierModel, new JunctionTree());
+    LoglikelihoodBoostingOracle oracle = new LoglikelihoodBoostingOracle(pfg, new JunctionTree());
     
     SufficientStatisticsEnsemble ensemble = ascent.train(oracle,
-        classifierModel.getNewSufficientStatistics(), classifierTrainingData);
+        pfg.getNewSufficientStatistics(), classifierTrainingData);
     
     JunctionTree jt = new JunctionTree();
-    DynamicFactorGraph fg = classifierModel.getModelFromParameters(ensemble);
+    DynamicFactorGraph fg = pfg.getModelFromParameters(ensemble);
     for (Example<DynamicAssignment, DynamicAssignment> example : classifierTestData) {
       Assignment predicted = jt.computeMaxMarginals(fg.conditional(example.getInput())).getNthBestAssignment(0);
       Assignment trueOutput = fg.getVariables().toAssignment(example.getOutput());
@@ -154,7 +169,7 @@ public class BoostingTrainingTest extends TestCase {
     }
     */
     
-    System.out.println(classifierModel.getParameterDescription(ensemble));
+    System.out.println(pfg.getParameterDescription(ensemble));
   }
   
   public void testTrain() {

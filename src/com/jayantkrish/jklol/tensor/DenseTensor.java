@@ -94,6 +94,28 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public DenseTensor retainKeys(Tensor indicatorTensor) {
     return this;
   }
+  
+  @Override
+  public Tensor findKeysLargerThan(double thresholdValue) {
+    Preconditions.checkArgument(thresholdValue > 0.0);
+    long[] resultKeyNums = new long[values.length];
+    
+    int resultInd = 0;    
+    int numKeys = values.length;
+    for (int i = 0; i < numKeys; i++) {
+      if (values[i] > thresholdValue) {
+        resultKeyNums[resultInd] = i;
+        resultInd++;
+      }
+    }
+    
+    long[] resizedKeyNums = ArrayUtils.copyOfRange(resultKeyNums, 0, resultInd);
+    double[] resizedValues = new double[resultInd];
+    Arrays.fill(resizedValues, 1.0);
+    
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), 
+        resizedKeyNums, resizedValues);
+  }
 
   @Override
   public DenseTensor elementwiseProduct(Tensor other) {

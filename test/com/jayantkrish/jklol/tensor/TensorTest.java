@@ -292,6 +292,23 @@ public abstract class TensorTest extends TestCase {
     assertTrue(intSet.contains(new int[] {3, 0, 0}));
     assertTrue(intSet.contains(new int[] {3, 0, 1}));
   }
+      
+  public void testFindKeysLargerThan() {
+    Tensor indicator = table.findKeysLargerThan(4.5);
+
+    assertEquals(6, indicator.size());
+    
+    assertEquals(0.0, indicator.getByDimKey(0, 0, 3));
+    assertEquals(0.0, indicator.getByDimKey(0, 1, 3));
+    assertEquals(0.0, indicator.getByDimKey(0, 3, 0));
+    
+    assertEquals(1.0, indicator.getByDimKey(1, 0, 3));
+    assertEquals(1.0, indicator.getByDimKey(3, 1, 0));
+    assertEquals(1.0, indicator.getByDimKey(3, 4, 3));
+    assertEquals(1.0, indicator.getByDimKey(2, 1, 0));
+    assertEquals(1.0, indicator.getByDimKey(4, 0, 1));
+    assertEquals(1.0, indicator.getByDimKey(4, 1, 0));
+  }
 
   public void testElementwiseProductEmpty() {
     for (Tensor emptyTable : emptyTables) {

@@ -24,6 +24,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -48,8 +49,11 @@ public class TrainPosCrf extends AbstractCli {
   public static final String TRANSITION_FACTOR = "transition";
 
   private OptionSpec<String> trainingFilename;
-  private OptionSpec<String> allowedTransitions;
+  // private OptionSpec<String> allowedTransitions;
   private OptionSpec<String> modelOutput;
+  
+  // Model construction options.
+  private OptionSpec<Void> noTransitions;
 
   public TrainPosCrf() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
@@ -59,11 +63,15 @@ public class TrainPosCrf extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     trainingFilename = parser.accepts("training").withRequiredArg()
         .ofType(String.class).required();
-    
+
+    /*
     allowedTransitions = parser.accepts("transitions").withRequiredArg()
         .ofType(String.class);
+        */
     
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+    
+    noTransitions = parser.accepts("noTransitions");
   }
 
   @Override
@@ -83,7 +91,7 @@ public class TrainPosCrf extends AbstractCli {
     
     // Build the factor graph.
     ParametricFactorGraph sequenceModelFamily = buildFeaturizedSequenceModel(posTags,
-        featureGen.getFeatureDictionary());
+        featureGen.getFeatureDictionary(), options.has(noTransitions));
 
     // Estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = reformatTrainingData(trainingData,
@@ -165,7 +173,7 @@ public class TrainPosCrf extends AbstractCli {
   }
 
   public static ParametricFactorGraph buildFeaturizedSequenceModel(Set<String> posTags,
-      DiscreteVariable featureDictionary) {
+      DiscreteVariable featureDictionary, boolean noTransitions) {
     DiscreteVariable posType = new DiscreteVariable("pos", posTags);
     ObjectVariable wordVectorType = new ObjectVariable(Tensor.class);
     
@@ -190,12 +198,12 @@ public class TrainPosCrf extends AbstractCli {
         plateVars, VariableNumMap.emptyMap()));
     
     // Add a factor connecting adjacent labels.
-    /*
-    VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
-        Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(posType, posType));
-    builder.addFactor(TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
-    */
+    if (!noTransitions) {
+      VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
+          Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(posType, posType));
+      builder.addFactor(TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
+          VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+    }
 
     return builder.build();
   }

@@ -49,15 +49,14 @@ public class TrainSequenceModel extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
     // The training data. Expects a filename of space-separated
-    // elements,
-    // where each element has the format word/label pairs.
+    // elements, where each element has the format word/label pairs.
     trainingFilename = parser.accepts("training").withRequiredArg()
         .ofType(String.class).required();
     // Feature functions of word/label pairs
     emissionFeatures = parser.accepts("emissionFeatures").withRequiredArg()
         .ofType(String.class).required();
     emissionFeaturesDelimiter = parser.accepts("emissionFeaturesDelimiter").withRequiredArg()
-	.ofType(String.class).defaultsTo(",");
+        .ofType(String.class).defaultsTo(",");
     // Where to serialize the trained factor graph
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     // Optional arguments.
@@ -82,9 +81,11 @@ public class TrainSequenceModel extends AbstractCli {
     System.out.println("Serializing trained model...");
     TrainedModelSet trainedModel = new TrainedModelSet(sequenceModel, parameters, factorGraph);
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
+    
+
   }
 
-  public SufficientStatistics run(ParametricFactorGraph sequenceModel, 
+  public SufficientStatistics run(ParametricFactorGraph sequenceModel,
       List<Example<DynamicAssignment, DynamicAssignment>> trainingData,
       boolean useMaxMargin) {
     System.out.println(trainingData.size() + " training examples.");

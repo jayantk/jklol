@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.preprocessing;
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 
@@ -45,5 +46,10 @@ public class HashingFeatureVectorGenerator<T> implements FeatureVectorGenerator<
   @Override
   public int getNumberOfFeatures() {
     return dimension;
+  }
+
+  @Override
+  public DiscreteVariable getFeatureDictionary() {
+    return DiscreteVariable.sequence("featureVectorType", dimension);
   }
 }

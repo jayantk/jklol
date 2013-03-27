@@ -35,7 +35,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
 
 		DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
-				Arrays.asList(new String[] {"T", "F"}));
+				Arrays.asList(new String[] {"T", "F"})); 
 
 		builder.addVariable("Var0", tfVar);
 		builder.addVariable("Var1", tfVar);

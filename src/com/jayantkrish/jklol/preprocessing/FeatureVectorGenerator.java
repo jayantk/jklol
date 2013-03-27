@@ -1,6 +1,9 @@
 package com.jayantkrish.jklol.preprocessing;
 
+import java.io.Serializable;
+
 import com.google.common.base.Function;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 /**
@@ -11,7 +14,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
  * @author jayantk
  * @param <T>
  */
-public interface FeatureVectorGenerator<T> extends Function<T, Tensor> {
+public interface FeatureVectorGenerator<T> extends Function<T, Tensor>, Serializable {
 
   @Override
   public Tensor apply(T item);
@@ -22,4 +25,11 @@ public interface FeatureVectorGenerator<T> extends Function<T, Tensor> {
    * @return
    */
   public int getNumberOfFeatures();
+  
+  /**
+   * Gets the mapping from objects to feature indexes.
+   * 
+   * @return
+   */
+  public DiscreteVariable getFeatureDictionary();
 }

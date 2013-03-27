@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.preprocessing;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -7,6 +8,7 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
@@ -20,6 +22,8 @@ import com.jayantkrish.jklol.util.IndexedList;
  * @author jayantk
  */
 public class DictionaryFeatureVectorGenerator<T, U> implements FeatureVectorGenerator<T> {
+
+  private static final long serialVersionUID = 1L;
 
   private final IndexedList<U> featureIndexes;
   private final FeatureGenerator<T, U> generator;
@@ -79,6 +83,11 @@ public class DictionaryFeatureVectorGenerator<T, U> implements FeatureVectorGene
   @Override
   public int getNumberOfFeatures() {
     return featureIndexes.size();
+  }
+  
+  @Override
+  public DiscreteVariable getFeatureDictionary() {
+    return new DiscreteVariable("featureVectorType", featureIndexes.items());
   }
   
   public List<U> getFeatures() {

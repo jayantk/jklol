@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.preprocessing;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -12,7 +13,7 @@ import java.util.Map;
  * @param <A>
  * @param <B>
  */
-public interface FeatureGenerator<A, B> {
+public interface FeatureGenerator<A, B> extends Serializable {
 
   /**
    * Generates features for {@code item} and returns their values in a map. The

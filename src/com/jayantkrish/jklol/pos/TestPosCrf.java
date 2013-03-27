@@ -1,25 +1,19 @@
 package com.jayantkrish.jklol.pos;
 
-import java.util.Collections;
 import java.util.List;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
-import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TestPosCrf extends AbstractCli {
 
   private OptionSpec<String> model;
-  private OptionSpec<String> testData;
+  private OptionSpec<String> testFilename;
 
   public TestPosCrf() {
     super();
@@ -28,7 +22,7 @@ public class TestPosCrf extends AbstractCli {
   @Override
   public void initializeOptions(OptionParser parser) {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
-    testData = parser.accepts("testData").withRequiredArg().ofType(String.class);
+    testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
   }
 
   @Override
@@ -37,32 +31,30 @@ public class TestPosCrf extends AbstractCli {
     TrainedPosTagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model),
         TrainedPosTagger.class);
 
-    if (options.has(testData)) {
+    if (options.has(testFilename)) {
+      List<PosTaggedSentence> testData = PosTaggerUtils.readTrainingData(options.valueOf(testFilename));
+      
+      int numCorrect = 0;
+      int total = 0;
+      for (PosTaggedSentence testDatum : testData) {
+        List<String> prediction = trainedModel.tagWords(testDatum.getWords()).getPos();
+        List<String> actual = testDatum.getPos();
+        Preconditions.checkState(prediction.size() == actual.size());
+        for (int i = 0; i < prediction.size(); i++) {
+          total++;
 
-    } else {
-      List<String> wordsToTag = options.nonOptionArguments();
-      List<String> posTags = Collections.<String>nCopies(wordsToTag.size(), "");
-      PosTaggedSentence sent = new PosTaggedSentence(wordsToTag, posTags);
-
-      DynamicAssignment input = TrainPosCrf.reformatTrainingData(sent, 
-          trainedModel.getFeatureGenerator(), trainedModel.getModelFamily()).getInput();
-
-      DynamicFactorGraph dfg = trainedModel.getInstantiatedModel();
-      FactorGraph fg = dfg.conditional(input);
-
-      JunctionTree jt = new JunctionTree();
-      Assignment output = jt.computeMaxMarginals(fg).getNthBestAssignment(0);
-
-      DynamicAssignment prediction = dfg.getVariables()
-          .toDynamicAssignment(output, fg.getAllVariables());
-      List<String> labels = Lists.newArrayList();
-      for (Assignment plateAssignment : prediction.getPlateFixedAssignments(TrainPosCrf.PLATE_NAME)) {
-        List<Object> values = plateAssignment.getValues();
-        labels.add((String) values.get(1));
+          if (prediction.get(i).equals(actual.get(i))) {
+            numCorrect++;
+          }
+        }
       }
-    
-      System.out.println(input);
-      System.out.println(labels);
+      
+      double accuracy = ((double) numCorrect) / total;
+      System.out.println("PER-WORD ACCURACY: " + accuracy + " (" + numCorrect + " / " + total + ")");
+    } else {
+      PosTaggedSentence tags = trainedModel.tagWords(options.nonOptionArguments());
+      System.out.println(tags.getWords());
+      System.out.println(tags.getPos());
     }
   }
 

@@ -8,7 +8,6 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -21,7 +20,6 @@ import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
-import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
@@ -36,18 +34,10 @@ import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
-import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TrainPosCrf extends AbstractCli {
   
-  public static final String PLATE_NAME = "plate";
-  public static final String INPUT_NAME = "wordVector";
-  public static final String OUTPUT_NAME = "pos";
-  
-  public static final String WORD_LABEL_FACTOR = "wordLabelFactor";
-  public static final String TRANSITION_FACTOR = "transition";
-
   private OptionSpec<String> trainingFilename;
   // private OptionSpec<String> allowedTransitions;
   private OptionSpec<String> modelOutput;
@@ -78,7 +68,7 @@ public class TrainPosCrf extends AbstractCli {
   public void run(OptionSet options) {
     // Read in the training data as sentences, to use for
     // feature generation.
-    List<PosTaggedSentence> trainingData = readTrainingData(options.valueOf(trainingFilename));
+    List<PosTaggedSentence> trainingData = PosTaggerUtils.readTrainingData(options.valueOf(trainingFilename));
     FeatureVectorGenerator<LocalContext> featureGen = buildFeatureVectorGenerator(trainingData);
 
     Set<String> posTags = Sets.newHashSet();
@@ -94,8 +84,8 @@ public class TrainPosCrf extends AbstractCli {
         featureGen.getFeatureDictionary(), options.has(noTransitions));
 
     // Estimate parameters.
-    List<Example<DynamicAssignment, DynamicAssignment>> examples = reformatTrainingData(trainingData,
-        featureGen, sequenceModelFamily);
+    List<Example<DynamicAssignment, DynamicAssignment>> examples = PosTaggerUtils
+        .reformatTrainingData(trainingData, featureGen, sequenceModelFamily);
     SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, false);
 
     // Save model to disk.
@@ -107,72 +97,12 @@ public class TrainPosCrf extends AbstractCli {
   }
 
   private static FeatureVectorGenerator<LocalContext> buildFeatureVectorGenerator(List<PosTaggedSentence> sentences) {
-    List<LocalContext> contexts = extractContextsFromData(sentences);
+    List<LocalContext> contexts = PosTaggerUtils.extractContextsFromData(sentences);
     WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
     return DictionaryFeatureVectorGenerator.createFromData(contexts, wordGen, true);
   }
   
-  private static List<PosTaggedSentence> readTrainingData(String trainingFilename) {
-    List<PosTaggedSentence> sentences = Lists.newArrayList();
-    for (String line : IoUtils.readLines(trainingFilename)) {
-      sentences.add(PosTaggedSentence.parseFrom(line));
-    }
-    return sentences;
-  }
-  
-  private static List<LocalContext> extractContextsFromData(List<PosTaggedSentence> sentences) {
-    List<LocalContext> contexts = Lists.newArrayList();
-    for (PosTaggedSentence sentence : sentences) {
-      contexts.addAll(sentence.getLocalContexts());
-    }
-    return contexts;
-  }
-  
-  /**
-   * Converts training data as sentences into assignments that can be used 
-   * for parameter estimation. 
-   * 
-   * @param sentences
-   * @param featureGen
-   * @param model
-   * @return
-   */
-  public static List<Example<DynamicAssignment, DynamicAssignment>> reformatTrainingData(
-      List<PosTaggedSentence> sentences, FeatureVectorGenerator<LocalContext> featureGen,
-      ParametricFactorGraph model) {
-    DynamicVariableSet plate = model.getVariables().getPlate(PLATE_NAME);
-    VariableNumMap x = plate.getFixedVariables().getVariablesByName(INPUT_NAME);
-    VariableNumMap y = plate.getFixedVariables().getVariablesByName(OUTPUT_NAME);
-
-    List<Example<DynamicAssignment, DynamicAssignment>> examples = Lists.newArrayList();
-    for (PosTaggedSentence sentence : sentences) { 
-      List<Assignment> inputs = Lists.newArrayList();
-      List<Assignment> outputs = Lists.newArrayList();
-      
-      List<LocalContext> contexts = sentence.getLocalContexts();
-      List<String> posTags = sentence.getPos();
-      for (int i = 0; i < contexts.size(); i ++) {
-        inputs.add(x.outcomeArrayToAssignment(featureGen.apply(contexts.get(i))));
-        outputs.add(y.outcomeArrayToAssignment(posTags.get(i)));
-      }
-      DynamicAssignment input = DynamicAssignment.createPlateAssignment(PLATE_NAME, inputs);
-      DynamicAssignment output = DynamicAssignment.createPlateAssignment(PLATE_NAME, outputs);
-      examples.add(Example.create(input, output));
-    }
-
-    return examples;
-  }
-
-  public static Example<DynamicAssignment, DynamicAssignment> reformatTrainingData(
-      PosTaggedSentence sentence, FeatureVectorGenerator<LocalContext> featureGen,
-      ParametricFactorGraph model) {
-    List<PosTaggedSentence> sentences = Lists.newArrayList(sentence);
-    List<Example<DynamicAssignment, DynamicAssignment>> examples = reformatTrainingData(
-        sentences, featureGen, model);
-    return examples.get(0);
-  }
-
-  public static ParametricFactorGraph buildFeaturizedSequenceModel(Set<String> posTags,
+  private static ParametricFactorGraph buildFeaturizedSequenceModel(Set<String> posTags,
       DiscreteVariable featureDictionary, boolean noTransitions) {
     DiscreteVariable posType = new DiscreteVariable("pos", posTags);
     ObjectVariable wordVectorType = new ObjectVariable(Tensor.class);
@@ -180,12 +110,12 @@ public class TrainPosCrf extends AbstractCli {
     // Create a dynamic factor graph with a single plate replicating
     // the input/output variables.
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
-    builder.addPlate(PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
-        Arrays.asList(INPUT_NAME, OUTPUT_NAME), Arrays.<Variable>asList(wordVectorType, posType)),
+    builder.addPlate(PosTaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
+        Arrays.asList(PosTaggerUtils.INPUT_NAME, PosTaggerUtils.OUTPUT_NAME), Arrays.<Variable>asList(wordVectorType, posType)),
         10000);
-    String inputPattern = PLATE_NAME + "/?(0)/" + INPUT_NAME;
-    String outputPattern = PLATE_NAME + "/?(0)/" + OUTPUT_NAME;
-    String nextOutputPattern = PLATE_NAME + "/?(1)/" + OUTPUT_NAME;
+    String inputPattern = PosTaggerUtils.PLATE_NAME + "/?(0)/" + PosTaggerUtils.INPUT_NAME;
+    String outputPattern = PosTaggerUtils.PLATE_NAME + "/?(0)/" + PosTaggerUtils.OUTPUT_NAME;
+    String nextOutputPattern = PosTaggerUtils.PLATE_NAME + "/?(1)/" + PosTaggerUtils.OUTPUT_NAME;
 
     // Add a classifier from local word contexts to pos tags.
     VariableNumMap plateVars = new VariableNumMap(Ints.asList(1, 2),
@@ -194,14 +124,14 @@ public class TrainPosCrf extends AbstractCli {
     VariableNumMap posVar = plateVars.getVariablesByName(outputPattern);
     ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
         VariableNumMap.emptyMap(), featureDictionary);
-    builder.addFactor(WORD_LABEL_FACTOR, wordClassifier, VariableNamePattern.fromTemplateVariables(
-        plateVars, VariableNumMap.emptyMap()));
+    builder.addFactor(PosTaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
+        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
     
     // Add a factor connecting adjacent labels.
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
           Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(posType, posType));
-      builder.addFactor(TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
+      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
           VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
     }
 
@@ -225,8 +155,7 @@ public class TrainPosCrf extends AbstractCli {
     StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
     SufficientStatistics initialParameters = sequenceModel.getNewSufficientStatistics();
     initialParameters.makeDense();
-    SufficientStatistics parameters = trainer.train(
-        oracle, initialParameters, trainingData);
+    SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
 
     return parameters;
   }

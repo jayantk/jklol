@@ -3,13 +3,13 @@ package com.jayantkrish.jklol.training;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -78,6 +78,14 @@ Example<DynamicAssignment, DynamicAssignment>> {
     MarginalSet outputMarginals = marginalCalculator.computeMarginals(
         outputFactorGraph);
     log.stopTimer("update_gradient/output_marginal");
+    
+    double inputPartitionFunction = inputMarginals.getPartitionFunction();
+    double outputPartitionFunction = outputMarginals.getPartitionFunction();
+    if (Double.isInfinite(inputPartitionFunction) || Double.isNaN(inputPartitionFunction)
+        || Double.isInfinite(outputPartitionFunction) || Double.isNaN(outputPartitionFunction)) {
+      // Search error from numerical issues.
+      throw new ZeroProbabilityError();
+    }
 
     // Perform the gradient update. Note that this occurs after both marginal
     // calculations, since the marginal calculations may throw ZeroProbabilityErrors
@@ -92,7 +100,6 @@ Example<DynamicAssignment, DynamicAssignment>> {
     // System.out.println(gradient);
     log.stopTimer("update_gradient/increment");
 
-    return Math.log(outputMarginals.getPartitionFunction()) - 
-        Math.log(inputMarginals.getPartitionFunction());
+    return Math.log(outputPartitionFunction) - Math.log(inputPartitionFunction);
   }
 }

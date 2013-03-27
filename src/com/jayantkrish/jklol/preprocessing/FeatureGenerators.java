@@ -62,6 +62,16 @@ public class FeatureGenerators {
       FeatureGenerator<A, ? extends B>... generators) {
     return FeatureGenerators.productFeatureGenerator(Arrays.asList(generators));
   }
+  
+  public static <A, B> CountAccumulator<B> getFeatureCounts(FeatureGenerator<A, B> featureGenerator,
+      Iterable<? extends A> data) {
+    CountAccumulator<B> featureCounts = CountAccumulator.create();
+    for (A datum : data) {
+      Map<B, Double> datumFeatures = featureGenerator.generateFeatures(datum);
+      featureCounts.increment(datumFeatures);
+    }
+    return featureCounts; 
+  }
 
   /**
    * Combines many {@code FeatureGenerator}s into a single

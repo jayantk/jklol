@@ -36,6 +36,8 @@ import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
+import com.jayantkrish.jklol.util.CountAccumulator;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TrainPosCrf extends AbstractCli {
@@ -103,10 +105,17 @@ public class TrainPosCrf extends AbstractCli {
     List<LocalContext> contexts = PosTaggerUtils.extractContextsFromData(sentences);
     WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
     WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(4, 4);
-
     FeatureGenerator<LocalContext, String> featureGen = FeatureGenerators
         .combinedFeatureGenerator(wordGen, prefixGen);
-    return DictionaryFeatureVectorGenerator.createFromData(contexts, featureGen, true);
+    
+    // Count threshold the generated features to eliminate rare features.
+    CountAccumulator<String> wordFeatureCounts = FeatureGenerators.getFeatureCounts(wordGen, contexts);
+    CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
+    IndexedList<String> featureDictionary = IndexedList.create();
+    featureDictionary.addAll(wordFeatureCounts.keySet());
+    featureDictionary.addAll(prefixFeatureCounts.getKeysAboveCountThreshold(35.0));
+
+    return new DictionaryFeatureVectorGenerator<LocalContext, String>(featureDictionary, featureGen, true);
   }
 
   private static ParametricFactorGraph buildFeaturizedSequenceModel(Set<String> posTags,

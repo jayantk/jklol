@@ -28,6 +28,8 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerators;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -96,12 +98,17 @@ public class TrainPosCrf extends AbstractCli {
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
 
+  @SuppressWarnings("unchecked")
   private static FeatureVectorGenerator<LocalContext> buildFeatureVectorGenerator(List<PosTaggedSentence> sentences) {
     List<LocalContext> contexts = PosTaggerUtils.extractContextsFromData(sentences);
     WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
-    return DictionaryFeatureVectorGenerator.createFromData(contexts, wordGen, true);
+    WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(4, 4);
+
+    FeatureGenerator<LocalContext, String> featureGen = FeatureGenerators
+        .combinedFeatureGenerator(wordGen, prefixGen);
+    return DictionaryFeatureVectorGenerator.createFromData(contexts, featureGen, true);
   }
-  
+
   private static ParametricFactorGraph buildFeaturizedSequenceModel(Set<String> posTags,
       DiscreteVariable featureDictionary, boolean noTransitions) {
     DiscreteVariable posType = new DiscreteVariable("pos", posTags);

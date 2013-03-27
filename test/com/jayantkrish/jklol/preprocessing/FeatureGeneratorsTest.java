@@ -20,6 +20,7 @@ public class FeatureGeneratorsTest extends TestCase {
   
   public void setUp() {
     wordCount = new FeatureGenerator<String, String>() {
+      private static final long serialVersionUID = 1L;
       @Override
       public Map<String, Double> generateFeatures(String item) {
         CountAccumulator<String> counts = CountAccumulator.create();
@@ -31,6 +32,8 @@ public class FeatureGeneratorsTest extends TestCase {
     };
     
     firstLetters = new FeatureGenerator<String, String>() {
+      private static final long serialVersionUID = 1L;
+
       @Override
       public Map<String, Double> generateFeatures(String item) {
         CountAccumulator<String> counts = CountAccumulator.create();

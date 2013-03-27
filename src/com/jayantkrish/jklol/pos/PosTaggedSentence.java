@@ -61,6 +61,15 @@ public class PosTaggedSentence {
       this.words = ImmutableList.copyOf(words);
       this.pos = Preconditions.checkNotNull(pos);
     }
+    
+    /**
+     * Gets the central word which this context surrounds.
+     * 
+     * @return
+     */
+    public String getWord() {
+      return words.get(0);
+    }
 
     public List<String> getWords() {
       return words;

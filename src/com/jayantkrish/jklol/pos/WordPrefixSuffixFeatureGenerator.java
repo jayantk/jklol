@@ -47,13 +47,19 @@ public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalC
   }
 
   private void generatePrefixSuffixFeatures(String word, Map<String, Double> weights) {
-    for (int i = 1; i <= maxPrefixLength; i++) {
+    if (word.length() == 1) {
+      return;
+    }
+
+    int maxPrefixIndex = Math.min(word.length(), maxPrefixLength);
+    for (int i = 1; i <= maxPrefixIndex; i++) {
       String featureName = "PREFIX=" + word.substring(0, i).intern();
       weights.put(featureName, 1.0);
     }
 
     int len = word.length();
-    for (int i = len - 1; i >= len - maxSuffixLength; i--) {
+    int minSuffixIndex = Math.max(0, len - maxSuffixLength);
+    for (int i = len - 1; i >= minSuffixIndex; i--) {
       String featureName = "SUFFIX=" + word.substring(i, len).intern();
       weights.put(featureName, 1.0);
     }

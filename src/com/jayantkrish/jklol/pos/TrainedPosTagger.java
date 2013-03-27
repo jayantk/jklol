@@ -53,6 +53,6 @@ public class TrainedPosTagger extends TrainedModelSet {
       labels.add((String) values.get(1));
     }
 
-    return new PosTaggedSentence(words, posTags);
+    return new PosTaggedSentence(words, labels);
   }
 }

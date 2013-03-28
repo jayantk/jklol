@@ -83,7 +83,8 @@ public class FeatureGenerators {
    * @param <B>
    */
   private static class CombinedFeatureGenerator<A, B> implements FeatureGenerator<A, B> {
-
+    private static final long serialVersionUID = 1L;
+    
     private final Iterable<FeatureGenerator<A, ? extends B>> generators;
 
     public CombinedFeatureGenerator(Iterable<FeatureGenerator<A, ? extends B>> generators) {
@@ -101,6 +102,8 @@ public class FeatureGenerators {
   }
   
   private static class ProductFeatureGenerator<A, B> implements FeatureGenerator<A, List<B>> {
+    private static final long serialVersionUID = 1L;
+
     private final List<FeatureGenerator<A, ? extends B>> generators;
 
     public ProductFeatureGenerator(Iterable<FeatureGenerator<A, ? extends B>> generators) {

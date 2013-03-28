@@ -33,7 +33,7 @@ public class TestPosCrf extends AbstractCli {
 
     if (options.has(testFilename)) {
       List<PosTaggedSentence> testData = PosTaggerUtils.readTrainingData(options.valueOf(testFilename));
-      
+
       int numCorrect = 0;
       int total = 0;
       for (PosTaggedSentence testDatum : testData) {
@@ -47,6 +47,10 @@ public class TestPosCrf extends AbstractCli {
             numCorrect++;
           }
         }
+        
+        System.out.println(testDatum.getWords());
+        System.out.println(prediction);
+        System.out.println(actual);
       }
       
       double accuracy = ((double) numCorrect) / total;

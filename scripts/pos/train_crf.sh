@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 TRAINING_DATA=/data/penn_treebank3/LDC/LDC1/LDC99T42/TREEBANK_3/PARSED/MRG/WSJ/pos_00-18_10sent.txt
 OUTPUT=out2.ser

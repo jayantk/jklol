@@ -16,7 +16,7 @@ public class WordContextFeatureGenerator implements FeatureGenerator<LocalContex
     for (String word : item.getWords()) {
       weights.put(formatFeature(word, item.getPos()), 1.0);
     }
-    weights.put("bias", 1.0);
+    // weights.put("bias", 1.0);
     return weights;
   }
 

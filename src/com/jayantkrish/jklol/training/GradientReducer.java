@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.training;
 
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
 
 /**
@@ -20,7 +21,8 @@ public class GradientReducer<M, E> extends SimpleReducer<GradientEvaluation> {
   
   @Override
   public GradientEvaluation getInitialValue() {
-    return new GradientEvaluation(oracle.initializeGradient(), 0.0, 0);
+    SufficientStatistics gradient = oracle.initializeGradient();
+    return new GradientEvaluation(gradient, 0.0, 0);
   }
   
   @Override

@@ -48,6 +48,7 @@ public class TrainPosCrf extends AbstractCli {
   
   // Model construction options.
   private OptionSpec<Void> noTransitions;
+  private OptionSpec<Void> maxMargin;
 
   public TrainPosCrf() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
@@ -66,6 +67,7 @@ public class TrainPosCrf extends AbstractCli {
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     
     noTransitions = parser.accepts("noTransitions");
+    maxMargin = parser.accepts("maxMargin");
   }
 
   @Override
@@ -90,7 +92,7 @@ public class TrainPosCrf extends AbstractCli {
     // Estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = PosTaggerUtils
         .reformatTrainingData(trainingData, featureGen, sequenceModelFamily);
-    SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, false);
+    SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, options.has(maxMargin));
 
     // Save model to disk.
     System.out.println("Serializing trained model...");    
@@ -104,7 +106,7 @@ public class TrainPosCrf extends AbstractCli {
   private static FeatureVectorGenerator<LocalContext> buildFeatureVectorGenerator(List<PosTaggedSentence> sentences) {
     List<LocalContext> contexts = PosTaggerUtils.extractContextsFromData(sentences);
     WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
-    WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(4, 4);
+    WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(0, 0);
     FeatureGenerator<LocalContext, String> featureGen = FeatureGenerators
         .combinedFeatureGenerator(wordGen, prefixGen);
     

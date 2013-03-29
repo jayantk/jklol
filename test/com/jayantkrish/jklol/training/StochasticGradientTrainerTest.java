@@ -67,7 +67,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 	}
 	
 	public void testTrainUnregularized() {
-	  runTest(new StochasticGradientTrainer(100, 3, 0.01, true, new DefaultLogFunction()));
+	  runTest(new StochasticGradientTrainer(100, 9, 1.0, true, new DefaultLogFunction()));
 	}
 
 	public void testTrainL2() {

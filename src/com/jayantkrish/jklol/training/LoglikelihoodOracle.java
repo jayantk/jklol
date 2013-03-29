@@ -94,11 +94,15 @@ Example<DynamicAssignment, DynamicAssignment>> {
     family.incrementSufficientStatistics(gradient, inputMarginals, -1.0);
     // System.out.println("=== input marginals ===");
     // System.out.println(inputMarginals);
+    // System.out.println(family.getParameterDescription(gradient));
+
     family.incrementSufficientStatistics(gradient, outputMarginals, 1.0);
     // System.out.println("=== output marginals ===");
     // System.out.println(outputMarginals);
     // System.out.println(gradient);
     log.stopTimer("update_gradient/increment");
+    
+    // System.out.println(family.getParameterDescription(gradient));
 
     return Math.log(outputPartitionFunction) - Math.log(inputPartitionFunction);
   }

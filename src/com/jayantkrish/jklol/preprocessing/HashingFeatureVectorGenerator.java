@@ -19,6 +19,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
  * @param <T>
  */
 public class HashingFeatureVectorGenerator<T> implements FeatureVectorGenerator<T> {
+  private static final long serialVersionUID = 1L;
 
   private final int dimension;
   private final FeatureGenerator<T, ? extends Object> featureGenerator;

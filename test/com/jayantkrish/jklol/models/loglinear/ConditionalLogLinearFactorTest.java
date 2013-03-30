@@ -12,7 +12,6 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -79,5 +78,10 @@ public class ConditionalLogLinearFactorTest extends TestCase {
     assertEquals(2.0 + (.0468 * 5.0), conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("B")), 0.001);
     assertEquals(1.9405 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("A")), 0.001);
     assertEquals(0.0063 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("C")), 0.001);
+  }
+  
+  public void testIncrementSufficientStatisticsFromMarginal() {
+    // TODO: check that parameter vectors are correctly incremented.
+    assertFalse(true);
   }
 }

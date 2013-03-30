@@ -94,6 +94,7 @@ public class StochasticGradientTrainer {
     // When it drops below some threshold, we'll say the algorithm has
     // converged.
     double exponentiallyWeightedUpdateNorm = stepSize;
+    double exponentiallyWeightedObjectiveValue = 0.0;
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
 
@@ -126,13 +127,16 @@ public class StochasticGradientTrainer {
 
       log.startTimer("compute_statistics");
       gradientL2 = gradient.getL2Norm();
+      double objectiveValue = oracleResult.getObjectiveValue() / batchSize;
       exponentiallyWeightedUpdateNorm = (0.2) * gradientL2 * currentStepSize + (0.8 * exponentiallyWeightedUpdateNorm);
+      exponentiallyWeightedObjectiveValue = objectiveValue + (0.9 * exponentiallyWeightedObjectiveValue);
       log.stopTimer("compute_statistics");
 
       log.logStatistic(i, "search errors", iterSearchErrors);
       log.logStatistic(i, "gradient l2 norm", gradientL2);
       log.logStatistic(i, "step size", currentStepSize);
-      log.logStatistic(i, "objective value", oracleResult.getObjectiveValue());
+      log.logStatistic(i, "objective value", objectiveValue);
+      log.logStatistic(i, "objective value (moving avg.)", exponentiallyWeightedObjectiveValue / 9.0);
       log.logStatistic(i, "exponentially weighted update norm", exponentiallyWeightedUpdateNorm);
       log.notifyIterationEnd(i);
     }

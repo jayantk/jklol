@@ -119,4 +119,6 @@ public interface SufficientStatistics extends Serializable {
    * copy.
    */
   public void makeDense();
+  
+  public String getDescription();
 }

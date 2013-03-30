@@ -104,30 +104,46 @@ public class LinearClassifierTest extends TestCase {
     // Linear classifiers (or factor graphs generally) can be trained using
     // different objective functions. This is a max-margin objective, i.e., an
     // SVM.
-    runTrainerTest(new MaxMarginOracle(linearClassifier, new MaxMarginOracle.HammingCost(), new JunctionTree()));
+    runTrainerTest(new MaxMarginOracle(linearClassifier, new MaxMarginOracle.HammingCost(), new JunctionTree()), false);
   }
 
   public void testTrainLogisticRegression() {
     // This creates a loglikelihood objective function to optimize.
     // The "new JunctionTree()" tells the objective how to compute
     // marginals in the model during training.
-    runTrainerTest(new LoglikelihoodOracle(linearClassifier, new JunctionTree()));
+    runTrainerTest(new LoglikelihoodOracle(linearClassifier, new JunctionTree()), false);
+  }
+  
+  public void testTrainLogisticRegressionLbfgs() {
+    runTrainerTest(new LoglikelihoodOracle(linearClassifier, new JunctionTree()), true);
   }
 
-  private void runTrainerTest(GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
+  private void runTrainerTest(GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle,
+      boolean useLbfgs) {
     // Our factor graph isn't dynamic (i.e., has no plates), so wrap the oracle
     // to accept Assignments (instead of DynamicAssignments, which are required
     // for plate models).
     GradientOracle<DynamicFactorGraph, Example<Assignment, Assignment>> adaptedOracle =
         OracleAdapter.createAssignmentAdapter(oracle);
 
-    // Instantiate the optimization algorithm, in this case stochastic gradient
-    // with l2 regularization.
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(1000, 
-        1, 1.0, true, 0.1, new DefaultLogFunction(10000, false));
-    // Estimate classifier parameters.
-    SufficientStatistics parameters = trainer.train(adaptedOracle,
-        linearClassifier.getNewSufficientStatistics(), trainingData);
+    SufficientStatistics parameters = null;
+    if (useLbfgs) {
+      // Instantiate the optimization algorithm, in this case stochastic gradient
+      // with l2 regularization.
+      Lbfgs trainer = new Lbfgs(50, 10, 0.0, new DefaultLogFunction(1, false));
+      
+      // Estimate classifier parameters.
+      parameters = trainer.train(adaptedOracle,
+          linearClassifier.getNewSufficientStatistics(), trainingData);
+    } else {
+      // Instantiate the optimization algorithm, in this case stochastic gradient
+      // with l2 regularization.
+      StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(1000, 
+          1, 1.0, true, 0.1, new DefaultLogFunction(10000, false));
+      // Estimate classifier parameters.
+      parameters = trainer.train(adaptedOracle,
+          linearClassifier.getNewSufficientStatistics(), trainingData);
+    }
     // Get the trained classifier as a factor graph (enabling inference). The
     // "getFactorGraph()" part again exists to support dynamic factor graphs.
     FactorGraph trainedModel = linearClassifier.getModelFromParameters(parameters)

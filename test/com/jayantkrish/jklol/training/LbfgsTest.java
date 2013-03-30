@@ -22,8 +22,7 @@ import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.TensorBase;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class StochasticGradientTrainerTest extends TestCase {
-
+public class LbfgsTest extends TestCase {
 	ParametricFactorGraph logLinearModel;
 	List<String> clique1Names;
 	List<String> clique2Names;
@@ -67,54 +66,52 @@ public class StochasticGradientTrainerTest extends TestCase {
 	}
 	
 	public void testTrainUnregularized() {
-	  runTest(new StochasticGradientTrainer(100, 9, 1.0, true, new DefaultLogFunction()));
-	}
-
-	public void testTrainL2() {
-	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 0.01, true, 1, new DefaultLogFunction()));
-	}
-	
-	public void testTrainL1() {
-	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, 0.1, new DefaultLogFunction()));
+	  DefaultLogFunction log = new DefaultLogFunction(1, false);
+	  Lbfgs lbfgs = new Lbfgs(100, 10, 0.0, log);
+	  runTest(lbfgs);
+	  
+	  // Check convergence of the objective value.
+	  double[] objectiveValues = log.getStatisticValues("objective value");
+	  assertEquals(Math.log(1.0 / 3.0), objectiveValues[objectiveValues.length - 1], 0.00000001);
 	}
 	
-	private void runTest(StochasticGradientTrainer trainer) {
-	  		// These assignments should have positive weight for clique 1
-		Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
-		clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)
-		    .outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T"})));
-		clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)
-		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "F", "F"})));
+	private SufficientStatistics runTest(Lbfgs trainer) {
+	  // These assignments should have positive weight for clique 1
+	  Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
+	  clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)
+	      .outcomeToAssignment(Arrays.asList(new String[] {"T", "T", "T"})));
+	  clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)
+	      .outcomeToAssignment(Arrays.asList(new String[] {"F", "F", "F"})));
 
-		Set<Assignment> clique2NegativeAssignments = new HashSet<Assignment>();
-		clique2NegativeAssignments.add(allVariables.getVariablesByName(clique2Names)
-		    .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
+	  Set<Assignment> clique2NegativeAssignments = new HashSet<Assignment>();
+	  clique2NegativeAssignments.add(allVariables.getVariablesByName(clique2Names)
+	      .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
-		LoglikelihoodOracle oracle = new LoglikelihoodOracle(logLinearModel, new JunctionTree());
-		SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingData);
-		
-		System.out.println(logLinearModel.getParameterDescription(parameters));
+	  LoglikelihoodOracle oracle = new LoglikelihoodOracle(logLinearModel, new JunctionTree());
+	  SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingData);
 
-		List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
-		for (int i = 0; i < parameterList.size(); i++) {
-		  DiscreteLogLinearFactor factor = (DiscreteLogLinearFactor) logLinearModel.getParametricFactors().get(i);
-		  SufficientStatistics stats = parameterList.get(i);
-		  
-		  DiscreteFactor featureValues = factor.getFeatureValues();
-		  VariableNumMap featureVariable = featureValues.getVars().removeAll(factor.getVars());
-		  TensorBase weights = ((TensorSufficientStatistics) stats).get();
-		  for (int j = 0; j < weights.size(); j++) {
-		    
-		    Assignment a = featureValues.conditional(featureVariable.intArrayToAssignment(new int[] {j}))
-		        .outcomeIterator().next().getAssignment();
-		    if (a.getVariableNums().size() == 3) {
-		      assertTrue(clique1PositiveAssignments.contains(a) ||
-		          weights.getByDimKey(j) < 0.0);
-		    } else {
-		      assertTrue(clique2NegativeAssignments.contains(a) ||
-		          weights.getByDimKey(j) > -1.0);
-		    }
-		  }
-		}
+	  List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
+	  for (int i = 0; i < parameterList.size(); i++) {
+	    DiscreteLogLinearFactor factor = (DiscreteLogLinearFactor) logLinearModel.getParametricFactors().get(i);
+	    SufficientStatistics stats = parameterList.get(i);
+
+	    DiscreteFactor featureValues = factor.getFeatureValues();
+	    VariableNumMap featureVariable = featureValues.getVars().removeAll(factor.getVars());
+	    TensorBase weights = ((TensorSufficientStatistics) stats).get();
+	    for (int j = 0; j < weights.size(); j++) {
+
+	      Assignment a = featureValues.conditional(featureVariable.intArrayToAssignment(new int[] {j}))
+	          .outcomeIterator().next().getAssignment();
+	      if (a.getVariableNums().size() == 3) {
+	        assertTrue(clique1PositiveAssignments.contains(a) ||
+	            weights.getByDimKey(j) < 0.0);
+	      } else {
+	        assertTrue(clique2NegativeAssignments.contains(a) ||
+	            weights.getByDimKey(j) > -1.0);
+	      }
+	    }
+	  }
+	  
+	  return parameters;
 	}
 }

@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -19,6 +22,8 @@ public class DefaultLogFunction extends AbstractLogFunction {
   private final int logInterval;
   private final boolean showExamples;
   
+  private final ListMultimap<String, Double> statistics;
+  
   // Print asynchronously for speed.
   private final ExecutorService printExecutor;
 
@@ -27,6 +32,8 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.logInterval = 1;
     this.showExamples = true;
     this.printExecutor = Executors.newSingleThreadExecutor();
+    
+    this.statistics = ArrayListMultimap.create();
   }
   
   public DefaultLogFunction(int logInterval, boolean showExamples) { 
@@ -34,6 +41,8 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.logInterval = logInterval;
     this.showExamples = showExamples;
     this.printExecutor = Executors.newSingleThreadExecutor();
+    
+    this.statistics = ArrayListMultimap.create();
   }
   
   protected void print(String toPrint) {
@@ -92,6 +101,11 @@ public class DefaultLogFunction extends AbstractLogFunction {
     if (iteration % logInterval == 0) {
       print(iteration + ": " + statisticName + "=" + value);
     }
+    statistics.put(statisticName, value);
+  }
+  
+  public double[] getStatisticValues(String statisticName) {
+    return Doubles.toArray(statistics.get(statisticName));
   }
   
   public void printTimeStatistics() {

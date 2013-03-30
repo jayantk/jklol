@@ -304,6 +304,11 @@ public class TensorSufficientStatistics implements SufficientStatistics {
       isDense = true;
     }
   }
+  
+  @Override
+  public String getDescription() {
+    return getFactor().getParameterDescription();
+  }
 
   public void getFeatureNames() {
     System.out.println("**** feature names *****" + this.statisticNames.getVariables().get(0).toString());

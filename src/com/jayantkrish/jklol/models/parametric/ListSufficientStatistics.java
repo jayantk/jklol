@@ -172,6 +172,16 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
+  public String getDescription() {
+    StringBuilder sb = new StringBuilder();
+    for (SufficientStatistics statistic : statistics) {
+      sb.append(statistic.getDescription());
+      sb.append("\n");
+    }
+    return sb.toString();
+  }
+
+  @Override
   public String toString() {
     return statistics.toString();
   }

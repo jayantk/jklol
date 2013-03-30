@@ -22,6 +22,8 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -61,7 +63,6 @@ public class SequenceModelTest extends TestCase {
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
     builder.addFactor("adjacent", DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
         VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
-
     sequenceModel = builder.build();
         
     // Construct some training data.
@@ -94,19 +95,33 @@ public class SequenceModelTest extends TestCase {
   }
   
   public void testTrainSvm() {
-    testZeroTrainingError(new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree()));
+    testZeroTrainingError(new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(),
+        new JunctionTree()), false);
   }
   
   public void testTrainLogLinear() {
-    testZeroTrainingError(new LoglikelihoodOracle(sequenceModel, new JunctionTree()));
+    testZeroTrainingError(new LoglikelihoodOracle(sequenceModel, new JunctionTree()), false);
+  }
+  
+  public void testTrainLogLinearLbfgs() {
+    testZeroTrainingError(new LoglikelihoodOracle(sequenceModel, new JunctionTree()), true);
   }
   
   private void testZeroTrainingError(
-      GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
-
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1.0, true, 0.1, new DefaultLogFunction());
+      GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle,
+      boolean useLbfgs) {
     
-    SufficientStatistics parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData); 
+    MapReduceConfiguration.setMapReduceExecutor(new LocalMapReduceExecutor(1, 1));
+
+    SufficientStatistics parameters = null;
+    if (useLbfgs) {
+      Lbfgs trainer = new Lbfgs(50, 10, 0.1, new DefaultLogFunction(1, false));
+      parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
+    } else {
+      StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
+          100, 1, 1.0, true, 0.1, new DefaultLogFunction());
+      parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
+    }
     DynamicFactorGraph trainedModel = sequenceModel.getModelFromParameters(parameters);
     
     // Should be able to get 0 training error.

@@ -172,7 +172,7 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
       MarginalSet marginals, double count) {
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
-
+    
     List<Integer> conditionedVariableNums = marginals.getConditionedValues().getVariableNums();
     for (int i = 0; i < statisticsList.size(); i++) {
       VariablePattern pattern = factorPatterns.get(i);

@@ -126,8 +126,10 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNums()));
 
     if (conditionalAssignment.containsAll(getVars().getVariableNums())) {
+      Preconditions.checkState(marginal.getVars().size() == 0);
       // Easy case where all variables' values are known.
-      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, count / partitionFunction);
+      double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
+      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);
     } else {
       // Construct a factor representing the unnormalized probability distribution over all
       // of the output variables.

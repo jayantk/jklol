@@ -23,6 +23,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -32,7 +33,9 @@ import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerators;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -149,7 +152,7 @@ public class TrainPosCrf extends AbstractCli {
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
           Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(posType, posType));
-      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
+      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, IndicatorLogLinearFactor.createDenseFactor(adjacentVars),
           VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
     }
 
@@ -163,19 +166,26 @@ public class TrainPosCrf extends AbstractCli {
 
     // Estimate parameters
     GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
-    if (useMaxMargin) {
-      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
-    } else {
-      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
-    }
-
-    System.out.println("Training...");
-    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
     SufficientStatistics initialParameters = sequenceModel.getNewSufficientStatistics();
     initialParameters.makeDense();
-    SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
+    System.out.println("Training...");
+    if (useMaxMargin) {
+      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
 
-    return parameters;
+      StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
+      SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
+      return parameters;
+    } else {
+      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
+
+      /*
+      Lbfgs lbfgs = new Lbfgs(50, 10, 0.0, new DefaultLogFunction(1, false));
+      SufficientStatistics parameters = lbfgs.train(oracle, initialParameters, trainingData);
+      */
+      StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
+      SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
+      return parameters;
+    }
   }
   
   public static void main(String[] args) {

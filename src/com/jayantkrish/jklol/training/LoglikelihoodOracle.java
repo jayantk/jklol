@@ -103,6 +103,11 @@ Example<DynamicAssignment, DynamicAssignment>> {
     log.stopTimer("update_gradient/increment");
     
     // System.out.println(family.getParameterDescription(gradient));
+    /*
+    double prob = outputPartitionFunction / inputPartitionFunction;
+    double prob2 = inputFactorGraph.getUnnormalizedProbability(observed) / inputPartitionFunction;
+    System.out.println("prob:" + prob + " " + prob2);
+    */
 
     return Math.log(outputPartitionFunction) - Math.log(inputPartitionFunction);
   }

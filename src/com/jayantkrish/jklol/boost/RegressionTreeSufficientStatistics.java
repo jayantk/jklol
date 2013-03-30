@@ -72,4 +72,13 @@ public class RegressionTreeSufficientStatistics implements SufficientStatistics 
 
   @Override
   public void makeDense() {}
+  
+  @Override
+  public String getDescription() {
+    StringBuilder sb = new StringBuilder();
+    for (RegressionTree tree : trees) {
+      sb.append(tree.toString());
+    }
+    return sb.toString();
+  }
 }

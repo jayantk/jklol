@@ -10,8 +10,14 @@ import joptsimple.OptionSpec;
 
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.boost.AveragingBoostingFamily;
+import com.jayantkrish.jklol.boost.FunctionalGradientAscent;
+import com.jayantkrish.jklol.boost.LoglikelihoodBoostingOracle;
+import com.jayantkrish.jklol.boost.ParametricFactorGraphEnsemble;
+import com.jayantkrish.jklol.boost.ParametricFactorGraphEnsembleBuilder;
+import com.jayantkrish.jklol.boost.RegressionTreeBoostingFamily;
+import com.jayantkrish.jklol.boost.SufficientStatisticsEnsemble;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.cli.TrainedModelSet;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -21,41 +27,24 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
-import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.LoglikelihoodOracle;
-import com.jayantkrish.jklol.training.MaxMarginOracle;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IoUtils;
 
-/**
- * Trains a sequence model for part-of-speech tagging. The model can
- * either be trained as a conditional random field (CRF) or a
- * max-margin markov network (M^3N).
- * 
- * @author jayant
- */
-public class TrainPosCrf extends AbstractCli {
-  
+public class TrainBoostedPosCrf extends AbstractCli {
+
   private OptionSpec<String> trainingFilename;
-  // private OptionSpec<String> allowedTransitions;
   private OptionSpec<String> modelOutput;
   
   // Model construction options.
   private OptionSpec<Void> noTransitions;
   private OptionSpec<Void> noUnknownWordFeatures;
-  private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
 
-  public TrainPosCrf() {
-    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
+  public TrainBoostedPosCrf() {
+    super(CommonOptions.MAP_REDUCE, CommonOptions.FUNCTIONAL_GRADIENT_ASCENT,
+        CommonOptions.REGRESSION_TREE);
   }
   
   @Override
@@ -72,7 +61,6 @@ public class TrainPosCrf extends AbstractCli {
     
     noTransitions = parser.accepts("noTransitions");
     noUnknownWordFeatures = parser.accepts("noUnknownWordFeatures");
-    maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(5);
   }
@@ -95,30 +83,30 @@ public class TrainPosCrf extends AbstractCli {
     System.out.println(featureGen.getNumberOfFeatures() + " word/POS features");
     
     // Build the factor graph.
-    ParametricFactorGraph sequenceModelFamily = buildFeaturizedSequenceModel(posTags,
+    ParametricFactorGraphEnsemble sequenceModelFamily = buildFeaturizedSequenceModel(posTags,
         featureGen.getFeatureDictionary(), options.has(noTransitions));
 
     // Estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = PosTaggerUtils
         .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
-    SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, options.has(maxMargin));
+    SufficientStatisticsEnsemble parameters = estimateParameters(sequenceModelFamily, examples);
 
     // Save model to disk.
     System.out.println("Serializing trained model...");    
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
-    TrainedModelSet trainedModel = new TrainedPosTagger(sequenceModelFamily, parameters, 
+    TrainedBoostedPosTagger trainedModel = new TrainedBoostedPosTagger(sequenceModelFamily, parameters, 
         factorGraph, featureGen);
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
 
-  private static ParametricFactorGraph buildFeaturizedSequenceModel(Set<String> posTags,
+  private ParametricFactorGraphEnsemble buildFeaturizedSequenceModel(Set<String> posTags,
       DiscreteVariable featureDictionary, boolean noTransitions) {
     DiscreteVariable posType = new DiscreteVariable("pos", posTags);
     ObjectVariable wordVectorType = new ObjectVariable(Tensor.class);
     
     // Create a dynamic factor graph with a single plate replicating
     // the input/output variables.
-    ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
+    ParametricFactorGraphEnsembleBuilder builder = new ParametricFactorGraphEnsembleBuilder();
     builder.addPlate(PosTaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
         Arrays.asList(PosTaggerUtils.INPUT_NAME, PosTaggerUtils.OUTPUT_NAME),
         Arrays.<Variable>asList(wordVectorType, posType)), 10000);
@@ -131,8 +119,8 @@ public class TrainPosCrf extends AbstractCli {
         Arrays.asList(inputPattern, outputPattern), Arrays.<Variable>asList(wordVectorType, posType));
     VariableNumMap wordVectorVar = plateVars.getVariablesByName(inputPattern);
     VariableNumMap posVar = plateVars.getVariablesByName(outputPattern);
-    ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
-        VariableNumMap.emptyMap(), featureDictionary);
+    RegressionTreeBoostingFamily wordClassifier = new RegressionTreeBoostingFamily(wordVectorVar, posVar,
+        createRegressionTreeTrainer(), featureDictionary, null);
     builder.addFactor(PosTaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
         VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
     
@@ -140,43 +128,27 @@ public class TrainPosCrf extends AbstractCli {
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
           Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(posType, posType));
-      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, IndicatorLogLinearFactor.createDenseFactor(adjacentVars),
+      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, new AveragingBoostingFamily(adjacentVars),
           VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
     }
 
     return builder.build();
   }
 
-  private SufficientStatistics estimateParameters(ParametricFactorGraph sequenceModel,
-      List<Example<DynamicAssignment, DynamicAssignment>> trainingData,
-      boolean useMaxMargin) {
+  private SufficientStatisticsEnsemble estimateParameters(ParametricFactorGraphEnsemble sequenceModel,
+      List<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
     System.out.println(trainingData.size() + " training examples.");
 
-    // Estimate parameters
-    GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
-    SufficientStatistics initialParameters = sequenceModel.getNewSufficientStatistics();
-    initialParameters.makeDense();
+    // Estimate parameters using functional gradient ascent.
     System.out.println("Training...");
-    if (useMaxMargin) {
-      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
-
-      StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
-      SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
-      return parameters;
-    } else {
-      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
-
-      /*
-      Lbfgs lbfgs = new Lbfgs(50, 10, 0.0, new DefaultLogFunction(1, false));
-      SufficientStatistics parameters = lbfgs.train(oracle, initialParameters, trainingData);
-      */
-      StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
-      SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
-      return parameters;
-    }
+    SufficientStatisticsEnsemble initialParameters = sequenceModel.getNewSufficientStatistics();
+    LoglikelihoodBoostingOracle oracle = new LoglikelihoodBoostingOracle(sequenceModel, new JunctionTree());
+    FunctionalGradientAscent trainer = createFunctionalGradientAscent(trainingData.size());
+    SufficientStatisticsEnsemble parameters = trainer.train(oracle, initialParameters, trainingData);
+    return parameters;
   }
   
   public static void main(String[] args) {
-    new TrainPosCrf().run(args);
+    new TrainBoostedPosCrf().run(args);
   }
 }

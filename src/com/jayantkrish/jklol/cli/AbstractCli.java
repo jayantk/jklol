@@ -14,9 +14,11 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.boost.FunctionalGradientAscent;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgRuleSchema;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.dtree.RegressionTreeTrainer;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
@@ -67,6 +69,15 @@ public abstract class AbstractCli {
      * providing a lexicon and CCG rules.
      */
     PARAMETRIC_CCG_PARSER,
+    /**
+     * Enables options for performing boosting via functional gradient
+     * ascent.
+     */
+    FUNCTIONAL_GRADIENT_ASCENT,
+    /**
+     * Enables options for training regression trees.
+     */    
+    REGRESSION_TREE,
   };
 
   private final Set<CommonOptions> opts;
@@ -97,12 +108,21 @@ public abstract class AbstractCli {
   protected OptionSpec<String> ccgRules;
   protected OptionSpec<String> ccgDependencyFeatures;
   protected OptionSpec<Void> ccgApplicationOnly;
-
+  
+  // Functional gradient ascent options
+  protected OptionSpec<Integer> fgaIterations;
+  protected OptionSpec<Double> fgaInitialStep;
+  protected OptionSpec<Void> fgaNoDecayStepSize;
+  
+  // Regression tree options
+  protected OptionSpec<Integer> rtreeMaxDepth;
+  
   /**
    * Creates a command line program that accepts the specified set of
    * options.
    * 
-   * @param opts any optional option sets to accept
+   * @param opts
+   *          any optional option sets to accept
    */
   public AbstractCli(CommonOptions... opts) {
     this.opts = Sets.newHashSet(opts);
@@ -111,8 +131,9 @@ public abstract class AbstractCli {
   /**
    * Runs the program, parsing any options from {@code args}.
    * 
-   * @param args arguments to the program, in the same format as
-   * provided by {@code main}.
+   * @param args
+   *          arguments to the program, in the same format as provided
+   *          by {@code main}.
    */
   public void run(String[] args) {
     // Add and parse options.
@@ -130,7 +151,8 @@ public abstract class AbstractCli {
     boolean printHelp = false;
     if (errorMessage != null) {
       // If an error occurs, the options don't parse.
-      // Therefore, we must manually check if the help option was given.
+      // Therefore, we must manually check if the help option was
+      // given.
       for (int i = 0; i < args.length; i++) {
         if (args[i].equals("--help")) {
           printHelp = true;
@@ -171,7 +193,7 @@ public abstract class AbstractCli {
     processOptions(parsedOptions);
     run(parsedOptions);
     long endTime = System.currentTimeMillis();
-    double timeElapsed = ((double) (endTime - startTime)) / 1000; 
+    double timeElapsed = ((double) (endTime - startTime)) / 1000;
     System.out.println("Total time elapsed: " + timeElapsed + " seconds");
 
     System.exit(0);
@@ -181,15 +203,17 @@ public abstract class AbstractCli {
    * Adds subclass-specific options to {@code parser}. Subclasses must
    * implement this method in order to accept class-specific options.
    * 
-   * @param parser option parser to which additional command-line
-   * options should be added.
+   * @param parser
+   *          option parser to which additional command-line options
+   *          should be added.
    */
   public abstract void initializeOptions(OptionParser parser);
 
   /**
    * Runs the program using parsed {@code options}.
    * 
-   * @param options option values passed to the program
+   * @param options
+   *          option values passed to the program
    */
   public abstract void run(OptionSet options);
 
@@ -247,6 +271,22 @@ public abstract class AbstractCli {
       ccgApplicationOnly = parser.accepts("applicationOnly",
           "Use only function application during parsing, i.e., no composition.");
     }
+    
+    if (opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT)) {
+      fgaIterations = parser.accepts("fgaIterations",
+          "Number of iterations of functional gradient ascent to perform.").withRequiredArg()
+          .ofType(Integer.class).defaultsTo(10);
+      fgaInitialStep = parser.accepts("fgaInitialStepSize",
+          "Initial step size for functional gradient ascent.")
+          .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
+      fgaNoDecayStepSize = parser.accepts("fgaNoDecayStepSize",
+          "Don't use a 1/sqrt(t) step size decay during functional gradient ascent.");
+    }
+    
+    if (opts.contains(CommonOptions.REGRESSION_TREE)) {
+      rtreeMaxDepth = parser.accepts("rtreeMaxDepth", "Maximum depth of trained regression trees")
+          .withRequiredArg().ofType(Integer.class).required();
+    }
   }
 
   /**
@@ -270,7 +310,7 @@ public abstract class AbstractCli {
    * {@link CommonOptions#STOCHASTIC_GRADIENT} to the constructor.
    * 
    * @return a stochastic gradient trainer configured using any
-   * command-line options passed to the program
+   *         command-line options passed to the program
    */
   protected StochasticGradientTrainer createStochasticGradientTrainer(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.STOCHASTIC_GRADIENT));
@@ -299,5 +339,22 @@ public abstract class AbstractCli {
         : Collections.<String> emptyList();
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
         posTagSet, !parsedOptions.has(ccgApplicationOnly), rules, false);
+  }
+  
+  protected FunctionalGradientAscent createFunctionalGradientAscent(int numExamples) {
+    Preconditions.checkState(opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT));
+    
+    int iterations = parsedOptions.valueOf(fgaIterations);
+    double initialStep = parsedOptions.valueOf(fgaInitialStep);
+    boolean noDecay = parsedOptions.has(fgaNoDecayStepSize);
+    LogFunction log = new DefaultLogFunction(1, false);
+    
+    return new FunctionalGradientAscent(iterations, numExamples, initialStep, !noDecay, log);
+  }
+  
+  protected RegressionTreeTrainer createRegressionTreeTrainer() {
+    Preconditions.checkState(opts.contains(CommonOptions.REGRESSION_TREE));
+
+    return new RegressionTreeTrainer(parsedOptions.valueOf(rtreeMaxDepth));
   }
 }

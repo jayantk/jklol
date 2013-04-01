@@ -127,13 +127,16 @@ public class TrainPosCrf extends AbstractCli {
         commonWordThreshold));
     
     if (noUnknownWordFeatures) {
-      WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
+      WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator(new int[] {-1, 0, 1},
+          commonWords);
       return DictionaryFeatureVectorGenerator.createFromData(contexts, wordGen, true);
     } else {
-      WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
-      WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(4, 4);
-      FeatureGenerator<LocalContext, String> featureGen = new RareWordFeatureGenerator(commonWords,
-          wordGen, prefixGen);
+      WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator(new int[] {-1, 0, 1},
+          commonWords);
+      WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(4, 4, commonWords);
+      @SuppressWarnings("unchecked")
+      FeatureGenerator<LocalContext, String> featureGen = FeatureGenerators
+          .combinedFeatureGenerator(wordGen, prefixGen);
 
       // Count threshold the generated features to eliminate rare features.
       CountAccumulator<String> wordFeatureCounts = FeatureGenerators.getFeatureCounts(wordGen, contexts);

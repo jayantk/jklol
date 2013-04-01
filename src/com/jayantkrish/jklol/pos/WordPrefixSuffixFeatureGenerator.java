@@ -1,8 +1,10 @@
 package com.jayantkrish.jklol.pos;
 
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
@@ -19,18 +21,24 @@ public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalC
   private final int maxPrefixLength;
   private final int maxSuffixLength;
   
-  public WordPrefixSuffixFeatureGenerator(int maxPrefixLength, int maxSuffixLength) {
+  private final Set<String> commonWords;
+  
+  public WordPrefixSuffixFeatureGenerator(int maxPrefixLength, int maxSuffixLength,
+      Set<String> commonWords) {
     Preconditions.checkArgument(maxPrefixLength >= 0);
     Preconditions.checkArgument(maxSuffixLength >= 0);
     
     this.maxPrefixLength = maxPrefixLength;
     this.maxSuffixLength = maxSuffixLength;
+    
+    this.commonWords = ImmutableSet.copyOf(commonWords);
   }
 
   @Override
   public Map<String, Double> generateFeatures(LocalContext item) {
     Map<String, Double> weights = Maps.newHashMap();
-    for (String word : item.getWords()) {
+    String word = item.getWord();
+    if (!commonWords.contains(word)) {
       generatePrefixSuffixFeatures(word, weights);
       
       if (word.matches("\\d")) {

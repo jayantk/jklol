@@ -49,11 +49,16 @@ public class ConditionalLogLinearFactorTest extends TestCase {
   }
   
   public void testGetFactorFromParameters() {
+    Factor uniform = factor.getModelFromParameters(factor.getNewSufficientStatistics())
+        .conditional(input.outcomeArrayToAssignment(featureVectors.get(0)));
+    Factor empty = uniform.marginalize(output); 
+    
     SufficientStatistics stats = factor.getNewSufficientStatistics();
     factor.incrementSufficientStatisticsFromAssignment(stats, 
         both.outcomeArrayToAssignment(featureVectors.get(0), "A"), 1.0);
-    factor.incrementSufficientStatisticsFromAssignment(stats, 
-        both.outcomeArrayToAssignment(featureVectors.get(1), "B"), 1.0);
+    factor.incrementSufficientStatisticsFromMarginal(stats, empty,  
+        both.outcomeArrayToAssignment(featureVectors.get(1), "B"), 1.0,
+        empty.getTotalUnnormalizedProbability());
     
     Factor classifier = factor.getModelFromParameters(stats);
     Assignment inputAssignment = input.outcomeArrayToAssignment(featureVectors.get(0));
@@ -78,10 +83,5 @@ public class ConditionalLogLinearFactorTest extends TestCase {
     assertEquals(2.0 + (.0468 * 5.0), conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("B")), 0.001);
     assertEquals(1.9405 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("A")), 0.001);
     assertEquals(0.0063 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("C")), 0.001);
-  }
-  
-  public void testIncrementSufficientStatisticsFromMarginal() {
-    // TODO: check that parameter vectors are correctly incremented.
-    assertFalse(true);
   }
 }

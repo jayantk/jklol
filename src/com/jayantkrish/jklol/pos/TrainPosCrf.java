@@ -22,7 +22,6 @@ import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
@@ -33,9 +32,7 @@ import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerators;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -43,6 +40,13 @@ import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
+/**
+ * Trains a sequence model for part-of-speech tagging. The model can
+ * either be trained as a conditional random field (CRF) or a
+ * max-margin markov network (M^3N).
+ * 
+ * @author jayant
+ */
 public class TrainPosCrf extends AbstractCli {
   
   private OptionSpec<String> trainingFilename;
@@ -51,7 +55,9 @@ public class TrainPosCrf extends AbstractCli {
   
   // Model construction options.
   private OptionSpec<Void> noTransitions;
+  private OptionSpec<Void> noUnknownWordFeatures;
   private OptionSpec<Void> maxMargin;
+  private OptionSpec<Integer> commonWordCountThreshold;
 
   public TrainPosCrf() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
@@ -70,15 +76,20 @@ public class TrainPosCrf extends AbstractCli {
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     
     noTransitions = parser.accepts("noTransitions");
+    noUnknownWordFeatures = parser.accepts("noUnknownWordFeatures");
     maxMargin = parser.accepts("maxMargin");
+    commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
+        .ofType(Integer.class).defaultsTo(5);
   }
 
   @Override
   public void run(OptionSet options) {
     // Read in the training data as sentences, to use for
     // feature generation.
-    List<PosTaggedSentence> trainingData = PosTaggerUtils.readTrainingData(options.valueOf(trainingFilename));
-    FeatureVectorGenerator<LocalContext> featureGen = buildFeatureVectorGenerator(trainingData);
+    List<PosTaggedSentence> trainingData = PosTaggerUtils.readTrainingData(
+        options.valueOf(trainingFilename));
+    FeatureVectorGenerator<LocalContext> featureGen = buildFeatureVectorGenerator(trainingData,
+        options.valueOf(commonWordCountThreshold), options.has(noUnknownWordFeatures));
 
     Set<String> posTags = Sets.newHashSet();
     for (PosTaggedSentence datum : trainingData) {
@@ -105,22 +116,34 @@ public class TrainPosCrf extends AbstractCli {
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
 
-  @SuppressWarnings("unchecked")
-  private static FeatureVectorGenerator<LocalContext> buildFeatureVectorGenerator(List<PosTaggedSentence> sentences) {
+  private static FeatureVectorGenerator<LocalContext> buildFeatureVectorGenerator(
+      List<PosTaggedSentence> sentences, int commonWordThreshold, boolean noUnknownWordFeatures) {
     List<LocalContext> contexts = PosTaggerUtils.extractContextsFromData(sentences);
-    WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
-    WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(0, 0);
-    FeatureGenerator<LocalContext, String> featureGen = FeatureGenerators
-        .combinedFeatureGenerator(wordGen, prefixGen);
+    CountAccumulator<String> wordCounts = CountAccumulator.create();
+    for (LocalContext context : contexts) {
+      wordCounts.increment(context.getWord(), 1.0);
+    }    
+    Set<String> commonWords = Sets.newHashSet(wordCounts.getKeysAboveCountThreshold(
+        commonWordThreshold));
     
-    // Count threshold the generated features to eliminate rare features.
-    CountAccumulator<String> wordFeatureCounts = FeatureGenerators.getFeatureCounts(wordGen, contexts);
-    CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
-    IndexedList<String> featureDictionary = IndexedList.create();
-    featureDictionary.addAll(wordFeatureCounts.keySet());
-    featureDictionary.addAll(prefixFeatureCounts.getKeysAboveCountThreshold(35.0));
+    if (noUnknownWordFeatures) {
+      WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
+      return DictionaryFeatureVectorGenerator.createFromData(contexts, wordGen, true);
+    } else {
+      WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator();
+      WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(4, 4);
+      FeatureGenerator<LocalContext, String> featureGen = new RareWordFeatureGenerator(commonWords,
+          wordGen, prefixGen);
 
-    return new DictionaryFeatureVectorGenerator<LocalContext, String>(featureDictionary, featureGen, true);
+      // Count threshold the generated features to eliminate rare features.
+      CountAccumulator<String> wordFeatureCounts = FeatureGenerators.getFeatureCounts(wordGen, contexts);
+      CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
+      IndexedList<String> featureDictionary = IndexedList.create();
+      featureDictionary.addAll(wordFeatureCounts.getKeysAboveCountThreshold(commonWordThreshold));
+      featureDictionary.addAll(prefixFeatureCounts.getKeysAboveCountThreshold(35.0));
+
+      return new DictionaryFeatureVectorGenerator<LocalContext, String>(featureDictionary, featureGen, true);
+    }
   }
 
   private static ParametricFactorGraph buildFeaturizedSequenceModel(Set<String> posTags,
@@ -132,8 +155,8 @@ public class TrainPosCrf extends AbstractCli {
     // the input/output variables.
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
     builder.addPlate(PosTaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
-        Arrays.asList(PosTaggerUtils.INPUT_NAME, PosTaggerUtils.OUTPUT_NAME), Arrays.<Variable>asList(wordVectorType, posType)),
-        10000);
+        Arrays.asList(PosTaggerUtils.INPUT_NAME, PosTaggerUtils.OUTPUT_NAME),
+        Arrays.<Variable>asList(wordVectorType, posType)), 10000);
     String inputPattern = PosTaggerUtils.PLATE_NAME + "/?(0)/" + PosTaggerUtils.INPUT_NAME;
     String outputPattern = PosTaggerUtils.PLATE_NAME + "/?(0)/" + PosTaggerUtils.OUTPUT_NAME;
     String nextOutputPattern = PosTaggerUtils.PLATE_NAME + "/?(1)/" + PosTaggerUtils.OUTPUT_NAME;

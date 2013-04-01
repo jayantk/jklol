@@ -38,7 +38,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
   private static final long serialVersionUID = 7327454945090137844L;
-  
+
   // This factor has one weight for each assignment to featureVariables.
   private final VariableNumMap featureVariables;
   // A features x assignments tensor.
@@ -94,7 +94,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   public DiscreteFactor getFeatureValues() {
     return featureValues;
   }
-  
+
   public VariableNumMap getFeatureVariables() {
     return featureVariables;
   }
@@ -111,7 +111,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
     return exponentiateLogProbs(logProbs); 
   }
-  
+
   private TableFactor exponentiateLogProbs(Tensor logProbs) {
     // Maintain the sparsity pattern, but fast. The result is equivalent
     // to initialWeights.elementwiseProduct(logProbs.elementwiseExp());
@@ -151,7 +151,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     Tensor weights = getFeatureWeights(parameters);
     TableFactor weightFactor = new TableFactor(featureVariables, weights);
-    
+
     List<Assignment> assignments = weightFactor.product(weightFactor).getMostLikelyAssignments(numFeatures);
     return weightFactor.describeAssignments(assignments);
   }
@@ -170,14 +170,9 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {
-      return new TensorSufficientStatistics(featureVariables, 
-               new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
-				      featureVariables.getVariableSizes()));
-      /*
-      return TensorSufficientStatistics.createSparse(featureVariables, 
-           SparseTensor.empty(Ints.toArray(featureVariables.getVariableNums()),
-			      featureVariables.getVariableSizes()));
-      */
+    return new TensorSufficientStatistics(featureVariables, 
+        new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
+            featureVariables.getVariableSizes()));
   }
 
   @Override
@@ -197,14 +192,6 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
     // Compute expected feature counts based on the input marginal distribution.
     DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
         .innerProduct(marginal);
-
-      /*
-    DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
-        .product(marginal);
-    System.out.println(expectedFeatureCounts.getVars() + " " + 
-		       expectedFeatureCounts.size());
-      */
-
     Preconditions.checkState(expectedFeatureCounts.getVars().equals(featureVariables));
 
     ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts.getWeights(), 

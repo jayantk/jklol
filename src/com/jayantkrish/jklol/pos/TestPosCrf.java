@@ -28,11 +28,11 @@ public class TestPosCrf extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Read in the serialized model and print its parameters
-    TrainedPosTagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model),
-        TrainedPosTagger.class);
+    PosTagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model), PosTagger.class);
 
     if (options.has(testFilename)) {
-      List<PosTaggedSentence> testData = PosTaggerUtils.readTrainingData(options.valueOf(testFilename));
+      List<PosTaggedSentence> testData = PosTaggerUtils.readTrainingData(
+          options.valueOf(testFilename));
 
       int numCorrect = 0;
       int total = 0;

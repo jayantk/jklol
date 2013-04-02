@@ -17,7 +17,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayantk
  */
 public class LoglikelihoodBoostingOracle implements BoostingOracle<DynamicFactorGraph, 
-FunctionalGradient, Example<DynamicAssignment, DynamicAssignment>>{
+Example<DynamicAssignment, DynamicAssignment>>{
 
   private final ParametricFactorGraphEnsemble family;
   private final MarginalCalculator marginalCalculator;
@@ -38,7 +38,7 @@ FunctionalGradient, Example<DynamicAssignment, DynamicAssignment>>{
   }
 
   @Override
-  public void accumulateGradient(FunctionalGradient gradient, DynamicFactorGraph model,
+  public double accumulateGradient(FunctionalGradient gradient, DynamicFactorGraph model,
       Example<DynamicAssignment, DynamicAssignment> example, LogFunction log) {
     // Instantiate any replicated factors, etc.
     log.startTimer("update_gradient/get_factor_graph_from_parameters");
@@ -72,11 +72,9 @@ FunctionalGradient, Example<DynamicAssignment, DynamicAssignment>>{
     
     family.incrementFunctionalGradient(gradient, inputMarginals, outputMarginals, 1.0);
 
-    // Loglikelihood.
-    /*
+    // Return the loglikelihood.
     return Math.log(outputMarginals.getPartitionFunction()) - 
         Math.log(inputMarginals.getPartitionFunction());
-        */
   }
 
   @Override

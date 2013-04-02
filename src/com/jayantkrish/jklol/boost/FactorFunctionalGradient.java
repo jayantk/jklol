@@ -38,4 +38,11 @@ public class FactorFunctionalGradient implements FunctionalGradient {
   public List<Assignment> getRegressionAssignments() {
     return regressionAssignments;
   }
+  
+  @Override
+  public void combineExamples(FunctionalGradient other) {
+    FactorFunctionalGradient factorOther = (FactorFunctionalGradient) other;
+    regressionTargets.addAll(factorOther.getRegressionTargets());
+    regressionAssignments.addAll(factorOther.getRegressionAssignments());
+  }
 }

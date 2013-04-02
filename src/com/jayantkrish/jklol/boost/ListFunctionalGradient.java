@@ -24,4 +24,14 @@ public class ListFunctionalGradient implements FunctionalGradient {
   public List<FunctionalGradient> getGradientList() {
     return gradients;
   }
+  
+  @Override
+  public void combineExamples(FunctionalGradient other) {
+    List<FunctionalGradient> otherList = ((ListFunctionalGradient) other).getGradientList(); 
+    Preconditions.checkArgument(otherList.size() == gradients.size());
+    
+    for (int i = 0; i < gradients.size(); i++) {
+      gradients.get(i).combineExamples(otherList.get(i));
+    }
+  }
 }

@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.dtree.RegressionTree;
 import com.jayantkrish.jklol.dtree.RegressionTreeTrainer;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -12,6 +13,10 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.RegressionTreeFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mapper;
+import com.jayantkrish.jklol.parallel.Reducers;
 import com.jayantkrish.jklol.tensor.AppendOnlySparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
@@ -134,14 +139,22 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
     }
     Tensor targetTensor = targetBuilder.build();
 
-    // Train a regression tree for each outcome.
-    RegressionTree[] trees = new RegressionTree[outputOutcomes.size()];
+    // Train a regression tree for each outcome. Trees are trained in parallel.
+    List<RegressionTreeData> dataSets = Lists.newArrayList();
     for (int i = 0; i < outputOutcomes.size(); i++) {
       int[] dimKey = outputOutcomes.keyNumToDimKey(outputOutcomes.indexToKeyNum(i));
-
       Tensor outcomeTargets = targetTensor.slice(outputDims, dimKey);
-      RegressionTree outcomeTree = trainer.train(featureMatrix, outcomeTargets);
-      trees[i] = outcomeTree;
+      dataSets.add(new RegressionTreeData(featureMatrix, outcomeTargets, i));
+    }
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+    List<TrainedRegressionTree> trainedTrees = executor.mapReduce(dataSets, 
+        new RegressionTreeMapper(trainer), Reducers.<TrainedRegressionTree>getAggregatingListReducer());
+
+    // Parallel execution may reorder the trees. Identify the appropriate tree
+    // for each outcome.
+    RegressionTree[] trees = new RegressionTree[outputOutcomes.size()];
+    for (TrainedRegressionTree tree : trainedTrees) {
+      trees[tree.getTreeIndex()] = tree.getTree();
     }
 
     return new RegressionTreeSufficientStatistics(trees);
@@ -156,5 +169,62 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
       sb.append("\n");
     }
     return sb.toString();
+  }
+  
+  private static class RegressionTreeData {
+    private final Tensor featureMatrix;
+    private final Tensor targets;
+    
+    private final int treeIndex;
+    
+    public RegressionTreeData(Tensor featureMatrix, Tensor targets, int treeIndex) {
+      this.featureMatrix = featureMatrix;
+      this.targets = targets;
+      this.treeIndex = treeIndex;
+    }
+
+    public Tensor getFeatureMatrix() {
+      return featureMatrix;
+    }
+
+    public Tensor getTargets() {
+      return targets;
+    }
+    
+    public int getTreeIndex() {
+      return treeIndex;
+    }
+  }
+  
+  private static class TrainedRegressionTree {
+    private final int treeIndex;
+    private final RegressionTree tree;
+
+    public TrainedRegressionTree(int treeIndex, RegressionTree tree) {
+      this.treeIndex = treeIndex;
+      this.tree = tree;
+    }
+    
+    public int getTreeIndex() {
+      return treeIndex;
+    }
+    
+    public RegressionTree getTree() {
+      return tree;
+    }
+  }
+  
+  private static class RegressionTreeMapper extends Mapper<RegressionTreeData, TrainedRegressionTree> {    
+    private final RegressionTreeTrainer trainer;
+
+    public RegressionTreeMapper(RegressionTreeTrainer trainer) {
+      this.trainer = trainer;
+    }
+
+    @Override
+    public TrainedRegressionTree map(RegressionTreeData item) {
+      RegressionTree tree = trainer.train(item.getFeatureMatrix(), item.getTargets());
+      return new TrainedRegressionTree(item.getTreeIndex(), tree);
+    }
   }
 }

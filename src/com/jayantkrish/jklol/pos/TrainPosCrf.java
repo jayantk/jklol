@@ -20,7 +20,7 @@ import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
-import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
+import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -134,14 +134,14 @@ public class TrainPosCrf extends AbstractCli {
     ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
         VariableNumMap.emptyMap(), featureDictionary);
     builder.addFactor(PosTaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
-        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
+        VariableNumPattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
     
     // Add a factor connecting adjacent labels.
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
           Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(posType, posType));
       builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, IndicatorLogLinearFactor.createDenseFactor(adjacentVars),
-          VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+          VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
     }
 
     return builder.build();

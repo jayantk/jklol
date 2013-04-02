@@ -49,6 +49,10 @@ public abstract class AbstractFactorGraphBuilder<T> {
   public VariableNumMap getVariables() {
     return variables.getFixedVariables();
   }
+  
+  public DynamicVariableSet getDynamicVariableSet() {
+    return variables;
+  }
 
   /**
    * Get the factor graph being constructed with this builder.

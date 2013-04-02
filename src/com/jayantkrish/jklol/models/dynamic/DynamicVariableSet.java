@@ -14,13 +14,14 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * The variables for a dynamic factor graph, where the number of variables in
- * the graph is a function of the input instance. {@code DynamicVariableSet}s
- * convert to {@link VariableNumMap}s by conditioning on a
- * {@link DynamicAssignment}. During instantiation, a {@code DynamicVariableSet}
- * creates a {@code VariableNumMap} by repeating certain sets of template
- * variables ("plates"). The number of repetitions of each plate is dictated by
- * the input {@code DynamicAssignment}.
+ * The variables for a dynamic factor graph, where the number of
+ * variables in the graph is a function of the input instance.
+ * {@code DynamicVariableSet}s convert to {@link VariableNumMap}s by
+ * conditioning on a {@link DynamicAssignment}. During instantiation,
+ * a {@code DynamicVariableSet} creates a {@code VariableNumMap} by
+ * repeating certain sets of template variables ("plates"). The number
+ * of repetitions of each plate is dictated by the input
+ * {@code DynamicAssignment}.
  * 
  * @author jayant
  */
@@ -51,8 +52,8 @@ public class DynamicVariableSet implements Serializable {
   }
 
   /**
-   * Creates a {@code DynamicVariableSet} containing {@code variables} and no
-   * plates.
+   * Creates a {@code DynamicVariableSet} containing {@code variables}
+   * and no plates.
    * 
    * @param variables
    * @return
@@ -63,8 +64,8 @@ public class DynamicVariableSet implements Serializable {
   }
 
   /**
-   * Converts {@code values} into an assignment to the fixed (non-plate)
-   * variables of {@code this}.
+   * Converts {@code values} into an assignment to the fixed
+   * (non-plate) variables of {@code this}.
    * 
    * @param values
    * @return
@@ -111,8 +112,32 @@ public class DynamicVariableSet implements Serializable {
   }
 
   /**
-   * Returns {@code true} if {@code assignment} is a legitimate assignment to
-   * {@code this}.
+   * Gets the first variable index which can used for a variable in
+   * {@code plate}. The returned index is inclusive.
+   * 
+   * @param plate
+   * @return
+   */
+  public int getPlateStartIndex(String plate) {
+    return getPlateStartIndex(plateNames.indexOf(plate));
+  }
+
+  /**
+   * Gets the last variable index which can used for a variable in
+   * {@code plate}. The returned index is exclusive, i.e., all
+   * variables in {@code plate} have numbers less than the returned
+   * value.
+   * 
+   * @param plate
+   * @return
+   */
+  public int getPlateEndIndex(String plate) {
+    return getPlateEndIndex(plateNames.indexOf(plate));
+  }
+
+  /**
+   * Returns {@code true} if {@code assignment} is a legitimate
+   * assignment to {@code this}.
    * 
    * @param assignment
    * @return
@@ -133,13 +158,18 @@ public class DynamicVariableSet implements Serializable {
     return true;
   }
 
+  public String[] partitionVariableName(String variableName) {
+    return variableName.split(NAMESPACE_SEPARATOR);
+  }
+
   /**
-   * Gets a {@code VariableNumMap} by replicating the plates in {@code this}.
-   * {@code assignment} must contain a value (list of assignments) for all
-   * plates in {@code this}; these values determine how many times each plate is
-   * replicated in the returned {@code VariableNumMap}. If two assignments have
-   * the same number of replications of each plate, this method will return the
-   * same {@code VariableNumMap}.
+   * Gets a {@code VariableNumMap} by replicating the plates in
+   * {@code this}. {@code assignment} must contain a value (list of
+   * assignments) for all plates in {@code this}; these values
+   * determine how many times each plate is replicated in the returned
+   * {@code VariableNumMap}. If two assignments have the same number
+   * of replications of each plate, this method will return the same
+   * {@code VariableNumMap}.
    * 
    * @param assignment
    * @return
@@ -166,10 +196,10 @@ public class DynamicVariableSet implements Serializable {
 
     for (int i = 0; i < plateNames.size(); i++) {
       Preconditions.checkArgument(assignment.containsPlateValue(plateNames.get(i)),
-          "Cannot assign %s to %s", assignment, this); 
+          "Cannot assign %s to %s", assignment, this);
       List<DynamicAssignment> plateValues = assignment.getPlateValue(plateNames.get(i));
-      // Allocate a fraction of the indices between startOffset and endOffset to
-      // each plate.
+      // Allocate a fraction of the indices between startOffset and
+      // endOffset to each plate.
       int plateIndex = indexOffset + getPlateStartIndex(i);
       for (int j = 0; j < plateValues.size(); j++) {
         plates.get(i).instantiateVariablesHelper(plateValues.get(j),
@@ -185,9 +215,9 @@ public class DynamicVariableSet implements Serializable {
   }
 
   /**
-   * Gets the first variable index which can contain a replicated variable for
-   * the {@code plateNum}th plate. The returned index is inclusive and may be
-   * used by the plate.
+   * Gets the first variable index which can contain a replicated
+   * variable for the {@code plateNum}th plate. The returned index is
+   * inclusive and may be used by the plate.
    * 
    * @param plateNum
    * @return
@@ -203,9 +233,9 @@ public class DynamicVariableSet implements Serializable {
 
   /**
    * Gets the end of the block of variable indices which can contain a
-   * replicated variable from the {@code plateNum}th plate. The returned index
-   * is exclusive, i.e., all indices used by {@code plateNum} must be less than
-   * the returned value.
+   * replicated variable from the {@code plateNum}th plate. The
+   * returned index is exclusive, i.e., all indices used by
+   * {@code plateNum} must be less than the returned value.
    * 
    * @param plateName
    * @return
@@ -298,8 +328,9 @@ public class DynamicVariableSet implements Serializable {
   // //////////////////////////////////////////////////////////////
 
   /**
-   * Returns a copy of {@code this} with an additional fixed variable. The
-   * created variable is named {@code name} and has type {@code variable}.
+   * Returns a copy of {@code this} with an additional fixed variable.
+   * The created variable is named {@code name} and has type
+   * {@code variable}.
    * 
    * @param name
    * @param variable
@@ -310,17 +341,18 @@ public class DynamicVariableSet implements Serializable {
     return new DynamicVariableSet(fixedVariables.addMapping(variableIndex, name, variable),
         plateNames, plates, maximumReplications);
   }
-  
+
   /**
-   * Returns a copy of {@code this} with an additional fixed variables. The
-   * added variables use the names and numbers provided in {@code variables}.
+   * Returns a copy of {@code this} with an additional fixed
+   * variables. The added variables use the names and numbers provided
+   * in {@code variables}.
    * 
    * @param variables
    * @return
    */
   public DynamicVariableSet addFixedVariables(VariableNumMap variables) {
     Preconditions.checkArgument(!fixedVariables.containsAny(variables.getVariableNums()));
-    
+
     return new DynamicVariableSet(fixedVariables.union(variables), plateNames, plates,
         maximumReplications);
   }
@@ -381,7 +413,7 @@ public class DynamicVariableSet implements Serializable {
       return false;
     return true;
   }
-  
+
   @Override
   public String toString() {
     return "(" + fixedVariables.toString() + " plates: " + plateNames.toString() + " " + plates.toString() + ")";

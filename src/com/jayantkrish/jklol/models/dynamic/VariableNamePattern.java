@@ -46,6 +46,8 @@ public class VariableNamePattern extends AbstractVariablePattern {
 
   public VariableNamePattern(List<VariableNameMatcher> templateVariableMatchers,
       VariableNumMap templateVariables, VariableNumMap fixedVariables) {
+    super();
+
     Preconditions.checkArgument(templateVariableMatchers.size() == templateVariables.size());
     this.templateVariableMatchers = ImmutableList.copyOf(templateVariableMatchers);
     this.fixedVariables = Preconditions.checkNotNull(fixedVariables);

@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
+import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -56,13 +57,15 @@ public class SequenceModelTest extends TestCase {
     y = all.getVariablesByName("plateVar/?(0)/y");
     ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.emptyMap(), 
         DiscreteVariable.sequence("foo", 4));
-    builder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+    builder.addFactor("classifier", f, VariableNumPattern.fromTemplateVariables(all,
+        VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
     builder.addFactor("adjacent", DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+        VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), 
+            builder.getDynamicVariableSet())); 
     sequenceModel = builder.build();
         
     // Construct some training data.

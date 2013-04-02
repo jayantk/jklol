@@ -94,7 +94,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     // Pick an arbitrary factor to use for the marginal
     Factor marginal = relevantFactors.iterator().next();
 
-    // Marginalize out any remaining variables...
+    // Marginalize out any remaining variables
     Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());
     allVarNums.removeAll(varNums);
     return marginal.marginalize(allVarNums);

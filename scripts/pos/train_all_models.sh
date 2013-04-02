@@ -4,7 +4,7 @@ TRAINING_DATA=~/data/ptb_pos/pos_00-18.txt
 VALIDATION_DATA=~/data/ptb_pos/pos_19-21.txt
 OUTPUT_DIR=pos_output/common_and_unk_features/
 
-ITERATIONS=100
+ITERATIONS=20
 L2_REG=0.00001
 
 # Where the trained models go.

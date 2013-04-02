@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.Factors;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -27,7 +26,7 @@ public class AveragingBoostingFamily extends AbstractBoostingFactorFamily {
   
   @Override
   public FunctionalGradient getNewFunctionalGradient() {
-    return FactorFunctionalGradient.empty();
+    return MeanFunctionalGradient.empty(getUnconditionalVariables());
   }
   
   @Override
@@ -45,15 +44,15 @@ public class AveragingBoostingFamily extends AbstractBoostingFactorFamily {
   @Override
   public void incrementGradient(FunctionalGradient gradient, Factor regressionTarget,
       Assignment regressionAssignment) {
-    ((FactorFunctionalGradient) gradient).addExample(regressionTarget, regressionAssignment);
+    ((MeanFunctionalGradient) gradient).addExample(regressionTarget, regressionAssignment);
   }
 
   @Override
   public SufficientStatistics projectGradient(FunctionalGradient gradient) {
-    FactorFunctionalGradient factorGradient = (FactorFunctionalGradient) gradient;
+    MeanFunctionalGradient factorGradient = (MeanFunctionalGradient) gradient;
     
-    List<Factor> regressionTargets = factorGradient.getRegressionTargets();
-    Factor mean = Factors.add(regressionTargets).product(1.0 / regressionTargets.size());
+    Factor regressionTargetSum = factorGradient.getRegressionTargetSum();
+    Factor mean = regressionTargetSum.product(1.0 / factorGradient.getNumTargets());
 
     Preconditions.checkState(mean.getVars().equals(getVariables()));
     return TensorSufficientStatistics.createSparse(mean.getVars(), mean.coerceToDiscrete().getWeights());

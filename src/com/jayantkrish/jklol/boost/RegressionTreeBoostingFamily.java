@@ -116,6 +116,7 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
     }
     Tensor featureMatrix = featureMatrixBuilder.build();
 
+    System.out.println("building regression targets");
     // Build a tensor of the regression targets for each outcome.
     int[] newDims = Arrays.copyOf(outputDims, outputDims.length + 1);
     newDims[newDims.length - 1] = exampleDim;
@@ -137,6 +138,7 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
     // Train a regression tree for each outcome.
     RegressionTree[] trees = new RegressionTree[outputOutcomes.size()];
     for (int i = 0; i < outputOutcomes.size(); i++) {
+	System.out.println("training tree: " + i);
       int[] dimKey = outputOutcomes.keyNumToDimKey(outputOutcomes.indexToKeyNum(i));
 
       Tensor outcomeTargets = targetTensor.slice(outputDims, dimKey);

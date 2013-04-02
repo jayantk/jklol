@@ -69,7 +69,9 @@ public class FunctionalGradientAscent {
 
       log.startTimer("compute_gradient_(serial)");
       F functionalGradient = oracle.initializeFunctionalGradient();
+      int j = 0;
       for (T trainingDatum : batchData) {
+	  j++;
         oracle.accumulateGradient(functionalGradient, currentModel, trainingDatum, log);
       }
       log.stopTimer("compute_gradient_(serial)");
@@ -78,9 +80,11 @@ public class FunctionalGradientAscent {
       // Apply regularization and take a gradient step.
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
 
-      // TODO: take gradient step.
+      // Take gradient step.
+      System.out.println("pre gradient step");
       initialParameters.addStatistics(oracle.projectGradient(functionalGradient), stepSize);
 
+      System.out.println("end");
       // System.out.println(initialParameters);
       log.stopTimer("parameter_update");
       log.logStatistic(i, "step size", currentStepSize);

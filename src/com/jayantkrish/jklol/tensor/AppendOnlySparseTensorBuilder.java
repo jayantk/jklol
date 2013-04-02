@@ -96,10 +96,6 @@ public class AppendOnlySparseTensorBuilder extends AbstractTensorBase implements
   public void putByKeyNum(long keyNum, double value) {
     keys.add(keyNum);
     values.add(value);
-    
-    if (keys.size() % 10000 == 0) {
-      System.out.println(keys.size());
-    }
   }
 
   @Override

@@ -121,6 +121,7 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
     }
     Tensor featureMatrix = featureMatrixBuilder.build();
 
+    System.out.println("building regression targets");
     // Build a tensor of the regression targets for each outcome.
     int[] newDims = Arrays.copyOf(outputDims, outputDims.length + 1);
     newDims[newDims.length - 1] = exampleDim;
@@ -142,6 +143,7 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
     // Train a regression tree for each outcome. Trees are trained in parallel.
     List<RegressionTreeData> dataSets = Lists.newArrayList();
     for (int i = 0; i < outputOutcomes.size(); i++) {
+      System.out.println("training tree: " + i);
       int[] dimKey = outputOutcomes.keyNumToDimKey(outputOutcomes.indexToKeyNum(i));
       Tensor outcomeTargets = targetTensor.slice(outputDims, dimKey);
       dataSets.add(new RegressionTreeData(featureMatrix, outcomeTargets, i));
@@ -170,13 +172,13 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
     }
     return sb.toString();
   }
-  
+
   private static class RegressionTreeData {
     private final Tensor featureMatrix;
     private final Tensor targets;
-    
+
     private final int treeIndex;
-    
+
     public RegressionTreeData(Tensor featureMatrix, Tensor targets, int treeIndex) {
       this.featureMatrix = featureMatrix;
       this.targets = targets;
@@ -190,12 +192,12 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
     public Tensor getTargets() {
       return targets;
     }
-    
+
     public int getTreeIndex() {
       return treeIndex;
     }
   }
-  
+
   private static class TrainedRegressionTree {
     private final int treeIndex;
     private final RegressionTree tree;
@@ -204,16 +206,16 @@ public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
       this.treeIndex = treeIndex;
       this.tree = tree;
     }
-    
+
     public int getTreeIndex() {
       return treeIndex;
     }
-    
+
     public RegressionTree getTree() {
       return tree;
     }
   }
-  
+
   private static class RegressionTreeMapper extends Mapper<RegressionTreeData, TrainedRegressionTree> {    
     private final RegressionTreeTrainer trainer;
 

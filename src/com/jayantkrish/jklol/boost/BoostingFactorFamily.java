@@ -1,11 +1,13 @@
 package com.jayantkrish.jklol.boost;
 
+import java.io.Serializable;
+
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
-public interface BoostingFactorFamily {
+public interface BoostingFactorFamily extends Serializable {
 
   /**
    * Gets all of the variables this family is defined over.

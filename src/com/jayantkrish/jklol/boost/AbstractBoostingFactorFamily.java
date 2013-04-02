@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
  * @author jayantk
  */
 public abstract class AbstractBoostingFactorFamily implements BoostingFactorFamily {
+  private static final long serialVersionUID = 1L;
   
   private final VariableNumMap conditionalVars;
   private final VariableNumMap unconditionalVars;

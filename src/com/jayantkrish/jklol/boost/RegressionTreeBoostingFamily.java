@@ -30,6 +30,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  */
 public class RegressionTreeBoostingFamily extends AbstractBoostingFactorFamily {
+  private static final long serialVersionUID = 1L;
 
   private final RegressionTreeTrainer trainer;
 

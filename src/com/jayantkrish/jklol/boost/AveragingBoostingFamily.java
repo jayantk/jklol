@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayantk
  */
 public class AveragingBoostingFamily extends AbstractBoostingFactorFamily {
+  private static final long serialVersionUID = 1L;
   
   public AveragingBoostingFamily(VariableNumMap unconditionalVars) {
     super(VariableNumMap.emptyMap(), unconditionalVars);

@@ -1,11 +1,14 @@
 package com.jayantkrish.jklol.dtree;
 
+import java.io.Serializable;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 
-public class RegressionTreeTrainer {
-  
+public class RegressionTreeTrainer implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final int maxDepth;
   
   public RegressionTreeTrainer(int maxDepth) {

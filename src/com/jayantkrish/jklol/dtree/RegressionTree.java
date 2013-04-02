@@ -1,9 +1,13 @@
 package com.jayantkrish.jklol.dtree;
 
+import java.io.Serializable;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.Tensor;
 
-public class RegressionTree {
+public class RegressionTree implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   // Populated values if this is a split point in the tree.
   // If this is a leaf, featureNum = -1
   private final int featureNum;

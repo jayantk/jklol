@@ -32,16 +32,20 @@ public class ParametricFactorGraphEnsemble implements Serializable {
 
   private final List<BoostingFactorFamily> boostingFamilies;
   private final List<VariablePattern> factorPatterns;
+  private final List<Factor> baseFactors;
   private final IndexedList<String> factorNames;
 
-  public ParametricFactorGraphEnsemble(DynamicFactorGraph baseFactorGraph, List<BoostingFactorFamily> boostingFamilies,
-      List<VariablePattern> factorPatterns, IndexedList<String> factorNames) {
+  public ParametricFactorGraphEnsemble(DynamicFactorGraph baseFactorGraph, 
+      List<BoostingFactorFamily> boostingFamilies, List<VariablePattern> factorPatterns,
+      List<Factor> baseFactors, IndexedList<String> factorNames) {
     this.baseFactorGraph = Preconditions.checkNotNull(baseFactorGraph);
     this.boostingFamilies = Preconditions.checkNotNull(boostingFamilies);
     this.factorPatterns = Preconditions.checkNotNull(factorPatterns);
+    this.baseFactors = Preconditions.checkNotNull(baseFactors);
     this.factorNames = Preconditions.checkNotNull(factorNames);
     
     Preconditions.checkState(boostingFamilies.size() == factorPatterns.size());
+    Preconditions.checkState(boostingFamilies.size() == baseFactors.size());
     Preconditions.checkState(boostingFamilies.size() == factorNames.size());
   }
   
@@ -75,12 +79,16 @@ public class ParametricFactorGraphEnsemble implements Serializable {
     List<PlateFactor> plateFactors = Lists.newArrayList();
     for (int i = 0; i < boostingFamilies.size(); i++) {
       BoostingFactorFamily family = boostingFamilies.get(i);
-      
+
       List<Factor> factors = Lists.newArrayList();
+      if (baseFactors.get(i) != null) {
+        factors.add(baseFactors.get(i));
+      }
+
       for (int j = 0; j < ensembleParameters.size(); j++) {
         factors.add(family.getModelFromParameters(ensembleParameters.get(j).coerceToList().getStatistics().get(i)));
       }
-      
+
       VariableNumMap conditionalVars = family.getConditionalVariables();
       Factor result = null;
       if (conditionalVars.size() == 0) {

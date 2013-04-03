@@ -29,4 +29,11 @@ public interface PlateFactor extends Serializable {
    * @return
    */
   public List<Factor> instantiateFactors(VariableNumMap factorGraphVariables);
+  
+  /**
+   * Gets the factor replicated by {@code this}.
+   * 
+   * @return
+   */
+  public Factor getFactor();
 }

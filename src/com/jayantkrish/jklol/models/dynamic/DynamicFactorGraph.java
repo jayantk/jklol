@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.models.dynamic;
 import java.io.Serializable;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
@@ -85,5 +86,11 @@ public class DynamicFactorGraph implements Serializable {
     List<String> allNames = Lists.newArrayList(factorNames);
     allNames.addAll(newFactorNames);
     return new DynamicFactorGraph(getVariables(), allFactors, allNames);
+  }
+  
+  public PlateFactor getFactorByName(String name) {
+    int index = factorNames.indexOf(name);
+    Preconditions.checkArgument(index != -1);
+    return plateFactors.get(index);
   }
 }

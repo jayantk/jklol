@@ -47,4 +47,9 @@ public class ReplicatedFactor implements PlateFactor {
     }
     return instantiatedFactors;
   }
+  
+  @Override
+  public Factor getFactor() {
+    return factorToReplicate;
+  }
 }

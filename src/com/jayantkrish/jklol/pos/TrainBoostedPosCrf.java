@@ -8,6 +8,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.boost.AveragingBoostingFamily;
@@ -21,6 +22,7 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -41,6 +43,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
   private OptionSpec<Void> noTransitions;
   private OptionSpec<Void> noUnknownWordFeatures;
   private OptionSpec<Integer> commonWordCountThreshold;
+  private OptionSpec<String> initialModel;
 
   public TrainBoostedPosCrf() {
     super(CommonOptions.MAP_REDUCE, CommonOptions.FUNCTIONAL_GRADIENT_ASCENT,
@@ -63,6 +66,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
     noUnknownWordFeatures = parser.accepts("noUnknownWordFeatures");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(5);
+    initialModel = parser.accepts("initialModel").withRequiredArg().ofType(String.class);
   }
 
   @Override
@@ -71,8 +75,20 @@ public class TrainBoostedPosCrf extends AbstractCli {
     // feature generation.
     List<PosTaggedSentence> trainingData = PosTaggerUtils.readTrainingData(
         options.valueOf(trainingFilename));
-    FeatureVectorGenerator<LocalContext> featureGen = PosTaggerUtils.buildFeatureVectorGenerator(trainingData,
-        options.valueOf(commonWordCountThreshold), options.has(noUnknownWordFeatures));
+    
+    TrainedPosTagger initialTagger = null;
+    if (options.has(initialModel)) {
+      initialTagger = IoUtils.readSerializedObject(options.valueOf(initialModel), TrainedPosTagger.class);
+    }
+    
+    FeatureVectorGenerator<LocalContext> featureGen = null;
+    
+    if (options.has(initialModel)) {  
+      featureGen = initialTagger.getFeatureGenerator();
+    } else {
+      featureGen = PosTaggerUtils.buildFeatureVectorGenerator(trainingData,
+          options.valueOf(commonWordCountThreshold), options.has(noUnknownWordFeatures));
+    }
 
     Set<String> posTags = Sets.newHashSet();
     for (PosTaggedSentence datum : trainingData) {
@@ -84,7 +100,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
     
     // Build the factor graph.
     ParametricFactorGraphEnsemble sequenceModelFamily = buildFeaturizedSequenceModel(posTags,
-        featureGen.getFeatureDictionary(), options.has(noTransitions));
+        featureGen.getFeatureDictionary(), options.has(noTransitions), initialTagger.getInstantiatedModel());
 
     // Estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = PosTaggerUtils
@@ -100,7 +116,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
   }
 
   private ParametricFactorGraphEnsemble buildFeaturizedSequenceModel(Set<String> posTags,
-      DiscreteVariable featureDictionary, boolean noTransitions) {
+      DiscreteVariable featureDictionary, boolean noTransitions, DynamicFactorGraph initialModel) {
     DiscreteVariable posType = new DiscreteVariable("pos", posTags);
     ObjectVariable wordVectorType = new ObjectVariable(Tensor.class);
     
@@ -121,14 +137,25 @@ public class TrainBoostedPosCrf extends AbstractCli {
     VariableNumMap posVar = plateVars.getVariablesByName(outputPattern);
     RegressionTreeBoostingFamily wordClassifier = new RegressionTreeBoostingFamily(wordVectorVar, posVar,
         createRegressionTreeTrainer(), featureDictionary, null);
-    builder.addFactor(PosTaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
+    Factor baseClassifier = null;
+    if (initialModel != null) {
+      baseClassifier = initialModel.getFactorByName(PosTaggerUtils.WORD_LABEL_FACTOR).getFactor();
+      Preconditions.checkState(wordClassifier.getVariables().equals(baseClassifier.getVars()));
+    }
+    builder.addFactor(PosTaggerUtils.WORD_LABEL_FACTOR, wordClassifier, baseClassifier,
         VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
     
     // Add a factor connecting adjacent labels.
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
           Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(posType, posType));
-      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, new AveragingBoostingFamily(adjacentVars),
+      AveragingBoostingFamily transitionFamily = new AveragingBoostingFamily(adjacentVars);
+      Factor baseTransitionFactor = null;
+      if (initialModel != null) {
+        baseTransitionFactor = initialModel.getFactorByName(PosTaggerUtils.TRANSITION_FACTOR).getFactor();
+        Preconditions.checkState(transitionFamily.getVariables().equals(baseTransitionFactor.getVars()));
+      }
+      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, transitionFamily, baseTransitionFactor,
           VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
     }
 

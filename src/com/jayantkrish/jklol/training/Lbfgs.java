@@ -42,9 +42,6 @@ public class Lbfgs {
     this.maxIterations = maxIterations;
     this.numVectorsInApproximation = numVectorsInApproximation;
     this.l2Regularization = l2Regularization;
-    
-    // Regularization is not working yet.
-    Preconditions.checkArgument(l2Regularization == 0.0);
 
     this.log = Preconditions.checkNotNull(log);
   }
@@ -154,7 +151,6 @@ public class Lbfgs {
         cond1Rhs = currentObjectiveValue - (WOLFE_CONDITION_C1 * stepSize * curInnerProd);
         cond2Rhs = -1.0 * WOLFE_CONDITION_C2 * curInnerProd;
 
-        /*
         System.out.println("next:");
         System.out.println(nextParameters.getDescription());
         System.out.println("next gradient:");
@@ -168,9 +164,8 @@ public class Lbfgs {
 
         System.out.println("cond1: " + nextObjectiveValue + " > " + cond1Rhs);
         System.out.println("cond2: abs(" + nextInnerProd + ") < " + cond2Rhs);
-        */
 
-      } while ((nextObjectiveValue < cond1Rhs || Double.isNaN(cond1Rhs)) 
+      } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs)) 
           && stepSize > MIN_STEP_SIZE); //  || Math.abs(nextInnerProd) > cond2Rhs
       log.logStatistic(i, "step size", stepSize);
       log.stopTimer("compute_step_size");
@@ -213,7 +208,7 @@ public class Lbfgs {
         evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);
         double parameterSumSquares = parameters.getL2Norm();
         parameterSumSquares *= parameterSumSquares;
-        evaluation.setObjectiveValue(evaluation.getObjectiveValue() - (l2Regularization * parameterSumSquares));
+        evaluation.setObjectiveValue(evaluation.getObjectiveValue() - (l2Regularization * parameterSumSquares / 2.0));
       }
 
       return evaluation;

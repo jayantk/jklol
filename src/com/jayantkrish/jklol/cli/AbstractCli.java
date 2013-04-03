@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.dtree.RegressionTreeTrainer;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -57,6 +58,10 @@ public abstract class AbstractCli {
      * parameters.
      */
     STOCHASTIC_GRADIENT,
+    /**
+     * Enables options for constructing a {@code Lbfgs} trainer.
+     */
+    LBFGS,
     /**
      * Enables parallelization options configuring the execution of
      * embarassingly parallel tasks. These options set the default
@@ -98,6 +103,11 @@ public abstract class AbstractCli {
   protected OptionSpec<Void> sgdNoDecayStepSize;
   protected OptionSpec<Double> sgdL2Regularization;
   protected OptionSpec<Void> sgdBrief;
+  
+  // LBFGS options.
+  protected OptionSpec<Integer> lbfgsIterations;
+  protected OptionSpec<Integer> lbfgsHessianRank;
+  protected OptionSpec<Double> lbfgsL2Regularization;
 
   // Map reduce options.
   protected OptionSpec<Integer> mrMaxThreads;
@@ -250,6 +260,18 @@ public abstract class AbstractCli {
       // boolean option.
       sgdBrief = parser.accepts("brief", "Hides training output.");
     }
+    
+    if (opts.contains(CommonOptions.LBFGS)) {
+      lbfgsIterations = parser.accepts("lbfgsIterations",
+          "Maximum number of iterations (passes over the data) for LBFGS.").
+          withRequiredArg().ofType(Integer.class).defaultsTo(100);
+      lbfgsHessianRank = parser.accepts("lbfgsHessianRank",
+          "Rank (number of vectors) of LBFGS's inverse Hessian approximation.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(30);
+      lbfgsL2Regularization = parser.accepts("lbfgsL2Regularization",
+          "L2 regularization imposed by LBFGS")
+          .withRequiredArg().ofType(Double.class).defaultsTo(0.0);
+    } 
 
     if (opts.contains(CommonOptions.MAP_REDUCE)) {
       mrMaxThreads = parser.accepts("maxThreads",
@@ -318,7 +340,7 @@ public abstract class AbstractCli {
     int iterationsOption = parsedOptions.valueOf(sgdIterations);
     int batchSize = numExamples;
     if (parsedOptions.has(sgdBatchSize)) {
-	batchSize = parsedOptions.valueOf(sgdBatchSize);
+      batchSize = parsedOptions.valueOf(sgdBatchSize);
     }
     int numIterations = (int) Math.ceil(iterationsOption * numExamples / ((double) batchSize));
     double initialStepSize = parsedOptions.valueOf(sgdInitialStep);
@@ -326,12 +348,18 @@ public abstract class AbstractCli {
     boolean brief = parsedOptions.has(sgdBrief);
 
     LogFunction log = (brief ? new NullLogFunction()
-        : new DefaultLogFunction(parsedOptions.valueOf(sgdLogInterval), false));
+    : new DefaultLogFunction(parsedOptions.valueOf(sgdLogInterval), false));
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
         numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
         l2Regularization, log);
 
     return trainer;
+  }
+
+  protected Lbfgs createLbfgs() {
+    Preconditions.checkState(opts.contains(CommonOptions.LBFGS));
+    return new Lbfgs(parsedOptions.valueOf(lbfgsIterations), parsedOptions.valueOf(lbfgsHessianRank),
+        parsedOptions.valueOf(lbfgsL2Regularization), new DefaultLogFunction(1, false));
   }
 
   protected ParametricCcgParser createCcgParser(Set<String> posTagSet, Set<CcgRuleSchema> rules,

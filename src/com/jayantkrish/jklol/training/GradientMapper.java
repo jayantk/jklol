@@ -53,6 +53,10 @@ public class GradientMapper<M, E> extends Mapper<E, GradientEvaluation> {
     public SufficientStatistics getGradient() {
       return gradient;
     }
+    
+    public void setObjectiveValue(double newObjectiveValue) {
+      this.objectiveValue = newObjectiveValue;
+    }
         
     public double getObjectiveValue() {
       return objectiveValue;

@@ -42,6 +42,9 @@ public class Lbfgs {
     this.maxIterations = maxIterations;
     this.numVectorsInApproximation = numVectorsInApproximation;
     this.l2Regularization = l2Regularization;
+    
+    // Regularization is not working yet.
+    Preconditions.checkArgument(l2Regularization == 0.0);
 
     this.log = Preconditions.checkNotNull(log);
   }

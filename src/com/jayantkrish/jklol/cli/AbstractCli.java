@@ -81,7 +81,7 @@ public abstract class AbstractCli {
     FUNCTIONAL_GRADIENT_ASCENT,
     /**
      * Enables options for training regression trees.
-     */    
+     */
     REGRESSION_TREE,
   };
 
@@ -103,7 +103,7 @@ public abstract class AbstractCli {
   protected OptionSpec<Void> sgdNoDecayStepSize;
   protected OptionSpec<Double> sgdL2Regularization;
   protected OptionSpec<Void> sgdBrief;
-  
+
   // LBFGS options.
   protected OptionSpec<Integer> lbfgsIterations;
   protected OptionSpec<Integer> lbfgsHessianRank;
@@ -118,21 +118,21 @@ public abstract class AbstractCli {
   protected OptionSpec<String> ccgRules;
   protected OptionSpec<String> ccgDependencyFeatures;
   protected OptionSpec<Void> ccgApplicationOnly;
-  
+
   // Functional gradient ascent options
   protected OptionSpec<Integer> fgaIterations;
+  protected OptionSpec<Integer> fgaBatchSize;
   protected OptionSpec<Double> fgaInitialStep;
   protected OptionSpec<Void> fgaNoDecayStepSize;
-  
+
   // Regression tree options
   protected OptionSpec<Integer> rtreeMaxDepth;
-  
+
   /**
    * Creates a command line program that accepts the specified set of
    * options.
    * 
-   * @param opts
-   *          any optional option sets to accept
+   * @param opts any optional option sets to accept
    */
   public AbstractCli(CommonOptions... opts) {
     this.opts = Sets.newHashSet(opts);
@@ -141,9 +141,8 @@ public abstract class AbstractCli {
   /**
    * Runs the program, parsing any options from {@code args}.
    * 
-   * @param args
-   *          arguments to the program, in the same format as provided
-   *          by {@code main}.
+   * @param args arguments to the program, in the same format as
+   * provided by {@code main}.
    */
   public void run(String[] args) {
     // Add and parse options.
@@ -213,17 +212,15 @@ public abstract class AbstractCli {
    * Adds subclass-specific options to {@code parser}. Subclasses must
    * implement this method in order to accept class-specific options.
    * 
-   * @param parser
-   *          option parser to which additional command-line options
-   *          should be added.
+   * @param parser option parser to which additional command-line
+   * options should be added.
    */
   public abstract void initializeOptions(OptionParser parser);
 
   /**
    * Runs the program using parsed {@code options}.
    * 
-   * @param options
-   *          option values passed to the program
+   * @param options option values passed to the program
    */
   public abstract void run(OptionSet options);
 
@@ -298,6 +295,9 @@ public abstract class AbstractCli {
       fgaIterations = parser.accepts("fgaIterations",
           "Number of iterations of functional gradient ascent to perform.").withRequiredArg()
           .ofType(Integer.class).defaultsTo(10);
+      fgaBatchSize = parser.accepts("fgaBatchSize",
+          "Number of examples to process before each functional gradient update. If not provided, use the entire data set.")
+          .withRequiredArg().ofType(Integer.class);
       fgaInitialStep = parser.accepts("fgaInitialStepSize",
           "Initial step size for functional gradient ascent.")
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
@@ -332,7 +332,7 @@ public abstract class AbstractCli {
    * {@link CommonOptions#STOCHASTIC_GRADIENT} to the constructor.
    * 
    * @return a stochastic gradient trainer configured using any
-   *         command-line options passed to the program
+   * command-line options passed to the program
    */
   protected StochasticGradientTrainer createStochasticGradientTrainer(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.STOCHASTIC_GRADIENT));
@@ -348,7 +348,7 @@ public abstract class AbstractCli {
     boolean brief = parsedOptions.has(sgdBrief);
 
     LogFunction log = (brief ? new NullLogFunction()
-    : new DefaultLogFunction(parsedOptions.valueOf(sgdLogInterval), false));
+        : new DefaultLogFunction(parsedOptions.valueOf(sgdLogInterval), false));
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
         numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
         l2Regularization, log);
@@ -371,18 +371,19 @@ public abstract class AbstractCli {
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
         posTagSet, !parsedOptions.has(ccgApplicationOnly), rules, false);
   }
-  
+
   protected FunctionalGradientAscent createFunctionalGradientAscent(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT));
-    
+
     int iterations = parsedOptions.valueOf(fgaIterations);
+    int batchSize = parsedOptions.has(fgaBatchSize) ? parsedOptions.valueOf(fgaBatchSize) : numExamples;
     double initialStep = parsedOptions.valueOf(fgaInitialStep);
     boolean noDecay = parsedOptions.has(fgaNoDecayStepSize);
     LogFunction log = new DefaultLogFunction(1, false);
-    
-    return new FunctionalGradientAscent(iterations, numExamples, initialStep, !noDecay, log);
+
+    return new FunctionalGradientAscent(iterations, batchSize, initialStep, !noDecay, log);
   }
-  
+
   protected RegressionTreeTrainer createRegressionTreeTrainer() {
     Preconditions.checkState(opts.contains(CommonOptions.REGRESSION_TREE));
 

@@ -75,7 +75,7 @@ public class FunctionalGradientAscent {
       BoostingGradientEvaluation gradientEvaluation = executor.mapReduce(batchData,
           new BoostingGradientMapper<M, T>(currentModel, oracle, log),
           new BoostingGradientReducer<M, T>(oracle, log));
-      log.logStatistic(i, "objective value", gradientEvaluation.getObjectiveValue());
+      log.logStatistic(i, "objective value", gradientEvaluation.getObjectiveValue() / batchSize);
       log.logStatistic(i, "search errors", gradientEvaluation.getSearchErrors());
       FunctionalGradient functionalGradient = gradientEvaluation.getGradient();
       log.stopTimer("compute_gradient_(serial)");

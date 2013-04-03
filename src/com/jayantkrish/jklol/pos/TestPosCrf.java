@@ -47,7 +47,7 @@ public class TestPosCrf extends AbstractCli {
             numCorrect++;
           }
         }
-        
+
         System.out.println(testDatum.getWords());
         System.out.println(prediction);
         System.out.println(actual);

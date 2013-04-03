@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.dtree;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.DenseTensor;
@@ -25,7 +26,9 @@ public class RegressionTreeTrainer implements Serializable {
     if (curDepth >= maxDepth) {
       return fitLeaf(targets, indicators);
     } else {
+	// System.out.println(curDepth + " data size: " + Arrays.toString(data.getDimensionSizes()));
       Split split = findSplitForIndicatorFeatures(data, targets, indicators);
+      // System.out.println(curDepth + " found split.");
 
       int featureDim = data.getDimensionNumbers()[1];
       Tensor featureValues = data.slice(new int[] {featureDim}, new int[] {split.featureNum});

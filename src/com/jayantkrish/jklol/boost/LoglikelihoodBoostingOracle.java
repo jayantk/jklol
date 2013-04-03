@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.boost;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
@@ -69,6 +70,14 @@ Example<DynamicAssignment, DynamicAssignment>>{
     MarginalSet outputMarginals = marginalCalculator.computeMarginals(
         outputFactorGraph);
     log.stopTimer("update_gradient/output_marginal");
+
+    double inputPartitionFunction = inputMarginals.getPartitionFunction();
+    double outputPartitionFunction = outputMarginals.getPartitionFunction();
+    if (Double.isInfinite(inputPartitionFunction) || Double.isNaN(inputPartitionFunction)
+        || Double.isInfinite(outputPartitionFunction) || Double.isNaN(outputPartitionFunction)) {
+      // Search error from numerical issues.
+      throw new ZeroProbabilityError();
+    }
     
     family.incrementFunctionalGradient(gradient, inputMarginals, outputMarginals, 1.0);
 

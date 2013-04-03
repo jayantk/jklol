@@ -234,8 +234,8 @@ public abstract class AbstractCli {
           "Number of iterations (passes over the data) for stochastic gradient descent.").
           withRequiredArg().ofType(Integer.class).defaultsTo(10);
       sgdBatchSize = parser.accepts("batchSize",
-          "Minibatch size, i.e., the number of examples processed per gradient computation.")
-          .withRequiredArg().ofType(Integer.class).defaultsTo(1);
+          "Minibatch size, i.e., the number of examples processed per gradient computation. If unspecified, defaults to using the entire data set (gradient descent).")
+          .withRequiredArg().ofType(Integer.class);
       sgdLogInterval = parser.accepts("logInterval",
           "Number of iterations of stochastic gradient training between logging outputs.")
           .withRequiredArg().ofType(Integer.class).defaultsTo(1);
@@ -316,7 +316,10 @@ public abstract class AbstractCli {
     Preconditions.checkState(opts.contains(CommonOptions.STOCHASTIC_GRADIENT));
 
     int iterationsOption = parsedOptions.valueOf(sgdIterations);
-    int batchSize = parsedOptions.valueOf(sgdBatchSize);
+    int batchSize = numExamples;
+    if (parsedOptions.has(sgdBatchSize)) {
+	batchSize = parsedOptions.valueOf(sgdBatchSize);
+    }
     int numIterations = (int) Math.ceil(iterationsOption * numExamples / ((double) batchSize));
     double initialStepSize = parsedOptions.valueOf(sgdInitialStep);
     double l2Regularization = parsedOptions.valueOf(sgdL2Regularization);

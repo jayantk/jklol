@@ -1,10 +1,24 @@
 #!/bin/bash -e
 
 TRAINING_DATA=~/data/ptb_pos/pos_00-18.txt
-OUTPUT=out4.ser
+VALIDATION_DATA=~/data/ptb_pos/pos_19-21.txt
+OUTPUT_PREFIX=pos_output/lbfgs/crf_gd_
 
-./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$OUTPUT --initialStepSize=1.0 --iterations 10 --l2Regularization 0.0001 --batchSize 100 --maxThreads 16 --maxMargin --noTransitions $@
+LOG_SUFFIX=log.txt
+MODEL_SUFFIX=out.ser
+TRAIN_SUFFIX=train.txt
+VALIDATION_SUFFIX=validation.txt
 
-echo "Printing top parameters:"
-./scripts/run.sh com.jayantkrish.jklol.cli.PrintParameters --model=$OUTPUT --numFeatures 10
+LOG=$OUTPUT_PREFIX$LOG_SUFFIX
+MODEL=$OUTPUT_PREFIX$MODEL_SUFFIX
+TRAIN=$OUTPUT_PREFIX$TRAIN_SUFFIX
+VALIDATION=$OUTPUT_PREFIX$VALIDATION_SUFFIX
+
+./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$MODEL --initialStepSize=1.0 --iterations 10 --l2Regularization 0.0001 --maxThreads 16 $@ > $LOG
+
+./scripts/run.sh com.jayantkrish.jklol.pos.TestPosCrf --model=$MODEL --testFilename=$VALIDATION_DATA > $VALIDATION
+./scripts/run.sh com.jayantkrish.jklol.pos.TestPosCrf --model=$MODEL --testFilename=$TRAINING_DATA > $TRAIN
+
+#echo "Printing top parameters:"
+#./scripts/run.sh com.jayantkrish.jklol.cli.PrintParameters --model=$OUTPUT --numFeatures 10
 

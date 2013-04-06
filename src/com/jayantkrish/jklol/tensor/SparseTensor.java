@@ -419,22 +419,32 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       return SparseTensor.copyOf(other.elementwiseProduct(this));
     }
 
-    Preconditions.checkArgument(dimensionNums[dimensionNums.length - 1]
-        < otherDimensionNums[otherDimensionNums.length - 1]);
+    if (dimensionNums[dimensionNums.length - 1] < otherDimensionNums[0]) {
+      return fastOuterProduct(other, other.getMaxKeyNum(), 1, true);
+    } else if (otherDimensionNums[otherDimensionNums.length - 1] < dimensionNums[0]) {
+      return fastOuterProduct(other, 1, getMaxKeyNum(), false);
+    }
+    
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+  
+  private final SparseTensor fastOuterProduct(Tensor other, long myKeyNumMultiplier,
+      long otherKeyNumMultiplier, boolean otherOnRight) {
+    int[] dimensionNums = getDimensionNumbers();
+    int[] otherDimensionNums = other.getDimensionNumbers();
 
-    long multiplier = other.getMaxKeyNum();
     int mySize = size();
     int otherSize = other.size();
     long[] resultKeyNums = new long[mySize * otherSize];
     double[] resultValues = new double[mySize * otherSize];
     int resultInd = 0;
     for (int i = 0; i < mySize; i++) {
-      long keyNumOffset = keyNums[i] * multiplier;
+      long keyNumOffset = keyNums[i] * myKeyNumMultiplier;
       double myValue = values[i];
       for (int j = 0; j < otherSize; j++) {
         double otherValue = other.getByIndex(j);
         if (otherValue != 0.0) {
-          resultKeyNums[resultInd] = keyNumOffset + other.indexToKeyNum(j);
+          resultKeyNums[resultInd] = keyNumOffset + (other.indexToKeyNum(j) * otherKeyNumMultiplier);
           resultValues[resultInd] = myValue * otherValue;
           resultInd++;
         }
@@ -445,14 +455,27 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int[] otherDimensionSizes = other.getDimensionSizes();
     int[] resultDims = new int[dimensionNums.length + otherDimensionNums.length];
     int[] resultSizes = new int[dimensionNums.length + otherDimensionNums.length];
-    for (int i = 0; i < dimensionNums.length; i++) {
-      resultDims[i] = dimensionNums[i];
-      resultSizes[i] = dimensionSizes[i];
+    
+    int[] first, second, firstSizes, secondSizes;
+    if (otherOnRight) {
+      first = dimensionNums;
+      firstSizes = dimensionSizes;
+      second = otherDimensionNums;
+      secondSizes = otherDimensionSizes;
+    } else {
+      first = otherDimensionNums;
+      firstSizes = otherDimensionSizes;
+      second = dimensionNums;
+      secondSizes = dimensionSizes;
+    }
+    for (int i = 0; i < first.length; i++) {
+      resultDims[i] = first[i];
+      resultSizes[i] = firstSizes[i];
     }
 
-    for (int i = 0; i < otherDimensionNums.length; i++) {
-      resultDims[i + dimensionNums.length] = otherDimensionNums[i];
-      resultSizes[i + dimensionNums.length] = otherDimensionSizes[i];
+    for (int i = 0; i < second.length; i++) {
+      resultDims[i + first.length] = second[i];
+      resultSizes[i + first.length] = secondSizes[i];
     }
 
     return resizeIntoTable(resultDims, resultSizes, resultKeyNums, resultValues, resultInd);
@@ -460,7 +483,40 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
   @Override
   public SparseTensor elementwiseAddition(Tensor otherTensor) {
-    return doElementwise(otherTensor, true);
+    if (otherTensor.getDimensionNumbers().length < getDimensionNumbers().length) {
+      int[] otherDims = otherTensor.getDimensionNumbers();
+      int[] myDims = getDimensionNumbers();
+      int[] mySizes = getDimensionSizes();
+      
+      int[] outerProductDims = new int[myDims.length - otherDims.length];
+      int[] outerProductSizes = new int[myDims.length - otherDims.length];
+      int outerProductIndex = 0;
+      for (int i = 0; i < myDims.length; i++) {
+        int dim = myDims[i];
+        if (!Ints.contains(otherDims, dim)) {
+          outerProductDims[outerProductIndex] = dim;
+          outerProductSizes[outerProductIndex] = mySizes[i];
+          outerProductIndex++;
+        }
+      }
+      /*
+      System.out.println(Arrays.toString(myDims));
+      System.out.println(Arrays.toString(otherDims));
+      System.out.println(Arrays.toString(outerProductDims));
+      System.out.println(DenseTensor.constant(outerProductDims, outerProductSizes, 1.0));
+      */
+      Tensor result = otherTensor.outerProduct(
+          DenseTensor.constant(outerProductDims, outerProductSizes, 1.0));
+      SparseTensor value = elementwiseAddition(result);
+      System.out.println("foo");
+      System.out.println(result);
+      System.out.println(this);
+      System.out.println(value);
+      
+      return value;
+    } else {
+      return doElementwise(otherTensor, true);
+    }
   }
 
   @Override

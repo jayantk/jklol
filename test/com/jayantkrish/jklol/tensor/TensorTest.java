@@ -29,12 +29,16 @@ public abstract class TensorTest extends TestCase {
   private final List<TensorFactory> allTensorFactories;
   
   protected int[] varNums, varSizes;
-  protected Tensor table, emptyInputTable;
+  protected Tensor table, vector, emptyInputTable;
   
   protected List<Tensor> smallTables, missingMiddles, missingFirsts,
     missingLasts, emptyTables, addTables, disjointTables, vectors;
 
   protected int[] a1, a2;
+  
+  private static enum ReduceType {
+    SUM, MAX, LOG_SUM
+  };
   
   public TensorTest(TensorFactory tensorFactory) {
     this.tensorFactory = tensorFactory;
@@ -83,6 +87,11 @@ public abstract class TensorTest extends TestCase {
     builder = tensorFactory.getBuilder(new int[] {}, new int[] {});
     builder.put(new int[] {}, 5.0);
     emptyInputTable = builder.build();
+    
+    TensorBuilder vectorBuilder = tensorFactory.getBuilder(new int[] {1}, new int[] {5});
+    vectorBuilder.putByKeyNum(1, 1.0);
+    vectorBuilder.putByKeyNum(4, 2.0);
+    vector = vectorBuilder.build();
 
     smallTables = Lists.newArrayList();
     addTables = Lists.newArrayList();
@@ -375,7 +384,7 @@ public abstract class TensorTest extends TestCase {
     for (Tensor missingFirst : missingFirsts) {
       Tensor actual = table.innerProduct(missingFirst);
       Tensor expected = simpleReduce(simpleMultiply(table, missingFirst), 
-          Sets.newHashSet(Ints.asList(missingFirst.getDimensionNumbers())), true);
+          Sets.newHashSet(Ints.asList(missingFirst.getDimensionNumbers())), ReduceType.SUM);
       assertEquals(expected, actual);
     }
   }
@@ -384,7 +393,7 @@ public abstract class TensorTest extends TestCase {
     for (Tensor missingLast : missingLasts) {
       Tensor actual = table.innerProduct(missingLast);
       Tensor expected = simpleReduce(simpleMultiply(table, missingLast), 
-          Sets.newHashSet(Ints.asList(missingLast.getDimensionNumbers())), true);      
+          Sets.newHashSet(Ints.asList(missingLast.getDimensionNumbers())), ReduceType.SUM);      
       assertEquals(expected, actual);
     }
   }
@@ -393,7 +402,7 @@ public abstract class TensorTest extends TestCase {
     for (Tensor vector : vectors) {
       Tensor actual = table.innerProduct(vector);
       Tensor expected = simpleReduce(simpleMultiply(table, vector), 
-          Sets.newHashSet(Ints.asList(vector.getDimensionNumbers())), true);
+          Sets.newHashSet(Ints.asList(vector.getDimensionNumbers())), ReduceType.SUM);
 
       System.out.println("expected: " + expected);
       System.out.println("actual: " + actual);
@@ -404,7 +413,7 @@ public abstract class TensorTest extends TestCase {
   public void testInnerProductAllDims() {
     Tensor actual = table.innerProduct(table);
     Tensor expected = simpleReduce(simpleMultiply(table, table), 
-          Sets.newHashSet(Ints.asList(table.getDimensionNumbers())), true);    
+          Sets.newHashSet(Ints.asList(table.getDimensionNumbers())), ReduceType.SUM);
     assertEquals(expected, actual);
   }
 
@@ -424,6 +433,29 @@ public abstract class TensorTest extends TestCase {
       
       // The size is different depending on whether the tensor is sparse or dense.
       assertTrue(result.size() == (18 * 3) || result.size() == (120 * 6));
+    }
+  }
+
+  public void testOuterProduct2() {
+    for (Tensor missingFirst : missingFirsts) {
+      Tensor result = vector.outerProduct(missingFirst);
+      
+      assertEquals(0.0, result.getByDimKey(0, 0, 3));
+      assertEquals(2.0, result.getByDimKey(1, 0, 3));
+      assertEquals(0.0, result.getByDimKey(3, 0, 3));
+      assertEquals(4.0, result.getByDimKey(4, 0, 3));
+      assertEquals(0.0, result.getByDimKey(0, 1, 3));
+      assertEquals(3.0, result.getByDimKey(1, 1, 3));
+      assertEquals(6.0, result.getByDimKey(4, 1, 3));
+      assertEquals(4.0, result.getByDimKey(1, 3, 0));
+      assertEquals(0.0, result.getByDimKey(2, 3, 0));
+      assertEquals(8.0, result.getByDimKey(4, 3, 0));
+
+      assertTrue(Arrays.equals(new int[] {1, 3, 4}, result.getDimensionNumbers()));
+      assertTrue(Arrays.equals(new int[] {5, 5, 4}, result.getDimensionSizes()));
+
+      // The size is different depending on whether the tensor is sparse or dense.
+      assertTrue(result.size() == (3 * 2) || result.size() == (20 * 5));
     }
   }
  
@@ -618,17 +650,20 @@ public abstract class TensorTest extends TestCase {
   }
 
   /**
-   * Helper method for testing sumOutDimensions / maxOutDimensions.
+   * Helper method for testing sumOutDimensions / maxOutDimensions / logSumOutDimensions.
    */
   private void runReduceTest(Tensor table, Set<Integer> dimsToEliminate) {
-    Tensor expected = simpleReduce(table, dimsToEliminate, true);
+    Tensor expected = simpleReduce(table, dimsToEliminate, ReduceType.SUM);
     Tensor actual = table.sumOutDimensions(dimsToEliminate);
     assertEquals(expected, actual);
+    
+    expected = simpleReduce(table, dimsToEliminate, ReduceType.LOG_SUM);
+    actual = table.logSumOutDimensions(dimsToEliminate);    
+    assertTensorEquals(expected, actual, 10e-8);
+    
     Backpointers actualBackpointers = new Backpointers();
-    expected = simpleReduce(table, dimsToEliminate, false);
+    expected = simpleReduce(table, dimsToEliminate, ReduceType.MAX);
     actual = table.maxOutDimensions(dimsToEliminate, actualBackpointers);
-    System.out.println(expected);
-    System.out.println(actual);
     assertEquals(expected, actual);
     
     // Test that the returned backpointers point to keys with the correct values.
@@ -646,7 +681,7 @@ public abstract class TensorTest extends TestCase {
   /**
    * This is a simple version of sum/max out dimensions algorithm. 
    */
-  private Tensor simpleReduce(Tensor first, Set<Integer> dimsToEliminate, boolean useSum) {
+  private Tensor simpleReduce(Tensor first, Set<Integer> dimsToEliminate, ReduceType type) {
     int[] currentDims = first.getDimensionNumbers();
     int[] currentSizes = first.getDimensionSizes();
     int[] newDimNums = new int[currentDims.length];
@@ -663,7 +698,7 @@ public abstract class TensorTest extends TestCase {
     TensorBuilder builder = tensorFactory.getBuilder(
         Arrays.copyOf(newDimNums, newDimIndices.size()),
         Arrays.copyOf(newDimSizes, newDimIndices.size()));
-    if (!useSum) {
+    if (type == ReduceType.MAX) {
       builder.increment(Double.NEGATIVE_INFINITY);
     }
     
@@ -676,15 +711,31 @@ public abstract class TensorTest extends TestCase {
         newKey[entry.getValue()] = key[entry.getKey()];
       }
       
-      if (useSum) {
+      if (type == ReduceType.SUM) {
         builder.put(newKey, builder.getByDimKey(newKey) + value);
-      } else {
+      } else if (type == ReduceType.MAX) {
         if (value >= builder.getByDimKey(newKey)) { 
           builder.put(newKey, value);
         }
+      } else if (type == ReduceType.LOG_SUM) {
+        builder.put(newKey, builder.getByDimKey(newKey) + Math.exp(value));
       }
     }
     
-    return builder.build();
+    if (type == ReduceType.LOG_SUM) {
+      return builder.build().elementwiseLog();
+    } else {
+      return builder.build();
+    }
+  }
+  
+  private void assertTensorEquals(Tensor expected, Tensor actual, double tolerance) {
+    assertTrue(Arrays.equals(expected.getDimensionNumbers(), actual.getDimensionNumbers()));
+    
+    Iterator<KeyValue> iter = actual.keyValueIterator();
+    while (iter.hasNext()) {
+      KeyValue k = iter.next();
+      assertEquals(expected.getByDimKey(k.getKey()), actual.getByDimKey(k.getKey()), tolerance);
+    }
   }
 }

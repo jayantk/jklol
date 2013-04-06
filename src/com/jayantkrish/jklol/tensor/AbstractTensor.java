@@ -52,14 +52,28 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
   }
 
   public static Tensor logSumOutDimensions(Tensor tensor, Collection<Integer> dimensionsToEliminate) {
+    if (dimensionsToEliminate.size() == 0) {
+      return tensor;
+    }
+    
     int eliminatedDimensionSize = 1;
     int[] nums = tensor.getDimensionNumbers();
     int[] sizes = tensor.getDimensionSizes();
-    
+    for (int i = 0; i < nums.length; i++) {
+      if (dimensionsToEliminate.contains(nums[i])) {
+        eliminatedDimensionSize *= sizes[i];
+      }
+    }
+
     Tensor minValues = tensor.elementwiseProduct(-1.0).maxOutDimensions(dimensionsToEliminate);    
-    Tensor replicatedMinValues = minValues.elementwiseProduct(tensor.getNumKeysInDimensions(dimensionToEliminate));
     
-    return tensor.sumOutDimensions(dimensionsToEliminate).elementwiseAddition(replicatedMinValues)
-        .elementwiseExp().elementwiseAddition(1.0).elementwiseLog().elementwiseAddition(minValues);
+    System.out.println(dimensionsToEliminate);
+    System.out.println(tensor);
+    System.out.println(tensor.maxOutDimensions(dimensionsToEliminate));
+    System.out.println("minvalues: " + minValues);
+    System.out.println("add result: " + tensor.elementwiseAddition(minValues));
+    
+    return tensor.elementwiseAddition(minValues).elementwiseExp().sumOutDimensions(dimensionsToEliminate)
+        .elementwiseLog().elementwiseAddition(minValues.elementwiseProduct(-1.0));
   }
 }

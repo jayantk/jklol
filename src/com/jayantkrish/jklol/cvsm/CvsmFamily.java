@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.cvsm;
 
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -49,8 +48,6 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
   
   public void incrementValueSufficientStatistics(String valueName, Tensor valueGradient,
       SufficientStatistics gradient, double multiplier) {
-    System.out.println("gradient " + valueName + ": " + Arrays.toString(valueGradient.getValues()));
-    
     SufficientStatistics gradientTerm = gradient.coerceToList().getStatisticByName(valueName);
     ((TensorSufficientStatistics) gradientTerm).increment(valueGradient, multiplier);
   }

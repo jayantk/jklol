@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.cvsm;
 
-import java.util.Arrays;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -35,10 +33,7 @@ public class CvsmSquareLossTree extends AbstractCvsmTree {
   
   @Override
   public double getLoss() {
-    System.out.println(Arrays.toString(getValue().getValues()));
-    
     Tensor deltas = getValue().elementwiseAddition(targets.elementwiseProduct(-1.0));
-    System.out.println(Arrays.toString(deltas.getValues()));
     return deltas.innerProduct(deltas).getByDimKey();
   }
 }

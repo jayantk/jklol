@@ -7,13 +7,11 @@ import com.jayantkrish.jklol.tensor.Tensor;
 public class CvsmRelabelDimsTree extends AbstractCvsmTree {
   
   private final CvsmTree subtree;
-  private final BiMap<Integer, Integer> relabeling;
   private final BiMap<Integer, Integer> inverseRelabeling;
   
   public CvsmRelabelDimsTree(CvsmTree subtree, BiMap<Integer, Integer> subtreeToRootRelabeling) {
     super(subtree.getValue().relabelDimensions(subtreeToRootRelabeling));
     this.subtree = subtree;
-    this.relabeling = subtreeToRootRelabeling;
     this.inverseRelabeling = subtreeToRootRelabeling.inverse();
   }
 

@@ -28,10 +28,6 @@ public class CvsmProductTree extends AbstractCvsmTree {
     Tensor smallTreeValue = smallTree.getValue();
     Preconditions.checkArgument(Arrays.equals(treeGradient.getDimensionNumbers(), bigTreeValue.getDimensionNumbers()));
 
-    System.out.println(Arrays.toString(bigTreeValue.getDimensionNumbers()));
-    System.out.println(Arrays.toString(smallTreeValue.getDimensionNumbers()));
-    System.out.println(Arrays.toString(treeGradient.getDimensionNumbers()));
-
     SortedSet<Integer> dimsToEliminate = Sets.newTreeSet(Ints.asList(bigTreeValue.getDimensionNumbers()));
     dimsToEliminate.removeAll(Ints.asList(smallTreeValue.getDimensionNumbers()));
     Tensor smallTreeGradient = treeGradient.elementwiseProduct(bigTreeValue)

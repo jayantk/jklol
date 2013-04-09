@@ -32,7 +32,7 @@ public class Cvsm implements Serializable {
   public CvsmTree getInterpretationTree(Expression logicalForm) {
     if (logicalForm instanceof ConstantExpression) {
       String value = ((ConstantExpression) logicalForm).getName();
-      Preconditions.checkArgument(tensorNames.contains(value));
+      Preconditions.checkArgument(tensorNames.contains(value), "Unknown parameter name: %s", value);
       return new CvsmTensorTree(value, tensors.get(tensorNames.getIndex(value)));
     } else if (logicalForm instanceof ApplicationExpression) {
       ApplicationExpression app = ((ApplicationExpression) logicalForm);
@@ -62,6 +62,22 @@ public class Cvsm implements Serializable {
         }
 
         return new CvsmRelabelDimsTree(tree, relabeling);
+      } else if (functionName.equals("op:softmax")) {
+        Preconditions.checkArgument(args.size() == 1);
+
+        CvsmTree subtree = getInterpretationTree(args.get(0));
+        return CvsmSoftmaxTree.create(subtree);
+      } else if (functionName.equals("op:logistic")) {
+        Preconditions.checkArgument(args.size() == 1);
+
+        CvsmTree subtree = getInterpretationTree(args.get(0));
+        return new CvsmLogisticTree(subtree);
+      } else if (functionName.equals("op:add")) {
+        Preconditions.checkArgument(args.size() == 2);
+        
+        CvsmTree left = getInterpretationTree(args.get(0));
+        CvsmTree right = getInterpretationTree(args.get(1));
+        return new CvsmAdditionTree(left, right);
       }
 
       throw new IllegalArgumentException("Unknown function name: " + functionName);

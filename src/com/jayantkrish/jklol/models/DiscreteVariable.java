@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -19,7 +18,7 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class DiscreteVariable implements Variable, Serializable {
 
   private static final long serialVersionUID = 2948903432256540126L;
-  
+
   private String name;
   private IndexedList<Object> values;
 

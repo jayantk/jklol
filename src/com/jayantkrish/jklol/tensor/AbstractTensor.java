@@ -55,15 +55,6 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
     if (dimensionsToEliminate.size() == 0) {
       return tensor;
     }
-    
-    int eliminatedDimensionSize = 1;
-    int[] nums = tensor.getDimensionNumbers();
-    int[] sizes = tensor.getDimensionSizes();
-    for (int i = 0; i < nums.length; i++) {
-      if (dimensionsToEliminate.contains(nums[i])) {
-        eliminatedDimensionSize *= sizes[i];
-      }
-    }
 
     Tensor minValues = tensor.elementwiseProduct(-1.0).maxOutDimensions(dimensionsToEliminate);    
     

@@ -134,6 +134,7 @@ public class TrainLinearClassifier extends AbstractCli {
         classifier, classifier.getVariables().getVariablesByName(OUTPUT_VAR_NAME), new JunctionTree());
     
     PrecisionRecall<Object> loss = LossFunctions.newPrecisionRecall();
+    double numCorrect = 0;
     for (Example<Assignment, Assignment> example : data) {
       Assignment input = example.getInput();
       Assignment output = example.getOutput();
@@ -146,9 +147,12 @@ public class TrainLinearClassifier extends AbstractCli {
       boolean predictionBoolean = prediction.getBestPrediction().getOnlyValue().equals("T");
       boolean outputBoolean = output.getOnlyValue().equals("T");
       loss.accumulatePrediction(predictionBoolean, outputBoolean, prediction.getBestPredictionScore());
+      
+      numCorrect += (prediction.getBestPrediction().equals(output)) ? 1 : 0;
     }
     
-    System.out.println(loss);
+    // System.out.println(loss);
+    System.out.println("ACCURACY: " + (numCorrect / data.size()));
   }
   
   public static void main(String[] args) {

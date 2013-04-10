@@ -1022,6 +1022,32 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
+   * Creates a tensor whose only non-zero entries are on its main diagonal.
+   * 
+   * @param dimensionNumbers
+   * @param dimensionSizes
+   * @param value weight assigned to the keys on the main diagonal.
+   * @return
+   */
+  public static SparseTensor diagonal(int[] dimensionNumbers, int[] dimensionSizes, double value) {
+    int minDimensionSize = Ints.min(dimensionSizes); 
+
+    long[] keyNums = new long[minDimensionSize];
+    long[] indexOffsets = computeIndexOffsets(dimensionSizes);
+    for (int i = 0; i < minDimensionSize; i++) {
+      keyNums[i] = 0;
+      for (int j = 0; j < indexOffsets.length; j++) {
+        keyNums[i] += indexOffsets[j] * i;
+      }
+    }
+
+    double[] values = new double[minDimensionSize];
+    Arrays.fill(values, value);
+
+    return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
+  }
+
+  /**
    * Similar to the constructor, except does not require {@code keyNums} to
    * occur in ascending order.
    * 

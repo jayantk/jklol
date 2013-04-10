@@ -29,8 +29,9 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
     List<SufficientStatistics> parameters = Lists.newArrayList();
     for (int i = 0; i < valueVars.size(); i++) {
       VariableNumMap curVars = valueVars.get(i);
-      parameters.add(TensorSufficientStatistics.createDense(curVars, 
-          new DenseTensorBuilder(curVars.getVariableNumsArray(), curVars.getVariableSizes())));
+      DenseTensorBuilder builder = new DenseTensorBuilder(curVars.getVariableNumsArray(), 
+          curVars.getVariableSizes());
+      parameters.add(TensorSufficientStatistics.createDense(curVars, builder));
     }
     return new ListSufficientStatistics(valueNames.items(), parameters);
   }

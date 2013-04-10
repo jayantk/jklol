@@ -20,7 +20,7 @@ public class TestPosCrf extends AbstractCli {
   private OptionSpec<String> testFilename;
 
   public TestPosCrf() {
-    super();
+    super(CommonOptions.MAP_REDUCE);
   }
 
   @Override

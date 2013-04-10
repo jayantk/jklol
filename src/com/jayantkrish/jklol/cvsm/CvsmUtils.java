@@ -19,6 +19,10 @@ public class CvsmUtils {
     ExpressionParser exp = new ExpressionParser();
     List<String> lines = IoUtils.readLines(filename);
     for (String line : lines) {
+      if (line.trim().startsWith("#")) {
+        continue;
+      }
+
       String[] parts = csv.parseLine(line);
       if (parts.length == 0) {
         continue;

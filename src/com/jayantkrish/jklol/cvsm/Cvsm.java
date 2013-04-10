@@ -62,6 +62,23 @@ public class Cvsm implements Serializable {
         }
 
         return new CvsmRelabelDimsTree(tree, relabeling);
+      } else if (functionName.equals("op:matvecmul")) {
+        // Tensor-vector multiplication. First argument is tensor, second is vector.
+        Preconditions.checkArgument(args.size() == 2);
+        
+        CvsmTree tensorTree = getInterpretationTree(args.get(0));
+        CvsmTree vectorTree = getInterpretationTree(args.get(1));
+        
+        CvsmTree result = new CvsmProductTree(tensorTree, vectorTree);
+        result = new CvsmReduceTree(new int[] {0}, result);
+        
+        BiMap<Integer, Integer> relabeling = HashBiMap.create();
+        int[] tensorDims = tensorTree.getValue().getDimensionNumbers();
+        for (int i = 1; i < tensorDims.length; i++) {
+          relabeling.put(i, i - 1);
+        }
+        result = new CvsmRelabelDimsTree(result, relabeling);
+        return result;
       } else if (functionName.equals("op:softmax")) {
         Preconditions.checkArgument(args.size() == 1);
 

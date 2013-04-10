@@ -52,6 +52,9 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
   }
 
   public static Tensor logSumOutDimensions(Tensor tensor, Collection<Integer> dimensionsToEliminate) {
+    throw new UnsupportedOperationException("Not yet implemented.");
+    // This code isn't quite correct, but it's close.
+    /*
     if (dimensionsToEliminate.size() == 0) {
       return tensor;
     }
@@ -66,5 +69,6 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
     
     return tensor.elementwiseAddition(minValues).elementwiseExp().sumOutDimensions(dimensionsToEliminate)
         .elementwiseLog().elementwiseAddition(minValues.elementwiseProduct(-1.0));
+        */
   }
 }

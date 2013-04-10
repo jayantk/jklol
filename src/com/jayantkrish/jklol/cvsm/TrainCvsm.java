@@ -18,6 +18,9 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -59,6 +62,24 @@ public class TrainCvsm extends AbstractCli {
   private SufficientStatistics estimateParameters(CvsmFamily family, List<CvsmExample> examples) {
     GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
+
+    // Initialize matrix parameters to the identity
+    List<String> names = initialParameters.coerceToList().getStatisticNames().items();
+    List<SufficientStatistics> list = initialParameters.coerceToList().getStatistics();
+    for (int i = 0; i < names.size(); i++) {
+      String name = names.get(i);
+
+      if (name.startsWith(MATRIX_PREFIX) || name.startsWith(TENSOR_PREFIX)) {
+        TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
+        Tensor tensor = tensorStats.get();
+        Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
+            tensor.getDimensionSizes(), 1.0);
+        tensorStats.increment(diag, 1.0);
+      }
+    }
+    
+    initialParameters.perturb(0.0001);
+
     StochasticGradientTrainer trainer = createStochasticGradientTrainer(examples.size());
     return trainer.train(oracle, initialParameters, examples);
   }

@@ -17,6 +17,8 @@ public class TestCvsm extends AbstractCli {
   private OptionSpec<String> model;
   private OptionSpec<String> testFilename;
   
+  private OptionSpec<Void> squareLoss;
+  
   public TestCvsm() {
     super();
   }
@@ -24,8 +26,9 @@ public class TestCvsm extends AbstractCli {
   @Override
   public void initializeOptions(OptionParser parser) {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
-
     testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
+    
+    squareLoss = parser.accepts("squareLoss");
   }
 
   @Override
@@ -37,11 +40,17 @@ public class TestCvsm extends AbstractCli {
 
       double loss = 0.0;
       for (CvsmExample example : examples) {
-        CvsmTree tree = new CvsmSquareLossTree(example.getTargetDistribution(),
-            trainedModel.getInterpretationTree(example.getLogicalForm()));
+        CvsmTree tree = null;
+        if (options.has(squareLoss)) {
+          tree = new CvsmSquareLossTree(example.getTargetDistribution(),
+              trainedModel.getInterpretationTree(example.getLogicalForm()));
+        } else {
+          tree = new CvsmKlLossTree(example.getTargetDistribution(),
+              trainedModel.getInterpretationTree(example.getLogicalForm()));
+        }
         double exampleLoss = tree.getLoss();
         loss += exampleLoss;
-        
+
         System.out.println(exampleLoss + " " + example.getLogicalForm());
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");

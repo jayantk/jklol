@@ -10,9 +10,11 @@ import com.jayantkrish.jklol.training.LogFunction;
 public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample> {
   
   private final CvsmFamily family;
+  private final boolean useSquareLoss;
   
-  public CvsmLoglikelihoodOracle(CvsmFamily family) {
+  public CvsmLoglikelihoodOracle(CvsmFamily family, boolean useSquareLoss) {
     this.family = Preconditions.checkNotNull(family);
+    this.useSquareLoss = useSquareLoss;
   }
 
   @Override
@@ -29,8 +31,13 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
   public double accumulateGradient(SufficientStatistics gradient, Cvsm instantiatedModel,
       CvsmExample example, LogFunction log) {
     CvsmTree tree = instantiatedModel.getInterpretationTree(example.getLogicalForm());
-    CvsmTree gradientTree = new CvsmSquareLossTree(example.getTargetDistribution(), tree);
-    
+    CvsmTree gradientTree = null;
+    if (useSquareLoss) {
+      gradientTree = new CvsmSquareLossTree(example.getTargetDistribution(), tree);
+    } else {
+      gradientTree = new CvsmKlLossTree(example.getTargetDistribution(), tree);
+    }
+
     log.startTimer("backpropagate_gradient");
     Tensor root = gradientTree.getValue();
     gradientTree.backpropagateGradient(SparseTensor.empty(root.getDimensionNumbers(), root.getDimensionSizes()),

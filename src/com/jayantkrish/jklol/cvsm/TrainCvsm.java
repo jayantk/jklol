@@ -30,6 +30,8 @@ public class TrainCvsm extends AbstractCli {
 
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
+  
+  private OptionSpec<Void> squareLoss;
 
   private static final String VECTOR_PREFIX = "t1:";
   private static final String MATRIX_PREFIX = "t2:";
@@ -44,6 +46,8 @@ public class TrainCvsm extends AbstractCli {
     trainingFilename = parser.accepts("training").withRequiredArg()
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+    
+    squareLoss = parser.accepts("squareLoss");
   }
 
   @Override
@@ -53,14 +57,15 @@ public class TrainCvsm extends AbstractCli {
     List<String> parameterNames = getParameterNames(examples);
 
     CvsmFamily family = buildCvsmModel(vectorSize, parameterNames);
-    SufficientStatistics trainedParameters = estimateParameters(family, examples);
+    SufficientStatistics trainedParameters = estimateParameters(family, examples, options.has(squareLoss));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
   
-  private SufficientStatistics estimateParameters(CvsmFamily family, List<CvsmExample> examples) {
-    GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family);
+  private SufficientStatistics estimateParameters(CvsmFamily family, 
+      List<CvsmExample> examples, boolean useSquareLoss) {
+    GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, useSquareLoss);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
 
     // Initialize matrix parameters to the identity

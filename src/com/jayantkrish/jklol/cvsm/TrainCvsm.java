@@ -36,6 +36,7 @@ public class TrainCvsm extends AbstractCli {
   private static final String VECTOR_PREFIX = "t1:";
   private static final String MATRIX_PREFIX = "t2:";
   private static final String TENSOR_PREFIX = "t3:";
+  private static final String TENSOR4_PREFIX = "t4:";
 
   public TrainCvsm() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
@@ -74,7 +75,8 @@ public class TrainCvsm extends AbstractCli {
     for (int i = 0; i < names.size(); i++) {
       String name = names.get(i);
 
-      if (name.startsWith(MATRIX_PREFIX) || name.startsWith(TENSOR_PREFIX)) {
+      if (name.startsWith(MATRIX_PREFIX) || name.startsWith(TENSOR_PREFIX) || 
+          name.startsWith(TENSOR4_PREFIX)) {
         TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
         Tensor tensor = tensorStats.get();
         Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
@@ -120,6 +122,9 @@ public class TrainCvsm extends AbstractCli {
         Arrays.asList("dim-0", "dim-1"), Arrays.asList(dimType, dimType));
     VariableNumMap t3Vars = new VariableNumMap(Ints.asList(0, 1, 2),
         Arrays.asList("dim-0", "dim-1", "dim-2"), Arrays.asList(dimType, dimType, dimType));
+    VariableNumMap t4Vars = new VariableNumMap(Ints.asList(0, 1, 2, 3),
+        Arrays.asList("dim-0", "dim-1", "dim-2", "dim-3"), 
+        Arrays.asList(dimType, dimType, dimType, dimType));
 
     IndexedList<String> tensorNames = IndexedList.create();
     List<VariableNumMap> tensorDims = Lists.newArrayList();
@@ -132,6 +137,8 @@ public class TrainCvsm extends AbstractCli {
         tensorDims.add(matrixVars);
       } else if (parameterName.startsWith(TENSOR_PREFIX)) {
         tensorDims.add(t3Vars);
+      } else if (parameterName.startsWith(TENSOR4_PREFIX)) {
+        tensorDims.add(t4Vars);
       } else {
         throw new IllegalArgumentException("Unknown type prefix: " + parameterName);
       }

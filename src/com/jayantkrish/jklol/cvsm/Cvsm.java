@@ -70,12 +70,12 @@ public class Cvsm implements Serializable {
         CvsmTree vectorTree = getInterpretationTree(args.get(1));
         
         CvsmTree result = new CvsmProductTree(tensorTree, vectorTree);
-        result = new CvsmReduceTree(new int[] {0}, result);
+        result = new CvsmReduceTree(vectorTree.getValue().getDimensionNumbers(), result);
         
         BiMap<Integer, Integer> relabeling = HashBiMap.create();
-        int[] tensorDims = tensorTree.getValue().getDimensionNumbers();
-        for (int i = 1; i < tensorDims.length; i++) {
-          relabeling.put(i, i - 1);
+        int[] tensorDims = result.getValue().getDimensionNumbers();
+        for (int i = 0; i < tensorDims.length; i++) {
+          relabeling.put(tensorDims[i], i);
         }
         result = new CvsmRelabelDimsTree(result, relabeling);
         return result;

@@ -29,6 +29,14 @@ public class CvsmKlLossTree extends AbstractCvsmTree {
 
   @Override
   public double getLoss() {
-    return getValue().elementwiseLog().elementwiseProduct(targetDistribution).elementwiseProduct(-1.0).getTrace();
+    double[] predictedValues = getValue().getValues();
+    double[] targetValues = targetDistribution.getValues();
+    double kl = 0;
+    for (int i = 0; i < targetValues.length; i++) {
+      if (targetValues[i] != 0.0) {
+        kl += targetValues[i] * (Math.log(targetValues[i]) - Math.log(predictedValues[i]));
+      }
+    }
+    return kl;
   }
 }

@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.cvsm;
 import com.google.common.base.Preconditions;
 
 public abstract class AbstractLowRankTensor implements LowRankTensor {
+  private static final long serialVersionUID = 1L;
   
   private final int[] dimensionNums;
   private final int[] dimensionSizes;

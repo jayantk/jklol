@@ -5,7 +5,8 @@ import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public class TensorLowRankTensor extends AbstractLowRankTensor {
-  
+  private static final long serialVersionUID = 1L;
+
   private final Tensor tensor;
 
   public TensorLowRankTensor(Tensor tensor) {

@@ -24,7 +24,8 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
   protected final long[] indexOffsets;
 
   public AbstractTensorBase(int[] dimensions, int[] sizes) {
-    Preconditions.checkArgument(dimensions.length == sizes.length);
+    Preconditions.checkArgument(dimensions.length == sizes.length,
+        "Dimensions and sizes must have same length.");
     for (int i = 0; i < sizes.length; i++) {
       Preconditions.checkArgument(sizes[i] > 0,
           "Cannot create Tensors with zero-size dimensions. Requested dimensions: %s and sizes: %s",

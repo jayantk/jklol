@@ -33,8 +33,10 @@ public class TrainCvsm extends AbstractCli {
 
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
+  
   private OptionSpec<String> initialVectors;
   private OptionSpec<String> fixedVectors;
+  private OptionSpec<Integer> tensorRank;
   
   private OptionSpec<Void> squareLoss;
 
@@ -55,6 +57,7 @@ public class TrainCvsm extends AbstractCli {
     
     initialVectors = parser.accepts("initialVectors").withRequiredArg().ofType(String.class);
     fixedVectors = parser.accepts("fixedVectors").withRequiredArg().ofType(String.class);
+    tensorRank = parser.accepts("tensorRank").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
     
     squareLoss = parser.accepts("squareLoss");
   }
@@ -70,9 +73,9 @@ public class TrainCvsm extends AbstractCli {
       vectors = readVectors(options.valueOf(initialVectors));
     }
 
-    CvsmFamily family = buildCvsmModel(vectorSize, parameterNames);
+    CvsmFamily family = buildCvsmModel(vectorSize, parameterNames, options.valueOf(tensorRank));
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
-        options.has(squareLoss));
+        options.has(squareLoss), !options.has(tensorRank));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -94,7 +97,7 @@ public class TrainCvsm extends AbstractCli {
   
   private SufficientStatistics estimateParameters(CvsmFamily family, 
       List<CvsmExample> examples, Map<String, double[]> initialParameterMap,
-      boolean useSquareLoss) {
+      boolean useSquareLoss, boolean initializeToIdentity) {
     GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, useSquareLoss);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
 
@@ -109,18 +112,20 @@ public class TrainCvsm extends AbstractCli {
         Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
             tensor.getDimensionSizes(), initialParameterMap.get(name));
         tensorStats.increment(increment, 1.0);
-      } else if (name.startsWith(MATRIX_PREFIX) || name.startsWith(TENSOR_PREFIX) || 
-          name.startsWith(TENSOR4_PREFIX)) {
-        // Initialize matrix and tensor parameters to the identity
-        TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
-        Tensor tensor = tensorStats.get();
-        Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
-            tensor.getDimensionSizes(), 1.0);
-        tensorStats.increment(diag, 1.0);
+      } else {
+        if (initializeToIdentity && (name.startsWith(MATRIX_PREFIX) || 
+            name.startsWith(TENSOR_PREFIX) || name.startsWith(TENSOR4_PREFIX))) {
+          // Initialize matrix and tensor parameters to the identity
+          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
+          Tensor tensor = tensorStats.get();
+          Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
+              tensor.getDimensionSizes(), 1.0);
+          tensorStats.increment(diag, 1.0);
+        }
       }
     }
     
-    initialParameters.perturb(0.0001);
+    initialParameters.perturb(0.1);
 
     StochasticGradientTrainer trainer = createStochasticGradientTrainer(examples.size());
     return trainer.train(oracle, initialParameters, examples);
@@ -150,8 +155,9 @@ public class TrainCvsm extends AbstractCli {
     return list;
   }
 
-  private static CvsmFamily buildCvsmModel(int vectorSize, List<String> parameterNames) {
+  private static CvsmFamily buildCvsmModel(int vectorSize, List<String> parameterNames, int tensorRank) {
     DiscreteVariable dimType = DiscreteVariable.sequence("seq", vectorSize);
+
     VariableNumMap vectorVars = VariableNumMap.singleton(0, "dim-0", dimType);
     VariableNumMap matrixVars = new VariableNumMap(Ints.asList(0, 1),
         Arrays.asList("dim-0", "dim-1"), Arrays.asList(dimType, dimType));
@@ -161,19 +167,32 @@ public class TrainCvsm extends AbstractCli {
         Arrays.asList("dim-0", "dim-1", "dim-2", "dim-3"), 
         Arrays.asList(dimType, dimType, dimType, dimType));
 
+    LrtFamily vectorFamily, matrixFamily, t3Family, t4Family;
+    if (tensorRank == -1) {
+      vectorFamily = new TensorLrtFamily(vectorVars);
+      matrixFamily = new TensorLrtFamily(matrixVars);
+      t3Family = new TensorLrtFamily(t3Vars);
+      t4Family = new TensorLrtFamily(t4Vars);
+    } else {
+      vectorFamily = new TensorLrtFamily(vectorVars);
+      matrixFamily = new OpLrtFamily(matrixVars, tensorRank);
+      t3Family = new OpLrtFamily(t3Vars, tensorRank);
+      t4Family = new OpLrtFamily(t4Vars, tensorRank);
+    }
+
     IndexedList<String> tensorNames = IndexedList.create();
-    List<VariableNumMap> tensorDims = Lists.newArrayList();
+    List<LrtFamily> tensorDims = Lists.newArrayList();
     for (String parameterName : parameterNames) {
       tensorNames.add(parameterName);
 
       if (parameterName.startsWith(VECTOR_PREFIX)) {
-        tensorDims.add(vectorVars);
+        tensorDims.add(vectorFamily);
       } else if (parameterName.startsWith(MATRIX_PREFIX)) {
-        tensorDims.add(matrixVars);
+        tensorDims.add(matrixFamily);
       } else if (parameterName.startsWith(TENSOR_PREFIX)) {
-        tensorDims.add(t3Vars);
+        tensorDims.add(t3Family);
       } else if (parameterName.startsWith(TENSOR4_PREFIX)) {
-        tensorDims.add(t4Vars);
+        tensorDims.add(t4Family);
       } else {
         throw new IllegalArgumentException("Unknown type prefix: " + parameterName);
       }

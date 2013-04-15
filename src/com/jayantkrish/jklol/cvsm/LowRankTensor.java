@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.cvsm;
 
+import java.io.Serializable;
+
 import com.google.common.collect.BiMap;
 import com.jayantkrish.jklol.tensor.Tensor;
 
@@ -10,7 +12,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
  * 
  * @author jayant
  */
-public interface LowRankTensor {
+public interface LowRankTensor extends Serializable {
     
   public int[] getDimensionNumbers();
   

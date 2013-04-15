@@ -27,9 +27,9 @@ public class CvsmTest extends TestCase {
   public void setUp() {
     IndexedList<String> tensorNames = IndexedList.create();
     tensorNames.addAll(Arrays.asList(vectorNames));
-    List<Tensor> tensors = Lists.newArrayList();
+    List<LowRankTensor> tensors = Lists.newArrayList();
     for (int i = 0; i < vectorValues.length; i++) {
-      tensors.add(new DenseTensor(new int[] {0}, new int[] {3}, vectorValues[i]));
+      tensors.add(new TensorLowRankTensor(new DenseTensor(new int[] {0}, new int[] {3}, vectorValues[i])));
     }
     cvsm = new Cvsm(tensorNames, tensors);
     exp = new ExpressionParser();
@@ -38,7 +38,7 @@ public class CvsmTest extends TestCase {
   public void testVector() {
     CvsmTree tree = cvsm.getInterpretationTree(exp.parseSingleExpression("vec:block"));
     
-    Tensor value = tree.getValue();
+    Tensor value = tree.getValue().getTensor();
     assertTrue(Arrays.equals(value.getValues(), vectorValues[0]));
     assertEquals(0.0, tree.getLoss());    
   }
@@ -48,7 +48,7 @@ public class CvsmTest extends TestCase {
     Tensor targets = new DenseTensor(new int[] {0}, new int[] {3}, new double[] {0, 2, -1});
     tree = new CvsmSquareLossTree(targets, tree);
     
-    assertTrue(Arrays.equals(tree.getValue().getValues(), vectorValues[0]));
+    assertTrue(Arrays.equals(tree.getValue().getTensor().getValues(), vectorValues[0]));
     assertEquals(30.0, tree.getLoss());
   }
 }

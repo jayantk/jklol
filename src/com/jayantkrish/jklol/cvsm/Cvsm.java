@@ -9,7 +9,6 @@ import com.google.common.collect.HashBiMap;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -21,9 +20,9 @@ public class Cvsm implements Serializable {
   private static final long serialVersionUID = 1L;
   
   private final IndexedList<String> tensorNames;
-  private final List<Tensor> tensors;
+  private final List<LowRankTensor> tensors;
 
-  public Cvsm(IndexedList<String> tensorNames, List<Tensor> tensors) {
+  public Cvsm(IndexedList<String> tensorNames, List<LowRankTensor> tensors) {
     this.tensorNames = Preconditions.checkNotNull(tensorNames);
     this.tensors = Preconditions.checkNotNull(tensors);
     Preconditions.checkArgument(tensors.size() == tensorNames.size());
@@ -38,39 +37,14 @@ public class Cvsm implements Serializable {
       ApplicationExpression app = ((ApplicationExpression) logicalForm);
       String functionName = ((ConstantExpression) app.getFunction()).getName();
       List<Expression> args = app.getArguments();
-      if (functionName.equals("op:hadamard")) {
-        Preconditions.checkArgument(args.size() == 2);
-        
-        CvsmTree bigTree = getInterpretationTree(args.get(0));
-        CvsmTree smallTree = getInterpretationTree(args.get(1));
-
-        return new CvsmProductTree(bigTree, smallTree);
-      } else if (functionName.equals("op:sum_out")) {
-        Preconditions.checkArgument(args.size() >= 2);
-        
-        CvsmTree subtree = getInterpretationTree(args.get(0));
-        int[] dimsToEliminate = new int[args.size() - 1];
-        for (int i = 1; i < args.size(); i++) {
-          dimsToEliminate[i - 1] = Integer.parseInt(((ConstantExpression) args.get(i)).getName());
-        }
-
-        CvsmTree tree = new CvsmReduceTree(dimsToEliminate, subtree);
-        int[] dims = tree.getValue().getDimensionNumbers();
-        BiMap<Integer, Integer> relabeling = HashBiMap.create();
-        for (int i = 0; i < dims.length; i++) {
-          relabeling.put(dims[i], i);
-        }
-
-        return new CvsmRelabelDimsTree(tree, relabeling);
-      } else if (functionName.equals("op:matvecmul")) {
+      if (functionName.equals("op:matvecmul")) {
         // Tensor-vector multiplication. First argument is tensor, second is vector.
         Preconditions.checkArgument(args.size() == 2);
         
         CvsmTree tensorTree = getInterpretationTree(args.get(0));
         CvsmTree vectorTree = getInterpretationTree(args.get(1));
         
-        CvsmTree result = new CvsmProductTree(tensorTree, vectorTree);
-        result = new CvsmReduceTree(vectorTree.getValue().getDimensionNumbers(), result);
+        CvsmTree result = new CvsmInnerProductTree(tensorTree, vectorTree);
         
         BiMap<Integer, Integer> relabeling = HashBiMap.create();
         int[] tensorDims = result.getValue().getDimensionNumbers();

@@ -10,6 +10,7 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public class OuterProductLowRankTensor extends AbstractLowRankTensor {
+  private static final long serialVersionUID = 1L;
   
   private final LowRankTensor left;
   private final LowRankTensor right;
@@ -40,6 +41,14 @@ public class OuterProductLowRankTensor extends AbstractLowRankTensor {
     }
 
     return new OuterProductLowRankTensor(dimArray, dimSizes, left, right);
+  }
+  
+  public LowRankTensor getLeft() {
+    return left;
+  }
+  
+  public LowRankTensor getRight() {
+    return right;
   }
 
   @Override

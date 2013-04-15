@@ -57,7 +57,7 @@ public class TestCvsm extends AbstractCli {
     } else {
       Expression lf = (new ExpressionParser()).parseSingleExpression(
           Joiner.on(" ").join(options.nonOptionArguments()));
-      System.out.println(trainedModel.getInterpretationTree(lf).getValue());
+      System.out.println(trainedModel.getInterpretationTree(lf).getValue().getTensor());
     }
   }
   

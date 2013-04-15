@@ -16,6 +16,7 @@ import com.jayantkrish.jklol.tensor.Tensors;
  * @author jayantk
  */
 public class SumLowRankTensor extends AbstractLowRankTensor {
+  private static final long serialVersionUID = 1L;
 
   private final LowRankTensor[] tensors;
 
@@ -32,6 +33,10 @@ public class SumLowRankTensor extends AbstractLowRankTensor {
     int[] dimensionSizes = tensors[0].getDimensionSizes();
 
     return new SumLowRankTensor(dimensionNums, dimensionSizes, tensors);
+  }
+  
+  public LowRankTensor[] getTerms() {
+    return tensors;
   }
 
   @Override

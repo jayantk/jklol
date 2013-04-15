@@ -4,53 +4,49 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class CvsmFamily implements ParametricFamily<Cvsm> {
   private static final long serialVersionUID = 1L;
   
   private final IndexedList<String> valueNames;
-  private final List<VariableNumMap> valueVars;
+  private final List<LrtFamily> families;
   
-  public CvsmFamily(IndexedList<String> valueNames, List<VariableNumMap> valueVars) {
+  public CvsmFamily(IndexedList<String> valueNames, List<LrtFamily> families) {
     this.valueNames = Preconditions.checkNotNull(valueNames);
-    this.valueVars = Preconditions.checkNotNull(valueVars);
+    this.families = Preconditions.checkNotNull(families);
+    Preconditions.checkArgument(valueNames.size() == families.size());
   }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> parameters = Lists.newArrayList();
-    for (int i = 0; i < valueVars.size(); i++) {
-      VariableNumMap curVars = valueVars.get(i);
-      DenseTensorBuilder builder = new DenseTensorBuilder(curVars.getVariableNumsArray(), 
-          curVars.getVariableSizes());
-      parameters.add(TensorSufficientStatistics.createDense(curVars, builder));
+    for (int i = 0; i < families.size(); i++) {
+      parameters.add(families.get(i).getNewSufficientStatistics());
     }
     return new ListSufficientStatistics(valueNames.items(), parameters);
   }
 
   @Override
   public Cvsm getModelFromParameters(SufficientStatistics parameters) {
-    List<Tensor> tensors = Lists.newArrayList();
+    List<LowRankTensor> tensors = Lists.newArrayList();
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
-    for (SufficientStatistics parameter : parameterList) {
-      tensors.add(((TensorSufficientStatistics) parameter).get());
+    Preconditions.checkArgument(parameterList.size() == families.size());
+    for (int i = 0; i < families.size(); i++) {
+      tensors.add(families.get(i).getModelFromParameters(parameterList.get(i)));
     }
        
     return new Cvsm(valueNames, tensors);
   }
   
-  public void incrementValueSufficientStatistics(String valueName, Tensor valueGradient,
-      SufficientStatistics gradient, double multiplier) {
+  public void incrementValueSufficientStatistics(String valueName, LowRankTensor currentValue, 
+      LowRankTensor valueGradient, SufficientStatistics gradient, double multiplier) {
+    int familyIndex = valueNames.getIndex(valueName);
     SufficientStatistics gradientTerm = gradient.coerceToList().getStatisticByName(valueName);
-    ((TensorSufficientStatistics) gradientTerm).increment(valueGradient, multiplier);
+    families.get(familyIndex).increment(gradientTerm, currentValue, valueGradient, multiplier);
   }
 
   @Override

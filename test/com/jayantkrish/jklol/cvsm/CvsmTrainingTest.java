@@ -55,13 +55,13 @@ public class CvsmTrainingTest extends TestCase {
   private static final String[] tensor3Names = {
       "t3:on"
   };
-
+  
   private static final String[] affineExamples = {
       "vec:block",
       "vec:table",
-      "(op:sum_out (op:hadamard mat:red vec:block) 0)",
-      "(op:sum_out (op:hadamard mat:red vec:table) 0)",
-      "(op:sum_out (op:hadamard (op:sum_out (op:hadamard t3:on vec:block) 0) vec:table) 0)",
+      "(op:matvecmul mat:red vec:block)",
+      "(op:matvecmul mat:red vec:table)",
+      "(op:matvecmul (op:matvecmul t3:on vec:block) vec:table)",
   };
 
   private static final double[][] affineTargets = {
@@ -76,8 +76,8 @@ public class CvsmTrainingTest extends TestCase {
       "vec:block",
       "vec:table",
       "(op:softmax vec:distribution)",
-      "(op:softmax (op:sum_out (op:hadamard weights:logreg vec:block) 0))",
-      "(op:softmax (op:sum_out (op:hadamard weights:logreg vec:table) 0))",
+      "(op:softmax (op:matvecmul weights:logreg vec:block))",
+      "(op:softmax (op:matvecmul weights:logreg vec:table))",
   };
 
   private static final double[][] softmaxTargets = {
@@ -99,10 +99,10 @@ public class CvsmTrainingTest extends TestCase {
   private static final String[] tprodExamples = {
       "vec:block",
       "vec:table",
-      "(op:sum_out (op:hadamard (op:sum_out (op:hadamard t3:on vec:block) 0) vec:block) 0)",
-      "(op:sum_out (op:hadamard (op:sum_out (op:hadamard t3:on vec:block) 0) vec:table) 0)",
-      "(op:sum_out (op:hadamard (op:sum_out (op:hadamard t3:on vec:table) 0) vec:block) 0)",
-      "(op:sum_out (op:hadamard (op:sum_out (op:hadamard t3:on vec:table) 0) vec:table) 0)",
+      "(op:matvecmul (op:matvecmul t3:on vec:block) vec:block)",
+      "(op:matvecmul (op:matvecmul t3:on vec:block) vec:table)",
+      "(op:matvecmul (op:matvecmul t3:on vec:table) vec:block)",
+      "(op:matvecmul (op:matvecmul t3:on vec:table) vec:table)",
   };
 
   private static final double[][] tprodTargets = {
@@ -120,6 +120,7 @@ public class CvsmTrainingTest extends TestCase {
   private CcgParser parser;
 
   private CvsmFamily cvsmFamily;
+  private CvsmFamily lowRankCvsmFamily;
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(rules),
@@ -134,23 +135,28 @@ public class CvsmTrainingTest extends TestCase {
         Arrays.asList("dim-0", "dim-1", "dim-2"), Arrays.asList(dimType, dimType, dimType));
 
     IndexedList<String> tensorNames = IndexedList.create();
-    List<VariableNumMap> tensorDims = Lists.newArrayList();
+    List<LrtFamily> tensorDims = Lists.newArrayList();
+    List<LrtFamily> lrtTensorDims = Lists.newArrayList();
     for (int i = 0; i < vectorNames.length; i++) {
       tensorNames.add(vectorNames[i]);
-      tensorDims.add(vectorVars);
+      tensorDims.add(new TensorLrtFamily(vectorVars));
+      lrtTensorDims.add(new TensorLrtFamily(vectorVars));
     }
 
     for (int i = 0; i < matrixNames.length; i++) {
       tensorNames.add(matrixNames[i]);
-      tensorDims.add(matrixVars);
+      tensorDims.add(new TensorLrtFamily(matrixVars));
+      lrtTensorDims.add(new OpLrtFamily(matrixVars, 2));
     }
 
     for (int i = 0; i < tensor3Names.length; i++) {
       tensorNames.add(tensor3Names[i]);
-      tensorDims.add(t3Vars);
+      tensorDims.add(new TensorLrtFamily(t3Vars));
+      lrtTensorDims.add(new OpLrtFamily(t3Vars, 4));
     }
 
     cvsmFamily = new CvsmFamily(tensorNames, tensorDims);
+    lowRankCvsmFamily = new CvsmFamily(tensorNames, lrtTensorDims);
   }
 
   public void testParse() {
@@ -162,26 +168,45 @@ public class CvsmTrainingTest extends TestCase {
   public void testCvsmAffineTraining() {
     runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily);
   }
+  
+  public void testLowRankCvsmAffineTraining() {
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), lowRankCvsmFamily);
+  }
 
   public void testCvsmSoftmaxTraining() {
     runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), cvsmFamily);
   }
+  
+  public void testLowRankCvsmSoftmaxTraining() {
+    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), lowRankCvsmFamily);
+  }
 
   public void testCvsmLogisticTraining() {
     runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), cvsmFamily);
+  }
+  
+  public void testLowRankCvsmLogisticTraining() {
+    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), lowRankCvsmFamily);
   }
 
   public void testCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
     runCvsmTrainingTest(cvsmTensorExamples, cvsmFamily);
   }
+  
+  public void testLowRankCvsmTensorTraining() {
+    List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
+    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily);
+  }
 
   private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples, CvsmFamily cvsmFamily) {
     CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, true);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        1000, 1, 1.0, true, 0.0001, new DefaultLogFunction(1, false));
+        10000, 1, 1.0, true, 0.0001, new DefaultLogFunction(1, false));
+    SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
+    initialParameters.perturb(0.1);
     SufficientStatistics parameters = trainer.train(oracle,
-        cvsmFamily.getNewSufficientStatistics(), cvsmExamples);
+        initialParameters, cvsmExamples);
 
     System.out.println(cvsmFamily.getParameterDescription(parameters));
 
@@ -189,7 +214,7 @@ public class CvsmTrainingTest extends TestCase {
 
     for (CvsmExample example : cvsmExamples) {
       CvsmTree tree = cvsm.getInterpretationTree(example.getLogicalForm());
-      Tensor predictedValue = tree.getValue();
+      Tensor predictedValue = tree.getValue().getTensor();
 
       Tensor deltas = predictedValue.elementwiseAddition(example.getTargetDistribution().elementwiseProduct(-1.0));
       double squareLoss = deltas.innerProduct(deltas).getByDimKey();

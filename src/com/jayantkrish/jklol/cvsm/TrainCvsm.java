@@ -66,14 +66,19 @@ public class TrainCvsm extends AbstractCli {
   public void run(OptionSet options) {
     List<CvsmExample> examples = CvsmUtils.readTrainingData(options.valueOf(trainingFilename));
     int vectorSize = examples.get(0).getTargetDistribution().getDimensionSizes()[0];
-    List<String> parameterNames = getParameterNames(examples);
+    Set<String> parameterNames = getParameterNames(examples);
     
     Map<String, double[]> vectors = Maps.newHashMap();
     if (options.has(initialVectors)) {
       vectors = readVectors(options.valueOf(initialVectors));
+      parameterNames.addAll(vectors.keySet());
     }
+    
+    List<String> sortedParameters = Lists.newArrayList();
+    sortedParameters.addAll(parameterNames);
+    Collections.sort(sortedParameters);
 
-    CvsmFamily family = buildCvsmModel(vectorSize, parameterNames, options.valueOf(tensorRank));
+    CvsmFamily family = buildCvsmModel(vectorSize, sortedParameters, options.valueOf(tensorRank));
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
         options.has(squareLoss), !options.has(tensorRank));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
@@ -138,7 +143,7 @@ public class TrainCvsm extends AbstractCli {
    * @param examples
    * @return
    */
-  private static List<String> getParameterNames(List<CvsmExample> examples) {
+  private static Set<String> getParameterNames(List<CvsmExample> examples) {
     Set<String> parameterNames = Sets.newHashSet();
     Pattern pattern = Pattern.compile("t[0-9]:.*");
     for (CvsmExample example : examples) {
@@ -149,10 +154,7 @@ public class TrainCvsm extends AbstractCli {
         }
       }
     }
-
-    List<String> list = Lists.newArrayList(parameterNames);
-    Collections.sort(list);
-    return list;
+    return parameterNames;
   }
 
   private static CvsmFamily buildCvsmModel(int vectorSize, List<String> parameterNames, int tensorRank) {

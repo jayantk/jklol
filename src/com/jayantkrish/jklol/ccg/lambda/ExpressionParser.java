@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
 import java.util.Arrays;
+import java.util.EmptyStackException;
 import java.util.List;
 import java.util.Stack;
 
@@ -36,12 +37,15 @@ public class ExpressionParser {
   
   public List<Expression> parse(List<String> tokenizedExpressionString) {
     Stack<Expression> stack = new Stack<Expression>();
-    
-    for (String token : tokenizedExpressionString) {
-      stack.push(new ConstantExpression(token));
-      if (stack.peek().equals(CLOSE_PAREN)) {
-        stack.push(reduce(stack));
+    try {
+      for (String token : tokenizedExpressionString) {
+        stack.push(new ConstantExpression(token));
+        if (stack.peek().equals(CLOSE_PAREN)) {
+          stack.push(reduce(stack));
+        }
       }
+    } catch (EmptyStackException e) {
+      throw new IllegalArgumentException("Invalid tokenized input: " + tokenizedExpressionString);
     }
     
     return stack;

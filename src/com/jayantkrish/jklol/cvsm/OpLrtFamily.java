@@ -20,7 +20,7 @@ public class OpLrtFamily implements LrtFamily {
   
   public OpLrtFamily(VariableNumMap vars, int rank) {
     this.vars = Preconditions.checkNotNull(vars);
-    Preconditions.checkArgument(rank >= 1);
+    Preconditions.checkArgument(rank >= 0);
     this.rank = rank;
   }
 

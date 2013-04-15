@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.cvsm;
 
 import com.google.common.collect.BiMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.Tensor;
 
 public class CvsmRelabelDimsTree extends AbstractCvsmTree {
   
@@ -16,7 +15,7 @@ public class CvsmRelabelDimsTree extends AbstractCvsmTree {
   }
 
   @Override
-  public void backpropagateGradient(Tensor treeGradient, CvsmFamily family,
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family,
       SufficientStatistics gradient) {
     subtree.backpropagateGradient(treeGradient.relabelDimensions(inverseRelabeling),
         family, gradient);

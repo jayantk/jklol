@@ -21,15 +21,17 @@ public class CvsmKlLossTree extends AbstractCvsmTree {
   }
 
   @Override
-  public void backpropagateGradient(Tensor treeGradient, CvsmFamily family, SufficientStatistics gradient) {
-    Tensor nodeDistribution = getValue();
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family,
+      SufficientStatistics gradient) {
+    Tensor nodeDistribution = getValue().getTensor();
     Tensor nodeGradient = targetDistribution.elementwiseProduct(nodeDistribution.elementwiseInverse());
-    subtree.backpropagateGradient(nodeGradient.elementwiseAddition(treeGradient), family, gradient);
+    subtree.backpropagateGradient(LowRankTensor.vector(nodeGradient.elementwiseAddition(treeGradient.getTensor())),
+        family, gradient);
   }
 
   @Override
   public double getLoss() {
-    double[] predictedValues = getValue().getValues();
+    double[] predictedValues = getValue().getTensor().getValues();
     double[] targetValues = targetDistribution.getValues();
     double kl = 0;
     for (int i = 0; i < targetValues.length; i++) {

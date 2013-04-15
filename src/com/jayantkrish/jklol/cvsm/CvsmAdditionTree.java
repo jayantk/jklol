@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.cvsm;
 
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.Tensor;
 
 public class CvsmAdditionTree extends AbstractCvsmTree {
 
@@ -15,7 +14,7 @@ public class CvsmAdditionTree extends AbstractCvsmTree {
   }
 
   @Override
-  public void backpropagateGradient(Tensor treeGradient, CvsmFamily family, SufficientStatistics gradient) {
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family, SufficientStatistics gradient) {
     left.backpropagateGradient(treeGradient, family, gradient);
     right.backpropagateGradient(treeGradient, family, gradient);
   }

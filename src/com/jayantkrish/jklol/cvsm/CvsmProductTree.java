@@ -23,9 +23,9 @@ public class CvsmProductTree extends AbstractCvsmTree {
   }
 
   @Override
-  public void backpropagateGradient(Tensor treeGradient, CvsmFamily family, SufficientStatistics gradient) {
-    Tensor bigTreeValue = bigTree.getValue();
-    Tensor smallTreeValue = smallTree.getValue();
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family, SufficientStatistics gradient) {
+    LowRankTensor bigTreeValue = bigTree.getValue();
+    LowRankTensor smallTreeValue = smallTree.getValue();
     Preconditions.checkArgument(Arrays.equals(treeGradient.getDimensionNumbers(), bigTreeValue.getDimensionNumbers()));
 
     SortedSet<Integer> dimsToEliminate = Sets.newTreeSet(Ints.asList(bigTreeValue.getDimensionNumbers()));

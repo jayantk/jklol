@@ -1,13 +1,12 @@
 package com.jayantkrish.jklol.cvsm;
 
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.Tensor;
 
 public interface CvsmTree {
 
-  Tensor getValue();
+  LowRankTensor getValue();
 
-  void backpropagateGradient(Tensor treeGradient, CvsmFamily family, SufficientStatistics gradient);
+  void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family, SufficientStatistics gradient);
   
   double getLoss();
 }

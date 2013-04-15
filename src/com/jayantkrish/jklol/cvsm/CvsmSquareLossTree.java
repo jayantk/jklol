@@ -22,18 +22,18 @@ public class CvsmSquareLossTree extends AbstractCvsmTree {
   }
 
   @Override
-  public void backpropagateGradient(Tensor treeGradient, CvsmFamily family,
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family,
       SufficientStatistics gradient) {
-    Tensor predictedValue = getValue();
+    Tensor predictedValue = getValue().getTensor();
     Tensor nodeGradient = targets.elementwiseAddition(predictedValue.elementwiseProduct(-1.0));
 
-    Tensor resultGradient = nodeGradient.elementwiseAddition(treeGradient);
-    subtree.backpropagateGradient(resultGradient, family, gradient);
+    Tensor resultGradient = nodeGradient.elementwiseAddition(treeGradient.getTensor());
+    subtree.backpropagateGradient(LowRankTensor.vector(resultGradient), family, gradient);
   }
   
   @Override
   public double getLoss() {
-    Tensor deltas = getValue().elementwiseAddition(targets.elementwiseProduct(-1.0));
+    Tensor deltas = getValue().getTensor().elementwiseAddition(targets.elementwiseProduct(-1.0));
     return deltas.innerProduct(deltas).getByDimKey();
   }
 }

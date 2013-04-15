@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.cvsm;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -11,6 +12,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
@@ -19,6 +21,7 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -30,6 +33,8 @@ public class TrainCvsm extends AbstractCli {
 
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
+  private OptionSpec<String> initialVectors;
+  private OptionSpec<String> fixedVectors;
   
   private OptionSpec<Void> squareLoss;
 
@@ -48,6 +53,9 @@ public class TrainCvsm extends AbstractCli {
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     
+    initialVectors = parser.accepts("initialVectors").withRequiredArg().ofType(String.class);
+    fixedVectors = parser.accepts("fixedVectors").withRequiredArg().ofType(String.class);
+    
     squareLoss = parser.accepts("squareLoss");
   }
 
@@ -56,27 +64,54 @@ public class TrainCvsm extends AbstractCli {
     List<CvsmExample> examples = CvsmUtils.readTrainingData(options.valueOf(trainingFilename));
     int vectorSize = examples.get(0).getTargetDistribution().getDimensionSizes()[0];
     List<String> parameterNames = getParameterNames(examples);
+    
+    Map<String, double[]> vectors = Maps.newHashMap();
+    if (options.has(initialVectors)) {
+      vectors = readVectors(options.valueOf(initialVectors));
+    }
 
     CvsmFamily family = buildCvsmModel(vectorSize, parameterNames);
-    SufficientStatistics trainedParameters = estimateParameters(family, examples, options.has(squareLoss));
+    SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
+        options.has(squareLoss));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
   
+  private static Map<String, double[]> readVectors(String filename) {
+    Map<String, double[]> vectors = Maps.newHashMap();
+    for (String line : IoUtils.readLines(filename)) {
+      String[] parts = line.split("#");
+      String[] entries = parts[1].split(",");
+      double[] values = new double[entries.length];
+      for (int i = 0; i < entries.length; i++) {
+        values[i] = Double.parseDouble(entries[i]);
+      }
+      vectors.put(parts[0], values);
+    }
+    return vectors;
+  }
+  
   private SufficientStatistics estimateParameters(CvsmFamily family, 
-      List<CvsmExample> examples, boolean useSquareLoss) {
+      List<CvsmExample> examples, Map<String, double[]> initialParameterMap,
+      boolean useSquareLoss) {
     GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, useSquareLoss);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
 
-    // Initialize matrix parameters to the identity
     List<String> names = initialParameters.coerceToList().getStatisticNames().items();
     List<SufficientStatistics> list = initialParameters.coerceToList().getStatistics();
     for (int i = 0; i < names.size(); i++) {
       String name = names.get(i);
-
-      if (name.startsWith(MATRIX_PREFIX) || name.startsWith(TENSOR_PREFIX) || 
+      
+      if (initialParameterMap.containsKey(name)) {
+        TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
+        Tensor tensor = tensorStats.get();
+        Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
+            tensor.getDimensionSizes(), initialParameterMap.get(name));
+        tensorStats.increment(increment, 1.0);
+      } else if (name.startsWith(MATRIX_PREFIX) || name.startsWith(TENSOR_PREFIX) || 
           name.startsWith(TENSOR4_PREFIX)) {
+        // Initialize matrix and tensor parameters to the identity
         TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
         Tensor tensor = tensorStats.get();
         Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),

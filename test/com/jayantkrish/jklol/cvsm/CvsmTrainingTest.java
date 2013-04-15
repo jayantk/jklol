@@ -177,7 +177,7 @@ public class CvsmTrainingTest extends TestCase {
   }
 
   private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples, CvsmFamily cvsmFamily) {
-    CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily);
+    CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, true);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
         1000, 1, 1.0, true, 0.0001, new DefaultLogFunction(1, false));
     SufficientStatistics parameters = trainer.train(oracle,

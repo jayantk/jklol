@@ -1,0 +1,28 @@
+package com.jayantkrish.jklol.cvsm;
+
+import com.google.common.collect.BiMap;
+import com.jayantkrish.jklol.tensor.Tensor;
+
+/**
+ * Factored representation of a tensor as a sum of outer products
+ * of vectors. This representation generalizes decomposed representations
+ * such as USV^T (as produced by an SVD). 
+ * 
+ * @author jayant
+ */
+public interface LowRankTensor {
+    
+  public int[] getDimensionNumbers();
+  
+  public int[] getDimensionSizes();
+  
+  public Tensor getTensor();
+  
+  public LowRankTensor relabelDimensions(BiMap<Integer, Integer> relabeling);
+  
+  public LowRankTensor innerProduct(LowRankTensor other);
+  
+  public LowRankTensor outerProduct(LowRankTensor other);
+  
+  public LowRankTensor elementwiseAddition(LowRankTensor other);
+}

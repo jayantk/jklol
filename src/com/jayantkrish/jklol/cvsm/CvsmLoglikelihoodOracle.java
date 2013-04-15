@@ -39,8 +39,8 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
     }
 
     log.startTimer("backpropagate_gradient");
-    Tensor root = gradientTree.getValue();
-    gradientTree.backpropagateGradient(SparseTensor.empty(root.getDimensionNumbers(), root.getDimensionSizes()),
+    Tensor root = gradientTree.getValue().getTensor();
+    gradientTree.backpropagateGradient(LowRankTensor.zero(root.getDimensionNumbers(), root.getDimensionSizes()),
         family, gradient);
     log.stopTimer("backpropagate_gradient");
 

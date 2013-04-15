@@ -22,7 +22,5 @@ public interface LowRankTensor {
   
   public LowRankTensor innerProduct(LowRankTensor other);
   
-  public LowRankTensor outerProduct(LowRankTensor other);
-  
-  public LowRankTensor elementwiseAddition(LowRankTensor other);
+  public LowRankTensor elementwiseProduct(double value);
 }

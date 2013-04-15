@@ -34,7 +34,7 @@ public class CvsmInnerProductTree extends AbstractCvsmTree {
     LowRankTensor smallTreeGradient = bigTreeValue.innerProduct(treeGradient);
     smallTree.backpropagateGradient(smallTreeGradient, family, gradient);
 
-    LowRankTensor bigTreeGradient = smallTreeValue.outerProduct(treeGradient);
+    LowRankTensor bigTreeGradient = LowRankTensors.outerProduct(smallTreeValue, treeGradient);
     bigTree.backpropagateGradient(bigTreeGradient, family, gradient);
   }
 

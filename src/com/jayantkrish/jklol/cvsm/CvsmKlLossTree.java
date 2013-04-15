@@ -25,7 +25,7 @@ public class CvsmKlLossTree extends AbstractCvsmTree {
       SufficientStatistics gradient) {
     Tensor nodeDistribution = getValue().getTensor();
     Tensor nodeGradient = targetDistribution.elementwiseProduct(nodeDistribution.elementwiseInverse());
-    subtree.backpropagateGradient(LowRankTensor.vector(nodeGradient.elementwiseAddition(treeGradient.getTensor())),
+    subtree.backpropagateGradient(new TensorLowRankTensor(nodeGradient.elementwiseAddition(treeGradient.getTensor())),
         family, gradient);
   }
 

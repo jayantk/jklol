@@ -9,7 +9,7 @@ public class CvsmLogisticTree extends AbstractCvsmTree {
   private final CvsmTree subtree;
   
   public CvsmLogisticTree(CvsmTree subtree) {
-    super(LowRankTensor.vector(subtree.getValue().getTensor().elementwiseProduct(-1.0)
+    super(new TensorLowRankTensor(subtree.getValue().getTensor().elementwiseProduct(-1.0)
         .elementwiseExp().elementwiseAddition(1.0).elementwiseInverse()));
     this.subtree = Preconditions.checkNotNull(subtree);
   }
@@ -20,7 +20,7 @@ public class CvsmLogisticTree extends AbstractCvsmTree {
     Tensor nodeGradient = value.elementwiseProduct(value.elementwiseProduct(-1.0).elementwiseAddition(1.0));
     Tensor subtreeGradient = nodeGradient.elementwiseProduct(treeGradient.getTensor());
     
-    subtree.backpropagateGradient(LowRankTensor.vector(subtreeGradient), family, gradient);
+    subtree.backpropagateGradient(new TensorLowRankTensor(subtreeGradient), family, gradient);
   }
 
   @Override

@@ -1,7 +1,9 @@
 package com.jayantkrish.jklol.cvsm;
 
 import java.util.Set;
+import java.util.SortedSet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -12,9 +14,32 @@ public class OuterProductLowRankTensor extends AbstractLowRankTensor {
   private final LowRankTensor left;
   private final LowRankTensor right;
 
-  public OuterProductLowRankTensor(int[] dimensionNums, int[] dimensionSizes) {
+  private OuterProductLowRankTensor(int[] dimensionNums, int[] dimensionSizes,
+      LowRankTensor left, LowRankTensor right) {
     super(dimensionNums, dimensionSizes);
-    // TODO Auto-generated constructor stub
+    this.left = Preconditions.checkNotNull(left);
+    this.right = Preconditions.checkNotNull(right);
+  }
+  
+  public static OuterProductLowRankTensor create(LowRankTensor left, LowRankTensor right) {
+    SortedSet<Integer> dims = Sets.newTreeSet();
+    dims.addAll(Ints.asList(left.getDimensionNumbers()));
+    dims.addAll(Ints.asList(right.getDimensionNumbers()));
+    int[] dimArray = Ints.toArray(dims);
+    int[] dimSizes = new int[dimArray.length];
+    for (int i = 0; i < dimArray.length; i++) {
+      int dim = dimArray[i];
+      int leftInd = Ints.indexOf(left.getDimensionNumbers(), dim);
+      int rightInd = Ints.indexOf(right.getDimensionNumbers(), dim);
+      
+      if (leftInd != -1) {
+        dimSizes[i] = left.getDimensionSizes()[leftInd];
+      } else {
+        dimSizes[i] = right.getDimensionSizes()[rightInd];
+      }
+    }
+
+    return new OuterProductLowRankTensor(dimArray, dimSizes, left, right);
   }
 
   @Override
@@ -24,7 +49,7 @@ public class OuterProductLowRankTensor extends AbstractLowRankTensor {
 
   @Override
   public LowRankTensor relabelDimensions(BiMap<Integer, Integer> relabeling) {
-    return new OuterProductLowRankTensor(left.relabelDimensions(relabeling),
+    return OuterProductLowRankTensor.create(left.relabelDimensions(relabeling),
         right.relabelDimensions(relabeling));
   }
 
@@ -38,10 +63,10 @@ public class OuterProductLowRankTensor extends AbstractLowRankTensor {
     
     if (myLeftDims.containsAll(otherDimsSet)) {
       LowRankTensor newLeft = left.innerProduct(other);
-      return new OuterProductLowRankTensor(newLeft, right);
+      return LowRankTensors.outerProduct(newLeft, right);
     } else if (myRightDims.containsAll(otherDimsSet)) {
       LowRankTensor newRight = right.innerProduct(other);
-      return new OuterProductLowRankTensor(left, newRight);
+      return LowRankTensors.outerProduct(left, newRight);
     } else if (other instanceof OuterProductLowRankTensor) {
       OuterProductLowRankTensor outer = (OuterProductLowRankTensor) other;
       
@@ -52,7 +77,7 @@ public class OuterProductLowRankTensor extends AbstractLowRankTensor {
         LowRankTensor newLeft = left.innerProduct(outer.left);
         LowRankTensor newRight = right.innerProduct(outer.right);
         
-        return new OuterProductLowRankTensor(newLeft, newRight);
+        return LowRankTensors.outerProduct(newLeft, newRight);
       }
     } else if (myDims.equals(otherDimsSet)) {
       return other.innerProduct(this);
@@ -60,16 +85,9 @@ public class OuterProductLowRankTensor extends AbstractLowRankTensor {
 
     throw new UnsupportedOperationException("Cannot compute inner product.");
   }
-
+  
   @Override
-  public LowRankTensor outerProduct(LowRankTensor other) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public LowRankTensor elementwiseAddition(LowRankTensor other) {
-    // TODO Auto-generated method stub
-    return null;
+  public OuterProductLowRankTensor elementwiseProduct(double value) {
+    return OuterProductLowRankTensor.create(left.elementwiseProduct(value), right);
   }
 }

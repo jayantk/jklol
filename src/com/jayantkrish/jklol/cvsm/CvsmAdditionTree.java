@@ -8,7 +8,7 @@ public class CvsmAdditionTree extends AbstractCvsmTree {
   private final CvsmTree right;
 
   public CvsmAdditionTree(CvsmTree left, CvsmTree right) {
-    super(left.getValue().elementwiseAddition(right.getValue()));
+    super(LowRankTensors.elementwiseAddition(left.getValue(), right.getValue()));
     this.left = left;
     this.right = right;
   }

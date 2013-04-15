@@ -18,7 +18,7 @@ public class CvsmSoftmaxTree extends AbstractCvsmTree {
     double partitionFunction = unnormalizedValues.sumOutDimensions(unnormalizedValues.getDimensionNumbers()).getByDimKey();    
     Tensor values = unnormalizedValues.elementwiseProduct(1.0 / partitionFunction);
     
-    return new CvsmSoftmaxTree(LowRankTensor.vector(values), subtree);
+    return new CvsmSoftmaxTree(new TensorLowRankTensor(values), subtree);
   }
 
   @Override
@@ -30,7 +30,7 @@ public class CvsmSoftmaxTree extends AbstractCvsmTree {
     Tensor crossExpectations = probs.elementwiseProduct(innerProduct); 
     
     Tensor subtreeGradient = expectations.elementwiseAddition(crossExpectations.elementwiseProduct(-1.0));
-    subtree.backpropagateGradient(LowRankTensor.vector(subtreeGradient), family, gradient);
+    subtree.backpropagateGradient(new TensorLowRankTensor(subtreeGradient), family, gradient);
   }
 
   @Override

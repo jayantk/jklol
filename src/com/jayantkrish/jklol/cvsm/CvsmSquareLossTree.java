@@ -28,7 +28,7 @@ public class CvsmSquareLossTree extends AbstractCvsmTree {
     Tensor nodeGradient = targets.elementwiseAddition(predictedValue.elementwiseProduct(-1.0));
 
     Tensor resultGradient = nodeGradient.elementwiseAddition(treeGradient.getTensor());
-    subtree.backpropagateGradient(LowRankTensor.vector(resultGradient), family, gradient);
+    subtree.backpropagateGradient(new TensorLowRankTensor(resultGradient), family, gradient);
   }
   
   @Override

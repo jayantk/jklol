@@ -172,7 +172,7 @@ public abstract class AbstractCli {
     if (errorMessage != null && !printHelp) {
       System.out.println(errorMessage);
       System.out.println("Try --help for more information about options.");
-      System.exit(0);
+      System.exit(1);
     }
 
     if (printHelp || parsedOptions.has(helpOpt)) {

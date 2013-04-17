@@ -86,22 +86,23 @@ public class TrainCvsm extends AbstractCli {
     GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, useSquareLoss);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
 
-    List<String> names = initialParameters.coerceToList().getStatisticNames().items();
-    List<SufficientStatistics> list = initialParameters.coerceToList().getStatistics();
+    CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) initialParameters;
+    List<String> names = cvsmStats.getNames().items();
     for (int i = 0; i < names.size(); i++) {
       String name = names.get(i);
       
       if (initialParameterMap.containsKey(name)) {
         TensorSpec spec = initialParameterMap.get(name);
+	SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
         if (spec.hasValues()) {
-          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
+          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
           Tensor tensor = tensorStats.get();
           Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
               tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
           tensorStats.increment(increment, 1.0);
-        } else if (spec.getSizes().length > 1) {
+        } else if (spec.getSizes().length > 1 && curStats instanceof TensorSufficientStatistics) {
           // Initialize matrix and tensor parameters to the identity
-          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) list.get(i);
+          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
           Tensor tensor = tensorStats.get();
           Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
               tensor.getDimensionSizes(), 1.0);

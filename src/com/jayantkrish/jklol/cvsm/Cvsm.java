@@ -91,11 +91,13 @@ public class Cvsm implements Serializable {
     }
   }
   
-  public static interface LazyLowRankTensor {
+  public static interface LazyLowRankTensor extends Serializable {
     public LowRankTensor get();
   }
   
   public static class TensorLazyLowRankTensor implements LazyLowRankTensor {
+    private static final long serialVersionUID = 1L;
+
     private final LowRankTensor tensor;
     
     public TensorLazyLowRankTensor(LowRankTensor tensor) {

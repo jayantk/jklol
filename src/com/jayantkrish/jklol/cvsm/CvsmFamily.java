@@ -71,6 +71,8 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
   
   
   private static class ParameterLazyLowRankTensor implements LazyLowRankTensor {
+    private static final long serialVersionUID = 1L;
+
     private final LrtFamily family;
     private final CvsmSufficientStatistics parameters;
     private final int index;

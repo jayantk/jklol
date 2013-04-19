@@ -56,8 +56,7 @@ public class CcgParse {
 
   // Portion of the sentence spanned by this tree. Both spanStart and
   // spanEnd are inclusive indexes, (i.e., a tree spanning one word
-  // has
-  // spanStart == spanEnd).
+  // has spanStart == spanEnd).
   private final int spanStart;
   private final int spanEnd;
 
@@ -172,6 +171,14 @@ public class CcgParse {
    */
   public UnaryCombinator getUnaryRule() {
     return unaryRule;
+  }
+  
+  public int getSpanStart() {
+    return spanStart;
+  }
+  
+  public int getSpanEnd() {
+    return spanEnd;
   }
 
   /**

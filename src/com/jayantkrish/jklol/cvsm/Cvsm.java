@@ -39,11 +39,10 @@ public class Cvsm implements Serializable {
       List<Expression> args = app.getArguments();
       if (functionName.equals("op:matvecmul")) {
         // Tensor-vector multiplication. First argument is tensor, second is vector.
-        Preconditions.checkArgument(args.size() == 2);
+        Preconditions.checkArgument(args.size() >= 2);
         
         CvsmTree tensorTree = getInterpretationTree(args.get(0));
         CvsmTree vectorTree = getInterpretationTree(args.get(1));
-        
         CvsmTree result = new CvsmInnerProductTree(tensorTree, vectorTree);
         
         BiMap<Integer, Integer> relabeling = HashBiMap.create();

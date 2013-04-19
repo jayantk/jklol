@@ -134,6 +134,13 @@ public class FunctionalGradientAscent {
     }
   }
 
+  /**
+   * Mapper for parallelization of functional gradient computation. 
+   * This class computes a functional gradient for a single example.
+   *
+   * @param <M>
+   * @param <E>
+   */
   private static class BoostingGradientMapper<M, E> extends Mapper<E, BoostingGradientEvaluation> {
     private final M instantiatedModel;
     private final BoostingOracle<M, ? super E> oracle;
@@ -162,7 +169,14 @@ public class FunctionalGradientAscent {
       return new BoostingGradientEvaluation(gradient, objective, searchErrors);
     }
   }
-
+  
+  /**
+   * Reducer for combining functional gradients computed by multiple
+   * mappers. 
+   * 
+   * @param <M>
+   * @param <E>
+   */
   private static class BoostingGradientReducer<M, E> extends SimpleReducer<BoostingGradientEvaluation> {
     private final BoostingOracle<M, ? super E> oracle;
     private final LogFunction log;

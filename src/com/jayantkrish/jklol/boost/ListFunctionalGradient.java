@@ -5,6 +5,14 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.util.IndexedList;
 
+/**
+ * Combines multiple independent functional gradients in a list. 
+ * This class is useful for problems where multiple regressors
+ * each independently optimize some particular portion of an 
+ * objective.
+ *  
+ * @author jayant
+ */
 public class ListFunctionalGradient implements FunctionalGradient {
 
   private final IndexedList<String> names;

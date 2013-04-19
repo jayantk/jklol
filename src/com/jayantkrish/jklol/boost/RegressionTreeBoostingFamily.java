@@ -29,8 +29,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * Family that trains a set of regression trees to predict outcome
  * weights. This family is defined over a single vector-valued
  * variable, and any number of discrete variables. Regression trees
- * are trained using the value of the vector variable as feature
- * vectors.
+ * are trained to predict outcome weights for the discrete variables
+ * using the value of the vector variable as features.
  * 
  * @author jayant
  */

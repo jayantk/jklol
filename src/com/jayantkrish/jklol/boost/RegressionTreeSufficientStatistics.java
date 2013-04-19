@@ -7,6 +7,13 @@ import com.jayantkrish.jklol.dtree.RegressionTree;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
+/**
+ * Stores a collection of regression trees. This class does not
+ * implement the methods of {@code SufficientStatistics} which 
+ * only make sense for vector-valued parameters.
+ * 
+ * @author jayant
+ */
 public class RegressionTreeSufficientStatistics implements SufficientStatistics {
   private static final long serialVersionUID = 1L;
   

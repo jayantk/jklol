@@ -12,7 +12,10 @@ import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * 
+ * Boosting family that behaves like a factor of indicator 
+ * variables in a loglinear model. This class trains regressors
+ * that predict the mean value for each outcome. 
+ *  
  * @author jayantk
  */
 public class AveragingBoostingFamily extends AbstractBoostingFactorFamily {

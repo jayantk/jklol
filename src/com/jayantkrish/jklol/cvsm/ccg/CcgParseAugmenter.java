@@ -23,26 +23,15 @@ public class CcgParseAugmenter {
     }
 
     return new CcgParseAugmenter(patterns);
-    
-    /*
-     * Translation rules:
-     * 
-     * "N","t1:<word>"
-     * "N/N","(lambda x (op:logistic (op:add (op:matvecmul t2:<word> x) t1:<word>)))"
-     * "(N\N)/N","(lambda x (lambda y (op:logistic (op:add (op:matvecmul t3:<word> x y) (op:matvecmul t2:<word>-r x) (op:matvecmul t2:<word>-l y) t1:<word>))))"
-     * "((S\N)\(S\N))/N","(lambda x (lambda f (lambda y (op:logistic (op:add (op:matvecmul t3:<word> x (f y)) (op:matvecmul t2:<word>-r x) (op:matvecmul t2:<word>-l (f y)) t1:<word>)))))"
-     * "((S\N)\(S\N))","(lambda f (lambda y (op:logistic (op:add (op:matvecmul t2:<word> (f y)) t1:<word>))))"
-     * "(N/N)/(N/N)","(lambda f (lambda y (f (op:matvecmul t4:<word> y))))"
-     */
   }
   
   public CcgParse addLogicalForms(CcgParse input) {
     if (input.isTerminal()) {
       HeadedSyntacticCategory cat = input.getHeadedSyntacticCategory();
       for (CategoryPattern pattern : patterns) {
-        if (pattern.matches(input.getWords(), cat)) {
+        if (pattern.matches(input.getWords(), cat.getSyntax())) {
           CcgCategory currentEntry = input.getLexiconEntry();
-          CcgCategory lexiconEntry = new CcgCategory(cat, pattern.getLogicalForm(input.getWords(), cat), currentEntry.getSubjects(), 
+          CcgCategory lexiconEntry = new CcgCategory(cat, pattern.getLogicalForm(input.getWords(), cat.getSyntax()), currentEntry.getSubjects(), 
               currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
           
           return CcgParse.forTerminal(cat, lexiconEntry, input.getLexiconTriggerWords(), 

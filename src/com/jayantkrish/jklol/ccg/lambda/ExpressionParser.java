@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
-import java.util.Arrays;
 import java.util.EmptyStackException;
 import java.util.List;
 import java.util.Stack;
@@ -17,8 +16,49 @@ public class ExpressionParser {
   public ExpressionParser() {}
   
   private List<String> tokenize(String expression) {
+    boolean inQuotes = false;
+    int exprStart = -1;
+    List<String> tokens = Lists.newArrayList();
+    for (int i = 0; i < expression.length(); i++) {
+      char character = expression.charAt(i);
+      
+      if (character == '\"') {
+        if (exprStart == -1 && !inQuotes) {
+          inQuotes = true;
+          exprStart = i;
+        } else if (exprStart != -1 && inQuotes) {
+          inQuotes = false;
+        } else {
+          Preconditions.checkState(false, "Quoting error!");
+        }
+      }
+
+      if (!inQuotes) {
+        if (Character.isWhitespace(character)) {
+          if (exprStart != -1) {
+            tokens.add(expression.substring(exprStart, i));
+            exprStart = -1;
+          }
+        } else if (character == '(' || character == ')') {
+          if (exprStart != -1) {
+            tokens.add(expression.substring(exprStart, i));
+          }
+          tokens.add(expression.substring(i, i+1));
+          exprStart = -1;
+        } else if (exprStart == -1) {
+          // A meaningful, non whitespace, non parenthesis character.
+          exprStart = i;
+        }
+      }
+    }
+    if (exprStart != -1) {
+      tokens.add(expression.substring(exprStart, expression.length()));
+    }
+    return tokens;
+    /*
     String transformedExpression = expression.replaceAll("([()])", " $1 ");
     return Arrays.asList(transformedExpression.trim().split("\\s+"));
+    */
   }
 
   public Expression parseSingleExpression(String expression) {

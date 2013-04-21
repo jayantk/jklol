@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -27,7 +26,7 @@ public class SemTypePattern implements CategoryPattern {
   }
 
   public static SemTypePattern parseFrom(String string) {
-    String[] parts = CsvParser.defaultParser().parseLine(string);
+    String[] parts = new CsvParser(',', '"', CsvParser.NULL_ESCAPE).parseLine(string);
     Preconditions.checkArgument(parts.length == 2);
     
     return new SemTypePattern(SyntacticCategory.parseFrom(parts[0]),
@@ -35,11 +34,11 @@ public class SemTypePattern implements CategoryPattern {
   }
   
   @Override
-  public boolean matches(List<String> words, HeadedSyntacticCategory category) {
-    return matchesHelper(patternCategory, category.getSyntax());
+  public boolean matches(List<String> words, SyntacticCategory category) {
+    return hasSameSemanticType(patternCategory, category);
   }
 
-  private static boolean matchesHelper(SyntacticCategory pattern, SyntacticCategory target) {
+  public static boolean hasSameSemanticType(SyntacticCategory pattern, SyntacticCategory target) {
     if (pattern.isAtomic()) {
       if (target.isAtomic()) {
         return true;
@@ -50,15 +49,14 @@ public class SemTypePattern implements CategoryPattern {
       if (target.isAtomic()) {
         return false; 
       } else {
-        return matchesHelper(pattern.getArgument(), target.getArgument()) &&
-             matchesHelper(pattern.getReturn(), target.getReturn());
+        return hasSameSemanticType(pattern.getArgument(), target.getArgument()) &&
+             hasSameSemanticType(pattern.getReturn(), target.getReturn());
       }
     }
   }
 
   @Override
-  public Expression getLogicalForm(List<String> words,
-      HeadedSyntacticCategory category) {
+  public Expression getLogicalForm(List<String> words, SyntacticCategory category) {
     String parameterName = Joiner.on(WORD_SEP).join(words);
     Expression result = template;
     for (ConstantExpression expression : template.getFreeVariables()) {
@@ -68,9 +66,8 @@ public class SemTypePattern implements CategoryPattern {
         newName = name.replace(WORD_PATTERN, parameterName);
       }
       // TODO: possibly include part of speech tags, etc.
-      
       if (!newName.equals(name)) {
-        result.renameVariable(expression, new ConstantExpression(newName));
+        result = result.renameVariable(expression, new ConstantExpression(newName));
       }
     }
 

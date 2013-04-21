@@ -29,7 +29,7 @@ public class ExpressionParser {
         } else if (exprStart != -1 && inQuotes) {
           inQuotes = false;
         } else {
-          Preconditions.checkState(false, "Quoting error!");
+          Preconditions.checkState(false, "Quoting error. Current: " + expression);
         }
       }
 

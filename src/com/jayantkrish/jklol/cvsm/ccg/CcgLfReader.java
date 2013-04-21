@@ -45,7 +45,9 @@ public class CcgLfReader {
     }
 
     for (int i = 0; i < wordExpressions.size(); i++) {
-      Preconditions.checkState(wordExpressions.get(i) != null);
+      if (wordExpressions.get(i) == null) {
+        throw new LogicalFormConversionError("No lexicon template for word: " + words.get(i));        
+      }
     }
     return recursivelyTransformCcgParse(((ApplicationExpression) ccgExpression).getArguments().get(1), 
         wordExpressions);
@@ -62,6 +64,8 @@ public class CcgLfReader {
 
   private Expression recursivelyTransformCcgParse(Expression ccgExpression,
       List<Expression> wordExpressions) {
+    Preconditions.checkState(ccgExpression instanceof ApplicationExpression, 
+        "Illegal expression type: " + ccgExpression);
     ApplicationExpression app = (ApplicationExpression) ccgExpression;
     
     String name = ((ConstantExpression) app.getFunction()).getName();

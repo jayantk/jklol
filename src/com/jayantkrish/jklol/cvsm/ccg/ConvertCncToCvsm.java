@@ -93,7 +93,18 @@ public class ConvertCncToCvsm extends AbstractCli {
   
   private Expression convertExpression(RelationExtractionExample example, Expression ccgExpression, 
       List<Expression> initialWordExpressions, IndexedList<String> relDict) {
+    int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
     ccgExpression = ((ApplicationExpression) ccgExpression).getArguments().get(1);
+
+    List<Expression> wordExpressions = Lists.newArrayList(initialWordExpressions);
+    for (Expression wordExpression : initialWordExpressions) {
+      int wordParseNum = Integer.parseInt(((ConstantExpression) 
+          ((ApplicationExpression) wordExpressions).getArguments().get(0)).getName());
+      
+      if (wordParseNum != parseNum) {
+        wordExpressions.remove(wordExpression);
+      }
+    }
 
     // Find the marked mentions to identify the sentence span to retain.
     Span e1Span = mapSpanToTokenizedSpan(example.getE1Span(), wordExpressions);

@@ -126,6 +126,7 @@ public class CcgLfReader {
       if (wordExpression == null) {
         throw new LogicalFormConversionError("No lexicon template for word: " + words.get(wordInd));
       }
+      return wordExpression;
     } else if (name.equals("lex")) {
       // Lex is a type-changing rule. Only rules which maintain the same
       // semantic type specification are supported.

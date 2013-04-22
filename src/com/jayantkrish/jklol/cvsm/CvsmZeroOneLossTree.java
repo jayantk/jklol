@@ -34,7 +34,7 @@ public class CvsmZeroOneLossTree extends AbstractCvsmTree {
     
     Tensor zeroOnePredictions = backpointers.getOldKeyIndicatorTensor();
     
-    return zeroOnePredictions.innerProduct(targetDistribution).getByDimKey() 
-        - targetDistribution.getL2Norm();
+    return targetDistribution.getL2Norm() - 
+	zeroOnePredictions.innerProduct(targetDistribution).getByDimKey();
   }
 }

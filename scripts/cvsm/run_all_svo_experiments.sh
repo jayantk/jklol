@@ -9,14 +9,14 @@ TEST_SUFF=_test.txt
 VECTOR_SUFF=_vector.txt
 JKLOL_RUN=./scripts/run.sh
 
-RUN_ID=5iter
+RUN_ID=20iter
 OUT_DIR=$BASE_DIR/output/$RUN_ID/
 LOGNAME=_log.txt
 TRAINNAME=_train_err.txt
 TESTNAME=_test_err.txt
 MODELNAME=_out.ser
 
-ITERATIONS=5
+ITERATIONS=20
 
 mkdir -p $OUT_DIR
 
@@ -34,7 +34,7 @@ do
     MODEL_OUT=$OUT_DIR/$FILENAME$MODELNAME
 
     echo "Running $FILENAME..."
-    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --iterations $ITERATIONS --batchSize 1 --l2Regularization 0.01 --initialVectors $VECTOR_IN > $LOG_OUT
+    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --iterations $ITERATIONS --batchSize 1 --l2Regularization 0.01 --initialVectors $VECTOR_IN --regularizationFrequency 0.1 > $LOG_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT  --testFilename $TRAIN_IN > $TRAIN_ERR_OUT
     # $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT  --testFilename $TEST_IN > $TEST_ERR_OUT
 done

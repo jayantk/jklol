@@ -59,10 +59,7 @@ public class ConvertCncToCvsm extends AbstractCli {
       if (line.startsWith("(ccg")) {
         if (ccgExpression != null) {
           int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
-          while (expressions.size() < (parseNum - 1)) {
-            expressions.add(null);
-          }
-          RelationExtractionExample sentence = examples.get(expressions.size());
+          RelationExtractionExample sentence = examples.get(parseNum - 1);
           expressions.add(convertExpression(sentence, ccgExpression, wordExpressions, relDict));
         }
         ccgExpression = exp.parseSingleExpression(line);
@@ -74,11 +71,7 @@ public class ConvertCncToCvsm extends AbstractCli {
 
     if (ccgExpression != null) {
       int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
-      while (expressions.size() < (parseNum - 1)) {
-        expressions.add(null);
-      }
-
-      RelationExtractionExample sentence = examples.get(expressions.size());
+      RelationExtractionExample sentence = examples.get(parseNum - 1);
       expressions.add(convertExpression(sentence, ccgExpression, wordExpressions, relDict));
     }
   }
@@ -99,7 +92,7 @@ public class ConvertCncToCvsm extends AbstractCli {
   }
   
   private Expression convertExpression(RelationExtractionExample example, Expression ccgExpression, 
-      List<Expression> wordExpressions, IndexedList<String> relDict) {
+      List<Expression> initialWordExpressions, IndexedList<String> relDict) {
     ccgExpression = ((ApplicationExpression) ccgExpression).getArguments().get(1);
 
     // Find the marked mentions to identify the sentence span to retain.

@@ -77,11 +77,12 @@ public class Cvsm implements Serializable {
         CvsmTree subtree = getInterpretationTree(args.get(0));
         return new CvsmLogisticTree(subtree);
       } else if (functionName.equals("op:add")) {
-        Preconditions.checkArgument(args.size() == 2);
-        
-        CvsmTree left = getInterpretationTree(args.get(0));
-        CvsmTree right = getInterpretationTree(args.get(1));
-        return new CvsmAdditionTree(left, right);
+        Preconditions.checkArgument(args.size() > 1);
+        CvsmTree value = getInterpretationTree(args.get(0));
+        for (int i = 1; i < args.size(); i++) {
+          value = new CvsmAdditionTree(value, getInterpretationTree(args.get(i)));
+        }
+        return value;
       }
 
       throw new IllegalArgumentException("Unknown function name: " + functionName);

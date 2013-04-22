@@ -100,12 +100,7 @@ public class CcgLfReader {
       wordExpressions.set(wordNum - 1, getExpressionForWord(word, wordSyntax));
     }
 
-    for (int i = 0; i < wordExpressions.size(); i++) {
-      if (wordExpressions.get(i) == null) {
-        throw new LogicalFormConversionError("No lexicon template for word: " + words.get(i));        
-      }
-    }
-    return recursivelyTransformCcgParse(ccgExpression, wordExpressions);
+    return recursivelyTransformCcgParse(ccgExpression, wordExpressions, words);
   }
 
   private Expression getExpressionForWord(String word, SyntacticCategory syntax) {
@@ -118,7 +113,7 @@ public class CcgLfReader {
   }
 
   private Expression recursivelyTransformCcgParse(Expression ccgExpression,
-      List<Expression> wordExpressions) {
+      List<Expression> wordExpressions, List<Expression> words) {
     Preconditions.checkState(ccgExpression instanceof ApplicationExpression, 
         "Illegal expression type: " + ccgExpression);
     ApplicationExpression app = (ApplicationExpression) ccgExpression;
@@ -127,7 +122,10 @@ public class CcgLfReader {
     List<Expression> arguments = app.getArguments();
     if (name.equals("lf")) {
       int wordInd = Integer.parseInt(((ConstantExpression) arguments.get(1)).getName());
-      return wordExpressions.get(wordInd - 1);
+      Expression wordExpression = wordExpressions.get(wordInd - 1); 
+      if (wordExpression == null) {
+        throw new LogicalFormConversionError("No lexicon template for word: " + words.get(wordInd));
+      }
     } else if (name.equals("lex")) {
       // Lex is a type-changing rule. Only rules which maintain the same
       // semantic type specification are supported.
@@ -136,21 +134,21 @@ public class CcgLfReader {
       if (!SemTypePattern.hasSameSemanticType(origCategory, newCategory)) {
         throw new LogicalFormConversionError("Used type changing rule: " + origCategory + " to " + newCategory);
       }
-      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions);
+      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
     } else if (name.equals("fa")) {
-      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions);
-      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions);
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
       return new ApplicationExpression(left, Arrays.asList(right));
     } else if (name.equals("ba")) {
-      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions);
-      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions);
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
       return new ApplicationExpression(right, Arrays.asList(left));
     } else if (name.equals("rp")) {
       Preconditions.checkState(arguments.size() == 3, "rp arguments: " + arguments);
-      return recursivelyTransformCcgParse(arguments.get(1), wordExpressions);
+      return recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
     } else if (name.equals("lp")) {
       Preconditions.checkState(arguments.size() == 3);
-      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions);
+      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
     }
     // TODO: composition rules.
     throw new LogicalFormConversionError("Unknown function type: " + name);

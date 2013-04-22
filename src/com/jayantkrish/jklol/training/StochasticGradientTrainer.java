@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
 import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * An implementation of stochastic (sub)gradient ascent that can optimize any
@@ -44,7 +45,7 @@ public class StochasticGradientTrainer {
 
     this.stepSize = stepSize;
     this.decayStepSize = decayStepSize;
-    this.regularizer = new L2Regularizer(0.0);
+    this.regularizer = new StochasticL2Regularizer(0.0, 0.0);
   }
 
   /**
@@ -70,7 +71,15 @@ public class StochasticGradientTrainer {
 
   public static StochasticGradientTrainer createWithL2Regularization(int numIterations, int batchSize,
       double stepSize, boolean decayStepSize, double l2Penalty, LogFunction log) {
-    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L2Regularizer(l2Penalty), log);
+    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
+        new StochasticL2Regularizer(l2Penalty, 1.0), log);
+  }
+  
+  public static StochasticGradientTrainer createWithStochasticL2Regularization(int numIterations,
+      int batchSize, double stepSize, boolean decayStepSize, double l2Penalty,
+      double regularizationFrequency, LogFunction log) {
+    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
+        new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
   }
 
   public static StochasticGradientTrainer createWithL1Regularization(int numIterations, int batchSize,
@@ -170,33 +179,32 @@ public class StochasticGradientTrainer {
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize);
   }
-
+  
   /**
-   * An L2 regularization penalty, i.e., a penalty on the sum of the squares of
-   * the parameter weights.
-   * 
+   * An L2 regularization penalty that is applied on random iterations. 
+   * Regularization can be the most expensive part of training, since it
+   * touches every parameter. Using a randomized regularized reduces the
+   * frequency of regularization, thereby improving speed.
+   *    
    * @author jayantk
    */
-  public static class L2Regularizer implements Regularizer {
+  public static class StochasticL2Regularizer implements Regularizer {
     private final double l2Penalty;
+    private final double frequency;
 
-    /**
-     * Note that {@code l2Penalty} times the initial gradient step size should
-     * be less than 1.0. If this value is greater than one, the gradient's
-     * magnitude will be larger than the current parameter vector's magnitude,
-     * causing training to bounce back and forth between positive and negative
-     * parameter values for a while before converging.
-     * 
-     * @param l2Penalty
-     */
-    public L2Regularizer(double l2Penalty) {
+    public StochasticL2Regularizer(double l2Penalty, double frequency) {
       Preconditions.checkArgument(l2Penalty >= 0.0);
+      Preconditions.checkArgument(frequency >= 0.0 && frequency <= 1.0);
       this.l2Penalty = l2Penalty;
+      this.frequency = frequency;
     }
 
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize) {
-      currentParameters.multiply(1 - (currentStepSize * l2Penalty));
+      double rand = Pseudorandom.get().nextDouble();
+      if (rand < frequency) {
+        currentParameters.multiply(1 - (currentStepSize * l2Penalty * (1.0 / frequency)));
+      }
       currentParameters.increment(gradient, currentStepSize);
     }
   }

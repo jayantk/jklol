@@ -102,6 +102,7 @@ public abstract class AbstractCli {
   protected OptionSpec<Double> sgdInitialStep;
   protected OptionSpec<Void> sgdNoDecayStepSize;
   protected OptionSpec<Double> sgdL2Regularization;
+  protected OptionSpec<Double> sgdRegularizationFrequency;
   protected OptionSpec<Void> sgdBrief;
 
   // LBFGS options.
@@ -254,6 +255,10 @@ public abstract class AbstractCli {
       sgdL2Regularization = parser.accepts("l2Regularization",
           "Regularization parameter for the L2 norm of the parameter vector.")
           .withRequiredArg().ofType(Double.class).defaultsTo(0.1);
+      sgdRegularizationFrequency = parser.accepts("regularizationFrequency",
+          "Fraction of iterations on which to apply regularization. Must be between 0 and 1")
+          .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
+
       // boolean option.
       sgdBrief = parser.accepts("brief", "Hides training output.");
     }
@@ -349,9 +354,9 @@ public abstract class AbstractCli {
 
     LogFunction log = (brief ? new NullLogFunction()
         : new DefaultLogFunction(parsedOptions.valueOf(sgdLogInterval), false));
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
         numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
-        l2Regularization, log);
+        l2Regularization, parsedOptions.valueOf(sgdRegularizationFrequency), log);
 
     return trainer;
   }

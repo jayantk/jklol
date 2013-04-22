@@ -33,7 +33,7 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> initialVectors;
-  
+
   private OptionSpec<Void> squareLoss;
 
   public TrainCvsm() {
@@ -65,11 +65,11 @@ public class TrainCvsm extends AbstractCli {
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
-  
+
   private static Map<String, TensorSpec> readVectors(String filename) {
     Map<String, TensorSpec> vectors = Maps.newHashMap();
     for (String line : IoUtils.readLines(filename)) {
-      String[] parts = line.split("#");
+      String[] parts = line.split("\\s\\s*");
       String name = parts[0].trim();
       int[] sizes = ArrayUtils.parseInts(parts[1].split(","));
       int rank = Integer.parseInt(parts[2].trim());
@@ -79,7 +79,7 @@ public class TrainCvsm extends AbstractCli {
     }
     return vectors;
   }
-  
+
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
       boolean useSquareLoss) {
@@ -90,10 +90,10 @@ public class TrainCvsm extends AbstractCli {
     List<String> names = cvsmStats.getNames().items();
     for (int i = 0; i < names.size(); i++) {
       String name = names.get(i);
-      
+
       if (initialParameterMap.containsKey(name)) {
         TensorSpec spec = initialParameterMap.get(name);
-	SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
+        SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
         if (spec.hasValues()) {
           TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
           Tensor tensor = tensorStats.get();
@@ -140,7 +140,7 @@ public class TrainCvsm extends AbstractCli {
 
   private static CvsmFamily buildCvsmModel(Map<String, TensorSpec> vectors) {
     Map<Integer, DiscreteVariable> varMap = Maps.newHashMap();
-    
+
     IndexedList<String> tensorNames = IndexedList.create();
     List<LrtFamily> tensorDims = Lists.newArrayList();
     for (String vectorName : vectors.keySet()) {
@@ -150,19 +150,19 @@ public class TrainCvsm extends AbstractCli {
       VariableNumMap vars = VariableNumMap.emptyMap();
       for (int i = 0; i < sizes.length; i++) {
         if (!varMap.containsKey(sizes[i])) {
-         varMap.put(sizes[i], DiscreteVariable.sequence("seq-" + sizes[i], sizes[i]));
+          varMap.put(sizes[i], DiscreteVariable.sequence("seq-" + sizes[i], sizes[i]));
         }
         DiscreteVariable dimType = varMap.get(sizes[i]);
         vars = vars.union(VariableNumMap.singleton(i, ("dim-" + i).intern(), dimType));
       }
-      
+
       LrtFamily family = null;
       if (spec.getRank() == -1 || sizes.length == 1) {
         family = new TensorLrtFamily(vars);
       } else {
         family = new OpLrtFamily(vars, spec.getRank());
       }
-      
+
       tensorNames.add(vectorName);
       tensorDims.add(family);
     }
@@ -173,12 +173,12 @@ public class TrainCvsm extends AbstractCli {
   public static void main(String[] args) {
     new TrainCvsm().run(args);
   } 
-  
+
   private static class TensorSpec {
     private final int[] sizes;
     private final int rank;
     private final double[] values;
-    
+
     public TensorSpec(int[] sizes, int rank, double[] values) {
       this.sizes = Preconditions.checkNotNull(sizes);
       this.rank = rank;
@@ -188,7 +188,7 @@ public class TrainCvsm extends AbstractCli {
     public int[] getSizes() {
       return sizes;
     }
-    
+
     public int getRank() {
       return rank;
     }
@@ -196,7 +196,7 @@ public class TrainCvsm extends AbstractCli {
     public double[] getValues() {
       return values;
     }
-    
+
     public boolean hasValues() {
       return values != null;
     }

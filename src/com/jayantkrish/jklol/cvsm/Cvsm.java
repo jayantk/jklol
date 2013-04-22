@@ -52,19 +52,22 @@ public class Cvsm implements Serializable {
       String functionName = ((ConstantExpression) app.getFunction()).getName();
       List<Expression> args = app.getArguments();
       if (functionName.equals("op:matvecmul")) {
-        // Tensor-vector multiplication. First argument is tensor, second is vector.
-        Preconditions.checkArgument(args.size() >= 2);
+        // Tensor-vector multiplication. First argument is tensor, remaining arguments are
+        // multiplied into the the first.
+        Preconditions.checkArgument(args.size() >= 1);
         
-        CvsmTree tensorTree = getInterpretationTree(args.get(0));
-        CvsmTree vectorTree = getInterpretationTree(args.get(1));
-        CvsmTree result = new CvsmInnerProductTree(tensorTree, vectorTree);
+        CvsmTree result = getInterpretationTree(args.get(0));
+        for (int j = 0; j < args.size(); j++) {
+          CvsmTree vectorTree = getInterpretationTree(args.get(j));
+          result = new CvsmInnerProductTree(result, vectorTree);
         
-        BiMap<Integer, Integer> relabeling = HashBiMap.create();
-        int[] tensorDims = result.getValue().getDimensionNumbers();
-        for (int i = 0; i < tensorDims.length; i++) {
-          relabeling.put(tensorDims[i], i);
+          BiMap<Integer, Integer> relabeling = HashBiMap.create();
+          int[] tensorDims = result.getValue().getDimensionNumbers();
+          for (int i = 0; i < tensorDims.length; i++) {
+            relabeling.put(tensorDims[i], i);
+          }
+          result = new CvsmRelabelDimsTree(result, relabeling);
         }
-        result = new CvsmRelabelDimsTree(result, relabeling);
         return result;
       } else if (functionName.equals("op:softmax")) {
         Preconditions.checkArgument(args.size() == 1);

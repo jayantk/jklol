@@ -47,6 +47,10 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
     return statistics.size();
   }
 
+    public IndexedList<String> getNames() {
+	return names;
+    }
+
   /**
    * Gets the sufficient statistics associated with index i.
    * 
@@ -55,10 +59,11 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
    */
   public SufficientStatistics getSufficientStatistics(int i) {
     if (statistics.get(i) == null) {
-      return families.get(i).getNewSufficientStatistics();
-    } else {
-      return statistics.get(i);
+	// Note that the expected contract is that mutating the returned
+	// value affects the values in this.
+	statistics.set(i, families.get(i).getNewSufficientStatistics());
     }
+    return statistics.get(i);
   }
 
   /**

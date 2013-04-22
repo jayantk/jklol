@@ -31,7 +31,7 @@ public class CvsmTest extends TestCase {
     for (int i = 0; i < vectorValues.length; i++) {
       tensors.add(new TensorLowRankTensor(new DenseTensor(new int[] {0}, new int[] {3}, vectorValues[i])));
     }
-    cvsm = new Cvsm(tensorNames, tensors);
+    cvsm = Cvsm.fromTensors(tensorNames, tensors);
     exp = new ExpressionParser();
   }
   

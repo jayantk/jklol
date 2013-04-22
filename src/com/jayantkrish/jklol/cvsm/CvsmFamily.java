@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.cvsm.Cvsm.LazyLowRankTensor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -29,12 +30,12 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
 
   @Override
   public Cvsm getModelFromParameters(SufficientStatistics parameters) {
-    List<LowRankTensor> tensors = Lists.newArrayList();
+    List<LazyLowRankTensor> tensors = Lists.newArrayList();
     CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) parameters;
     
     Preconditions.checkArgument(cvsmStats.size() == families.size());
     for (int i = 0; i < families.size(); i++) {
-      tensors.add(families.get(i).getModelFromParameters(cvsmStats.getSufficientStatistics(i)));
+      tensors.add(new ParameterLazyLowRankTensor(families.get(i), cvsmStats, i));
     }
 
     return new Cvsm(valueNames, tensors);
@@ -66,5 +67,30 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
       sb.append("\n");
     }
     return sb.toString();
+  }
+  
+  
+  private static class ParameterLazyLowRankTensor implements LazyLowRankTensor {
+    private static final long serialVersionUID = 1L;
+
+    private final LrtFamily family;
+    private final CvsmSufficientStatistics parameters;
+    private final int index;
+    private LowRankTensor tensor;
+    
+    public ParameterLazyLowRankTensor(LrtFamily family, 
+        CvsmSufficientStatistics parameters, int index) {
+      this.family = Preconditions.checkNotNull(family);
+      this.parameters = Preconditions.checkNotNull(parameters);
+      this.index = index;
+    }
+    
+    public LowRankTensor get() {
+      if (tensor == null) {
+        LowRankTensor computed = family.getModelFromParameters(parameters.getSufficientStatistics(index));
+        tensor = computed;
+      }
+      return tensor;
+    }
   }
 }

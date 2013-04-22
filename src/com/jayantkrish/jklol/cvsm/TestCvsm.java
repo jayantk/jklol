@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cvsm;
 
+import java.util.Arrays;
 import java.util.List;
 
 import joptsimple.OptionParser;
@@ -51,7 +52,8 @@ public class TestCvsm extends AbstractCli {
         double exampleLoss = tree.getLoss();
         loss += exampleLoss;
 
-        System.out.println(exampleLoss + " " + example.getLogicalForm());
+        System.out.println(exampleLoss + " " + Arrays.toString(example.getTargetDistribution().getValues()) 
+			   + " " + Arrays.toString(tree.getValue().getTensor().getValues()) + " " + example.getLogicalForm());
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");
     } else {

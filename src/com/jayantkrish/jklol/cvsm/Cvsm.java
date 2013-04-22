@@ -57,7 +57,7 @@ public class Cvsm implements Serializable {
         Preconditions.checkArgument(args.size() >= 1);
         
         CvsmTree result = getInterpretationTree(args.get(0));
-        for (int j = 0; j < args.size(); j++) {
+        for (int j = 1; j < args.size(); j++) {
           CvsmTree vectorTree = getInterpretationTree(args.get(j));
           result = new CvsmInnerProductTree(result, vectorTree);
         

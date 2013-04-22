@@ -157,6 +157,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     // inner product algorithm.
     int[] myDims = getDimensionNumbers();
     int[] mySizes = getDimensionSizes();
+    Preconditions.checkArgument(otherDims.length <= myDims.length);
     if (areDimensionsRightAligned(otherDims)) {
       int maxDimIndex = myDims.length - (otherDims.length + 1);
       int[] newDims = ArrayUtils.copyOf(myDims, maxDimIndex + 1);

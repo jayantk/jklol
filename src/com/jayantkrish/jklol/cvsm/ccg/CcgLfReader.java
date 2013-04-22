@@ -3,18 +3,24 @@ package com.jayantkrish.jklol.cvsm.ccg;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.util.Pair;
 
 public class CcgLfReader {
 
   private final List<CategoryPattern> patterns;
+  
+  private static final Set<String> twoArgumentFunctions = Sets.newHashSet("fa", "ba", "rp", "lp", "bc", "fc", "gbx", "bx", "conj", "funny", "ltc", "rtc");
+  private static final Set<String> oneArgumentFunctions = Sets.newHashSet("lex", "tr");
   
   public CcgLfReader(List<CategoryPattern> patterns) {
     this.patterns = ImmutableList.copyOf(patterns);
@@ -27,6 +33,56 @@ public class CcgLfReader {
     }
     
     return new CcgLfReader(patterns);
+  }
+  
+  public Expression findSpanningExpression(Expression ccgExpression, int spanStart, int spanEnd) {
+    List<Expression> spanningExpression = Lists.newArrayList();
+    spanningExpression.add(null);
+    findSpanningExpressionHelper(ccgExpression, spanStart, spanEnd, spanningExpression);
+    return spanningExpression.get(0);
+  }
+  
+  private static Pair<Integer, Integer> findSpanningExpressionHelper(Expression ccgExpression, 
+      int spanStart, int spanEnd, List<Expression> spanningExpression) {
+    Preconditions.checkState(ccgExpression instanceof ApplicationExpression, 
+        "Illegal expression type: " + ccgExpression);
+    ApplicationExpression app = (ApplicationExpression) ccgExpression;
+
+    Pair<Integer, Integer> currentSpan = null;
+    String syntaxString = null;
+    
+    String name = ((ConstantExpression) app.getFunction()).getName();
+    List<Expression> arguments = app.getArguments();
+    int lastArg = arguments.size() - 1;
+    if (name.equals("lf")) {
+      int wordInd = Integer.parseInt(((ConstantExpression) arguments.get(1)).getName()) - 1;
+      currentSpan = Pair.of(wordInd, wordInd + 1);
+      syntaxString = ((ConstantExpression) arguments.get(lastArg)).getName();
+      
+    } else if (twoArgumentFunctions.contains(name)) {
+      Pair<Integer, Integer> leftSpan = findSpanningExpressionHelper(arguments.get(lastArg - 1),
+          spanStart, spanEnd, spanningExpression);
+      Pair<Integer, Integer> rightSpan = findSpanningExpressionHelper(arguments.get(lastArg),
+          spanStart, spanEnd, spanningExpression);
+      
+      syntaxString = ((ConstantExpression) arguments.get(lastArg - 2)).getName();
+      currentSpan = Pair.of(leftSpan.getLeft(), rightSpan.getRight());
+    } else if (oneArgumentFunctions.contains(name)) {
+      syntaxString = ((ConstantExpression) arguments.get(lastArg - 1)).getName();
+      currentSpan = findSpanningExpressionHelper(arguments.get(lastArg),
+          spanStart, spanEnd, spanningExpression);
+    } else {
+      throw new IllegalArgumentException("Unknown function type: " + name);
+    }
+    
+    syntaxString = syntaxString.replaceAll("^\"(.*)\"$", "$1");
+    SyntacticCategory syntax = SyntacticCategory.parseFrom(syntaxString);
+
+    if (currentSpan.getLeft() <= spanStart && currentSpan.getRight() >= spanEnd &&
+        spanningExpression.get(0) == null && syntax.isAtomic()) {
+      spanningExpression.set(0, ccgExpression);
+    }    
+    return currentSpan;
   }
   
   public Expression parse(Expression ccgExpression, List<Expression> words) {
@@ -49,8 +105,7 @@ public class CcgLfReader {
         throw new LogicalFormConversionError("No lexicon template for word: " + words.get(i));        
       }
     }
-    return recursivelyTransformCcgParse(((ApplicationExpression) ccgExpression).getArguments().get(1), 
-        wordExpressions);
+    return recursivelyTransformCcgParse(ccgExpression, wordExpressions);
   }
 
   private Expression getExpressionForWord(String word, SyntacticCategory syntax) {

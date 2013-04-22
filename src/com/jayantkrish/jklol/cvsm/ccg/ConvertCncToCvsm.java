@@ -15,12 +15,14 @@ import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cvsm.ccg.CcgLfReader.LogicalFormConversionError;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class ConvertCncToCvsm extends AbstractCli {
   
   private OptionSpec<String> cncParses;
   private OptionSpec<String> mentions;
+  private OptionSpec<String> relationDictionary;
   private OptionSpec<String> lfTemplates;
   
   private CcgLfReader reader;
@@ -33,6 +35,7 @@ public class ConvertCncToCvsm extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     cncParses = parser.accepts("cncParses").withRequiredArg().ofType(String.class).required();
     mentions = parser.accepts("mentions").withRequiredArg().ofType(String.class).required();
+    relationDictionary = parser.accepts("relationDictionary").withRequiredArg().ofType(String.class).required();
     lfTemplates = parser.accepts("lfTemplates").withRequiredArg().ofType(String.class).required();
   }
 
@@ -42,11 +45,12 @@ public class ConvertCncToCvsm extends AbstractCli {
     ExpressionParser exp = new ExpressionParser();
 
     List<RelationExtractionExample> examples = readExamples(IoUtils.readLines(options.valueOf(mentions)));
+    IndexedList<String> relDict = IndexedList.create(IoUtils.readLines(options.valueOf(relationDictionary)));
+    
     List<String> lines = IoUtils.readLines(options.valueOf(cncParses));
     Expression ccgExpression = null;
     List<Expression> wordExpressions = null;
     List<Expression> expressions = Lists.newArrayList();
-
     for (String line : lines) {
       if (!line.startsWith("(")) {
         continue;
@@ -54,8 +58,12 @@ public class ConvertCncToCvsm extends AbstractCli {
       
       if (line.startsWith("(ccg")) {
         if (ccgExpression != null) {
+          int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
+          while (expressions.size() < (parseNum - 1)) {
+            expressions.add(null);
+          }
           RelationExtractionExample sentence = examples.get(expressions.size());
-          expressions.add(convertExpression(sentence, ccgExpression, wordExpressions));
+          expressions.add(convertExpression(sentence, ccgExpression, wordExpressions, relDict));
         }
         ccgExpression = exp.parseSingleExpression(line);
         wordExpressions = Lists.newArrayList();
@@ -65,8 +73,13 @@ public class ConvertCncToCvsm extends AbstractCli {
     }
 
     if (ccgExpression != null) {
+      int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
+      while (expressions.size() < (parseNum - 1)) {
+        expressions.add(null);
+      }
+
       RelationExtractionExample sentence = examples.get(expressions.size());
-      expressions.add(convertExpression(sentence, ccgExpression, wordExpressions));
+      expressions.add(convertExpression(sentence, ccgExpression, wordExpressions, relDict));
     }
   }
   
@@ -86,33 +99,38 @@ public class ConvertCncToCvsm extends AbstractCli {
   }
   
   private Expression convertExpression(RelationExtractionExample example, Expression ccgExpression, 
-      List<Expression> wordExpressions) {
-    
-    System.out.println(example.getSentence());
-    System.out.println("e1: " + example.getE1Span() + " e2: " + example.getE2Span());
+      List<Expression> wordExpressions, IndexedList<String> relDict) {
+    ccgExpression = ((ApplicationExpression) ccgExpression).getArguments().get(1);
+
     // Find the marked mentions to identify the sentence span to retain.
     Span e1Span = mapSpanToTokenizedSpan(example.getE1Span(), wordExpressions);
     Span e2Span = mapSpanToTokenizedSpan(example.getE2Span(), wordExpressions);
-    
-    System.out.println("e1: " + e1Span + " e2: " + e2Span);
+    if (e1Span == null || e2Span == null) {
+      System.err.println("No conversion: no span for " + example.getE1Span() + " and " + example.getE2Span());
+      return null;
+    }
+    Expression spanningExpression = reader.findSpanningExpression(ccgExpression, e1Span.getStart(), e2Span.getEnd());
+    if (spanningExpression == null) {
+      System.err.println("No conversion: no atomic type: " + ccgExpression);
+      return null;
+    }
 
     try {
-      Expression parsedExpression = reader.parse(ccgExpression, wordExpressions);
-      System.out.println(parsedExpression.simplify());
+      Expression parsedExpression = reader.parse(spanningExpression, wordExpressions);
+      System.out.println("\"" + parsedExpression.simplify() + "\",\"" + example.getLabelDistribution(relDict) + "\"");
       return parsedExpression;
     } catch (LogicalFormConversionError error) {
-      System.out.println("No conversion. " + error.getMessage());
+      System.err.println("No conversion. " + error.getMessage());
       return null;
     }
   }
   
   private Span mapSpanToTokenizedSpan(Span span, List<Expression> wordExpressions) {
     String firstWord = span.getWords().get(0);
-    
     for (int i = span.getStart(); i < wordExpressions.size(); i++) {
       ApplicationExpression app = (ApplicationExpression) wordExpressions.get(i);
-      String word = ((ConstantExpression) app.getArguments().get(2)).getName();
-      
+      String word = ((ConstantExpression) app.getArguments().get(2)).getName().replaceAll("^\"(.*)\"", "$1");
+
       if (word.equals(firstWord)) {
         return new Span(i, i + span.getSize(), span.getWords());
       }
@@ -130,7 +148,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     private final String label;
 
     public RelationExtractionExample(String sentence, String label) {
-      this.sentence = sentence.replaceAll("([^ ])(</?e[0-9]>)", "$1 $2");
+      this.sentence = sentence.replaceAll("([^ ])(<e[0-9]>)", "$1 $2").replaceAll("(</e[0-9]>)([^ ])", "$1 $2");
       this.sentenceWithoutEntities = sentence.replaceAll("(.)</?e[0-9]>", "$1 ").replaceAll("</?e[0-9]>", "");
       this.label = label;
     }
@@ -168,6 +186,18 @@ public class ConvertCncToCvsm extends AbstractCli {
 
     public String getLabel() {
       return label;
+    }
+    
+    public String getLabelDistribution(IndexedList<String> relDict) {
+      int index = relDict.getIndex(label);
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < relDict.size(); i++) {
+        if (i != 0) {
+          sb.append(",");
+        }
+        sb.append(i == index ? "1" : "0");
+      }
+      return sb.toString();
     }
   }
   

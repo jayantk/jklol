@@ -1,8 +1,5 @@
 package com.jayantkrish.jklol.cvsm;
 
-import java.util.Arrays;
-
-import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -33,9 +30,6 @@ public class TensorLowRankTensor extends AbstractLowRankTensor {
 
   @Override
   public LowRankTensor innerProduct(LowRankTensor other) {
-    Preconditions.checkArgument(other.getDimensionNumbers().length < this.getDimensionNumbers().length,
-        "Cannot inner product %s and %s", Arrays.toString(this.getDimensionNumbers()), Arrays.toString(other.getDimensionNumbers()));
-    
     return new TensorLowRankTensor(tensor.innerProduct(other.getTensor()));
   }
 

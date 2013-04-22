@@ -117,6 +117,8 @@ public class ConvertCncToCvsm extends AbstractCli {
 
     try {
       Expression parsedExpression = reader.parse(spanningExpression, wordExpressions);
+      parsedExpression = new ApplicationExpression(new ConstantExpression("op:softmax"), Arrays.asList(new ApplicationExpression(new ConstantExpression("op:matvecmul"), Arrays.asList(new ConstantExpression("weights:softmax"), parsedExpression))));
+
       System.out.println("\"" + parsedExpression.simplify() + "\",\"" + example.getLabelDistribution(relDict) + "\"");
       return parsedExpression;
     } catch (LogicalFormConversionError error) {

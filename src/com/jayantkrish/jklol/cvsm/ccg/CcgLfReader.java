@@ -124,7 +124,7 @@ public class CcgLfReader {
       int wordInd = Integer.parseInt(((ConstantExpression) arguments.get(1)).getName());
       Expression wordExpression = wordExpressions.get(wordInd - 1); 
       if (wordExpression == null) {
-        throw new LogicalFormConversionError("No lexicon template for word: " + words.get(wordInd));
+        throw new LogicalFormConversionError("No lexicon template for word: " + words.get(wordInd - 1));
       }
       return wordExpression;
     } else if (name.equals("lex")) {

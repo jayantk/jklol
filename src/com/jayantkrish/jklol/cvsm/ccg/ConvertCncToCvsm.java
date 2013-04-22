@@ -99,7 +99,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     List<Expression> wordExpressions = Lists.newArrayList(initialWordExpressions);
     for (Expression wordExpression : initialWordExpressions) {
       int wordParseNum = Integer.parseInt(((ConstantExpression) 
-          ((ApplicationExpression) wordExpressions).getArguments().get(0)).getName());
+					   ((ApplicationExpression) wordExpression).getArguments().get(0)).getName());
       
       if (wordParseNum != parseNum) {
         wordExpressions.remove(wordExpression);

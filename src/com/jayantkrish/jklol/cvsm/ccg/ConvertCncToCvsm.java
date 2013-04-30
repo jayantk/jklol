@@ -1,5 +1,8 @@
 package com.jayantkrish.jklol.cvsm.ccg;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,6 +28,13 @@ public class ConvertCncToCvsm extends AbstractCli {
   private OptionSpec<String> relationDictionary;
   private OptionSpec<String> lfTemplates;
   
+  private OptionSpec<String> trainingOut;
+  private OptionSpec<String> validationOut;
+  private OptionSpec<Integer> validationNum;
+
+  private OptionSpec<Void> generateSubexpressionExamples;
+
+
   private CcgLfReader reader;
   
   public ConvertCncToCvsm() {
@@ -37,6 +47,12 @@ public class ConvertCncToCvsm extends AbstractCli {
     mentions = parser.accepts("mentions").withRequiredArg().ofType(String.class).required();
     relationDictionary = parser.accepts("relationDictionary").withRequiredArg().ofType(String.class).required();
     lfTemplates = parser.accepts("lfTemplates").withRequiredArg().ofType(String.class).required();
+
+    trainingOut = parser.accepts("trainingOut").withRequiredArg().ofType(String.class).required();
+    validationOut = parser.accepts("validationOut").withRequiredArg().ofType(String.class).defaultsTo("");
+    validationNum = parser.accepts("validationNum").withRequiredArg().ofType(Integer.class).defaultsTo(0);
+
+    generateSubexpressionExamples = parser.accepts("generateSubexpressionExamples");
   }
 
   @Override
@@ -50,7 +66,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     List<String> lines = IoUtils.readLines(options.valueOf(cncParses));
     Expression ccgExpression = null;
     List<Expression> wordExpressions = null;
-    List<Expression> expressions = Lists.newArrayList();
+    List<List<Expression>> expressions = Lists.newArrayList();
     for (String line : lines) {
       if (!line.startsWith("(")) {
         continue;
@@ -60,7 +76,8 @@ public class ConvertCncToCvsm extends AbstractCli {
         if (ccgExpression != null) {
           int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
           RelationExtractionExample sentence = examples.get(parseNum - 1);
-          expressions.add(convertExpression(sentence, ccgExpression, wordExpressions, relDict));
+          expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
+              options.has(generateSubexpressionExamples)));
         }
         ccgExpression = exp.parseSingleExpression(line);
         wordExpressions = Lists.newArrayList();
@@ -72,7 +89,34 @@ public class ConvertCncToCvsm extends AbstractCli {
     if (ccgExpression != null) {
       int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
       RelationExtractionExample sentence = examples.get(parseNum - 1);
-      expressions.add(convertExpression(sentence, ccgExpression, wordExpressions, relDict));
+      expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
+          options.has(generateSubexpressionExamples)));
+    }
+    
+    writeData(expressions, examples, relDict, options.valueOf(trainingOut),
+        options.valueOf(validationOut), options.valueOf(validationNum));
+  }
+  
+  private static void writeData(List<List<Expression>> expressions, List<RelationExtractionExample> examples,
+      IndexedList<String> relDict, String trainingFilename, String validationFilename, int validationModulo) {
+    try {
+      PrintWriter trainingOut = new PrintWriter(new FileWriter(trainingFilename));
+      PrintWriter validationOut = validationFilename != null ? new PrintWriter(new FileWriter(validationFilename)) : null;
+
+      Preconditions.checkArgument(examples.size() == expressions.size());
+      for (int i = 0; i < examples.size(); i++) {
+        RelationExtractionExample example = examples.get(i);
+
+        for (Expression expression : expressions.get(i)) {
+          if (validationModulo > 0 && i % validationModulo == 0) {
+            validationOut.print("\"" + expression + "\",\"" + example.getLabelDistribution(relDict) + "\"\n");
+          } else {
+            trainingOut.print("\"" + expression + "\",\"" + example.getLabelDistribution(relDict) + "\"\n");
+          }
+        }
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
   
@@ -91,8 +135,8 @@ public class ConvertCncToCvsm extends AbstractCli {
     return examples;
   }
   
-  private Expression convertExpression(RelationExtractionExample example, Expression ccgExpression, 
-      List<Expression> initialWordExpressions, IndexedList<String> relDict) {
+  private List<Expression> convertExpression(RelationExtractionExample example, Expression ccgExpression, 
+      List<Expression> initialWordExpressions, boolean generateSubexpressionExamples) {
     int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
     ccgExpression = ((ApplicationExpression) ccgExpression).getArguments().get(1);
 
@@ -118,17 +162,29 @@ public class ConvertCncToCvsm extends AbstractCli {
       System.err.println("No conversion: no atomic type: " + ccgExpression);
       return null;
     }
-
-    try {
-      Expression parsedExpression = reader.parse(spanningExpression, wordExpressions);
-      parsedExpression = new ApplicationExpression(new ConstantExpression("op:softmax"), Arrays.asList(new ApplicationExpression(new ConstantExpression("op:matvecmul"), Arrays.asList(new ConstantExpression("weights:softmax"), parsedExpression))));
-
-      System.out.println("\"" + parsedExpression.simplify() + "\",\"" + example.getLabelDistribution(relDict) + "\"");
-      return parsedExpression;
-    } catch (LogicalFormConversionError error) {
-      System.err.println("No conversion. " + error.getMessage());
-      return null;
+    
+    List<Expression> subexpressions = null;
+    if (generateSubexpressionExamples) {
+      subexpressions = reader.findAtomicSubexpressions(spanningExpression);
+    } else {
+      subexpressions = Lists.newArrayList(spanningExpression);
     }
+
+    List<Expression> exampleExpressions = Lists.newArrayList();
+    for (Expression subexpression : subexpressions) {
+      try {
+        Expression parsedExpression = reader.parse(subexpression, wordExpressions);
+        parsedExpression = new ApplicationExpression(new ConstantExpression("op:softmax"),
+            Arrays.asList(new ApplicationExpression(new ConstantExpression("op:matvecmul"),
+                Arrays.asList(new ConstantExpression("weights:softmax"), parsedExpression))));
+
+        exampleExpressions.add(parsedExpression.simplify());
+      } catch (LogicalFormConversionError error) {
+        System.err.println("No conversion. " + error.getMessage());
+      }
+    }
+    
+    return exampleExpressions;
   }
   
   private Span mapSpanToTokenizedSpan(Span span, List<Expression> wordExpressions) {
@@ -217,7 +273,7 @@ public class ConvertCncToCvsm extends AbstractCli {
       this.start = start;
       this.end = end;
       this.words = words;
-      
+
       Preconditions.checkArgument(words.size() == (end - start));
     }
 

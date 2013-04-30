@@ -10,6 +10,14 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.tree.CvsmAdditionTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmInnerProductTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmLogisticTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmRelabelDimsTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmSoftmaxTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTensorTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -37,11 +45,11 @@ public class Cvsm implements Serializable {
     return new Cvsm(tensorNames, lazyTensors);
   }
   
-  private LowRankTensor getTensor(String name) {
+  public LowRankTensor getTensor(String name) {
     int index = tensorNames.getIndex(name);
     return tensors.get(index).get();
   }
-  
+
   public CvsmTree getInterpretationTree(Expression logicalForm) {
     if (logicalForm instanceof ConstantExpression) {
       String value = ((ConstantExpression) logicalForm).getName();

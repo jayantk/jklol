@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cvsm.Cvsm.LazyLowRankTensor;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
@@ -79,6 +80,18 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
     }
 
     return new Cvsm(valueNames, tensors);
+  }
+
+  public void incrementSufficientStatistics(CvsmGradient increment, Cvsm currentValues,
+      SufficientStatistics parameters) {
+    List<String> tensorNames = increment.getTensorNames();
+    List<LowRankTensor> tensors = increment.getTensors();
+    
+    for (int i = 0; i < tensorNames.size(); i++) {
+      String name = tensorNames.get(i);
+      LowRankTensor currentValue = currentValues.getTensor(name);
+      incrementValueSufficientStatistics(name, currentValue, tensors.get(i), parameters, 1.0);
+    }
   }
 
   public void incrementValueSufficientStatistics(String valueName, LowRankTensor currentValue, 

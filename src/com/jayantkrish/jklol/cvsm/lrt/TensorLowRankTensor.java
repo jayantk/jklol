@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.lrt;
 
 import com.google.common.collect.BiMap;
 import com.jayantkrish.jklol.tensor.SparseTensor;

@@ -1,12 +1,15 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.tree;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.SortedSet;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.cvsm.CvsmGradient;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensors;
 
 public class CvsmInnerProductTree extends AbstractCvsmTree {
   
@@ -19,10 +22,20 @@ public class CvsmInnerProductTree extends AbstractCvsmTree {
     this.bigTree = bigTree;
     this.smallTree = smallTree;
   }
+  
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(bigTree, smallTree);
+  }
 
   @Override
-  public void backpropagateGradient(LowRankTensor treeGradient,
-      CvsmFamily family, SufficientStatistics gradient) {
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 2);
+    return new CvsmInnerProductTree(subtrees.get(0), subtrees.get(1));
+  }
+
+  @Override
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmGradient gradient) {
     LowRankTensor bigTreeValue = bigTree.getValue();
     LowRankTensor smallTreeValue = smallTree.getValue();
     
@@ -32,10 +45,10 @@ public class CvsmInnerProductTree extends AbstractCvsmTree {
         Ints.toArray(expectedDims)));
     
     LowRankTensor smallTreeGradient = bigTreeValue.innerProduct(treeGradient);
-    smallTree.backpropagateGradient(smallTreeGradient, family, gradient);
+    smallTree.backpropagateGradient(smallTreeGradient, gradient);
 
     LowRankTensor bigTreeGradient = LowRankTensors.outerProduct(smallTreeValue, treeGradient);
-    bigTree.backpropagateGradient(bigTreeGradient, family, gradient);
+    bigTree.backpropagateGradient(bigTreeGradient, gradient);
   }
 
   @Override

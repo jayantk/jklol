@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cvsm;
 
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 

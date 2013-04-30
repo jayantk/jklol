@@ -1,6 +1,7 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.tree;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 
 public abstract class AbstractCvsmTree implements CvsmTree {
 

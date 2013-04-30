@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.lrt;
 
 import java.util.Arrays;
 import java.util.List;

@@ -1,9 +1,12 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.tree;
 
 import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.cvsm.CvsmGradient;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public class CvsmKlLossTree extends AbstractCvsmTree {
@@ -19,14 +22,24 @@ public class CvsmKlLossTree extends AbstractCvsmTree {
     Preconditions.checkArgument(Arrays.equals(subtree.getValue().getDimensionNumbers(),
         targetDistribution.getDimensionNumbers()));
   }
+  
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(subtree);
+  }
 
   @Override
-  public void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family,
-      SufficientStatistics gradient) {
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 1);
+    return new CvsmKlLossTree(targetDistribution, subtrees.get(0));
+  }
+
+  @Override
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmGradient gradient) {
     Tensor nodeDistribution = getValue().getTensor();
     Tensor nodeGradient = targetDistribution.elementwiseProduct(nodeDistribution.elementwiseInverse());
     subtree.backpropagateGradient(new TensorLowRankTensor(nodeGradient.elementwiseAddition(treeGradient.getTensor())),
-        family, gradient);
+        gradient);
   }
 
   @Override

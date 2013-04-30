@@ -82,6 +82,18 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
     return new Cvsm(valueNames, tensors);
   }
 
+  public void incrementSufficientStatistics(CvsmGradient increment, Cvsm currentValues,
+      SufficientStatistics parameters) {
+    List<String> tensorNames = increment.getTensorNames();
+    List<LowRankTensor> tensors = increment.getTensors();
+    
+    for (int i = 0; i < tensorNames.size(); i++) {
+      String name = tensorNames.get(i);
+      LowRankTensor currentValue = currentValues.getTensor(name);
+      incrementValueSufficientStatistics(name, currentValue, tensors.get(i), parameters, 1.0);
+    }
+  }
+
   public void incrementValueSufficientStatistics(String valueName, LowRankTensor currentValue, 
       LowRankTensor valueGradient, SufficientStatistics gradient, double multiplier) {
     int familyIndex = valueNames.getIndex(valueName);

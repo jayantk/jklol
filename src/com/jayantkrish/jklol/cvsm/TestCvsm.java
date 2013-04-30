@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmZeroOneLossTree;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TestCvsm extends AbstractCli {

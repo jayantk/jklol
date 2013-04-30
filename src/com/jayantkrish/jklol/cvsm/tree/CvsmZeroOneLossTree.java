@@ -1,13 +1,11 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.tree;
 
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.cvsm.CvsmGradient;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
-import com.jayantkrish.jklol.cvsm.tree.AbstractCvsmTree;
-import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
-import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Backpointers;
 import com.jayantkrish.jklol.tensor.Tensor;
 
@@ -24,8 +22,7 @@ public class CvsmZeroOneLossTree extends AbstractCvsmTree {
   }
 
   @Override
-  public void backpropagateGradient(LowRankTensor treeGradient, CvsmFamily family,
-      SufficientStatistics gradient) {
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmGradient gradient) {
     throw new UnsupportedOperationException("Cannot propagate gradient of zero-one loss.");
   }
 
@@ -34,10 +31,10 @@ public class CvsmZeroOneLossTree extends AbstractCvsmTree {
     Tensor predicted = getValue().getTensor();
     Backpointers backpointers = new Backpointers();
     predicted.maxOutDimensions(Ints.asList(predicted.getDimensionNumbers()), backpointers);
-    
+
     Tensor zeroOnePredictions = backpointers.getOldKeyIndicatorTensor();
-    
+
     return targetDistribution.getL2Norm() - 
-	zeroOnePredictions.innerProduct(targetDistribution).getByDimKey();
+        zeroOnePredictions.innerProduct(targetDistribution).getByDimKey();
   }
 }

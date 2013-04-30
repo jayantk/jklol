@@ -45,11 +45,11 @@ public class Cvsm implements Serializable {
     return new Cvsm(tensorNames, lazyTensors);
   }
   
-  private LowRankTensor getTensor(String name) {
+  public LowRankTensor getTensor(String name) {
     int index = tensorNames.getIndex(name);
     return tensors.get(index).get();
   }
-  
+
   public CvsmTree getInterpretationTree(Expression logicalForm) {
     if (logicalForm instanceof ConstantExpression) {
       String value = ((ConstantExpression) logicalForm).getName();

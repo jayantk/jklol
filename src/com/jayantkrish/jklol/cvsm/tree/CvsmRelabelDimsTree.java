@@ -1,5 +1,9 @@
 package com.jayantkrish.jklol.cvsm.tree;
 
+import java.util.Arrays;
+import java.util.List;
+
+import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.jayantkrish.jklol.cvsm.CvsmGradient;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
@@ -13,6 +17,17 @@ public class CvsmRelabelDimsTree extends AbstractCvsmTree {
     super(subtree.getValue().relabelDimensions(subtreeToRootRelabeling));
     this.subtree = subtree;
     this.inverseRelabeling = subtreeToRootRelabeling.inverse();
+  }
+  
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(subtree);
+  }
+
+  @Override
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 1);
+    return new CvsmRelabelDimsTree(subtrees.get(0), inverseRelabeling.inverse());
   }
 
   @Override

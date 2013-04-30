@@ -1,6 +1,10 @@
 package com.jayantkrish.jklol.cvsm;
 
+import java.util.List;
+
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
@@ -41,7 +45,7 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
   public double accumulateGradient(SufficientStatistics gradient, Cvsm instantiatedModel,
       CvsmExample example, LogFunction log) {
     CvsmTree tree = instantiatedModel.getInterpretationTree(example.getLogicalForm());
-    CvsmTree gradientTree = lossFunction.augmentTreeWithLoss(tree, example.getTargets());
+    CvsmTree gradientTree = lossFunction.augmentTreeWithLoss(tree, instantiatedModel, example.getTargets());
 
     log.startTimer("backpropagate_gradient");
     Tensor root = gradientTree.getValue().getTensor();
@@ -63,28 +67,51 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
      * @param tree
      * @return
      */
-    CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets);
+    CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets);
   }
   
   public static class CvsmSquareLoss implements CvsmLoss {
-    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets) {
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
       return new CvsmSquareLossTree(targets, tree);
     }
   }
   
   public static class CvsmKlLoss implements CvsmLoss {
-    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets) {
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
       return new CvsmKlLossTree(targets, tree);
     }
   }
 
-  /*
   public static class CvsmTreeLoss implements CvsmLoss {
     private CvsmLoss nodeLoss;
     
-    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets) {
-      for ()
+    private Expression augmentingExpression;
+    private String bindingName;
+
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
+      CvsmTree augmented = augmentTreeHelper(tree, targets, cvsm);
+      return nodeLoss.augmentTreeWithLoss(augmented, cvsm, targets);
+    }
+
+    private CvsmTree augmentTreeHelper(CvsmTree tree, Tensor targets, Cvsm cvsm) {
+      List<CvsmTree> subtrees = tree.getSubtrees();
+      List<CvsmTree> augmentedSubtrees = Lists.newArrayList();
+      for (CvsmTree subtree : subtrees) {
+        augmentedSubtrees.add(augmentTreeHelper(subtree, targets, cvsm));
+      }
+      
+      CvsmTree result = tree.replaceSubtrees(augmentedSubtrees);
+
+      /*
+      if (tree instanceof CvsmNullTree) {
+        LowRankTensor value = tree.getValue();
+        Cvsm newEnvironment = cvsm.addBinding(bindingName, value);
+        CvsmTree evaluationTree = newEnvironment.getInterpretationTree(augmentingExpression);
+        evaluationTree = nodeLoss.augmentTreeWithLoss(evaluationTree, newEnvironment, targets);
+        result = new CvsmSplitTree(result, evaluationTree, bindingName);
+      }
+      */
+      return result;
     }
   }
-  */
 }

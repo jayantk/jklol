@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm.tree;
 
 import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
@@ -12,13 +13,26 @@ import com.jayantkrish.jklol.tensor.Tensor;
 public class CvsmZeroOneLossTree extends AbstractCvsmTree {
 
   private final Tensor targetDistribution;
+  private final CvsmTree subtree;
 
   public CvsmZeroOneLossTree(Tensor targetDistribution, CvsmTree subtree) {
     super(subtree.getValue());
     this.targetDistribution = Preconditions.checkNotNull(targetDistribution);
+    this.subtree = Preconditions.checkNotNull(subtree);
     
     Preconditions.checkArgument(Arrays.equals(subtree.getValue().getDimensionNumbers(),
         targetDistribution.getDimensionNumbers()));
+  }
+
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(subtree);
+  }
+
+  @Override
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 1);
+    return new CvsmZeroOneLossTree(targetDistribution, subtrees.get(0));
   }
 
   @Override

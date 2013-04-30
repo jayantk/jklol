@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm.tree;
 
 import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cvsm.CvsmGradient;
@@ -20,6 +21,17 @@ public class CvsmKlLossTree extends AbstractCvsmTree {
     
     Preconditions.checkArgument(Arrays.equals(subtree.getValue().getDimensionNumbers(),
         targetDistribution.getDimensionNumbers()));
+  }
+  
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(subtree);
+  }
+
+  @Override
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 1);
+    return new CvsmKlLossTree(targetDistribution, subtrees.get(0));
   }
 
   @Override

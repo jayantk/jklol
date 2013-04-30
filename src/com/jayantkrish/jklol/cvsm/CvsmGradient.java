@@ -11,7 +11,7 @@ public class CvsmGradient {
 
   private IndexedList<String> tensorNames;
   private List<LowRankTensor> tensors;
-  
+
   public CvsmGradient() {
     tensorNames = IndexedList.create();
     tensors = Lists.newArrayList();
@@ -26,7 +26,7 @@ public class CvsmGradient {
       tensors.add(gradient);
     }
   }
-  
+
   public List<String> getTensorNames() {
     return tensorNames.items();
   }

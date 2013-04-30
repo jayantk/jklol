@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm.tree;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.SortedSet;
 
 import com.google.common.base.Preconditions;
@@ -20,6 +21,17 @@ public class CvsmInnerProductTree extends AbstractCvsmTree {
     
     this.bigTree = bigTree;
     this.smallTree = smallTree;
+  }
+  
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(bigTree, smallTree);
+  }
+
+  @Override
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 2);
+    return new CvsmInnerProductTree(subtrees.get(0), subtrees.get(1));
   }
 
   @Override

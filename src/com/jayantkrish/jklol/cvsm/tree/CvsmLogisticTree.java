@@ -1,5 +1,8 @@
 package com.jayantkrish.jklol.cvsm.tree;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cvsm.CvsmGradient;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
@@ -14,6 +17,17 @@ public class CvsmLogisticTree extends AbstractCvsmTree {
     super(new TensorLowRankTensor(subtree.getValue().getTensor().elementwiseProduct(-1.0)
         .elementwiseExp().elementwiseAddition(1.0).elementwiseInverse()));
     this.subtree = Preconditions.checkNotNull(subtree);
+  }
+
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(subtree);
+  }
+
+  @Override
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 1);
+    return new CvsmLogisticTree(subtrees.get(0));
   }
 
   @Override

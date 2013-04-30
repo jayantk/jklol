@@ -1,5 +1,8 @@
 package com.jayantkrish.jklol.cvsm.tree;
 
+import java.util.Arrays;
+import java.util.List;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cvsm.CvsmGradient;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
@@ -21,6 +24,17 @@ public class CvsmSoftmaxTree extends AbstractCvsmTree {
     Tensor values = unnormalizedValues.elementwiseProduct(1.0 / partitionFunction);
     
     return new CvsmSoftmaxTree(new TensorLowRankTensor(values), subtree);
+  }
+  
+  @Override
+  public List<CvsmTree> getSubtrees() {
+    return Arrays.asList(subtree);
+  }
+
+  @Override
+  public CvsmTree replaceSubtrees(List<CvsmTree> subtrees) {
+    Preconditions.checkArgument(subtrees.size() == 1);
+    return CvsmSoftmaxTree.create(subtrees.get(0));
   }
 
   @Override

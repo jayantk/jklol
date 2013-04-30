@@ -7,6 +7,10 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
+import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;

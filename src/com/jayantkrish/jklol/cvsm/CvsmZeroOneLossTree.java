@@ -4,6 +4,9 @@ import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.tree.AbstractCvsmTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Backpointers;
 import com.jayantkrish.jklol.tensor.Tensor;

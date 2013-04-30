@@ -10,6 +10,14 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.tree.CvsmAdditionTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmInnerProductTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmLogisticTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmRelabelDimsTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmSoftmaxTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTensorTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**

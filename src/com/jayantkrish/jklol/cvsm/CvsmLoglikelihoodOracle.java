@@ -1,6 +1,10 @@
 package com.jayantkrish.jklol.cvsm;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
+import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -70,4 +74,14 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
       return new CvsmKlLossTree(targets, tree);
     }
   }
+
+  /*
+  public static class CvsmTreeLoss implements CvsmLoss {
+    private CvsmLoss nodeLoss;
+    
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets) {
+      for ()
+    }
+  }
+  */
 }

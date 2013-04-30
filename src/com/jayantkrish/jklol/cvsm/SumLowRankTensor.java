@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cvsm;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -25,6 +26,10 @@ public class SumLowRankTensor extends AbstractLowRankTensor {
     super(dimensionNums, dimensionSizes);
     this.tensors = Preconditions.checkNotNull(tensors);
     Preconditions.checkArgument(tensors.length > 0);
+    
+    for (LowRankTensor tensor : tensors) {
+      Preconditions.checkArgument(Arrays.equals(tensor.getDimensionNumbers(), dimensionNums));
+    }
   }
 
   public static SumLowRankTensor create(LowRankTensor[] tensors) {
@@ -46,6 +51,15 @@ public class SumLowRankTensor extends AbstractLowRankTensor {
       elements.add(tensors[i].getTensor());
     }
     return Tensors.elementwiseAddition(elements);
+  }
+  
+  @Override
+  public double getByDimKey(int... key) {
+    double value = 0.0;
+    for (int i = 0; i < tensors.length; i++) {
+      value += tensors[i].getByDimKey(key);
+    }
+    return value;
   }
 
   @Override

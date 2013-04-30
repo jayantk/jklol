@@ -8,6 +8,10 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cvsm.Cvsm.LazyLowRankTensor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class CvsmFamily implements ParametricFamily<Cvsm> {
@@ -26,6 +30,42 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> parameters = Collections.<SufficientStatistics>nCopies(families.size(), null);
     return new CvsmSufficientStatistics(valueNames.items(), families, parameters);
+  }
+
+  /**
+   * Initialize the matrices and tensors in {@code parameters} to the
+   * identity. Assumes the initial values of these parameters are 0.
+   *  
+   * @param parameters
+   */
+  public void initializeParametersToIdentity(SufficientStatistics parameters) {
+    CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) parameters;
+    Preconditions.checkArgument(cvsmStats.size() == families.size());
+
+    for (int i = 0; i < cvsmStats.size(); i++) {
+      SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
+      LrtFamily lrtFamily = families.get(i);
+      if (lrtFamily.getDimensionNumbers().length >= 2) {
+        if (curStats instanceof TensorSufficientStatistics) {
+          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
+          Tensor tensor = tensorStats.get();
+          Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
+              tensor.getDimensionSizes(), 1.0);
+          tensorStats.increment(diag, 1.0);
+        } else {
+          List<SufficientStatistics> stats = curStats.coerceToList().getStatistics();
+          TensorSufficientStatistics diagStats = (TensorSufficientStatistics) stats.get(stats.size() - 1);
+          Tensor tensor = diagStats.get();
+
+          DenseTensor increment = DenseTensor.constant(tensor.getDimensionNumbers(), tensor.getDimensionSizes(), 1.0);
+          diagStats.increment(increment, 1.0);
+        }
+      }
+    }
+  }
+
+  public List<LrtFamily> getFamilies() {
+    return families;
   }
 
   @Override

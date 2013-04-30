@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.cvsm;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -54,6 +56,27 @@ public class OuterProductLowRankTensor extends AbstractLowRankTensor {
   @Override
   public Tensor getTensor() {
     return left.getTensor().outerProduct(right.getTensor());
+  }
+  
+  @Override
+  public double getByDimKey(int ... key) {
+    Preconditions.checkArgument(key.length == getDimensionNumbers().length);
+    List<LowRankTensor> subtensors = Arrays.asList(left, right);
+    int[] myDims = getDimensionNumbers();
+    double value = 1.0;
+    for (int i = 0; i < subtensors.size(); i++) {
+      LowRankTensor tensor = subtensors.get(i);
+      
+      int[] tensorDims = tensor.getDimensionNumbers();
+      int[] tensorKey = new int[tensorDims.length];
+      for (int j = 0; j < tensorKey.length; j++) {
+        int ind = Ints.indexOf(myDims, tensorDims[j]);
+        tensorKey[j] = key[ind];
+      }
+
+      value *= tensor.getByDimKey(tensorKey);
+    }
+    return value;
   }
 
   @Override

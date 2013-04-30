@@ -20,6 +20,8 @@ public interface LowRankTensor extends Serializable {
   
   public Tensor getTensor();
   
+  public double getByDimKey(int ... key);
+  
   public LowRankTensor relabelDimensions(BiMap<Integer, Integer> relabeling);
   
   public LowRankTensor innerProduct(LowRankTensor other);

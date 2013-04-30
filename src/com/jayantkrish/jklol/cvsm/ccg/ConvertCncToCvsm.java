@@ -33,7 +33,7 @@ public class ConvertCncToCvsm extends AbstractCli {
   private OptionSpec<Integer> validationNum;
 
   private OptionSpec<Void> generateSubexpressionExamples;
-
+  private OptionSpec<Void> brief;
 
   private CcgLfReader reader;
   
@@ -53,10 +53,15 @@ public class ConvertCncToCvsm extends AbstractCli {
     validationNum = parser.accepts("validationNum").withRequiredArg().ofType(Integer.class).defaultsTo(0);
 
     generateSubexpressionExamples = parser.accepts("generateSubexpressionExamples");
+    brief = parser.accepts("brief");
   }
 
   @Override
   public void run(OptionSet options) {
+    if (options.has(brief)) {
+      
+    }
+    
     reader = CcgLfReader.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)));
     ExpressionParser exp = new ExpressionParser();
 
@@ -96,7 +101,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     writeData(expressions, examples, relDict, options.valueOf(trainingOut),
         options.valueOf(validationOut), options.valueOf(validationNum));
   }
-  
+
   private static void writeData(List<List<Expression>> expressions, List<RelationExtractionExample> examples,
       IndexedList<String> relDict, String trainingFilename, String validationFilename, int validationModulo) {
     try {

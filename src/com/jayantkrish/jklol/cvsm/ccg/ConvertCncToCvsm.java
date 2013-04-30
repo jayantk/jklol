@@ -75,6 +75,9 @@ public class ConvertCncToCvsm extends AbstractCli {
       if (line.startsWith("(ccg")) {
         if (ccgExpression != null) {
           int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
+	  while (expressions.size() < parseNum - 1) {
+	      expressions.add(Lists.<Expression>newArrayList());
+	  }
           RelationExtractionExample sentence = examples.get(parseNum - 1);
           expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
               options.has(generateSubexpressionExamples)));
@@ -88,20 +91,26 @@ public class ConvertCncToCvsm extends AbstractCli {
 
     if (ccgExpression != null) {
       int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
+      while (expressions.size() < parseNum - 1) {
+	  expressions.add(Lists.<Expression>newArrayList());
+      }
       RelationExtractionExample sentence = examples.get(parseNum - 1);
       expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
           options.has(generateSubexpressionExamples)));
     }
     
+    System.err.println("expressions: " + expressions.size() + " examples: " + examples.size());
+
     writeData(expressions, examples, relDict, options.valueOf(trainingOut),
         options.valueOf(validationOut), options.valueOf(validationNum));
   }
   
   private static void writeData(List<List<Expression>> expressions, List<RelationExtractionExample> examples,
       IndexedList<String> relDict, String trainingFilename, String validationFilename, int validationModulo) {
+      PrintWriter trainingOut = null, validationOut = null;
     try {
-      PrintWriter trainingOut = new PrintWriter(new FileWriter(trainingFilename));
-      PrintWriter validationOut = validationFilename != null ? new PrintWriter(new FileWriter(validationFilename)) : null;
+	trainingOut = new PrintWriter(new FileWriter(trainingFilename));
+	validationOut = validationFilename != null ? new PrintWriter(new FileWriter(validationFilename)) : null;
 
       Preconditions.checkArgument(examples.size() == expressions.size());
       for (int i = 0; i < examples.size(); i++) {
@@ -117,6 +126,9 @@ public class ConvertCncToCvsm extends AbstractCli {
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
+    } finally {
+	if (trainingOut != null) { trainingOut.close(); }
+	if (validationOut != null) { validationOut.close(); }
     }
   }
   
@@ -155,12 +167,12 @@ public class ConvertCncToCvsm extends AbstractCli {
     Span e2Span = mapSpanToTokenizedSpan(example.getE2Span(), wordExpressions);
     if (e1Span == null || e2Span == null) {
       System.err.println("No conversion: no span for " + example.getE1Span() + " and " + example.getE2Span());
-      return null;
+      return Lists.<Expression>newArrayList();
     }
     Expression spanningExpression = reader.findSpanningExpression(ccgExpression, e1Span.getStart(), e2Span.getEnd());
     if (spanningExpression == null) {
       System.err.println("No conversion: no atomic type: " + ccgExpression);
-      return null;
+      return Lists.<Expression>newArrayList();
     }
     
     List<Expression> subexpressions = null;

@@ -9,14 +9,14 @@ TEST_SUFF=_test.txt
 VECTOR_SUFF=_vector.txt
 JKLOL_RUN=./scripts/run.sh
 
-RUN_ID=20iter
+RUN_ID=50iter
 OUT_DIR=$BASE_DIR/output/$RUN_ID/
 LOGNAME=_log.txt
 TRAINNAME=_train_err.txt
 TESTNAME=_test_err.txt
 MODELNAME=_out.ser
 
-ITERATIONS=20
+ITERATIONS=50
 
 mkdir -p $OUT_DIR
 

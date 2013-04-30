@@ -2,8 +2,6 @@ package com.jayantkrish.jklol.cvsm;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -12,15 +10,12 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensor;
-import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -33,7 +28,8 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> initialVectors;
-
+  
+  private OptionSpec<Void> initializeTensorsToIdentity;
   private OptionSpec<Void> squareLoss;
 
   public TrainCvsm() {
@@ -45,9 +41,9 @@ public class TrainCvsm extends AbstractCli {
     trainingFilename = parser.accepts("training").withRequiredArg()
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
-
     initialVectors = parser.accepts("initialVectors").withRequiredArg().ofType(String.class).required();
 
+    initializeTensorsToIdentity = parser.accepts("initializeTensorsToIdentity");
     squareLoss = parser.accepts("squareLoss");
   }
 
@@ -60,7 +56,7 @@ public class TrainCvsm extends AbstractCli {
 
     CvsmFamily family = buildCvsmModel(vectors);
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
-        options.has(squareLoss));
+        options.has(squareLoss), options.has(initializeTensorsToIdentity));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -82,9 +78,13 @@ public class TrainCvsm extends AbstractCli {
 
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
-      boolean useSquareLoss) {
+      boolean useSquareLoss, boolean initializeTensorsToIdentity) {
+
     GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, useSquareLoss);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
+    if (initializeTensorsToIdentity) {
+      family.initializeParametersToIdentity(initialParameters);
+    }
 
     CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) initialParameters;
     List<String> names = cvsmStats.getNames().items();
@@ -99,23 +99,9 @@ public class TrainCvsm extends AbstractCli {
           Tensor tensor = tensorStats.get();
           Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
               tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
+
+          tensorStats.increment(tensorStats, -1.0);
           tensorStats.increment(increment, 1.0);
-        } else if (spec.getSizes().length > 1) {
-          // Initialize matrix and tensor parameters to the identity
-          if (curStats instanceof TensorSufficientStatistics) {
-            TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
-            Tensor tensor = tensorStats.get();
-            Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
-                tensor.getDimensionSizes(), 1.0);
-            tensorStats.increment(diag, 1.0);
-          } else {
-            List<SufficientStatistics> stats = curStats.coerceToList().getStatistics();
-            TensorSufficientStatistics diagStats = (TensorSufficientStatistics) stats.get(stats.size() - 1);
-            Tensor tensor = diagStats.get();
-            DenseTensor increment = DenseTensor.constant(tensor.getDimensionNumbers(), 
-                tensor.getDimensionSizes(), 1.0);
-            diagStats.increment(increment, 1.0);
-          }
         }
       }
     }
@@ -124,27 +110,6 @@ public class TrainCvsm extends AbstractCli {
 
     StochasticGradientTrainer trainer = createStochasticGradientTrainer(examples.size());
     return trainer.train(oracle, initialParameters, examples);
-  }
-
-  /**
-   * Searches {@code examples} for all terms referring to vectors,
-   * matrices and tensors and returns them. 
-   * 
-   * @param examples
-   * @return
-   */
-  private static Set<String> getParameterNames(List<CvsmExample> examples) {
-    Set<String> parameterNames = Sets.newHashSet();
-    Pattern pattern = Pattern.compile("t[0-9]:.*");
-    for (CvsmExample example : examples) {
-      for (ConstantExpression constant : example.getLogicalForm().getFreeVariables()) {
-        String name = constant.getName();
-        if (pattern.matcher(name).matches()) {
-          parameterNames.add(name);
-        }
-      }
-    }
-    return parameterNames;
   }
 
   private static CvsmFamily buildCvsmModel(Map<String, TensorSpec> vectors) {

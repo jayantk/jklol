@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.cvsm.ccg;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +13,7 @@ import joptsimple.OptionSpec;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.io.NullOutputStream;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -22,12 +24,12 @@ import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class ConvertCncToCvsm extends AbstractCli {
-  
+
   private OptionSpec<String> cncParses;
   private OptionSpec<String> mentions;
   private OptionSpec<String> relationDictionary;
   private OptionSpec<String> lfTemplates;
-  
+
   private OptionSpec<String> trainingOut;
   private OptionSpec<String> validationOut;
   private OptionSpec<Integer> validationNum;
@@ -36,7 +38,7 @@ public class ConvertCncToCvsm extends AbstractCli {
   private OptionSpec<Void> brief;
 
   private CcgLfReader reader;
-  
+
   public ConvertCncToCvsm() {
     super();
   }
@@ -59,15 +61,15 @@ public class ConvertCncToCvsm extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     if (options.has(brief)) {
-      
+      System.setErr(new PrintStream(new NullOutputStream()));
     }
-    
+
     reader = CcgLfReader.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)));
     ExpressionParser exp = new ExpressionParser();
 
     List<RelationExtractionExample> examples = readExamples(IoUtils.readLines(options.valueOf(mentions)));
     IndexedList<String> relDict = IndexedList.create(IoUtils.readLines(options.valueOf(relationDictionary)));
-    
+
     List<String> lines = IoUtils.readLines(options.valueOf(cncParses));
     Expression ccgExpression = null;
     List<Expression> wordExpressions = null;
@@ -76,13 +78,13 @@ public class ConvertCncToCvsm extends AbstractCli {
       if (!line.startsWith("(")) {
         continue;
       }
-      
+
       if (line.startsWith("(ccg")) {
         if (ccgExpression != null) {
           int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
-	  while (expressions.size() < parseNum - 1) {
-	      expressions.add(Lists.<Expression>newArrayList());
-	  }
+          while (expressions.size() < parseNum - 1) {
+            expressions.add(Lists.<Expression>newArrayList());
+          }
           RelationExtractionExample sentence = examples.get(parseNum - 1);
           expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
               options.has(generateSubexpressionExamples)));
@@ -97,13 +99,13 @@ public class ConvertCncToCvsm extends AbstractCli {
     if (ccgExpression != null) {
       int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
       while (expressions.size() < parseNum - 1) {
-	  expressions.add(Lists.<Expression>newArrayList());
+        expressions.add(Lists.<Expression>newArrayList());
       }
       RelationExtractionExample sentence = examples.get(parseNum - 1);
       expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
           options.has(generateSubexpressionExamples)));
     }
-    
+
     System.err.println("expressions: " + expressions.size() + " examples: " + examples.size());
 
     writeData(expressions, examples, relDict, options.valueOf(trainingOut),
@@ -112,19 +114,23 @@ public class ConvertCncToCvsm extends AbstractCli {
 
   private static void writeData(List<List<Expression>> expressions, List<RelationExtractionExample> examples,
       IndexedList<String> relDict, String trainingFilename, String validationFilename, int validationModulo) {
-      PrintWriter trainingOut = null, validationOut = null;
+    PrintWriter trainingOut = null, validationOut = null;
     try {
-	trainingOut = new PrintWriter(new FileWriter(trainingFilename));
-	validationOut = validationFilename != null ? new PrintWriter(new FileWriter(validationFilename)) : null;
+      trainingOut = new PrintWriter(new FileWriter(trainingFilename));
+      validationOut = validationFilename != null ? new PrintWriter(new FileWriter(validationFilename)) : null;
 
       Preconditions.checkArgument(examples.size() == expressions.size());
       for (int i = 0; i < examples.size(); i++) {
         RelationExtractionExample example = examples.get(i);
 
-        for (Expression expression : expressions.get(i)) {
-          if (validationModulo > 0 && i % validationModulo == 0) {
-            validationOut.print("\"" + expression + "\",\"" + example.getLabelDistribution(relDict) + "\"\n");
-          } else {
+        if (validationModulo > 0 && i % validationModulo == 0) {
+          if (expressions.size() > 0) {
+            // For validation, only print the first expression, which contains
+            // all of the subexpressions.
+            validationOut.print("\"" + expressions.get(0) + "\",\"" + example.getLabelDistribution(relDict) + "\"\n");
+          }
+        } else {
+          for (Expression expression : expressions.get(i)) {
             trainingOut.print("\"" + expression + "\",\"" + example.getLabelDistribution(relDict) + "\"\n");
           }
         }
@@ -132,18 +138,18 @@ public class ConvertCncToCvsm extends AbstractCli {
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
-	if (trainingOut != null) { trainingOut.close(); }
-	if (validationOut != null) { validationOut.close(); }
+      if (trainingOut != null) { trainingOut.close(); }
+      if (validationOut != null) { validationOut.close(); }
     }
   }
-  
+
   private List<RelationExtractionExample> readExamples(List<String> lines) {
     List<RelationExtractionExample> examples = Lists.newArrayList();
     for (int i = 0; i < lines.size(); i++) {
       String line = lines.get(i);
       if (line.matches("^[0-9].*")) {
         String label = lines.get(i + 1);
-        
+
         String sentence = line.split("\t")[1];
         sentence = sentence.replaceFirst("^\\s*\"(.*)\"\\s*$", "$1");        
         examples.add(new RelationExtractionExample(sentence, label));
@@ -151,7 +157,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     }
     return examples;
   }
-  
+
   private List<Expression> convertExpression(RelationExtractionExample example, Expression ccgExpression, 
       List<Expression> initialWordExpressions, boolean generateSubexpressionExamples) {
     int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
@@ -160,8 +166,8 @@ public class ConvertCncToCvsm extends AbstractCli {
     List<Expression> wordExpressions = Lists.newArrayList(initialWordExpressions);
     for (Expression wordExpression : initialWordExpressions) {
       int wordParseNum = Integer.parseInt(((ConstantExpression) 
-					   ((ApplicationExpression) wordExpression).getArguments().get(0)).getName());
-      
+          ((ApplicationExpression) wordExpression).getArguments().get(0)).getName());
+
       if (wordParseNum != parseNum) {
         wordExpressions.remove(wordExpression);
       }
@@ -179,7 +185,7 @@ public class ConvertCncToCvsm extends AbstractCli {
       System.err.println("No conversion: no atomic type: " + ccgExpression);
       return Lists.<Expression>newArrayList();
     }
-    
+
     List<Expression> subexpressions = null;
     if (generateSubexpressionExamples) {
       subexpressions = reader.findAtomicSubexpressions(spanningExpression);
@@ -200,10 +206,10 @@ public class ConvertCncToCvsm extends AbstractCli {
         System.err.println("No conversion. " + error.getMessage());
       }
     }
-    
+
     return exampleExpressions;
   }
-  
+
   private Span mapSpanToTokenizedSpan(Span span, List<Expression> wordExpressions) {
     String firstWord = span.getWords().get(0);
     for (int i = span.getStart(); i < wordExpressions.size(); i++) {
@@ -220,7 +226,7 @@ public class ConvertCncToCvsm extends AbstractCli {
   public static void main(String[] args) {
     new ConvertCncToCvsm().run(args);
   }
-  
+
   public static class RelationExtractionExample {
     private final String sentence;
     private final String sentenceWithoutEntities;
@@ -235,22 +241,22 @@ public class ConvertCncToCvsm extends AbstractCli {
     public String getSentence() {
       return sentence;
     }
-    
+
     public Span getE1Span() {
       int start = getStringWordIndex("<e1>");
       int end = getStringWordIndex("</e1>");
-      
+
       String[] words = sentenceWithoutEntities.split("  *");
-      
+
       return new Span(start, end, Lists.newArrayList(Arrays.copyOfRange(words, start, end)));
     }
-    
+
     public Span getE2Span() {
       int start = getStringWordIndex("<e2>");
       int end = getStringWordIndex("</e2>");
-      
+
       String[] words = sentenceWithoutEntities.split("  *");
-      
+
       return new Span(start, end, Lists.newArrayList(Arrays.copyOfRange(words, start, end)));
     }
 
@@ -266,7 +272,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     public String getLabel() {
       return label;
     }
-    
+
     public String getLabelDistribution(IndexedList<String> relDict) {
       int index = relDict.getIndex(label);
       StringBuilder sb = new StringBuilder();
@@ -279,7 +285,7 @@ public class ConvertCncToCvsm extends AbstractCli {
       return sb.toString();
     }
   }
-  
+
   public static class Span {
     private final int start;
     private final int end;
@@ -301,7 +307,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     public int getEnd() {
       return end;
     }
-    
+
     public int getSize() {
       return end - start;
     }
@@ -309,7 +315,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     public List<String> getWords() {
       return words;
     }
-    
+
     @Override
     public String toString() {
       return start + "," + end + ":" + words;

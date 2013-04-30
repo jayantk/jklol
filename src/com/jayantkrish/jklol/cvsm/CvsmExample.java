@@ -8,14 +8,14 @@ import com.jayantkrish.jklol.tensor.Tensor;
 public class CvsmExample {
 
   private final Expression logicalForm;
-  private final Tensor targetDistribution;
+  private final Tensor targets;
 
   // May be null.
   private final CcgParse parse;
 
   public CvsmExample(Expression logicalForm, Tensor targetDistribution, CcgParse parse) {
     this.logicalForm = Preconditions.checkNotNull(logicalForm);
-    this.targetDistribution = Preconditions.checkNotNull(targetDistribution);
+    this.targets = Preconditions.checkNotNull(targetDistribution);
     this.parse = parse;
   }
 
@@ -23,8 +23,8 @@ public class CvsmExample {
     return logicalForm;
   }
 
-  public Tensor getTargetDistribution() {
-    return targetDistribution;
+  public Tensor getTargets() {
+    return targets;
   }
 
   public CcgParse getParse() {

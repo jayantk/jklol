@@ -12,6 +12,7 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -235,7 +236,7 @@ public class CvsmTrainingTest extends TestCase {
   private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples, CvsmFamily cvsmFamily, int iterations) {
     if (iterations == -1) { iterations = 1000; } 
 
-    CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, true);
+    CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, new CvsmSquareLoss());
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
         iterations, 1, 1.0, true, 0.0001, new DefaultLogFunction(1, false));
 
@@ -253,7 +254,7 @@ public class CvsmTrainingTest extends TestCase {
       CvsmTree tree = cvsm.getInterpretationTree(example.getLogicalForm());
       Tensor predictedValue = tree.getValue().getTensor();
 
-      Tensor deltas = predictedValue.elementwiseAddition(example.getTargetDistribution().elementwiseProduct(-1.0));
+      Tensor deltas = predictedValue.elementwiseAddition(example.getTargets().elementwiseProduct(-1.0));
       double squareLoss = deltas.innerProduct(deltas).getByDimKey();
       System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
       assertTrue(squareLoss <= 0.1);

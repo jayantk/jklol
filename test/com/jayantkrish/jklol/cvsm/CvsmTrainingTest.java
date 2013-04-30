@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IndexedList;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * Regression tests for training compositional vector space models.
@@ -71,6 +72,22 @@ public class CvsmTrainingTest extends TestCase {
       { 2, 1, 2 },
       { 1, 2, 3 },
   };
+  
+  private static final String[] diagExamples = {
+    "vec:block",
+    "vec:table",
+    "(op:matvecmul mat:red vec:block)",
+    "(op:matvecmul mat:red vec:table)",
+    "(op:matvecmul (op:matvecmul t3:on vec:block) vec:table)",
+  };
+
+  private static final double[][] diagTargets = {
+    { 1, 1, 0 },
+    { 0, 2, 1 },
+    { 0.5, 0.75, 0 },
+    { 0, 1.5, 2 },
+    { 0, 1.5, 0 },
+  };
 
   private static final String[] softmaxExamples = {
       "vec:block",
@@ -119,8 +136,7 @@ public class CvsmTrainingTest extends TestCase {
   private ParametricCcgParser family;
   private CcgParser parser;
 
-  private CvsmFamily cvsmFamily;
-  private CvsmFamily lowRankCvsmFamily;
+  private CvsmFamily cvsmFamily, lowRankCvsmFamily, diagCvsmFamily;
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(rules),
@@ -137,26 +153,31 @@ public class CvsmTrainingTest extends TestCase {
     IndexedList<String> tensorNames = IndexedList.create();
     List<LrtFamily> tensorDims = Lists.newArrayList();
     List<LrtFamily> lrtTensorDims = Lists.newArrayList();
+    List<LrtFamily> diagTensorDims = Lists.newArrayList();
     for (int i = 0; i < vectorNames.length; i++) {
       tensorNames.add(vectorNames[i]);
       tensorDims.add(new TensorLrtFamily(vectorVars));
       lrtTensorDims.add(new TensorLrtFamily(vectorVars));
+      diagTensorDims.add(new TensorLrtFamily(vectorVars));
     }
 
     for (int i = 0; i < matrixNames.length; i++) {
       tensorNames.add(matrixNames[i]);
       tensorDims.add(new TensorLrtFamily(matrixVars));
       lrtTensorDims.add(new OpLrtFamily(matrixVars, 2));
+      diagTensorDims.add(new OpLrtFamily(matrixVars, 0));
     }
 
     for (int i = 0; i < tensor3Names.length; i++) {
       tensorNames.add(tensor3Names[i]);
       tensorDims.add(new TensorLrtFamily(t3Vars));
       lrtTensorDims.add(new OpLrtFamily(t3Vars, 4));
+      diagTensorDims.add(new OpLrtFamily(t3Vars, 0));
     }
 
     cvsmFamily = new CvsmFamily(tensorNames, tensorDims);
     lowRankCvsmFamily = new CvsmFamily(tensorNames, lrtTensorDims);
+    diagCvsmFamily = new CvsmFamily(tensorNames, diagTensorDims);
   }
 
   public void testParse() {
@@ -166,45 +187,61 @@ public class CvsmTrainingTest extends TestCase {
   }
 
   public void testCvsmAffineTraining() {
-    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily);
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily, -1);
   }
   
   public void testLowRankCvsmAffineTraining() {
-    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), lowRankCvsmFamily);
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), lowRankCvsmFamily, -1);
+  }
+  
+  public void testCvsmDiagTraining() {
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), cvsmFamily, -1);
+  }
+
+  public void testLowRankCvsmDiagTraining() {
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), lowRankCvsmFamily, -1);
+  }
+  
+  public void testDiagCvsmDiagTraining() {
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), diagCvsmFamily, -1);
   }
 
   public void testCvsmSoftmaxTraining() {
-    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), cvsmFamily);
+    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), cvsmFamily, -1);
   }
   
   public void testLowRankCvsmSoftmaxTraining() {
-    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), lowRankCvsmFamily);
+    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), lowRankCvsmFamily, 5000);
   }
 
   public void testCvsmLogisticTraining() {
-    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), cvsmFamily);
+    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), cvsmFamily, -1);
   }
   
   public void testLowRankCvsmLogisticTraining() {
-    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), lowRankCvsmFamily);
+    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), lowRankCvsmFamily, -1);
   }
 
   public void testCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
-    runCvsmTrainingTest(cvsmTensorExamples, cvsmFamily);
+    runCvsmTrainingTest(cvsmTensorExamples, cvsmFamily, -1);
   }
   
   public void testLowRankCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
-    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily);
+    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily, 10000);
   }
 
-  private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples, CvsmFamily cvsmFamily) {
+  private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples, CvsmFamily cvsmFamily, int iterations) {
+    if (iterations == -1) { iterations = 1000; } 
+
     CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, true);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        10000, 1, 1.0, true, 0.0001, new DefaultLogFunction(1, false));
+        iterations, 1, 1.0, true, 0.0001, new DefaultLogFunction(1, false));
+
     SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
-    initialParameters.perturb(0.1);
+    initializeParameters(cvsmFamily, initialParameters);
+
     SufficientStatistics parameters = trainer.train(oracle,
         initialParameters, cvsmExamples);
 
@@ -221,6 +258,13 @@ public class CvsmTrainingTest extends TestCase {
       System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
       assertTrue(squareLoss <= 0.1);
     }
+  }
+
+  private static void initializeParameters(CvsmFamily family, SufficientStatistics parameters) {
+    // We can initialize matrix and tensor parameters to the identity using:
+    // family.initializeParametersToIdentity(parameters);
+    Pseudorandom.get().setSeed(0L);
+    parameters.perturb(0.1);
   }
 
   private static List<CvsmExample> parseExamples(String[] examples, double[][] targets) {

@@ -1030,7 +1030,16 @@ public class SparseTensor extends AbstractTensor implements Serializable {
    * @return
    */
   public static SparseTensor diagonal(int[] dimensionNumbers, int[] dimensionSizes, double value) {
-    int minDimensionSize = Ints.min(dimensionSizes); 
+    int minDimensionSize = Ints.min(dimensionSizes);
+    double[] values = new double[minDimensionSize];
+    Arrays.fill(values, value);
+    
+    return diagonal(dimensionNumbers, dimensionSizes, values);
+  }
+  
+  public static SparseTensor diagonal(int[] dimensionNumbers, int[] dimensionSizes, double[] values) {
+    int minDimensionSize = Ints.min(dimensionSizes);
+    Preconditions.checkArgument(values.length == minDimensionSize);
 
     long[] keyNums = new long[minDimensionSize];
     long[] indexOffsets = computeIndexOffsets(dimensionSizes);
@@ -1041,10 +1050,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       }
     }
 
-    double[] values = new double[minDimensionSize];
-    Arrays.fill(values, value);
-
-    return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
+    double[] valuesCopy = Arrays.copyOf(values, values.length);
+    return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, valuesCopy);
   }
 
   /**

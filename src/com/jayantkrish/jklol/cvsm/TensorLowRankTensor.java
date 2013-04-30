@@ -22,6 +22,11 @@ public class TensorLowRankTensor extends AbstractLowRankTensor {
   public Tensor getTensor() {
     return tensor;
   }
+  
+  @Override
+  public double getByDimKey(int... key) {
+    return tensor.getByDimKey(key);
+  }
 
   @Override
   public LowRankTensor relabelDimensions(BiMap<Integer, Integer> relabeling) {

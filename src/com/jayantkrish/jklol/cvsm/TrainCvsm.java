@@ -100,13 +100,22 @@ public class TrainCvsm extends AbstractCli {
           Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
               tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
           tensorStats.increment(increment, 1.0);
-        } else if (spec.getSizes().length > 1 && curStats instanceof TensorSufficientStatistics) {
+        } else if (spec.getSizes().length > 1) {
           // Initialize matrix and tensor parameters to the identity
-          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
-          Tensor tensor = tensorStats.get();
-          Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
-              tensor.getDimensionSizes(), 1.0);
-          tensorStats.increment(diag, 1.0);
+          if (curStats instanceof TensorSufficientStatistics) {
+            TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
+            Tensor tensor = tensorStats.get();
+            Tensor diag = SparseTensor.diagonal(tensor.getDimensionNumbers(),
+                tensor.getDimensionSizes(), 1.0);
+            tensorStats.increment(diag, 1.0);
+          } else {
+            List<SufficientStatistics> stats = curStats.coerceToList().getStatistics();
+            TensorSufficientStatistics diagStats = (TensorSufficientStatistics) stats.get(stats.size() - 1);
+            Tensor tensor = diagStats.get();
+            DenseTensor increment = DenseTensor.constant(tensor.getDimensionNumbers(), 
+                tensor.getDimensionSizes(), 1.0);
+            diagStats.increment(increment, 1.0);
+          }
         }
       }
     }

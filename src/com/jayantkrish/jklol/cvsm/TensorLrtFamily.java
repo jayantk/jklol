@@ -19,6 +19,11 @@ public class TensorLrtFamily implements LrtFamily {
   public TensorLrtFamily(VariableNumMap vars) {
     this.vars = Preconditions.checkNotNull(vars);
   }
+  
+  @Override
+  public int[] getDimensionNumbers() {
+    return vars.getVariableNumsArray();
+  }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {

@@ -11,6 +11,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmKlLoss;
+import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
+import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -79,8 +82,15 @@ public class TrainCvsm extends AbstractCli {
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
       boolean useSquareLoss, boolean initializeTensorsToIdentity) {
+    
+    CvsmLoss loss = null;
+    if (useSquareLoss) {
+      loss = new CvsmSquareLoss();
+    } else {
+      loss = new CvsmKlLoss();
+    }
 
-    GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, useSquareLoss);
+    GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, loss);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
     if (initializeTensorsToIdentity) {
       family.initializeParametersToIdentity(initialParameters);

@@ -6,14 +6,21 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
+/**
+ * Oracle for training the parameters of a compositional vector space
+ * model. This oracle is compatible with a number of different loss
+ * functions.
+ * 
+ * @author jayantk
+ */
 public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample> {
-  
+
   private final CvsmFamily family;
-  private final boolean useSquareLoss;
-  
-  public CvsmLoglikelihoodOracle(CvsmFamily family, boolean useSquareLoss) {
+  private final CvsmLoss lossFunction;
+
+  public CvsmLoglikelihoodOracle(CvsmFamily family, CvsmLoss lossFunction) {
     this.family = Preconditions.checkNotNull(family);
-    this.useSquareLoss = useSquareLoss;
+    this.lossFunction = lossFunction;
   }
 
   @Override
@@ -30,19 +37,37 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
   public double accumulateGradient(SufficientStatistics gradient, Cvsm instantiatedModel,
       CvsmExample example, LogFunction log) {
     CvsmTree tree = instantiatedModel.getInterpretationTree(example.getLogicalForm());
-    CvsmTree gradientTree = null;
-    if (useSquareLoss) {
-      gradientTree = new CvsmSquareLossTree(example.getTargetDistribution(), tree);
-    } else {
-      gradientTree = new CvsmKlLossTree(example.getTargetDistribution(), tree);
-    }
+    CvsmTree gradientTree = lossFunction.augmentTreeWithLoss(tree, example.getTargets());
 
     log.startTimer("backpropagate_gradient");
     Tensor root = gradientTree.getValue().getTensor();
-    gradientTree.backpropagateGradient(TensorLowRankTensor.zero(root.getDimensionNumbers(), root.getDimensionSizes()),
-        family, gradient);
+    gradientTree.backpropagateGradient(TensorLowRankTensor.zero(
+        root.getDimensionNumbers(), root.getDimensionSizes()), family, gradient);
     log.stopTimer("backpropagate_gradient");
 
     return gradientTree.getLoss();
+  }
+  
+  public static interface CvsmLoss {
+
+    /**
+     * Adds loss nodes to {@code tree} to compute gradients, etc.
+     * 
+     * @param tree
+     * @return
+     */
+    CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets);
+  }
+  
+  public static class CvsmSquareLoss implements CvsmLoss {
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets) {
+      return new CvsmSquareLossTree(targets, tree);
+    }
+  }
+  
+  public static class CvsmKlLoss implements CvsmLoss {
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Tensor targets) {
+      return new CvsmKlLossTree(targets, tree);
+    }
   }
 }

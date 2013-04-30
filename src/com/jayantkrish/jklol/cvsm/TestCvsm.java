@@ -45,19 +45,19 @@ public class TestCvsm extends AbstractCli {
       for (CvsmExample example : examples) {
         CvsmTree tree = null;
         if (options.has(squareLoss)) {
-          tree = new CvsmSquareLossTree(example.getTargetDistribution(),
+          tree = new CvsmSquareLossTree(example.getTargets(),
               trainedModel.getInterpretationTree(example.getLogicalForm()));
         } else if (options.has(klLoss)) {
-          tree = new CvsmKlLossTree(example.getTargetDistribution(),
+          tree = new CvsmKlLossTree(example.getTargets(),
               trainedModel.getInterpretationTree(example.getLogicalForm()));
         } else {
-          tree = new CvsmZeroOneLossTree(example.getTargetDistribution(),
+          tree = new CvsmZeroOneLossTree(example.getTargets(),
               trainedModel.getInterpretationTree(example.getLogicalForm()));
         }
         double exampleLoss = tree.getLoss();
         loss += exampleLoss;
 
-        System.out.println(exampleLoss + " " + Arrays.toString(example.getTargetDistribution().getValues()) 
+        System.out.println(exampleLoss + " " + Arrays.toString(example.getTargets().getValues()) 
 			   + " " + Arrays.toString(tree.getValue().getTensor().getValues()) + " " + example.getLogicalForm());
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");

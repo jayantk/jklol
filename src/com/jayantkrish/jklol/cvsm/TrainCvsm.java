@@ -21,6 +21,7 @@ import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -34,9 +35,10 @@ public class TrainCvsm extends AbstractCli {
   
   private OptionSpec<Void> initializeTensorsToIdentity;
   private OptionSpec<Void> squareLoss;
+  private OptionSpec<Void> lbfgs;
 
   public TrainCvsm() {
-    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
+    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE, CommonOptions.LBFGS);
   }
 
   @Override
@@ -48,6 +50,7 @@ public class TrainCvsm extends AbstractCli {
 
     initializeTensorsToIdentity = parser.accepts("initializeTensorsToIdentity");
     squareLoss = parser.accepts("squareLoss");
+    lbfgs = parser.accepts("lbfgs");
   }
 
   @Override
@@ -59,7 +62,7 @@ public class TrainCvsm extends AbstractCli {
 
     CvsmFamily family = buildCvsmModel(vectors);
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
-        options.has(squareLoss), options.has(initializeTensorsToIdentity));
+        options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -81,7 +84,7 @@ public class TrainCvsm extends AbstractCli {
 
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
-      boolean useSquareLoss, boolean initializeTensorsToIdentity) {
+      boolean useSquareLoss, boolean initializeTensorsToIdentity, boolean useLbfgs) {
     
     CvsmLoss loss = null;
     if (useSquareLoss) {
@@ -118,8 +121,13 @@ public class TrainCvsm extends AbstractCli {
 
     initialParameters.perturb(0.1);
 
-    StochasticGradientTrainer trainer = createStochasticGradientTrainer(examples.size());
-    return trainer.train(oracle, initialParameters, examples);
+    if (useLbfgs) {
+      Lbfgs lbfgs = createLbfgs();
+      return lbfgs.train(oracle, initialParameters, examples);
+    } else {
+      StochasticGradientTrainer trainer = createStochasticGradientTrainer(examples.size());
+      return trainer.train(oracle, initialParameters, examples);
+    }
   }
 
   private static CvsmFamily buildCvsmModel(Map<String, TensorSpec> vectors) {

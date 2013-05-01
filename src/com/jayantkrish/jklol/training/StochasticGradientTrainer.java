@@ -123,7 +123,9 @@ public class StochasticGradientTrainer {
 
       iterSearchErrors = oracleResult.getSearchErrors();
       SufficientStatistics gradient = oracleResult.getGradient();
-      gradient.multiply(1.0 / batchSize);
+      if (batchSize > 1) {
+        gradient.multiply(1.0 / batchSize);
+      }
       log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");

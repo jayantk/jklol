@@ -118,8 +118,22 @@ public class StochasticGradientTrainer {
 
       log.startTimer("compute_gradient_(serial)");
       int iterSearchErrors = 0;
-      GradientEvaluation oracleResult = executor.mapReduce(batchData,
-          new GradientMapper<M, T>(currentModel, oracle, log), new GradientReducer<M, T>(oracle, log));
+      GradientMapper<M, T> mapper = new GradientMapper<M, T>(currentModel, oracle, log);
+      GradientReducer<M, T> reducer = new GradientReducer<M, T>(oracle, log);
+      GradientEvaluation oracleResult = null;
+      if (batchSize == 1) {
+	  log.startTimer("initialize_reducer");
+	  GradientEvaluation result = reducer.getInitialValue();
+	  log.stopTimer("initialize_reducer");
+
+	  oracleResult = mapper.map(batchData.get(0));
+
+	  log.startTimer("reduce");
+	  oracleResult = reducer.reduce(oracleResult, result);
+	  log.stopTimer("reduce");
+      } else {
+	  oracleResult = executor.mapReduce(batchData, mapper, reducer);
+      }
 
       iterSearchErrors = oracleResult.getSearchErrors();
       SufficientStatistics gradient = oracleResult.getGradient();

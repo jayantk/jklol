@@ -74,7 +74,7 @@ public class StochasticGradientTrainer {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
         new StochasticL2Regularizer(l2Penalty, 1.0), log);
   }
-  
+
   public static StochasticGradientTrainer createWithStochasticL2Regularization(int numIterations,
       int batchSize, double stepSize, boolean decayStepSize, double l2Penalty,
       double regularizationFrequency, LogFunction log) {
@@ -89,7 +89,7 @@ public class StochasticGradientTrainer {
 
   public <M, E, T extends E> SufficientStatistics train(GradientOracle<M, E> oracle,
       SufficientStatistics initialParameters, Iterable<T> trainingData) {
-    
+
     // cycledTrainingData loops indefinitely over the elements of trainingData.
     // This is desirable because we want batchSize examples but don't
     // particularly care where in trainingData they come from.
@@ -122,17 +122,17 @@ public class StochasticGradientTrainer {
       GradientReducer<M, T> reducer = new GradientReducer<M, T>(oracle, log);
       GradientEvaluation oracleResult = null;
       if (batchSize == 1) {
-	  log.startTimer("initialize_reducer");
-	  GradientEvaluation result = reducer.getInitialValue();
-	  log.stopTimer("initialize_reducer");
+        log.startTimer("initialize_reducer");
+        GradientEvaluation result = reducer.getInitialValue();
+        log.stopTimer("initialize_reducer");
 
-	  oracleResult = mapper.map(batchData.get(0));
+        oracleResult = mapper.map(batchData.get(0));
 
-	  log.startTimer("reduce");
-	  oracleResult = reducer.reduce(oracleResult, result);
-	  log.stopTimer("reduce");
+        log.startTimer("reduce");
+        oracleResult = reducer.reduce(oracleResult, result);
+        log.stopTimer("reduce");
       } else {
-	  oracleResult = executor.mapReduce(batchData, mapper, reducer);
+        oracleResult = executor.mapReduce(batchData, mapper, reducer);
       }
 
       iterSearchErrors = oracleResult.getSearchErrors();
@@ -195,7 +195,7 @@ public class StochasticGradientTrainer {
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize);
   }
-  
+
   /**
    * An L2 regularization penalty that is applied on random iterations. 
    * Regularization can be the most expensive part of training, since it

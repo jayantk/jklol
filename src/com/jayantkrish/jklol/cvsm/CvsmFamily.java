@@ -30,7 +30,7 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> parameters = Collections.<SufficientStatistics>nCopies(families.size(), null);
-    return new CvsmSufficientStatistics(valueNames.items(), families, parameters);
+    return new CvsmSufficientStatistics(valueNames, families, parameters);
   }
 
   /**

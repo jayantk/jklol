@@ -28,9 +28,9 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   private final List<? extends ParametricFamily<?>> families;
   private final List<SufficientStatistics> statistics;
 
-  public CvsmSufficientStatistics(List<String> names,
+  public CvsmSufficientStatistics(IndexedList<String> names,
       List<? extends ParametricFamily<?>> families, List<SufficientStatistics> statistics) {
-    this.names = IndexedList.create(names);
+    this.names = Preconditions.checkNotNull(names);
     this.families = Preconditions.checkNotNull(families);
     this.statistics = Lists.newArrayList(Preconditions.checkNotNull(statistics));
 
@@ -47,9 +47,9 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
     return statistics.size();
   }
 
-    public IndexedList<String> getNames() {
-	return names;
-    }
+  public IndexedList<String> getNames() {
+    return names;
+  }
 
   /**
    * Gets the sufficient statistics associated with index i.
@@ -59,9 +59,9 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
    */
   public SufficientStatistics getSufficientStatistics(int i) {
     if (statistics.get(i) == null) {
-	// Note that the expected contract is that mutating the returned
-	// value affects the values in this.
-	statistics.set(i, families.get(i).getNewSufficientStatistics());
+      // Note that the expected contract is that mutating the returned
+      // value affects the values in this.
+      statistics.set(i, families.get(i).getNewSufficientStatistics());
     }
     return statistics.get(i);
   }
@@ -153,7 +153,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
         newStatistics.add(null);
       }
     }
-    return new CvsmSufficientStatistics(names.items(), families, newStatistics);
+    return new CvsmSufficientStatistics(names, families, newStatistics);
   }
 
   @Override

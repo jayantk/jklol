@@ -15,12 +15,17 @@ import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmZeroOneLossTree;
+import com.jayantkrish.jklol.tensor.Backpointers;
+import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TestCvsm extends AbstractCli {
   
   private OptionSpec<String> model;
   private OptionSpec<String> testFilename;
+  
+  private OptionSpec<String> relationDictionary;
   
   private OptionSpec<Void> squareLoss;
   private OptionSpec<Void> klLoss;
@@ -33,7 +38,9 @@ public class TestCvsm extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
     testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
-    
+
+    relationDictionary = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
+
     squareLoss = parser.accepts("squareLoss");
     klLoss = parser.accepts("klLoss");
   }
@@ -44,6 +51,11 @@ public class TestCvsm extends AbstractCli {
     
     if (options.has(testFilename)) {
       List<CvsmExample> examples = CvsmUtils.readTrainingData(options.valueOf(testFilename));
+      
+      IndexedList<String> relDict = null;
+      if (options.has(relationDictionary)) {
+        relDict = IndexedList.create(IoUtils.readLines(options.valueOf(relationDictionary)));
+      }
 
       double loss = 0.0;
       for (CvsmExample example : examples) {
@@ -61,8 +73,24 @@ public class TestCvsm extends AbstractCli {
         double exampleLoss = tree.getLoss();
         loss += exampleLoss;
 
-        System.out.println(exampleLoss + " " + Arrays.toString(example.getTargets().getValues()) 
-			   + " " + Arrays.toString(tree.getValue().getTensor().getValues()) + " " + example.getLogicalForm());
+        if (relDict == null) {
+          System.out.println(exampleLoss + " " + Arrays.toString(example.getTargets().getValues()) 
+              + " " + Arrays.toString(tree.getValue().getTensor().getValues()) + " " + example.getLogicalForm());
+        } else {
+          Tensor targetTensor = example.getTargets();
+          Tensor predictedTensor = tree.getValue().getTensor();
+
+          Backpointers backpointers = new Backpointers();
+          targetTensor.maxOutDimensions(targetTensor.getDimensionNumbers(), backpointers);
+          int targetRel = (int) backpointers.getBackpointer(0);
+          
+          backpointers = new Backpointers();
+          predictedTensor.maxOutDimensions(predictedTensor.getDimensionNumbers(), backpointers);
+          int predictedRel = (int) backpointers.getBackpointer(0);
+          
+          System.out.println(exampleLoss + " " + relDict.get(targetRel) 
+              + " " + relDict.get(predictedRel) + " " + example.getLogicalForm());
+        }
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");
     } else {

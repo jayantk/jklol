@@ -350,6 +350,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       Backpointers backpointers) {
     return reduceDimensions(dimensionsToEliminate, false, backpointers);
   }
+  
+  @Override
+  public DenseTensor maxOutDimensions(int[] dimensionsToEliminate, Backpointers backpointers) {
+    return maxOutDimensions(Ints.asList(dimensionsToEliminate), backpointers);
+  }
 
   /**
    * Performs reduction operations which eliminate some subset of the existing

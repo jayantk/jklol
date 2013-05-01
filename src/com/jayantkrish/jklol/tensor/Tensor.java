@@ -303,6 +303,11 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate, Backpointers backpointers);
+  
+  /**
+   * Same as {@link #maxOutDimensions(Collection, Backpointers)}. 
+   */
+  Tensor maxOutDimensions(int[] dimensionsToEliminate, Backpointers backpointers);
 
   /**
    * Relabels the dimensions of this tensor to {@code newDimensions}.

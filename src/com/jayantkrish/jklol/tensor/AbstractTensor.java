@@ -42,6 +42,11 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
   }
   
   @Override
+  public Tensor maxOutDimensions(int[] dimensionsToEliminate, Backpointers backpointers) {
+    return maxOutDimensions(Ints.asList(dimensionsToEliminate), backpointers);
+  }
+
+  @Override
   public Tensor logSumOutDimensions(Collection<Integer> dimensionsToEliminate) {
     return AbstractTensor.logSumOutDimensions(this, dimensionsToEliminate);
   }

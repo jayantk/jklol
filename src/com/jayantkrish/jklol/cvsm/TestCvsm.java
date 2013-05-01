@@ -15,6 +15,10 @@ import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmZeroOneLossTree;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.Backpointers;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -48,14 +52,13 @@ public class TestCvsm extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     Cvsm trainedModel = IoUtils.readSerializedObject(options.valueOf(model), Cvsm.class);
-    
+    IndexedList<String> relDict = null;
+    if (options.has(relationDictionary)) {
+      relDict = IndexedList.create(IoUtils.readLines(options.valueOf(relationDictionary)));
+    }
+
     if (options.has(testFilename)) {
       List<CvsmExample> examples = CvsmUtils.readTrainingData(options.valueOf(testFilename));
-      
-      IndexedList<String> relDict = null;
-      if (options.has(relationDictionary)) {
-        relDict = IndexedList.create(IoUtils.readLines(options.valueOf(relationDictionary)));
-      }
 
       double loss = 0.0;
       for (CvsmExample example : examples) {
@@ -96,7 +99,16 @@ public class TestCvsm extends AbstractCli {
     } else {
       Expression lf = (new ExpressionParser()).parseSingleExpression(
           Joiner.on(" ").join(options.nonOptionArguments()));
-      System.out.println(trainedModel.getInterpretationTree(lf).getValue().getTensor());
+      
+      Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
+      if (relDict == null || tensor.getDimensionNumbers().length > 1 || tensor.getDimensionSizes()[0] != relDict.size()) {
+        System.out.println(tensor);
+      } else {
+        DiscreteVariable varType = new DiscreteVariable("var", relDict.items());
+        VariableNumMap var = VariableNumMap.singleton(0, "var", varType);
+        DiscreteFactor factor = new TableFactor(var, tensor); 
+        System.out.println(factor.getParameterDescription());
+      }
     }
   }
   

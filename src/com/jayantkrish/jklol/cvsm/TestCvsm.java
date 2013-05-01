@@ -39,7 +39,7 @@ public class TestCvsm extends AbstractCli {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
     testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
 
-    relationDictionary = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
+    relationDictionary = parser.accepts("relationDictionary").withRequiredArg().ofType(String.class);
 
     squareLoss = parser.accepts("squareLoss");
     klLoss = parser.accepts("klLoss");
@@ -76,7 +76,7 @@ public class TestCvsm extends AbstractCli {
         if (relDict == null) {
           System.out.println(exampleLoss + " " + Arrays.toString(example.getTargets().getValues()) 
               + " " + Arrays.toString(tree.getValue().getTensor().getValues()) + " " + example.getLogicalForm());
-        } else {
+        } else { 
           Tensor targetTensor = example.getTargets();
           Tensor predictedTensor = tree.getValue().getTensor();
 

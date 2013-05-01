@@ -124,10 +124,10 @@ public class ConvertCncToCvsm extends AbstractCli {
         RelationExtractionExample example = examples.get(i);
 
         if (validationModulo > 0 && i % validationModulo == 0) {
-          if (expressions.size() > 0) {
+	    if (expressions.get(i).size() > 0) {
             // For validation, only print the first expression, which contains
             // all of the subexpressions.
-            validationOut.print("\"" + expressions.get(0) + "\",\"" + example.getLabelDistribution(relDict) + "\"\n");
+		validationOut.print("\"" + expressions.get(i).get(0) + "\",\"" + example.getLabelDistribution(relDict) + "\"\n");
           }
         } else {
           for (Expression expression : expressions.get(i)) {
@@ -184,6 +184,13 @@ public class ConvertCncToCvsm extends AbstractCli {
     if (spanningExpression == null) {
       System.err.println("No conversion: no atomic type: " + ccgExpression);
       return Lists.<Expression>newArrayList();
+    }
+
+    try {
+	reader.parse(spanningExpression, wordExpressions);
+    } catch (LogicalFormConversionError error) {
+	System.err.println("No conversion. " + error.getMessage());
+	return Lists.<Expression>newArrayList();
     }
 
     List<Expression> subexpressions = null;

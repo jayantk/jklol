@@ -195,6 +195,13 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor elementwiseExp();
+  
+  /**
+   * Get the hyperbolic tangent of this tensor.
+   *
+   * @return
+   */
+  Tensor elementwiseTanh();
 
   /**
    * Applies the soft threshold operator to each element in this. The

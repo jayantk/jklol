@@ -155,6 +155,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   }
   
   @Override
+  public Tensor elementwiseTanh() {
+    return logWeights.elementwiseExp().elementwiseTanh();
+  }
+
+  @Override
   public Tensor softThreshold(double threshold) {
     throw new UnsupportedOperationException("Not yet implemented.");
   }

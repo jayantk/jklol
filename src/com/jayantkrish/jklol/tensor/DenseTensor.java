@@ -308,6 +308,16 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
   
   @Override
+  public DenseTensor elementwiseTanh() {
+    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    for (int i = 0; i < values.length; i++) {
+      outputBuilder.values[i] = Math.tanh(values[i]);
+    }
+    return outputBuilder.buildNoCopy();
+  }
+
+  @Override
   public DenseTensor softThreshold(double threshold) {
     DenseTensorBuilder builder = DenseTensorBuilder.copyOf(this);
     builder.softThreshold(threshold);

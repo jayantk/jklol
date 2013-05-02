@@ -33,6 +33,7 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> initialVectors;
   
+  private OptionSpec<Void> fixInitializedVectors;  
   private OptionSpec<Void> initializeTensorsToIdentity;
   private OptionSpec<Void> squareLoss;
   private OptionSpec<Void> lbfgs;
@@ -47,7 +48,8 @@ public class TrainCvsm extends AbstractCli {
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     initialVectors = parser.accepts("initialVectors").withRequiredArg().ofType(String.class).required();
-
+  
+    fixInitializedVectors = parser.accepts("fixInitializedVectors");
     initializeTensorsToIdentity = parser.accepts("initializeTensorsToIdentity");
     squareLoss = parser.accepts("squareLoss");
     lbfgs = parser.accepts("lbfgs");
@@ -60,7 +62,7 @@ public class TrainCvsm extends AbstractCli {
     Map<String, TensorSpec> vectors = Maps.newTreeMap();
     vectors = readVectors(options.valueOf(initialVectors));
 
-    CvsmFamily family = buildCvsmModel(vectors);
+    CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
         options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
@@ -130,7 +132,8 @@ public class TrainCvsm extends AbstractCli {
     }
   }
 
-  private static CvsmFamily buildCvsmModel(Map<String, TensorSpec> vectors) {
+  private static CvsmFamily buildCvsmModel(Map<String, TensorSpec> vectors,
+      boolean fixInitializedValues) {
     Map<Integer, DiscreteVariable> varMap = Maps.newHashMap();
 
     IndexedList<String> tensorNames = IndexedList.create();
@@ -150,7 +153,7 @@ public class TrainCvsm extends AbstractCli {
 
       LrtFamily family = null;
       if (spec.getRank() == -1 || sizes.length == 1) {
-        family = new TensorLrtFamily(vars);
+        family = new TensorLrtFamily(vars, spec.hasValues() && fixInitializedValues);
       } else {
         family = new OpLrtFamily(vars, spec.getRank());
       }

@@ -17,9 +17,13 @@ public class TensorLrtFamily implements LrtFamily {
   private static final long serialVersionUID = 1L;
   
   private final VariableNumMap vars;
+  // If true, the tensor returned by this family is a constant,
+  // and is not modified by training.
+  private final boolean isConstant;
   
-  public TensorLrtFamily(VariableNumMap vars) {
+  public TensorLrtFamily(VariableNumMap vars, boolean isConstant) {
     this.vars = Preconditions.checkNotNull(vars);
+    this.isConstant = isConstant;
   }
   
   @Override
@@ -42,7 +46,9 @@ public class TensorLrtFamily implements LrtFamily {
   @Override
   public void increment(SufficientStatistics gradient, LowRankTensor value, 
       LowRankTensor increment, double multiplier) {
-    ((TensorSufficientStatistics) gradient).increment(increment.getTensor(), multiplier);
+    if (!isConstant) {
+      ((TensorSufficientStatistics) gradient).increment(increment.getTensor(), multiplier);
+    }
   }
 
   @Override

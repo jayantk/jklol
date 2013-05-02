@@ -641,7 +641,18 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     }
     return builder.buildNoCopy();
   }
+  
+  public Tensor elementwiseTanh() {
+    // The tanh of 0 is 0, so this operation preserves sparsity.
+    double[] newValues = new double[size()];
+    for (int i = 0; i < size(); i++) {
+      newValues[i] = Math.tanh(values[i]);
+    }
 
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
+  }
+
+  @Override
   public SparseTensor softThreshold(double threshold) {
     double[] newValues = new double[values.length];
     long[] newKeyNums = new long[values.length];

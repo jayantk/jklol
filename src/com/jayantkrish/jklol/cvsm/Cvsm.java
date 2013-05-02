@@ -16,6 +16,7 @@ import com.jayantkrish.jklol.cvsm.tree.CvsmInnerProductTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLogisticTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmRelabelDimsTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSoftmaxTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmTanhTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTensorTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -87,6 +88,11 @@ public class Cvsm implements Serializable {
 
         CvsmTree subtree = getInterpretationTree(args.get(0));
         return new CvsmLogisticTree(subtree);
+      } else if (functionName.equals("op:tanh")) {
+        Preconditions.checkArgument(args.size() == 1);
+
+        CvsmTree subtree = getInterpretationTree(args.get(0));
+        return new CvsmTanhTree(subtree);
       } else if (functionName.equals("op:add")) {
         Preconditions.checkArgument(args.size() > 1);
         CvsmTree value = getInterpretationTree(args.get(0));

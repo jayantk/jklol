@@ -114,6 +114,14 @@ public class CvsmTrainingTest extends TestCase {
   private static final double[][] logisticTargets = {
       { 1.0, 0.75, 0.2 },
   };
+  
+  private static final String[] tanhExamples = {
+      "(op:tanh vec:logistic)"
+  };
+
+  private static final double[][] tanhTargets = {
+      { 1.0, 0.0, -0.5 },
+  };
 
   private static final String[] tprodExamples = {
       "vec:block",
@@ -222,6 +230,14 @@ public class CvsmTrainingTest extends TestCase {
   
   public void testLowRankCvsmLogisticTraining() {
     runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), lowRankCvsmFamily, -1);
+  }
+  
+  public void testCvsmTanhTraining() {
+    runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), cvsmFamily, -1);
+  }
+  
+  public void testLowRankCvsmTanhTraining() {
+    runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), lowRankCvsmFamily, -1);
   }
 
   public void testCvsmTensorTraining() {

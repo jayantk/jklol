@@ -113,6 +113,11 @@ public class FactoredTensor extends AbstractTensor {
   public Tensor elementwiseExp() {
     throw new UnsupportedOperationException("Not implemented.");
   }
+  
+  @Override
+  public Tensor elementwiseTanh() {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
 
   @Override
   public Tensor softThreshold(double threshold) {

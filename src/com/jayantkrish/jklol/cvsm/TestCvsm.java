@@ -43,7 +43,7 @@ public class TestCvsm extends AbstractCli {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
     testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
 
-    relationDictionary = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
+    relationDictionary = parser.accepts("relationDictionary").withRequiredArg().ofType(String.class);
 
     squareLoss = parser.accepts("squareLoss");
     klLoss = parser.accepts("klLoss");
@@ -79,20 +79,22 @@ public class TestCvsm extends AbstractCli {
         if (relDict == null) {
           System.out.println(exampleLoss + " " + Arrays.toString(example.getTargets().getValues()) 
               + " " + Arrays.toString(tree.getValue().getTensor().getValues()) + " " + example.getLogicalForm());
-        } else {
+        } else { 
           Tensor targetTensor = example.getTargets();
           Tensor predictedTensor = tree.getValue().getTensor();
 
           Backpointers backpointers = new Backpointers();
           targetTensor.maxOutDimensions(targetTensor.getDimensionNumbers(), backpointers);
           int targetRel = (int) backpointers.getBackpointer(0);
+	  double targetProb = predictedTensor.get(targetRel);
           
           backpointers = new Backpointers();
           predictedTensor.maxOutDimensions(predictedTensor.getDimensionNumbers(), backpointers);
           int predictedRel = (int) backpointers.getBackpointer(0);
+	  double predictedProb = predictedTensor.get(predictedRel);
           
-          System.out.println(exampleLoss + " " + relDict.get(targetRel) 
-              + " " + relDict.get(predictedRel) + " " + example.getLogicalForm());
+          System.out.println(exampleLoss + " " + relDict.get(targetRel) + " " + targetProb
+              + " " + relDict.get(predictedRel) + " " + predictedProb + " " + example.getLogicalForm());
         }
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");
@@ -107,7 +109,7 @@ public class TestCvsm extends AbstractCli {
         DiscreteVariable varType = new DiscreteVariable("var", relDict.items());
         VariableNumMap var = VariableNumMap.singleton(0, "var", varType);
         DiscreteFactor factor = new TableFactor(var, tensor); 
-        System.out.println(factor.getParameterDescription());
+        System.out.println(factor.describeAssignments(factor.getMostLikelyAssignments(relDict.size())));
       }
     }
   }

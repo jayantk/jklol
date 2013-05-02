@@ -52,6 +52,6 @@ public class CvsmKlLossTree extends AbstractCvsmTree {
         kl += targetValues[i] * (Math.log(targetValues[i]) - Math.log(predictedValues[i]));
       }
     }
-    return kl;
+    return -1.0 * kl;
   }
 }

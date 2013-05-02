@@ -114,7 +114,9 @@ public class Lbfgs {
         return currentParameters;
       }
       
+      log.logStatistic(i, "parameter l2 norm", previousParameters.getL2Norm());
       log.logStatistic(i, "gradient l2 norm", gradientL2Norm);
+      log.logStatistic(i, "direction l2 norm", direction.getL2Norm());
       log.logStatistic(i, "search errors", gradientEvaluation.getSearchErrors());
       log.logStatistic(i, "objective value", gradientEvaluation.getObjectiveValue());
 
@@ -158,6 +160,7 @@ public class Lbfgs {
 
         System.out.println("current: " + currentObjectiveValue);
         System.out.println("next: " + nextObjectiveValue);
+        System.out.println("next parameter l2Norm: " + nextParameters.getL2Norm());
         System.out.println("next gradient l2Norm: " + nextGradient.getL2Norm());
         System.out.println("curInnerProd: " + curInnerProd);
         System.out.println("nextInnerProd: " + nextInnerProd);
@@ -165,7 +168,7 @@ public class Lbfgs {
         System.out.println("cond1: " + nextObjectiveValue + " > " + cond1Rhs);
         System.out.println("cond2: abs(" + nextInnerProd + ") < " + cond2Rhs);
 
-      } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs)) 
+      } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs) || Double.isNaN(nextObjectiveValue))
           && stepSize > MIN_STEP_SIZE); //  || Math.abs(nextInnerProd) > cond2Rhs
       log.logStatistic(i, "step size", stepSize);
       log.stopTimer("compute_step_size");
@@ -202,7 +205,10 @@ public class Lbfgs {
       evaluation.getGradient().multiply(1.0 / dataList.size());
       evaluation.setObjectiveValue(evaluation.getObjectiveValue() / dataList.size());
       
-      System.out.println("old norm: "+ evaluation.getGradient().getL2Norm());
+      double oldNorm = evaluation.getGradient().getL2Norm();
+      if (Double.isNaN(oldNorm)) {
+	  System.out.println(evaluation.getGradient().getDescription());
+      }
       
       if (l2Regularization > 0.0) {
         evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);

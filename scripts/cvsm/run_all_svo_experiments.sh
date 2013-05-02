@@ -11,9 +11,9 @@ TEST_SUFF=_test.txt
 VECTOR_SUFF=_vector.txt
 JKLOL_RUN=./scripts/run.sh
 
-RUN_ID=alldata_subexpr
-OUT_DIR=$BASE_DIR/output/$RUN_ID/
-OUT_TEMP_DIR=$BASE_DIR/output/$RUN_ID/temp
+RUN_ID=fixed_vec_l2-1e-2
+OUT_DIR=$BASE_DIR/output/an/$RUN_ID/
+OUT_TEMP_DIR=$BASE_DIR/output/an/$RUN_ID/temp
 LOGNAME=_log.txt
 TRAINNAME=_train_err.txt
 TRAIN_SEM=_train_sem.txt
@@ -25,7 +25,7 @@ MODELNAME=_out.ser
 SEMEVAL_SCORER=~/data/cvsm_2013/semeval_task8/SemEval2010_task8_all_data/SemEval2010_task8_scorer-v1.2/semeval2010_task8_scorer-v1.2.pl
 
 ITERATIONS=100
-L2REG=0.000001
+L2REG=0.01
 
 mkdir -p $OUT_DIR
 mkdir -p $OUT_TEMP_DIR
@@ -49,7 +49,7 @@ do
 
     echo "Running $FILENAME..."
     # $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --batchSize 1 --iterations $ITERATIONS --l2Regularization $L2REG --initialVectors $VECTOR_IN --regularizationFrequency 0.1 --initialStepSize 0.1 > $LOG_OUT
-    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --lbfgsIterations $ITERATIONS --lbfgs --lbfgsL2Regularization $L2REG --initialVectors $VECTOR_IN > $LOG_OUT
+    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --lbfgsIterations $ITERATIONS --lbfgs --lbfgsL2Regularization $L2REG --initialVectors $VECTOR_IN --fixInitializedVectors > $LOG_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $TRAIN_IN > $TRAIN_ERR_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $VALIDATION_IN > $VALIDATION_ERR_OUT
 

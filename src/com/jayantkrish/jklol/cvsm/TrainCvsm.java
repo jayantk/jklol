@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmKlLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
+import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -64,7 +65,7 @@ public class TrainCvsm extends AbstractCli {
 
     CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
-        options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs));
+								options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs), options.has(fixInitializedVectors));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -86,7 +87,7 @@ public class TrainCvsm extends AbstractCli {
 
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
-      boolean useSquareLoss, boolean initializeTensorsToIdentity, boolean useLbfgs) {
+						  boolean useSquareLoss, boolean initializeTensorsToIdentity, boolean useLbfgs, boolean fixInitializedVectors) {
     
     CvsmLoss loss = null;
     if (useSquareLoss) {
@@ -101,24 +102,26 @@ public class TrainCvsm extends AbstractCli {
       family.initializeParametersToIdentity(initialParameters);
     }
 
-    CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) initialParameters;
-    List<String> names = cvsmStats.getNames().items();
-    for (int i = 0; i < names.size(); i++) {
-      String name = names.get(i);
-
-      if (initialParameterMap.containsKey(name)) {
-        TensorSpec spec = initialParameterMap.get(name);
-        SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
-        if (spec.hasValues()) {
-          TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
-          Tensor tensor = tensorStats.get();
-          Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
-              tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
-
-          tensorStats.increment(tensorStats, -1.0);
-          tensorStats.increment(increment, 1.0);
-        }
-      }
+    if (!fixInitializedVectors) {
+	CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) initialParameters;
+	List<String> names = cvsmStats.getNames().items();
+	for (int i = 0; i < names.size(); i++) {
+	    String name = names.get(i);
+	    
+	    if (initialParameterMap.containsKey(name)) {
+		TensorSpec spec = initialParameterMap.get(name);
+		SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
+		if (spec.hasValues()) {
+		    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
+		    Tensor tensor = tensorStats.get();
+		    Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
+						       tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
+		    
+		    tensorStats.increment(tensorStats, -1.0);
+		    tensorStats.increment(increment, 1.0);
+		}
+	    }
+	}
     }
 
     initialParameters.perturb(0.1);
@@ -153,7 +156,11 @@ public class TrainCvsm extends AbstractCli {
 
       LrtFamily family = null;
       if (spec.getRank() == -1 || sizes.length == 1) {
-        family = new TensorLrtFamily(vars, spec.hasValues() && fixInitializedValues);
+	  if (spec.hasValues() && fixInitializedValues) {
+	      family = new ConstantLrtFamily(vars, new TensorLowRankTensor(new DenseTensor(vars.getVariableNumsArray(), vars.getVariableSizes(), spec.getValues())));
+	  } else {
+	      family = new TensorLrtFamily(vars);
+	  }
       } else {
         family = new OpLrtFamily(vars, spec.getRank());
       }

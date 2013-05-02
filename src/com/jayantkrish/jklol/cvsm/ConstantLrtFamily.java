@@ -1,25 +1,30 @@
 package com.jayantkrish.jklol.cvsm;
 
+import java.util.Collections;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 
 /**
- * Returns full rank tensors defined over a set of variables.
+ * Returns a constant tensor.
  * 
  * @author jayantk
  */
-public class TensorLrtFamily implements LrtFamily {
+public class ConstantLrtFamily implements LrtFamily {
   private static final long serialVersionUID = 1L;
   
   private final VariableNumMap vars;
-  
-  public TensorLrtFamily(VariableNumMap vars) {
+  private final LowRankTensor tensor;
+
+    public ConstantLrtFamily(VariableNumMap vars, LowRankTensor tensor) {
     this.vars = Preconditions.checkNotNull(vars);
+    this.tensor = Preconditions.checkNotNull(tensor);
   }
   
   @Override
@@ -29,29 +34,27 @@ public class TensorLrtFamily implements LrtFamily {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    DenseTensorBuilder builder = new DenseTensorBuilder(vars.getVariableNumsArray(), 
-        vars.getVariableSizes());
-    return TensorSufficientStatistics.createDense(vars, builder);
+      return new ListSufficientStatistics(Collections.<String>emptyList(), Collections.<SufficientStatistics>emptyList());
   }
 
   @Override
   public LowRankTensor getModelFromParameters(SufficientStatistics parameters) {
-    return new TensorLowRankTensor(((TensorSufficientStatistics) parameters).get());
+      return tensor;
   }
   
   @Override
   public void increment(SufficientStatistics gradient, LowRankTensor value, 
       LowRankTensor increment, double multiplier) {
-      ((TensorSufficientStatistics) gradient).increment(increment.getTensor(), multiplier);
+      // No need to do anything.
   }
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters) {
-    return getParameterDescription(parameters, -1);
+      return "";
   }
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    return parameters.getDescription();
+    return "";
   }
 }

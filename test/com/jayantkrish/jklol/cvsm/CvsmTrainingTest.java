@@ -166,21 +166,21 @@ public class CvsmTrainingTest extends TestCase {
     List<LrtFamily> diagTensorDims = Lists.newArrayList();
     for (int i = 0; i < vectorNames.length; i++) {
       tensorNames.add(vectorNames[i]);
-      tensorDims.add(new TensorLrtFamily(vectorVars, false));
-      lrtTensorDims.add(new TensorLrtFamily(vectorVars, false));
-      diagTensorDims.add(new TensorLrtFamily(vectorVars, false));
+      tensorDims.add(new TensorLrtFamily(vectorVars));
+      lrtTensorDims.add(new TensorLrtFamily(vectorVars));
+      diagTensorDims.add(new TensorLrtFamily(vectorVars));
     }
 
     for (int i = 0; i < matrixNames.length; i++) {
       tensorNames.add(matrixNames[i]);
-      tensorDims.add(new TensorLrtFamily(matrixVars, false));
+      tensorDims.add(new TensorLrtFamily(matrixVars));
       lrtTensorDims.add(new OpLrtFamily(matrixVars, 2));
       diagTensorDims.add(new OpLrtFamily(matrixVars, 0));
     }
 
     for (int i = 0; i < tensor3Names.length; i++) {
       tensorNames.add(tensor3Names[i]);
-      tensorDims.add(new TensorLrtFamily(t3Vars, false));
+      tensorDims.add(new TensorLrtFamily(t3Vars));
       lrtTensorDims.add(new OpLrtFamily(t3Vars, 4));
       diagTensorDims.add(new OpLrtFamily(t3Vars, 0));
     }

@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cvsm.ccg.CcgLfReader.LogicalFormConversionError;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
+import com.jayantkrish.jklol.util.Pair;
 
 public class ConvertCncToCvsm extends AbstractCli {
 
@@ -195,6 +196,9 @@ public class ConvertCncToCvsm extends AbstractCli {
       return Lists.<Expression>newArrayList();
     }
 
+    Pair<Integer, Integer> parseSpan = reader.getExpressionSpan(spanningExpression);
+    System.out.println(example.getSentenceSpan(parseSpan.getLeft(), parseSpan.getRight()));
+
     List<Expression> subexpressions = null;
     if (generateSubexpressionExamples) {
       subexpressions = reader.findAtomicSubexpressions(spanningExpression);
@@ -240,24 +244,27 @@ public class ConvertCncToCvsm extends AbstractCli {
 
   public static class RelationExtractionExample {
     private final String sentence;
-    private final String sentenceWithoutEntities;
+    private final String[] words;
     private final String label;
 
     public RelationExtractionExample(String sentence, String label) {
       this.sentence = sentence.replaceAll("([^ ])(<e[0-9]>)", "$1 $2").replaceAll("(</e[0-9]>)([^ ])", "$1 $2");
-      this.sentenceWithoutEntities = sentence.replaceAll("(.)</?e[0-9]>", "$1 ").replaceAll("</?e[0-9]>", "");
+      String sentenceWithoutEntities = sentence.replaceAll("(.)</?e[0-9]>", "$1 ").replaceAll("</?e[0-9]>", "");
+      words = sentenceWithoutEntities.split("  *");
       this.label = label;
     }
 
     public String getSentence() {
       return sentence;
     }
+    
+    public Span getSentenceSpan(int spanStart, int spanEnd) {
+      return new Span(spanStart, spanEnd, Lists.newArrayList(Arrays.copyOfRange(words, spanStart, spanEnd)));
+    }
 
     public Span getE1Span() {
       int start = getStringWordIndex("<e1>");
       int end = getStringWordIndex("</e1>");
-
-      String[] words = sentenceWithoutEntities.split("  *");
 
       return new Span(start, end, Lists.newArrayList(Arrays.copyOfRange(words, start, end)));
     }
@@ -265,8 +272,6 @@ public class ConvertCncToCvsm extends AbstractCli {
     public Span getE2Span() {
       int start = getStringWordIndex("<e2>");
       int end = getStringWordIndex("</e2>");
-
-      String[] words = sentenceWithoutEntities.split("  *");
 
       return new Span(start, end, Lists.newArrayList(Arrays.copyOfRange(words, start, end)));
     }

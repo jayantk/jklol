@@ -33,7 +33,7 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> initialVectors;
-  
+
   private OptionSpec<Void> fixInitializedVectors;  
   private OptionSpec<Void> initializeTensorsToIdentity;
   private OptionSpec<Void> squareLoss;
@@ -49,7 +49,7 @@ public class TrainCvsm extends AbstractCli {
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     initialVectors = parser.accepts("initialVectors").withRequiredArg().ofType(String.class).required();
-  
+
     fixInitializedVectors = parser.accepts("fixInitializedVectors");
     initializeTensorsToIdentity = parser.accepts("initializeTensorsToIdentity");
     squareLoss = parser.accepts("squareLoss");
@@ -65,7 +65,7 @@ public class TrainCvsm extends AbstractCli {
 
     CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
-								options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs), options.has(fixInitializedVectors));
+        options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs), options.has(fixInitializedVectors));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -87,8 +87,8 @@ public class TrainCvsm extends AbstractCli {
 
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
-						  boolean useSquareLoss, boolean initializeTensorsToIdentity, boolean useLbfgs, boolean fixInitializedVectors) {
-    
+      boolean useSquareLoss, boolean initializeTensorsToIdentity, boolean useLbfgs, boolean fixInitializedVectors) {
+
     CvsmLoss loss = null;
     if (useSquareLoss) {
       loss = new CvsmSquareLoss();
@@ -103,25 +103,25 @@ public class TrainCvsm extends AbstractCli {
     }
 
     if (!fixInitializedVectors) {
-	CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) initialParameters;
-	List<String> names = cvsmStats.getNames().items();
-	for (int i = 0; i < names.size(); i++) {
-	    String name = names.get(i);
-	    
-	    if (initialParameterMap.containsKey(name)) {
-		TensorSpec spec = initialParameterMap.get(name);
-		SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
-		if (spec.hasValues()) {
-		    TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
-		    Tensor tensor = tensorStats.get();
-		    Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
-						       tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
-		    
-		    tensorStats.increment(tensorStats, -1.0);
-		    tensorStats.increment(increment, 1.0);
-		}
-	    }
-	}
+      CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) initialParameters;
+      List<String> names = cvsmStats.getNames().items();
+      for (int i = 0; i < names.size(); i++) {
+        String name = names.get(i);
+
+        if (initialParameterMap.containsKey(name)) {
+          TensorSpec spec = initialParameterMap.get(name);
+          SufficientStatistics curStats = cvsmStats.getSufficientStatistics(i);
+          if (spec.hasValues()) {
+            TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
+            Tensor tensor = tensorStats.get();
+            Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
+                tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
+
+            tensorStats.increment(tensorStats, -1.0);
+            tensorStats.increment(increment, 1.0);
+          }
+        }
+      }
     }
 
     initialParameters.perturb(0.1);
@@ -156,11 +156,11 @@ public class TrainCvsm extends AbstractCli {
 
       LrtFamily family = null;
       if (spec.getRank() == -1 || sizes.length == 1) {
-	  if (spec.hasValues() && fixInitializedValues) {
-	      family = new ConstantLrtFamily(vars, new TensorLowRankTensor(new DenseTensor(vars.getVariableNumsArray(), vars.getVariableSizes(), spec.getValues())));
-	  } else {
-	      family = new TensorLrtFamily(vars);
-	  }
+        if (spec.hasValues() && fixInitializedValues) {
+          family = new ConstantLrtFamily(vars, new TensorLowRankTensor(new DenseTensor(vars.getVariableNumsArray(), vars.getVariableSizes(), spec.getValues())));
+        } else {
+          family = new TensorLrtFamily(vars);
+        }
       } else {
         family = new OpLrtFamily(vars, spec.getRank());
       }

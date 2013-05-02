@@ -186,6 +186,8 @@ public class ConvertCncToCvsm extends AbstractCli {
       return Lists.<Expression>newArrayList();
     }
 
+    System.out.println(spanningExpression);
+
     try {
       reader.parse(spanningExpression, wordExpressions);
     } catch (LogicalFormConversionError error) {

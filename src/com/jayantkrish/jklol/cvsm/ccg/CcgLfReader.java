@@ -87,6 +87,12 @@ public class CcgLfReader {
     return currentSpan;
   }
 
+  public Pair<Integer, Integer> getExpressionSpan(Expression ccgExpression) {
+    List<Expression> spanningExpression = Lists.newArrayList();
+    spanningExpression.add(null);
+    return findSpanningExpressionHelper(ccgExpression, -1, -1, spanningExpression);
+  }
+
   private static SyntacticCategory getSyntacticCategory(Expression ccgExpression) {
     Preconditions.checkState(ccgExpression instanceof ApplicationExpression,
         "Illegal expression type: " + ccgExpression);

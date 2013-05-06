@@ -49,8 +49,9 @@ public class SemTypePattern implements CategoryPattern {
       if (target.isAtomic()) {
         return false; 
       } else {
-        return hasSameSemanticType(pattern.getArgument(), target.getArgument()) &&
-             hasSameSemanticType(pattern.getReturn(), target.getReturn());
+        return pattern.getDirection().equals(target.getDirection()) && 
+            hasSameSemanticType(pattern.getArgument(), target.getArgument()) &&
+            hasSameSemanticType(pattern.getReturn(), target.getReturn());
       }
     }
   }

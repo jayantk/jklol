@@ -118,7 +118,7 @@ public class SequenceModelTest extends TestCase {
 
     SufficientStatistics parameters = null;
     if (useLbfgs) {
-      Lbfgs trainer = new Lbfgs(50, 10, 0.1, new DefaultLogFunction(1, false));
+      RetryingLbfgs trainer = new RetryingLbfgs(50, 10, 0.1, new DefaultLogFunction(1, false));
       parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     } else {
       StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(

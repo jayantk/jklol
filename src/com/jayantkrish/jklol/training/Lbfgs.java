@@ -34,7 +34,7 @@ public class Lbfgs {
 
   private static final double WOLFE_CONDITION_C1 = 1e-4;
   private static final double WOLFE_CONDITION_C2 = 0.9;
-  
+
   private static final double GRADIENT_CONVERGENCE_THRESHOLD = 1e-9;
 
   public Lbfgs(int maxIterations, int numVectorsInApproximation,
@@ -46,6 +46,35 @@ public class Lbfgs {
     this.log = Preconditions.checkNotNull(log);
   }
 
+  public int getMaxIterations() {
+    return maxIterations;
+  }
+
+  public int getNumVectorsInApproximation() {
+    return numVectorsInApproximation;
+  }
+
+  public double getL2Regularization() {
+    return l2Regularization;
+  }
+
+  public LogFunction getLog() {
+    return log;
+  }
+
+  /**
+   * Optimizes the objective given by {@code oracle} starting from
+   * {@code initialParameters}. This method may mutate
+   * {@code initialParameters}.
+   * <p>
+   * Throws {@link LbfgsConvergenceError} if a suitable step size 
+   * cannot be found by backtracking line search.
+   * 
+   * @param oracle
+   * @param initialParameters
+   * @param trainingData
+   * @return
+   */
   public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
       SufficientStatistics initialParameters, Iterable<E> trainingData) {
 
@@ -63,7 +92,7 @@ public class Lbfgs {
       log.notifyIterationStart(i);
 
       if (gradientEvaluation == null) {
-        gradientEvaluation = evaluateGradient(currentParameters, dataList, 
+        gradientEvaluation = evaluateGradient(currentParameters, dataList,
             oracle, executor, log);
       }
       SufficientStatistics gradient = gradientEvaluation.getGradient();
@@ -76,7 +105,7 @@ public class Lbfgs {
         pointDelta.increment(previousParameters, -1.0);
         pointDeltas.add(pointDelta);
 
-        // Note that gradient and previousGradient are actually the 
+        // Note that gradient and previousGradient are actually the
         // *negative* gradient (i.e., a descent direction).
         SufficientStatistics gradientDelta = previousGradient.duplicate();
         gradientDelta.increment(gradient, -1.0);
@@ -97,7 +126,7 @@ public class Lbfgs {
         weights[hessianVectorCount - (j + 1)] = weight;
       }
       // The assumption here is that the initial Hessian estimate is
-      // the identity. Multiply direction by the Hessian estimate here 
+      // the identity. Multiply direction by the Hessian estimate here
       // to pick another value.
       for (int j = 0; j < hessianVectorCount; j++) {
         int index = i + j - hessianVectorCount;
@@ -113,7 +142,7 @@ public class Lbfgs {
       if (gradientL2Norm < GRADIENT_CONVERGENCE_THRESHOLD) {
         return currentParameters;
       }
-      
+
       log.logStatistic(i, "parameter l2 norm", previousParameters.getL2Norm());
       log.logStatistic(i, "gradient l2 norm", gradientL2Norm);
       log.logStatistic(i, "direction l2 norm", direction.getL2Norm());
@@ -126,33 +155,34 @@ public class Lbfgs {
       double currentObjectiveValue = gradientEvaluation.getObjectiveValue();
       double nextObjectiveValue, curInnerProd, nextInnerProd, cond1Rhs, cond2Rhs;
       SufficientStatistics nextParameters;
-      
+
       /*
-      System.out.println("current:");
-      System.out.println(currentParameters.getDescription());
-      
-      System.out.println("direction:");
-      System.out.println(direction.getDescription());
-      
-      System.out.println("gradient:");
-      System.out.println(gradient.getDescription());
-      */
-      
+       * System.out.println("current:");
+       * System.out.println(currentParameters.getDescription());
+       * 
+       * System.out.println("direction:");
+       * System.out.println(direction.getDescription());
+       * 
+       * System.out.println("gradient:");
+       * System.out.println(gradient.getDescription());
+       */
+
       do {
         stepSize = stepSize * LINE_SEARCH_CONSTANT;
         nextParameters = currentParameters.duplicate();
         nextParameters.increment(direction, -1.0 * stepSize);
         gradientEvaluation = evaluateGradient(nextParameters, dataList, oracle, executor, log);
-     
+
         // Check the Wolfe conditions to ensure sufficient descent.
         nextObjectiveValue = gradientEvaluation.getObjectiveValue();
         curInnerProd = gradient.innerProduct(direction);
         SufficientStatistics nextGradient = gradientEvaluation.getGradient();
         nextInnerProd = nextGradient.innerProduct(direction);
-        
+
         cond1Rhs = currentObjectiveValue - (WOLFE_CONDITION_C1 * stepSize * curInnerProd);
         cond2Rhs = -1.0 * WOLFE_CONDITION_C2 * curInnerProd;
-
+        
+        /*
         System.out.println("next:");
         System.out.println(nextParameters.getDescription());
         System.out.println("next gradient:");
@@ -167,16 +197,18 @@ public class Lbfgs {
 
         System.out.println("cond1: " + nextObjectiveValue + " > " + cond1Rhs);
         System.out.println("cond2: abs(" + nextInnerProd + ") < " + cond2Rhs);
+        */
 
       } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs) || Double.isNaN(nextObjectiveValue))
-          && stepSize > MIN_STEP_SIZE); //  || Math.abs(nextInnerProd) > cond2Rhs
+          && stepSize > MIN_STEP_SIZE); // || Math.abs(nextInnerProd)
+                                        // > cond2Rhs
       log.logStatistic(i, "step size", stepSize);
       log.stopTimer("compute_step_size");
 
       if (stepSize <= MIN_STEP_SIZE) {
-        return currentParameters;
+        throw new LbfgsConvergenceError("L-BFGS could not find a suitable step size.",
+            currentParameters, direction, stepSize, i);
       }
-      
       currentParameters = nextParameters;
 
       log.notifyIterationEnd(i);
@@ -184,39 +216,39 @@ public class Lbfgs {
     return currentParameters;
   }
 
-    private <M, E> GradientEvaluation evaluateGradient(SufficientStatistics parameters, 
-        List<E> dataList, GradientOracle<M, E> oracle, MapReduceExecutor executor, 
-        LogFunction log) {
-      // Create the factor graph (or whatever else) from the parameter
-      // vector.
-      log.startTimer("factor_graph_from_parameters");
-      M nextModel = oracle.instantiateModel(parameters);
-      log.stopTimer("factor_graph_from_parameters");
+  private <M, E> GradientEvaluation evaluateGradient(SufficientStatistics parameters,
+      List<E> dataList, GradientOracle<M, E> oracle, MapReduceExecutor executor,
+      LogFunction log) {
+    // Create the factor graph (or whatever else) from the parameter
+    // vector.
+    log.startTimer("factor_graph_from_parameters");
+    M nextModel = oracle.instantiateModel(parameters);
+    log.stopTimer("factor_graph_from_parameters");
 
-      // In parallel, compute the gradient from the entire training
-      // set. Note that this computation does not include the added
-      // regularization term.
-      log.startTimer("compute_gradient_(serial)");
-      GradientEvaluation evaluation = executor.mapReduce(dataList,
-            new GradientMapper<M, E>(nextModel, oracle, log), new GradientReducer<M, E>(oracle, log));
-      log.stopTimer("compute_gradient_(serial)");
-      
-      // Normalize the objective term, then apply regularization
-      evaluation.getGradient().multiply(1.0 / dataList.size());
-      evaluation.setObjectiveValue(evaluation.getObjectiveValue() / dataList.size());
-      
-      double oldNorm = evaluation.getGradient().getL2Norm();
-      if (Double.isNaN(oldNorm)) {
-	  System.out.println(evaluation.getGradient().getDescription());
-      }
-      
-      if (l2Regularization > 0.0) {
-        evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);
-        double parameterSumSquares = parameters.getL2Norm();
-        parameterSumSquares *= parameterSumSquares;
-        evaluation.setObjectiveValue(evaluation.getObjectiveValue() - (l2Regularization * parameterSumSquares / 2.0));
-      }
+    // In parallel, compute the gradient from the entire training
+    // set. Note that this computation does not include the added
+    // regularization term.
+    log.startTimer("compute_gradient_(serial)");
+    GradientEvaluation evaluation = executor.mapReduce(dataList,
+        new GradientMapper<M, E>(nextModel, oracle, log), new GradientReducer<M, E>(oracle, log));
+    log.stopTimer("compute_gradient_(serial)");
 
-      return evaluation;
+    // Normalize the objective term, then apply regularization
+    evaluation.getGradient().multiply(1.0 / dataList.size());
+    evaluation.setObjectiveValue(evaluation.getObjectiveValue() / dataList.size());
+
+    double oldNorm = evaluation.getGradient().getL2Norm();
+    if (Double.isNaN(oldNorm)) {
+      System.out.println(evaluation.getGradient().getDescription());
     }
+
+    if (l2Regularization > 0.0) {
+      evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);
+      double parameterSumSquares = parameters.getL2Norm();
+      parameterSumSquares *= parameterSumSquares;
+      evaluation.setObjectiveValue(evaluation.getObjectiveValue() - (l2Regularization * parameterSumSquares / 2.0));
+    }
+
+    return evaluation;
+  }
 }

@@ -23,6 +23,7 @@ import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.RetryingLbfgs;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -128,7 +129,9 @@ public class TrainCvsm extends AbstractCli {
 
     if (useLbfgs) {
       Lbfgs lbfgs = createLbfgs();
-      return lbfgs.train(oracle, initialParameters, examples);
+      RetryingLbfgs retryingLbfgs = new RetryingLbfgs(lbfgs.getMaxIterations(), lbfgs.getNumVectorsInApproximation(),
+          lbfgs.getL2Regularization(), lbfgs.getLog());
+      return retryingLbfgs.train(oracle, initialParameters, examples);
     } else {
       StochasticGradientTrainer trainer = createStochasticGradientTrainer(examples.size());
       return trainer.train(oracle, initialParameters, examples);

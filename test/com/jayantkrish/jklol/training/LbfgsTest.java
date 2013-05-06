@@ -94,7 +94,12 @@ public class LbfgsTest extends TestCase {
 	      .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
 	  LoglikelihoodOracle oracle = new LoglikelihoodOracle(logLinearModel, new JunctionTree());
-	  SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingData);
+	  SufficientStatistics parameters = null;
+	  try {
+	    parameters = trainer.train(oracle, oracle.initializeGradient(), trainingData);
+	  } catch (LbfgsConvergenceError error) {
+	    parameters = error.getFinalParameters();
+	  }
 
 	  List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 	  for (int i = 0; i < parameterList.size(); i++) {

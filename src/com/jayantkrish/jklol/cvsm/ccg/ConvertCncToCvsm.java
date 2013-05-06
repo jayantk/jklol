@@ -198,11 +198,14 @@ public class ConvertCncToCvsm extends AbstractCli {
 
     Pair<Integer, Integer> parseSpan = reader.getExpressionSpan(spanningExpression);
     List<String> wordsInSpan = getWordsInSpan(parseSpan.getLeft(), parseSpan.getRight(), wordExpressions);
+    
+    spanningExpression = reader.pruneModifiers(spanningExpression, Arrays.asList(e1Span, e2Span));
+    List<String> wordsInParse = reader.getWordsInCcgParse(spanningExpression, wordExpressions);
     if (parseSpan.getRight() - parseSpan.getLeft() > maxSpanLength) {
-	System.err.println("Span too big: " + wordsInSpan);
+      System.err.println("Span too big: " + wordsInSpan);
       return Lists.<Expression>newArrayList();
     }
-    System.out.println(wordsInSpan);
+    System.out.println(wordsInSpan + " " + wordsInParse);
 
     List<Expression> subexpressions = null;
     if (generateSubexpressionExamples) {
@@ -216,10 +219,10 @@ public class ConvertCncToCvsm extends AbstractCli {
       try {
         Expression parsedExpression = reader.parse(subexpression, wordExpressions);
         parsedExpression = new ApplicationExpression(new ConstantExpression("op:softmax"),
-						     Arrays.asList(new ApplicationExpression(new ConstantExpression("op:add"), 
-									       Arrays.asList(new ApplicationExpression(new ConstantExpression("op:matvecmul"),
-														       Arrays.asList(new ConstantExpression("weights:softmax"), parsedExpression)),
-											     new ConstantExpression("weights:softmax_bias")))));
+            Arrays.asList(new ApplicationExpression(new ConstantExpression("op:add"), 
+                Arrays.asList(new ApplicationExpression(new ConstantExpression("op:matvecmul"),
+                    Arrays.asList(new ConstantExpression("weights:softmax"), parsedExpression)),
+                    new ConstantExpression("weights:softmax_bias")))));
 
         exampleExpressions.add(parsedExpression.simplify());
       } catch (LogicalFormConversionError error) {
@@ -230,14 +233,14 @@ public class ConvertCncToCvsm extends AbstractCli {
     return exampleExpressions;
   }
 
-    private List<String> getWordsInSpan(int start, int end, List<Expression> wordExpressions) {
-	List<String> words = Lists.newArrayList();
-	for (int i = start; i < end; i++) {
-	    ApplicationExpression app = (ApplicationExpression) wordExpressions.get(i);
-	    words.add(((ConstantExpression) app.getArguments().get(2)).getName().replaceAll("^\"(.*)\"", "$1"));
-	}
-	return words;
+  private List<String> getWordsInSpan(int start, int end, List<Expression> wordExpressions) {
+    List<String> words = Lists.newArrayList();
+    for (int i = start; i < end; i++) {
+      ApplicationExpression app = (ApplicationExpression) wordExpressions.get(i);
+      words.add(((ConstantExpression) app.getArguments().get(2)).getName().replaceAll("^\"(.*)\"", "$1"));
     }
+    return words;
+  }
 
   private Span mapSpanToTokenizedSpan(Span span, List<Expression> wordExpressions) {
     String firstWord = span.getWords().get(0);
@@ -271,7 +274,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     public String getSentence() {
       return sentence;
     }
-    
+
     public Span getSentenceSpan(int spanStart, int spanEnd) {
       return new Span(spanStart, spanEnd, Lists.newArrayList(Arrays.copyOfRange(words, spanStart, spanEnd)));
     }

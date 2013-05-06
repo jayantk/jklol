@@ -13,6 +13,7 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.cvsm.ccg.ConvertCncToCvsm.Span;
 import com.jayantkrish.jklol.util.Pair;
 
 public class CcgLfReader {
@@ -91,6 +92,83 @@ public class CcgLfReader {
     List<Expression> spanningExpression = Lists.newArrayList();
     spanningExpression.add(null);
     return findSpanningExpressionHelper(ccgExpression, -1, -1, spanningExpression);
+  }
+
+  public Expression pruneModifiers(Expression ccgExpression, List<Span> mentionSpans) {
+    ApplicationExpression app = (ApplicationExpression) ccgExpression;
+    String name = ((ConstantExpression) app.getFunction()).getName();
+    List<Expression> arguments = app.getArguments();
+    int lastArg = arguments.size() - 1;
+    if (name.equals("lf")) {
+      return ccgExpression;
+    } else if (oneArgumentFunctions.contains(name)) {
+      List<Expression> newArguments = Lists.newArrayList(arguments);
+      newArguments.set(lastArg, pruneModifiers(arguments.get(lastArg), mentionSpans));
+      return new ApplicationExpression(app.getFunction(), newArguments);
+    } else if (name.equals("fa") || name.equals("ba")) {
+      Expression left = arguments.get(lastArg - 1);
+      Expression right = arguments.get(lastArg);
+      
+      SyntacticCategory syntax = null;
+      Expression toSimplify = null;
+      Pair<Integer, Integer> expressionSpan = null;
+      if (name.equals("fa")) {
+        syntax = getSyntacticCategory(left);
+        expressionSpan = getExpressionSpan(left);
+        toSimplify = right;
+      } else {
+        syntax = getSyntacticCategory(right);
+        expressionSpan = getExpressionSpan(right);
+        toSimplify = left;
+      }
+      
+      if (!syntax.isAtomic() && syntax.getArgument().isUnifiableWith(syntax.getReturn())) {
+        boolean noMentionInSpan = true;
+        for (Span mentionSpan : mentionSpans) {
+          if (!(mentionSpan.getEnd() <= expressionSpan.getLeft() || mentionSpan.getStart() >= expressionSpan.getRight())) {
+            noMentionInSpan = false;
+          }
+        }
+        if (noMentionInSpan) {
+          return pruneModifiers(toSimplify, mentionSpans);
+        }
+      }
+    } 
+      
+    if (twoArgumentFunctions.contains(name)) {
+      Expression left = arguments.get(lastArg - 1);
+      Expression right = arguments.get(lastArg);
+
+      List<Expression> newArguments = Lists.newArrayList(arguments);
+      newArguments.set(lastArg - 1, pruneModifiers(left, mentionSpans));
+      newArguments.set(lastArg, pruneModifiers(right, mentionSpans));
+      return new ApplicationExpression(app.getFunction(), newArguments);
+    } else {
+      throw new IllegalArgumentException("Unknown function type: " + name);
+    }
+  }
+  
+  public List<String> getWordsInCcgParse(Expression ccgParse, List<Expression> wordExpressions) {
+    List<String> words = Lists.newArrayList();
+    getWordsInCcgParseHelper(ccgParse, wordExpressions, words);
+    return words;
+  }
+  
+  public void getWordsInCcgParseHelper(Expression ccgExpression, List<Expression> wordExpressions, List<String> words) {
+    ApplicationExpression app = (ApplicationExpression) ccgExpression;
+    String name = ((ConstantExpression) app.getFunction()).getName();
+    List<Expression> arguments = app.getArguments();
+    int lastArg = arguments.size() - 1;
+    if (name.equals("lf")) {
+      int wordInd = Integer.parseInt(((ConstantExpression) arguments.get(1)).getName()) - 1;
+      ApplicationExpression wordExpression = (ApplicationExpression) wordExpressions.get(wordInd);
+      words.add(((ConstantExpression) wordExpression.getArguments().get(2)).getName().replaceAll("^\"(.*)\"", "$1"));
+    } else if (oneArgumentFunctions.contains(name)) {
+      getWordsInCcgParseHelper(arguments.get(lastArg), wordExpressions, words);
+    } else if (twoArgumentFunctions.contains(name)) {
+      getWordsInCcgParseHelper(arguments.get(lastArg - 1), wordExpressions, words);
+      getWordsInCcgParseHelper(arguments.get(lastArg), wordExpressions, words);
+    }
   }
 
   private static SyntacticCategory getSyntacticCategory(Expression ccgExpression) {

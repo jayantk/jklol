@@ -124,7 +124,7 @@ public class TrainCvsm extends AbstractCli {
       }
     }
 
-    initialParameters.perturb(0.1);
+    initialParameters.perturb(0.0001);
 
     if (useLbfgs) {
       Lbfgs lbfgs = createLbfgs();

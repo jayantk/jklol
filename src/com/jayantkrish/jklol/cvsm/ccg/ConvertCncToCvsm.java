@@ -30,6 +30,7 @@ public class ConvertCncToCvsm extends AbstractCli {
   private OptionSpec<String> mentions;
   private OptionSpec<String> relationDictionary;
   private OptionSpec<String> lfTemplates;
+  private OptionSpec<Integer> maxSpanLength;
 
   private OptionSpec<String> trainingOut;
   private OptionSpec<String> validationOut;
@@ -50,6 +51,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     mentions = parser.accepts("mentions").withRequiredArg().ofType(String.class).required();
     relationDictionary = parser.accepts("relationDictionary").withRequiredArg().ofType(String.class).required();
     lfTemplates = parser.accepts("lfTemplates").withRequiredArg().ofType(String.class).required();
+    maxSpanLength = parser.accepts("maxSpanLength").withRequiredArg().ofType(Integer.class).defaultsTo(Integer.MAX_VALUE - 1);
 
     trainingOut = parser.accepts("trainingOut").withRequiredArg().ofType(String.class).required();
     validationOut = parser.accepts("validationOut").withRequiredArg().ofType(String.class).defaultsTo("");
@@ -88,7 +90,7 @@ public class ConvertCncToCvsm extends AbstractCli {
           }
           RelationExtractionExample sentence = examples.get(parseNum - 1);
           expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
-              options.has(generateSubexpressionExamples)));
+					    options.has(generateSubexpressionExamples), options.valueOf(maxSpanLength)));
         }
         ccgExpression = exp.parseSingleExpression(line);
         wordExpressions = Lists.newArrayList();
@@ -104,7 +106,7 @@ public class ConvertCncToCvsm extends AbstractCli {
       }
       RelationExtractionExample sentence = examples.get(parseNum - 1);
       expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
-          options.has(generateSubexpressionExamples)));
+					options.has(generateSubexpressionExamples), options.valueOf(maxSpanLength)));
     }
 
     System.err.println("expressions: " + expressions.size() + " examples: " + examples.size());
@@ -160,7 +162,7 @@ public class ConvertCncToCvsm extends AbstractCli {
   }
 
   private List<Expression> convertExpression(RelationExtractionExample example, Expression ccgExpression, 
-      List<Expression> initialWordExpressions, boolean generateSubexpressionExamples) {
+					     List<Expression> initialWordExpressions, boolean generateSubexpressionExamples, int maxSpanLength) {
     int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
     ccgExpression = ((ApplicationExpression) ccgExpression).getArguments().get(1);
 
@@ -187,8 +189,6 @@ public class ConvertCncToCvsm extends AbstractCli {
       return Lists.<Expression>newArrayList();
     }
 
-    System.out.println(spanningExpression);
-
     try {
       reader.parse(spanningExpression, wordExpressions);
     } catch (LogicalFormConversionError error) {
@@ -197,7 +197,12 @@ public class ConvertCncToCvsm extends AbstractCli {
     }
 
     Pair<Integer, Integer> parseSpan = reader.getExpressionSpan(spanningExpression);
-    System.out.println(example.getSentenceSpan(parseSpan.getLeft(), parseSpan.getRight()));
+    List<String> wordsInSpan = getWordsInSpan(parseSpan.getLeft(), parseSpan.getRight(), wordExpressions);
+    if (parseSpan.getRight() - parseSpan.getLeft() > maxSpanLength) {
+	System.err.println("Span too big: " + wordsInSpan);
+      return Lists.<Expression>newArrayList();
+    }
+    System.out.println(wordsInSpan);
 
     List<Expression> subexpressions = null;
     if (generateSubexpressionExamples) {
@@ -224,6 +229,15 @@ public class ConvertCncToCvsm extends AbstractCli {
 
     return exampleExpressions;
   }
+
+    private List<String> getWordsInSpan(int start, int end, List<Expression> wordExpressions) {
+	List<String> words = Lists.newArrayList();
+	for (int i = start; i < end; i++) {
+	    ApplicationExpression app = (ApplicationExpression) wordExpressions.get(i);
+	    words.add(((ConstantExpression) app.getArguments().get(2)).getName().replaceAll("^\"(.*)\"", "$1"));
+	}
+	return words;
+    }
 
   private Span mapSpanToTokenizedSpan(Span span, List<Expression> wordExpressions) {
     String firstWord = span.getWords().get(0);

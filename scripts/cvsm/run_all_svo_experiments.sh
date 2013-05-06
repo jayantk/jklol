@@ -12,8 +12,8 @@ VECTOR_SUFF=_vector.txt
 JKLOL_RUN=./scripts/run.sh
 
 RUN_ID=$1
-OUT_DIR=$BASE_DIR/output/svo2/subexpressions_sgd/$RUN_ID/
-OUT_TEMP_DIR=$BASE_DIR/output/svo2/subexpressions_sgd/$RUN_ID/temp
+OUT_DIR=$BASE_DIR/output/svo3/no_subexpressions_optfix/$RUN_ID/
+OUT_TEMP_DIR=$BASE_DIR/output/svo3/no_subexpressions_optfix/$RUN_ID/temp
 LOGNAME=_log.txt
 TRAINNAME=_train_err.txt
 TRAIN_SEM=_train_sem.txt
@@ -48,8 +48,8 @@ do
     MODEL_OUT=$OUT_DIR/$FILENAME$MODELNAME
 
     echo "Running $FILENAME..."
-    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --batchSize 1 --iterations $ITERATIONS --l2Regularization $L2REG --initialVectors $VECTOR_IN --regularizationFrequency 0.1 --initialStepSize 0.1 $@ > $LOG_OUT
-    # $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --lbfgsIterations $ITERATIONS --lbfgs --lbfgsL2Regularization $L2REG --initialVectors $VECTOR_IN $@ > $LOG_OUT
+    # $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --batchSize 1 --iterations $ITERATIONS --l2Regularization $L2REG --initialVectors $VECTOR_IN --regularizationFrequency 0.1 --initialStepSize 0.1 $@ > $LOG_OUT
+    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --lbfgsIterations $ITERATIONS --lbfgs --lbfgsL2Regularization $L2REG --initialVectors $VECTOR_IN $@ > $LOG_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $TRAIN_IN > $TRAIN_ERR_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $VALIDATION_IN > $VALIDATION_ERR_OUT
 

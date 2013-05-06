@@ -37,8 +37,13 @@ public class RetryingLbfgs {
         completedIterations = maxIterations;
       } catch (LbfgsConvergenceError error) {
         log.logMessage("L-BFGS Convergence Failed. Restarting L-BFGS.");
-        completedIterations += error.getFinalIteration() + 1;
         parameters = error.getFinalParameters();
+	if (error.getFinalIteration() == 0) {
+	    // If the first iteration fails, retrying it isn't going to help.
+	    completedIterations = maxIterations;
+	} else {
+	    completedIterations += error.getFinalIteration() + 1;
+	}
       }
     }
     return parameters;

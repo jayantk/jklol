@@ -35,7 +35,7 @@ public class Lbfgs {
   private static final double WOLFE_CONDITION_C1 = 1e-4;
   private static final double WOLFE_CONDITION_C2 = 0.9;
 
-  private static final double GRADIENT_CONVERGENCE_THRESHOLD = 1e-9;
+  private static final double GRADIENT_CONVERGENCE_THRESHOLD = 1e-6;
 
   public Lbfgs(int maxIterations, int numVectorsInApproximation,
       double l2Regularization, LogFunction log) {

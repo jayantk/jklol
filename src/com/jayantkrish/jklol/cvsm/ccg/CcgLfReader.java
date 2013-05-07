@@ -108,7 +108,7 @@ public class CcgLfReader {
     } else if (name.equals("fa") || name.equals("ba")) {
       Expression left = arguments.get(lastArg - 1);
       Expression right = arguments.get(lastArg);
-      
+
       SyntacticCategory syntax = null;
       Expression toSimplify = null;
       Pair<Integer, Integer> expressionSpan = null;
@@ -121,9 +121,9 @@ public class CcgLfReader {
         expressionSpan = getExpressionSpan(right);
         toSimplify = left;
       }
-      
+
       if (!syntax.isAtomic() && (syntax.getArgument().isUnifiableWith(syntax.getReturn()) ||
-				 syntax.isUnifiableWith(SyntacticCategory.parseFrom("NP[1]/N")))) {
+          syntax.isUnifiableWith(SyntacticCategory.parseFrom("NP[1]/N")))) {
         boolean noMentionInSpan = true;
         for (Span mentionSpan : mentionSpans) {
           if (!(mentionSpan.getEnd() <= expressionSpan.getLeft() || mentionSpan.getStart() >= expressionSpan.getRight())) {
@@ -135,11 +135,11 @@ public class CcgLfReader {
         }
       }
     } else if (name.equals("lp")) {
-	return pruneModifiers(arguments.get(lastArg), mentionSpans);
+      return pruneModifiers(arguments.get(lastArg), mentionSpans);
     } else if (name.equals("rp")) {
-	return pruneModifiers(arguments.get(lastArg - 1), mentionSpans);
+      return pruneModifiers(arguments.get(lastArg - 1), mentionSpans);
     }
-      
+
     if (twoArgumentFunctions.contains(name)) {
       Expression left = arguments.get(lastArg - 1);
       Expression right = arguments.get(lastArg);
@@ -152,13 +152,13 @@ public class CcgLfReader {
       throw new IllegalArgumentException("Unknown function type: " + name);
     }
   }
-  
+
   public List<String> getWordsInCcgParse(Expression ccgParse, List<Expression> wordExpressions) {
     List<String> words = Lists.newArrayList();
     getWordsInCcgParseHelper(ccgParse, wordExpressions, words);
     return words;
   }
-  
+
   public void getWordsInCcgParseHelper(Expression ccgExpression, List<Expression> wordExpressions, List<String> words) {
     ApplicationExpression app = (ApplicationExpression) ccgExpression;
     String name = ((ConstantExpression) app.getFunction()).getName();
@@ -197,13 +197,13 @@ public class CcgLfReader {
     syntaxString = syntaxString.replaceAll("^\"(.*)\"$", "$1");
     return SyntacticCategory.parseFrom(syntaxString);
   }
-  
+
   public List<Expression> findAtomicSubexpressions(Expression ccgExpression) {
     List<Expression> subexpressions = Lists.newArrayList();
     findAtomicSubexpressionsHelper(ccgExpression, subexpressions);
     return subexpressions;
   }
-  
+
   private void findAtomicSubexpressionsHelper(Expression ccgExpression, List<Expression> accumulator) {
     SyntacticCategory syntax = getSyntacticCategory(ccgExpression);
     if (syntax.isAtomic()) {

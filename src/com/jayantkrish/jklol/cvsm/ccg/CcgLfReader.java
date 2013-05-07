@@ -122,7 +122,8 @@ public class CcgLfReader {
         toSimplify = left;
       }
       
-      if (!syntax.isAtomic() && syntax.getArgument().isUnifiableWith(syntax.getReturn())) {
+      if (!syntax.isAtomic() && (syntax.getArgument().isUnifiableWith(syntax.getReturn()) ||
+				 syntax.isUnifiableWith(SyntacticCategory.parseFrom("NP[1]/N")))) {
         boolean noMentionInSpan = true;
         for (Span mentionSpan : mentionSpans) {
           if (!(mentionSpan.getEnd() <= expressionSpan.getLeft() || mentionSpan.getStart() >= expressionSpan.getRight())) {
@@ -133,7 +134,11 @@ public class CcgLfReader {
           return pruneModifiers(toSimplify, mentionSpans);
         }
       }
-    } 
+    } else if (name.equals("lp")) {
+	return pruneModifiers(arguments.get(lastArg), mentionSpans);
+    } else if (name.equals("rp")) {
+	return pruneModifiers(arguments.get(lastArg - 1), mentionSpans);
+    }
       
     if (twoArgumentFunctions.contains(name)) {
       Expression left = arguments.get(lastArg - 1);

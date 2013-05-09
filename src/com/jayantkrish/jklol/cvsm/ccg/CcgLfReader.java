@@ -22,30 +22,36 @@ import com.jayantkrish.jklol.util.Pair;
 public class CcgLfReader {
 
   private final List<CategoryPattern> patterns;
+  private final List<TypeChangePattern> typeChangePatterns;
   private final Expression conjProcedure;
 
   private static final Set<String> twoArgumentFunctions = Sets.newHashSet("fa", "ba", "rp", "lp", "bc", "fc", "gbx", "bx", "conj", "funny", "ltc", "rtc");
   private static final Set<String> oneArgumentFunctions = Sets.newHashSet("lex", "tr");
 
-  public CcgLfReader(List<CategoryPattern> patterns, Expression conjProcedure) {
+  public CcgLfReader(List<CategoryPattern> patterns,
+      List<TypeChangePattern> typeChangePatterns, Expression conjProcedure) {
     this.patterns = ImmutableList.copyOf(patterns);
+    this.typeChangePatterns = ImmutableList.copyOf(typeChangePatterns);
     this.conjProcedure = conjProcedure;
   }
 
   public static CcgLfReader parseFrom(Iterable<String> patternStrings) {
     List<CategoryPattern> patterns = Lists.newArrayList();
+    List<TypeChangePattern> typeChangePatterns = Lists.newArrayList();
     Expression conjProcedure = null;
     for (String line : patternStrings) {
       if (line.startsWith("\"conj\"")) {
         Preconditions.checkState(conjProcedure == null);
         String[] parts = CsvParser.noEscapeParser().parseLine(line);
         conjProcedure = (new ExpressionParser()).parseSingleExpression(parts[1]);
+      } if (line.startsWith("\"lex\"")) {
+        typeChangePatterns.add(TypeChangePattern.parseFrom(line));
       } else {
         patterns.add(SemTypePattern.parseFrom(line));
       }
     }
 
-    return new CcgLfReader(patterns, conjProcedure);
+    return new CcgLfReader(patterns, typeChangePatterns, conjProcedure);
   }
 
   /**
@@ -285,10 +291,17 @@ public class CcgLfReader {
       // same semantic type specification are supported.
       SyntacticCategory origCategory = SyntacticCategory.parseFrom(((ConstantExpression) arguments.get(0)).getName().replaceAll("\"", ""));
       SyntacticCategory newCategory = SyntacticCategory.parseFrom(((ConstantExpression) arguments.get(1)).getName().replaceAll("\"", ""));
-      if (!SemTypePattern.hasSameSemanticType(origCategory, newCategory)) {
-        throw new LogicalFormConversionError("Used type changing rule: " + origCategory + " to " + newCategory);
+      Expression origExpression = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      if (SemTypePattern.hasSameSemanticType(origCategory, newCategory, false)) {
+        return origExpression;
+      } else {
+        for (TypeChangePattern pattern : typeChangePatterns) {
+          if (pattern.matches(origCategory, newCategory)) {
+            return new ApplicationExpression(pattern.getLogicalForm(), Arrays.asList(origExpression));
+          }
+        }
       }
-      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      throw new LogicalFormConversionError("Used type changing rule: " + origCategory + " to " + newCategory);
     } else if (name.equals("fa")) {
       Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
       Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
@@ -322,14 +335,14 @@ public class CcgLfReader {
       int depth = getCompositionDepth(function, argument);
       return buildCompositionExpression(left, right, depth);
     } else if (name.equals("conj") && conjProcedure != null) {
-	Expression nonConjArgument = recursivelyTransformCcgParse(arguments.get(4), wordExpressions, words).simplify();
+      Expression nonConjArgument = recursivelyTransformCcgParse(arguments.get(4), wordExpressions, words).simplify();
 
-	SyntacticCategory mySyntax = getSyntacticCategory(ccgExpression);
-	SyntacticCategory childSyntax = getSyntacticCategory(arguments.get(4));
-	if (mySyntax.isUnifiableWith(childSyntax)) {
-	    // Sometimes the conj category just absorbs punctuation...
-	    return nonConjArgument;
-	}
+      SyntacticCategory mySyntax = getSyntacticCategory(ccgExpression);
+      SyntacticCategory childSyntax = getSyntacticCategory(arguments.get(4));
+      if (mySyntax.isUnifiableWith(childSyntax)) {
+        // Sometimes the conj category just absorbs punctuation...
+        return nonConjArgument;
+      }
 
       // Expression conjArgument = recursivelyTransformCcgParse(arguments.get(3), wordExpressions, words);
 
@@ -345,7 +358,7 @@ public class CcgLfReader {
       }
       Expression result = conjProcedure.substitute(new ConstantExpression("t1:<right>"), appliedArgument);
       result = result.substitute(new ConstantExpression("t1:<left>"), remainingArgument);
-      
+
       if (newVars.size() > 0) {
         result = new LambdaExpression(newVars, result);
       }
@@ -353,14 +366,14 @@ public class CcgLfReader {
 
       return result;
     } else if (name.equals("funny")) {
-	// funny is the type changing rule that combines a conj with a noun 
-	// to produce a noun.
-	return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      // funny is the type changing rule that combines a conj with a noun 
+      // to produce a noun.
+      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
     }
 
     throw new LogicalFormConversionError("Unknown function type: " + name);
   }
-  
+
   private Expression buildCompositionExpression(Expression functionLogicalForm,
       Expression argumentLogicalForm, int numArgsToKeep) {
     // Composition.
@@ -385,7 +398,7 @@ public class CcgLfReader {
     // System.out.println("result: " + result);
     return result;
   }
-  
+
   private int getCompositionDepth(SyntacticCategory function, SyntacticCategory argument) {
     SyntacticCategory functionArgument = function.getArgument();
     // Depth is the number of arguments of argument which must be passed in before

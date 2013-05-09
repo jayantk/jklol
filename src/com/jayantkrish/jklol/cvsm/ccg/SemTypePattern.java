@@ -35,10 +35,11 @@ public class SemTypePattern implements CategoryPattern {
   
   @Override
   public boolean matches(List<String> words, SyntacticCategory category) {
-    return hasSameSemanticType(patternCategory, category);
+    return hasSameSemanticType(patternCategory, category, true);
   }
 
-  public static boolean hasSameSemanticType(SyntacticCategory pattern, SyntacticCategory target) {
+  public static boolean hasSameSemanticType(SyntacticCategory pattern,
+      SyntacticCategory target, boolean useDirectionality) {
     if (pattern.isAtomic()) {
       if (target.isAtomic()) {
         return true;
@@ -49,9 +50,9 @@ public class SemTypePattern implements CategoryPattern {
       if (target.isAtomic()) {
         return false; 
       } else {
-        return pattern.getDirection().equals(target.getDirection()) && 
-            hasSameSemanticType(pattern.getArgument(), target.getArgument()) &&
-            hasSameSemanticType(pattern.getReturn(), target.getReturn());
+        return (!useDirectionality || pattern.getDirection().equals(target.getDirection())) && 
+            hasSameSemanticType(pattern.getArgument(), target.getArgument(), useDirectionality) &&
+            hasSameSemanticType(pattern.getReturn(), target.getReturn(), useDirectionality);
       }
     }
   }

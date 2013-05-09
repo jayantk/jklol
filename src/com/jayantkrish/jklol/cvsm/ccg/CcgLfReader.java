@@ -13,28 +13,39 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.cvsm.ccg.ConvertCncToCvsm.Span;
+import com.jayantkrish.jklol.util.CsvParser;
 import com.jayantkrish.jklol.util.Pair;
 
 public class CcgLfReader {
 
   private final List<CategoryPattern> patterns;
+  private final Expression conjProcedure;
 
   private static final Set<String> twoArgumentFunctions = Sets.newHashSet("fa", "ba", "rp", "lp", "bc", "fc", "gbx", "bx", "conj", "funny", "ltc", "rtc");
   private static final Set<String> oneArgumentFunctions = Sets.newHashSet("lex", "tr");
 
-  public CcgLfReader(List<CategoryPattern> patterns) {
+  public CcgLfReader(List<CategoryPattern> patterns, Expression conjProcedure) {
     this.patterns = ImmutableList.copyOf(patterns);
+    this.conjProcedure = conjProcedure;
   }
 
   public static CcgLfReader parseFrom(Iterable<String> patternStrings) {
     List<CategoryPattern> patterns = Lists.newArrayList();
+    Expression conjProcedure = null;
     for (String line : patternStrings) {
-      patterns.add(SemTypePattern.parseFrom(line));
+      if (line.startsWith("\"conj\"")) {
+        Preconditions.checkState(conjProcedure == null);
+        String[] parts = CsvParser.noEscapeParser().parseLine(line);
+        conjProcedure = (new ExpressionParser()).parseSingleExpression(parts[1]);
+      } else {
+        patterns.add(SemTypePattern.parseFrom(line));
+      }
     }
 
-    return new CcgLfReader(patterns);
+    return new CcgLfReader(patterns, conjProcedure);
   }
 
   /**
@@ -310,6 +321,29 @@ public class CcgLfReader {
 
       int depth = getCompositionDepth(function, argument);
       return buildCompositionExpression(left, right, depth);
+    } else if (name.equals("conj") && conjProcedure != null) {
+      Expression nonConjArgument = recursivelyTransformCcgParse(arguments.get(4), wordExpressions, words);
+      // Expression conjArgument = recursivelyTransformCcgParse(arguments.get(3), wordExpressions, words);
+      
+      List<ConstantExpression> newVars = Lists.newArrayList();
+      ConstantExpression remainingArgumentName = ConstantExpression.generateUniqueVariable();
+      Expression remainingArgument = remainingArgumentName;
+      Expression appliedArgument = nonConjArgument;
+      if (nonConjArgument instanceof LambdaExpression) {
+        LambdaExpression nonConjLambda = (LambdaExpression) nonConjArgument.simplify();
+        newVars = ConstantExpression.generateUniqueVariables(nonConjLambda.getArguments().size());
+        appliedArgument = new ApplicationExpression(nonConjLambda, newVars);
+        remainingArgument = new ApplicationExpression(remainingArgumentName, newVars);
+      }
+      Expression result = conjProcedure.substitute(new ConstantExpression("t1:<right>"), appliedArgument);
+      result = result.substitute(new ConstantExpression("t1:<left>"), remainingArgument);
+      
+      if (newVars.size() > 0) {
+        result = new LambdaExpression(newVars, result);
+      }
+      result = new LambdaExpression(Arrays.asList(remainingArgumentName), result);
+
+      return result;
     }
 
     throw new LogicalFormConversionError("Unknown function type: " + name);

@@ -12,8 +12,8 @@ VECTOR_SUFF=_vector.txt
 JKLOL_RUN=./scripts/run.sh
 
 RUN_ID=$1
-OUT_DIR=$BASE_DIR/output/svo4/no_subexpressions/$RUN_ID/
-OUT_TEMP_DIR=$BASE_DIR/output/svo4/subexpressions/$RUN_ID/temp
+OUT_DIR=$BASE_DIR/output/svo5/no_subexpressions/$RUN_ID/
+OUT_TEMP_DIR=$BASE_DIR/output/svo5/no_subexpressions/$RUN_ID/temp
 LOGNAME=_log.txt
 TRAINNAME=_train_err.txt
 TRAIN_SEM=_train_sem.txt

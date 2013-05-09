@@ -292,12 +292,21 @@ public class CcgLfReader {
     } else if (name.equals("lp")) {
       Preconditions.checkState(arguments.size() == 3);
       return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
-    } else if (name.equals("bx")) {
+    } else if (name.equals("bx") || name.equals("bc")) {
       Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
       Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
 
       SyntacticCategory function = getSyntacticCategory(arguments.get(2));
       SyntacticCategory argument = getSyntacticCategory(arguments.get(1));
+
+      int depth = getCompositionDepth(function, argument);
+      return buildCompositionExpression(right, left, depth);
+    } else if (name.equals("fc")) {
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+
+      SyntacticCategory function = getSyntacticCategory(arguments.get(1));
+      SyntacticCategory argument = getSyntacticCategory(arguments.get(2));
 
       int depth = getCompositionDepth(function, argument);
       return buildCompositionExpression(left, right, depth);
@@ -311,7 +320,8 @@ public class CcgLfReader {
     // Composition.
     LambdaExpression functionAsLambda = (LambdaExpression) (functionLogicalForm.simplify());
     LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
-    System.out.println("argument: " + argumentAsLambda);
+    // System.out.println("function: " + functionAsLambda);
+    // System.out.println("argument: " + argumentAsLambda);
     List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
     List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
 
@@ -324,7 +334,8 @@ public class CcgLfReader {
     if (newFunctionArgs.size() > 0) {
       result = new LambdaExpression(newFunctionArgs, result);
     }
-    result = new LambdaExpression(remainingArgsRenamed, result);
+    result = new LambdaExpression(remainingArgsRenamed, result).simplify();
+    // System.out.println("result: " + result);
     return result;
   }
   

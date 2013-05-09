@@ -193,6 +193,8 @@ public class ConvertCncToCvsm extends AbstractCli {
     List<String> wordsInSpan = getWordsInSpan(parseSpan.getLeft(), parseSpan.getRight(), wordExpressions);
     spanningExpression = reader.pruneModifiers(spanningExpression, Arrays.asList(e1Span, e2Span));
 
+    List<String> wordsInParse = reader.getWordsInCcgParse(spanningExpression, wordExpressions);
+    System.out.println(wordsInSpan + " " + wordsInParse);
     try {
       reader.parse(spanningExpression, wordExpressions);
     } catch (LogicalFormConversionError error) {
@@ -200,12 +202,10 @@ public class ConvertCncToCvsm extends AbstractCli {
       return Lists.<Expression>newArrayList();
     }
 
-    List<String> wordsInParse = reader.getWordsInCcgParse(spanningExpression, wordExpressions);
     if (parseSpan.getRight() - parseSpan.getLeft() > maxSpanLength) {
       System.err.println("Span too big: " + wordsInSpan);
       return Lists.<Expression>newArrayList();
     }
-    System.out.println(wordsInSpan + " " + wordsInParse);
 
     List<Expression> subexpressions = null;
     if (generateSubexpressionExamples) {

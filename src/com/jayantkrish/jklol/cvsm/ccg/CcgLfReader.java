@@ -322,9 +322,17 @@ public class CcgLfReader {
       int depth = getCompositionDepth(function, argument);
       return buildCompositionExpression(left, right, depth);
     } else if (name.equals("conj") && conjProcedure != null) {
-      Expression nonConjArgument = recursivelyTransformCcgParse(arguments.get(4), wordExpressions, words);
+	Expression nonConjArgument = recursivelyTransformCcgParse(arguments.get(4), wordExpressions, words).simplify();
+
+	SyntacticCategory mySyntax = getSyntacticCategory(ccgExpression);
+	SyntacticCategory childSyntax = getSyntacticCategory(arguments.get(4));
+	if (mySyntax.isUnifiableWith(childSyntax)) {
+	    // Sometimes the conj category just absorbs punctuation...
+	    return nonConjArgument;
+	}
+
       // Expression conjArgument = recursivelyTransformCcgParse(arguments.get(3), wordExpressions, words);
-      
+
       List<ConstantExpression> newVars = Lists.newArrayList();
       ConstantExpression remainingArgumentName = ConstantExpression.generateUniqueVariable();
       Expression remainingArgument = remainingArgumentName;
@@ -344,6 +352,10 @@ public class CcgLfReader {
       result = new LambdaExpression(Arrays.asList(remainingArgumentName), result);
 
       return result;
+    } else if (name.equals("funny")) {
+	// funny is the type changing rule that combines a conj with a noun 
+	// to produce a noun.
+	return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
     }
 
     throw new LogicalFormConversionError("Unknown function type: " + name);

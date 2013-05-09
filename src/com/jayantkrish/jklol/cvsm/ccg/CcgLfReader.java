@@ -311,7 +311,6 @@ public class CcgLfReader {
     // Composition.
     LambdaExpression functionAsLambda = (LambdaExpression) (functionLogicalForm.simplify());
     LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
-    System.out.println("argument: " + argumentAsLambda);
     List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
     List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
 

@@ -13,6 +13,7 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.cvsm.ccg.ConvertCncToCvsm.Span;
 import com.jayantkrish.jklol.util.Pair;
 
@@ -270,8 +271,7 @@ public class CcgLfReader {
       return wordExpression;
     } else if (name.equals("lex")) {
       // Lex is a type-changing rule. Only rules which maintain the
-      // same
-      // semantic type specification are supported.
+      // same semantic type specification are supported.
       SyntacticCategory origCategory = SyntacticCategory.parseFrom(((ConstantExpression) arguments.get(0)).getName().replaceAll("\"", ""));
       SyntacticCategory newCategory = SyntacticCategory.parseFrom(((ConstantExpression) arguments.get(1)).getName().replaceAll("\"", ""));
       if (!SemTypePattern.hasSameSemanticType(origCategory, newCategory)) {
@@ -292,9 +292,52 @@ public class CcgLfReader {
     } else if (name.equals("lp")) {
       Preconditions.checkState(arguments.size() == 3);
       return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+    } else if (name.equals("bx")) {
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+
+      SyntacticCategory function = getSyntacticCategory(arguments.get(2));
+      SyntacticCategory argument = getSyntacticCategory(arguments.get(1));
+
+      int depth = getCompositionDepth(function, argument);
+      return buildCompositionExpression(left, right, depth);
     }
-    // TODO: composition rules.
+
     throw new LogicalFormConversionError("Unknown function type: " + name);
+  }
+  
+  private Expression buildCompositionExpression(Expression functionLogicalForm,
+      Expression argumentLogicalForm, int numArgsToKeep) {
+    // Composition.
+    LambdaExpression functionAsLambda = (LambdaExpression) (functionLogicalForm.simplify());
+    LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
+    System.out.println("argument: " + argumentAsLambda);
+    List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
+    List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
+
+    List<Expression> functionArguments = Lists.newArrayList();
+    functionArguments.add(new ApplicationExpression(argumentAsLambda, remainingArgsRenamed));
+    List<ConstantExpression> newFunctionArgs = ConstantExpression.generateUniqueVariables(functionAsLambda.getArguments().size() - 1);
+    functionArguments.addAll(newFunctionArgs);
+
+    Expression result = new ApplicationExpression(functionAsLambda, functionArguments);
+    if (newFunctionArgs.size() > 0) {
+      result = new LambdaExpression(newFunctionArgs, result);
+    }
+    result = new LambdaExpression(remainingArgsRenamed, result);
+    return result;
+  }
+  
+  private int getCompositionDepth(SyntacticCategory function, SyntacticCategory argument) {
+    SyntacticCategory functionArgument = function.getArgument();
+    // Depth is the number of arguments of argument which must be passed in before
+    // function can be applied to argument.
+    int depth = 0;
+    while (!functionArgument.isUnifiableWith(argument)) {
+      depth++;
+      argument = argument.getReturn();
+    }
+    return depth;
   }
 
   public class LogicalFormConversionError extends RuntimeException {

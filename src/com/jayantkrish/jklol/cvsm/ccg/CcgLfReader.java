@@ -302,6 +302,18 @@ public class CcgLfReader {
         }
       }
       throw new LogicalFormConversionError("Used type changing rule: " + origCategory + " to " + newCategory);
+    } else if (name.equals("tr")) {
+	Expression origExpression = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
+	SyntacticCategory origCategory = getSyntacticCategory(arguments.get(1));
+	SyntacticCategory myCategory = getSyntacticCategory(ccgExpression);
+
+        for (TypeChangePattern pattern : typeChangePatterns) {
+	    if (pattern.matches(origCategory, myCategory)) {
+		return new ApplicationExpression(pattern.getLogicalForm(), Arrays.asList(origExpression));
+	    }
+        }
+
+	throw new LogicalFormConversionError("Used type raising rule: " + origCategory + " to " + myCategory);
     } else if (name.equals("fa")) {
       Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
       Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
@@ -316,7 +328,7 @@ public class CcgLfReader {
     } else if (name.equals("lp")) {
       Preconditions.checkState(arguments.size() == 3);
       return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
-    } else if (name.equals("bx") || name.equals("bc")) {
+    } else if (name.equals("bx") || name.equals("bc") || name.equals("gbx")) {
       Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
       Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
 

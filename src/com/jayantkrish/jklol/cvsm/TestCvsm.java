@@ -25,15 +25,15 @@ import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TestCvsm extends AbstractCli {
-  
+
   private OptionSpec<String> model;
   private OptionSpec<String> testFilename;
-  
+
   private OptionSpec<String> relationDictionary;
-  
+
   private OptionSpec<Void> squareLoss;
   private OptionSpec<Void> klLoss;
-  
+
   public TestCvsm() {
     super();
   }
@@ -86,13 +86,13 @@ public class TestCvsm extends AbstractCli {
           Backpointers backpointers = new Backpointers();
           targetTensor.maxOutDimensions(targetTensor.getDimensionNumbers(), backpointers);
           int targetRel = (int) backpointers.getBackpointer(0);
-	  double targetProb = predictedTensor.get(targetRel);
-          
+          double targetProb = predictedTensor.get(targetRel);
+
           backpointers = new Backpointers();
           predictedTensor.maxOutDimensions(predictedTensor.getDimensionNumbers(), backpointers);
           int predictedRel = (int) backpointers.getBackpointer(0);
-	  double predictedProb = predictedTensor.get(predictedRel);
-          
+          double predictedProb = predictedTensor.get(predictedRel);
+
           System.out.println(exampleLoss + " " + relDict.get(targetRel) + " " + targetProb
               + " " + relDict.get(predictedRel) + " " + predictedProb + " " + example.getLogicalForm());
         }
@@ -101,7 +101,7 @@ public class TestCvsm extends AbstractCli {
     } else {
       Expression lf = (new ExpressionParser()).parseSingleExpression(
           Joiner.on(" ").join(options.nonOptionArguments()));
-      
+
       Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
       if (relDict == null || tensor.getDimensionNumbers().length > 1 || tensor.getDimensionSizes()[0] != relDict.size()) {
         System.out.println(tensor);
@@ -113,7 +113,7 @@ public class TestCvsm extends AbstractCli {
       }
     }
   }
-  
+
   public static void main(String[] args) {
     new TestCvsm().run(args);
   }

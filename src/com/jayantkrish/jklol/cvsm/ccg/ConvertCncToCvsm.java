@@ -216,28 +216,29 @@ public class ConvertCncToCvsm extends AbstractCli {
     } else {
       subexpressions = Lists.newArrayList(spanningExpression);
     }
-    
-    Expression entity1Expression = reader.parse(reader.findSpanningExpression(
-        ccgExpression, e1Span.getStart(), e1Span.getEnd()), wordExpressions);
-    Expression entity2Expression = reader.parse(reader.findSpanningExpression(
-        ccgExpression, e1Span.getStart(), e1Span.getEnd()), wordExpressions);
-    
-    Expression entityClassifiers = null;
-    if (useEntityTypes) {
-      entityClassifiers = new ApplicationExpression(new ConstantExpression("op:add"),
-          Arrays.asList(
-              new ApplicationExpression(new ConstantExpression("op:matvecmul"),
-                  Arrays.asList(new ConstantExpression("weights:softmax_e1"), entity1Expression)),
-                  new ApplicationExpression(new ConstantExpression("op:matvecmul"),
-                      Arrays.asList(new ConstantExpression("weights:softmax_e2"), entity2Expression)),
-                      new ConstantExpression("weights:softmax_bias")));
-    } else {
-      entityClassifiers = new ConstantExpression("weights:softmax_bias");
-    }
 
     List<Expression> exampleExpressions = Lists.newArrayList();
     for (Expression subexpression : subexpressions) {
       try {
+    
+	  Expression entityClassifiers = null;
+	  if (useEntityTypes) {
+	      Expression entity1Expression = reader.parse(reader.findSpanningExpression(
+							      subexpression, e1Span.getStart(), e1Span.getEnd()), wordExpressions);
+	      Expression entity2Expression = reader.parse(reader.findSpanningExpression(
+							      subexpression, e2Span.getStart(), e2Span.getEnd()), wordExpressions);
+
+	      entityClassifiers = new ApplicationExpression(new ConstantExpression("op:add"),
+							    Arrays.asList(
+								new ApplicationExpression(new ConstantExpression("op:matvecmul"),
+											  Arrays.asList(new ConstantExpression("weights:softmax_e1"), entity1Expression)),
+								new ApplicationExpression(new ConstantExpression("op:matvecmul"),
+											  Arrays.asList(new ConstantExpression("weights:softmax_e2"), entity2Expression)),
+								new ConstantExpression("weights:softmax_bias")));
+	  } else {
+	      entityClassifiers = new ConstantExpression("weights:softmax_bias");
+	  }
+
         Expression parsedExpression = reader.parse(subexpression, wordExpressions);
         parsedExpression = new ApplicationExpression(new ConstantExpression("op:softmax"),
             Arrays.asList(new ApplicationExpression(new ConstantExpression("op:add"), 

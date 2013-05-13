@@ -10,6 +10,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
+import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -127,31 +128,50 @@ public class CcgLfReader {
       Expression left = arguments.get(lastArg - 1);
       Expression right = arguments.get(lastArg);
 
-      SyntacticCategory syntax = null;
-      Expression toSimplify = null;
-      Pair<Integer, Integer> expressionSpan = null;
+      Expression functionExpression = null;
+      Expression argumentExpression = null;
       if (name.equals("fa")) {
-        syntax = getSyntacticCategory(left);
-        expressionSpan = getExpressionSpan(left);
-        toSimplify = right;
+	functionExpression = left;
+        argumentExpression = right;
       } else {
-        syntax = getSyntacticCategory(right);
-        expressionSpan = getExpressionSpan(right);
-        toSimplify = left;
+	functionExpression = right;
+        argumentExpression = left;
       }
 
-      if (!syntax.isAtomic() && (syntax.getArgument().isUnifiableWith(syntax.getReturn()) ||
-          syntax.isUnifiableWith(SyntacticCategory.parseFrom("NP[1]/N")))) {
+      SyntacticCategory function = getSyntacticCategory(functionExpression);
+      SyntacticCategory argument = getSyntacticCategory(argumentExpression);
+      Pair<Integer, Integer> functionSpan = getExpressionSpan(functionExpression);
+      Pair<Integer, Integer> argumentSpan = getExpressionSpan(argumentExpression);
+
+      if (!function.isAtomic() && (function.getArgument().isUnifiableWith(function.getReturn()) ||
+          function.isUnifiableWith(SyntacticCategory.parseFrom("NP[1]/N")))) {
         boolean noMentionInSpan = true;
         for (Span mentionSpan : mentionSpans) {
-          if (!(mentionSpan.getEnd() <= expressionSpan.getLeft() || mentionSpan.getStart() >= expressionSpan.getRight())) {
+          if (!(mentionSpan.getEnd() <= functionSpan.getLeft() || mentionSpan.getStart() >= functionSpan.getRight())) {
             noMentionInSpan = false;
           }
         }
         if (noMentionInSpan) {
-          return pruneModifiers(toSimplify, mentionSpans);
+          return pruneModifiers(argumentExpression, mentionSpans);
         }
       }
+      
+      if (argument.isAtomic() && function.getFinalReturnCategory().getValue().equals("S")) {
+	  boolean noMentionInArgumentSpan = true;
+	  for (Span mentionSpan : mentionSpans) {
+	      if (!(mentionSpan.getEnd() <= argumentSpan.getLeft() || mentionSpan.getStart() >= argumentSpan.getRight())) {
+		  noMentionInArgumentSpan = false;
+	      }
+	  }
+
+	  if (noMentionInArgumentSpan) {
+	      Expression eliminatedArgumentExpression = eliminateArgument(functionExpression, 0);
+	      if (eliminatedArgumentExpression != null) {
+		  return pruneModifiers(eliminatedArgumentExpression, mentionSpans);
+	      }
+	  }
+      }
+
     } else if (name.equals("lp")) {
       return pruneModifiers(arguments.get(lastArg), mentionSpans);
     } else if (name.equals("rp")) {
@@ -170,6 +190,57 @@ public class CcgLfReader {
       throw new IllegalArgumentException("Unknown function type: " + name);
     }
   }
+
+    public Expression eliminateArgument(Expression ccgExpression, int argIndexFromEnd) {
+	System.err.println("eliminateArgument: " + argIndexFromEnd + " " + ccgExpression);
+	ApplicationExpression app = (ApplicationExpression) ccgExpression;
+	String name = ((ConstantExpression) app.getFunction()).getName();
+	List<Expression> arguments = app.getArguments();
+	int lastArg = arguments.size() - 1;
+
+	if (name.equals("lf")) {
+	    SyntacticCategory category = getSyntacticCategory(ccgExpression);
+	    SyntacticCategory returnCat = category.getFinalReturnCategory();
+	    List<SyntacticCategory> catArguments = category.getArgumentList();
+	    List<Direction> catDirections = category.getArgumentDirectionList();
+	    Preconditions.checkArgument(catArguments.size() > argIndexFromEnd);
+	    
+	    catArguments.remove(catArguments.size() - (1 + argIndexFromEnd));
+	    catDirections.remove(catDirections.size() - (1 + argIndexFromEnd));
+
+	    SyntacticCategory newCategory = SyntacticCategory.createFunctional(returnCat, catDirections, catArguments);
+	    List<Expression> newArguments = Lists.newArrayList(arguments);
+	    newArguments.set(lastArg, new ConstantExpression("\"" + newCategory + "\""));
+	    return new ApplicationExpression(app.getFunction(), newArguments);
+	} else if (oneArgumentFunctions.contains(name)) {
+	    /*
+	    List<Expression> newArguments = Lists.newArrayList(arguments);
+	    newArguments.set(lastArg, eliminateArgument(arguments.get(lastArg), argIndexFromEnd));
+	    return new ApplicationExpression(app.getFunction(), newArguments);
+	    */
+	    return null;
+	} else if (name.equals("fa")) {
+	    Expression left = arguments.get(lastArg - 1);
+	    Expression right = arguments.get(lastArg);
+
+	    List<Expression> newArguments = Lists.newArrayList(arguments);
+	    newArguments.set(lastArg - 1, eliminateArgument(left, argIndexFromEnd + 1));
+	    if (newArguments.get(lastArg - 1) == null) { return null; }
+	    return new ApplicationExpression(app.getFunction(), newArguments);
+	} else if (name.equals("ba")) {
+	    Expression left = arguments.get(lastArg - 1);
+	    Expression right = arguments.get(lastArg);
+
+	    List<Expression> newArguments = Lists.newArrayList(arguments);
+	    newArguments.set(lastArg, eliminateArgument(right, argIndexFromEnd + 1));
+	    if (newArguments.get(lastArg) == null) { return null; }
+	    return new ApplicationExpression(app.getFunction(), newArguments);
+	} else if (twoArgumentFunctions.contains(name)) {
+	    return null;
+	} else {
+	    throw new IllegalArgumentException("Unknown function type: " + name);
+	}
+    }
 
   public List<String> getWordsInCcgParse(Expression ccgParse, List<Expression> wordExpressions) {
     List<String> words = Lists.newArrayList();
@@ -245,34 +316,26 @@ public class CcgLfReader {
   }
 
   public Expression parse(Expression ccgExpression, List<Expression> words) {
-    int numWords = words.size();
-    List<Expression> wordExpressions = Lists.newArrayList(Collections.<Expression> nCopies(numWords, null));
+    return recursivelyTransformCcgParse(ccgExpression, words);
+  }
 
-    for (Expression expression : words) {
-      ApplicationExpression app = (ApplicationExpression) expression;
+    private Expression getExpressionForWord(List<Expression> wordExpressions, int wordIndex, SyntacticCategory syntax) {
+	ApplicationExpression app = (ApplicationExpression) wordExpressions.get(wordIndex);
       String functionName = ((ConstantExpression) app.getFunction()).getName();
       Preconditions.checkArgument(functionName.equals("w"));
       int wordNum = Integer.parseInt(((ConstantExpression) app.getArguments().get(1)).getName());
       String word = ((ConstantExpression) app.getArguments().get(2)).getName().toLowerCase().replaceAll("\"", "");
-      SyntacticCategory wordSyntax = SyntacticCategory.parseFrom(((ConstantExpression)
-          app.getArguments().get(7)).getName().replaceAll("\"", ""));
-      wordExpressions.set(wordNum - 1, getExpressionForWord(word, wordSyntax));
-    }
 
-    return recursivelyTransformCcgParse(ccgExpression, wordExpressions, words);
-  }
-
-  private Expression getExpressionForWord(String word, SyntacticCategory syntax) {
-    for (CategoryPattern pattern : patterns) {
-      if (pattern.matches(Arrays.<String> asList(word), syntax)) {
-        return pattern.getLogicalForm(Arrays.<String> asList(word), syntax);
+      for (CategoryPattern pattern : patterns) {
+	  if (pattern.matches(Arrays.<String> asList(word), syntax)) {
+	      return pattern.getLogicalForm(Arrays.<String> asList(word), syntax);
+	  }
       }
+      return null;
     }
-    return null;
-  }
 
   private Expression recursivelyTransformCcgParse(Expression ccgExpression,
-      List<Expression> wordExpressions, List<Expression> words) {
+						  List<Expression> words) {
     Preconditions.checkState(ccgExpression instanceof ApplicationExpression,
         "Illegal expression type: " + ccgExpression);
     ApplicationExpression app = (ApplicationExpression) ccgExpression;
@@ -281,7 +344,7 @@ public class CcgLfReader {
     List<Expression> arguments = app.getArguments();
     if (name.equals("lf")) {
       int wordInd = Integer.parseInt(((ConstantExpression) arguments.get(1)).getName());
-      Expression wordExpression = wordExpressions.get(wordInd - 1);
+      Expression wordExpression = getExpressionForWord(words, wordInd - 1, getSyntacticCategory(ccgExpression));
       if (wordExpression == null) {
         throw new LogicalFormConversionError("No lexicon template for word: " + words.get(wordInd - 1));
       }
@@ -291,7 +354,7 @@ public class CcgLfReader {
       // same semantic type specification are supported.
       SyntacticCategory origCategory = SyntacticCategory.parseFrom(((ConstantExpression) arguments.get(0)).getName().replaceAll("\"", ""));
       SyntacticCategory newCategory = SyntacticCategory.parseFrom(((ConstantExpression) arguments.get(1)).getName().replaceAll("\"", ""));
-      Expression origExpression = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      Expression origExpression = recursivelyTransformCcgParse(arguments.get(2), words);
       if (SemTypePattern.hasSameSemanticType(origCategory, newCategory, false)) {
         return origExpression;
       } else {
@@ -303,7 +366,7 @@ public class CcgLfReader {
       }
       throw new LogicalFormConversionError("Used type changing rule: " + origCategory + " to " + newCategory);
     } else if (name.equals("tr")) {
-	Expression origExpression = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
+	Expression origExpression = recursivelyTransformCcgParse(arguments.get(1), words);
 	SyntacticCategory origCategory = getSyntacticCategory(arguments.get(1));
 	SyntacticCategory myCategory = getSyntacticCategory(ccgExpression);
 
@@ -315,22 +378,22 @@ public class CcgLfReader {
 
 	throw new LogicalFormConversionError("Used type raising rule: " + origCategory + " to " + myCategory);
     } else if (name.equals("fa")) {
-      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
-      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), words);
       return new ApplicationExpression(left, Arrays.asList(right));
     } else if (name.equals("ba")) {
-      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
-      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), words);
       return new ApplicationExpression(right, Arrays.asList(left));
     } else if (name.equals("rp")) {
       Preconditions.checkState(arguments.size() == 3, "rp arguments: " + arguments);
-      return recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
+      return recursivelyTransformCcgParse(arguments.get(1), words);
     } else if (name.equals("lp")) {
       Preconditions.checkState(arguments.size() == 3);
-      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      return recursivelyTransformCcgParse(arguments.get(2), words);
     } else if (name.equals("bx") || name.equals("bc") || name.equals("gbx")) {
-      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
-      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), words);
 
       SyntacticCategory function = getSyntacticCategory(arguments.get(2));
       SyntacticCategory argument = getSyntacticCategory(arguments.get(1));
@@ -338,8 +401,8 @@ public class CcgLfReader {
       int depth = getCompositionDepth(function, argument);
       return buildCompositionExpression(right, left, depth);
     } else if (name.equals("fc")) {
-      Expression left = recursivelyTransformCcgParse(arguments.get(1), wordExpressions, words);
-      Expression right = recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      Expression left = recursivelyTransformCcgParse(arguments.get(1), words);
+      Expression right = recursivelyTransformCcgParse(arguments.get(2), words);
 
       SyntacticCategory function = getSyntacticCategory(arguments.get(1));
       SyntacticCategory argument = getSyntacticCategory(arguments.get(2));
@@ -347,7 +410,7 @@ public class CcgLfReader {
       int depth = getCompositionDepth(function, argument);
       return buildCompositionExpression(left, right, depth);
     } else if (name.equals("conj") && conjProcedure != null) {
-      Expression nonConjArgument = recursivelyTransformCcgParse(arguments.get(4), wordExpressions, words).simplify();
+      Expression nonConjArgument = recursivelyTransformCcgParse(arguments.get(4), words).simplify();
 
       SyntacticCategory mySyntax = getSyntacticCategory(ccgExpression);
       SyntacticCategory childSyntax = getSyntacticCategory(arguments.get(4));
@@ -356,7 +419,7 @@ public class CcgLfReader {
         return nonConjArgument;
       }
 
-      // Expression conjArgument = recursivelyTransformCcgParse(arguments.get(3), wordExpressions, words);
+      // Expression conjArgument = recursivelyTransformCcgParse(arguments.get(3), words);
 
       List<ConstantExpression> newVars = Lists.newArrayList();
       ConstantExpression remainingArgumentName = ConstantExpression.generateUniqueVariable();
@@ -380,7 +443,7 @@ public class CcgLfReader {
     } else if (name.equals("funny")) {
       // funny is the type changing rule that combines a conj with a noun 
       // to produce a noun.
-      return recursivelyTransformCcgParse(arguments.get(2), wordExpressions, words);
+      return recursivelyTransformCcgParse(arguments.get(2), words);
     }
 
     throw new LogicalFormConversionError("Unknown function type: " + name);

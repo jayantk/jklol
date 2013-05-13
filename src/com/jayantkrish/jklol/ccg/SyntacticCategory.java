@@ -333,6 +333,21 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
+   * Get a syntactic category identical to this one except with all 
+   * feature values replaced by the default value.
+   *   
+   * @return
+   */
+  public SyntacticCategory getWithoutFeatures() {
+    if (isAtomic()) {
+      return createAtomic(value, DEFAULT_FEATURE_VALUE, -1);
+    } else {
+      return createFunctional(getDirection(), returnType.getWithoutFeatures(),
+          argumentType.getWithoutFeatures());
+    }
+  }
+
+  /**
    * Gets the number of subcategories of this category. This number is
    * equal to the number of nodes in the binary tree required to
    * represent the category. Specifically, this method returns 1 if

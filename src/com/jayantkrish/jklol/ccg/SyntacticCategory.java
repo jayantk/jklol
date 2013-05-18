@@ -453,6 +453,7 @@ public class SyntacticCategory implements Serializable {
     Map<Integer, String> otherAssignedVariables = Maps.newHashMap();
     Map<Integer, Integer> variableRelabeling = Maps.newHashMap();
 
+    // System.err.println("unifying: " + this + " " + other);
     return isUnifiableWith(other, myAssignedVariables, otherAssignedVariables, variableRelabeling); 
   }
   

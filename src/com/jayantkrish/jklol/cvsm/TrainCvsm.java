@@ -23,6 +23,7 @@ import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.MinibatchLbfgs;
 import com.jayantkrish.jklol.training.RetryingLbfgs;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.ArrayUtils;
@@ -40,6 +41,10 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<Void> squareLoss;
   private OptionSpec<Void> lbfgs;
 
+  // Using either of these options results in minibatch LBFGS
+  protected OptionSpec<Integer> lbfgsMinibatchSize;
+  protected OptionSpec<Integer> lbfgsMinibatchIterations;
+
   public TrainCvsm() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE, CommonOptions.LBFGS);
   }
@@ -54,7 +59,10 @@ public class TrainCvsm extends AbstractCli {
     fixInitializedVectors = parser.accepts("fixInitializedVectors");
     initializeTensorsToIdentity = parser.accepts("initializeTensorsToIdentity");
     squareLoss = parser.accepts("squareLoss");
+
     lbfgs = parser.accepts("lbfgs");
+    lbfgsMinibatchIterations = parser.accepts("lbfgsMinibatchIterations").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
+    lbfgsMinibatchSize = parser.accepts("lbfgsMinibatchSize").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
   }
 
   @Override
@@ -66,7 +74,8 @@ public class TrainCvsm extends AbstractCli {
 
     CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
-        options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs), options.has(fixInitializedVectors));
+        options.has(squareLoss), options.has(initializeTensorsToIdentity), options.has(lbfgs), 
+								options.valueOf(lbfgsMinibatchSize), options.valueOf(lbfgsMinibatchIterations), options.has(fixInitializedVectors));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -88,7 +97,9 @@ public class TrainCvsm extends AbstractCli {
 
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
-      boolean useSquareLoss, boolean initializeTensorsToIdentity, boolean useLbfgs, boolean fixInitializedVectors) {
+      boolean useSquareLoss, boolean initializeTensorsToIdentity, boolean useLbfgs, 
+						  int lbfgsMinibatchSize, int lbfgsMinibatchIterations,
+						  boolean fixInitializedVectors) {
 
     CvsmLoss loss = null;
     if (useSquareLoss) {
@@ -129,9 +140,18 @@ public class TrainCvsm extends AbstractCli {
 
     if (useLbfgs) {
       Lbfgs lbfgs = createLbfgs();
-      RetryingLbfgs retryingLbfgs = new RetryingLbfgs(lbfgs.getMaxIterations(), lbfgs.getNumVectorsInApproximation(),
+      if (lbfgsMinibatchSize != -1 && lbfgsMinibatchIterations != -1) {
+	  MinibatchLbfgs minibatchLbfgs = new MinibatchLbfgs(lbfgs.getMaxIterations(), lbfgs.getNumVectorsInApproximation(), lbfgs.getL2Regularization(), lbfgsMinibatchSize, lbfgsMinibatchIterations, lbfgs.getLog());
+	  return minibatchLbfgs.train(oracle, initialParameters, examples);
+
+      } else if (lbfgsMinibatchSize == -1 && lbfgsMinibatchIterations == -1) {
+	  RetryingLbfgs retryingLbfgs = new RetryingLbfgs(lbfgs.getMaxIterations(), lbfgs.getNumVectorsInApproximation(),
           lbfgs.getL2Regularization(), lbfgs.getLog());
-      return retryingLbfgs.train(oracle, initialParameters, examples);
+	  return retryingLbfgs.train(oracle, initialParameters, examples);
+      } else {
+	  throw new IllegalArgumentException("Must specify both lbfgsMinibatchIterations and lbfgsMinibatchSize, or neither.");
+      }
+
     } else {
       StochasticGradientTrainer trainer = createStochasticGradientTrainer(examples.size());
       return trainer.train(oracle, initialParameters, examples);

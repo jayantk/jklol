@@ -101,7 +101,7 @@ public class CcgLfReader {
     SyntacticCategory syntax = getSyntacticCategory(ccgExpression);
 
     if (currentSpan.getLeft() <= spanStart && currentSpan.getRight() >= spanEnd &&
-        spanningExpression.get(0) == null && syntax.isAtomic()) {
+        spanningExpression.get(0) == null) { // && syntax.isAtomic()
       spanningExpression.set(0, ccgExpression);
     }
     return currentSpan;
@@ -124,13 +124,14 @@ public class CcgLfReader {
       List<Expression> newArguments = Lists.newArrayList(arguments);
       newArguments.set(lastArg, pruneModifiers(arguments.get(lastArg), mentionSpans));
       return new ApplicationExpression(app.getFunction(), newArguments);
-    } else if (name.equals("fa") || name.equals("ba")) {
+    } else if (name.equals("fa") || name.equals("ba") || name.equals("fc") || name.equals("bc") 
+	       || name.equals("bx") || name.equals("gbx")) {
       Expression left = arguments.get(lastArg - 1);
       Expression right = arguments.get(lastArg);
 
       Expression functionExpression = null;
       Expression argumentExpression = null;
-      if (name.equals("fa")) {
+      if (name.equals("fa") || name.equals("fc")) {
 	functionExpression = left;
         argumentExpression = right;
       } else {
@@ -155,17 +156,30 @@ public class CcgLfReader {
           return pruneModifiers(argumentExpression, mentionSpans);
         }
       }
-      
-      if (argument.isAtomic() && function.getFinalReturnCategory().getValue().equals("S")) {
-	  boolean noMentionInArgumentSpan = true;
-	  for (Span mentionSpan : mentionSpans) {
-	      if (!(mentionSpan.getEnd() <= argumentSpan.getLeft() || mentionSpan.getStart() >= argumentSpan.getRight())) {
-		  noMentionInArgumentSpan = false;
-	      }
-	  }
 
-	  if (noMentionInArgumentSpan) {
-	      Expression eliminatedArgumentExpression = eliminateArgument(functionExpression, 0);
+      boolean noMentionInArgumentSpan = true;
+      for (Span mentionSpan : mentionSpans) {
+	  if (!(mentionSpan.getEnd() <= argumentSpan.getLeft() || 
+		mentionSpan.getStart() >= argumentSpan.getRight())) {
+	      noMentionInArgumentSpan = false;
+	  }
+      }
+      
+
+      if (noMentionInArgumentSpan) {
+	  String functionName = ((ConstantExpression) ((ApplicationExpression) functionExpression).getFunction()).getName();
+	  if (functionName.equals("conj")) {
+	      Expression returnValue = functionExpression;
+	      String returnName = functionName;
+	      do {
+		  List<Expression> returnArguments = ((ApplicationExpression) returnValue).getArguments();
+		  returnValue = returnArguments.get(4);
+		  returnName = ((ConstantExpression) ((ApplicationExpression) returnValue).getFunction()).getName();
+	      } while (returnName.equals("conj"));
+	      return pruneModifiers(returnValue, mentionSpans);
+	  } 
+	  else if (argument.isAtomic() && function.getFinalReturnCategory().getValue().equals("S")) {
+	      Expression eliminatedArgumentExpression = eliminateArgument(pruneModifiers(functionExpression, mentionSpans), new int[] {0});
 	      if (eliminatedArgumentExpression != null) {
 		  return pruneModifiers(eliminatedArgumentExpression, mentionSpans);
 	      }
@@ -191,24 +205,34 @@ public class CcgLfReader {
     }
   }
 
-    public Expression eliminateArgument(Expression ccgExpression, int argIndexFromEnd) {
-	System.err.println("eliminateArgument: " + argIndexFromEnd + " " + ccgExpression);
+    public SyntacticCategory eliminateArgument(SyntacticCategory category, int[] argIndexFromEnd) {
+	SyntacticCategory returnCat = category.getFinalReturnCategory();
+	List<SyntacticCategory> catArguments = category.getArgumentList();
+	List<Direction> catDirections = category.getArgumentDirectionList();
+	Preconditions.checkArgument(catArguments.size() > argIndexFromEnd[0]);
+
+	int index = catArguments.size() - (1 + argIndexFromEnd[0]);
+	if (argIndexFromEnd.length == 1) {
+	    catArguments.remove(index);
+	    catDirections.remove(index);
+	} else {
+	    catArguments.set(index, 
+			     eliminateArgument(catArguments.get(index), Arrays.copyOfRange(argIndexFromEnd, 1, argIndexFromEnd.length)));
+	}
+	return SyntacticCategory.createFunctional(returnCat, catDirections, catArguments);
+    }
+
+    public Expression eliminateArgument(Expression ccgExpression, int[] argIndexFromEnd) {
 	ApplicationExpression app = (ApplicationExpression) ccgExpression;
 	String name = ((ConstantExpression) app.getFunction()).getName();
 	List<Expression> arguments = app.getArguments();
 	int lastArg = arguments.size() - 1;
 
 	if (name.equals("lf")) {
-	    SyntacticCategory category = getSyntacticCategory(ccgExpression);
-	    SyntacticCategory returnCat = category.getFinalReturnCategory();
-	    List<SyntacticCategory> catArguments = category.getArgumentList();
-	    List<Direction> catDirections = category.getArgumentDirectionList();
-	    Preconditions.checkArgument(catArguments.size() > argIndexFromEnd);
-	    
-	    catArguments.remove(catArguments.size() - (1 + argIndexFromEnd));
-	    catDirections.remove(catDirections.size() - (1 + argIndexFromEnd));
+	    SyntacticCategory input = getSyntacticCategory(ccgExpression);
+	    SyntacticCategory newCategory = eliminateArgument(input, argIndexFromEnd);
+	    // System.err.println("eliminateArgument " + Arrays.toString(argIndexFromEnd) + " " + input + " " + newCategory);
 
-	    SyntacticCategory newCategory = SyntacticCategory.createFunctional(returnCat, catDirections, catArguments);
 	    List<Expression> newArguments = Lists.newArrayList(arguments);
 	    newArguments.set(lastArg, new ConstantExpression("\"" + newCategory + "\""));
 	    return new ApplicationExpression(app.getFunction(), newArguments);
@@ -224,16 +248,57 @@ public class CcgLfReader {
 	    Expression right = arguments.get(lastArg);
 
 	    List<Expression> newArguments = Lists.newArrayList(arguments);
-	    newArguments.set(lastArg - 1, eliminateArgument(left, argIndexFromEnd + 1));
-	    if (newArguments.get(lastArg - 1) == null) { return null; }
+
+	    SyntacticCategory functionCat = getSyntacticCategory(left).getWithoutFeatures();
+	    if (functionCat.getArgument().isUnifiableWith(functionCat.getReturn()) && 
+		!functionCat.getReturn().isAtomic() && argIndexFromEnd.length == 1) {
+		// Modifier category. Need to eliminate an argument from both the argument
+		// and return type.
+		
+		Expression result = eliminateArgument(left, new int[] {argIndexFromEnd[0] + 1});
+		if (result == null) {return null;}
+		result = eliminateArgument(result, new int[] {0, argIndexFromEnd[0]});
+		newArguments.set(lastArg - 1, result);
+		newArguments.set(lastArg, eliminateArgument(right, argIndexFromEnd));
+	    }  else {
+		int[] newArgs = Arrays.copyOf(argIndexFromEnd, argIndexFromEnd.length);
+		newArgs[0] += 1;
+		newArguments.set(lastArg - 1, eliminateArgument(left, newArgs));
+	    }
+
+	    for (Expression newArgument : newArguments) {
+		if (newArgument == null) {
+		    return null;
+		}
+	    }
 	    return new ApplicationExpression(app.getFunction(), newArguments);
 	} else if (name.equals("ba")) {
 	    Expression left = arguments.get(lastArg - 1);
 	    Expression right = arguments.get(lastArg);
-
 	    List<Expression> newArguments = Lists.newArrayList(arguments);
-	    newArguments.set(lastArg, eliminateArgument(right, argIndexFromEnd + 1));
-	    if (newArguments.get(lastArg) == null) { return null; }
+
+	    SyntacticCategory functionCat = getSyntacticCategory(right).getWithoutFeatures();
+	    if (functionCat.getArgument().isUnifiableWith(functionCat.getReturn()) && 
+		!functionCat.getReturn().isAtomic()  && argIndexFromEnd.length == 1) {
+		// Modifier category. Need to eliminate an argument from both the argument
+		// and return type.
+		
+		Expression result = eliminateArgument(right, new int[] {argIndexFromEnd[0] + 1});
+		if (result == null) {return null;}
+		result = eliminateArgument(result, new int[] {0, argIndexFromEnd[0]});
+		newArguments.set(lastArg, result);
+		newArguments.set(lastArg - 1, eliminateArgument(left, argIndexFromEnd));
+	    }  else {
+		int[] newArgs = Arrays.copyOf(argIndexFromEnd, argIndexFromEnd.length);
+		newArgs[0] += 1;
+		newArguments.set(lastArg, eliminateArgument(right, newArgs));
+	    }
+
+	    for (Expression newArgument : newArguments) {
+		if (newArgument == null) {
+		    return null;
+		}
+	    }
 	    return new ApplicationExpression(app.getFunction(), newArguments);
 	} else if (twoArgumentFunctions.contains(name)) {
 	    return null;
@@ -265,7 +330,20 @@ public class CcgLfReader {
     }
   }
 
-  private static SyntacticCategory getSyntacticCategory(Expression ccgExpression) {
+    public Expression buildNpExpression(List<String> words) {
+	Preconditions.checkArgument(words.size() > 0);
+	SyntacticCategory noun = SyntacticCategory.parseFrom("N");
+	SyntacticCategory adj = SyntacticCategory.parseFrom("N/N");
+
+	Expression result = getExpressionForWord(words.get(words.size() - 1), noun);
+	for (int i = words.size() - 2; i >= 0; i++) {
+	    Expression adjExpr = getExpressionForWord(words.get(i), adj);
+	    result = new ApplicationExpression(adjExpr, Arrays.asList(result));
+	}
+	return result.simplify();
+    }
+
+  public static SyntacticCategory getSyntacticCategory(Expression ccgExpression) {
     Preconditions.checkState(ccgExpression instanceof ApplicationExpression,
         "Illegal expression type: " + ccgExpression);
     ApplicationExpression app = (ApplicationExpression) ccgExpression;
@@ -326,12 +404,16 @@ public class CcgLfReader {
       int wordNum = Integer.parseInt(((ConstantExpression) app.getArguments().get(1)).getName());
       String word = ((ConstantExpression) app.getArguments().get(2)).getName().toLowerCase().replaceAll("\"", "");
 
-      for (CategoryPattern pattern : patterns) {
-	  if (pattern.matches(Arrays.<String> asList(word), syntax)) {
-	      return pattern.getLogicalForm(Arrays.<String> asList(word), syntax);
-	  }
-      }
-      return null;
+      return getExpressionForWord(word, syntax);
+    }
+
+    private Expression getExpressionForWord(String word, SyntacticCategory syntax) {
+	for (CategoryPattern pattern : patterns) {
+	    if (pattern.matches(Arrays.<String> asList(word), syntax)) {
+		return pattern.getLogicalForm(Arrays.<String> asList(word), syntax);
+	    }
+	}
+	return null;
     }
 
   private Expression recursivelyTransformCcgParse(Expression ccgExpression,
@@ -346,7 +428,7 @@ public class CcgLfReader {
       int wordInd = Integer.parseInt(((ConstantExpression) arguments.get(1)).getName());
       Expression wordExpression = getExpressionForWord(words, wordInd - 1, getSyntacticCategory(ccgExpression));
       if (wordExpression == null) {
-        throw new LogicalFormConversionError("No lexicon template for word: " + words.get(wordInd - 1));
+	  throw new LogicalFormConversionError("No lexicon template for word: " + words.get(wordInd - 1) + " " + getSyntacticCategory(ccgExpression));
       }
       return wordExpression;
     } else if (name.equals("lex")) {
@@ -475,6 +557,8 @@ public class CcgLfReader {
   }
 
   private int getCompositionDepth(SyntacticCategory function, SyntacticCategory argument) {
+      function = function.getWithoutFeatures();
+      argument = argument.getWithoutFeatures();
     SyntacticCategory functionArgument = function.getArgument();
     // Depth is the number of arguments of argument which must be passed in before
     // function can be applied to argument.

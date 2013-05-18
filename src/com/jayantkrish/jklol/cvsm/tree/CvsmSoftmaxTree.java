@@ -19,10 +19,10 @@ public class CvsmSoftmaxTree extends AbstractCvsmTree {
   }
   
   public static CvsmSoftmaxTree create(CvsmTree subtree) {
-    Tensor unnormalizedValues = subtree.getValue().getTensor().elementwiseExp();
-    double partitionFunction = unnormalizedValues.sumOutDimensions(unnormalizedValues.getDimensionNumbers()).getByDimKey();    
-    Tensor values = unnormalizedValues.elementwiseProduct(1.0 / partitionFunction);
-    
+    Tensor unnormalizedValues = subtree.getValue().getTensor();
+    double logPartitionFunction = unnormalizedValues.logSumOutDimensions(unnormalizedValues.getDimensionNumbers()).getByDimKey();
+    Tensor values = unnormalizedValues.elementwiseAddition(-1.0 * logPartitionFunction).elementwiseExp();
+
     return new CvsmSoftmaxTree(new TensorLowRankTensor(values), subtree);
   }
   

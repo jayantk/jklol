@@ -72,7 +72,7 @@ public class LbfgsTest extends TestCase {
 	  
 	  // Check convergence of the objective value.
 	  double[] objectiveValues = log.getStatisticValues("objective value");
-	  assertEquals(Math.log(1.0 / 3.0), objectiveValues[objectiveValues.length - 1], 0.00000001);
+	  assertEquals(Math.log(1.0 / 3.0), objectiveValues[objectiveValues.length - 1], 0.00001);
 	}
 	
 	public void testTrainRegularized() {

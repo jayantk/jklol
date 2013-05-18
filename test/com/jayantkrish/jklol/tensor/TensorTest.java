@@ -458,6 +458,39 @@ public abstract class TensorTest extends TestCase {
       assertTrue(result.size() == (3 * 2) || result.size() == (20 * 5));
     }
   }
+  
+  public void testOuterProduct3() {
+    Tensor relabeledVector = vector.relabelDimensions(new int[] {3});
+    for (Tensor missingMiddle : missingMiddles) {
+      Tensor result = relabeledVector.outerProduct(missingMiddle);
+
+      System.out.println(result);
+      
+      assertEquals(0.0, result.getByDimKey(0, 0, 0));
+      assertEquals(0.0, result.getByDimKey(0, 0, 3));
+      assertEquals(0.0, result.getByDimKey(0, 1, 0));
+      assertEquals(0.0, result.getByDimKey(0, 4, 0));
+      assertEquals(0.0, result.getByDimKey(5, 4, 3));
+
+      assertEquals(2.0, result.getByDimKey(0, 1, 3));
+      assertEquals(4.0, result.getByDimKey(0, 4, 3));
+      assertEquals(3.0, result.getByDimKey(1, 1, 3));
+      assertEquals(6.0, result.getByDimKey(1, 4, 3));
+      assertEquals(4.0, result.getByDimKey(3, 1, 0));
+      assertEquals(8.0, result.getByDimKey(3, 4, 0));
+      assertEquals(5.0, result.getByDimKey(4, 1, 0));
+      assertEquals(10.0, result.getByDimKey(4, 4, 0));
+      assertEquals(6.0, result.getByDimKey(4, 1, 1));
+      assertEquals(12.0, result.getByDimKey(4, 4, 1));
+
+      assertTrue(Arrays.equals(new int[] {1, 3, 4}, result.getDimensionNumbers()));
+      assertTrue(Arrays.equals(new int[] {6, 5, 4}, result.getDimensionSizes()));
+
+      // The size is different depending on whether the tensor is sparse or dense.
+      System.out.println(result.size());
+      assertTrue(result.size() == (5 * 2) || result.size() == (24 * 5) || result.size() == (24 * 2));
+    }
+  }
  
   public void testElementwiseAddition() {
     for (Tensor addTable : addTables) {
@@ -657,11 +690,9 @@ public abstract class TensorTest extends TestCase {
     Tensor actual = table.sumOutDimensions(dimsToEliminate);
     assertEquals(expected, actual);
  
-    /*
     expected = simpleReduce(table, dimsToEliminate, ReduceType.LOG_SUM);
     actual = table.logSumOutDimensions(dimsToEliminate);    
     assertTensorEquals(expected, actual, 10e-8);
-    */
 
     Backpointers actualBackpointers = new Backpointers();
     expected = simpleReduce(table, dimsToEliminate, ReduceType.MAX);
@@ -737,6 +768,7 @@ public abstract class TensorTest extends TestCase {
     Iterator<KeyValue> iter = actual.keyValueIterator();
     while (iter.hasNext()) {
       KeyValue k = iter.next();
+      System.out.println(k);
       assertEquals(expected.getByDimKey(k.getKey()), actual.getByDimKey(k.getKey()), tolerance);
     }
   }

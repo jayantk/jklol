@@ -409,7 +409,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   @Override
-  public SparseTensor outerProduct(Tensor other) {
+  public Tensor outerProduct(Tensor other) {
     int[] dimensionNums = getDimensionNumbers();
     int[] otherDimensionNums = other.getDimensionNumbers();
     if (otherDimensionNums.length == 0) {
@@ -425,7 +425,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       return fastOuterProduct(other, 1, getMaxKeyNum(), false);
     }
     
-    throw new UnsupportedOperationException("Not implemented.");
+    return slowOuterProduct(other);
   }
   
   private final SparseTensor fastOuterProduct(Tensor other, long myKeyNumMultiplier,
@@ -478,7 +478,15 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       resultSizes[i + first.length] = secondSizes[i];
     }
 
-    return resizeIntoTable(resultDims, resultSizes, resultKeyNums, resultValues, resultInd);
+    if (!otherOnRight) {
+      return SparseTensor.fromUnorderedKeyValuesNoCopy(resultDims, resultSizes, resultKeyNums, resultValues);
+    } else {
+      return resizeIntoTable(resultDims, resultSizes, resultKeyNums, resultValues, resultInd);
+    }
+  }
+
+  private final Tensor slowOuterProduct(Tensor other) {
+    return AbstractTensor.outerProduct(this, other);
   }
 
   @Override
@@ -499,20 +507,12 @@ public class SparseTensor extends AbstractTensor implements Serializable {
           outerProductIndex++;
         }
       }
-      /*
-      System.out.println(Arrays.toString(myDims));
-      System.out.println(Arrays.toString(otherDims));
-      System.out.println(Arrays.toString(outerProductDims));
-      System.out.println(DenseTensor.constant(outerProductDims, outerProductSizes, 1.0));
-      */
+
       Tensor result = otherTensor.outerProduct(
           DenseTensor.constant(outerProductDims, outerProductSizes, 1.0));
-      SparseTensor value = elementwiseAddition(result);
-      System.out.println("foo");
-      System.out.println(result);
-      System.out.println(this);
-      System.out.println(value);
+      System.out.println("op result: " + result);
       
+      SparseTensor value = elementwiseAddition(result);
       return value;
     } else {
       return doElementwise(otherTensor, true);
@@ -868,9 +868,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     if (Ordering.natural().isOrdered(Ints.asList(newDimensions))) {
       // If the new dimension labels are in sorted order, then we don't have to
       // re-sort the outcome and value arrays. This is a big efficiency win if
-      // it
-      // happens. Note that keyNums and values are (treated as) immutable, and
-      // hence we don't need to copy them.
+      // it happens. Note that keyNums and values are (treated as) immutable, 
+      // and hence we don't need to copy them.
       return new SparseTensor(newDimensions, getDimensionSizes(), keyNums, values);
     }
 
@@ -1079,9 +1078,23 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       long[] keyNums, double[] values) {
     long[] keyNumsCopy = ArrayUtils.copyOf(keyNums, keyNums.length);
     double[] valuesCopy = ArrayUtils.copyOf(values, values.length);
-    ArrayUtils.sortKeyValuePairs(keyNumsCopy, valuesCopy, 0, keyNums.length);
-
-    return new SparseTensor(dimensionNumbers, dimensionSizes, keyNumsCopy, valuesCopy);
+    return fromUnorderedKeyValuesNoCopy(dimensionNumbers, dimensionSizes, keyNumsCopy, valuesCopy);
+  }
+  
+  /**
+   * Same as {@link #fromUnorderedKeyValues}, except that neither input
+   * array is copied. These arrays must not be modified by the caller after
+   * invoking this method.
+   * 
+   * @param dimensionNumbers
+   * @param dimensionSizes
+   * @param keyNums
+   * @param values
+   */
+  public static SparseTensor fromUnorderedKeyValuesNoCopy(int[] dimensionNumbers, 
+      int[] dimensionSizes, long[] keyNums, double[] values) {
+    ArrayUtils.sortKeyValuePairs(keyNums, values, 0, keyNums.length);
+    return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
   }
 
   public static SparseTensor singleElement(int[] dimensionNumbers, int[] dimensionSizes, int[] dimKey, double value) {

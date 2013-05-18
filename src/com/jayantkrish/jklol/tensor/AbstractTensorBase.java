@@ -57,6 +57,27 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
     }
     return indexOffsets;
   }
+  
+  /**
+   * Converts {@code keyNum} coded using a set of original offsets into
+   * a {@code keyNum} using {@code resultOffsets}. This method maps keys
+   * between tensors with different dimension orderings.
+   *
+   * @param keyNum
+   * @param originalOffsets
+   * @param originalSizes
+   * @param resultOffsets
+   * @return
+   */
+  public static final long recodeKeyNum(long keyNum, long[] originalOffsets, int[] originalSizes,
+      long[] resultOffsets) {
+    long resultKeyNum = 0;
+    int numDims = originalOffsets.length;
+    for (int j = 0; j < numDims; j++) {
+      resultKeyNum += ((keyNum / originalOffsets[j]) % originalSizes[j]) * resultOffsets[j];
+    }
+    return resultKeyNum;
+  }
 
   @Override
   public int[] getDimensionNumbers() {

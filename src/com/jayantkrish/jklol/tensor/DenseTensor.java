@@ -228,16 +228,19 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       // Both tensor products coincide when the other tensor has no dimensions (is a scalar).
       return elementwiseProduct(other);
     } 
-    // All dimensions of this tensor must be smaller than the dimensions
-    // of the other tensor.
-    Preconditions.checkArgument(myDims.length == 0 || myDims[myDims.length - 1] < otherDims[0]);
-    
-    int[] newDims = Ints.concat(myDims, otherDims);
-    int[] newSizes = Ints.concat(getDimensionSizes(), other.getDimensionSizes());
-    DenseTensorBuilder builder = new DenseTensorBuilder(newDims, newSizes);
-    builder.increment(this);
 
-    return builder.buildNoCopy().elementwiseProduct(other);
+    if (myDims.length == 0 || myDims[myDims.length - 1] < otherDims[0]) {
+      // Fast implementation for when all dimensions of this tensor 
+      // are smaller than the dimensions of the other tensor.
+      int[] newDims = Ints.concat(myDims, otherDims);
+      int[] newSizes = Ints.concat(getDimensionSizes(), other.getDimensionSizes());
+      DenseTensorBuilder builder = new DenseTensorBuilder(newDims, newSizes);
+      builder.increment(this);
+      
+      return builder.buildNoCopy().elementwiseProduct(other);
+    } else {
+      return DenseTensor.copyOf(AbstractTensor.outerProduct(this, other));
+    }
   }
 
   @Override

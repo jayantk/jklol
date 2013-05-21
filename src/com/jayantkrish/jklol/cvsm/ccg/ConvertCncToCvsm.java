@@ -60,7 +60,7 @@ public class ConvertCncToCvsm extends AbstractCli {
 
     generateSubexpressionExamples = parser.accepts("generateSubexpressionExamples");
     useEntityTypes = parser.accepts("useEntityTypes");
-    brief = parser.accepts("brief");
+    brief = parser.accepts("logBrief");
   }
 
   @Override

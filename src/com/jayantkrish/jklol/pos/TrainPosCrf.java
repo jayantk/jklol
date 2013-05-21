@@ -8,7 +8,6 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -30,11 +29,10 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -56,9 +54,6 @@ public class TrainPosCrf extends AbstractCli {
   private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
   
-  // Optimization options.
-  private OptionSpec<Void> lbfgs;
-
   public TrainPosCrf() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.LBFGS, CommonOptions.MAP_REDUCE);
   }
@@ -80,8 +75,6 @@ public class TrainPosCrf extends AbstractCli {
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(5);
-    
-    lbfgs = parser.accepts("lbfgs");
   }
 
   @Override
@@ -109,7 +102,7 @@ public class TrainPosCrf extends AbstractCli {
     List<Example<DynamicAssignment, DynamicAssignment>> examples = PosTaggerUtils
         .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
     SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, 
-        options.has(maxMargin), options.has(lbfgs));
+        options.has(maxMargin));
 
     // Save model to disk.
     System.out.println("Serializing trained model...");    
@@ -156,10 +149,8 @@ public class TrainPosCrf extends AbstractCli {
   }
 
   private SufficientStatistics estimateParameters(ParametricFactorGraph sequenceModel,
-      List<Example<DynamicAssignment, DynamicAssignment>> trainingData,
-      boolean useMaxMargin, boolean useLbfgs) {
+      List<Example<DynamicAssignment, DynamicAssignment>> trainingData, boolean useMaxMargin) {
     System.out.println(trainingData.size() + " training examples.");
-    Preconditions.checkArgument(!(useMaxMargin && useLbfgs), "LBFGS can only be used on smooth objectives."); 
 
     // Estimate parameters
     GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
@@ -168,24 +159,13 @@ public class TrainPosCrf extends AbstractCli {
     System.out.println("Training...");
     if (useMaxMargin) {
       oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
-
-      StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
-      SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
-      return parameters;
     } else {
       oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
-
-      SufficientStatistics parameters = null;
-      if (useLbfgs) {
-        Lbfgs lbfgs = createLbfgs();
-        parameters = lbfgs.train(oracle, initialParameters, trainingData);
-      } else {
-        StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
-        parameters = trainer.train(oracle, initialParameters, trainingData);
-      }
-      
-      return parameters;
     }
+    
+    GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
+    SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
+    return parameters;
   }
   
   public static void main(String[] args) {

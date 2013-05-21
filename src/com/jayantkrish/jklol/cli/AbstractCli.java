@@ -419,9 +419,9 @@ public abstract class AbstractCli {
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) && 
         opts.contains(CommonOptions.LBFGS)) {
       if (parsedOptions.has(lbfgs)) {
-        createLbfgs();
+	  return createLbfgs();
       } else {
-        createStochasticGradientTrainer(numExamples);
+	  return createStochasticGradientTrainer(numExamples);
       }
     } else if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT)) {
       return createStochasticGradientTrainer(numExamples);

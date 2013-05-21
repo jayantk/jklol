@@ -66,14 +66,7 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
       return tensor;
     }
 
-    Tensor minValues = tensor.elementwiseProduct(-1.0).maxOutDimensions(dimensionsToEliminate);    
-    
-    System.out.println(dimensionsToEliminate);
-    System.out.println(tensor);
-    System.out.println(tensor.maxOutDimensions(dimensionsToEliminate));
-    System.out.println("minvalues: " + minValues);
-    System.out.println("add result: " + tensor.elementwiseAddition(minValues));
-    
+    Tensor minValues = tensor.elementwiseProduct(-1.0).maxOutDimensions(dimensionsToEliminate);
     return tensor.elementwiseAddition(minValues).elementwiseExp().sumOutDimensions(dimensionsToEliminate)
         .elementwiseLog().elementwiseAddition(minValues.elementwiseProduct(-1.0));
   }

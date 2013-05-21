@@ -336,7 +336,7 @@ public class CcgLfReader {
 	SyntacticCategory adj = SyntacticCategory.parseFrom("N/N");
 
 	Expression result = getExpressionForWord(words.get(words.size() - 1), noun);
-	for (int i = words.size() - 2; i >= 0; i++) {
+	for (int i = words.size() - 2; i >= 0; i--) {
 	    Expression adjExpr = getExpressionForWord(words.get(i), adj);
 	    result = new ApplicationExpression(adjExpr, Arrays.asList(result));
 	}
@@ -408,6 +408,7 @@ public class CcgLfReader {
     }
 
     private Expression getExpressionForWord(String word, SyntacticCategory syntax) {
+	word = word.toLowerCase();
 	for (CategoryPattern pattern : patterns) {
 	    if (pattern.matches(Arrays.<String> asList(word), syntax)) {
 		return pattern.getLogicalForm(Arrays.<String> asList(word), syntax);

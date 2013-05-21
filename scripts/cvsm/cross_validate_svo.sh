@@ -1,9 +1,12 @@
 #!/bin/bash -e
 
-#L2_ARRAY=(0.01 0.001 0.0005 0.0001 0.00005 0.00001 0.000005 0.000001);
-L2_ARRAY=(0.0001);
-RUN_BASENAMES=("var_vec_l2-" "fixed_vec_l2-")
-FLAGS=(" " "--fixInitializedVectors")
+L2_ARRAY=(0.000001 0.000005 0.00001 0.00005 0.0001 0.0005);
+RUN_BASENAMES=("var_vec_l2-")
+FLAGS=(" ")
+
+#L2_ARRAY=(0.0001);
+#RUN_BASENAMES=("var_vec_l2-" "fixed_vec_l2-")
+#FLAGS=(" " "--fixInitializedVectors")
 
 # L2_ARRAY=(0.00001);
 # RUN_BASENAMES=("var_vec_l2-")

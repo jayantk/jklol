@@ -179,7 +179,6 @@ public class ConvertCncToCvsm extends AbstractCli {
 
 	Expression entityClassifiers = null;
 	if (useEntityTypes) {
-	    /*
 	    Expression entity1Expression = reader.buildNpExpression(example.getE1Span().getWords());
 	    Expression entity2Expression = reader.buildNpExpression(example.getE2Span().getWords());
 	    
@@ -190,7 +189,6 @@ public class ConvertCncToCvsm extends AbstractCli {
 							      new ApplicationExpression(new ConstantExpression("op:matvecmul"),
 											Arrays.asList(new ConstantExpression("weights:softmax_e2"), entity2Expression)),
 							      new ConstantExpression("weights:softmax_bias")));
-	    */
 	} else {
 	    entityClassifiers = new ConstantExpression("weights:softmax_bias");
 	}

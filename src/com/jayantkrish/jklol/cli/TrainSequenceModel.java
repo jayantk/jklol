@@ -16,10 +16,10 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -81,8 +81,6 @@ public class TrainSequenceModel extends AbstractCli {
     System.out.println("Serializing trained model...");
     TrainedModelSet trainedModel = new TrainedModelSet(sequenceModel, parameters, factorGraph);
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
-    
-
   }
 
   public SufficientStatistics run(ParametricFactorGraph sequenceModel,
@@ -99,7 +97,7 @@ public class TrainSequenceModel extends AbstractCli {
     }
 
     System.out.println("Training...");
-    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
+    GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
     SufficientStatistics initialParameters = sequenceModel.getNewSufficientStatistics();
     initialParameters.makeDense();
     SufficientStatistics parameters = trainer.train(

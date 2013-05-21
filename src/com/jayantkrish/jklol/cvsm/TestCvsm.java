@@ -8,6 +8,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -28,6 +29,7 @@ public class TestCvsm extends AbstractCli {
 
   private OptionSpec<String> model;
   private OptionSpec<String> testFilename;
+  private OptionSpec<String> vectorDumpFilename;
 
   private OptionSpec<String> relationDictionary;
 
@@ -42,6 +44,7 @@ public class TestCvsm extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
     testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
+    vectorDumpFilename = parser.accepts("vectorDumpFilename").withRequiredArg().ofType(String.class);
 
     relationDictionary = parser.accepts("relationDictionary").withRequiredArg().ofType(String.class);
 
@@ -98,6 +101,19 @@ public class TestCvsm extends AbstractCli {
         }
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");
+    } else if (options.has(vectorDumpFilename)) {
+      ExpressionParser parser = new ExpressionParser(); 
+      for (String line : IoUtils.readLines(options.valueOf(vectorDumpFilename))) {
+        Expression lf = parser.parseSingleExpression(line);
+        Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
+        Preconditions.checkState(tensor.getDimensionNumbers().length == 1);
+
+        for (long i = 0; i < tensor.getMaxKeyNum(); i++) {
+          System.out.print(tensor.get(i));
+          System.out.print(" ");
+        }
+        System.out.print("\n");
+      }
     } else {
       Expression lf = (new ExpressionParser()).parseSingleExpression(
           Joiner.on(" ").join(options.nonOptionArguments()));

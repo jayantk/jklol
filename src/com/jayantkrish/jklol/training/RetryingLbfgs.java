@@ -9,7 +9,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
  * 
  * @author jayantk
  */
-public class RetryingLbfgs {
+public class RetryingLbfgs implements GradientOptimizer {
   
   private final int maxIterations;
   private final int numVectorsInApproximation;
@@ -25,8 +25,9 @@ public class RetryingLbfgs {
     this.log = log;
   }
 
-  public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
-      SufficientStatistics initialParameters, Iterable<E> trainingData) {
+  @Override
+  public <M, E, T extends E> SufficientStatistics train(GradientOracle<M, E> oracle,
+      SufficientStatistics initialParameters, Iterable<T> trainingData) {
     int completedIterations = 0;
     SufficientStatistics parameters = initialParameters;
     while (completedIterations < maxIterations) {
@@ -38,12 +39,12 @@ public class RetryingLbfgs {
       } catch (LbfgsConvergenceError error) {
         log.logMessage("L-BFGS Convergence Failed. Restarting L-BFGS.");
         parameters = error.getFinalParameters();
-	if (error.getFinalIteration() == 0) {
-	    // If the first iteration fails, retrying it isn't going to help.
-	    completedIterations = maxIterations;
-	} else {
-	    completedIterations += error.getFinalIteration() + 1;
-	}
+        if (error.getFinalIteration() == 0) {
+          // If the first iteration fails, retrying it isn't going to help.
+          completedIterations = maxIterations;
+        } else {
+          completedIterations += error.getFinalIteration() + 1;
+        }
       }
     }
     return parameters;

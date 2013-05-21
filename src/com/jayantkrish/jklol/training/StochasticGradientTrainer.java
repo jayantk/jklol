@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.util.Pseudorandom;
  * 
  * @author jayantk
  */
-public class StochasticGradientTrainer {
+public class StochasticGradientTrainer implements GradientOptimizer {
 
   private final int numIterations;
   private final int batchSize;
@@ -87,6 +87,7 @@ public class StochasticGradientTrainer {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L1Regularizer(l1Penalty), log);
   }
 
+  @Override
   public <M, E, T extends E> SufficientStatistics train(GradientOracle<M, E> oracle,
       SufficientStatistics initialParameters, Iterable<T> trainingData) {
 

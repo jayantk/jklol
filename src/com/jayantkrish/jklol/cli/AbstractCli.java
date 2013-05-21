@@ -22,8 +22,10 @@ import com.jayantkrish.jklol.dtree.RegressionTreeTrainer;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.MinibatchLbfgs;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -98,17 +100,22 @@ public abstract class AbstractCli {
   // Stochastic gradient options.
   protected OptionSpec<Integer> sgdIterations;
   protected OptionSpec<Integer> sgdBatchSize;
-  protected OptionSpec<Integer> sgdLogInterval;
   protected OptionSpec<Double> sgdInitialStep;
   protected OptionSpec<Void> sgdNoDecayStepSize;
   protected OptionSpec<Double> sgdL2Regularization;
   protected OptionSpec<Double> sgdRegularizationFrequency;
-  protected OptionSpec<Void> sgdBrief;
 
   // LBFGS options.
+  protected OptionSpec<Void> lbfgs;
   protected OptionSpec<Integer> lbfgsIterations;
   protected OptionSpec<Integer> lbfgsHessianRank;
   protected OptionSpec<Double> lbfgsL2Regularization;
+  protected OptionSpec<Integer> lbfgsMinibatchSize;
+  protected OptionSpec<Integer> lbfgsMinibatchIterations;
+  
+  // Logging options for all optimization algorithms.
+  protected OptionSpec<Integer> logInterval;
+  protected OptionSpec<Void> logBrief;
 
   // Map reduce options.
   protected OptionSpec<Integer> mrMaxThreads;
@@ -244,9 +251,6 @@ public abstract class AbstractCli {
       sgdBatchSize = parser.accepts("batchSize",
           "Minibatch size, i.e., the number of examples processed per gradient computation. If unspecified, defaults to using the entire data set (gradient descent).")
           .withRequiredArg().ofType(Integer.class);
-      sgdLogInterval = parser.accepts("logInterval",
-          "Number of iterations of stochastic gradient training between logging outputs.")
-          .withRequiredArg().ofType(Integer.class).defaultsTo(1);
       sgdInitialStep = parser.accepts("initialStepSize",
           "Initial step size for stochastic gradient descent.")
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
@@ -258,12 +262,10 @@ public abstract class AbstractCli {
       sgdRegularizationFrequency = parser.accepts("regularizationFrequency",
           "Fraction of iterations on which to apply regularization. Must be between 0 and 1")
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
-
-      // boolean option.
-      sgdBrief = parser.accepts("brief", "Hides training output.");
     }
-    
+
     if (opts.contains(CommonOptions.LBFGS)) {
+      lbfgs = parser.accepts("lbfgs");
       lbfgsIterations = parser.accepts("lbfgsIterations",
           "Maximum number of iterations (passes over the data) for LBFGS.").
           withRequiredArg().ofType(Integer.class).defaultsTo(100);
@@ -273,7 +275,24 @@ public abstract class AbstractCli {
       lbfgsL2Regularization = parser.accepts("lbfgsL2Regularization",
           "L2 regularization imposed by LBFGS")
           .withRequiredArg().ofType(Double.class).defaultsTo(0.0);
-    } 
+      
+      // Providing either of these options triggers the use of minibatch LBFGS
+      lbfgsMinibatchIterations = parser.accepts("lbfgsMinibatchIterations",
+          "If specified, run LBFGS on minibatches of the data with the specified number of iterations per minibatch.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(-1);
+      lbfgsMinibatchSize = parser.accepts("lbfgsMinibatchSize",
+          "If specified, run LBFGS on minibatches of the data with the specified number of examples per minibatch.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(-1);
+    }
+    
+    if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) || opts.contains(CommonOptions.LBFGS)) {
+      logInterval = parser.accepts("logInterval",
+          "Number of training iterations between logging outputs.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(1);
+
+      // boolean option.
+      logBrief = parser.accepts("logBrief", "Hides training output.");
+    }
 
     if (opts.contains(CommonOptions.MAP_REDUCE)) {
       mrMaxThreads = parser.accepts("maxThreads",
@@ -295,7 +314,7 @@ public abstract class AbstractCli {
       ccgApplicationOnly = parser.accepts("applicationOnly",
           "Use only function application during parsing, i.e., no composition.");
     }
-    
+
     if (opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT)) {
       fgaIterations = parser.accepts("fgaIterations",
           "Number of iterations of functional gradient ascent to perform.").withRequiredArg()
@@ -309,7 +328,7 @@ public abstract class AbstractCli {
       fgaNoDecayStepSize = parser.accepts("fgaNoDecayStepSize",
           "Don't use a 1/sqrt(t) step size decay during functional gradient ascent.");
     }
-    
+
     if (opts.contains(CommonOptions.REGRESSION_TREE)) {
       rtreeMaxDepth = parser.accepts("rtreeMaxDepth", "Maximum depth of trained regression trees")
           .withRequiredArg().ofType(Integer.class).required();
@@ -330,6 +349,11 @@ public abstract class AbstractCli {
           options.valueOf(mrMaxThreads), options.valueOf(mrMaxBatchesPerThread)));
     }
   }
+  
+  private LogFunction createLogFunction() {
+    return (parsedOptions.has(logBrief) ? new NullLogFunction() 
+    : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
+  }
 
   /**
    * Creates a {@code StochasticGradientTrainer} configured using the
@@ -339,7 +363,7 @@ public abstract class AbstractCli {
    * @return a stochastic gradient trainer configured using any
    * command-line options passed to the program
    */
-  protected StochasticGradientTrainer createStochasticGradientTrainer(int numExamples) {
+  private StochasticGradientTrainer createStochasticGradientTrainer(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.STOCHASTIC_GRADIENT));
 
     int iterationsOption = parsedOptions.valueOf(sgdIterations);
@@ -350,10 +374,8 @@ public abstract class AbstractCli {
     int numIterations = (int) Math.ceil(iterationsOption * numExamples / ((double) batchSize));
     double initialStepSize = parsedOptions.valueOf(sgdInitialStep);
     double l2Regularization = parsedOptions.valueOf(sgdL2Regularization);
-    boolean brief = parsedOptions.has(sgdBrief);
 
-    LogFunction log = (brief ? new NullLogFunction()
-        : new DefaultLogFunction(parsedOptions.valueOf(sgdLogInterval), false));
+    LogFunction log = createLogFunction(); 
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
         numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
         l2Regularization, parsedOptions.valueOf(sgdRegularizationFrequency), log);
@@ -361,10 +383,53 @@ public abstract class AbstractCli {
     return trainer;
   }
 
-  protected Lbfgs createLbfgs() {
+  private GradientOptimizer createLbfgs() {
     Preconditions.checkState(opts.contains(CommonOptions.LBFGS));
-    return new Lbfgs(parsedOptions.valueOf(lbfgsIterations), parsedOptions.valueOf(lbfgsHessianRank),
-        parsedOptions.valueOf(lbfgsL2Regularization), new DefaultLogFunction(1, false));
+    
+    int lbfgsMinibatchSizeInt = parsedOptions.valueOf(lbfgsMinibatchSize);
+    int lbfgsMinibatchIterationsInt = parsedOptions.valueOf(lbfgsMinibatchIterations);
+    if (lbfgsMinibatchSizeInt != -1 && lbfgsMinibatchIterationsInt != -1) {
+      // Using these options triggers minibatch LBFGS with a fixed 
+      // sized schedule.
+      int batchIterations = (int) Math.ceil(((double) parsedOptions.valueOf(lbfgsIterations)) / lbfgsMinibatchIterationsInt);
+      return MinibatchLbfgs.createFixedSchedule(parsedOptions.valueOf(lbfgsHessianRank), 
+          parsedOptions.valueOf(lbfgsL2Regularization), batchIterations,
+          lbfgsMinibatchSizeInt, lbfgsMinibatchIterationsInt, createLogFunction());
+    } else if (lbfgsMinibatchIterationsInt == -1 && lbfgsMinibatchSizeInt == -1) {
+      return new Lbfgs(parsedOptions.valueOf(lbfgsIterations), parsedOptions.valueOf(lbfgsHessianRank),
+        parsedOptions.valueOf(lbfgsL2Regularization), createLogFunction());
+    }
+
+    throw new UnsupportedOperationException(
+        "Must specify both or neither of --lbfgsMinibatchIterations and --lbfgsMinibatchSize");
+  }
+
+  /**
+   * Creates a gradient-based optimization algorithm based on the
+   * given command-line parameters. To use this method, pass at least
+   * one of {@link CommonOptions#STOCHASTIC_GRADIENT} or
+   * {@link CommonOptions#LBFGS} to the constructor. This method allows
+   * users to easily select different optimization algorithms and
+   * parameterizations. 
+   * 
+   * @param numExamples
+   * @return
+   */
+  protected GradientOptimizer createGradientOptimizer(int numExamples) {
+    if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) && 
+        opts.contains(CommonOptions.LBFGS)) {
+      if (parsedOptions.has(lbfgs)) {
+        createLbfgs();
+      } else {
+        createStochasticGradientTrainer(numExamples);
+      }
+    } else if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT)) {
+      return createStochasticGradientTrainer(numExamples);
+    } else if (opts.contains(CommonOptions.LBFGS)) {
+      return createLbfgs();
+    }
+
+    throw new UnsupportedOperationException("To use createGradientOptimizer, the CLI constructor must specify STOCHASTIC_GRADIENT and/or LBFGS.");
   }
 
   protected ParametricCcgParser createCcgParser(Set<String> posTagSet, Set<CcgRuleSchema> rules,

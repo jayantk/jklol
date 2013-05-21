@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
  * 
  * @author jayantk
  */
-public class Lbfgs {
+public class Lbfgs implements GradientOptimizer {
 
   private final int maxIterations;
   private final int numVectorsInApproximation;
@@ -63,9 +63,7 @@ public class Lbfgs {
   }
 
   /**
-   * Optimizes the objective given by {@code oracle} starting from
-   * {@code initialParameters}. This method may mutate
-   * {@code initialParameters}.
+   * {@inheritDoc}
    * <p>
    * Throws {@link LbfgsConvergenceError} if a suitable step size 
    * cannot be found by backtracking line search.
@@ -75,9 +73,9 @@ public class Lbfgs {
    * @param trainingData
    * @return
    */
-  public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
-      SufficientStatistics initialParameters, Iterable<E> trainingData) {
-
+  @Override
+  public <M, E, T extends E> SufficientStatistics train(GradientOracle<M, E> oracle,
+      SufficientStatistics initialParameters, Iterable<T> trainingData) {
     SufficientStatistics currentParameters = initialParameters;
     SufficientStatistics previousParameters = null;
     SufficientStatistics previousGradient = null;
@@ -86,7 +84,7 @@ public class Lbfgs {
     List<Double> scalings = Lists.newArrayList();
 
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
-    List<E> dataList = Lists.newArrayList(trainingData);
+    List<T> dataList = Lists.newArrayList(trainingData);
     GradientEvaluation gradientEvaluation = null;
     for (int i = 0; i < maxIterations; i++) {
       log.notifyIterationStart(i);
@@ -153,7 +151,7 @@ public class Lbfgs {
       // Perform a backtracking line search to find a step size.
       double stepSize = 1.0 / LINE_SEARCH_CONSTANT;
       double currentObjectiveValue = gradientEvaluation.getObjectiveValue();
-      double nextObjectiveValue, curInnerProd, nextInnerProd, cond1Rhs, cond2Rhs;
+      double nextObjectiveValue, curInnerProd, cond1Rhs, nextInnerProd, cond2Rhs;
       SufficientStatistics nextParameters;
 
       /*
@@ -216,8 +214,8 @@ public class Lbfgs {
     return currentParameters;
   }
 
-  private <M, E> GradientEvaluation evaluateGradient(SufficientStatistics parameters,
-      List<E> dataList, GradientOracle<M, E> oracle, MapReduceExecutor executor,
+  private <M, E, T extends E> GradientEvaluation evaluateGradient(SufficientStatistics parameters,
+      List<T> dataList, GradientOracle<M, E> oracle, MapReduceExecutor executor,
       LogFunction log) {
     // Create the factor graph (or whatever else) from the parameter
     // vector.
@@ -230,7 +228,7 @@ public class Lbfgs {
     // regularization term.
     log.startTimer("compute_gradient_(serial)");
     GradientEvaluation evaluation = executor.mapReduce(dataList,
-        new GradientMapper<M, E>(nextModel, oracle, log), new GradientReducer<M, E>(oracle, log));
+        new GradientMapper<M, T>(nextModel, oracle, log), new GradientReducer<M, T>(oracle, log));
     log.stopTimer("compute_gradient_(serial)");
 
     // Normalize the objective term, then apply regularization

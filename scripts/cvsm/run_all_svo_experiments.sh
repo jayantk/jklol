@@ -52,6 +52,7 @@ do
     echo "Running $FILENAME..."
     ### $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --batchSize 1 --iterations $ITERATIONS --l2Regularization $L2REG --initialVectors $VECTOR_IN --regularizationFrequency 0.1 --initialStepSize 0.1 $@ > $LOG_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --initializeTensorsToIdentity --lbfgsIterations $ITERATIONS --lbfgs --lbfgsL2Regularization $L2REG --initialVectors $VECTOR_IN --lbfgsMinibatchSize 1000 --lbfgsMinibatchIterations 20 $@ > $LOG_OUT
+
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $TRAIN_IN > $TRAIN_ERR_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $VALIDATION_IN > $VALIDATION_ERR_OUT
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $TEST_IN > $TEST_ERR_OUT

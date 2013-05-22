@@ -228,7 +228,6 @@ public abstract class TensorTest extends TestCase {
 
   public void testSlice2() {
     Tensor slice = table.slice(new int[] {3, 4}, new int[] {4, 3});
-    System.out.println("slice: " + slice);
     assertEquals(0.0, slice.getByDimKey(0));
     assertEquals(7.0, slice.getByDimKey(3));
     assertEquals(3.0, slice.getByDimKey(5));
@@ -403,9 +402,6 @@ public abstract class TensorTest extends TestCase {
       Tensor actual = table.innerProduct(vector);
       Tensor expected = simpleReduce(simpleMultiply(table, vector), 
           Sets.newHashSet(Ints.asList(vector.getDimensionNumbers())), ReduceType.SUM);
-
-      System.out.println("expected: " + expected);
-      System.out.println("actual: " + actual);
       assertEquals(expected, actual);
     }
   }
@@ -463,8 +459,6 @@ public abstract class TensorTest extends TestCase {
     Tensor relabeledVector = vector.relabelDimensions(new int[] {3});
     for (Tensor missingMiddle : missingMiddles) {
       Tensor result = relabeledVector.outerProduct(missingMiddle);
-
-      System.out.println(result);
       
       assertEquals(0.0, result.getByDimKey(0, 0, 0));
       assertEquals(0.0, result.getByDimKey(0, 0, 3));
@@ -487,7 +481,6 @@ public abstract class TensorTest extends TestCase {
       assertTrue(Arrays.equals(new int[] {6, 5, 4}, result.getDimensionSizes()));
 
       // The size is different depending on whether the tensor is sparse or dense.
-      System.out.println(result.size());
       assertTrue(result.size() == (5 * 2) || result.size() == (24 * 5) || result.size() == (24 * 2));
     }
   }
@@ -768,7 +761,7 @@ public abstract class TensorTest extends TestCase {
     Iterator<KeyValue> iter = actual.keyValueIterator();
     while (iter.hasNext()) {
       KeyValue k = iter.next();
-      System.out.println(k);
+      // System.out.println(k);
       assertEquals(expected.getByDimKey(k.getKey()), actual.getByDimKey(k.getKey()), tolerance);
     }
   }

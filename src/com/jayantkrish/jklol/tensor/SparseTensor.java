@@ -510,8 +510,6 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
       Tensor result = otherTensor.outerProduct(
           DenseTensor.constant(outerProductDims, outerProductSizes, 1.0));
-      System.out.println("op result: " + result);
-      
       SparseTensor value = elementwiseAddition(result);
       return value;
     } else {

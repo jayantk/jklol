@@ -152,11 +152,17 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       return elementwiseProduct(other);
     }
 
+    int[] myDims = getDimensionNumbers();
+    int[] mySizes = getDimensionSizes();
+    // If the other tensor has the same dimensionality as this tensor, 
+    // and is dense, the inner product is a simple array operation.
+    if (Arrays.equals(otherDims, myDims) && other instanceof DenseTensor) {
+      return DenseTensor.scalar(denseTensorInnerProduct((DenseTensor) other));
+    }
+
     // Check if the dimensions of other are either left- or right-aligned 
     // with this tensor's dimensions, in which case we can use a faster
     // inner product algorithm.
-    int[] myDims = getDimensionNumbers();
-    int[] mySizes = getDimensionSizes();
     Preconditions.checkArgument(otherDims.length <= myDims.length);
     if (areDimensionsRightAligned(otherDims)) {
       int maxDimIndex = myDims.length - (otherDims.length + 1);
@@ -189,6 +195,26 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       // Slow, default inner product.
       return elementwiseProduct(other).sumOutDimensions(otherDims);
     }
+  }
+  
+  /**
+   * Implementation of inner product where both tensors are dense and have
+   * the same dimensionality. These properties enable the inner product to
+   * be computed extremely quickly by iterating over both dense arrays of
+   * values.
+   *  
+   * @param other
+   * @return
+   */
+  private double denseTensorInnerProduct(DenseTensor other) {
+    double[] otherValues = other.values;
+    int length = values.length;
+    Preconditions.checkArgument(otherValues.length == length);
+    double innerProduct = 0.0;
+    for (int i = 0; i < length; i++) {
+      innerProduct += values[i] * otherValues[i];
+    }
+    return innerProduct;
   }
 
   /**
@@ -580,6 +606,16 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public static DenseTensor constant(int[] dimensions, int[] sizes, double weight) {
     DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes, weight);
     return builder.buildNoCopy();
+  }
+  
+  /**
+   * Gets a tensor representation of a scalar.
+   *  
+   * @param value
+   * @return
+   */
+  public static DenseTensor scalar(double value) {
+    return new DenseTensor(new int[] {}, new int[] {}, new double[] {value});
   }
 
   /**

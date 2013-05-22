@@ -94,7 +94,13 @@ public class Lbfgs implements GradientOptimizer {
             oracle, executor, log);
       }
       SufficientStatistics gradient = gradientEvaluation.getGradient();
+      
+      double gradientL2Norm = gradient.getL2Norm();
+      if (gradientL2Norm < GRADIENT_CONVERGENCE_THRESHOLD) {
+        return currentParameters;
+      }
 
+      // We haven't converged yet. Figure out which direction to move in.
       log.startTimer("compute_search_direction");
       // Store the requisite data for approximating the inverse
       // Hessian.
@@ -111,6 +117,9 @@ public class Lbfgs implements GradientOptimizer {
 
         scalings.add(1.0 / (pointDelta.innerProduct(gradientDelta)));
       }
+      
+      previousParameters = currentParameters.duplicate();
+      previousGradient = gradient.duplicate();
 
       // Compute this iteration's search direction.
       int hessianVectorCount = (int) Math.min(numVectorsInApproximation, i);
@@ -131,15 +140,7 @@ public class Lbfgs implements GradientOptimizer {
         double weight = scalings.get(index) * (gradientDeltas.get(index).innerProduct(direction));
         direction.increment(pointDeltas.get(index), weights[j] - weight);
       }
-
-      previousParameters = currentParameters.duplicate();
-      previousGradient = gradient.duplicate();
       log.stopTimer("compute_search_direction");
-
-      double gradientL2Norm = gradient.getL2Norm();
-      if (gradientL2Norm < GRADIENT_CONVERGENCE_THRESHOLD) {
-        return currentParameters;
-      }
 
       log.logStatistic(i, "parameter l2 norm", previousParameters.getL2Norm());
       log.logStatistic(i, "gradient l2 norm", gradientL2Norm);

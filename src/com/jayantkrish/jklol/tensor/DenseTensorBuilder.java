@@ -104,10 +104,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   private void simpleIncrement(TensorBase other, double multiplier) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
     if (other instanceof DenseTensorBase) {
-      DenseTensorBase otherTensor = (DenseTensorBase) other;
-      Preconditions.checkArgument(otherTensor.values.length == values.length);
-      for (int i = 0; i < values.length; i++) {
-        values[i] += otherTensor.values[i] * multiplier;
+      double[] otherTensorValues = ((DenseTensorBase) other).values;
+      Preconditions.checkArgument(otherTensorValues.length == values.length);
+      int length = values.length;
+      for (int i = 0; i < length; i++) {
+        values[i] += otherTensorValues[i] * multiplier;
       }
     } else {
       int otherSize = other.size();

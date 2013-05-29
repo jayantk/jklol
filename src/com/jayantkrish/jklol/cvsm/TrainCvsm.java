@@ -143,7 +143,7 @@ public class TrainCvsm extends AbstractCli {
       }
     }
 
-    initialParameters.perturb(1.0);
+    initialParameters.perturb(0.01);
 
     GradientOptimizer trainer = createGradientOptimizer(examples.size());
     return trainer.train(oracle, initialParameters, examples);

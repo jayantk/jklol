@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 
 public class OpLrtFamily implements LrtFamily {
   private static final long serialVersionUID = 1L;
@@ -26,6 +27,11 @@ public class OpLrtFamily implements LrtFamily {
   private final int rank;
   
   private final VariableNumMap smallestVar; 
+
+    // If non-null, this tensor is added to the diagonal
+    // entries of the matrix, making regularization apply
+    // to the deviation from this value.
+  private Tensor initialTensor;
   
   public OpLrtFamily(VariableNumMap vars, int rank) {
     this.vars = Preconditions.checkNotNull(vars);
@@ -42,12 +48,25 @@ public class OpLrtFamily implements LrtFamily {
       }
     }
     this.smallestVar = vars.intersection(minIndex);
+
+    this.initialTensor = null;
   }
   
   @Override
   public int[] getDimensionNumbers() {
     return vars.getVariableNumsArray();
   }
+
+    @Override
+    public int[] getDimensionSizes() {
+	return vars.getVariableSizes();
+    }
+
+    @Override
+    public void setInitialTensor(Tensor tensor) {
+	Preconditions.checkArgument(Arrays.equals(tensor.getDimensionNumbers(), getDimensionNumbers()));
+	this.initialTensor = tensor;
+    }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
@@ -95,8 +114,12 @@ public class OpLrtFamily implements LrtFamily {
     }
 
     double[] diagValues = ((TensorSufficientStatistics) opStats.get(rank)).get().getValues();
-    elements[rank] = new TensorLowRankTensor(SparseTensor.diagonal(
-        vars.getVariableNumsArray(), vars.getVariableSizes(), diagValues));
+    Tensor diagTensor = SparseTensor.diagonal(vars.getVariableNumsArray(), 
+					      vars.getVariableSizes(), diagValues);
+    if (initialTensor != null) {
+	diagTensor = diagTensor.elementwiseAddition(initialTensor);
+    }
+    elements[rank] = new TensorLowRankTensor(diagTensor);
 
     LowRankTensor finalResult = SumLowRankTensor.create(elements);
     return finalResult; 

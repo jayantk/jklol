@@ -35,6 +35,8 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<String> initialVectors;
 
   private OptionSpec<Void> fixInitializedVectors;  
+  private OptionSpec<Void> regularizeDeltas;  
+  private OptionSpec<Void> regularizeVectorDeltas;
   private OptionSpec<Void> initializeTensorsToIdentity;
   private OptionSpec<Void> squareLoss;
   private OptionSpec<Void> klLoss;
@@ -51,6 +53,8 @@ public class TrainCvsm extends AbstractCli {
     initialVectors = parser.accepts("initialVectors").withRequiredArg().ofType(String.class).required();
 
     fixInitializedVectors = parser.accepts("fixInitializedVectors");
+    regularizeDeltas = parser.accepts("regularizeDeltas");
+    regularizeVectorDeltas = parser.accepts("regularizeVectorDeltas");
     initializeTensorsToIdentity = parser.accepts("initializeTensorsToIdentity");
     squareLoss = parser.accepts("squareLoss");
     klLoss = parser.accepts("klLoss");
@@ -66,8 +70,8 @@ public class TrainCvsm extends AbstractCli {
     CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
     SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
         options.has(squareLoss), options.has(klLoss), options.has(initializeTensorsToIdentity),
-        options.has(lbfgs), options.valueOf(lbfgsMinibatchSize),
-        options.valueOf(lbfgsMinibatchIterations), options.has(fixInitializedVectors));
+        options.has(lbfgs),  options.valueOf(lbfgsMinibatchSize), options.valueOf(lbfgsMinibatchIterations),
+        options.has(fixInitializedVectors), options.has(regularizeDeltas), options.has(regularizeVectorDeltas));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -89,8 +93,9 @@ public class TrainCvsm extends AbstractCli {
 
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
-      boolean useSquareLoss, boolean useKlLoss, boolean initializeTensorsToIdentity, boolean useLbfgs, 
-      int lbfgsMinibatchSize, int lbfgsMinibatchIterations, boolean fixInitializedVectors) {
+      boolean useSquareLoss, boolean useKlLoss, boolean initializeTensorsToIdentity,
+      boolean useLbfgs, int lbfgsMinibatchSize, int lbfgsMinibatchIterations,
+      boolean fixInitializedVectors, boolean regularizeDeltas, boolean regularizeVectorDeltas) {
 
     CvsmLoss loss = null;
     if (useSquareLoss) {
@@ -104,11 +109,16 @@ public class TrainCvsm extends AbstractCli {
     GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, loss);
     SufficientStatistics initialParameters = family.getNewSufficientStatistics();
     if (initializeTensorsToIdentity) {
-      family.initializeParametersToIdentity(initialParameters);
+      if (regularizeDeltas) {
+        family.setInitialTensorsToIdentity();
+      } else {
+        family.initializeParametersToIdentity(initialParameters);
+      }
     }
 
     if (!fixInitializedVectors) {
       CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) initialParameters;
+      List<LrtFamily> families = family.getFamilies();
       List<String> names = cvsmStats.getNames().items();
       for (int i = 0; i < names.size(); i++) {
         String name = names.get(i);
@@ -122,14 +132,18 @@ public class TrainCvsm extends AbstractCli {
             Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
                 tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
 
-            tensorStats.increment(tensorStats, -1.0);
-            tensorStats.increment(increment, 1.0);
+            if (!regularizeVectorDeltas) {
+              tensorStats.increment(tensorStats, -1.0);
+              tensorStats.increment(increment, 1.0);
+            } else {
+              families.get(i).setInitialTensor(increment);
+            }
           }
         }
       }
     }
 
-    initialParameters.perturb(0.0001);
+    initialParameters.perturb(0.01);
 
     GradientOptimizer trainer = createGradientOptimizer(examples.size());
     return trainer.train(oracle, initialParameters, examples);

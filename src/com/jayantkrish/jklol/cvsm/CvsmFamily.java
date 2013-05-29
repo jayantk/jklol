@@ -65,6 +65,24 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
     }
   }
 
+  /**
+   * Set the initial tensors and matrices in this family to the identity.
+   * This method differs from {@link #initializeParametersToIdentity} in 
+   * the way that regularization affects the parameters.
+   *  
+   * @param parameters
+   */
+  public void setInitialTensorsToIdentity() {
+    for (int i = 0; i < families.size(); i++) {
+      LrtFamily lrtFamily = families.get(i);
+      if (lrtFamily.getDimensionNumbers().length >= 2) {
+	  Tensor initialValue = SparseTensor.diagonal(lrtFamily.getDimensionNumbers(),
+				lrtFamily.getDimensionSizes(), 1.0);
+	  lrtFamily.setInitialTensor(initialValue);
+      }
+    }
+  }
+
   public List<LrtFamily> getFamilies() {
     return families;
   }

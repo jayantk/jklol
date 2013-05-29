@@ -28,16 +28,19 @@ public class CvsmUtils {
         continue;
       }
 
-      Preconditions.checkArgument(parts.length == 2);
       Expression logicalForm = exp.parseSingleExpression(parts[0]);
-      
-      String[] stringValues = parts[1].split(",");
-      double[] values = new double[stringValues.length];
-      for (int i = 0; i < stringValues.length; i++) {
-        values[i] = Double.parseDouble(stringValues[i]);
+
+      Tensor target = null;
+      if (parts.length > 1) {
+        String[] stringValues = parts[1].split(",");
+        double[] values = new double[stringValues.length];
+        for (int i = 0; i < stringValues.length; i++) {
+          values[i] = Double.parseDouble(stringValues[i]);
+        }
+
+        target = new DenseTensor(new int[] {0}, new int[] {stringValues.length}, values);
       }
 
-      Tensor target = new DenseTensor(new int[] {0}, new int[] {stringValues.length}, values);
       examples.add(new CvsmExample(logicalForm, target, null));
     }
     return examples;

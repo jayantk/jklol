@@ -11,14 +11,18 @@ import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.cvsm.tree.CvsmAdditionTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmConstantTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmInnerProductTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmLogTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLogisticTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmRelabelDimsTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSoftmaxTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTanhTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTensorTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
+import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 /**
@@ -54,8 +58,16 @@ public class Cvsm implements Serializable {
   public CvsmTree getInterpretationTree(Expression logicalForm) {
     if (logicalForm instanceof ConstantExpression) {
       String value = ((ConstantExpression) logicalForm).getName();
-      Preconditions.checkArgument(tensorNames.contains(value), "Unknown parameter name: %s", value);
-      return new CvsmTensorTree(value, getTensor(value));
+      if (tensorNames.contains(value)) {
+        return new CvsmTensorTree(value, getTensor(value));
+      } else {
+        try {
+          double doubleValue = Double.parseDouble(value);
+          return new CvsmConstantTree(new TensorLowRankTensor(DenseTensor.scalar(doubleValue)));
+        } catch (NumberFormatException e) {
+          throw new IllegalArgumentException("Unknown parameter name: " + value);
+        }
+      } 
     } else if (logicalForm instanceof ApplicationExpression) {
       ApplicationExpression app = ((ApplicationExpression) logicalForm);
       String functionName = ((ConstantExpression) app.getFunction()).getName();
@@ -83,6 +95,11 @@ public class Cvsm implements Serializable {
 
         CvsmTree subtree = getInterpretationTree(args.get(0));
         return CvsmSoftmaxTree.create(subtree);
+      } else if (functionName.equals("op:log")) {
+        Preconditions.checkArgument(args.size() == 1);
+
+        CvsmTree subtree = getInterpretationTree(args.get(0));
+        return CvsmLogTree.create(subtree);
       } else if (functionName.equals("op:logistic")) {
         Preconditions.checkArgument(args.size() == 1);
 

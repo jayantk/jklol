@@ -37,9 +37,11 @@ public class CvsmValueLossTree extends AbstractCvsmTree {
   }
 
   @Override
-  public void backpropagateGradient(LowRankTensor treeGradient, CvsmGradient gradient) {    
+  public void backpropagateGradient(LowRankTensor treeGradient, CvsmGradient gradient) {
+    // Backpropagating a gradient of -1 gets the negative gradient,
+    // which is what we want to minimize the loss.
     Tensor gradientTensor = DenseTensor.constant(treeGradient.getDimensionNumbers(),
-        treeGradient.getDimensionSizes(), 1.0);
+        treeGradient.getDimensionSizes(), -1.0);
     subtree.backpropagateGradient(new TensorLowRankTensor(gradientTensor), gradient);
   }
   

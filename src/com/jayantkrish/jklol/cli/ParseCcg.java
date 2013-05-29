@@ -98,11 +98,7 @@ public class ParseCcg extends AbstractCli {
       List<String> sentenceToParse = Lists.newArrayList();
       List<String> posTags = Lists.newArrayList();
       if (options.has(pos)) {
-        for (String token : input) {
-          String[] chunks = token.split("/");
-          sentenceToParse.add(chunks[0]);
-          posTags.add(chunks[1]);
-        }
+        parsePosTaggedInput(input, sentenceToParse, posTags);
       } else {
         sentenceToParse = input;
         posTags = Collections.nCopies(sentenceToParse.size(), ParametricCcgParser.DEFAULT_POS_TAG);
@@ -111,10 +107,17 @@ public class ParseCcg extends AbstractCli {
       List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, posTags, options.valueOf(beamSize));
       printCcgParses(parses, options.valueOf(numParses), options.has(atomic), options.has(printLf));
     }
-
     System.exit(0);
   }
   
+  public static void parsePosTaggedInput(List<String> input, List<String> wordAccumulator,
+      List<String> posAccumulator) {
+    for (String token : input) {
+      String[] chunks = token.split("/");
+      wordAccumulator.add(chunks[0]);
+      posAccumulator.add(chunks[1]);
+    }
+  }
 
   public static void main(String[] args) {
     new ParseCcg().run(args);

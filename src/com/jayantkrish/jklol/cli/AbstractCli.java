@@ -178,15 +178,15 @@ public abstract class AbstractCli {
     }
 
     if (errorMessage != null && !printHelp) {
-      System.out.println(errorMessage);
-      System.out.println("Try --help for more information about options.");
+      System.err.println(errorMessage);
+      System.err.println("Try --help for more information about options.");
       System.exit(1);
     }
 
     if (printHelp || parsedOptions.has(helpOpt)) {
       // If a help option is given, print help then quit.
       try {
-        parser.printHelpOn(System.out);
+        parser.printHelpOn(System.err);
       } catch (IOException ioException) {
         throw new RuntimeException(ioException);
       }

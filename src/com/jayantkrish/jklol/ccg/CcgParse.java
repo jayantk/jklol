@@ -291,10 +291,10 @@ public class CcgParse {
       System.out.println(rightLogicalForm);
       System.out.println(dependencies);
       System.out.println(combinator);
-      */
-
       System.out.println("left: " + leftLogicalForm);
       System.out.println("right: " + rightLogicalForm);
+      */
+
       Expression result = null;
       if (leftLogicalForm != null && rightLogicalForm != null) {
         if (combinator.getBinaryRule() != null) {
@@ -330,7 +330,7 @@ public class CcgParse {
           } else {
             // Composition.
             LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
-            System.out.println("argument: " + argumentAsLambda);
+
             List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
             List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
 

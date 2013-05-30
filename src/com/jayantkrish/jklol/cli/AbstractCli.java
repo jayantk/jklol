@@ -11,6 +11,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -198,7 +199,7 @@ public abstract class AbstractCli {
     for (OptionSpec<?> optionSpec : parsedOptions.specs()) {
       if (parsedOptions.hasArgument(optionSpec)) {
         System.out.println("--" + Iterables.getFirst(optionSpec.options(), "") + " "
-            + parsedOptions.valueOf(optionSpec));
+            + Joiner.on(" ").join(parsedOptions.valuesOf(optionSpec)));
       } else {
         System.out.println("--" + Iterables.getFirst(optionSpec.options(), ""));
       }

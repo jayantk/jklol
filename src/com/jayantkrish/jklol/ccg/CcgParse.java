@@ -247,27 +247,50 @@ public class CcgParse {
     }
   }
 
+  /**
+   * Gets the logical forms for every subspan of this parse tree.
+   * Many of the returned logical forms combine with each other 
+   * during the parse of the sentence.
+   * 
+   * @return
+   */
   public List<SpannedExpression> getSpannedLogicalForms() {
     List<SpannedExpression> spannedExpressions = Lists.newArrayList();
-    getSpannedLogicalFormsHelper(spannedExpressions);
+    getSpannedLogicalFormsHelper(spannedExpressions, false);
     return spannedExpressions;
   }
 
-  private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions) {
+  /**
+   * Gets the logical forms for the maximal subspans of this sentence
+   * for which logical forms exist. None of the returned logical forms
+   * combine with each other in this parse.
+   * 
+   * @return
+   */
+  public List<SpannedExpression> getMaximalSpannedLogicalForms() {    
+    List<SpannedExpression> spannedExpressions = Lists.newArrayList();
+    getSpannedLogicalFormsHelper(spannedExpressions, true);
+    return spannedExpressions;
+  }
+
+  private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions,
+      boolean onlyMaximal) {
     Expression logicalForm = getLogicalForm();
     if (logicalForm != null) {
       spannedExpressions.add(new SpannedExpression(logicalForm.simplify(), spanStart, spanEnd));
+      if (onlyMaximal) { return; }
     } 
     Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
 
     if (preUnaryLogicalForm != null) {
       spannedExpressions.add(new SpannedExpression(preUnaryLogicalForm.simplify(),
           spanStart, spanEnd));
+      if (onlyMaximal) { return; }
     }
 
     if (!isTerminal()) {
-      left.getSpannedLogicalFormsHelper(spannedExpressions);
-      right.getSpannedLogicalFormsHelper(spannedExpressions);
+      left.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal);
+      right.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal);
     }
   }
 
@@ -279,7 +302,13 @@ public class CcgParse {
    */
   private Expression getPreUnaryLogicalForm() {
     if (isTerminal()) {
-      return lexiconEntry.getLogicalForm();
+      Expression logicalForm = lexiconEntry.getLogicalForm();
+      if (logicalForm == null) { 
+        // Try and guess a suitable logical form based on the syntactic category.
+        // This method also returns null on failure. 
+        logicalForm = CcgCategory.induceLogicalFormFromSyntax(lexiconEntry.getSyntax());
+      }
+      return logicalForm;
     } else {
       Expression leftLogicalForm = left.getLogicalForm();
       Expression rightLogicalForm = right.getLogicalForm();
@@ -296,55 +325,70 @@ public class CcgParse {
       */
 
       Expression result = null;
-      if (leftLogicalForm != null && rightLogicalForm != null) {
-        if (combinator.getBinaryRule() != null) {
-          LambdaExpression combinatorExpression = combinator.getBinaryRule().getLogicalForm();
-          if (combinatorExpression != null) {
-            result = combinatorExpression.reduce(Arrays.asList(leftLogicalForm, rightLogicalForm));
+      if (combinator.getBinaryRule() != null) {
+        // Binary rules may not require both argument logical forms to be
+        // defined in order to produce the logical form for the phrase.
+        LambdaExpression combinatorExpression = combinator.getBinaryRule().getLogicalForm();
+        if (combinatorExpression != null) {
+          List<ConstantExpression> argumentVars = combinatorExpression.getArguments().subList(0, 2);
+          Expression body = combinatorExpression.getBody();
+          List<Expression> argValues = Lists.newArrayList(leftLogicalForm, rightLogicalForm);
+          // If the body is missing either argument, we can assign an arbitrary
+          // value to the argument and still get the correct logical form.
+          // for the entire phrase.
+          if (!body.getFreeVariables().contains(argumentVars.get(0))) {
+            argValues.set(0, new ConstantExpression("**null**"));
+          }
+          if (!body.getFreeVariables().contains(argumentVars.get(1))) {
+            argValues.set(1, new ConstantExpression("**null**"));
+          }
+          
+          if (argValues.get(0) != null && argValues.get(1) != null) {
+            result = combinatorExpression.reduce(argValues);
+          }
+        }
+      } else if (leftLogicalForm != null && rightLogicalForm != null) {
+        // Function application or composition.
+        Expression functionLogicalForm = null;
+        Expression argumentLogicalForm = null;
+        if (combinator.isArgumentOnLeft()) {
+          functionLogicalForm = rightLogicalForm;
+          argumentLogicalForm = leftLogicalForm;
+        } else {
+          functionLogicalForm = leftLogicalForm;
+          argumentLogicalForm = rightLogicalForm;
+        }
+
+        LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm.simplify();
+        int numArgsToKeep = combinator.getArgumentReturnDepth();
+        if (numArgsToKeep == 0) {
+          // Function application.
+          int numArguments = functionAsLambda.getArguments().size(); 
+          if (numArguments > 1) {
+            List<ConstantExpression> remainingArguments = ConstantExpression.generateUniqueVariables(numArguments - 1);
+            List<Expression> arguments = Lists.newArrayList(argumentLogicalForm);
+            arguments.addAll(remainingArguments);
+            result = new LambdaExpression(remainingArguments, new ApplicationExpression(functionAsLambda, arguments));
+          } else {
+            result = new ApplicationExpression(functionAsLambda, Arrays.asList(argumentLogicalForm));
           }
         } else {
-          // Function application or composition.
-          Expression functionLogicalForm = null;
-          Expression argumentLogicalForm = null;
-          if (combinator.isArgumentOnLeft()) {
-            functionLogicalForm = rightLogicalForm;
-            argumentLogicalForm = leftLogicalForm;
-          } else {
-            functionLogicalForm = leftLogicalForm;
-            argumentLogicalForm = rightLogicalForm;
+          // Composition.
+          LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
+
+          List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
+          List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
+
+          List<Expression> functionArguments = Lists.newArrayList();
+          functionArguments.add(new ApplicationExpression(argumentAsLambda, remainingArgsRenamed));
+          List<ConstantExpression> newFunctionArgs = ConstantExpression.generateUniqueVariables(functionAsLambda.getArguments().size() - 1);
+          functionArguments.addAll(newFunctionArgs);
+
+          result = new ApplicationExpression(functionAsLambda, functionArguments);
+          if (newFunctionArgs.size() > 0) {
+            result = new LambdaExpression(newFunctionArgs, result);
           }
-
-          LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm.simplify();
-          int numArgsToKeep = combinator.getArgumentReturnDepth();
-          if (numArgsToKeep == 0) {
-            // Function application.
-            int numArguments = functionAsLambda.getArguments().size(); 
-            if (numArguments > 1) {
-              List<ConstantExpression> remainingArguments = ConstantExpression.generateUniqueVariables(numArguments - 1);
-              List<Expression> arguments = Lists.newArrayList(argumentLogicalForm);
-              arguments.addAll(remainingArguments);
-              result = new LambdaExpression(remainingArguments, new ApplicationExpression(functionAsLambda, arguments));
-            } else {
-              result = new ApplicationExpression(functionAsLambda, Arrays.asList(argumentLogicalForm));
-            }
-          } else {
-            // Composition.
-            LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
-
-            List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
-            List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
-
-            List<Expression> functionArguments = Lists.newArrayList();
-            functionArguments.add(new ApplicationExpression(argumentAsLambda, remainingArgsRenamed));
-            List<ConstantExpression> newFunctionArgs = ConstantExpression.generateUniqueVariables(functionAsLambda.getArguments().size() - 1);
-            functionArguments.addAll(newFunctionArgs);
-
-            result = new ApplicationExpression(functionAsLambda, functionArguments);
-            if (newFunctionArgs.size() > 0) {
-              result = new LambdaExpression(newFunctionArgs, result);
-            }
-            result = new LambdaExpression(remainingArgsRenamed, result);
-          }
+          result = new LambdaExpression(remainingArgsRenamed, result);
         }
       }
       // System.out.println("result: " + result);

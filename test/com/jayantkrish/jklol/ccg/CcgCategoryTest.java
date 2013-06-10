@@ -22,7 +22,7 @@ public class CcgCategoryTest extends TestCase {
   }
   
   public void testInduceLogicalForm2() {
-    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("(((S{0}\\N{1}){0}\\(S{0}\\N{1}){0}){2}/N{3}){2}");
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("(((S[9]{0}\\N{1}){0}\\(S[9]{0}\\N{1}){0}){2}/N{3}){2}");
     
     Expression expression = CcgCategory.induceLogicalFormFromSyntax(cat);
     Expression expected = parser.parseSingleExpression("(lambda $3 $0 $1 ($0 $1))");

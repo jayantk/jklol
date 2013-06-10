@@ -88,6 +88,12 @@ public class CcgParser implements Serializable {
   private final VariableNumMap terminalPosVar;
   private final VariableNumMap terminalSyntaxVar;
   private final DiscreteFactor terminalPosDistribution;
+  
+  // Weights for word -> syntactic category mappings for
+  // the lexicon. This factor is defined over terminalVar
+  // and terminalSyntaxVar, and provides backoff weights
+  // for different semantic realizations of the same word.
+  private final DiscreteFactor terminalSyntaxDistribution;
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -166,8 +172,8 @@ public class CcgParser implements Serializable {
 
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
-      DiscreteFactor terminalPosDistribution, VariableNumMap dependencyHeadVar,
-      VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
+      DiscreteFactor terminalPosDistribution, DiscreteFactor terminalSyntaxDistribution, 
+      VariableNumMap dependencyHeadVar, VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       DiscreteFactor dependencyDistribution, VariableNumMap wordDistanceVar,
       DiscreteFactor wordDistanceFactor, VariableNumMap puncDistanceVar,
       DiscreteFactor puncDistanceFactor, Set<String> puncTagSet, VariableNumMap verbDistanceVar,
@@ -188,6 +194,10 @@ public class CcgParser implements Serializable {
     this.terminalPosDistribution = Preconditions.checkNotNull(terminalPosDistribution);
     VariableNumMap expectedTerminalPosVars = terminalPosVar.union(terminalSyntaxVar);
     Preconditions.checkArgument(expectedTerminalPosVars.equals(terminalPosDistribution.getVars()));
+    
+    this.terminalSyntaxDistribution = Preconditions.checkNotNull(terminalSyntaxDistribution);
+    VariableNumMap expectedTerminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
+    Preconditions.checkArgument(expectedTerminalSyntaxVars.equals(terminalSyntaxDistribution.getVars()));
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(
         VariableNumMap.unionAll(dependencyHeadVar, dependencyArgNumVar, dependencyArgVar)));
@@ -299,9 +309,11 @@ public class CcgParser implements Serializable {
       }
     }
     DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategory", allCategories);
+    /*
     for (int i = 0; i < syntaxType.numValues(); i++) {
       System.out.println(i + " " + syntaxType.getValue(i));
     }
+    */
     return syntaxType;
   }
 
@@ -1030,10 +1042,10 @@ public class CcgParser implements Serializable {
    * @param errorOnInvalidExample
    * @return
    */
-  public List<CcgExample> filterExampleCollection(Iterable<CcgExample> examples,
+  public <T extends CcgExample> List<T> filterExampleCollection(Iterable<T> examples,
       boolean errorOnInvalidExample, Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
-    List<CcgExample> filteredExamples = Lists.newArrayList();
-    for (CcgExample example : examples) {
+    List<T> filteredExamples = Lists.newArrayList();
+    for (T example : examples) {
       if (isPossibleExample(example, syntacticCategoryMap)) {
         filteredExamples.add(example);
       } else {
@@ -1043,7 +1055,7 @@ public class CcgParser implements Serializable {
     }
     return filteredExamples;
   }
-  
+
   public DiscreteVariable getSyntaxVarType() {
     return syntaxVarType;
   }
@@ -1318,10 +1330,12 @@ public class CcgParser implements Serializable {
       // Look up how likely this syntactic entry is to occur with
       // this part of speech.
       double posProb = getTerminalPosProbability(posTag, category.getSyntax());
+      double syntaxProb = getTerminalSyntaxProbability(terminalValue, category.getSyntax());
 
       // Add all possible chart entries to the ccg chart.
       ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, spanStart, spanEnd);
-      chart.addChartEntryForSpan(entry, bestOutcome.getProbability() * posProb, spanStart, spanEnd, syntaxVarType);
+      chart.addChartEntryForSpan(entry, bestOutcome.getProbability() * posProb * syntaxProb,
+          spanStart, spanEnd, syntaxVarType);
       numEntries++;
     }
     return numEntries;
@@ -1333,6 +1347,14 @@ public class CcgParser implements Serializable {
     // TODO: this check should be made unnecessary by preprocessing.
     if (terminalPosVar.isValidAssignment(posAssignment)) {
       return terminalPosDistribution.getUnnormalizedProbability(posAssignment.union(syntaxAssignment));
+    } else {
+      return 1.0;
+    }
+  }
+
+  public double getTerminalSyntaxProbability(List<String> terminal, HeadedSyntacticCategory syntax) {
+    if (terminalVar.isValidAssignment(terminalVar.outcomeArrayToAssignment(terminal))) {
+      return terminalSyntaxDistribution.getUnnormalizedProbability(terminal, syntax);
     } else {
       return 1.0;
     }
@@ -1856,7 +1878,6 @@ public class CcgParser implements Serializable {
   }
 
   public long predicateToLong(String predicate) {
-    System.out.println(predicate + " " + dependencyHeadType.canTakeValue(predicate));
     if (dependencyHeadType.canTakeValue(predicate)) {
       return dependencyHeadType.getValueIndex(predicate);
     } else {

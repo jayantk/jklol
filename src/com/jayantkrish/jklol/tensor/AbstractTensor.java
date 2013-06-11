@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.tensor;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.SortedSet;
 
 import com.google.common.base.Preconditions;
@@ -60,8 +61,6 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
   }
 
   public static Tensor logSumOutDimensions(Tensor tensor, Collection<Integer> dimensionsToEliminate) {
-    // throw new UnsupportedOperationException("Not yet implemented.");
-
     if (dimensionsToEliminate.size() == 0) {
       return tensor;
     }
@@ -70,7 +69,120 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
     return tensor.elementwiseAddition(minValues).elementwiseExp().sumOutDimensions(dimensionsToEliminate)
         .elementwiseLog().elementwiseAddition(minValues.elementwiseProduct(-1.0));
   }
-  
+
+  public static Tensor innerProduct(Tensor first, Tensor second, TensorFactory factory) {
+    int myInd = 0;
+    int mySize = first.size();
+    int otherSize = second.size();
+
+    // Figure out which dimensions of first are alignable to second.
+    int[] myDimensionNums = first.getDimensionNumbers();
+    int[] myDimensionSizes = first.getDimensionSizes();
+    long[] myDimensionOffsets = first.getDimensionOffsets();
+    List<Integer> myDimensionNumsList = Ints.asList(myDimensionNums);
+    int[] otherDimensionNums = second.getDimensionNumbers();
+    int[] otherDimensionSizes = second.getDimensionSizes();
+    long[] otherDimensionOffsets = second.getDimensionOffsets();
+    List<Integer> otherDimensionNumsList = Ints.asList(otherDimensionNums);
+
+    int firstAlignedDim = -1;
+    int numOtherDims = 0;
+    for (int i = 0; i < myDimensionNums.length; i++) {
+      if (myDimensionNums[i] == otherDimensionNums[numOtherDims]) {
+        if (numOtherDims == 0) {
+          firstAlignedDim = i;
+        }
+
+        Preconditions.checkArgument(myDimensionSizes[i] == otherDimensionSizes[numOtherDims]);
+        Preconditions.checkArgument(numOtherDims == 0 || myDimensionNums[i - 1] == otherDimensionNums[numOtherDims - 1],
+            "Dimensions of second must be contiguous in first. Got %s and %s.", myDimensionNumsList, otherDimensionNumsList);
+
+        numOtherDims++;
+      }
+    }
+    Preconditions.checkArgument(numOtherDims > 0);
+    
+    // This is an inclusive index.
+    int lastAlignedDim = firstAlignedDim + numOtherDims - 1;
+
+    // Use the alignment of dimensions to compute a mapping between
+    // the keys of the two tensors and the result.
+    long keyNumDivisor = myDimensionOffsets[lastAlignedDim];
+    long keyNumModulo = firstAlignedDim != 0 ? myDimensionOffsets[firstAlignedDim - 1] : first.getMaxKeyNum();
+
+    // otherKeyNumOffset partitions the keynums of other into two
+    // parts. Note that numOtherDims must be > 0.
+    long otherKeyNumOffset = otherDimensionOffsets[numOtherDims - 1];
+    
+    // This check is not necessary, but makes it easier to construct the
+    // dimensions of the result. Really, the result dimensions produced
+    // from second need to be contiguous when merged with the dimensions
+    // produced by first.
+    Preconditions.checkArgument(lastAlignedDim == myDimensionNums.length - 1 ||
+        numOtherDims == otherDimensionNums.length ||
+        myDimensionNums[lastAlignedDim + 1] > otherDimensionNums[otherDimensionNums.length - 1]);
+    
+    int numResultDims = (myDimensionNums.length - numOtherDims) + 
+        (otherDimensionNums.length - numOtherDims);
+    int[] resultDimensionNums = new int[numResultDims];
+    int[] resultDimensionSizes = new int[numResultDims];
+    
+    for (int i = 0; i < firstAlignedDim; i++) {
+      resultDimensionNums[i] = myDimensionNums[i];
+      resultDimensionSizes[i] = myDimensionSizes[i];
+    }
+    int numOtherUnalignedDims = otherDimensionNums.length - numOtherDims;
+    for (int i = 0; i < numOtherUnalignedDims; i++) {
+      resultDimensionNums[i + firstAlignedDim] = otherDimensionNums[i + numOtherDims];
+      resultDimensionSizes[i + firstAlignedDim] = otherDimensionSizes[i + numOtherDims];
+    }
+    for (int i = 0; i < myDimensionNums.length - (lastAlignedDim + 1); i++) {
+      resultDimensionNums[i + firstAlignedDim + numOtherDims] = myDimensionNums[i + lastAlignedDim + 1];
+      resultDimensionSizes[i + firstAlignedDim + numOtherDims] = myDimensionSizes[i + lastAlignedDim + 1];
+    }
+    TensorBuilder builder = factory.getBuilder(resultDimensionNums, resultDimensionSizes);
+    long[] resultDimensionOffsets = builder.getDimensionOffsets();
+    long resultPrefixOffset = firstAlignedDim != 0 ? resultDimensionOffsets[firstAlignedDim - 1] : 0;
+    long resultMiddleOffset = resultDimensionOffsets[firstAlignedDim + numOtherUnalignedDims - 1];
+    long resultSuffixOffset = 1L;
+
+    while (myInd < mySize) {
+      long myKeyNum = first.indexToKeyNum(myInd);
+      double myValue = first.getByIndex(myInd);
+
+      // myKeyNum has three parts: the parts before, in, and after 
+      // the dimensions involved in the inner product.
+      long myKeyNumPrefix = myKeyNum / keyNumModulo;
+      long myKeyNumMiddle = (myKeyNum % keyNumModulo) / keyNumDivisor;
+      long myKeyNumSuffix = myKeyNum % keyNumDivisor;
+
+      // Iterate over the dimensions of second which are not
+      // involved in the inner product with first.
+      long otherKeyNumPrefix = myKeyNumMiddle * otherKeyNumOffset;
+      long otherMaxKeyNum = otherKeyNumPrefix + otherKeyNumOffset;
+      int otherIndex = second.getNearestIndex(otherKeyNumPrefix);
+      while (otherIndex < otherSize) {
+        long otherKeyNum = second.indexToKeyNum(otherIndex);
+        if (otherKeyNum >= otherMaxKeyNum) {
+          break;
+        }
+
+        long otherResultKeyNum = otherKeyNum % otherKeyNumOffset;
+        long resultKeyNum = (myKeyNumPrefix * resultPrefixOffset) + 
+            (otherResultKeyNum * resultMiddleOffset) + (myKeyNumSuffix * resultSuffixOffset); 
+
+        double value = myValue * second.getByIndex(otherIndex);
+        builder.incrementEntryByKeyNum(value, resultKeyNum);
+
+        otherIndex++;
+      }
+
+      myInd++;
+    }
+
+    return builder.build();
+  }
+
   /**
    * Default implementation of tensor outer products.
    * 

@@ -76,6 +76,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   public void incrementEntry(double amount, int... key) {
     values[dimKeyToIndex(key)] += amount;
   }
+  
+  @Override
+  public void incrementEntryByKeyNum(double amount, long keyNum) {
+    values[keyNumToIndex(keyNum)] += amount;
+  }
 
   /**
    * {@inheritDoc}
@@ -194,6 +199,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     values[dimKeyToIndex(key)] *= amount;
   }
   
+  @Override
+  public void multiplyEntryByKeyNum(double amount, long keyNum) {
+    values[keyNumToIndex(keyNum)] *= amount;
+  }
+
   @Override
   public void softThreshold(double threshold) {
     double negativeThreshold = -1.0 * threshold;

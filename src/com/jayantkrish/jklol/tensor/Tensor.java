@@ -115,6 +115,16 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor innerProduct(Tensor other);
+  
+  /**
+   * Generalization of matrix-matrix multiplication. Elementwise 
+   * multiplies {@code this} and {@code other}, then sums out all
+   * shared dimensions.
+   *
+   * @param other
+   * @return
+   */
+  Tensor matrixInnerProduct(Tensor other);
 
   /**
    * The outer product. {@code other} and {@code this} must have

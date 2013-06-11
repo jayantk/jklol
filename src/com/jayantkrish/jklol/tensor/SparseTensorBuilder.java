@@ -237,6 +237,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     put(key, getByDimKey(key) + amount);
   }
 
+  @Override
   public void incrementEntryByKeyNum(double amount, long keyNum) {
     putByKeyNum(keyNum, get(keyNum) + amount);
   }
@@ -266,7 +267,12 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   public void multiplyEntry(double amount, int... key) {
     put(key, getByDimKey(key) * amount);
   }
-  
+
+  @Override
+  public void multiplyEntryByKeyNum(double amount, long keyNum) {
+    putByKeyNum(keyNum, get(keyNum) * amount);
+  }
+
   @Override
   public void softThreshold(double threshold) {
     double negativeThreshold = -1.0 * threshold;

@@ -9,12 +9,12 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.tensor.AbstractTensorBase.DimensionSpec;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
@@ -32,7 +32,8 @@ public abstract class TensorTest extends TestCase {
   protected Tensor table, vector, emptyInputTable;
   
   protected List<Tensor> smallTables, missingMiddles, missingFirsts,
-    missingLasts, emptyTables, addTables, disjointTables, vectors;
+    missingLasts, emptyTables, addTables, disjointTables, vectors, matrixInnerProductFirsts,
+    matrixInnerProductMiddles, matrixInnerProductLasts;
 
   protected int[] a1, a2;
   
@@ -99,6 +100,9 @@ public abstract class TensorTest extends TestCase {
     missingFirsts = Lists.newArrayList();
     missingMiddles = Lists.newArrayList();
     missingLasts = Lists.newArrayList();
+    matrixInnerProductFirsts = Lists.newArrayList();
+    matrixInnerProductMiddles = Lists.newArrayList();
+    matrixInnerProductLasts = Lists.newArrayList();
     emptyTables = Lists.newArrayList();
     vectors = Lists.newArrayList();
     for (TensorFactory otherFactory : allTensorFactories) {
@@ -134,6 +138,27 @@ public abstract class TensorTest extends TestCase {
       builder.put(new int[] { 5, 3 }, 7.0);
       builder.put(new int[] { 5, 4 }, 8.0);
       missingLasts.add(builder.build());
+      
+      builder = otherFactory.getBuilder(new int[] {1, 2}, new int[] {6, 3});
+      builder.put(new int[] {0, 1}, 1.0);
+      builder.put(new int[] {0, 2}, 2.0);
+      builder.put(new int[] {1, 0}, 0.5);
+      builder.put(new int[] {3, 0}, 2.0);
+      matrixInnerProductFirsts.add(builder.build());
+      
+      builder = otherFactory.getBuilder(new int[] {3, 4}, new int[] {5, 3});
+      builder.put(new int[] {0, 1}, 1.0);
+      builder.put(new int[] {0, 2}, 2.0);
+      builder.put(new int[] {1, 0}, 0.5);
+      builder.put(new int[] {3, 0}, 2.0);
+      matrixInnerProductMiddles.add(builder.build()); 
+
+      builder = otherFactory.getBuilder(new int[] {4, 5}, new int[] {4, 3});
+      builder.put(new int[] {0, 1}, 1.0);
+      builder.put(new int[] {0, 2}, 2.0);
+      builder.put(new int[] {1, 0}, 0.5);
+      builder.put(new int[] {3, 0}, 2.0);
+      matrixInnerProductLasts.add(builder.build()); 
 
       // Empty table is a table with no dimensions, which should behave like a
       // scalar.
@@ -387,7 +412,7 @@ public abstract class TensorTest extends TestCase {
       assertEquals(expected, actual);
     }
   }
-  
+
   public void testInnerProductLeftAligned() {
     for (Tensor missingLast : missingLasts) {
       Tensor actual = table.innerProduct(missingLast);
@@ -411,6 +436,34 @@ public abstract class TensorTest extends TestCase {
     Tensor expected = simpleReduce(simpleMultiply(table, table), 
           Sets.newHashSet(Ints.asList(table.getDimensionNumbers())), ReduceType.SUM);
     assertEquals(expected, actual);
+  }
+
+  public void testMatrixInnerProductLeftAligned() {
+    for (Tensor matrixInnerProductFirst : matrixInnerProductFirsts) {
+      Tensor actual = table.matrixInnerProduct(matrixInnerProductFirst);
+      Tensor expected = simpleReduce(simpleMultiply(table, matrixInnerProductFirst),
+          Sets.newHashSet(1), ReduceType.SUM);
+      assertEquals(expected, actual);
+    }
+  }
+  
+  public void testMatrixInnerProductMiddleAligned() {
+    Tensor relabeledTable = table.relabelDimensions(new int[] {1, 3, 5});
+    for (Tensor matrixInnerProductMiddle : matrixInnerProductMiddles) {
+      Tensor actual = relabeledTable.matrixInnerProduct(matrixInnerProductMiddle);
+      Tensor expected = simpleReduce(simpleMultiply(relabeledTable, matrixInnerProductMiddle),
+          Sets.newHashSet(3), ReduceType.SUM);
+      assertEquals(expected, actual);
+    }
+  }
+
+  public void testMatrixInnerProductRightAligned() {
+    for (Tensor matrixInnerProductLast : matrixInnerProductLasts) {
+      Tensor actual = table.matrixInnerProduct(matrixInnerProductLast);
+      Tensor expected = simpleReduce(simpleMultiply(table, matrixInnerProductLast),
+          Sets.newHashSet(4), ReduceType.SUM);
+      assertEquals(expected, actual);
+    }
   }
 
   public void testOuterProduct() {
@@ -635,26 +688,29 @@ public abstract class TensorTest extends TestCase {
   
   /**
    * This is a simple version of the elementwise multiply algorithm which looks
-   * at all pairs of keys in {@code first} and {@code second}. {@code second}
-   * must contain a subset of the dimensions of {@code first}.
+   * at all pairs of keys in {@code first} and {@code second}.
    * 
    * @param first
    * @param second
    * @return
    */
   private Tensor simpleMultiply(Tensor first, Tensor second) {
-    TensorBuilder builder = tensorFactory.getBuilder(first.getDimensionNumbers(),
-        first.getDimensionSizes());
+    int[] firstDims = first.getDimensionNumbers();
+    int[] secondDims = second.getDimensionNumbers();
+    int[] secondToFirstAlignment = AbstractTensorBase.getDimensionAlignment(secondDims, firstDims);
+    // System.out.println("secondToFirst: " + Arrays.toString(secondToFirstAlignment));
+    
+    DimensionSpec resultDimSpec = AbstractTensorBase.mergeDimensions(firstDims, first.getDimensionSizes(),
+        secondDims, second.getDimensionSizes());
+    int[] resultDims = resultDimSpec.getDimensionNumbers();
+    int[] resultDimSizes = resultDimSpec.getDimensionSizes();
+    
+    int[] firstToResultAlignment = AbstractTensorBase.getDimensionAlignment(firstDims, resultDims);
+    // System.out.println("firstToResult: " + Arrays.toString(firstToResultAlignment));
+    int[] secondToResultAlignment = AbstractTensorBase.getDimensionAlignment(secondDims, resultDims);
+    // System.out.println("secondToResult: " + Arrays.toString(secondToResultAlignment));
 
-    int firstInd = 0;
-    int[] alignment = new int[second.getDimensionNumbers().length];
-    for (int i = 0; i < second.getDimensionNumbers().length; i++) {
-      while (first.getDimensionNumbers()[firstInd] < second.getDimensionNumbers()[i]) {
-        firstInd++;
-      }
-      Preconditions.checkArgument(first.getDimensionNumbers()[firstInd] == second.getDimensionNumbers()[i]);
-      alignment[i] = firstInd;
-    }
+    TensorBuilder builder = tensorFactory.getBuilder(resultDims, resultDimSizes);
 
     Iterator<KeyValue> firstIter = first.keyValueIterator();
     while (firstIter.hasNext()) {
@@ -663,12 +719,29 @@ public abstract class TensorTest extends TestCase {
       while (secondIter.hasNext()) {
         KeyValue secondKeyValue = secondIter.next();
         boolean equal = true;
-        for (int i = 0; i < alignment.length; i++) {
-          equal = equal && secondKeyValue.getKey()[i] == firstKeyValue.getKey()[alignment[i]];
+        for (int i = 0; i < secondToFirstAlignment.length; i++) {
+          if (secondToFirstAlignment[i] != -1) {
+            equal = equal && secondKeyValue.getKey()[i] == firstKeyValue.getKey()[secondToFirstAlignment[i]];
+          }
         }
 
         if (equal) {
-          builder.put(firstKeyValue.getKey(), firstKeyValue.getValue() * secondKeyValue.getValue());
+          int[] resultKey = new int[resultDims.length];
+          for (int i = 0; i < firstDims.length; i++) {
+            int alignedIndex = firstToResultAlignment[i];
+            if (alignedIndex != -1) {
+              resultKey[alignedIndex] = firstKeyValue.getKey()[i];
+            }
+          }
+          
+          for (int i = 0; i < secondDims.length; i++) {
+            int alignedIndex = secondToResultAlignment[i];
+            if (alignedIndex != -1) {
+              resultKey[alignedIndex] = secondKeyValue.getKey()[i];
+            }
+          }
+
+          builder.put(resultKey, firstKeyValue.getValue() * secondKeyValue.getValue());
         }
       }
     }

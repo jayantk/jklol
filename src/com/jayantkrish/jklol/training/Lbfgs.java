@@ -22,7 +22,8 @@ import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
  * @author jayantk
  */
 public class Lbfgs implements GradientOptimizer {
-
+  
+  // Negative maxIterations means run to convergence.
   private final int maxIterations;
   private final int numVectorsInApproximation;
   private final double l2Regularization;
@@ -86,7 +87,7 @@ public class Lbfgs implements GradientOptimizer {
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
     List<T> dataList = Lists.newArrayList(trainingData);
     GradientEvaluation gradientEvaluation = null;
-    for (int i = 0; i < maxIterations; i++) {
+    for (int i = 0; i < maxIterations || maxIterations < 0; i++) {
       log.notifyIterationStart(i);
 
       if (gradientEvaluation == null) {

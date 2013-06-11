@@ -187,9 +187,9 @@ public class ExpressionTest extends TestCase {
   
   public void testExpandForAll3() {
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(
-        "(forall (b (set d e)) (f (set x y)) (b f))");
+        "(forall (b (set d e)) (f (set x b)) (b f))");
 
-    Expression expected = parser.parseSingleExpression("(and (d x) (d y) (e x) (e y))");
+    Expression expected = parser.parseSingleExpression("(and (d x) (d b) (e x) (e b))");
     assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
   }
   

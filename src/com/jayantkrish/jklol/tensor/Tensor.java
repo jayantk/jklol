@@ -106,7 +106,7 @@ public interface Tensor extends TensorBase, Serializable {
 
   /**
    * The tensor inner product, which is analogous to the standard
-   * matrix product. This method elementwise multiplies {@code this}
+   * matrix-vector product. This method elementwise multiplies {@code this}
    * and {@code other}, then sums out all dimensions in {@code other}.
    * The returned tensor has the dimensions of {@code this} minus the
    * dimensions of {@code other}.

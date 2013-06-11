@@ -408,6 +408,30 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     return elementwiseProduct(other).sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
   }
 
+  /*
+  private final SparseTensor innerProductLeftAligned(SparseTensor other) {
+    
+    int myInd = 0;
+    int otherInd = 0;
+    int mySize = keyNums.length;
+    int otherSize = other.keyNums.length;
+    
+    long[] otherKeyNums = other.keyNums;
+    double[] otherValues = other.values;
+    
+    while (myInd < mySize && otherInd < otherSize) {
+      long myLeftAlignedKeyNum = keyNums[myInd] / myLeftAlignDivisor;
+      long otherLeftAlignedKeyNum = keyNums[otherInd] / otherLeftAlignDivisor;
+      
+      if (myLeftAlignedKeyNum == otherLeftAlignedKeyNum) {
+        
+      } else {
+        
+      }
+    }
+  }
+  */
+
   @Override
   public Tensor outerProduct(Tensor other) {
     int[] dimensionNums = getDimensionNumbers();

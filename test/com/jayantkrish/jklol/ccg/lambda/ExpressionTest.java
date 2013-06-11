@@ -156,8 +156,6 @@ public class ExpressionTest extends TestCase {
     Expression expression = parser.parseSingleExpression("(exists a b (and (exists c (and c (lambda x x))) b))");
     Expression expected = parser.parseSingleExpression("(exists a b c (and c (lambda x x) b))");
     
-    System.out.println(expression.simplify());
-    
     assertTrue(expected.functionallyEquals(expression.simplify()));
   }
   
@@ -184,8 +182,23 @@ public class ExpressionTest extends TestCase {
     Expression result = expression.expandQuantifier().simplify();
     
     Expression expected = parser.parseSingleExpression("(exists A B C (and (/m/0c7zf C) (/m/03__y B) (/location/location/contains B C) (/m/0357_ A)))");
-    System.out.println(result);
     assertTrue(expected.functionallyEquals(result));
+  }
+  
+  public void testExpandForAll3() {
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(
+        "(forall (b (set d e)) (f (set x y)) (b f))");
+
+    Expression expected = parser.parseSingleExpression("(and (d x) (d y) (e x) (e y))");
+    assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
+  }
+  
+  public void testExpandForAll4() {
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(
+        "(forall (b (set d e)) (f (set x y)) (exists c (and (b f) (b c))))");
+
+    Expression expected = parser.parseSingleExpression("(exists h i j k (and (d x) (d h) (d y) (d i) (e x) (e j) (e y) (e k)))");
+    assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
   }
   
   public void testFunctionallyEquals() {

@@ -11,6 +11,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -179,15 +180,15 @@ public abstract class AbstractCli {
     }
 
     if (errorMessage != null && !printHelp) {
-      System.out.println(errorMessage);
-      System.out.println("Try --help for more information about options.");
+      System.err.println(errorMessage);
+      System.err.println("Try --help for more information about options.");
       System.exit(1);
     }
 
     if (printHelp || parsedOptions.has(helpOpt)) {
       // If a help option is given, print help then quit.
       try {
-        parser.printHelpOn(System.out);
+        parser.printHelpOn(System.err);
       } catch (IOException ioException) {
         throw new RuntimeException(ioException);
       }
@@ -199,7 +200,7 @@ public abstract class AbstractCli {
     for (OptionSpec<?> optionSpec : parsedOptions.specs()) {
       if (parsedOptions.hasArgument(optionSpec)) {
         System.out.println("--" + Iterables.getFirst(optionSpec.options(), "") + " "
-            + parsedOptions.valueOf(optionSpec));
+            + Joiner.on(" ").join(parsedOptions.valuesOf(optionSpec)));
       } else {
         System.out.println("--" + Iterables.getFirst(optionSpec.options(), ""));
       }

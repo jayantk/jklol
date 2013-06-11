@@ -197,6 +197,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     }
   }
   
+  @Override
+  public Tensor matrixInnerProduct(Tensor other) {
+    return AbstractTensor.innerProduct(this, other, DenseTensorBuilder.getFactory());
+  }
+  
   /**
    * Implementation of inner product where both tensors are dense and have
    * the same dimensionality. These properties enable the inner product to

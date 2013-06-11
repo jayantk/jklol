@@ -124,8 +124,8 @@ public class CcgParserTest extends TestCase {
     assertEquals(4.0, parse.getRight().getNodeProbability());
     System.out.println(parse.getRight().getLeft());
     assertEquals(4.0, parse.getRight().getLeft().getNodeProbability());
-    assertEquals(0.5, parse.getLeft().getNodeProbability());
-    assertEquals(0.5 * 0.3 * 4.0 * 4.0 * 2.0, parse.getSubtreeProbability());
+    assertEquals(1.5, parse.getLeft().getNodeProbability());
+    assertEquals(1.5 * 0.3 * 4.0 * 4.0 * 2.0, parse.getSubtreeProbability());
     
     assertEquals(5, parse.getAllDependencies().size());
     
@@ -785,6 +785,13 @@ public class CcgParserTest extends TestCase {
     terminalSyntaxVar = VariableNumMap.singleton(1, "terminalSyntax", leftSyntaxVar.getDiscreteVariables().get(0));
     DiscreteFactor posDistribution = TableFactor.unity(posTagVar.union(terminalSyntaxVar));
     
+    // Distribution over syntactic categories assigned to each word.
+    VariableNumMap terminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
+    DiscreteFactor terminalSyntaxDistribution = TableFactor.unity(terminalSyntaxVars);
+    terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
+        terminalSyntaxVars, terminalSyntaxVars.outcomeArrayToAssignment(Arrays.asList("i"),
+            HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
+    
     // Distribution over predicate-argument distances.
     VariableNumMap distancePredicateVars = semanticHeadVar.union(semanticArgNumVar);
     VariableNumMap wordDistanceVar = VariableNumMap.singleton(2, "wordDistance", CcgParser.wordDistanceVarType);
@@ -804,7 +811,7 @@ public class CcgParserTest extends TestCase {
     wordDistanceFactor = wordFactorBuilder.build();
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
-        posTagVar, terminalSyntaxVar, posDistribution,
+        posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution,
         semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet, 
         verbDistanceVar, verbDistanceFactor, verbTagSet,

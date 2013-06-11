@@ -36,6 +36,8 @@ public class TestCvsm extends AbstractCli {
   private OptionSpec<Void> squareLoss;
   private OptionSpec<Void> klLoss;
 
+  private OptionSpec<Double> minValueToPrint;
+
   public TestCvsm() {
     super();
   }
@@ -50,6 +52,8 @@ public class TestCvsm extends AbstractCli {
 
     squareLoss = parser.accepts("squareLoss");
     klLoss = parser.accepts("klLoss");
+
+    minValueToPrint = parser.accepts("minValueToPrint").withRequiredArg().ofType(Double.class).defaultsTo(0.00);
   }
 
   @Override
@@ -119,11 +123,19 @@ public class TestCvsm extends AbstractCli {
           Joiner.on(" ").join(options.nonOptionArguments()));
 
       Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
+      // To make printing concise, remove values whose magnitude 
+      // is too small.
+      Tensor positiveKeys = tensor.findKeysLargerThan(options.valueOf(minValueToPrint));
+      Tensor negativeKeys = tensor.elementwiseProduct(-1.0).findKeysLargerThan(options.valueOf(minValueToPrint));
+      Tensor indicators = positiveKeys.elementwiseAddition(negativeKeys);
+      tensor = tensor.elementwiseProduct(indicators);
+
       if (relDict == null || tensor.getDimensionNumbers().length > 1 || tensor.getDimensionSizes()[0] != relDict.size()) {
-        System.out.println(tensor);
+	  System.out.println(tensor);
       } else {
         DiscreteVariable varType = new DiscreteVariable("var", relDict.items());
         VariableNumMap var = VariableNumMap.singleton(0, "var", varType);
+
         DiscreteFactor factor = new TableFactor(var, tensor); 
         System.out.println(factor.describeAssignments(factor.getMostLikelyAssignments(relDict.size())));
       }

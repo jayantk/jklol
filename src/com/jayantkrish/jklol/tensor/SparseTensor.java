@@ -407,6 +407,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   public SparseTensor innerProduct(Tensor other) {
     return elementwiseProduct(other).sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
   }
+  
+  @Override
+  public Tensor matrixInnerProduct(Tensor other) {
+    return AbstractTensor.innerProduct(this, other, SparseTensorBuilder.getFactory());
+  }
 
   @Override
   public Tensor outerProduct(Tensor other) {
@@ -1122,6 +1127,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       return builder.buildNoCopy();
     }
   }
+
+  // public static SparseTensor fromDelimitedFile(
 
   // ///////////////////////////////////////////////////////////////////////////////
   // Private Methods

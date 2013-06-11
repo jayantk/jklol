@@ -9,6 +9,7 @@ import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmValueLossTree;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -71,14 +72,23 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
   }
   
   public static class CvsmSquareLoss implements CvsmLoss {
+    @Override
     public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
       return new CvsmSquareLossTree(targets, tree);
     }
   }
   
   public static class CvsmKlLoss implements CvsmLoss {
+    @Override
     public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
       return new CvsmKlLossTree(targets, tree);
+    }
+  }
+  
+  public static class CvsmValueLoss implements CvsmLoss {
+    @Override
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
+      return new CvsmValueLossTree(tree);
     }
   }
 

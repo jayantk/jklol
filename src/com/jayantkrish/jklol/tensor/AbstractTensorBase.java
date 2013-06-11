@@ -1,8 +1,10 @@
 package com.jayantkrish.jklol.tensor;
 
 import java.io.Serializable;
+import java.util.SortedSet;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.util.ArrayUtils;
 
@@ -77,6 +79,67 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
       resultKeyNum += ((keyNum / originalOffsets[j]) % originalSizes[j]) * resultOffsets[j];
     }
     return resultKeyNum;
+  }
+
+  /**
+   * Merges the given sets of dimensions, verifying that any dimensions in 
+   * both sets have the same size.
+   *  
+   * @param firstDimensionNums
+   * @param firstDimensionSizes
+   * @param secondDimensionNums
+   * @param secondDimensionSizes
+   * @return
+   */
+  public static final DimensionSpec mergeDimensions(int[] firstDimensionNums, int[] firstDimensionSizes,
+      int[] secondDimensionNums, int[] secondDimensionSizes) {
+    SortedSet<Integer> first = Sets.newTreeSet(Ints.asList(firstDimensionNums));
+    SortedSet<Integer> second = Sets.newTreeSet(Ints.asList(secondDimensionNums));
+    SortedSet<Integer> all = Sets.newTreeSet(first);
+    all.addAll(second);
+    
+    int[] resultDims = Ints.toArray(all);
+    int[] resultSizes = new int[resultDims.length];
+    for (int i = 0; i < resultDims.length; i++) {
+      int dim = resultDims[i];
+      if (first.contains(dim) && second.contains(dim)) {
+        int firstIndex = Ints.indexOf(firstDimensionNums, dim);
+        int secondIndex = Ints.indexOf(secondDimensionNums, dim);
+        int firstSize = firstDimensionSizes[firstIndex];
+        int secondSize = secondDimensionSizes[secondIndex];
+        Preconditions.checkArgument(firstSize == secondSize,
+            "Dimension sizes do not match: dim %s, sizes %s and %s.", dim, firstSize, secondSize);
+        resultSizes[i] = firstSize;
+      } else if (first.contains(dim)) {
+        int firstIndex = Ints.indexOf(firstDimensionNums, dim);
+        int firstSize = firstDimensionSizes[firstIndex];
+        resultSizes[i] = firstSize;
+      } else {
+        int secondIndex = Ints.indexOf(secondDimensionNums, dim);
+        int secondSize = secondDimensionSizes[secondIndex];
+        resultSizes[i] = secondSize;
+      }
+    }
+
+    return new DimensionSpec(resultDims, resultSizes);
+  }
+  
+  /**
+   * Gets a mapping from dimensions in {@code firstDimensionNums} to their
+   * index in {@code secondDimensionNums}. Entries in the alignment are
+   * -1 for dimensions in {@code firstDimensionNums} that are not in
+   * {@code secondDimensionNums}.
+   * 
+   * @param firstDimensionNums
+   * @param secondDimensionNums
+   * @return
+   */
+  public static final int[] getDimensionAlignment(int[] firstDimensionNums, int[] secondDimensionNums) {
+    int[] alignment = new int[firstDimensionNums.length];
+    for (int i = 0; i < firstDimensionNums.length; i++) {
+      alignment[i] = Ints.indexOf(secondDimensionNums, firstDimensionNums[i]);
+    }
+    return alignment;
   }
 
   @Override
@@ -208,5 +271,23 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
       }
     }
     return true;
+  }
+  
+  public static class DimensionSpec {
+    private final int[] dimensionNums;
+    private final int[] dimensionSizes;
+    
+    public DimensionSpec(int[] dimensionNums, int[] dimensionSizes) {
+      this.dimensionNums = Preconditions.checkNotNull(dimensionNums);
+      this.dimensionSizes = Preconditions.checkNotNull(dimensionSizes);
+    }
+
+    public int[] getDimensionNumbers() {
+      return dimensionNums;
+    }
+    
+    public int[] getDimensionSizes() {
+      return dimensionSizes;
+    }
   }
 }

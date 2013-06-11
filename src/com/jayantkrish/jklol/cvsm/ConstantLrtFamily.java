@@ -4,12 +4,10 @@ import java.util.Collections;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
-import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.Tensor;
 
 /**
  * Returns a constant tensor.
@@ -30,6 +28,18 @@ public class ConstantLrtFamily implements LrtFamily {
   @Override
   public int[] getDimensionNumbers() {
     return vars.getVariableNumsArray();
+  }
+  
+  @Override
+  public int[] getDimensionSizes() {
+    return vars.getVariableSizes();
+  }
+
+  @Override
+  public void setInitialTensor(Tensor tensor) {
+    // This method could also just do nothing, but throwing an
+    // exception seems like it will simplify debugging.
+    throw new UnsupportedOperationException("Cannot set tensor of constant family.");
   }
 
   @Override

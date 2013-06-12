@@ -109,7 +109,7 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
       // Update the parameter vector
       family.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
       family.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
-      
+
       log.stopTimer("update_subgradient/increment_subgradient");
     }
 

@@ -116,7 +116,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     Tensor outputDistribution = SparseTensor.singleElement(outputVars.getVariableNumsArray(), 
         outputVars.getVariableSizes(), outputVars.assignmentToIntArray(assignment.intersection(outputVars)),
         1.0);
-    Tensor expectedCounts = inputValueFeatures.outerProduct(outputDistribution);    
+    Tensor expectedCounts = inputValueFeatures.outerProduct(outputDistribution);
     ((TensorSufficientStatistics) statistics).increment(expectedCounts, count);
   }
 

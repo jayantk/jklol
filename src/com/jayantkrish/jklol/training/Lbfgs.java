@@ -151,6 +151,7 @@ public class Lbfgs {
         cond1Rhs = currentObjectiveValue - (WOLFE_CONDITION_C1 * stepSize * curInnerProd);
         cond2Rhs = -1.0 * WOLFE_CONDITION_C2 * curInnerProd;
 
+	/*
         System.out.println("next:");
         System.out.println(nextParameters.getDescription());
         System.out.println("next gradient:");
@@ -164,6 +165,7 @@ public class Lbfgs {
 
         System.out.println("cond1: " + nextObjectiveValue + " > " + cond1Rhs);
         System.out.println("cond2: abs(" + nextInnerProd + ") < " + cond2Rhs);
+	*/
 
       } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs)) 
           && stepSize > MIN_STEP_SIZE); //  || Math.abs(nextInnerProd) > cond2Rhs
@@ -201,8 +203,6 @@ public class Lbfgs {
       // Normalize the objective term, then apply regularization
       evaluation.getGradient().multiply(1.0 / dataList.size());
       evaluation.setObjectiveValue(evaluation.getObjectiveValue() / dataList.size());
-      
-      System.out.println("old norm: "+ evaluation.getGradient().getL2Norm());
       
       if (l2Regularization > 0.0) {
         evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);

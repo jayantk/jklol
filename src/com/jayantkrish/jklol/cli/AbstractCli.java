@@ -375,8 +375,8 @@ public abstract class AbstractCli {
   protected FunctionalGradientAscent createFunctionalGradientAscent(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT));
 
-    int iterations = parsedOptions.valueOf(fgaIterations);
     int batchSize = parsedOptions.has(fgaBatchSize) ? parsedOptions.valueOf(fgaBatchSize) : numExamples;
+    int iterations = (int) Math.ceil(parsedOptions.valueOf(fgaIterations) * numExamples / ((double) batchSize));
     double initialStep = parsedOptions.valueOf(fgaInitialStep);
     boolean noDecay = parsedOptions.has(fgaNoDecayStepSize);
     LogFunction log = new DefaultLogFunction(1, false);

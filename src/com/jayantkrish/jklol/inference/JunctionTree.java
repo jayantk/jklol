@@ -22,6 +22,8 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -82,9 +84,20 @@ public class JunctionTree implements MarginalCalculator {
       return new FactorMaxMarginalSet(new FactorGraph(), factorGraph.getConditionedValues());
     }
 
+    LogFunction log = LogFunctions.getLogFunction();
+
+    log.startTimer("inference/build_clique_tree");
     CliqueTree cliqueTree = new CliqueTree(factorGraph);
+    log.stopTimer("inference/build_clique_tree");
+
+    log.startTimer("inference/message_passing");
     runMessagePassing(cliqueTree, false);
-    return cliqueTreeToMaxMarginalSet(cliqueTree, factorGraph);
+    log.stopTimer("inference/message_passing");
+
+    log.startTimer("inference/build_max_marginals");
+    MaxMarginalSet maxMarginals = cliqueTreeToMaxMarginalSet(cliqueTree, factorGraph);
+    log.stopTimer("inference/build_max_marginals");
+    return maxMarginals;
   }
 
   /**

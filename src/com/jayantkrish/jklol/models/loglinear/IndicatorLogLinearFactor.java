@@ -124,22 +124,28 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    VariableNumMap conditionedVars = initialWeights.getVars().intersection(
-        conditionalAssignment.getVariableNums());
+      if (conditionalAssignment.containsAll(getVars().getVariableNums())) {
+	  // Short-circuit the slow computation below if possible.
+	  double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
+	  incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);
+      } else {
+	  VariableNumMap conditionedVars = initialWeights.getVars().intersection(
+	      conditionalAssignment.getVariableNums());
 
-    TableFactor productFactor = (TableFactor) initialWeights.product(
-        TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
-        .product(marginal);
+	  TableFactor productFactor = (TableFactor) initialWeights.product(
+	      TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
+	      .product(marginal);
 
-    Tensor productFactorWeights = productFactor.getWeights();
-    double[] productFactorValues = productFactorWeights.getValues();
-    int tensorSize = productFactorWeights.size();
-    double multiplier = count / partitionFunction;
-    TensorSufficientStatistics stats = (TensorSufficientStatistics) statistics;
-    for (int i = 0; i < tensorSize; i++) {
-      int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
-      stats.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
-    }
+	  Tensor productFactorWeights = productFactor.getWeights();
+	  double[] productFactorValues = productFactorWeights.getValues();
+	  int tensorSize = productFactorWeights.size();
+	  double multiplier = count / partitionFunction;
+	  TensorSufficientStatistics stats = (TensorSufficientStatistics) statistics;
+	  for (int i = 0; i < tensorSize; i++) {
+	      int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
+	      stats.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
+	  }
+      }
   }
   
   private Tensor getFeatureWeights(SufficientStatistics parameters) {

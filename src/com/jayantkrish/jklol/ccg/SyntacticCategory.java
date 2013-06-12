@@ -86,6 +86,16 @@ public class SyntacticCategory implements Serializable {
       SyntacticCategory argumentType, String featureValue, int featureVariable) {
     return new SyntacticCategory(null, direction, returnType, argumentType, featureValue, featureVariable);
   }
+
+    public static SyntacticCategory createFunctional(SyntacticCategory returnType, List<Direction> argumentDirections,
+						     List<SyntacticCategory> arguments) {
+	Preconditions.checkArgument(arguments.size() == argumentDirections.size());
+	SyntacticCategory category = returnType;
+	for (int i = 0; i < arguments.size(); i++) {
+	    category = category.createFunctional(argumentDirections.get(i), category, arguments.get(i));
+	}
+	return category;
+    }
   
   public static SyntacticCategory createAtomic(String value, String featureValue, int featureVariable) {
     return new SyntacticCategory(value, null, null, null, featureValue, featureVariable);
@@ -323,6 +333,21 @@ public class SyntacticCategory implements Serializable {
   }
 
   /**
+   * Get a syntactic category identical to this one except with all 
+   * feature values replaced by the default value.
+   *   
+   * @return
+   */
+  public SyntacticCategory getWithoutFeatures() {
+    if (isAtomic()) {
+      return createAtomic(value, DEFAULT_FEATURE_VALUE, -1);
+    } else {
+      return createFunctional(getDirection(), returnType.getWithoutFeatures(),
+          argumentType.getWithoutFeatures());
+    }
+  }
+
+  /**
    * Gets the number of subcategories of this category. This number is
    * equal to the number of nodes in the binary tree required to
    * represent the category. Specifically, this method returns 1 if
@@ -373,6 +398,26 @@ public class SyntacticCategory implements Serializable {
     }
   }
 
+    public List<Direction> getArgumentDirectionList() {
+	if (isAtomic()) {
+	    return Lists.newArrayList();
+	} else {
+	    List<Direction> args = getReturn().getArgumentDirectionList();
+	    args.add(getDirection());
+	    return args;
+	}
+    }
+
+    public SyntacticCategory getFinalReturnCategory() {
+	if (isAtomic()) {
+	    return this;
+	} else {
+	    return getReturn().getFinalReturnCategory();
+	}
+    }
+
+    
+
   /**
    * If this is a functional category, this gets the type of the
    * return value. Returns {@code null} if this is an atomic category.
@@ -408,6 +453,7 @@ public class SyntacticCategory implements Serializable {
     Map<Integer, String> otherAssignedVariables = Maps.newHashMap();
     Map<Integer, Integer> variableRelabeling = Maps.newHashMap();
 
+    // System.err.println("unifying: " + this + " " + other);
     return isUnifiableWith(other, myAssignedVariables, otherAssignedVariables, variableRelabeling); 
   }
   

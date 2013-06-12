@@ -136,6 +136,16 @@ public class SparseTensorTest extends TensorTest {
     assertEquals(2.0, result.getByDimKey(0, 0, 0));
     assertEquals(3.0, result.getByDimKey(99, 97, 99));
     assertEquals(100.0, result.getByDimKey(99, 99, 99));
-
+  }
+  
+  public void testDiagonal() {
+    Tensor tensor = SparseTensor.diagonal(new int[] {0, 1, 2}, new int[] {4, 6, 5}, 2.0);
+    
+    for (int i = 0; i < 4; i++) {
+      assertEquals(2.0, tensor.getByDimKey(i, i, i));
+    }
+    assertEquals(0.0, tensor.getByDimKey(0, 2, 3));
+    assertEquals(0.0, tensor.getByDimKey(0, 3, 4));
+    assertEquals(0.0, tensor.getByDimKey(1, 2, 3));
   }
 }

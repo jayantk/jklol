@@ -25,9 +25,9 @@ import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
 import com.jayantkrish.jklol.training.OracleAdapter;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -63,7 +63,7 @@ public class TrainRbm extends AbstractCli {
         ",", rbmFamily);
 
     // The iterations option is interpreted as the number of passes over the training data to perform.
-    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingExamples.size()); 
+    GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size()); 
     LoglikelihoodOracle oracle = new LoglikelihoodOracle(rbmFamily, new GibbsSampler(0, 10, 0));
     SufficientStatistics parameters = rbmFamily.getNewSufficientStatistics();
     parameters.perturb(0.01);

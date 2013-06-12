@@ -160,6 +160,15 @@ public abstract class TensorBuilderTest extends TestCase {
     assertEquals(0.0, builder.getByDimKey(KEY3));
   }
   
+  public void testIncrementEntryByKeyNum() {
+    builder.incrementEntryByKeyNum(3.0, builder.dimKeyToKeyNum(KEY0));
+    builder.incrementEntryByKeyNum(3.0, builder.dimKeyToKeyNum(KEY2));
+    assertEquals(3.0, builder.getByDimKey(KEY0));
+    assertEquals(1.0, builder.getByDimKey(KEY1));
+    assertEquals(5.0, builder.getByDimKey(KEY2));
+    assertEquals(0.0, builder.getByDimKey(KEY3));
+  }
+
   public void testMultiply() {
     for (int i = 0; i < otherBuilders.size(); i++) {
       builder.multiply(otherBuilders.get(i));

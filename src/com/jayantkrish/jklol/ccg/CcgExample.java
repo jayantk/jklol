@@ -149,7 +149,7 @@ public class CcgExample {
    * @param examples
    * @return
    */
-  public static Set<String> getPosTagVocabulary(Iterable<CcgExample> examples) {
+  public static Set<String> getPosTagVocabulary(Iterable<? extends CcgExample> examples) {
     Set<String> posTagVocabulary = Sets.newHashSet();
     for (CcgExample example : examples) {
       posTagVocabulary.addAll(example.getPosTags());

@@ -1,0 +1,6 @@
+"N","t1:<word>"
+"N/N","(lambda x (op:logistic (op:add (op:matvecmul t2:<word> x) t1:<word>)))"
+"(N\N)/N","(lambda x (lambda y (op:logistic (op:add (op:matvecmul t3:<word> x y) (op:matvecmul t2:<word>-r x) (op:matvecmul t2:<word>-l y) t1:<word>))))"
+"((S\N)\(S\N))/N","(lambda x (lambda f (lambda y (op:logistic (op:add (op:matvecmul t3:<word> x (f y)) (op:matvecmul t2:<word>-r x) (op:matvecmul t2:<word>-l (f y)) t1:<word>)))))"
+"((S\N)\(S\N))","(lambda f (lambda y (op:logistic (op:add (op:matvecmul t2:<word> (f y)) t1:<word>))))"
+"(N/N)/(N/N)","(lambda f (lambda y (f (op:matvecmul t4:<word> y))))"

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.tensor;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -139,7 +140,8 @@ public class DenseTensorBase extends AbstractTensorBase {
       }
     }
     // Ensure that the mapping is fully initialized.
-    Preconditions.checkArgument(otherInd == otherDimensionNums.length);
+    Preconditions.checkArgument(otherInd == otherDimensionNums.length, "Cannot map tensor dimensions. My dimensions: %s. Other dimensions %s", 
+        Arrays.toString(getDimensionNumbers()), Arrays.toString(otherDimensionNums));
     return mapping;
   }
 

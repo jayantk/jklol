@@ -8,6 +8,15 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * Functional gradient that simply accumulates a factor value along 
+ * with any conditioned-on variables. This functional gradient 
+ * implementation stores all possible information that could be used for training, and 
+ * therefore should be suitable for most implementations of 
+ * {@code BoostingFactorFamily}.  
+ *
+ * @author jayant
+ */
 public class FactorFunctionalGradient implements FunctionalGradient {
 
   private final List<Factor> regressionTargets;

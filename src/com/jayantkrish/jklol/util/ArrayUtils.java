@@ -110,6 +110,36 @@ public class ArrayUtils {
   }
 
   /**
+   * Parses the string representations of integers in
+   * {@code intStrings} and returns the resulting integer array.
+   * 
+   * @param intStrings
+   * @return
+   */
+  public static int[] parseInts(String[] intStrings) {
+    int[] values = new int[intStrings.length];
+    for (int i = 0; i < intStrings.length; i++) {
+      values[i] = Integer.parseInt(intStrings[i].trim());
+    }
+    return values;
+  }
+
+  /**
+   * Parses the string representations of doubles in
+   * {@code doubleStrings} and returns the resulting doubles array.
+   * 
+   * @param doubleStrings
+   * @return
+   */
+  public static double[] parseDoubles(String[] doubleStrings) {
+    double[] values = new double[doubleStrings.length];
+    for (int i = 0; i < doubleStrings.length; i++) {
+      values[i] = Double.parseDouble(doubleStrings[i].trim());
+    }
+    return values;
+  }
+
+  /**
    * Sorts a portion of the given key/value pairs by key. This method
    * sorts the section of {@code keys} from {@code startInd}
    * (inclusive) to {@code endInd} (not inclusive), simultaneously
@@ -166,7 +196,7 @@ public class ArrayUtils {
     values[i] = values[j];
     values[j] = swapValue;
   }
-  
+
   /**
    * Sorts a portion of the given key/value pairs by key. This method
    * sorts the section of {@code keys} from {@code startInd}

@@ -1,0 +1,22 @@
+# Data generated using template: 
+# (op:softmax (op:logistic (op:add 
+#                           (op:matvecmul t2:W1 t1:<arg0>)
+#                           (op:matvecmul t2:W2 
+#                                         (op:logistic 
+#                                          (op:add (op:matvecmul t2:W1 t1:<arg1>)
+#                                                  (op:matvecmul t2:W2 t1:<arg2>)))))))
+# 
+# 
+
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 t1:and)))))))  ","0,1"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 t1:and)))))))  ","0,1"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 t1:and)))))))  ","0,1"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 t1:and)))))))  ","1,0"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 t1:or)))))))  ","0,1"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 t1:or)))))))  ","1,0"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 t1:or)))))))  ","1,0"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 t1:or)))))))  ","1,0"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 t1:xor)))))))  ","0,1"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 t1:xor)))))))  ","1,0"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:false) (op:matvecmul t2:W2 t1:xor)))))))  ","1,0"
+"(op:softmax (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 (op:logistic (op:add (op:matvecmul t2:W1 t1:true) (op:matvecmul t2:W2 t1:xor)))))))  ","0,1"

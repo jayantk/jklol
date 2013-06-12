@@ -1,0 +1,4 @@
+(op:softmax (op:matvecmul t2:weights 
+                          (op:logistic (op:matvecmul 
+                                        (op:matvecmul t3:<arg2> t1:<arg0>) 
+                                        t1:<arg1>))))

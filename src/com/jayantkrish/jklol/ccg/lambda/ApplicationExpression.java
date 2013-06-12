@@ -14,7 +14,7 @@ public class ApplicationExpression extends AbstractExpression {
   private final List<Expression> subexpressions;
 
   public ApplicationExpression(List<? extends Expression> subexpressions) {
-    Preconditions.checkArgument(subexpressions.size() >= 1);
+    Preconditions.checkArgument(subexpressions.size() >= 1, "Too few subexpressions: %s", subexpressions);
     this.subexpressions = ImmutableList.copyOf(subexpressions);
   }
   

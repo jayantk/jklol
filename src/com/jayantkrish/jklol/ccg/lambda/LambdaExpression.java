@@ -38,7 +38,8 @@ public class LambdaExpression extends AbstractExpression {
   }
 
   public Expression reduce(List<Expression> argumentValues) {
-    Preconditions.checkArgument(argumentValues.size() <= argumentVariables.size());
+      Preconditions.checkArgument(argumentValues.size() <= argumentVariables.size(), 
+				  "Too many arguments. Expected %s, got %s", argumentVariables, argumentValues);
     
     Expression substitutedBody = body;
     for (int i = 0; i < argumentValues.size(); i++) {

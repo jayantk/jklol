@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
  * 
  * @author jayantk
  */
-public class Lbfgs {
+public class Lbfgs implements GradientOptimizer {
 
   private final int maxIterations;
   private final int numVectorsInApproximation;
@@ -34,8 +34,8 @@ public class Lbfgs {
 
   private static final double WOLFE_CONDITION_C1 = 1e-4;
   private static final double WOLFE_CONDITION_C2 = 0.9;
-  
-  private static final double GRADIENT_CONVERGENCE_THRESHOLD = 1e-9;
+
+  private static final double GRADIENT_CONVERGENCE_THRESHOLD = 1e-6;
 
   public Lbfgs(int maxIterations, int numVectorsInApproximation,
       double l2Regularization, LogFunction log) {
@@ -46,9 +46,36 @@ public class Lbfgs {
     this.log = Preconditions.checkNotNull(log);
   }
 
-  public <M, E> SufficientStatistics train(GradientOracle<M, E> oracle,
-      SufficientStatistics initialParameters, Iterable<E> trainingData) {
+  public int getMaxIterations() {
+    return maxIterations;
+  }
 
+  public int getNumVectorsInApproximation() {
+    return numVectorsInApproximation;
+  }
+
+  public double getL2Regularization() {
+    return l2Regularization;
+  }
+
+  public LogFunction getLog() {
+    return log;
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * Throws {@link LbfgsConvergenceError} if a suitable step size 
+   * cannot be found by backtracking line search.
+   * 
+   * @param oracle
+   * @param initialParameters
+   * @param trainingData
+   * @return
+   */
+  @Override
+  public <M, E, T extends E> SufficientStatistics train(GradientOracle<M, E> oracle,
+      SufficientStatistics initialParameters, Iterable<T> trainingData) {
     SufficientStatistics currentParameters = initialParameters;
     SufficientStatistics previousParameters = null;
     SufficientStatistics previousGradient = null;
@@ -57,17 +84,23 @@ public class Lbfgs {
     List<Double> scalings = Lists.newArrayList();
 
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
-    List<E> dataList = Lists.newArrayList(trainingData);
+    List<T> dataList = Lists.newArrayList(trainingData);
     GradientEvaluation gradientEvaluation = null;
     for (int i = 0; i < maxIterations; i++) {
       log.notifyIterationStart(i);
 
       if (gradientEvaluation == null) {
-        gradientEvaluation = evaluateGradient(currentParameters, dataList, 
+        gradientEvaluation = evaluateGradient(currentParameters, dataList,
             oracle, executor, log);
       }
       SufficientStatistics gradient = gradientEvaluation.getGradient();
+      
+      double gradientL2Norm = gradient.getL2Norm();
+      if (gradientL2Norm < GRADIENT_CONVERGENCE_THRESHOLD) {
+        return currentParameters;
+      }
 
+      // We haven't converged yet. Figure out which direction to move in.
       log.startTimer("compute_search_direction");
       // Store the requisite data for approximating the inverse
       // Hessian.
@@ -76,7 +109,7 @@ public class Lbfgs {
         pointDelta.increment(previousParameters, -1.0);
         pointDeltas.add(pointDelta);
 
-        // Note that gradient and previousGradient are actually the 
+        // Note that gradient and previousGradient are actually the
         // *negative* gradient (i.e., a descent direction).
         SufficientStatistics gradientDelta = previousGradient.duplicate();
         gradientDelta.increment(gradient, -1.0);
@@ -84,6 +117,9 @@ public class Lbfgs {
 
         scalings.add(1.0 / (pointDelta.innerProduct(gradientDelta)));
       }
+      
+      previousParameters = currentParameters.duplicate();
+      previousGradient = gradient.duplicate();
 
       // Compute this iteration's search direction.
       int hessianVectorCount = (int) Math.min(numVectorsInApproximation, i);
@@ -97,24 +133,18 @@ public class Lbfgs {
         weights[hessianVectorCount - (j + 1)] = weight;
       }
       // The assumption here is that the initial Hessian estimate is
-      // the identity. Multiply direction by the Hessian estimate here 
+      // the identity. Multiply direction by the Hessian estimate here
       // to pick another value.
       for (int j = 0; j < hessianVectorCount; j++) {
         int index = i + j - hessianVectorCount;
         double weight = scalings.get(index) * (gradientDeltas.get(index).innerProduct(direction));
         direction.increment(pointDeltas.get(index), weights[j] - weight);
       }
-
-      previousParameters = currentParameters.duplicate();
-      previousGradient = gradient.duplicate();
       log.stopTimer("compute_search_direction");
 
-      double gradientL2Norm = gradient.getL2Norm();
-      if (gradientL2Norm < GRADIENT_CONVERGENCE_THRESHOLD) {
-        return currentParameters;
-      }
-      
+      log.logStatistic(i, "parameter l2 norm", previousParameters.getL2Norm());
       log.logStatistic(i, "gradient l2 norm", gradientL2Norm);
+      log.logStatistic(i, "direction l2 norm", direction.getL2Norm());
       log.logStatistic(i, "search errors", gradientEvaluation.getSearchErrors());
       log.logStatistic(i, "objective value", gradientEvaluation.getObjectiveValue());
 
@@ -122,36 +152,36 @@ public class Lbfgs {
       // Perform a backtracking line search to find a step size.
       double stepSize = 1.0 / LINE_SEARCH_CONSTANT;
       double currentObjectiveValue = gradientEvaluation.getObjectiveValue();
-      double nextObjectiveValue, curInnerProd, nextInnerProd, cond1Rhs, cond2Rhs;
+      double nextObjectiveValue, curInnerProd, cond1Rhs, nextInnerProd, cond2Rhs;
       SufficientStatistics nextParameters;
-      
+
       /*
-      System.out.println("current:");
-      System.out.println(currentParameters.getDescription());
-      
-      System.out.println("direction:");
-      System.out.println(direction.getDescription());
-      
-      System.out.println("gradient:");
-      System.out.println(gradient.getDescription());
-      */
-      
+       * System.out.println("current:");
+       * System.out.println(currentParameters.getDescription());
+       * 
+       * System.out.println("direction:");
+       * System.out.println(direction.getDescription());
+       * 
+       * System.out.println("gradient:");
+       * System.out.println(gradient.getDescription());
+       */
+
       do {
         stepSize = stepSize * LINE_SEARCH_CONSTANT;
         nextParameters = currentParameters.duplicate();
         nextParameters.increment(direction, -1.0 * stepSize);
         gradientEvaluation = evaluateGradient(nextParameters, dataList, oracle, executor, log);
-     
+
         // Check the Wolfe conditions to ensure sufficient descent.
         nextObjectiveValue = gradientEvaluation.getObjectiveValue();
         curInnerProd = gradient.innerProduct(direction);
         SufficientStatistics nextGradient = gradientEvaluation.getGradient();
         nextInnerProd = nextGradient.innerProduct(direction);
-        
+
         cond1Rhs = currentObjectiveValue - (WOLFE_CONDITION_C1 * stepSize * curInnerProd);
         cond2Rhs = -1.0 * WOLFE_CONDITION_C2 * curInnerProd;
 
-	/*
+        /*
         System.out.println("next:");
         System.out.println(nextParameters.getDescription());
         System.out.println("next gradient:");
@@ -159,6 +189,7 @@ public class Lbfgs {
 
         System.out.println("current: " + currentObjectiveValue);
         System.out.println("next: " + nextObjectiveValue);
+        System.out.println("next parameter l2Norm: " + nextParameters.getL2Norm());
         System.out.println("next gradient l2Norm: " + nextGradient.getL2Norm());
         System.out.println("curInnerProd: " + curInnerProd);
         System.out.println("nextInnerProd: " + nextInnerProd);
@@ -166,16 +197,16 @@ public class Lbfgs {
         System.out.println("cond1: " + nextObjectiveValue + " > " + cond1Rhs);
         System.out.println("cond2: abs(" + nextInnerProd + ") < " + cond2Rhs);
 	*/
-
-      } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs)) 
-          && stepSize > MIN_STEP_SIZE); //  || Math.abs(nextInnerProd) > cond2Rhs
+      } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs) || Double.isNaN(nextObjectiveValue))
+          && stepSize > MIN_STEP_SIZE); // || Math.abs(nextInnerProd)
+                                        // > cond2Rhs
       log.logStatistic(i, "step size", stepSize);
       log.stopTimer("compute_step_size");
 
       if (stepSize <= MIN_STEP_SIZE) {
-        return currentParameters;
+        throw new LbfgsConvergenceError("L-BFGS could not find a suitable step size.",
+            currentParameters, direction, stepSize, i);
       }
-      
       currentParameters = nextParameters;
 
       log.notifyIterationEnd(i);
@@ -203,7 +234,7 @@ public class Lbfgs {
       // Normalize the objective term, then apply regularization
       evaluation.getGradient().multiply(1.0 / dataList.size());
       evaluation.setObjectiveValue(evaluation.getObjectiveValue() / dataList.size());
-      
+
       if (l2Regularization > 0.0) {
         evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);
         double parameterSumSquares = parameters.getL2Norm();
@@ -211,6 +242,6 @@ public class Lbfgs {
         evaluation.setObjectiveValue(evaluation.getObjectiveValue() - (l2Regularization * parameterSumSquares / 2.0));
       }
 
-      return evaluation;
-    }
+    return evaluation;
+  }
 }

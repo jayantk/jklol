@@ -59,15 +59,17 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 
 	/**
 	 * Add a new element to this set. Note that there can only be a single
-	 * copy of any given item in the list.
+	 * copy of any given item in the list. Returns the index of the added item.
 	 */
-	public void add(T item) {
+	public int add(T item) {
 		if (itemIndex.containsKey(item)) {
 			// Items can only be added once
-			return;
+			return itemIndex.get(item);
 		}
-		itemIndex.put(item, items.size());
+		int index = items.size();
+		itemIndex.put(item, index);
 		items.add(item);
+		return index;
 	}
 
 	/**

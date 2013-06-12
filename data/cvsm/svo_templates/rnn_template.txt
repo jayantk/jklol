@@ -1,0 +1,8 @@
+(op:softmax (op:logistic (op:add 
+                          (op:matvecmul t2:W1 t1:<arg0>)
+                          (op:matvecmul t2:W2 
+                                        (op:logistic 
+                                         (op:add (op:matvecmul t2:W1 t1:<arg1>)
+                                                 (op:matvecmul t2:W2 t1:<arg2>)))))))
+
+

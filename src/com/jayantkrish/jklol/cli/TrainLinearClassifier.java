@@ -26,10 +26,10 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.training.MaxMarginOracle.HammingCost;
 import com.jayantkrish.jklol.training.OracleAdapter;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -98,7 +98,7 @@ public class TrainLinearClassifier extends AbstractCli {
     MaxMarginOracle oracle = new MaxMarginOracle(family, new HammingCost(), new JunctionTree());
     SufficientStatistics parameters = family.getNewSufficientStatistics();
     
-    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingData.size());
+    GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
     parameters = trainer.train(OracleAdapter.createAssignmentAdapter(oracle), parameters, trainingData);
 
     // Serialize the trained model to disk.
@@ -134,6 +134,7 @@ public class TrainLinearClassifier extends AbstractCli {
         classifier, classifier.getVariables().getVariablesByName(OUTPUT_VAR_NAME), new JunctionTree());
     
     PrecisionRecall<Object> loss = LossFunctions.newPrecisionRecall();
+    double numCorrect = 0;
     for (Example<Assignment, Assignment> example : data) {
       Assignment input = example.getInput();
       Assignment output = example.getOutput();
@@ -146,9 +147,12 @@ public class TrainLinearClassifier extends AbstractCli {
       boolean predictionBoolean = prediction.getBestPrediction().getOnlyValue().equals("T");
       boolean outputBoolean = output.getOnlyValue().equals("T");
       loss.accumulatePrediction(predictionBoolean, outputBoolean, prediction.getBestPredictionScore());
+      
+      numCorrect += (prediction.getBestPrediction().equals(output)) ? 1 : 0;
     }
     
-    System.out.println(loss);
+    // System.out.println(loss);
+    System.out.println("ACCURACY: " + (numCorrect / data.size()));
   }
   
   public static void main(String[] args) {

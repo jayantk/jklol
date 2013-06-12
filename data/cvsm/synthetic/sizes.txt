@@ -1,0 +1,9 @@
+very,big,elephant # 1,0
+not,big,elephant # 0.9,0.1
+not,small,elephant # 0.8,0.2
+very,small,elephant # 0.7,0.3
+
+very,big,mouse # 0.3,0.7
+not,big,mouse # 0.2,0.8
+not,small,mouse # 0.1,0.9
+very,small,mouse # 0,1

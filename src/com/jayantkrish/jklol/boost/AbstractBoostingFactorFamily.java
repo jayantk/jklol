@@ -5,7 +5,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 /**
- * Common implementations of basic {@code BoostingFactorFamily} methods.
+ * Common implementations of {@code BoostingFactorFamily} methods.
  * 
  * @author jayantk
  */

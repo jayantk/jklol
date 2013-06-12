@@ -1,0 +1,6 @@
+t1:elephant # 2 # -1
+t1:mouse # 2 # -1
+t2:big # 2,2 # -1
+t2:small # 2,2 # -1
+t4:very # 2,2,2,2 # -1
+t4:not # 2,2,2,2 # -1

@@ -106,7 +106,7 @@ public interface Tensor extends TensorBase, Serializable {
 
   /**
    * The tensor inner product, which is analogous to the standard
-   * matrix product. This method elementwise multiplies {@code this}
+   * matrix-vector product. This method elementwise multiplies {@code this}
    * and {@code other}, then sums out all dimensions in {@code other}.
    * The returned tensor has the dimensions of {@code this} minus the
    * dimensions of {@code other}.
@@ -115,6 +115,16 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor innerProduct(Tensor other);
+  
+  /**
+   * Generalization of matrix-matrix multiplication. Elementwise 
+   * multiplies {@code this} and {@code other}, then sums out all
+   * shared dimensions.
+   *
+   * @param other
+   * @return
+   */
+  Tensor matrixInnerProduct(Tensor other);
 
   /**
    * The outer product. {@code other} and {@code this} must have
@@ -195,6 +205,13 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor elementwiseExp();
+  
+  /**
+   * Get the hyperbolic tangent of this tensor.
+   *
+   * @return
+   */
+  Tensor elementwiseTanh();
 
   /**
    * Applies the soft threshold operator to each element in this. The
@@ -303,6 +320,11 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor maxOutDimensions(Collection<Integer> dimensionsToEliminate, Backpointers backpointers);
+  
+  /**
+   * Same as {@link #maxOutDimensions(Collection, Backpointers)}. 
+   */
+  Tensor maxOutDimensions(int[] dimensionsToEliminate, Backpointers backpointers);
 
   /**
    * Relabels the dimensions of this tensor to {@code newDimensions}.

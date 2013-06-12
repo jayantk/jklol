@@ -22,8 +22,8 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -107,7 +107,7 @@ public class TrainCcg extends AbstractCli {
     } else {
       oracle = new CcgLoglikelihoodOracle(family, compatibilityFunction, options.valueOf(beamSize));
     }
-    StochasticGradientTrainer trainer = createStochasticGradientTrainer(trainingExamples.size());
+    GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
     CcgParser ccgParser = family.getModelFromParameters(parameters);

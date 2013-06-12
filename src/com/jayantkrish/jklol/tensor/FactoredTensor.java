@@ -73,6 +73,11 @@ public class FactoredTensor extends AbstractTensor {
   public Tensor innerProduct(Tensor other) {
     throw new UnsupportedOperationException("Not implemented.");
   }
+  
+  @Override
+  public Tensor matrixInnerProduct(Tensor other) {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
 
   @Override
   public Tensor outerProduct(Tensor other) {
@@ -111,6 +116,11 @@ public class FactoredTensor extends AbstractTensor {
 
   @Override
   public Tensor elementwiseExp() {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+  
+  @Override
+  public Tensor elementwiseTanh() {
     throw new UnsupportedOperationException("Not implemented.");
   }
 

@@ -39,8 +39,6 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
   @Override
   public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
       Collection<? extends A> items, D mapper, E reducer) {
-    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-
     if (items.size() == 1) {
       // Run all computation in this thread, which is faster given only a small number of items.
       C accumulator = reducer.getInitialValue();
@@ -51,6 +49,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
       return accumulator;
     }
 
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
     // Set up the item batches for the executor service. 
     ImmutableList<A> itemsAsList = ImmutableList.copyOf(items);
     List<MapReduceBatch<A, B, C>> batches = Lists.newArrayList();

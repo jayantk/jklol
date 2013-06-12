@@ -39,16 +39,22 @@ public class ForAllExpression extends AbstractExpression {
   }
   
   public Expression expandQuantifier() {
-    Preconditions.checkState(boundVariables.size() == 1, "Not implemented for more than 1 variable");
-    
-    ConstantExpression boundVar = boundVariables.get(0);
-    CommutativeOperator set = (CommutativeOperator) restrictions.get(0);
-    List<Expression> clauses = Lists.newArrayList();
-    for (Expression arg : set.getArguments()) {
-      clauses.add(body.substitute(boundVar, arg));
+    // Generate unique names for the bound variables to avoid
+    // accidental substitutions. 
+    List<ConstantExpression> newBoundVariables = ConstantExpression.generateUniqueVariables(boundVariables.size());
+    Expression baseClause = body.renameVariables(boundVariables, newBoundVariables);
+    for (int i = 0; i < newBoundVariables.size(); i++) {
+      ConstantExpression boundVar = newBoundVariables.get(i);
+      CommutativeOperator set = (CommutativeOperator) restrictions.get(i);
+      
+      List<Expression> clauses = Lists.newArrayList();
+      for (Expression arg : set.getArguments()) {
+        clauses.add(baseClause.substitute(boundVar, arg));
+      }
+      baseClause = new CommutativeOperator(new ConstantExpression("and"), clauses);
     }
 
-    return new CommutativeOperator(new ConstantExpression("and"), clauses);
+    return baseClause;
   }
 
   @Override

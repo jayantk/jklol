@@ -76,6 +76,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   public void incrementEntry(double amount, int... key) {
     values[dimKeyToIndex(key)] += amount;
   }
+  
+  @Override
+  public void incrementEntryByKeyNum(double amount, long keyNum) {
+    values[keyNumToIndex(keyNum)] += amount;
+  }
 
   /**
    * {@inheritDoc}
@@ -104,10 +109,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   private void simpleIncrement(TensorBase other, double multiplier) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
     if (other instanceof DenseTensorBase) {
-      DenseTensorBase otherTensor = (DenseTensorBase) other;
-      Preconditions.checkArgument(otherTensor.values.length == values.length);
-      for (int i = 0; i < values.length; i++) {
-        values[i] += otherTensor.values[i] * multiplier;
+      double[] otherTensorValues = ((DenseTensorBase) other).values;
+      Preconditions.checkArgument(otherTensorValues.length == values.length);
+      int length = values.length;
+      for (int i = 0; i < length; i++) {
+        values[i] += otherTensorValues[i] * multiplier;
       }
     } else {
       int otherSize = other.size();
@@ -193,6 +199,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     values[dimKeyToIndex(key)] *= amount;
   }
   
+  @Override
+  public void multiplyEntryByKeyNum(double amount, long keyNum) {
+    values[keyNumToIndex(keyNum)] *= amount;
+  }
+
   @Override
   public void softThreshold(double threshold) {
     double negativeThreshold = -1.0 * threshold;

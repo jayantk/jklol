@@ -29,12 +29,16 @@ public interface TensorBuilder extends TensorBase, Serializable {
   void incrementWithMultiplier(TensorBase other, double multiplier);
 
   void incrementEntry(double amount, int... key);
+  
+  void incrementEntryByKeyNum(double amount, long keyNum);
 
   void multiply(TensorBase other);
 
   void multiply(double amount);
 
   void multiplyEntry(double amount, int... key);
+  
+  void multiplyEntryByKeyNum(double amount, long keyNum);
   
   /**
    * Applies the soft threshold operator to each element in this. The soft

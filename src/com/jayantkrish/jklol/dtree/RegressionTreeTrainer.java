@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.dtree;
 
 import java.io.Serializable;
-import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.DenseTensor;

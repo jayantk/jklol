@@ -72,7 +72,7 @@ public class LbfgsTest extends TestCase {
 	  
 	  // Check convergence of the objective value.
 	  double[] objectiveValues = log.getStatisticValues("objective value");
-	  assertEquals(Math.log(1.0 / 3.0), objectiveValues[objectiveValues.length - 1], 0.00000001);
+	  assertEquals(Math.log(1.0 / 3.0), objectiveValues[objectiveValues.length - 1], 0.00001);
 	}
 	
 	public void testTrainRegularized() {
@@ -94,7 +94,12 @@ public class LbfgsTest extends TestCase {
 	      .outcomeToAssignment(Arrays.asList(new String[] {"F", "T"})));
 
 	  LoglikelihoodOracle oracle = new LoglikelihoodOracle(logLinearModel, new JunctionTree());
-	  SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), trainingData);
+	  SufficientStatistics parameters = null;
+	  try {
+	    parameters = trainer.train(oracle, oracle.initializeGradient(), trainingData);
+	  } catch (LbfgsConvergenceError error) {
+	    parameters = error.getFinalParameters();
+	  }
 
 	  List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 	  for (int i = 0; i < parameterList.size(); i++) {

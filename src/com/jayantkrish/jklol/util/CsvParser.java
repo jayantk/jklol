@@ -29,6 +29,10 @@ public class CsvParser {
   public static CsvParser defaultParser() {
     return new CsvParser(',', '\"', '\\');
   }
+  
+  public static CsvParser noEscapeParser() {
+    return new CsvParser(',', '\"', NULL_ESCAPE);
+  }
 
   public String[] parseLine(String line) {
     List<String> parts = Lists.newArrayList();

@@ -152,11 +152,18 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       return elementwiseProduct(other);
     }
 
+    int[] myDims = getDimensionNumbers();
+    int[] mySizes = getDimensionSizes();
+    // If the other tensor has the same dimensionality as this tensor, 
+    // and is dense, the inner product is a simple array operation.
+    if (Arrays.equals(otherDims, myDims) && other instanceof DenseTensor) {
+      return DenseTensor.scalar(denseTensorInnerProduct((DenseTensor) other));
+    }
+
     // Check if the dimensions of other are either left- or right-aligned 
     // with this tensor's dimensions, in which case we can use a faster
     // inner product algorithm.
-    int[] myDims = getDimensionNumbers();
-    int[] mySizes = getDimensionSizes();
+    Preconditions.checkArgument(otherDims.length <= myDims.length);
     if (areDimensionsRightAligned(otherDims)) {
       int maxDimIndex = myDims.length - (otherDims.length + 1);
       int[] newDims = ArrayUtils.copyOf(myDims, maxDimIndex + 1);
@@ -188,6 +195,31 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       // Slow, default inner product.
       return elementwiseProduct(other).sumOutDimensions(otherDims);
     }
+  }
+  
+  @Override
+  public Tensor matrixInnerProduct(Tensor other) {
+    return AbstractTensor.innerProduct(this, other, DenseTensorBuilder.getFactory());
+  }
+  
+  /**
+   * Implementation of inner product where both tensors are dense and have
+   * the same dimensionality. These properties enable the inner product to
+   * be computed extremely quickly by iterating over both dense arrays of
+   * values.
+   *  
+   * @param other
+   * @return
+   */
+  private double denseTensorInnerProduct(DenseTensor other) {
+    double[] otherValues = other.values;
+    int length = values.length;
+    Preconditions.checkArgument(otherValues.length == length);
+    double innerProduct = 0.0;
+    for (int i = 0; i < length; i++) {
+      innerProduct += values[i] * otherValues[i];
+    }
+    return innerProduct;
   }
 
   /**
@@ -227,16 +259,19 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       // Both tensor products coincide when the other tensor has no dimensions (is a scalar).
       return elementwiseProduct(other);
     } 
-    // All dimensions of this tensor must be smaller than the dimensions
-    // of the other tensor.
-    Preconditions.checkArgument(myDims.length == 0 || myDims[myDims.length - 1] < otherDims[0]);
-    
-    int[] newDims = Ints.concat(myDims, otherDims);
-    int[] newSizes = Ints.concat(getDimensionSizes(), other.getDimensionSizes());
-    DenseTensorBuilder builder = new DenseTensorBuilder(newDims, newSizes);
-    builder.increment(this);
 
-    return builder.buildNoCopy().elementwiseProduct(other);
+    if (myDims.length == 0 || myDims[myDims.length - 1] < otherDims[0]) {
+      // Fast implementation for when all dimensions of this tensor 
+      // are smaller than the dimensions of the other tensor.
+      int[] newDims = Ints.concat(myDims, otherDims);
+      int[] newSizes = Ints.concat(getDimensionSizes(), other.getDimensionSizes());
+      DenseTensorBuilder builder = new DenseTensorBuilder(newDims, newSizes);
+      builder.increment(this);
+      
+      return builder.buildNoCopy().elementwiseProduct(other);
+    } else {
+      return DenseTensor.copyOf(AbstractTensor.outerProduct(this, other));
+    }
   }
 
   @Override
@@ -307,6 +342,16 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
   
   @Override
+  public DenseTensor elementwiseTanh() {
+    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    for (int i = 0; i < values.length; i++) {
+      outputBuilder.values[i] = Math.tanh(values[i]);
+    }
+    return outputBuilder.buildNoCopy();
+  }
+
+  @Override
   public DenseTensor softThreshold(double threshold) {
     DenseTensorBuilder builder = DenseTensorBuilder.copyOf(this);
     builder.softThreshold(threshold);
@@ -348,6 +393,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public DenseTensor maxOutDimensions(Collection<Integer> dimensionsToEliminate,
       Backpointers backpointers) {
     return reduceDimensions(dimensionsToEliminate, false, backpointers);
+  }
+  
+  @Override
+  public DenseTensor maxOutDimensions(int[] dimensionsToEliminate, Backpointers backpointers) {
+    return maxOutDimensions(Ints.asList(dimensionsToEliminate), backpointers);
   }
 
   /**
@@ -561,6 +611,16 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public static DenseTensor constant(int[] dimensions, int[] sizes, double weight) {
     DenseTensorBuilder builder = new DenseTensorBuilder(dimensions, sizes, weight);
     return builder.buildNoCopy();
+  }
+  
+  /**
+   * Gets a tensor representation of a scalar.
+   *  
+   * @param value
+   * @return
+   */
+  public static DenseTensor scalar(double value) {
+    return new DenseTensor(new int[] {}, new int[] {}, new double[] {value});
   }
 
   /**

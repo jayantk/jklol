@@ -117,6 +117,11 @@ public class AppendOnlySparseTensorBuilder extends AbstractTensorBase implements
   public void incrementEntry(double amount, int... key) {
     throw new UnsupportedOperationException();
   }
+  
+  @Override
+  public void incrementEntryByKeyNum(double amount, long keyNum) {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
   public void multiply(TensorBase other) {
@@ -130,6 +135,11 @@ public class AppendOnlySparseTensorBuilder extends AbstractTensorBase implements
 
   @Override
   public void multiplyEntry(double amount, int... key) {
+    throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public void multiplyEntryByKeyNum(double amount, long keyNum) {
     throw new UnsupportedOperationException();
   }
 

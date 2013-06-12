@@ -1,0 +1,18 @@
+# Data generated using template: 
+# (op:softmax (op:matvecmul t2:weights 
+#                           (op:logistic (op:matvecmul 
+#                                         (op:matvecmul t3:<arg2> t1:<arg0>) 
+#                                         t1:<arg1>))))
+
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:and t1:false) t1:false))))","0,1"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:and t1:false) t1:true))))","0,1"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:and t1:true) t1:false))))","0,1"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:and t1:true) t1:true))))","1,0"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:or t1:false) t1:false))))","0,1"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:or t1:false) t1:true))))","1,0"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:or t1:true) t1:false))))","1,0"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:or t1:true) t1:true))))","1,0"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:xor t1:false) t1:false))))","0,1"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:xor t1:false) t1:true))))","1,0"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:xor t1:true) t1:false))))","1,0"
+"(op:softmax (op:matvecmul t2:weights (op:logistic (op:matvecmul (op:matvecmul t3:xor t1:true) t1:true))))","0,1"

@@ -115,6 +115,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   }
   
   @Override
+  public Tensor matrixInnerProduct(Tensor other) {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+  
+  @Override
   public Tensor outerProduct(Tensor other) {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
@@ -154,6 +159,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
     return new LogSpaceTensorAdapter(logWeights.elementwiseExp());
   }
   
+  @Override
+  public Tensor elementwiseTanh() {
+    return logWeights.elementwiseExp().elementwiseTanh();
+  }
+
   @Override
   public Tensor softThreshold(double threshold) {
     throw new UnsupportedOperationException("Not yet implemented.");

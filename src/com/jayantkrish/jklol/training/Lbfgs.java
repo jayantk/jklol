@@ -214,33 +214,38 @@ public class Lbfgs implements GradientOptimizer {
     return currentParameters;
   }
 
-    private <M, E> GradientEvaluation evaluateGradient(SufficientStatistics parameters, 
-        List<E> dataList, GradientOracle<M, E> oracle, MapReduceExecutor executor, 
-        LogFunction log) {
-      // Create the factor graph (or whatever else) from the parameter
-      // vector.
-      log.startTimer("factor_graph_from_parameters");
-      M nextModel = oracle.instantiateModel(parameters);
-      log.stopTimer("factor_graph_from_parameters");
+  private <M, E, T extends E> GradientEvaluation evaluateGradient(SufficientStatistics parameters,
+      List<T> dataList, GradientOracle<M, E> oracle, MapReduceExecutor executor,
+      LogFunction log) {
+    // Create the factor graph (or whatever else) from the parameter
+    // vector.
+    log.startTimer("factor_graph_from_parameters");
+    M nextModel = oracle.instantiateModel(parameters);
+    log.stopTimer("factor_graph_from_parameters");
 
-      // In parallel, compute the gradient from the entire training
-      // set. Note that this computation does not include the added
-      // regularization term.
-      log.startTimer("compute_gradient_(serial)");
-      GradientEvaluation evaluation = executor.mapReduce(dataList,
-            new GradientMapper<M, E>(nextModel, oracle, log), new GradientReducer<M, E>(oracle, log));
-      log.stopTimer("compute_gradient_(serial)");
-      
-      // Normalize the objective term, then apply regularization
-      evaluation.getGradient().multiply(1.0 / dataList.size());
-      evaluation.setObjectiveValue(evaluation.getObjectiveValue() / dataList.size());
+    // In parallel, compute the gradient from the entire training
+    // set. Note that this computation does not include the added
+    // regularization term.
+    log.startTimer("compute_gradient_(serial)");
+    GradientEvaluation evaluation = executor.mapReduce(dataList,
+        new GradientMapper<M, T>(nextModel, oracle, log), new GradientReducer<M, T>(oracle, log));
+    log.stopTimer("compute_gradient_(serial)");
 
-      if (l2Regularization > 0.0) {
-        evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);
-        double parameterSumSquares = parameters.getL2Norm();
-        parameterSumSquares *= parameterSumSquares;
-        evaluation.setObjectiveValue(evaluation.getObjectiveValue() - (l2Regularization * parameterSumSquares / 2.0));
-      }
+    // Normalize the objective term, then apply regularization
+    evaluation.getGradient().multiply(1.0 / dataList.size());
+    evaluation.setObjectiveValue(evaluation.getObjectiveValue() / dataList.size());
+
+    double oldNorm = evaluation.getGradient().getL2Norm();
+    if (Double.isNaN(oldNorm)) {
+      System.out.println(evaluation.getGradient().getDescription());
+    }
+
+    if (l2Regularization > 0.0) {
+      evaluation.getGradient().increment(parameters, -1.0 * l2Regularization);
+      double parameterSumSquares = parameters.getL2Norm();
+      parameterSumSquares *= parameterSumSquares;
+      evaluation.setObjectiveValue(evaluation.getObjectiveValue() - (l2Regularization * parameterSumSquares / 2.0));
+    }
 
     return evaluation;
   }

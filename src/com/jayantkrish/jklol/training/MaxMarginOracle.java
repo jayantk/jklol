@@ -71,10 +71,10 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
     FactorGraph conditionalCostAugmentedModel = costAugmentedModel.conditional(input);
     log.stopTimer("update_subgradient/condition");
 
-    log.startTimer("update_subgradient/inference");
+    log.startTimer("update_subgradient/input_inference");
     MaxMarginalSet predicted = marginalCalculator.computeMaxMarginals(conditionalCostAugmentedModel);
     Assignment prediction = predicted.getNthBestAssignment(0);
-    log.stopTimer("update_subgradient/inference");
+    log.stopTimer("update_subgradient/input_inference");
 
     // Get the best value for any hidden variables, given the current input and
     // correct output.
@@ -85,10 +85,10 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
     FactorGraph conditionalOutputModel = conditionalCostAugmentedModel.conditional(outputAssignment);
     log.stopTimer("update_subgradient/condition");
 
-    log.startTimer("update_subgradient/inference");
+    log.startTimer("update_subgradient/output_inference");
     MaxMarginalSet actualMarginals = marginalCalculator.computeMaxMarginals(conditionalOutputModel);
     Assignment actual = actualMarginals.getNthBestAssignment(0);
-    log.stopTimer("update_subgradient/inference");
+    log.stopTimer("update_subgradient/output_inference");
 
     /*
      * log.log(iterationNum, iterationNum, input, currentModel);

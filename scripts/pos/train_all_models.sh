@@ -2,7 +2,7 @@
 
 TRAINING_DATA=~/data/ptb_pos/pos_00-18.txt
 VALIDATION_DATA=~/data/ptb_pos/pos_19-21.txt
-OUTPUT_DIR=pos_output/speed_test2/
+OUTPUT_DIR=pos_output/speed_test3/
 
 ITERATIONS=10
 BATCH_SIZE=1
@@ -32,7 +32,7 @@ M3N_VALIDATION=$OUTPUT_DIR/m3n_validation.txt
 mkdir -p $OUTPUT_DIR
 
 echo "Training logistic regression..."
-./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$LR_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize $BATCH_SIZE --maxThreads 16 --noTransitions --logInterval 1000 > $LR_LOG
+#./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$LR_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize $BATCH_SIZE --maxThreads 16 --noTransitions --logInterval 1000 > $LR_LOG
 
 echo "Training CRF..."
 #./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$CRF_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize $BATCH_SIZE --maxThreads 16 --logInterval 1000 > $CRF_LOG

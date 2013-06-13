@@ -870,6 +870,14 @@ public class CcgParser implements Serializable {
         newLeftRelabeling, newRightRelabeling);
   }
 
+  private static List<String> preprocessInput(List<String> terminals) {
+    List<String> preprocessedTerminals = Lists.newArrayList();
+    for (String terminal : terminals) {
+      preprocessedTerminals.add(terminal.toLowerCase());
+    }
+    return preprocessedTerminals;
+  }
+
   public boolean isPossibleDependencyStructure(DependencyStructure dependency) {
     Assignment assignment = Assignment.unionAll(
         dependencyHeadVar.outcomeArrayToAssignment(dependency.getHead()),
@@ -878,14 +886,6 @@ public class CcgParser implements Serializable {
 
     return dependencyDistribution.getVars().isValidAssignment(assignment) &&
         dependencyDistribution.getUnnormalizedLogProbability(assignment) != Double.NEGATIVE_INFINITY;
-  }
-
-  private static List<String> preprocessInput(List<String> terminals) {
-    List<String> preprocessedTerminals = Lists.newArrayList();
-    for (String terminal : terminals) {
-      preprocessedTerminals.add(terminal.toLowerCase());
-    }
-    return preprocessedTerminals;
   }
 
   public boolean isPossibleLexiconEntry(List<String> originalWords, List<String> posTags, HeadedSyntacticCategory category) {
@@ -1261,6 +1261,48 @@ public class CcgParser implements Serializable {
     int numParses = Math.min(chart.getBeamSize(),
         chart.getNumChartEntriesForSpan(0, chart.size() - 1));
     return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this, syntaxVarType);
+  }
+  
+  /**
+   * Gets the possible lexicon entries for {@code wordSequence} 
+   * that can be used in this parser. The returned entries do not 
+   * include lexicon entries for unknown words, which may occur 
+   * in the parse if {@code wordSequence} is unrecognized.
+   * 
+   * @param wordSequence
+   * @return
+   */
+  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence) {
+    return getLexiconEntriesFromFactor(wordSequence, terminalDistribution, terminalVar, ccgCategoryVar);
+  }
+
+  /**
+   * Gets the possible lexicon entries for {@code wordSequence} from 
+   * {@code terminalDistribution}, a distribution over CCG categories
+   * given word sequences.
+   *  
+   * @param wordSequence
+   * @param terminalDistribution
+   * @param terminalVar
+   * @param ccgCategoryVar
+   * @return
+   */
+  public static List<LexiconEntry> getLexiconEntriesFromFactor(List<String> wordSequence,
+      DiscreteFactor terminalDistribution, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar) {
+    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
+    if (terminalVar.isValidOutcomeArray(wordSequence)) {
+      Assignment assignment = terminalVar.outcomeArrayToAssignment(wordSequence);
+
+      Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+      while (iterator.hasNext()) {
+        Outcome bestOutcome = iterator.next();
+        CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
+            ccgCategoryVar.getOnlyVariableNum());
+        
+        lexiconEntries.add(new LexiconEntry(wordSequence, ccgCategory));
+      }
+    }
+    return lexiconEntries;
   }
 
   /**

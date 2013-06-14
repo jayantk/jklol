@@ -75,8 +75,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
         .intersection(inputFactorGraph.getVariables()));
     // System.out.println("output factor graph:");
     // System.out.println(outputFactorGraph.getParameterDescription());
-    MarginalSet outputMarginals = marginalCalculator.computeMarginals(
-        outputFactorGraph);
+    MarginalSet outputMarginals = marginalCalculator.computeMarginals(outputFactorGraph);
     log.stopTimer("update_gradient/output_marginal");
     
     double inputPartitionFunction = inputMarginals.getPartitionFunction();

@@ -2,9 +2,10 @@
 
 TRAINING_DATA=~/data/ptb_pos/pos_00-18.txt
 VALIDATION_DATA=~/data/ptb_pos/pos_19-21.txt
-OUTPUT_DIR=pos_output/common_and_unk_features/
+OUTPUT_DIR=pos_output/speed_test3/
 
-ITERATIONS=100
+ITERATIONS=10
+BATCH_SIZE=1
 L2_REG=0.00001
 
 # Where the trained models go.
@@ -28,17 +29,19 @@ M3N_OUT=$OUTPUT_DIR/m3n_out.ser
 M3N_TRAIN=$OUTPUT_DIR/m3n_train.txt
 M3N_VALIDATION=$OUTPUT_DIR/m3n_validation.txt
 
+mkdir -p $OUTPUT_DIR
+
 echo "Training logistic regression..."
-./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$LR_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize 100 --maxThreads 16 --noTransitions > $LR_LOG
+#./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$LR_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize $BATCH_SIZE --maxThreads 16 --noTransitions --logInterval 1000 > $LR_LOG
 
 echo "Training CRF..."
-./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$CRF_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize 100 --maxThreads 16 > $CRF_LOG
+#./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$CRF_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize $BATCH_SIZE --maxThreads 16 --logInterval 1000 > $CRF_LOG
 
 echo "Training SVM..."
-./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$SVM_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize 100 --maxThreads 16 --noTransitions --maxMargin > $SVM_LOG
+#./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$SVM_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize $BATCH_SIZE --maxThreads 16 --noTransitions --maxMargin --logInterval 1000 > $SVM_LOG
 
 echo "Training M3N..."
-./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$M3N_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize 100 --maxThreads 16 --maxMargin > $M3N_LOG
+./scripts/run.sh com.jayantkrish.jklol.pos.TrainPosCrf --training=$TRAINING_DATA --output=$M3N_OUT --initialStepSize=1.0 --iterations $ITERATIONS --l2Regularization $L2_REG --batchSize $BATCH_SIZE --maxThreads 16 --maxMargin --logInterval 1000 > $M3N_LOG
 
 # validate each model.
 echo "Testing..."

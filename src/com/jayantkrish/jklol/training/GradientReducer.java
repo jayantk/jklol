@@ -21,17 +21,17 @@ public class GradientReducer<M, E> extends SimpleReducer<GradientEvaluation> {
   
   @Override
   public GradientEvaluation getInitialValue() {
-    log.startTimer("initialize_gradient");
+    log.startTimer("mr_gradient_initialize");
     SufficientStatistics gradient = oracle.initializeGradient();
-    log.stopTimer("initialize_gradient");
+    log.stopTimer("mr_gradient_initialize");
     return new GradientEvaluation(gradient, 0.0, 0);
   }
 
   @Override
   public GradientEvaluation reduce(GradientEvaluation item, GradientEvaluation accumulated) {
-    log.startTimer("reduce_gradient");
+    log.startTimer("mr_gradient_reduce");
     accumulated.increment(item);
-    log.stopTimer("reduce_gradient");
+    log.stopTimer("mr_gradient_reduce");
     return accumulated;
   }
 }

@@ -348,10 +348,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap semanticArgNumVar = VariableNumMap.singleton(1, "semanticArgNum", argumentNums);
     VariableNumMap semanticArgVar = VariableNumMap.singleton(2, "semanticArg", semanticPredicateType);
 
-    // Create features over dependency structures.
-    ParametricFactor dependencyParametricFactor = featureFactory.getDependencyFeatures(semanticHeadVar,
-          semanticArgNumVar, semanticArgVar);
-
     // Create features over argument distances for each dependency.
     VariableNumMap wordDistanceVar = VariableNumMap.singleton(2, "wordDistance", CcgParser.wordDistanceVarType);
     ParametricFactor wordDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
@@ -362,6 +358,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap verbDistanceVar = VariableNumMap.singleton(2, "verbDistance", CcgParser.verbDistanceVarType);
     ParametricFactor verbDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
         semanticHeadVar, semanticArgNumVar, verbDistanceVar);
+    
+    // Create features over dependency structures.
+    ParametricFactor dependencyParametricFactor = featureFactory.getDependencyFeatures(semanticHeadVar,
+        semanticArgNumVar, semanticArgVar);
 
     Set<String> puncTagSet = DEFAULT_PUNC_TAGS;
     Set<String> verbTagSet = DEFAULT_VERB_TAGS;

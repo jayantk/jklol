@@ -26,6 +26,7 @@ import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.training.MinibatchLbfgs;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -353,11 +354,12 @@ public abstract class AbstractCli {
       MapReduceConfiguration.setMapReduceExecutor(new LocalMapReduceExecutor(
           options.valueOf(mrMaxThreads), options.valueOf(mrMaxBatchesPerThread)));
     }
-  }
 
-  private LogFunction createLogFunction() {
-    return (parsedOptions.has(logBrief) ? new NullLogFunction() 
-    : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
+    if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) || opts.contains(CommonOptions.LBFGS)) {
+      LogFunction log = (parsedOptions.has(logBrief) ? new NullLogFunction() 
+      : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
+      LogFunctions.setLogFunction(log);
+    }
   }
 
   /**
@@ -380,7 +382,7 @@ public abstract class AbstractCli {
     double initialStepSize = parsedOptions.valueOf(sgdInitialStep);
     double l2Regularization = parsedOptions.valueOf(sgdL2Regularization);
 
-    LogFunction log = createLogFunction(); 
+    LogFunction log = LogFunctions.getLogFunction();
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
         numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
         l2Regularization, parsedOptions.valueOf(sgdRegularizationFrequency), log);
@@ -397,7 +399,7 @@ public abstract class AbstractCli {
       
       return MinibatchLbfgs.createAdaptiveSchedule(parsedOptions.valueOf(lbfgsHessianRank), 
           parsedOptions.valueOf(lbfgsL2Regularization), numExamples, lbfgsMinibatchSizeInt,
-          -1, createLogFunction());
+          -1, LogFunctions.getLogFunction());
     }
 
     int lbfgsMinibatchSizeInt = parsedOptions.valueOf(lbfgsMinibatchSize);
@@ -408,10 +410,10 @@ public abstract class AbstractCli {
       int batchIterations = (int) Math.ceil(((double) parsedOptions.valueOf(lbfgsIterations)) / lbfgsMinibatchIterationsInt);
       return MinibatchLbfgs.createFixedSchedule(parsedOptions.valueOf(lbfgsHessianRank), 
           parsedOptions.valueOf(lbfgsL2Regularization), batchIterations,
-          lbfgsMinibatchSizeInt, lbfgsMinibatchIterationsInt, createLogFunction());
+          lbfgsMinibatchSizeInt, lbfgsMinibatchIterationsInt, LogFunctions.getLogFunction());
     } else if (lbfgsMinibatchIterationsInt == -1 && lbfgsMinibatchSizeInt == -1) {
       return new Lbfgs(parsedOptions.valueOf(lbfgsIterations), parsedOptions.valueOf(lbfgsHessianRank),
-          parsedOptions.valueOf(lbfgsL2Regularization), createLogFunction());
+          parsedOptions.valueOf(lbfgsL2Regularization), LogFunctions.getLogFunction());
     }
 
     throw new UnsupportedOperationException(
@@ -459,8 +461,8 @@ public abstract class AbstractCli {
   protected FunctionalGradientAscent createFunctionalGradientAscent(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT));
 
-    int iterations = parsedOptions.valueOf(fgaIterations);
     int batchSize = parsedOptions.has(fgaBatchSize) ? parsedOptions.valueOf(fgaBatchSize) : numExamples;
+    int iterations = (int) Math.ceil(parsedOptions.valueOf(fgaIterations) * numExamples / ((double) batchSize));
     double initialStep = parsedOptions.valueOf(fgaInitialStep);
     boolean noDecay = parsedOptions.has(fgaNoDecayStepSize);
     LogFunction log = new DefaultLogFunction(1, false);

@@ -75,18 +75,19 @@ public class ParametricFactorGraphEnsemble implements Serializable {
 
   public DynamicFactorGraph getModelFromParameters(SufficientStatisticsEnsemble parameters) {
     List<SufficientStatistics> ensembleParameters = parameters.getStatistics();
-    List<Double> ensembleWeights = parameters.getStatisticWeights();
+    List<Double> ensembleWeights = Lists.newArrayList(parameters.getStatisticWeights());
     List<PlateFactor> plateFactors = Lists.newArrayList();
     for (int i = 0; i < boostingFamilies.size(); i++) {
       BoostingFactorFamily family = boostingFamilies.get(i);
 
       List<Factor> factors = Lists.newArrayList();
-      if (baseFactors.get(i) != null) {
-        factors.add(baseFactors.get(i));
-      }
-
       for (int j = 0; j < ensembleParameters.size(); j++) {
         factors.add(family.getModelFromParameters(ensembleParameters.get(j).coerceToList().getStatistics().get(i)));
+      }
+
+      if (baseFactors.get(i) != null) {
+	  factors.add(baseFactors.get(i));
+	  ensembleWeights.add(1.0);
       }
 
       VariableNumMap conditionalVars = family.getConditionalVariables();
@@ -99,7 +100,7 @@ public class ParametricFactorGraphEnsemble implements Serializable {
           Tensor logWeights = reweightedFactor.getWeights().elementwiseLog().elementwiseProduct(ensembleWeights.get(j));
           reweightedFactors.add(new TableFactor(reweightedFactor.getVars(), logWeights.elementwiseExp()));
         }
-        result = Factors.product(factors);
+        result = Factors.product(reweightedFactors);
       } else {
         // Conditional factors must have the ensemble weights incorporated lazily,
         // after conditioning on an input.

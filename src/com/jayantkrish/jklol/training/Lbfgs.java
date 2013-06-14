@@ -181,7 +181,7 @@ public class Lbfgs implements GradientOptimizer {
 
         cond1Rhs = currentObjectiveValue - (WOLFE_CONDITION_C1 * stepSize * curInnerProd);
         cond2Rhs = -1.0 * WOLFE_CONDITION_C2 * curInnerProd;
-        
+
         /*
         System.out.println("next:");
         System.out.println(nextParameters.getDescription());
@@ -197,8 +197,7 @@ public class Lbfgs implements GradientOptimizer {
 
         System.out.println("cond1: " + nextObjectiveValue + " > " + cond1Rhs);
         System.out.println("cond2: abs(" + nextInnerProd + ") < " + cond2Rhs);
-        */
-
+	*/
       } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs) || Double.isNaN(nextObjectiveValue))
           && stepSize > MIN_STEP_SIZE); // || Math.abs(nextInnerProd)
                                         // > cond2Rhs

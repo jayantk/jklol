@@ -16,4 +16,6 @@ public interface SequenceTagger<I, O> {
   FeatureVectorGenerator<LocalContext<I>> getFeatureGenerator();
   
   TaggedSequence<I, O> tag(List<I> input);
+  
+  MultitaggedSequence<I, O> multitag(List<I> input, double tagThreshold);
 }

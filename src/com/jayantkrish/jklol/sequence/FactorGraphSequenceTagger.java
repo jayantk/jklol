@@ -6,6 +6,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cli.TrainedModelSet;
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
@@ -44,10 +45,10 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
   }
 
   @Override
-  public TaggedSequence<I, O> tag(List<I> words) {
-    TaggedSequence<I, O> sent = new ListTaggedSequence<I, O>(words, null);
+  public TaggedSequence<I, O> tag(List<I> items) {
+    TaggedSequence<I, O> sequence = new ListTaggedSequence<I, O>(items, null);
 
-    DynamicAssignment input = TaggerUtils.reformatTrainingData(sent,
+    DynamicAssignment input = TaggerUtils.reformatTrainingData(sequence,
         getFeatureGenerator(), getModelFamily().getVariables()).getInput();
 
     DynamicFactorGraph dfg = getInstantiatedModel();
@@ -64,6 +65,30 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
       labels.add(outputClass.cast(values.get(1)));
     }
 
-    return new ListTaggedSequence<I, O>(words, labels);
+    return new ListTaggedSequence<I, O>(items, labels);
+  }
+  
+  @Override
+  public MultitaggedSequence<I, O> multitag(List<I> items, double tagThreshold) {
+    TaggedSequence<I, O> sequence = new ListTaggedSequence<I, O>(items, null);
+
+    DynamicAssignment input = TaggerUtils.reformatTrainingData(sequence,
+        getFeatureGenerator(), getModelFamily().getVariables()).getInput();
+
+    DynamicFactorGraph dfg = getInstantiatedModel();
+    FactorGraph fg = dfg.conditional(input);
+
+    JunctionTree jt = new JunctionTree();
+    MarginalSet marginals = jt.computeMarginals(fg);
+
+    DynamicAssignment prediction = dfg.getVariables()
+        .toDynamicAssignment(output, fg.getAllVariables());
+    List<O> labels = Lists.newArrayList();
+    for (Assignment plateAssignment : prediction.getPlateFixedAssignments(TaggerUtils.PLATE_NAME)) {
+      List<Object> values = plateAssignment.getValues();
+      labels.add(outputClass.cast(values.get(1)));
+    }
+
+    return new ListTaggedSequence<I, O>(items, labels);
   }
 }

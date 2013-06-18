@@ -6,15 +6,15 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
+import com.jayantkrish.jklol.sequence.LocalContext;
 
 /**
  * Generates features from prefixes and suffixes of each word.
  *  
  * @author jayantk
  */
-public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalContext, String> {
+public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalContext<String>, String> {
 
   private static final long serialVersionUID = 1L;
   
@@ -35,9 +35,9 @@ public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalC
   }
 
   @Override
-  public Map<String, Double> generateFeatures(LocalContext item) {
+  public Map<String, Double> generateFeatures(LocalContext<String> item) {
     Map<String, Double> weights = Maps.newHashMap();
-    String word = item.getWord();
+    String word = item.getItem();
     if (!commonWords.contains(word)) {
       generatePrefixSuffixFeatures(word, weights);
       

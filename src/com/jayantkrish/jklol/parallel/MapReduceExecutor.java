@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.parallel;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.Future;
 
 
 /**
@@ -15,4 +17,9 @@ public interface MapReduceExecutor {
 
   public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
       Collection<? extends A> items, D mapper, E reducer);
+  
+  public <A, B, C extends Mapper<A, B>> List<B> map(Collection<? extends A> items, C mapper);
+  
+  public <A, B, C extends Mapper<A, B>> List<Future<B>> mapAsync(Collection<? extends A> items, C mapper)
+      throws InterruptedException;
 }

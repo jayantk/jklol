@@ -1128,9 +1128,14 @@ public class CcgParser implements Serializable {
 
     return decodeParsesForRoot(chart);
   }
-  
-  public CcgChart buildChartForInput(List<String> terminals, List<String> posTags, int beamSize,
-      ChartFilter beamFilter) {
+
+  public List<CcgParse> beamSearchWithSupertags(SupertaggedSentence sentence,
+      int beamSize, ChartFilter beamFilter, LogFunction log) {
+    // TODO: augment beamFilter with a chart filter for the supertags.
+  }
+
+  public CcgChart buildChartForInput(List<String> terminals, List<String> posTags,
+      int beamSize, ChartFilter beamFilter) {
     int numWords = terminals.size();
     int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
     int[] verbCounts = computeDistanceCounts(posTags, verbTagSet);

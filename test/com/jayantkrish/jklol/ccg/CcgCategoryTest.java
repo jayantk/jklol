@@ -12,7 +12,7 @@ public class CcgCategoryTest extends TestCase {
   public void setUp() {
     parser = new ExpressionParser();
   }
-  
+
   public void testInduceLogicalForm() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("((N{0}\\N{0}){1}/N{2}){1}");
     
@@ -28,8 +28,16 @@ public class CcgCategoryTest extends TestCase {
     Expression expected = parser.parseSingleExpression("(lambda $3 $0 $1 ($0 $1))");
     assertEquals(expected, expression);
   }
-  
+
   public void testInduceLogicalForm3() {
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("((S[dcl]{0}\\NP{1}){0}/(S[pss]{2}\\NP{1}){2}){0}");
+
+    Expression expression = CcgCategory.induceLogicalFormFromSyntax(cat);
+    Expression expected = parser.parseSingleExpression("(lambda $2 $1 ($2 $1))");
+    assertEquals(expected, expression);
+  }
+
+  public void testInduceLogicalForm4() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("((N{0}\\N{0}){1}/(S{2}/N{0}){2}){1}");
     
     Expression expression = CcgCategory.induceLogicalFormFromSyntax(cat);

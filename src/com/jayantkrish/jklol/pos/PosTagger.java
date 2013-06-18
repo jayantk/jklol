@@ -2,12 +2,10 @@ package com.jayantkrish.jklol.pos;
 
 import java.util.List;
 
-import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
-import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.sequence.SequenceTagger;
 
-public interface PosTagger {
-
-  FeatureVectorGenerator<LocalContext> getFeatureGenerator();
+public interface PosTagger extends SequenceTagger<String, String> {
   
-  PosTaggedSentence tagWords(List<String> words);
+  @Override
+  PosTaggedSentence tag(List<String> words);
 }

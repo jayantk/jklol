@@ -1,60 +1,27 @@
 package com.jayantkrish.jklol.pos;
 
-import java.util.Collections;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.cli.TrainedModelSet;
-import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.sequence.FactorGraphSequenceTagger;
+import com.jayantkrish.jklol.sequence.LocalContext;
+import com.jayantkrish.jklol.sequence.TaggedSequence;
 
-public class TrainedPosTagger extends TrainedModelSet implements PosTagger {
+public class TrainedPosTagger extends FactorGraphSequenceTagger<String, String> implements PosTagger {
   private static final long serialVersionUID = 1L;
-
-  private final FeatureVectorGenerator<LocalContext> featureGenerator;
 
   public TrainedPosTagger(ParametricFactorGraph modelFamily,
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
-      FeatureVectorGenerator<LocalContext> featureGenerator) {
-    super(modelFamily, parameters, instantiatedModel);
-    this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
+      FeatureVectorGenerator<LocalContext<String>> featureGenerator) {
+    super(modelFamily, parameters, instantiatedModel, featureGenerator, String.class);
   }
 
   @Override
-  public FeatureVectorGenerator<LocalContext> getFeatureGenerator() {
-    return featureGenerator;
-  }
-
-  @Override
-  public PosTaggedSentence tagWords(List<String> words) {
-    List<String> posTags = Collections.<String>nCopies(words.size(), "");
-    PosTaggedSentence sent = new PosTaggedSentence(words, posTags);
-
-    DynamicAssignment input = PosTaggerUtils.reformatTrainingData(sent, 
-        getFeatureGenerator(), getModelFamily().getVariables()).getInput();
-
-    DynamicFactorGraph dfg = getInstantiatedModel();
-    FactorGraph fg = dfg.conditional(input);
-
-    JunctionTree jt = new JunctionTree();
-    Assignment output = jt.computeMaxMarginals(fg).getNthBestAssignment(0);
-
-    DynamicAssignment prediction = dfg.getVariables()
-        .toDynamicAssignment(output, fg.getAllVariables());
-    List<String> labels = Lists.newArrayList();
-    for (Assignment plateAssignment : prediction.getPlateFixedAssignments(PosTaggerUtils.PLATE_NAME)) {
-      List<Object> values = plateAssignment.getValues();
-      labels.add((String) values.get(1));
-    }
-
-    return new PosTaggedSentence(words, labels);
-  }
+  public PosTaggedSentence tag(List<String> words) {
+    TaggedSequence<String, String> sequence = super.tag(words);
+    return new PosTaggedSentence(sequence.getItems(), sequence.getLabels());
+ }
 }

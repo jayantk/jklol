@@ -106,50 +106,45 @@ public class JunctionTree implements MarginalCalculator {
    * max-product.
    */
   private Set<Integer> runMessagePassing(CliqueTree cliqueTree, boolean useSumProduct) {
-    // This performs both passes of message passing.
-    boolean keepGoing = true;
     Set<Integer> rootFactors = Sets.newHashSet();
     int numFactors = cliqueTree.numFactors();
-    while (keepGoing) {
-      keepGoing = false;
 
-      for (int i = 0; i < 2 * numFactors; i++) {
-        // Perform both rounds of message passing in the same loop by
-        // going up the factor elimination indexes, then back down.
-        int factorNum = -1;
-        if (i < numFactors) {
-          factorNum = cliqueTree.getFactorEliminationOrder().get(i);
-        } else {
-          factorNum = cliqueTree.getFactorEliminationOrder().get((2 * numFactors - 1) - i);
-        }
-        Map<SeparatorSet, Factor> inboundMessages = cliqueTree.getInboundMessages(factorNum);
-        Set<SeparatorSet> possibleOutboundMessages = cliqueTree.getFactor(factorNum).getComputableOutboundMessages(inboundMessages);
+    for (int i = 0; i < 2 * numFactors; i++) {
+      // Perform both rounds of message passing in the same loop by
+      // going up the factor elimination indexes, then back down.
+      int factorNum = -1;
+      if (i < numFactors) {
+        factorNum = cliqueTree.getFactorEliminationOrder().get(i);
+      } else {
+        factorNum = cliqueTree.getFactorEliminationOrder().get((2 * numFactors - 1) - i);
+      }
+      Map<SeparatorSet, Factor> inboundMessages = cliqueTree.getInboundMessages(factorNum);
+      Set<SeparatorSet> possibleOutboundMessages = cliqueTree.getFactor(factorNum).getComputableOutboundMessages(inboundMessages);
 
-        // Pass any messages which we haven't already computed.
-        Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
-        for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
-          if (!alreadyPassedMessages.contains(possibleOutboundMessage.getEndFactor())) {
-            passMessage(cliqueTree, possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
-            keepGoing = true;
-          }
-        }
-
-        // Find any root nodes of the junction tree (which is really a junction
-        // forest) by finding factors which have received all of their inbound
-        // messages before passing any outbound messages. These root nodes are
-        // used to compute the partition function of the graphical model.
-        int numInboundFactors = 0;
-        for (Factor inboundFactor : inboundMessages.values()) {
-          if (inboundFactor != null) {
-            numInboundFactors++;
-          }
-        }
-        if (alreadyPassedMessages.size() == 0 &&
-            numInboundFactors == cliqueTree.getNeighboringFactors(factorNum).size()) {
-          rootFactors.add(factorNum);
+      // Pass any messages which we haven't already computed.
+      Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
+      for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
+        if (!alreadyPassedMessages.contains(possibleOutboundMessage.getEndFactor())) {
+          passMessage(cliqueTree, possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
         }
       }
+
+      // Find any root nodes of the junction tree (which is really a junction
+      // forest) by finding factors which have received all of their inbound
+      // messages before passing any outbound messages. These root nodes are
+      // used to compute the partition function of the graphical model.
+      int numInboundFactors = 0;
+      for (Factor inboundFactor : inboundMessages.values()) {
+        if (inboundFactor != null) {
+          numInboundFactors++;
+        }
+      }
+      if (alreadyPassedMessages.size() == 0 &&
+          numInboundFactors == cliqueTree.getNeighboringFactors(factorNum).size()) {
+        rootFactors.add(factorNum);
+      }
     }
+
     return rootFactors;
   }
 

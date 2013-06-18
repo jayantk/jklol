@@ -181,12 +181,17 @@ public class CcgCategory implements Serializable {
     List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList();
     List<Integer> argumentRoots = Lists.newArrayList();
     List<ConstantExpression> argumentVariables = Lists.newArrayList();
+    int heuristicRootVariable = -1;
     while (!syntax.isAtomic()) {
       HeadedSyntacticCategory argument = syntax.getArgumentType();
       argumentCats.add(argument);
       argumentRoots.add(argument.getRootVariable());
       argumentVariables.add(varMap.get(argument.getRootVariable()));
       syntax = syntax.getReturnType();
+      
+      if (argument.getSyntax().getWithoutFeatures().isUnifiableWith(syntax.getSyntax().getWithoutFeatures())) {
+        heuristicRootVariable = argument.getRootVariable();
+      }
     }
     Set<Integer> argumentRootSet = Sets.newHashSet(argumentRoots);
     if (argumentRootSet.size() < argumentRoots.size()) {
@@ -203,26 +208,32 @@ public class CcgCategory implements Serializable {
     Expression body = null;
     int argumentIndex = argumentRoots.indexOf(syntax.getRootVariable());
     if (argumentIndex == -1) {
-      // It's not clear what the body of the logical form should be here.
-      return null;
+      // The head of the returned category is not one of the argument variables.
+      // Try guessing a head based on syntactic unifiability.
+      argumentIndex = argumentRoots.indexOf(heuristicRootVariable);
     }
-    
-    List<Expression> argumentArguments = Lists.newArrayList();
-    int argumentRoot = argumentRoots.get(argumentIndex);
-    Set<Integer> usedVariables = Sets.newHashSet();
-    usedVariables.add(argumentRoot);
-    HeadedSyntacticCategory argument = argumentCats.get(argumentIndex);
-    if (argument.isAtomic()) {
-      body = argumentVariables.get(argumentIndex);
-    } else {
-      while (!argument.isAtomic()) {
-        int argumentArgumentRoot = argument.getArgumentType().getRootVariable();
-        usedVariables.add(argumentArgumentRoot);
-        argumentArguments.add(varMap.get(argumentArgumentRoot));
-        argument = argument.getReturnType();
+
+    if (argumentIndex != -1) {
+      List<Expression> argumentArguments = Lists.newArrayList();
+      int argumentRoot = argumentRoots.get(argumentIndex);
+      Set<Integer> usedVariables = Sets.newHashSet();
+      usedVariables.add(argumentRoot);
+      HeadedSyntacticCategory argument = argumentCats.get(argumentIndex);
+      if (argument.isAtomic()) {
+        body = argumentVariables.get(argumentIndex);
+      } else {
+        while (!argument.isAtomic()) {
+          int argumentArgumentRoot = argument.getArgumentType().getRootVariable();
+          usedVariables.add(argumentArgumentRoot);
+          argumentArguments.add(varMap.get(argumentArgumentRoot));
+          argument = argument.getReturnType();
+        }
+        body = new ApplicationExpression(argumentVariables.get(argumentIndex), argumentArguments);
       }
-      body = new ApplicationExpression(argumentVariables.get(argumentIndex), argumentArguments);
+      return new LambdaExpression(argumentVariables, body);
     }
+
+    return null;
 
     // See if there are any other arguments to the category whose
     // argument variables unify with the return value.
@@ -265,7 +276,7 @@ public class CcgCategory implements Serializable {
     }
     */
 
-    return new LambdaExpression(argumentVariables, body);
+
   }
 
   /**

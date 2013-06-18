@@ -45,7 +45,7 @@ public class TestPosCrf extends AbstractCli {
       System.out.println("TAG ACCURACY: " + error.getTagAccuracy() + " (" + error.getNumTagsCorrect() + " / " + error.getNumTags() + ")");
       System.out.println("SENTENCE ACCURACY: " + error.getSentenceAccuracy() + " (" + error.getNumSentencesCorrect() + " / " + error.getNumSentences() + ")");
     } else {
-      PosTaggedSentence tags = trainedModel.tagWords(options.nonOptionArguments());
+      PosTaggedSentence tags = trainedModel.tag(options.nonOptionArguments());
       System.out.println(tags.getWords());
       System.out.println(tags.getPos());
     }
@@ -115,7 +115,7 @@ public class TestPosCrf extends AbstractCli {
 
     @Override
     public PosError map(PosTaggedSentence item) {
-      List<String> prediction = tagger.tagWords(item.getWords()).getPos();
+      List<String> prediction = tagger.tag(item.getWords()).getPos();
       List<String> actual = item.getPos();
       Preconditions.checkState(prediction.size() == actual.size());
       int numTagsCorrect = 0;

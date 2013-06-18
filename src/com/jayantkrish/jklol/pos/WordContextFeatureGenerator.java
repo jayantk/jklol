@@ -5,8 +5,8 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
+import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.util.ArrayUtils;
 
 /**
@@ -15,7 +15,7 @@ import com.jayantkrish.jklol.util.ArrayUtils;
  * 
  * @author jayant
  */
-public class WordContextFeatureGenerator implements FeatureGenerator<LocalContext, String> {
+public class WordContextFeatureGenerator implements FeatureGenerator<LocalContext<String>, String> {
 
   private static final long serialVersionUID = 1L;
 
@@ -28,10 +28,10 @@ public class WordContextFeatureGenerator implements FeatureGenerator<LocalContex
   }
 
   @Override
-  public Map<String, Double> generateFeatures(LocalContext item) {
+  public Map<String, Double> generateFeatures(LocalContext<String> item) {
     Map<String, Double> weights = Maps.newHashMap();
     for (int i = 0; i < offsets.length; i++) {
-      String word = item.getWord(offsets[i]);
+      String word = item.getItem(offsets[i]);
       if (commonWords.contains(word)) {
         weights.put(formatFeature(word, offsets[i]), 1.0);
       }

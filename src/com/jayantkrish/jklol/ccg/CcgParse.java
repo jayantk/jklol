@@ -282,7 +282,7 @@ public class CcgParse {
     } 
     Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
 
-    if (preUnaryLogicalForm != null) {
+    if (preUnaryLogicalForm != null && !preUnaryLogicalForm.equals(logicalForm)) {
       spannedExpressions.add(new SpannedExpression(preUnaryLogicalForm.simplify(),
           spanStart, spanEnd));
       if (onlyMaximal) { return; }

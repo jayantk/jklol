@@ -12,8 +12,9 @@ import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
-import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.sequence.LocalContext;
+import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.util.Assignment;
 
 
@@ -24,11 +25,11 @@ public class TrainedBoostedPosTagger implements PosTagger, Serializable {
   private final SufficientStatisticsEnsemble parameters;
   private final DynamicFactorGraph factorGraph;
   
-  private final FeatureVectorGenerator<LocalContext> featureGenerator;
+  private final FeatureVectorGenerator<LocalContext<String>> featureGenerator;
   
   public TrainedBoostedPosTagger(ParametricFactorGraphEnsemble parametricFamily, 
       SufficientStatisticsEnsemble parameters, DynamicFactorGraph factorGraph,
-      FeatureVectorGenerator<LocalContext> featureGenerator) {
+      FeatureVectorGenerator<LocalContext<String>> featureGenerator) {
     this.parametricFamily = Preconditions.checkNotNull(parametricFamily);
     this.parameters = Preconditions.checkNotNull(parameters);
     this.factorGraph = Preconditions.checkNotNull(factorGraph);
@@ -41,16 +42,16 @@ public class TrainedBoostedPosTagger implements PosTagger, Serializable {
   }
 
   @Override
-  public FeatureVectorGenerator<LocalContext> getFeatureGenerator() {
+  public FeatureVectorGenerator<LocalContext<String>> getFeatureGenerator() {
     return featureGenerator;
   }
 
   @Override
-  public PosTaggedSentence tagWords(List<String> words) {
+  public PosTaggedSentence tag(List<String> words) {
     List<String> posTags = Collections.<String>nCopies(words.size(), "");
     PosTaggedSentence sent = new PosTaggedSentence(words, posTags);
 
-    DynamicAssignment input = PosTaggerUtils.reformatTrainingData(sent, 
+    DynamicAssignment input = TaggerUtils.reformatTrainingData(sent, 
         getFeatureGenerator(), parametricFamily.getVariables()).getInput();
 
     FactorGraph fg = factorGraph.conditional(input);
@@ -60,7 +61,7 @@ public class TrainedBoostedPosTagger implements PosTagger, Serializable {
     DynamicAssignment prediction = factorGraph.getVariables()
         .toDynamicAssignment(output, fg.getAllVariables());
     List<String> labels = Lists.newArrayList();
-    for (Assignment plateAssignment : prediction.getPlateFixedAssignments(PosTaggerUtils.PLATE_NAME)) {
+    for (Assignment plateAssignment : prediction.getPlateFixedAssignments(TaggerUtils.PLATE_NAME)) {
       List<Object> values = plateAssignment.getValues();
       labels.add((String) values.get(1));
     }

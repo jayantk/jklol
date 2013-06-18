@@ -29,8 +29,9 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
-import com.jayantkrish.jklol.pos.PosTaggedSentence.LocalContext;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.sequence.LocalContext;
+import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -80,9 +81,8 @@ public class TrainBoostedPosCrf extends AbstractCli {
     if (options.has(initialModel)) {
       initialTagger = IoUtils.readSerializedObject(options.valueOf(initialModel), TrainedPosTagger.class);
     }
-    
-    FeatureVectorGenerator<LocalContext> featureGen = null;
-    
+
+    FeatureVectorGenerator<LocalContext<String>> featureGen = null;
     if (options.has(initialModel)) {  
       featureGen = initialTagger.getFeatureGenerator();
     } else {
@@ -103,7 +103,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
         featureGen.getFeatureDictionary(), options.has(noTransitions), initialTagger.getInstantiatedModel());
 
     // Estimate parameters.
-    List<Example<DynamicAssignment, DynamicAssignment>> examples = PosTaggerUtils
+    List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
         .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
     SufficientStatisticsEnsemble parameters = estimateParameters(sequenceModelFamily, examples);
 
@@ -123,12 +123,12 @@ public class TrainBoostedPosCrf extends AbstractCli {
     // Create a dynamic factor graph with a single plate replicating
     // the input/output variables.
     ParametricFactorGraphEnsembleBuilder builder = new ParametricFactorGraphEnsembleBuilder();
-    builder.addPlate(PosTaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
-        Arrays.asList(PosTaggerUtils.INPUT_NAME, PosTaggerUtils.OUTPUT_NAME),
+    builder.addPlate(TaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
+        Arrays.asList(TaggerUtils.INPUT_NAME, TaggerUtils.OUTPUT_NAME),
         Arrays.<Variable>asList(wordVectorType, posType)), 10000);
-    String inputPattern = PosTaggerUtils.PLATE_NAME + "/?(0)/" + PosTaggerUtils.INPUT_NAME;
-    String outputPattern = PosTaggerUtils.PLATE_NAME + "/?(0)/" + PosTaggerUtils.OUTPUT_NAME;
-    String nextOutputPattern = PosTaggerUtils.PLATE_NAME + "/?(1)/" + PosTaggerUtils.OUTPUT_NAME;
+    String inputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_NAME;
+    String outputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
+    String nextOutputPattern = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.OUTPUT_NAME;
 
     // Add a classifier from local word contexts to pos tags.
     VariableNumMap plateVars = new VariableNumMap(Ints.asList(1, 2),
@@ -139,10 +139,10 @@ public class TrainBoostedPosCrf extends AbstractCli {
         createRegressionTreeTrainer(), featureDictionary, null);
     Factor baseClassifier = null;
     if (initialModel != null) {
-      baseClassifier = initialModel.getFactorByName(PosTaggerUtils.WORD_LABEL_FACTOR).getFactor();
+      baseClassifier = initialModel.getFactorByName(TaggerUtils.WORD_LABEL_FACTOR).getFactor();
       Preconditions.checkState(wordClassifier.getVariables().equals(baseClassifier.getVars()));
     }
-    builder.addFactor(PosTaggerUtils.WORD_LABEL_FACTOR, wordClassifier, baseClassifier,
+    builder.addFactor(TaggerUtils.WORD_LABEL_FACTOR, wordClassifier, baseClassifier,
         VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
     
     // Add a factor connecting adjacent labels.
@@ -152,10 +152,10 @@ public class TrainBoostedPosCrf extends AbstractCli {
       AveragingBoostingFamily transitionFamily = new AveragingBoostingFamily(adjacentVars);
       Factor baseTransitionFactor = null;
       if (initialModel != null) {
-        baseTransitionFactor = initialModel.getFactorByName(PosTaggerUtils.TRANSITION_FACTOR).getFactor();
+        baseTransitionFactor = initialModel.getFactorByName(TaggerUtils.TRANSITION_FACTOR).getFactor();
         Preconditions.checkState(transitionFamily.getVariables().equals(baseTransitionFactor.getVars()));
       }
-      builder.addFactor(PosTaggerUtils.TRANSITION_FACTOR, transitionFamily, baseTransitionFactor,
+      builder.addFactor(TaggerUtils.TRANSITION_FACTOR, transitionFamily, baseTransitionFactor,
           VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
     }
 

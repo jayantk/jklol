@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -17,7 +19,7 @@ import com.google.common.collect.Lists;
  * 
  * @author jayantk
  */
-public class LocalMapReduceExecutor implements MapReduceExecutor {
+public class LocalMapReduceExecutor extends AbstractMapReduceExecutor {
 
   private final int batchesPerThread;
   private final int numThreads;
@@ -35,7 +37,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
     this.numThreads = numThreads;
     this.batchesPerThread = batchesPerThread;
   }
-
+  
   @Override
   public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
       Collection<? extends A> items, D mapper, E reducer) {
@@ -49,7 +51,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
       return accumulator;
     }
 
-    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+    ExecutorService executor = getExecutor();
     // Set up the item batches for the executor service. 
     ImmutableList<A> itemsAsList = ImmutableList.copyOf(items);
     List<MapReduceBatch<A, B, C>> batches = Lists.newArrayList();
@@ -86,6 +88,27 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
     return accumulator;
   }
 
+  @Override
+  public <A, B, C extends Mapper<A, B>> List<Future<B>> mapAsync(Collection<? extends A> items, C mapper)
+      throws InterruptedException {
+    ExecutorService executor = getExecutor();
+
+    List<MapBatch<A, B>> batches = Lists.newArrayList();
+    for (A item : items) {
+      batches.add(new MapBatch<A, B>(item, mapper));
+    }
+    return executor.invokeAll(batches);
+  }
+
+  private ExecutorService getExecutor() {
+    // This thread pool executor is equivalent to using 
+    // Executors.newFixedThreadPool(numThreads), except that
+    // unused threads are eventually terminated, allowing the
+    // program to terminate without the user invoking shutdown().
+    return new ThreadPoolExecutor(numThreads, numThreads, 60, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>());
+  }
+
   /**
    * A single batch of items to be processed (mapped and reduced).
    * 
@@ -113,6 +136,21 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
         accumulator = reducer.reduce(mappedItem, accumulator);
       }
       return accumulator;
+    }
+  }
+  
+  public static class MapBatch<A, B> implements Callable<B> {
+    private final A item;
+    private final Mapper<A, B> mapper;
+
+    public MapBatch(A item, Mapper<A, B> mapper) {
+      this.item = item;
+      this.mapper = mapper;
+    }
+    
+    @Override
+    public B call() {
+      return mapper.map(item);
     }
   }
 }

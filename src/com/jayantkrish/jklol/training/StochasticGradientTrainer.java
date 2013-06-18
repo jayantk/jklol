@@ -101,8 +101,6 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     double gradientL2 = 0.0;
     // This is an attempt at estimating how much the parameters are still
     // changing.
-    // When it drops below some threshold, we'll say the algorithm has
-    // converged.
     double exponentiallyWeightedUpdateNorm = stepSize;
     double exponentiallyWeightedObjectiveValue = 0.0;
     for (int i = 0; i < numIterations; i++) {

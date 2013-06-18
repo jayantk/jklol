@@ -79,7 +79,7 @@ public class MinibatchLbfgs implements GradientOptimizer {
       int iterationsPerMinibatch, LogFunction log) {
     int numBatches = (int) Math.ceil(Math.log(((double) numExamples) / initialMinibatchSize) / Math.log(2));
     int[] minibatchSize = new int[numBatches];
-    int[] maxIterationsPerMinibatch = new int[iterationsPerMinibatch];
+    int[] maxIterationsPerMinibatch = new int[numBatches];
     
     minibatchSize[0] = initialMinibatchSize;
     for (int i = 1; i < numBatches; i++) {

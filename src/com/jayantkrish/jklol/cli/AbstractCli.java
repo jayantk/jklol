@@ -114,7 +114,8 @@ public abstract class AbstractCli {
   protected OptionSpec<Double> lbfgsL2Regularization;
   protected OptionSpec<Integer> lbfgsMinibatchSize;
   protected OptionSpec<Integer> lbfgsMinibatchIterations;
-  
+  protected OptionSpec<Void> lbfgsAdaptiveMinibatches;
+
   // Logging options for all optimization algorithms.
   protected OptionSpec<Integer> logInterval;
   protected OptionSpec<Void> logBrief;
@@ -277,7 +278,7 @@ public abstract class AbstractCli {
       lbfgsL2Regularization = parser.accepts("lbfgsL2Regularization",
           "L2 regularization imposed by LBFGS")
           .withRequiredArg().ofType(Double.class).defaultsTo(0.0);
-      
+
       // Providing either of these options triggers the use of minibatch LBFGS
       lbfgsMinibatchIterations = parser.accepts("lbfgsMinibatchIterations",
           "If specified, run LBFGS on minibatches of the data with the specified number of iterations per minibatch.")
@@ -285,8 +286,11 @@ public abstract class AbstractCli {
       lbfgsMinibatchSize = parser.accepts("lbfgsMinibatchSize",
           "If specified, run LBFGS on minibatches of the data with the specified number of examples per minibatch.")
           .withRequiredArg().ofType(Integer.class).defaultsTo(-1);
+
+      lbfgsAdaptiveMinibatches = parser.accepts("lbfgsAdaptiveMinibatches",
+          "If given, LBFGS is run on minibatches of exponentially increasing size.");
     }
-    
+
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) || opts.contains(CommonOptions.LBFGS)) {
       logInterval = parser.accepts("logInterval",
           "Number of training iterations between logging outputs.")
@@ -352,9 +356,9 @@ public abstract class AbstractCli {
     }
 
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) || opts.contains(CommonOptions.LBFGS)) {
-	LogFunction log = (parsedOptions.has(logBrief) ? new NullLogFunction() 
-			   : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
-	LogFunctions.setLogFunction(log);
+      LogFunction log = (parsedOptions.has(logBrief) ? new NullLogFunction() 
+      : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
+      LogFunctions.setLogFunction(log);
     }
   }
 
@@ -386,9 +390,18 @@ public abstract class AbstractCli {
     return trainer;
   }
 
-  private GradientOptimizer createLbfgs() {
+  private GradientOptimizer createLbfgs(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.LBFGS));
     
+    if (parsedOptions.has(lbfgsAdaptiveMinibatches)) {
+      int lbfgsMinibatchSizeInt = parsedOptions.valueOf(lbfgsMinibatchSize);
+      Preconditions.checkState(lbfgsMinibatchSizeInt != -1, "Must specify initial adaptive batch size using --lbfgsMinibatchSize");
+      
+      return MinibatchLbfgs.createAdaptiveSchedule(parsedOptions.valueOf(lbfgsHessianRank), 
+          parsedOptions.valueOf(lbfgsL2Regularization), numExamples, lbfgsMinibatchSizeInt,
+          -1, LogFunctions.getLogFunction());
+    }
+
     int lbfgsMinibatchSizeInt = parsedOptions.valueOf(lbfgsMinibatchSize);
     int lbfgsMinibatchIterationsInt = parsedOptions.valueOf(lbfgsMinibatchIterations);
     if (lbfgsMinibatchSizeInt != -1 && lbfgsMinibatchIterationsInt != -1) {
@@ -400,7 +413,7 @@ public abstract class AbstractCli {
           lbfgsMinibatchSizeInt, lbfgsMinibatchIterationsInt, LogFunctions.getLogFunction());
     } else if (lbfgsMinibatchIterationsInt == -1 && lbfgsMinibatchSizeInt == -1) {
       return new Lbfgs(parsedOptions.valueOf(lbfgsIterations), parsedOptions.valueOf(lbfgsHessianRank),
-        parsedOptions.valueOf(lbfgsL2Regularization), LogFunctions.getLogFunction());
+          parsedOptions.valueOf(lbfgsL2Regularization), LogFunctions.getLogFunction());
     }
 
     throw new UnsupportedOperationException(
@@ -422,14 +435,14 @@ public abstract class AbstractCli {
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) && 
         opts.contains(CommonOptions.LBFGS)) {
       if (parsedOptions.has(lbfgs)) {
-	  return createLbfgs();
+        return createLbfgs(numExamples);
       } else {
-	  return createStochasticGradientTrainer(numExamples);
+        return createStochasticGradientTrainer(numExamples);
       }
     } else if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT)) {
       return createStochasticGradientTrainer(numExamples);
     } else if (opts.contains(CommonOptions.LBFGS)) {
-      return createLbfgs();
+      return createLbfgs(numExamples);
     }
 
     throw new UnsupportedOperationException("To use createGradientOptimizer, the CLI constructor must specify STOCHASTIC_GRADIENT and/or LBFGS.");

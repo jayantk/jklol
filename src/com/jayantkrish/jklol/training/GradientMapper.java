@@ -24,7 +24,7 @@ public class GradientMapper<M, E> extends Mapper<E, GradientEvaluation> {
 
   @Override
   public GradientEvaluation map(E item) {
-    log.startTimer("gradient_mapper");
+    log.startTimer("mr_gradient_map");
     double objective = 0.0;
     int searchErrors = 0;
     SufficientStatistics gradient = oracle.initializeGradient();
@@ -34,7 +34,7 @@ public class GradientMapper<M, E> extends Mapper<E, GradientEvaluation> {
       // Ignore the example, returning the zero vector.
       searchErrors = 1;
     }
-    log.stopTimer("gradient_mapper");
+    log.stopTimer("mr_gradient_map");
     return new GradientEvaluation(gradient, objective, searchErrors);
   }
 

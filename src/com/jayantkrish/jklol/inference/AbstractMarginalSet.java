@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.inference;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -34,6 +36,11 @@ public abstract class AbstractMarginalSet implements MarginalSet {
   @Override
   public Assignment getConditionedValues() {
     return conditionedValues;
+  }
+  
+  @Override
+  public Factor getMarginal(int... varNums) {
+    return getMarginal(Ints.asList(varNums));
   }
   
   protected VariableNumMap getMarginalVariables() {

@@ -8,5 +8,5 @@ import com.jayantkrish.jklol.sequence.SequenceTagger;
 public interface Supertagger extends SequenceTagger<WordAndPos, SyntacticCategory> {
 
   @Override
-  SupertaggedSentence tag(List<WordAndPos> input);
+  SupertaggedSentence multitag(List<WordAndPos> input, double threshold);
 }

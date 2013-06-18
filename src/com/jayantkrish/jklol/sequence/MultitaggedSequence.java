@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.sequence;
 
 import java.util.List;
-import java.util.Set;
 
 public interface MultitaggedSequence<I, O> {
   
@@ -19,6 +18,10 @@ public interface MultitaggedSequence<I, O> {
    * @return
    */
   List<I> getItems();
+  
+  List<O> getBestLabels();
 
-  List<Set<O>> getLabels();
+  List<List<O>> getLabels();
+  
+  List<List<Double>> getLabelProbabilities();
 }

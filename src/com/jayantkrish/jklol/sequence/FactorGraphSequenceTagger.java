@@ -7,9 +7,12 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cli.TrainedModelSet;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MarginalSet;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -70,25 +73,44 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
   
   @Override
   public MultitaggedSequence<I, O> multitag(List<I> items, double tagThreshold) {
-    TaggedSequence<I, O> sequence = new ListTaggedSequence<I, O>(items, null);
+    Preconditions.checkArgument(tagThreshold >= 0 && tagThreshold <= 1.0, "tagThreshold must be between 0 and 1");
 
+    TaggedSequence<I, O> sequence = new ListTaggedSequence<I, O>(items, null);
     DynamicAssignment input = TaggerUtils.reformatTrainingData(sequence,
         getFeatureGenerator(), getModelFamily().getVariables()).getInput();
 
     DynamicFactorGraph dfg = getInstantiatedModel();
+    DynamicVariableSet dynamicVariables = dfg.getVariables();
     FactorGraph fg = dfg.conditional(input);
 
     JunctionTree jt = new JunctionTree();
     MarginalSet marginals = jt.computeMarginals(fg);
 
-    DynamicAssignment prediction = dfg.getVariables()
-        .toDynamicAssignment(output, fg.getAllVariables());
-    List<O> labels = Lists.newArrayList();
-    for (Assignment plateAssignment : prediction.getPlateFixedAssignments(TaggerUtils.PLATE_NAME)) {
-      List<Object> values = plateAssignment.getValues();
-      labels.add(outputClass.cast(values.get(1)));
+    List<VariableMatch> matches = dynamicVariables.getPlateInstantiations(
+        marginals.getVariables(), TaggerUtils.PLATE_NAME);
+    Preconditions.checkState(matches.size() == items.size());
+
+    List<List<O>> labels = Lists.newArrayList();
+    List<List<Double>> labelProbs = Lists.newArrayList();
+    for (VariableMatch match : matches) {
+      int varNum = match.getMatchedVariables().getOnlyVariableNum();
+      DiscreteFactor marginal = marginals.getMarginal(varNum).coerceToDiscrete();
+      List<Assignment> bestAssignments = marginal.getMostLikelyAssignments(-1);
+      
+      List<O> curLabels = Lists.newArrayList();
+      List<Double> curProbs = Lists.newArrayList();
+      double bestProb = -1;
+      for (Assignment assignment : bestAssignments) {
+        double curProb = marginal.getUnnormalizedProbability(assignment);
+        if (bestProb == -1) {
+          bestProb = curProb;
+        } else if (curProb > tagThreshold * bestProb) {
+          curLabels.add(outputClass.cast(assignment.getValue(varNum)));
+          curProbs.add(curProb);
+        }
+      }
     }
 
-    return new ListTaggedSequence<I, O>(items, labels);
+    return new ListMultitaggedSequence<I, O>(items, labels, labelProbs);
   }
 }

@@ -11,6 +11,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -317,6 +318,13 @@ public class DynamicVariableSet implements Serializable {
       allPlateAssignments.add(plateAssignments);
     }
     return new DynamicAssignment(fixedAssignment, plateNames, allPlateAssignments);
+  }
+  
+  public List<VariableMatch> getPlateInstantiations(VariableNumMap instantiatedVariables, 
+      String plateName) {
+    VariablePattern pattern = VariableNamePattern.fromPlate(plateName,
+        getPlate(plateName).getFixedVariables(), VariableNumMap.emptyMap());
+    return pattern.matchVariables(instantiatedVariables);
   }
 
   private String appendPlateToNamespace(String namespace, String plateName, int repetitionIndex) {

@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.sequence;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 
 public class LocalContext<I> {
@@ -28,21 +29,21 @@ public class LocalContext<I> {
    * Gets an item to the left or right of the central item in this
    * context. Negative offsets get an item on the left (e.g., -2 gets
    * the second item on the left) and positive offsets get an item on
-   * the right. 
-   * 
-   * TODO: items off of the end of the sentence.
+   * the right. If {@code relativeOffset} refers to a word off the end
+   * of the sequence, then {@code endFunction} is invoked to produce the
+   * return value.
    * 
    * @param relativeOffset
    * @return
    */
-  public I getItem(int relativeOffset) {
+  public I getItem(int relativeOffset, Function<Integer, I> endFunction) {
     int index = wordIndex + relativeOffset;
 
     if (index < 0) {
-      return ("<START_" + index + ">").intern();
-    } else if (index >= sentence.size()) {
-      int endWordIndex = index - (sentence.size() - 1);
-      return ("<END_" + endWordIndex + ">").intern();
+      return endFunction.apply(index);
+    } else if (index >= items.size()) {
+      int endWordIndex = index - (items.size() - 1);
+      return endFunction.apply(endWordIndex);
     } else {
       return items.get(index);
     }

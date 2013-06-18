@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.sequence.LocalContext;
+import com.jayantkrish.jklol.sequence.MultitaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -68,5 +69,9 @@ public class TrainedBoostedPosTagger implements PosTagger, Serializable {
 
     return new PosTaggedSentence(words, labels);
   }
-
+  
+  @Override
+  public MultitaggedSequence<String, String> multitag(List<String> items, double tagThreshold) {
+    throw new UnsupportedOperationException("not implemented");
+  }
 }

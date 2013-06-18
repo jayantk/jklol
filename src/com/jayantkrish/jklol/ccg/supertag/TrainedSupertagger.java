@@ -9,10 +9,10 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.sequence.FactorGraphSequenceTagger;
 import com.jayantkrish.jklol.sequence.LocalContext;
-import com.jayantkrish.jklol.sequence.TaggedSequence;
+import com.jayantkrish.jklol.sequence.MultitaggedSequence;
 
 /**
- * A supertagger trained using a factor graph.
+ * A supertagger using a graphical model.
  * 
  * @author jayantk
  */
@@ -26,8 +26,8 @@ public class TrainedSupertagger extends FactorGraphSequenceTagger<WordAndPos, Sy
   }
   
   @Override
-  public SupertaggedSentence tag(List<WordAndPos> input) {
-    TaggedSequence<WordAndPos, SyntacticCategory> sequence = super.tag(input);
-    return new SupertaggedSentence(sequence.getItems(), sequence.getLabels());
+  public SupertaggedSentence multitag(List<WordAndPos> input, double threshold) {
+    MultitaggedSequence<WordAndPos, SyntacticCategory> sequence = super.multitag(input, threshold);
+    return new SupertaggedSentence(sequence.getItems(), sequence.getLabels(), sequence.getLabelProbabilities());
   }
 }

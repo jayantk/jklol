@@ -13,6 +13,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
@@ -102,8 +103,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    return TensorSufficientStatistics.createSparse(sufficientStatisticVars,
-        SparseTensor.empty(dimensionNums, dimensionSizes));
+    return TensorSufficientStatistics.createDense(sufficientStatisticVars,
+        new DenseTensorBuilder(dimensionNums, dimensionSizes));
   }
 
   @Override

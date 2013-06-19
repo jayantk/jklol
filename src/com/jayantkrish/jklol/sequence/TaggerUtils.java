@@ -171,7 +171,6 @@ public class TaggerUtils {
         optimizer, useMaxMargin);
 
     // Save model to disk.
-    System.out.println("Serializing trained model...");    
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
     return new FactorGraphSequenceTagger<I, O>(sequenceModelFamily, parameters, 
         factorGraph, featureGen, outputClass);

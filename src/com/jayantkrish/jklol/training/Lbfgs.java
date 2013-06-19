@@ -7,7 +7,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
-import com.jayantkrish.jklol.training.GradientMapper.GradientEvaluation;
+import com.jayantkrish.jklol.parallel.Mappers;
 
 /**
  * Implementation of the L-BFGS algorithm for optimizing smooth,
@@ -229,7 +229,7 @@ public class Lbfgs implements GradientOptimizer {
     // regularization term.
     log.startTimer("compute_gradient_(serial)");
     GradientEvaluation evaluation = executor.mapReduce(dataList,
-        new GradientMapper<M, T>(nextModel, oracle, log), new GradientReducer<M, T>(oracle, log));
+        Mappers.<T>identity(), new GradientReducer<M, T>(nextModel, oracle, log));
     log.stopTimer("compute_gradient_(serial)");
 
     // Normalize the objective term, then apply regularization

@@ -259,6 +259,27 @@ public class CcgSyntaxTree {
     }
   }
   
+  /**
+   * Gets the syntactic categories assigned to the words in
+   * this parse.
+   * 
+   * @return
+   */
+  public List<SyntacticCategory> getAllSpannedLexiconEntries() {
+    List<SyntacticCategory> categories = Lists.newArrayList();
+    getAllSpannedLexiconEntriesHelper(categories);
+    return categories;
+  }
+
+  private void getAllSpannedLexiconEntriesHelper(List<SyntacticCategory> accumulator) {
+    if (!isTerminal()) {
+      left.getAllSpannedLexiconEntriesHelper(accumulator);
+      right.getAllSpannedLexiconEntriesHelper(accumulator);
+    } else {
+      accumulator.add(originalSyntax);
+    }
+  }
+
   public CcgSyntaxTree getLeft() {
     return left;
   }

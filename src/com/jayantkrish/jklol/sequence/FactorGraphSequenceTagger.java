@@ -100,7 +100,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
       int varNum = match.getMatchedVariablesFromTemplateVariables(templateLabelVar).getOnlyVariableNum();
       DiscreteFactor marginal = marginals.getMarginal(varNum).coerceToDiscrete();
       List<Assignment> bestAssignments = marginal.getMostLikelyAssignments(-1);
-      
+
       List<O> curLabels = Lists.newArrayList();
       List<Double> curProbs = Lists.newArrayList();
       double bestProb = -1;
@@ -108,11 +108,16 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
         double curProb = marginal.getUnnormalizedProbability(assignment);
         if (bestProb == -1) {
           bestProb = curProb;
+	  curLabels.add(outputClass.cast(assignment.getValue(varNum)));
+          curProbs.add(curProb);
         } else if (curProb > tagThreshold * bestProb) {
           curLabels.add(outputClass.cast(assignment.getValue(varNum)));
           curProbs.add(curProb);
         }
       }
+
+      labels.add(curLabels);
+      labelProbs.add(curProbs);
     }
 
     return new ListMultitaggedSequence<I, O>(items, labels, labelProbs);

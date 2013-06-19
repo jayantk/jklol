@@ -9,6 +9,7 @@ import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
@@ -90,10 +91,13 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
         marginals.getVariables(), TaggerUtils.PLATE_NAME);
     Preconditions.checkState(matches.size() == items.size());
 
+    VariableNumMap templateLabelVar = dynamicVariables.getPlate(TaggerUtils.PLATE_NAME)
+        .getFixedVariables().getVariablesByName(TaggerUtils.OUTPUT_NAME);
+
     List<List<O>> labels = Lists.newArrayList();
     List<List<Double>> labelProbs = Lists.newArrayList();
     for (VariableMatch match : matches) {
-      int varNum = match.getMatchedVariables().getOnlyVariableNum();
+      int varNum = match.getMatchedVariablesFromTemplateVariables(templateLabelVar).getOnlyVariableNum();
       DiscreteFactor marginal = marginals.getMarginal(varNum).coerceToDiscrete();
       List<Assignment> bestAssignments = marginal.getMostLikelyAssignments(-1);
       

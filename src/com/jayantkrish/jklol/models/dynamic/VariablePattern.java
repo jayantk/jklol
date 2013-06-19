@@ -97,6 +97,11 @@ public interface VariablePattern extends Serializable {
     public VariableRelabeling getMappingToTemplate() {
       return new VariableRelabeling(variableIndexMap, variableNameMap);
     }
+    
+    public VariableNumMap getMatchedVariablesFromTemplateVariables(VariableNumMap templateVariables) {
+      VariableRelabeling relabeling = new VariableRelabeling(variableIndexMap.inverse(), variableNameMap.inverse());
+      return relabeling.apply(templateVariables).intersection(allVariables);
+    }
 
     /**
      * Adds a new matching pair of variables to this pattern match.

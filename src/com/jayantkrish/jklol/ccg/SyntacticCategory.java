@@ -81,22 +81,22 @@ public class SyntacticCategory implements Serializable {
       SyntacticCategory argumentType) {
     return new SyntacticCategory(null, direction, returnType, argumentType, DEFAULT_FEATURE_VALUE, -1);
   }
-  
+
   public static SyntacticCategory createFunctional(Direction direction, SyntacticCategory returnType,
       SyntacticCategory argumentType, String featureValue, int featureVariable) {
     return new SyntacticCategory(null, direction, returnType, argumentType, featureValue, featureVariable);
   }
 
-    public static SyntacticCategory createFunctional(SyntacticCategory returnType, List<Direction> argumentDirections,
-						     List<SyntacticCategory> arguments) {
-	Preconditions.checkArgument(arguments.size() == argumentDirections.size());
-	SyntacticCategory category = returnType;
-	for (int i = 0; i < arguments.size(); i++) {
-	    category = category.createFunctional(argumentDirections.get(i), category, arguments.get(i));
-	}
-	return category;
+  public static SyntacticCategory createFunctional(SyntacticCategory returnType, List<Direction> argumentDirections,
+      List<SyntacticCategory> arguments) {
+    Preconditions.checkArgument(arguments.size() == argumentDirections.size());
+    SyntacticCategory category = returnType;
+    for (int i = 0; i < arguments.size(); i++) {
+      category = createFunctional(argumentDirections.get(i), category, arguments.get(i));
     }
-  
+    return category;
+  }
+
   public static SyntacticCategory createAtomic(String value, String featureValue, int featureVariable) {
     return new SyntacticCategory(value, null, null, null, featureValue, featureVariable);
   }

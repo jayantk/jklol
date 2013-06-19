@@ -54,11 +54,11 @@ public interface MarginalSet {
   public Factor getMarginal(int... varNums);
 
   /**
-   * Gets the partition function for the graphical model, which is the
-   * normalizing constant for the unnormalized marginals returned by
+   * Gets the log partition function for the graphical model, which is 
+   * the normalizing constant for the unnormalized marginals returned by
    * {@link getMarginal}.
    * 
    * @return
    */
-  public double getPartitionFunction();
+  public double getLogPartitionFunction();
 }

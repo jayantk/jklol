@@ -57,7 +57,7 @@ public class MarginalTestCase {
 	  for (Map.Entry<String[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
 	    VariableNumMap variables = marginals.getVariables().getVariablesByName(testCase.getKey());
 	    DiscreteFactor marginal = (DiscreteFactor) marginals.getMarginal(variables.getVariableNums());
-	    testCase.getValue().runTests(marginal, marginals.getPartitionFunction(), tolerance);
+	    testCase.getValue().runTests(marginal, 1.0, tolerance);
 	  }
 	}
 	

@@ -24,7 +24,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
 
   private final ImmutableList<Factor> allFactors;
   private final Multimap<Integer, Factor> variableFactorMap;
-  private final double partitionFunction;
+  private final double logPartitionFunction;
 
   /**
    * Constructs a {@code FactorMarginalSet} conditioned on
@@ -33,12 +33,12 @@ public class FactorMarginalSet extends AbstractMarginalSet {
    * of variables, given {@code conditionedValues}.
    * 
    * @param factors
-   * @param partitionFunction
+   * @param logPartitionFunction
    */
-  public FactorMarginalSet(Collection<Factor> factors, double partitionFunction,
+  public FactorMarginalSet(Collection<Factor> factors, double logPartitionFunction,
       VariableNumMap conditionedVariables, Assignment conditionedValues) {
     super(getVariablesFromFactors(factors), conditionedVariables, conditionedValues);
-    this.partitionFunction = partitionFunction;
+    this.logPartitionFunction = logPartitionFunction;
     this.variableFactorMap = HashMultimap.create();
     for (Factor factor : factors) {
       for (Integer variableNum : factor.getVars().getVariableNums()) {
@@ -57,11 +57,11 @@ public class FactorMarginalSet extends AbstractMarginalSet {
    *
    * @param conditionedVariables
    * @param conditionedValues
-   * @param partitionFunction
+   * @param logPartitionFunction
    */
   public static FactorMarginalSet fromAssignment(VariableNumMap conditionedVariables, Assignment conditionedValues,
-      double partitionFunction) {
-    return new FactorMarginalSet(Collections.<Factor>emptyList(), partitionFunction, conditionedVariables, conditionedValues);
+      double logPartitionFunction) {
+    return new FactorMarginalSet(Collections.<Factor>emptyList(), logPartitionFunction, conditionedVariables, conditionedValues);
   }
   
   private static VariableNumMap getVariablesFromFactors(Collection<Factor> factors) { 
@@ -76,9 +76,9 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   public Factor getMarginal(Collection<Integer> varNums) {
     if (varNums.size() == 0 && allFactors.size() == 0) {
       // Special case if the inputVar factor graph has no unassigned variables. 
-      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(partitionFunction);
+      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(1.0);
     }
-    
+
     // Find a factor among the given factors that includes all of the given
     // variables.
     Set<Factor> relevantFactors = Sets.newHashSet(allFactors);
@@ -97,25 +97,26 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     // Marginalize out any remaining variables
     Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());
     allVarNums.removeAll(varNums);
-    return marginal.marginalize(allVarNums);
+    Factor finalMarginal = marginal.marginalize(allVarNums);
+    return finalMarginal.product(1.0 / finalMarginal.getTotalUnnormalizedProbability());
   }
-  
+
   private Factor computeMarginalFromMultipleFactors(Collection<Integer> varNums) {
     throw new RuntimeException("Graph does not contain a factor with all variables: " + varNums);
   }
 
   @Override
-  public double getPartitionFunction() {
-    return partitionFunction;
+  public double getLogPartitionFunction() {
+    return logPartitionFunction;
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     for (Factor factor : allFactors) {
       sb.append(factor.getParameterDescription());
     }
-    sb.append("partition function=" + partitionFunction);
+    sb.append("partition function=" + logPartitionFunction);
     return sb.toString();
   }
 }

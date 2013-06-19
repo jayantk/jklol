@@ -63,6 +63,11 @@ public abstract class AbstractFactor implements Factor, Serializable {
   }
 
   @Override
+  public double getTotalUnnormalizedLogProbability() {
+    return Math.log(getTotalUnnormalizedProbability());
+  }
+
+  @Override
   public Factor marginalize(Integer... varNums) {
     return marginalize(Arrays.asList(varNums));
   }

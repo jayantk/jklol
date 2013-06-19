@@ -238,7 +238,7 @@ public class Lbfgs implements GradientOptimizer {
 
     double oldNorm = evaluation.getGradient().getL2Norm();
     if (Double.isNaN(oldNorm)) {
-      System.out.println(evaluation.getGradient().getDescription());
+      System.out.println("Objective norm is NaN");
     }
 
     if (l2Regularization > 0.0) {

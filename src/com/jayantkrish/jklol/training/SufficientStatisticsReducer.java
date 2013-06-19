@@ -27,7 +27,7 @@ public class SufficientStatisticsReducer implements Reducer<MarginalSet, Suffici
   @Override
   public SufficientStatisticsBatch reduce(MarginalSet item, SufficientStatisticsBatch accumulator) {
     parametricFactorGraph.incrementSufficientStatistics(accumulator.getStatistics(), item, 1.0);
-    accumulator.incrementLogLikelihood(Math.log(item.getPartitionFunction()));
+    accumulator.incrementLogLikelihood(item.getLogPartitionFunction());
     accumulator.incrementNumExamples(1);
     return accumulator;
   }

@@ -98,10 +98,10 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
     }
 
     // Need marginals in order to compute the true partition function.
-    double partitionFunction = 0.0;
+    double logPartitionFunction = Double.NEGATIVE_INFINITY;
     try {
       MarginalSet marginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
-      partitionFunction = marginals.getPartitionFunction();
+      logPartitionFunction = marginals.getLogPartitionFunction();
     } catch (ZeroProbabilityError e) {
       // If this occurs, the factor graph assigns zero probability 
       // to everything given dynamicInput.
@@ -113,7 +113,7 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
     double[] scores = new double[bestAssignments.size()];
     for (int i = 0; i < bestAssignments.size(); i++) {
       Assignment bestAssignment = bestAssignments.get(i);
-      scores[i] = conditionalFactorGraph.getUnnormalizedLogProbability(bestAssignment) - Math.log(partitionFunction);
+      scores[i] = conditionalFactorGraph.getUnnormalizedLogProbability(bestAssignment) - logPartitionFunction;
 
       Assignment outputAssignment = bestAssignment.intersection(
           getOutputVariables(conditionalFactorGraph, outputVariablePattern));
@@ -131,7 +131,7 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
         
         try {
           MarginalSet conditionedMarginals = marginalCalculator.computeMarginals(jointConditioned);
-          outputScore = Math.log(conditionedMarginals.getPartitionFunction()) - Math.log(partitionFunction);
+          outputScore = conditionedMarginals.getLogPartitionFunction() - logPartitionFunction;
         } catch (ZeroProbabilityError e) {
           // outputScore is already set as if output had zero probability.
         }

@@ -49,12 +49,12 @@ public class JunctionTree implements MarginalCalculator {
       // This returns the partition function, wrapped in a factor marginal set.
       return FactorMarginalSet.fromAssignment(factorGraph.getConditionedVariables(),
           factorGraph.getConditionedValues(), 
-          factorGraph.getUnnormalizedProbability(Assignment.EMPTY));
+          factorGraph.getUnnormalizedLogProbability(Assignment.EMPTY));
     } else if (factorGraph.getFactors().size() == 1) {
       // Factor graph has only one factor, meaning the marginal distribution is 
       // already computed.
       Factor theFactor = Iterables.getOnlyElement(factorGraph.getFactors());
-      return new FactorMarginalSet(factorGraph.getFactors(), theFactor.getTotalUnnormalizedProbability(),
+      return new FactorMarginalSet(factorGraph.getFactors(), theFactor.getTotalUnnormalizedLogProbability(),
           factorGraph.getConditionedVariables(), factorGraph.getConditionedValues());
     }
 
@@ -155,8 +155,8 @@ public class JunctionTree implements MarginalCalculator {
     VariableNumMap sharedVars = cliqueTree.getFactor(startFactor).getVars().intersection(cliqueTree.getFactor(destFactor).getVars());
 
     // Find the factors which have yet to be merged into the marginal
-    // distribution of factor, but are
-    // necessary for computing the specified message.
+    // distribution of factor, but are necessary for computing the 
+    // specified message.
     Set<Integer> factorIndicesToCombine = Sets.newHashSet(cliqueTree.getNeighboringFactors(startFactor));
     factorIndicesToCombine.removeAll(cliqueTree.getFactorsInMarginal(startFactor));
 
@@ -183,8 +183,8 @@ public class JunctionTree implements MarginalCalculator {
     cliqueTree.addFactorsToMarginal(startFactor, factorIndicesToCombine);
 
     // The message from startFactor to destFactor is the marginal of
-    // productFactor, divided by the message from
-    // destFactor to startFactor, if it exists.
+    // productFactor, divided by the message from destFactor to
+    // startFactor, if it exists.
     Factor messageFactor = null;
     if (useSumProduct) {
       messageFactor = updatedMarginal.marginalize(updatedMarginal.getVars().removeAll(sharedVars).getVariableNums());
@@ -239,30 +239,18 @@ public class JunctionTree implements MarginalCalculator {
     }
 
     // Get the partition function from the root nodes of the junction forest.
-    double partitionFunction = 1.0;
+    double logPartitionFunction = 0.0;
     for (int rootFactorNum : rootFactorNums) {
       Factor rootFactor = marginalFactors.get(rootFactorNum);
-      partitionFunction *= rootFactor.marginalize(rootFactor.getVars().getVariableNums())
-          .getUnnormalizedProbability(Assignment.EMPTY);
+      logPartitionFunction += rootFactor.marginalize(rootFactor.getVars().getVariableNums())
+          .getUnnormalizedLogProbability(Assignment.EMPTY);
     }
 
-    if (partitionFunction == 0.0) {
+    if (logPartitionFunction == Double.NEGATIVE_INFINITY) {
       throw new ZeroProbabilityError();
     }
 
-    if (rootFactorNums.size() > 1) {
-      // The junction forest contains multiple disjoint components. In this
-      // case, we have to multiply each marginal by a constant to get the
-      // normalization to work out correctly.
-      for (int i = 0; i < marginalFactors.size(); i++) {
-        Factor factor = marginalFactors.get(i);
-        double factorPartitionFunction = factor.marginalize(factor.getVars().getVariableNums())
-            .getUnnormalizedProbability(Assignment.EMPTY);
-        marginalFactors.set(i, factor.product(partitionFunction / factorPartitionFunction));
-      }
-    }
-
-    return new FactorMarginalSet(marginalFactors, partitionFunction,
+    return new FactorMarginalSet(marginalFactors, logPartitionFunction,
         originalFactorGraph.getConditionedVariables(), originalFactorGraph.getConditionedValues());
   }
 

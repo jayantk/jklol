@@ -495,7 +495,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   @Override
-  public SparseTensor elementwiseAddition(Tensor otherTensor) {
+  public Tensor elementwiseAddition(Tensor otherTensor) {
+    if (keyNums.length == 0) {
+      return otherTensor;
+    }
+
     if (otherTensor.getDimensionNumbers().length < getDimensionNumbers().length) {
       int[] otherDims = otherTensor.getDimensionNumbers();
       int[] myDims = getDimensionNumbers();
@@ -515,8 +519,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
       Tensor result = otherTensor.outerProduct(
           DenseTensor.constant(outerProductDims, outerProductSizes, 1.0));
-      SparseTensor value = elementwiseAddition(result);
-      return value;
+      return elementwiseAddition(result);
     } else {
       return doElementwise(otherTensor, true);
     }

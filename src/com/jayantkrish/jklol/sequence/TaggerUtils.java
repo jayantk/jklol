@@ -1,9 +1,12 @@
 package com.jayantkrish.jklol.sequence;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
@@ -21,6 +24,10 @@ import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mapper;
+import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOptimizer;
@@ -30,8 +37,7 @@ import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Utilities for constructing sequence taggers and formatting data for
- * sequence taggers.
+ * Utilities for defining, training, and evaluating sequence taggers.
  * 
  * @author jayantk
  */
@@ -147,7 +153,7 @@ public class TaggerUtils {
 
     return builder.build();
   }
-  
+
   /**
    * Trains a sequence model.
    * 
@@ -163,16 +169,16 @@ public class TaggerUtils {
       ParametricFactorGraph sequenceModelFamily, List<? extends TaggedSequence<I, O>> trainingData,
       Class<O> outputClass, FeatureVectorGenerator<LocalContext<I>> featureGen,
       GradientOptimizer optimizer, boolean useMaxMargin) {
-  
+
     // Estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
         .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
-    SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, 
+    SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples,
         optimizer, useMaxMargin);
 
     // Save model to disk.
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
-    return new FactorGraphSequenceTagger<I, O>(sequenceModelFamily, parameters, 
+    return new FactorGraphSequenceTagger<I, O>(sequenceModelFamily, parameters,
         factorGraph, featureGen, outputClass);
   }
 
@@ -196,7 +202,163 @@ public class TaggerUtils {
     return parameters;
   }
 
+  /**
+   * Evaluates the performance of {@code tagger} on
+   * {@code evaluationData}, returning both per-item and per-sequence
+   * error rates.
+   * 
+   * @param tagger
+   * @param evaluationData
+   * @return
+   */
+  public static <I, O> SequenceTaggerError evaluateTagger(SequenceTagger<I, O> tagger,
+      Collection<? extends TaggedSequence<I, O>> evaluationData) {
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+    return executor.mapReduce(evaluationData, new SequenceTaggerEvaluationMapper<I, O>(tagger, -1),
+        new SequenceTaggerEvaluationReducer());
+  }
+
+  /**
+   * Evaluates the performance of {@code tagger} as a multi-tagger on
+   * {@code evaluationData}, returning both per-item and per-sequence
+   * error rates. For this evaluation, the label for an item is
+   * considered correct if the tagger produces the correct label in
+   * its set of predicted labels for the item.
+   * 
+   * @param tagger
+   * @param evaluationData
+   * @param multitagThreshold
+   * @return
+   */
+  public static <I, O> SequenceTaggerError evaluateMultitagger(SequenceTagger<I, O> tagger,
+      Collection<? extends TaggedSequence<I, O>> evaluationData, double multitagThreshold) {
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+    return executor.mapReduce(evaluationData,
+        new SequenceTaggerEvaluationMapper<I, O>(tagger, multitagThreshold),
+        new SequenceTaggerEvaluationReducer());
+  }
+
   private TaggerUtils() {
     // Prevent instantiation.
+  }
+
+  public static class SequenceTaggerError {
+    // Total number of items across all sequences, and the
+    // number of those items for which the correct label 
+    // was predicted.
+    private int numItemsCorrect;
+    private int numItems;
+    
+    // Total number of predicted labels across all items.
+    // This only differs from numItems if evaluating a
+    // multitagger.
+    private int numLabels;
+
+    private int numSentencesCorrect;
+    private int numSentences;
+
+    public SequenceTaggerError(int numItemsCorrect, int numItems, int numLabels,
+        int numSentencesCorrect, int numSentences) {
+      this.numItemsCorrect = numItemsCorrect;
+      this.numItems = numItems;
+      this.numLabels = numLabels;
+      this.numSentencesCorrect = numSentencesCorrect;
+      this.numSentences = numSentences;
+    }
+
+    public static SequenceTaggerError zero() {
+      return new SequenceTaggerError(0, 0, 0, 0, 0);
+    }
+
+    public int getNumTagsCorrect() {
+      return numItemsCorrect;
+    }
+
+    public int getNumTags() {
+      return numItems;
+    }
+
+    public double getTagAccuracy() {
+      return ((double) numItemsCorrect) / numItems;
+    }
+    
+    public double getTagsPerItem() {
+      return ((double) numLabels) / numItems;
+    }
+
+    public int getNumSentencesCorrect() {
+      return numSentencesCorrect;
+    }
+
+    public int getNumSentences() {
+      return numSentences;
+    }
+
+    public double getSentenceAccuracy() {
+      return ((double) numSentencesCorrect) / numSentences;
+    }
+
+    public void increment(SequenceTaggerError other) {
+      this.numItemsCorrect += other.numItemsCorrect;
+      this.numItems += other.numItems;
+      this.numLabels += other.numLabels;
+      this.numSentencesCorrect += other.numSentencesCorrect;
+      this.numSentences += other.numSentences;
+    }
+  }
+
+  private static class SequenceTaggerEvaluationMapper<I, O> extends Mapper<TaggedSequence<I, O>, SequenceTaggerError> {
+    private final SequenceTagger<I, O> tagger;
+    private final double multitagThreshold;
+
+    public SequenceTaggerEvaluationMapper(SequenceTagger<I, O> tagger, double multitagThreshold) {
+      this.tagger = Preconditions.checkNotNull(tagger);
+      this.multitagThreshold = multitagThreshold;
+    }
+
+    @Override
+    public SequenceTaggerError map(TaggedSequence<I, O> item) {
+      // Run the tagger to get either the best prediction or the
+      // set of predicted labels for each element of the input
+      // sequence.
+      List<List<O>> prediction = null;
+      if (multitagThreshold >= 0.0) {
+        prediction = tagger.multitag(item.getItems(), multitagThreshold).getLabels();
+      } else {
+        List<O> predictionList = tagger.tag(item.getItems()).getLabels();
+        prediction = Lists.newArrayList();
+        for (O predicted : predictionList) {
+          prediction.add(Collections.singletonList(predicted));
+        }
+      }
+
+      List<O> actual = item.getLabels();
+      Preconditions.checkState(prediction.size() == actual.size());
+      int numTagsCorrect = 0;
+      int numLabels = 0;
+      for (int i = 0; i < prediction.size(); i++) {
+        if (prediction.get(i).contains((actual.get(i)))) {
+          numTagsCorrect++;
+        }
+        numLabels += prediction.get(i).size();
+      }
+
+      System.out.println(item.getItems() + "\n" + prediction + "\n" + actual);
+      int numSentencesCorrect = (numTagsCorrect == actual.size()) ? 1 : 0;
+      return new SequenceTaggerError(numTagsCorrect, actual.size(), numLabels, numSentencesCorrect, 1);
+    }
+  }
+
+  private static class SequenceTaggerEvaluationReducer extends SimpleReducer<SequenceTaggerError> {
+    @Override
+    public SequenceTaggerError getInitialValue() {
+      return SequenceTaggerError.zero();
+    }
+
+    @Override
+    public SequenceTaggerError reduce(SequenceTaggerError item, SequenceTaggerError accumulated) {
+      accumulated.increment(item);
+      return accumulated;
+    }
   }
 }

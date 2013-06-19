@@ -88,7 +88,7 @@ public class TrainSupertagger extends AbstractCli {
     IoUtils.serializeObjectToFile(supertagger, options.valueOf(modelOutput));
   }
 
-  private static List<TaggedSequence<WordAndPos, SyntacticCategory>> reformatTrainingExamples(
+  public static List<TaggedSequence<WordAndPos, SyntacticCategory>> reformatTrainingExamples(
       Collection<CcgExample> ccgExamples) {
     List<TaggedSequence<WordAndPos, SyntacticCategory>> examples = Lists.newArrayList();
     for (CcgExample example : ccgExamples) {

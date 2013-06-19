@@ -158,7 +158,6 @@ public class ParametricFactorGraphEnsemble implements Serializable {
     VariableNumMap fixedVars = match.getMatchedVariables().intersection(conditionedVariables);
     Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums())
         .relabelVariables(match.getMappingToTemplate());
-    factorMarginal = factorMarginal.product(1.0 / marginals.getPartitionFunction());
 
     Assignment assignment = marginals.getConditionedValues().intersection(fixedVars)
         .mapVariables(match.getMappingToTemplate().getVariableIndexReplacementMap());

@@ -92,6 +92,8 @@ public interface Factor {
    * @return
    */
   public double getTotalUnnormalizedProbability();
+  
+  public double getTotalUnnormalizedLogProbability();
 
   /**
    * Gets the set of possible outbound messages which can be computed when this

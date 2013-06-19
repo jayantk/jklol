@@ -78,10 +78,10 @@ Example<DynamicAssignment, DynamicAssignment>> {
     MarginalSet outputMarginals = marginalCalculator.computeMarginals(outputFactorGraph);
     log.stopTimer("update_gradient/output_marginal");
     
-    double inputPartitionFunction = inputMarginals.getPartitionFunction();
-    double outputPartitionFunction = outputMarginals.getPartitionFunction();
-    if (Double.isInfinite(inputPartitionFunction) || Double.isNaN(inputPartitionFunction)
-        || Double.isInfinite(outputPartitionFunction) || Double.isNaN(outputPartitionFunction)) {
+    double inputLogPartitionFunction = inputMarginals.getLogPartitionFunction();
+    double outputLogPartitionFunction = outputMarginals.getLogPartitionFunction();
+    if (Double.isInfinite(inputLogPartitionFunction) || Double.isNaN(inputLogPartitionFunction)
+        || Double.isInfinite(outputLogPartitionFunction) || Double.isNaN(outputLogPartitionFunction)) {
       // Search error from numerical issues.
       throw new ZeroProbabilityError();
     }
@@ -101,13 +101,6 @@ Example<DynamicAssignment, DynamicAssignment>> {
     // System.out.println(gradient);
     log.stopTimer("update_gradient/increment");
     
-    // System.out.println(family.getParameterDescription(gradient));
-    /*
-    double prob = outputPartitionFunction / inputPartitionFunction;
-    double prob2 = inputFactorGraph.getUnnormalizedProbability(observed) / inputPartitionFunction;
-    System.out.println("prob:" + prob + " " + prob2);
-    */
-
-    return Math.log(outputPartitionFunction) - Math.log(inputPartitionFunction);
+    return outputLogPartitionFunction - inputLogPartitionFunction;
   }
 }

@@ -36,8 +36,7 @@ public class JunctionTreeTest extends TestCase {
 	  JunctionTree jt = new JunctionTree();
 	  MarginalSet marginals = jt.computeMarginals(conditional);
 	  
-	  assertEquals(1.0, marginals.getMarginal(Ints.asList()).getUnnormalizedProbability(Assignment.EMPTY) / 
-	      marginals.getPartitionFunction());
+	  assertEquals(1.0, marginals.getMarginal(Ints.asList()).getUnnormalizedProbability(Assignment.EMPTY));
 	}
 
 	public void testMaxMarginals() {

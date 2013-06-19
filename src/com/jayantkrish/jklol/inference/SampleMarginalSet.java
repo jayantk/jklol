@@ -36,16 +36,18 @@ public class SampleMarginalSet extends AbstractMarginalSet {
 		Preconditions.checkNotNull(varNums);
 		VariableNumMap varsToRetain = factorGraphVariables.intersection(varNums);
 		TableFactorBuilder builder = new TableFactorBuilder(varsToRetain, SparseTensorBuilder.getFactory());
+		double increment = 1.0 / samples.size();
 		for (Assignment sample : samples) {
 			Assignment factorSample = sample.intersection(varNums);
 			builder.setWeight(factorSample, 
-			    builder.getWeight(factorSample) + 1.0);
+			    builder.getWeight(factorSample) + increment);
 		}
 		return builder.build();
 	}
-	
+
 	@Override
-	public double getPartitionFunction() {
-		return samples.size();
+	public double getLogPartitionFunction() {
+	  // This is definitely not right.
+		return Math.log(samples.size());
 	}
 }

@@ -195,7 +195,7 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
         // to here: 18 microsecs
         parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i),
             relabeledMarginal, relabeledAssignment,
-            count, marginals.getPartitionFunction());
+            count, 1.0);
         // to here: 27 microsecs
       }
     }

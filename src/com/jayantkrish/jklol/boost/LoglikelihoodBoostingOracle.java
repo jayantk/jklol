@@ -71,19 +71,18 @@ Example<DynamicAssignment, DynamicAssignment>>{
         outputFactorGraph);
     log.stopTimer("update_gradient/output_marginal");
 
-    double inputPartitionFunction = inputMarginals.getPartitionFunction();
-    double outputPartitionFunction = outputMarginals.getPartitionFunction();
-    if (Double.isInfinite(inputPartitionFunction) || Double.isNaN(inputPartitionFunction)
-        || Double.isInfinite(outputPartitionFunction) || Double.isNaN(outputPartitionFunction)) {
+    double inputLogPartitionFunction = inputMarginals.getLogPartitionFunction();
+    double outputLogPartitionFunction = outputMarginals.getLogPartitionFunction();
+    if (Double.isInfinite(inputLogPartitionFunction) || Double.isNaN(inputLogPartitionFunction)
+        || Double.isInfinite(outputLogPartitionFunction) || Double.isNaN(outputLogPartitionFunction)) {
       // Search error from numerical issues.
       throw new ZeroProbabilityError();
     }
-    
+
     family.incrementFunctionalGradient(gradient, inputMarginals, outputMarginals, 1.0);
 
     // Return the loglikelihood.
-    return Math.log(outputMarginals.getPartitionFunction()) - 
-        Math.log(inputMarginals.getPartitionFunction());
+    return outputLogPartitionFunction - inputLogPartitionFunction;
   }
 
   @Override

@@ -103,6 +103,11 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
+      /*
+    return TensorSufficientStatistics.createSparse(sufficientStatisticVars,
+        SparseTensor.empty(dimensionNums, dimensionSizes));
+      */
+
     return TensorSufficientStatistics.createDense(sufficientStatisticVars,
         new DenseTensorBuilder(dimensionNums, dimensionSizes));
   }

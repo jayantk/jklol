@@ -88,16 +88,22 @@ public class TaggerUtils {
     List<Example<DynamicAssignment, DynamicAssignment>> examples = Lists.newArrayList();
     for (TaggedSequence<I, O> sequence : sequences) {
       List<Assignment> inputs = Lists.newArrayList();
-      List<Assignment> outputs = Lists.newArrayList();
-
       List<LocalContext<I>> contexts = sequence.getLocalContexts();
-      List<O> labels = sequence.getLabels();
       for (int i = 0; i < contexts.size(); i++) {
         inputs.add(x.outcomeArrayToAssignment(featureGen.apply(contexts.get(i))));
-        outputs.add(y.outcomeArrayToAssignment(labels.get(i)));
       }
       DynamicAssignment input = DynamicAssignment.createPlateAssignment(PLATE_NAME, inputs);
-      DynamicAssignment output = DynamicAssignment.createPlateAssignment(PLATE_NAME, outputs);
+
+      DynamicAssignment output = DynamicAssignment.EMPTY;
+      if (sequence.getLabels() != null) {
+        List<Assignment> outputs = Lists.newArrayList();
+        List<O> labels = sequence.getLabels();
+        for (int i = 0; i < contexts.size(); i++) {
+          outputs.add(y.outcomeArrayToAssignment(labels.get(i)));
+        }
+        output = DynamicAssignment.createPlateAssignment(PLATE_NAME, outputs);
+      }
+
       examples.add(Example.create(input, output));
     }
 

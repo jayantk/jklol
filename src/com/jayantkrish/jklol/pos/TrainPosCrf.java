@@ -9,20 +9,12 @@ import joptsimple.OptionSpec;
 
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.cli.TrainedModelSet;
-import com.jayantkrish.jklol.evaluation.Example;
-import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
-import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.sequence.FactorGraphSequenceTagger;
 import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.training.GradientOptimizer;
-import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.LoglikelihoodOracle;
-import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -88,41 +80,18 @@ public class TrainPosCrf extends AbstractCli {
     // Build the factor graph.
     ParametricFactorGraph sequenceModelFamily = TaggerUtils.buildFeaturizedSequenceModel(posTags,
         featureGen.getFeatureDictionary(), options.has(noTransitions));
-
-    // Estimate parameters.
-    List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
-        .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
-    SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, 
+    GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
+    FactorGraphSequenceTagger<String, String> tagger = TaggerUtils.trainSequenceModel(
+        sequenceModelFamily, trainingData, String.class, featureGen, trainer,
         options.has(maxMargin));
 
     // Save model to disk.
-    System.out.println("Serializing trained model...");    
-    DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
-    TrainedModelSet trainedModel = new TrainedPosTagger(sequenceModelFamily, parameters, 
-        factorGraph, featureGen);
-    IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
+    System.out.println("Serializing trained model...");
+    TrainedPosTagger posTagger = new TrainedPosTagger(tagger.getModelFamily(), 
+        tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator());
+    IoUtils.serializeObjectToFile(posTagger, options.valueOf(modelOutput));
   }
 
-  private SufficientStatistics estimateParameters(ParametricFactorGraph sequenceModel,
-      List<Example<DynamicAssignment, DynamicAssignment>> trainingData, boolean useMaxMargin) {
-    System.out.println(trainingData.size() + " training examples.");
-
-    // Estimate parameters
-    GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
-    SufficientStatistics initialParameters = sequenceModel.getNewSufficientStatistics();
-    initialParameters.makeDense();
-    System.out.println("Training...");
-    if (useMaxMargin) {
-      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
-    } else {
-      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
-    }
-    
-    GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
-    SufficientStatistics parameters = trainer.train(oracle, initialParameters, trainingData);
-    return parameters;
-  }
-  
   public static void main(String[] args) {
     new TrainPosCrf().run(args);
   }

@@ -16,10 +16,10 @@ import com.jayantkrish.jklol.sequence.MultitaggedSequence;
  * 
  * @author jayantk
  */
-public class TrainedSupertagger extends FactorGraphSequenceTagger<WordAndPos, SyntacticCategory> implements Supertagger {
+public class FactorGraphSupertagger extends FactorGraphSequenceTagger<WordAndPos, SyntacticCategory> implements Supertagger {
   private static final long serialVersionUID = 1L;
   
-  public TrainedSupertagger(ParametricFactorGraph modelFamily,
+  public FactorGraphSupertagger(ParametricFactorGraph modelFamily,
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
       FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator) {
     super(modelFamily, parameters, instantiatedModel, featureGenerator, SyntacticCategory.class);

@@ -7,19 +7,26 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
+import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.GradientOptimizer;
+import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.LoglikelihoodOracle;
+import com.jayantkrish.jklol.training.MaxMarginOracle;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -139,6 +146,55 @@ public class TaggerUtils {
     }
 
     return builder.build();
+  }
+  
+  /**
+   * Trains a sequence model.
+   * 
+   * @param sequenceModelFamily
+   * @param trainingData
+   * @param outputClass
+   * @param featureGen
+   * @param optimizer
+   * @param useMaxMargin
+   * @return
+   */
+  public static <I, O> FactorGraphSequenceTagger<I, O> trainSequenceModel(
+      ParametricFactorGraph sequenceModelFamily, List<? extends TaggedSequence<I, O>> trainingData,
+      Class<O> outputClass, FeatureVectorGenerator<LocalContext<I>> featureGen,
+      GradientOptimizer optimizer, boolean useMaxMargin) {
+  
+    // Estimate parameters.
+    List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
+        .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
+    SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples, 
+        optimizer, useMaxMargin);
+
+    // Save model to disk.
+    System.out.println("Serializing trained model...");    
+    DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
+    return new FactorGraphSequenceTagger<I, O>(sequenceModelFamily, parameters, 
+        factorGraph, featureGen, outputClass);
+  }
+
+  private static SufficientStatistics estimateParameters(ParametricFactorGraph sequenceModel,
+      List<Example<DynamicAssignment, DynamicAssignment>> trainingData,
+      GradientOptimizer optimizer, boolean useMaxMargin) {
+    System.out.println(trainingData.size() + " training examples.");
+
+    // Estimate parameters
+    GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle;
+    SufficientStatistics initialParameters = sequenceModel.getNewSufficientStatistics();
+    initialParameters.makeDense();
+    System.out.println("Training...");
+    if (useMaxMargin) {
+      oracle = new MaxMarginOracle(sequenceModel, new MaxMarginOracle.HammingCost(), new JunctionTree());
+    } else {
+      oracle = new LoglikelihoodOracle(sequenceModel, new JunctionTree());
+    }
+
+    SufficientStatistics parameters = optimizer.train(oracle, initialParameters, trainingData);
+    return parameters;
   }
 
   private TaggerUtils() {

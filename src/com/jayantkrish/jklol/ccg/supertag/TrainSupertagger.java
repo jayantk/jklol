@@ -15,6 +15,8 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.sequence.FactorGraphSequenceTagger;
 import com.jayantkrish.jklol.sequence.ListTaggedSequence;
@@ -22,6 +24,7 @@ import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.sequence.TaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.training.GradientOptimizer;
+import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TrainSupertagger extends AbstractCli {
@@ -31,7 +34,6 @@ public class TrainSupertagger extends AbstractCli {
 
   // Model construction options.
   private OptionSpec<Void> noTransitions;
-  private OptionSpec<Void> noUnknownWordFeatures;
   private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
   
@@ -46,7 +48,6 @@ public class TrainSupertagger extends AbstractCli {
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
     
     noTransitions = parser.accepts("noTransitions");
-    noUnknownWordFeatures = parser.accepts("noUnknownWordFeatures");
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(5);
@@ -62,8 +63,7 @@ public class TrainSupertagger extends AbstractCli {
         reformatTrainingExamples(ccgExamples);
 
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen = 
-        buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold),
-            options.has(noUnknownWordFeatures));
+        buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold));
 
     Set<SyntacticCategory> validCategories = Sets.newHashSet();
     for (TaggedSequence<WordAndPos, SyntacticCategory> trainingDatum : trainingData) {
@@ -88,7 +88,7 @@ public class TrainSupertagger extends AbstractCli {
     IoUtils.serializeObjectToFile(supertagger, options.valueOf(modelOutput));
   }
 
-  private List<TaggedSequence<WordAndPos, SyntacticCategory>> reformatTrainingExamples(
+  private static List<TaggedSequence<WordAndPos, SyntacticCategory>> reformatTrainingExamples(
       Collection<CcgExample> ccgExamples) {
     List<TaggedSequence<WordAndPos, SyntacticCategory>> examples = Lists.newArrayList();
     for (CcgExample example : ccgExamples) {
@@ -98,6 +98,24 @@ public class TrainSupertagger extends AbstractCli {
       examples.add(new ListTaggedSequence<WordAndPos, SyntacticCategory>(taggedWords, syntacticCategories));
     }
     return examples;
+  }
+  
+  private static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
+      List<TaggedSequence<WordAndPos, SyntacticCategory>> trainingData, int commonWordCountThreshold) {
+    List<LocalContext<WordAndPos>> contexts = TaggerUtils.extractContextsFromData(trainingData);
+    CountAccumulator<String> wordCounts = CountAccumulator.create();
+    for (LocalContext<WordAndPos> context : contexts) {
+      wordCounts.increment(context.getItem().getWord(), 1.0);
+    }    
+    Set<String> commonWords = Sets.newHashSet(wordCounts.getKeysAboveCountThreshold(
+        commonWordCountThreshold));
+
+    // Build a dictionary of features which occur frequently enough
+    // in the data set.
+    FeatureGenerator<LocalContext<WordAndPos>, String> featureGenerator = new 
+        WordAndPosContextFeatureGenerator(new int[] {-2, -1, 0, 1, 2}, commonWords);
+    return DictionaryFeatureVectorGenerator.createFromDataWithThreshold(contexts,
+        featureGenerator, commonWordCountThreshold);
   }
 
   public static void main(String[] args) {

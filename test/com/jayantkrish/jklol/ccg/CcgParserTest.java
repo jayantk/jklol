@@ -18,8 +18,10 @@ import com.google.common.io.NullOutputStream;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
+import com.jayantkrish.jklol.ccg.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -61,7 +63,9 @@ public class CcgParserTest extends TestCase {
     "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},,0 near,near 2 2",
     "the,(N{0}/N{0}){1},(lambda $1 $1),1 the,the 1 0",
     "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1",
-    "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0"};
+    "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0",
+    "blue,N{0},blue,0 blue",
+    "blue,(N{0}/N{0}){1},blue,0 blue",};
   
   private static final double[] weights = {0.5, 1.0, 1.0, 1.0, 
     0.3, 1.0, 1.0, 
@@ -72,7 +76,7 @@ public class CcgParserTest extends TestCase {
     1.0, 0.5,
     1.0, 1.0,
     0.5, 1.0,
-    1.0, 1.0, 1.0, 1.0, 1.0};
+    1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
   private static final String[] binaryRuleArray = {";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)", 
     ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"", 
@@ -647,6 +651,23 @@ public class CcgParserTest extends TestCase {
     for (CcgParse parse : parses) {
       assertNoNounCompound(parse);
     }
+  }
+  
+  public void testSupertagChartFilter() {
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("blue", "berries"), 
+        Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10, new NullLogFunction());
+    assertEquals(2, parses.size());
+    
+    List<List<SyntacticCategory>> supertags = Lists.newArrayList();
+    supertags.add(Lists.newArrayList(SyntacticCategory.parseFrom("N")));
+    supertags.add(Lists.newArrayList(SyntacticCategory.parseFrom("N")));
+    
+    ChartFilter supertagChartFilter = new SupertagChartFilter(supertags, new DefaultCompatibilityFunction());
+
+    parses = parser.beamSearch(Arrays.asList("blue", "berries"), 
+        Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10,
+        supertagChartFilter, new NullLogFunction());
+    assertEquals(1, parses.size());
   }
   
   private void assertNoNounCompound(CcgParse parse) {

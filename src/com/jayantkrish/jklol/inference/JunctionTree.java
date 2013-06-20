@@ -125,6 +125,7 @@ public class JunctionTree implements MarginalCalculator {
       Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
       for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
         if (!alreadyPassedMessages.contains(possibleOutboundMessage.getEndFactor())) {
+	    System.out.println("pass: " + possibleOutboundMessage.getStartFactor() + " -> " + possibleOutboundMessage.getEndFactor());
           passMessage(cliqueTree, possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
         }
       }
@@ -240,10 +241,13 @@ public class JunctionTree implements MarginalCalculator {
 
     // Get the partition function from the root nodes of the junction forest.
     double logPartitionFunction = 0.0;
+    System.out.println("init");
     for (int rootFactorNum : rootFactorNums) {
       Factor rootFactor = marginalFactors.get(rootFactorNum);
-      logPartitionFunction += rootFactor.marginalize(rootFactor.getVars().getVariableNums())
+      double totalProb = rootFactor.marginalize(rootFactor.getVars().getVariableNums())
           .getUnnormalizedLogProbability(Assignment.EMPTY);
+      logPartitionFunction += totalProb;
+      System.out.println("lp "  + rootFactorNum + " : " + totalProb);
     }
 
     if (logPartitionFunction == Double.NEGATIVE_INFINITY) {
@@ -346,6 +350,8 @@ public class JunctionTree implements MarginalCalculator {
       }
       possibleEliminationOrder.put(eliminationIndex, Iterables.getOnlyElement(remainingFactors));
 
+      System.out.println(factorGraph.toString());
+      System.out.println(factorEdges);
       
       for (int i = 0; i < cliqueFactors.size(); i++) {
         separatorSets.add(Maps.<Integer, SeparatorSet> newHashMap());

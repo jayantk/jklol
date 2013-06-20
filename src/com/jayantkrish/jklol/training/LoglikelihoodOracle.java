@@ -37,7 +37,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
   public SufficientStatistics initializeGradient() {
     return family.getNewSufficientStatistics();
   }
-  
+
   @Override
   public DynamicFactorGraph instantiateModel(SufficientStatistics parameters) {
     return family.getModelFromParameters(parameters);
@@ -77,13 +77,13 @@ Example<DynamicAssignment, DynamicAssignment>> {
     // System.out.println(outputFactorGraph.getParameterDescription());
     MarginalSet outputMarginals = marginalCalculator.computeMarginals(outputFactorGraph);
     log.stopTimer("update_gradient/output_marginal");
-    
+
     double inputLogPartitionFunction = inputMarginals.getLogPartitionFunction();
     double outputLogPartitionFunction = outputMarginals.getLogPartitionFunction();
     if (Double.isInfinite(inputLogPartitionFunction) || Double.isNaN(inputLogPartitionFunction)
         || Double.isInfinite(outputLogPartitionFunction) || Double.isNaN(outputLogPartitionFunction)) {
       // Search error from numerical issues.
-	System.out.println("This search error: " + inputLogPartitionFunction + " " + outputLogPartitionFunction);
+      System.out.println("This search error: " + inputLogPartitionFunction + " " + outputLogPartitionFunction);
       throw new ZeroProbabilityError();
     }
 
@@ -101,7 +101,7 @@ Example<DynamicAssignment, DynamicAssignment>> {
     // System.out.println(outputMarginals);
     // System.out.println(gradient);
     log.stopTimer("update_gradient/increment");
-    
+
     return outputLogPartitionFunction - inputLogPartitionFunction;
   }
 }

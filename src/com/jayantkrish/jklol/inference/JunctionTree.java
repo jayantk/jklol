@@ -125,7 +125,7 @@ public class JunctionTree implements MarginalCalculator {
       Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
       for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
         if (!alreadyPassedMessages.contains(possibleOutboundMessage.getEndFactor())) {
-	    System.out.println("pass: " + possibleOutboundMessage.getStartFactor() + " -> " + possibleOutboundMessage.getEndFactor());
+          System.out.println("pass: " + possibleOutboundMessage.getStartFactor() + " -> " + possibleOutboundMessage.getEndFactor());
           passMessage(cliqueTree, possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
         }
       }

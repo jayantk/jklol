@@ -344,8 +344,7 @@ public class JunctionTree implements MarginalCalculator {
           }
         }
 
-        Preconditions.checkState(justEliminated != null,
-            "Could not convert %s into a clique tree. Remaining factors: %s", factorGraph, remainingFactors);
+        Preconditions.checkState(justEliminated != null, "Could not convert %s into a clique tree.", factorGraph);
         remainingFactors.remove(justEliminated);
       }
       possibleEliminationOrder.put(eliminationIndex, Iterables.getOnlyElement(remainingFactors));
@@ -423,7 +422,7 @@ public class JunctionTree implements MarginalCalculator {
       for (Integer variableNum : variablesToRetain) {
         mergeableFactors.retainAll(varFactorMap.get(variableNum));
       }
-      
+
       // It's possible that variablesToRetain is divided amongst two factors,
       // which means this factor cannot currently be eliminated.
       if (mergeableFactors.size() == 0 && variablesToRetain.size() > 0) {
@@ -432,11 +431,8 @@ public class JunctionTree implements MarginalCalculator {
 
       Factor superset = null;
       if (variablesToRetain.size() == 0) {
-        // We can merge this factor into any existing factor, except itself.
-        superset = Iterables.get(remainingFactors, 0);
-        if (superset == f) {
-          superset = Iterables.get(remainingFactors, 1);
-        }
+        // Don't need to merge this with anything.
+        return f;
       } else {
         // Merge this factor with the sparsest factor among the valid choices.
         Iterator<Factor> mergeableIterator = mergeableFactors.iterator();

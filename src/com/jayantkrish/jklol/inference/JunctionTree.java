@@ -125,7 +125,6 @@ public class JunctionTree implements MarginalCalculator {
       Set<Integer> alreadyPassedMessages = cliqueTree.getOutboundFactors(factorNum);
       for (SeparatorSet possibleOutboundMessage : possibleOutboundMessages) {
         if (!alreadyPassedMessages.contains(possibleOutboundMessage.getEndFactor())) {
-	    System.out.println("pass: " + possibleOutboundMessage.getStartFactor() + " -> " + possibleOutboundMessage.getEndFactor());
           passMessage(cliqueTree, possibleOutboundMessage.getStartFactor(), possibleOutboundMessage.getEndFactor(), useSumProduct);
         }
       }
@@ -241,13 +240,11 @@ public class JunctionTree implements MarginalCalculator {
 
     // Get the partition function from the root nodes of the junction forest.
     double logPartitionFunction = 0.0;
-    System.out.println("init");
     for (int rootFactorNum : rootFactorNums) {
       Factor rootFactor = marginalFactors.get(rootFactorNum);
       double totalProb = rootFactor.marginalize(rootFactor.getVars().getVariableNums())
           .getUnnormalizedLogProbability(Assignment.EMPTY);
       logPartitionFunction += totalProb;
-      System.out.println("lp "  + rootFactorNum + " : " + totalProb);
     }
 
     if (logPartitionFunction == Double.NEGATIVE_INFINITY) {
@@ -335,7 +332,7 @@ public class JunctionTree implements MarginalCalculator {
         for (Integer varNum : countsOfVars.get(1)) {
           Preconditions.checkState(varFactorMap.get(varNum).size() == 1);
           justEliminated = tryEliminateFactor(Iterables.getOnlyElement(varFactorMap.get(varNum)),
-              varFactorMap, factorIndexMap, countsOfVars, remainingFactors);
+              varFactorMap, factorIndexMap, countsOfVars);
 
           if (justEliminated != null) {
             possibleEliminationOrder.put(eliminationIndex, justEliminated);
@@ -348,9 +345,6 @@ public class JunctionTree implements MarginalCalculator {
         remainingFactors.remove(justEliminated);
       }
       possibleEliminationOrder.put(eliminationIndex, Iterables.getOnlyElement(remainingFactors));
-
-      System.out.println(factorGraph.toString());
-      System.out.println(factorEdges);
       
       for (int i = 0; i < cliqueFactors.size(); i++) {
         separatorSets.add(Maps.<Integer, SeparatorSet> newHashMap());
@@ -399,8 +393,7 @@ public class JunctionTree implements MarginalCalculator {
      * Helper method for constructing the clique tree by eliminating a single factor from the input.
      */
     private Factor tryEliminateFactor(Factor f, Multimap<Integer, Factor> varFactorMap,
-        Map<Factor, Integer> factorIndexMap, TreeMultimap<Integer, Integer> countsOfVars,
-        Set<Factor> remainingFactors) {
+        Map<Factor, Integer> factorIndexMap, TreeMultimap<Integer, Integer> countsOfVars) {
       Set<Integer> variablesToEliminate = Sets.newHashSet();
       Collection<Integer> factorVariables = f.getVars().getVariableNums();
       Set<Factor> mergeableFactors = new HashSet<Factor>();
@@ -432,7 +425,6 @@ public class JunctionTree implements MarginalCalculator {
       Factor superset = null;
       if (variablesToRetain.size() == 0) {
         // Don't need to merge this with anything.
-        return f;
       } else {
         // Merge this factor with the sparsest factor among the valid choices.
         Iterator<Factor> mergeableIterator = mergeableFactors.iterator();
@@ -458,11 +450,13 @@ public class JunctionTree implements MarginalCalculator {
       }
       
       // Add an undirected edge in the clique tree from f to superset.
-      int curFactorIndex = factorIndexMap.get(f);
-      int destFactorIndex = factorIndexMap.get(superset);
-      factorEdges.put(curFactorIndex, destFactorIndex);
-      factorEdges.put(destFactorIndex, curFactorIndex);
-      
+      if (superset != null) {
+	  int curFactorIndex = factorIndexMap.get(f);
+	  int destFactorIndex = factorIndexMap.get(superset);
+	  factorEdges.put(curFactorIndex, destFactorIndex);
+	  factorEdges.put(destFactorIndex, curFactorIndex);
+      }
+
       return f;
     }
 

@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.ccg;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
 import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -18,6 +19,29 @@ public class ConjunctionChartFilter implements ChartFilter {
 
   public ConjunctionChartFilter(List<ChartFilter> filters) {
     this.filters = ImmutableList.copyOf(filters);
+  }
+
+  /**
+   * Creates a chart filter ignoring any {@code null} filters, 
+   * which are interpreted as the always-true filter. Returns
+   * {@code null} if all of the given filters are {@code null}.
+   * 
+   * @param filters
+   * @return
+   */
+  public static ConjunctionChartFilter create(ChartFilter ... filters) {
+    List<ChartFilter> nonNullFilters = Lists.newArrayList();
+    for (ChartFilter filter : filters) {
+      if (filter != null) {
+        nonNullFilters.add(filter);
+      }
+    }
+    
+    if (nonNullFilters.size() > 0) {
+      return new ConjunctionChartFilter(nonNullFilters);
+    } else {
+      return null;
+    }
   }
 
   @Override

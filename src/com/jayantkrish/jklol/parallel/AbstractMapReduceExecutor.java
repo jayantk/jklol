@@ -43,11 +43,11 @@ public abstract class AbstractMapReduceExecutor implements MapReduceExecutor {
     List<B> results = Lists.newArrayList();
     try {
       List<Future<B>> futureResults = mapAsync(items, mapper);
-    
       for (Future<B> future : futureResults) {
         try {
           results.add(future.get(timeout, unit));
         } catch (TimeoutException e) {
+          future.cancel(true);
           results.add(null);
         }
       }

@@ -54,22 +54,21 @@ public class LocalMapReduceExecutor extends AbstractMapReduceExecutor {
     ExecutorService executor = getExecutor();
     // Set up the item batches for the executor service. 
     ImmutableList<A> itemsAsList = ImmutableList.copyOf(items);
-    List<MapReduceBatch<A, B, C>> batches = Lists.newArrayList();
     int batchSize = (int) Math.ceil(((double) items.size()) / (numThreads * batchesPerThread));
     
     // If batchSize is 1, then there are potentially more batches than items.
+    List<Future<C>> results = Lists.newArrayList();
     int numBatches = (int) Math.ceil(((double) items.size()) / batchSize); 
     for (int i = 0; i < numBatches; i++) {
       ImmutableList<A> batchItems = itemsAsList.subList(
           Math.min(i * batchSize, items.size()), Math.min((i + 1) * batchSize, items.size()));
-      batches.add(new MapReduceBatch<A, B, C>(batchItems, mapper, reducer));
+      results.add(executor.submit(new MapReduceBatch<A, B, C>(batchItems, mapper, reducer)));
     }
 
     // Run the tasks in parallel, aggregating (reducing) their results as 
     // they become available.
     C accumulator = reducer.getInitialValue();
     try {
-      List<Future<C>> results = executor.invokeAll(batches);
       for (Future<C> result : results) {
         accumulator = reducer.combine(result.get(), accumulator);
       }
@@ -84,7 +83,6 @@ public class LocalMapReduceExecutor extends AbstractMapReduceExecutor {
     } finally {
       executor.shutdown();
     }
-
     return accumulator;
   }
 
@@ -93,11 +91,11 @@ public class LocalMapReduceExecutor extends AbstractMapReduceExecutor {
       throws InterruptedException {
     ExecutorService executor = getExecutor();
 
-    List<MapBatch<A, B>> batches = Lists.newArrayList();
+    List<Future<B>> futures = Lists.newArrayList();
     for (A item : items) {
-      batches.add(new MapBatch<A, B>(item, mapper));
+      futures.add(executor.submit(new MapBatch<A, B>(item, mapper)));
     }
-    return executor.invokeAll(batches);
+    return futures;
   }
 
   private ExecutorService getExecutor() {

@@ -88,7 +88,7 @@ public class CcgParser implements Serializable {
   private final VariableNumMap terminalPosVar;
   private final VariableNumMap terminalSyntaxVar;
   private final DiscreteFactor terminalPosDistribution;
-  
+
   // Weights for word -> syntactic category mappings for
   // the lexicon. This factor is defined over terminalVar
   // and terminalSyntaxVar, and provides backoff weights
@@ -167,12 +167,12 @@ public class CcgParser implements Serializable {
 
   // All predicates used in CCG rules.
   private final Set<Long> predicatesInRules;
-  
+
   private final boolean allowWordSkipping;
 
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
-      DiscreteFactor terminalPosDistribution, DiscreteFactor terminalSyntaxDistribution, 
+      DiscreteFactor terminalPosDistribution, DiscreteFactor terminalSyntaxDistribution,
       VariableNumMap dependencyHeadVar, VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       DiscreteFactor dependencyDistribution, VariableNumMap wordDistanceVar,
       DiscreteFactor wordDistanceFactor, VariableNumMap puncDistanceVar,
@@ -194,7 +194,7 @@ public class CcgParser implements Serializable {
     this.terminalPosDistribution = Preconditions.checkNotNull(terminalPosDistribution);
     VariableNumMap expectedTerminalPosVars = terminalPosVar.union(terminalSyntaxVar);
     Preconditions.checkArgument(expectedTerminalPosVars.equals(terminalPosDistribution.getVars()));
-    
+
     this.terminalSyntaxDistribution = Preconditions.checkNotNull(terminalSyntaxDistribution);
     VariableNumMap expectedTerminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
     Preconditions.checkArgument(expectedTerminalSyntaxVars.equals(terminalSyntaxDistribution.getVars()));
@@ -209,8 +209,10 @@ public class CcgParser implements Serializable {
     this.dependencyDistribution = dependencyDistribution;
     this.dependencyHeadType = dependencyHeadVar.getDiscreteVariables().get(0);
     this.dependencyArgNumType = dependencyArgNumVar.getDiscreteVariables().get(0);
-    // TODO: This check can be made unnecessary by fixing the representation
-    // of unfilled dependencies as longs. Right now, the representation requires
+    // TODO: This check can be made unnecessary by fixing the
+    // representation
+    // of unfilled dependencies as longs. Right now, the
+    // representation requires
     // this condition to hold.
     for (int i = 0; i < dependencyArgNumType.numValues(); i++) {
       Preconditions.checkArgument(dependencyArgNumType.getValue(i) == (Integer) i);
@@ -310,10 +312,9 @@ public class CcgParser implements Serializable {
     }
     DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategory", allCategories);
     /*
-    for (int i = 0; i < syntaxType.numValues(); i++) {
-      System.out.println(i + " " + syntaxType.getValue(i));
-    }
-    */
+     * for (int i = 0; i < syntaxType.numValues(); i++) {
+     * System.out.println(i + " " + syntaxType.getValue(i)); }
+     */
     return syntaxType;
   }
 
@@ -697,7 +698,7 @@ public class CcgParser implements Serializable {
 
     SetMultimap<HeadedSyntacticCategory, HeadedSyntacticCategory> unifiabilityMap =
         buildUnifiabilityMap(syntaxVariableType.getValuesWithCast(HeadedSyntacticCategory.class));
-    
+
     List<List<Object>> validOutcomes = Lists.newArrayList();
     Set<UnaryCombinator> validCombinators = Sets.newHashSet();
     for (CcgUnaryRule rule : unaryRules) {
@@ -879,13 +880,28 @@ public class CcgParser implements Serializable {
   }
 
   public boolean isPossibleDependencyStructure(DependencyStructure dependency) {
+    return getDependencyStructureLogProbability(dependency) != Double.NEGATIVE_INFINITY;
+  }
+
+  /**
+   * Gets the log probability of a dependency structure, which is the
+   * weight added into a parse's log probability when
+   * {@code dependency} occurs.
+   * 
+   * @param dependency
+   * @return
+   */
+  public double getDependencyStructureLogProbability(DependencyStructure dependency) {
     Assignment assignment = Assignment.unionAll(
         dependencyHeadVar.outcomeArrayToAssignment(dependency.getHead()),
         dependencyArgNumVar.outcomeArrayToAssignment(dependency.getArgIndex()),
         dependencyArgVar.outcomeArrayToAssignment(dependency.getObject()));
 
-    return dependencyDistribution.getVars().isValidAssignment(assignment) &&
-        dependencyDistribution.getUnnormalizedLogProbability(assignment) != Double.NEGATIVE_INFINITY;
+    if (!dependencyDistribution.getVars().isValidAssignment(assignment)) {
+      return Double.NEGATIVE_INFINITY;
+    } else {
+      return dependencyDistribution.getUnnormalizedLogProbability(assignment);
+    }
   }
 
   public boolean isPossibleLexiconEntry(List<String> originalWords, List<String> posTags, HeadedSyntacticCategory category) {
@@ -914,7 +930,8 @@ public class CcgParser implements Serializable {
         }
       }
     }
-    // System.out.println("No such lexicon entry: " + words + " -> " + category);
+    // System.out.println("No such lexicon entry: " + words + " -> " +
+    // category);
     return false;
   }
 
@@ -928,7 +945,7 @@ public class CcgParser implements Serializable {
         // System.out.println(leftHeaded + " " +rightHeaded);
         Assignment assignment = leftSyntaxVar.outcomeArrayToAssignment(leftHeaded)
             .union(rightSyntaxVar.outcomeArrayToAssignment(rightHeaded));
-        
+
         if (leftSyntaxVar.union(rightSyntaxVar).isValidAssignment(assignment)) {
           Iterator<Outcome> outcomeIter = binaryRuleDistribution.outcomePrefixIterator(assignment);
           while (outcomeIter.hasNext()) {
@@ -988,7 +1005,7 @@ public class CcgParser implements Serializable {
       for (HeadedSyntacticCategory category : syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax())) {
         isPossible = isPossible || isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), category);
       }
-      
+
       if (!isPossible) {
         System.out.println("No such lexicon entry: " + tree.getWords() + " -> " +
             syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax()));
@@ -996,7 +1013,7 @@ public class CcgParser implements Serializable {
       return isPossible;
     } else {
       return isPossibleBinaryRule(tree.getLeft().getRootSyntax(), tree.getRight().getRootSyntax(),
-          tree.getPreUnaryRuleSyntax(), syntacticCategoryMap) 
+          tree.getPreUnaryRuleSyntax(), syntacticCategoryMap)
           && isPossibleSyntacticTree(tree.getLeft(), syntacticCategoryMap)
           && isPossibleSyntacticTree(tree.getRight(), syntacticCategoryMap);
     }
@@ -1059,11 +1076,11 @@ public class CcgParser implements Serializable {
   public DiscreteVariable getSyntaxVarType() {
     return syntaxVarType;
   }
-  
+
   public DiscreteVariable getPredicateVarType() {
     return dependencyHeadType;
   }
-  
+
   public DiscreteFactor getSyntaxDistribution() {
     return compiledSyntaxDistribution;
   }
@@ -1076,12 +1093,13 @@ public class CcgParser implements Serializable {
    * trees exist for a span of the sentence.
    * 
    * @param terminals
+   * @param posTags
    * @param beamSize
    * @param log
    * @return {@code beamSize} best parses for {@code terminals}.
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize, LogFunction log) {
-    return beamSearch(terminals, posTags, beamSize, null, log);
+    return beamSearch(terminals, posTags, beamSize, null, log, -1);
   }
 
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize) {
@@ -1101,11 +1119,13 @@ public class CcgParser implements Serializable {
    * @param beamFilter May be {@code null}, in which case all beam
    * entries are retained.
    * @param log
+   * @param maxParseTimeMillis (Approximate) maximum amount of time to
+   * spend parsing. Returns an empty list of parses if the time limit
+   * is exceeded. If negative, there is no time limit.
    * @return
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
-      ChartFilter beamFilter, LogFunction log) {
-
+      ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
     CcgChart chart = buildChartForInput(terminals, posTags, beamSize, beamFilter);
     System.out.println(terminals);
     System.out.println(posTags);
@@ -1113,7 +1133,7 @@ public class CcgParser implements Serializable {
     // log.startTimer("ccg_parse/initialize_chart");
     initializeChart(terminals, posTags, chart, log);
     // log.stopTimer("ccg_parse/initialize_chart");
-    
+
     chart.applyChartFilterToTerminals();
 
     // Sparsifying the dependencies actually slows the code down.
@@ -1121,20 +1141,24 @@ public class CcgParser implements Serializable {
     sparsifyDependencyDistribution(chart);
 
     // log.startTimer("ccg_parse/calculate_inside_beam");
-    calculateInsideBeam(chart, log);
+    boolean finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
     // log.stopTimer("ccg_parse/calculate_inside_beam");
 
-    reweightRootEntries(chart);
-
-    return decodeParsesForRoot(chart);
+    if (finishedParsing) {
+      reweightRootEntries(chart);
+      return decodeParsesForRoot(chart);
+    } else {
+      System.out.println("CCG Parser Timeout");
+      return Lists.newArrayList();
+    }
   }
 
   /*
-  public List<CcgParse> beamSearchWithSupertags(SupertaggedSentence sentence,
-      int beamSize, ChartFilter beamFilter, LogFunction log) {
-    // TODO: augment beamFilter with a chart filter for the supertags.
-  }
-  */
+   * public List<CcgParse> beamSearchWithSupertags(SupertaggedSentence
+   * sentence, int beamSize, ChartFilter beamFilter, LogFunction log)
+   * { // TODO: augment beamFilter with a chart filter for the
+   * supertags. }
+   */
 
   public CcgChart buildChartForInput(List<String> terminals, List<String> posTags,
       int beamSize, ChartFilter beamFilter) {
@@ -1146,7 +1170,7 @@ public class CcgParser implements Serializable {
     int[] puncDistances = new int[numWords * numWords];
     int[] verbDistances = new int[numWords * numWords];
     for (int i = 0; i < numWords; i++) {
-      for (int j = 0 ;j < numWords; j++) {
+      for (int j = 0; j < numWords; j++) {
         wordDistances[(i * numWords) + j] = computeWordDistance(i, j);
         puncDistances[(i * numWords) + j] = computeArrayDistance(puncCounts, i, j);
         verbDistances[(i * numWords) + j] = computeArrayDistance(verbCounts, i, j);
@@ -1155,8 +1179,9 @@ public class CcgParser implements Serializable {
 
     CcgChart chart = new CcgChart(terminals, posTags, wordDistances, puncDistances, verbDistances,
         beamSize, beamFilter);
-    
-    // Default: initialize chart with no dependency distribution pruning.
+
+    // Default: initialize chart with no dependency distribution
+    // pruning.
     chart.setDependencyTensor(dependencyTensor);
     chart.setWordDistanceTensor(wordDistanceTensor);
     chart.setPuncDistanceTensor(puncDistanceTensor);
@@ -1164,11 +1189,12 @@ public class CcgParser implements Serializable {
     chart.setSyntaxDistribution(compiledSyntaxDistribution);
 
     /*
-    System.out.println("dependency tensor: " + dependencyTensor.size());
-    System.out.println(wordDistanceTensor.size());
-    System.out.println(puncDistanceTensor.size());
-    System.out.println(verbDistanceTensor.size());
-    */
+     * System.out.println("dependency tensor: " +
+     * dependencyTensor.size());
+     * System.out.println(wordDistanceTensor.size());
+     * System.out.println(puncDistanceTensor.size());
+     * System.out.println(verbDistanceTensor.size());
+     */
 
     return chart;
   }
@@ -1245,16 +1271,26 @@ public class CcgParser implements Serializable {
    * @param chart
    * @param log
    */
-  public void calculateInsideBeam(CcgChart chart, LogFunction log) {
+  public boolean calculateInsideBeam(CcgChart chart, LogFunction log, long maxParseTimeMillis) {
     int chartSize = chart.size();
+    long currentTime = 0;
+    long endTime = System.currentTimeMillis() + maxParseTimeMillis;
     for (int spanSize = 1; spanSize < chartSize; spanSize++) {
       for (int spanStart = 0; spanStart + spanSize < chartSize; spanStart++) {
         int spanEnd = spanStart + spanSize;
         calculateInsideBeam(spanStart, spanEnd, chart, log);
+
+        if (maxParseTimeMillis >= 0) {
+          currentTime = System.currentTimeMillis();
+          if (currentTime > endTime) {
+            return false;
+          }
+        }
         // System.out.println(spanStart + "." + spanEnd + " : " +
         // chart.getNumChartEntriesForSpan(spanStart, spanEnd));
       }
     }
+    return true;
   }
 
   /**
@@ -1269,12 +1305,12 @@ public class CcgParser implements Serializable {
         chart.getNumChartEntriesForSpan(0, chart.size() - 1));
     return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this, syntaxVarType);
   }
-  
+
   /**
-   * Gets the possible lexicon entries for {@code wordSequence} 
-   * that can be used in this parser. The returned entries do not 
-   * include lexicon entries for unknown words, which may occur 
-   * in the parse if {@code wordSequence} is unrecognized.
+   * Gets the possible lexicon entries for {@code wordSequence} that
+   * can be used in this parser. The returned entries do not include
+   * lexicon entries for unknown words, which may occur in the parse
+   * if {@code wordSequence} is unrecognized.
    * 
    * @param wordSequence
    * @return
@@ -1284,10 +1320,10 @@ public class CcgParser implements Serializable {
   }
 
   /**
-   * Gets the possible lexicon entries for {@code wordSequence} from 
+   * Gets the possible lexicon entries for {@code wordSequence} from
    * {@code terminalDistribution}, a distribution over CCG categories
    * given word sequences.
-   *  
+   * 
    * @param wordSequence
    * @param terminalDistribution
    * @param terminalVar
@@ -1305,7 +1341,7 @@ public class CcgParser implements Serializable {
         Outcome bestOutcome = iterator.next();
         CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
             ccgCategoryVar.getOnlyVariableNum());
-        
+
         lexiconEntries.add(new LexiconEntry(wordSequence, ccgCategory));
       }
     }
@@ -1324,7 +1360,7 @@ public class CcgParser implements Serializable {
     initializeChartWithDistribution(terminals, posTags, chart, log, terminalVar, ccgCategoryVar,
         terminalDistribution, true);
   }
-  
+
   /**
    * This method is a hack.
    * 
@@ -1340,7 +1376,7 @@ public class CcgParser implements Serializable {
    * @param terminalPosDistribution
    */
   public void initializeChartWithDistribution(List<String> terminals, List<String> posTags, CcgChart chart,
-      LogFunction log, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, 
+      LogFunction log, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, boolean useUnknownWords) {
     Preconditions.checkArgument(terminals.size() == posTags.size());
 
@@ -1349,20 +1385,20 @@ public class CcgParser implements Serializable {
       for (int j = i; j < preprocessedTerminals.size(); j++) {
         List<String> terminalValue = preprocessedTerminals.subList(i, j + 1);
         String posTag = posTags.get(j);
-        int numAdded = addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, 
+        int numAdded = addChartEntriesForTerminal(terminalValue, posTag, i, j, chart,
             log, terminalVar, ccgCategoryVar, terminalDistribution);
         if (numAdded == 0 && i == j && useUnknownWords) {
           // Backoff to POS tags if the input is unknown.
           terminalValue = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(i)));
-          addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, log, 
+          addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, log,
               terminalVar, ccgCategoryVar, terminalDistribution);
         }
       }
     }
   }
-  
+
   private int addChartEntriesForTerminal(List<String> terminalValue, String posTag,
-      int spanStart, int spanEnd, CcgChart chart, LogFunction log, 
+      int spanStart, int spanEnd, CcgChart chart, LogFunction log,
       VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, DiscreteFactor terminalDistribution) {
     int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
     Assignment assignment = terminalVar.outcomeArrayToAssignment(terminalValue);
@@ -1424,7 +1460,7 @@ public class CcgParser implements Serializable {
           for (int assignmentPredicateNum : entries[i].getAssignmentPredicateNums()) {
             possiblePredicates.add((long) assignmentPredicateNum);
           }
-          for (long depLong : entries[i].getUnfilledDependencies()){
+          for (long depLong : entries[i].getUnfilledDependencies()) {
             possiblePredicates.add(((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM);
           }
         }
@@ -1493,12 +1529,12 @@ public class CcgParser implements Serializable {
 
     Tensor syntaxDistributionTensor = chart.getSyntaxDistribution().getWeights();
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
-    
+
     Tensor currentDependencyTensor = chart.getDependencyTensor();
     Tensor currentWordTensor = chart.getWordDistanceTensor();
     Tensor currentPuncTensor = chart.getPuncDistanceTensor();
     Tensor currentVerbTensor = chart.getVerbDistanceTensor();
-    
+
     int[] wordDistances = chart.getWordDistances();
     int[] puncDistances = chart.getPunctuationDistances();
     int[] verbDistances = chart.getVerbDistances();
@@ -1510,7 +1546,7 @@ public class CcgParser implements Serializable {
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j is for forward compatibility for skipping terminal
       // symbols.
-      int maxInd = allowWordSkipping ? spanEnd - spanStart : i + 2; 
+      int maxInd = allowWordSkipping ? spanEnd - spanStart : i + 2;
       for (int j = i + 1; j < maxInd; j++) {
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
@@ -1578,7 +1614,8 @@ public class CcgParser implements Serializable {
                     // log.stopTimer("ccg_parse/beam_loop/unary");
 
                     // log.startTimer("ccg_parse/beam_loop/relabel");
-                    // Relabel assignments from the left and right chart
+                    // Relabel assignments from the left and right
+                    // chart
                     // entries.
                     int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftRelabeling(),
                         assignmentVariableAccumulator, assignmentPredicateAccumulator,
@@ -1611,14 +1648,18 @@ public class CcgParser implements Serializable {
                     if (numDeps == -1) {
                       continue;
                     }
-                    // Fill any dependencies from the combinator itself.
-                    numDeps = accumulateDependencies(resultCombinator.getUnfilledDependencies(this, spanEnd),
-                        resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
-                        assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
-                        resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(),
-                        resultSyntaxUniqueVars, numDeps);
-                    if (numDeps == -1) {
-                      continue;
+
+                    // Fill any dependencies from the combinator
+                    // itself.
+                    if (resultCombinator.hasUnfilledDependencies()) {
+                      numDeps = accumulateDependencies(resultCombinator.getUnfilledDependencies(this, spanEnd),
+                          resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
+                          assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
+                          resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(),
+                          resultSyntaxUniqueVars, numDeps);
+                      if (numDeps == -1) {
+                        continue;
+                      }
                     }
 
                     long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
@@ -1638,9 +1679,10 @@ public class CcgParser implements Serializable {
                         newAssignmentPredicateNums, newAssignmentIndexes, unfilledDepArray, filledDepArray,
                         spanStart, spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
                     // log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
-                    
+
                     // log.startTimer("ccg_parse/beam_loop/dependencies");
-                    // Get the probabilities of the generated dependencies.
+                    // Get the probabilities of the generated
+                    // dependencies.
                     double depProb = 1.0;
                     double curDepProb = 1.0;
                     for (int depIndex = 0; depIndex < filledDepArray.length; depIndex++) {
@@ -1650,7 +1692,8 @@ public class CcgParser implements Serializable {
                         continue;
                       }
 
-                      // Compute the keyNum containing the weight for depLong
+                      // Compute the keyNum containing the weight for
+                      // depLong
                       // in dependencyTensor.
                       int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
                       int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
@@ -1659,7 +1702,8 @@ public class CcgParser implements Serializable {
                       long depNum = (headNum * dependencyHeadOffset) + (argNumNum * dependencyArgNumOffset)
                           + objectNum * dependencyObjectOffset;
 
-                      // Get the probability of this predicate-argument combination.
+                      // Get the probability of this
+                      // predicate-argument combination.
                       // log.startTimer("chart_entry/dependency_prob");
                       curDepProb = currentDependencyTensor.get(depNum);
                       // log.stopTimer("chart_entry/dependency_prob");
@@ -1669,7 +1713,7 @@ public class CcgParser implements Serializable {
                       int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
 
                       // log.startTimer("chart_entry/compute_distance");
-                      int distanceIndex = (subjectWordIndex * numTerminals) +  objectWordIndex;
+                      int distanceIndex = (subjectWordIndex * numTerminals) + objectWordIndex;
                       int wordDistance = wordDistances[distanceIndex];
                       int puncDistance = puncDistances[distanceIndex];
                       int verbDistance = verbDistances[distanceIndex];
@@ -1684,7 +1728,8 @@ public class CcgParser implements Serializable {
                       long verbDistanceKeyNum = distanceKeyNumBase + (verbDistance * distanceDistanceOffset);
                       curDepProb *= currentVerbTensor.get(verbDistanceKeyNum);
                       // log.stopTimer("chart_entry/lookup_distance");
-                      // System.out.println(longToUnfilledDependency(depLong) + " " + depProb);
+                      // System.out.println(longToUnfilledDependency(depLong)
+                      // + " " + depProb);
 
                       depProb *= curDepProb;
 

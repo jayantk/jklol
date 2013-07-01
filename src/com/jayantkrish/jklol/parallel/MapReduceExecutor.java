@@ -2,8 +2,6 @@ package com.jayantkrish.jklol.parallel;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 /**
  * {@code MapReduceExecutor} is a simple parallel computing interface
@@ -19,23 +17,12 @@ public interface MapReduceExecutor {
   public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
       Collection<? extends A> items, D mapper, E reducer);
 
-  public <A, B, C extends Mapper<A, B>> List<B> map(Collection<? extends A> items, C mapper);
-
   /**
-   * Runs {@code mapper} on each of the given {@code items}, while
-   * upper bounding the maximum running time of mapper for each item.
-   * If {@code timeout} is exceeded for an item, then the item is
-   * mapped to {@code null}.
+   * Runs {@code mapper} on each of the given {@code items}.
    * 
    * @param items
    * @param mapper
-   * @param timeout
-   * @param unit
    * @return
    */
-  public <A, B, C extends Mapper<A, B>> List<B> map(Collection<? extends A> items, C mapper,
-      long timeout, TimeUnit unit);
-
-  public <A, B, C extends Mapper<A, B>> List<Future<B>> mapAsync(Collection<? extends A> items, C mapper)
-      throws InterruptedException;
+  public <A, B, C extends Mapper<A, B>> List<B> map(Collection<? extends A> items, C mapper);
 }

@@ -53,7 +53,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // Calculate the best predicted parse, i.e., the highest weight parse
     // without conditioning on the true parse.
     List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(),
-        beamSize, searchFilter, log);
+        beamSize, searchFilter, log, -1);
     CcgParse bestPredictedParse = parses.size() > 0 ? parses.get(0) : null;
     System.out.println("num predicted: " + parses.size());
     if (bestPredictedParse == null) {
@@ -71,7 +71,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
         conditionalChartFilter = new ConjunctionChartFilter(Arrays.asList(conditionalChartFilter, searchFilter));
       }
       possibleParses = instantiatedParser.beamSearch(example.getWords(),
-          example.getPosTags(), beamSize, conditionalChartFilter, log);
+          example.getPosTags(), beamSize, conditionalChartFilter, log, -1);
     } else {
       possibleParses = parses;
     }

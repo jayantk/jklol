@@ -124,7 +124,7 @@ public class CcgTrainingTest extends TestCase {
     
     SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse(), 
         new DefaultCompatibilityFunction());
-    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction());
+    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction(), -1);
     
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
@@ -144,7 +144,7 @@ public class CcgTrainingTest extends TestCase {
 
     SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse(),
         new DefaultCompatibilityFunction());
-    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction());
+    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction(), -1);
     
     for (CcgParse correct : correctParses) {
       System.out.println(correct);

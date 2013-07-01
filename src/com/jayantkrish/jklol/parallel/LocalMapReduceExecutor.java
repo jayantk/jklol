@@ -19,7 +19,7 @@ import com.google.common.collect.Lists;
  * 
  * @author jayantk
  */
-public class LocalMapReduceExecutor extends AbstractMapReduceExecutor {
+public class LocalMapReduceExecutor implements MapReduceExecutor {
 
   private final int batchesPerThread;
   private final int numThreads;
@@ -85,17 +85,32 @@ public class LocalMapReduceExecutor extends AbstractMapReduceExecutor {
     }
     return accumulator;
   }
-
+  
   @Override
-  public <A, B, C extends Mapper<A, B>> List<Future<B>> mapAsync(Collection<? extends A> items, C mapper)
-      throws InterruptedException {
+  public <A, B, C extends Mapper<A, B>> List<B> map(Collection<? extends A> items, C mapper) {
+    List<B> results = Lists.newArrayList();
     ExecutorService executor = getExecutor();
+    try {
+      List<Future<B>> futureResults = Lists.newArrayList();
+      for (A item : items) {
+        futureResults.add(executor.submit(new MapBatch<A, B>(item, mapper)));
+      }
 
-    List<Future<B>> futures = Lists.newArrayList();
-    for (A item : items) {
-      futures.add(executor.submit(new MapBatch<A, B>(item, mapper)));
+      for (Future<B> future : futureResults) {
+        results.add(future.get());
+      }
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+      e.getCause().printStackTrace();
+      throw new RuntimeException(e);
+    } catch (ExecutionException e) {
+      e.printStackTrace();
+      e.getCause().printStackTrace();
+      throw new RuntimeException(e);
+    } finally {
+      executor.shutdownNow();
     }
-    return futures;
+    return results;
   }
 
   private ExecutorService getExecutor() {
@@ -103,8 +118,9 @@ public class LocalMapReduceExecutor extends AbstractMapReduceExecutor {
     // Executors.newFixedThreadPool(numThreads), except that
     // unused threads are eventually terminated, allowing the
     // program to terminate without the user invoking shutdown().
-    return new ThreadPoolExecutor(numThreads, numThreads, 60, TimeUnit.SECONDS,
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(numThreads, numThreads, 10, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>());
+    return executor;
   }
 
   /**

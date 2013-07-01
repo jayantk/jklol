@@ -92,6 +92,10 @@ public class Combinator implements Serializable {
   public String[] getSubjects() {
     return subjects;
   }
+  
+  public boolean hasUnfilledDependencies() {
+    return subjects.length > 0;
+  }
 
   public long[] getUnfilledDependencies(CcgParser parser, int headWordIndex) {
     long[] dependencies = new long[subjects.length];

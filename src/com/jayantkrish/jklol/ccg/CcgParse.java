@@ -5,7 +5,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
@@ -180,6 +182,20 @@ public class CcgParse {
   public int getSpanEnd() {
     return spanEnd;
   }
+  
+  public CcgParse getParseForSpan(int spanStart, int spanEnd) {
+    if (!isTerminal()) {
+      if (left.spanStart <= spanStart && left.spanEnd >= spanEnd) {
+        return left.getParseForSpan(spanStart, spanEnd);
+      } else if (right.spanStart <= spanStart && right.spanEnd >= spanEnd) {
+        return right.getParseForSpan(spanStart, spanEnd);
+      }
+    }
+
+    // Either this is a terminal, or neither the left nor right subtrees
+    // completely contain the given span.
+    return this;
+  }
 
   /**
    * Gets a representation of the syntactic structure of this parse,
@@ -230,18 +246,11 @@ public class CcgParse {
    * @return
    */
   public SpannedExpression getLogicalFormForSpan(int spanStart, int spanEnd) {
-    if (!isTerminal()) {
-      if (left.spanStart <= spanStart && left.spanEnd >= spanEnd) {
-        return left.getLogicalFormForSpan(spanStart, spanEnd);
-      } else if (right.spanStart <= spanStart && right.spanEnd >= spanEnd) {
-        return right.getLogicalFormForSpan(spanStart, spanEnd);
-      }
-    }
-
-    // This is a terminal or the smallest portion of the tree containing the span.    
-    Expression lf = getPreUnaryLogicalForm();
+    CcgParse spanningParse = getParseForSpan(spanStart, spanEnd);
+    Expression lf = spanningParse.getPreUnaryLogicalForm();
     if (lf != null) {
-      return new SpannedExpression(getLogicalForm(), this.spanStart, this.spanEnd);
+      return new SpannedExpression(spanningParse.getLogicalForm(),
+          spanningParse.getSpanStart(), spanningParse.getSpanEnd());
     } else {
       return null;
     }
@@ -571,6 +580,20 @@ public class CcgParse {
     }
     deps.addAll(dependencies);
     return deps;
+  }
+
+  /**
+   * Gets all dependency structures populated during parsing, indexed
+   * by the word that projects the dependency.
+   * 
+   * @return
+   */
+  public Multimap<Integer, DependencyStructure> getAllDependenciesIndexedByHeadWordIndex() {
+    Multimap<Integer, DependencyStructure> map = HashMultimap.create();
+    for (DependencyStructure dep : getAllDependencies()) {
+      map.put(dep.getHeadWordIndex(), dep);
+    }
+    return map;
   }
 
   public Set<Integer> getWordIndexesProjectingDependencies() {

@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
+import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
@@ -157,15 +158,6 @@ public class ParseCcg extends AbstractCli {
     CcgLossMapper mapper = new CcgLossMapper(ccgParser);
     CcgLossReducer reducer = new CcgLossReducer();
     return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
-  }
-
-  private static Set<DependencyStructure> stripDependencyLabels(Collection<DependencyStructure> dependencies) {
-    Set<DependencyStructure> deps = Sets.newHashSet();
-    for (DependencyStructure oldDep : dependencies) {
-      deps.add(new DependencyStructure("", oldDep.getHeadWordIndex(),
-          "", oldDep.getObjectWordIndex(), 0));
-    }
-    return deps;
   }
 
   public static class CcgLoss {
@@ -308,10 +300,17 @@ public class ParseCcg extends AbstractCli {
       printCcgParses(parses, 1, false, false);
 
       if (parses.size() > 0) {
-        List<DependencyStructure> predictedDeps = parses.get(0).getAllDependencies();
-        Set<DependencyStructure> trueDeps = example.getDependencies();
+        List<SyntacticCategory> predictedLexicalCategories = parses.get(0)
+            .getSyntacticParse().getAllSpannedLexiconEntries();
+        List<LabeledDep> predictedDeps = dependenciesToLabeledDeps(
+            parses.get(0).getAllDependencies(), predictedLexicalCategories);
+
+        List<SyntacticCategory> trueLexicalCategories = example.getSyntacticParse().getAllSpannedLexiconEntries();
+        Set<LabeledDep> trueDeps = Sets.newHashSet(dependenciesToLabeledDeps(
+            example.getDependencies(),trueLexicalCategories));
+
         System.out.println("Predicted: ");
-        for (DependencyStructure dep : predictedDeps) {
+        for (LabeledDep dep : predictedDeps) {
           if (trueDeps.contains(dep)) {
             System.out.println(dep);
           } else {
@@ -320,7 +319,7 @@ public class ParseCcg extends AbstractCli {
         }
 
         System.out.println("Missing true dependencies:");
-        for (DependencyStructure dep : trueDeps) {
+        for (LabeledDep dep : trueDeps) {
           if (!predictedDeps.contains(dep)) {
             System.out.println(dep);
           }
@@ -328,9 +327,9 @@ public class ParseCcg extends AbstractCli {
 
         // Compute the correct / incorrect labeled dependencies for
         // the current example.
-        Set<DependencyStructure> incorrectDeps = Sets.newHashSet(predictedDeps);
+        Set<LabeledDep> incorrectDeps = Sets.newHashSet(predictedDeps);
         incorrectDeps.removeAll(trueDeps);
-        Set<DependencyStructure> correctDeps = Sets.newHashSet(predictedDeps);
+        Set<LabeledDep> correctDeps = Sets.newHashSet(predictedDeps);
         correctDeps.retainAll(trueDeps);
         int correct = correctDeps.size();
         int falsePositive = predictedDeps.size() - correctDeps.size();
@@ -348,7 +347,7 @@ public class ParseCcg extends AbstractCli {
         labeledFn += falseNegative;
 
         // Compute the correct / incorrect unlabeled dependencies.
-        Set<DependencyStructure> unlabeledPredicted = stripDependencyLabels(predictedDeps);
+        Set<LabeledDep> unlabeledPredicted = stripDependencyLabels(predictedDeps);
         trueDeps = stripDependencyLabels(trueDeps);
         incorrectDeps = Sets.newHashSet(unlabeledPredicted);
         incorrectDeps.removeAll(trueDeps);
@@ -372,6 +371,33 @@ public class ParseCcg extends AbstractCli {
       return new CcgLoss(labeledTp, labeledFp, labeledFn, unlabeledTp, unlabeledFp, unlabeledFn,
           numParsed, 1);
     }
+    
+    /*
+     * Maps dependencies produced by the parser into the dependencies required for
+     * evaluation.
+     */
+    private List<LabeledDep> dependenciesToLabeledDeps(Collection<DependencyStructure> deps,
+        List<SyntacticCategory> lexicalCategories) {
+      List<LabeledDep> labeledDeps = Lists.newArrayList();
+      for (DependencyStructure dep : deps) {
+        int headIndex = dep.getHeadWordIndex();
+        labeledDeps.add(new LabeledDep(dep.getHeadWordIndex(), dep.getObjectWordIndex(),
+            lexicalCategories.get(headIndex), dep.getArgIndex()));
+      }
+      return labeledDeps;
+    }
+    
+    /*
+     * Removes the syntactic category and argument number from labeled dependencies,
+     * converting them into unlabeled dependencies.
+     */
+    private Set<LabeledDep> stripDependencyLabels(Collection<LabeledDep> dependencies) {
+      Set<LabeledDep> deps = Sets.newHashSet();
+      for (LabeledDep oldDep : dependencies) {
+        deps.add(new LabeledDep(oldDep.getHeadWordIndex(), oldDep.getArgWordIndex(), null, -1));
+      }
+      return deps;
+    }
   }
   
   public static class CcgLossReducer extends SimpleReducer<CcgLoss> {
@@ -383,6 +409,76 @@ public class ParseCcg extends AbstractCli {
     @Override
     public CcgLoss reduce(CcgLoss item, CcgLoss accumulated) {
       return accumulated.add(item);
+    }
+  }
+
+  private static class LabeledDep {
+    private final int headWordIndex;
+    private final int argWordIndex;
+
+    private final SyntacticCategory syntax;
+    private final int argNum;
+
+    public LabeledDep(int headWordIndex, int argWordIndex, SyntacticCategory syntax, int argNum) {
+      this.headWordIndex = headWordIndex;
+      this.argWordIndex = argWordIndex;
+      this.syntax = syntax;
+      this.argNum = argNum;
+    }
+
+    public int getHeadWordIndex() {
+      return headWordIndex;
+    }
+
+    public int getArgWordIndex() {
+      return argWordIndex;
+    }
+
+    public SyntacticCategory getSyntax() {
+      return syntax;
+    }
+
+    public int getArgNum() {
+      return argNum;
+    }
+    
+    @Override
+    public String toString() {
+      return headWordIndex + "," + syntax + "," + argNum + "," + argWordIndex;
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + argNum;
+      result = prime * result + argWordIndex;
+      result = prime * result + headWordIndex;
+      result = prime * result + ((syntax == null) ? 0 : syntax.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      LabeledDep other = (LabeledDep) obj;
+      if (argNum != other.argNum)
+        return false;
+      if (argWordIndex != other.argWordIndex)
+        return false;
+      if (headWordIndex != other.headWordIndex)
+        return false;
+      if (syntax == null) {
+        if (other.syntax != null)
+          return false;
+      } else if (!syntax.equals(other.syntax))
+        return false;
+      return true;
     }
   }
 }

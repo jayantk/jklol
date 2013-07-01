@@ -6,7 +6,7 @@ public class DependencyStructure {
 
   private final String object;
   private final int objectWordIndex;
-  
+
   private final int argumentNumber;
   
   public DependencyStructure(String head, int headWordIndex, String object, 

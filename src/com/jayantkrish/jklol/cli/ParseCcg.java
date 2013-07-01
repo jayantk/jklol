@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
@@ -90,7 +91,9 @@ public class ParseCcg extends AbstractCli {
       }
       System.out.println(testExamples.size() + " test examples after filtering.");
 
-      CcgLoss loss = runTestSetEvaluation(ccgParser, testExamples, options.valueOf(beamSize));
+      SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
+          options.valueOf(beamSize), -1, null, 0.0);
+      CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser);
       System.out.println(loss);
     } else {
       // Parse a string from the command line.
@@ -149,9 +152,9 @@ public class ParseCcg extends AbstractCli {
     }
   }
 
-  public static CcgLoss runTestSetEvaluation(CcgParser ccgParser, Collection<CcgExample> testExamples,
-      int beamSize) {
-    CcgLossMapper mapper = new CcgLossMapper(ccgParser, beamSize);
+  public static CcgLoss runTestSetEvaluation(Collection<CcgExample> testExamples, 
+      SupertaggingCcgParser ccgParser) {
+    CcgLossMapper mapper = new CcgLossMapper(ccgParser);
     CcgLossReducer reducer = new CcgLossReducer();
     return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
   }
@@ -290,19 +293,17 @@ public class ParseCcg extends AbstractCli {
   
   public static class CcgLossMapper extends Mapper<CcgExample, CcgLoss> {
     
-    private final CcgParser parser;
-    private final int beamSize;
-    
-    public CcgLossMapper(CcgParser parser, int beamSize) {
+    private final SupertaggingCcgParser parser;
+
+    public CcgLossMapper(SupertaggingCcgParser parser) {
       this.parser = Preconditions.checkNotNull(parser);
-      this.beamSize = beamSize;
     }
-    
+
     @Override
     public CcgLoss map(CcgExample example) {
       int labeledTp = 0, labeledFp = 0, labeledFn = 0, unlabeledTp = 0, unlabeledFp = 0, unlabeledFn = 0;
-      int numParsed = 0, numExamples = 0;
-      List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags(), beamSize);
+      int numParsed = 0;
+      List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags());
       System.out.println("SENT: " + example.getWords());
       printCcgParses(parses, 1, false, false);
 

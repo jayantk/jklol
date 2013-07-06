@@ -15,10 +15,13 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
+import com.jayantkrish.jklol.ccg.SyntacticChartFilter;
+import com.jayantkrish.jklol.ccg.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
@@ -94,7 +97,7 @@ public class ParseCcg extends AbstractCli {
 
       SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
           options.valueOf(beamSize), -1, null, 0.0);
-      CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser);
+      CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, false);
       System.out.println(loss);
     } else {
       // Parse a string from the command line.
@@ -154,10 +157,103 @@ public class ParseCcg extends AbstractCli {
   }
 
   public static CcgLoss runTestSetEvaluation(Collection<CcgExample> testExamples, 
-      SupertaggingCcgParser ccgParser) {
-    CcgLossMapper mapper = new CcgLossMapper(ccgParser);
+      SupertaggingCcgParser ccgParser, boolean useCcgbankDerivations) {
+    CcgLossMapper mapper = new CcgLossMapper(ccgParser, useCcgbankDerivations);
     CcgLossReducer reducer = new CcgLossReducer();
     return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
+  }
+  
+  public static CcgLoss computeLoss(CcgParse predictedParse, CcgExample example) {
+    List<LabeledDep> predictedDeps = dependenciesToLabeledDeps(
+        predictedParse.getAllDependencies(), predictedParse.getSyntacticParse()); 
+    List<LabeledDep> trueDeps = dependenciesToLabeledDeps(example.getDependencies(),
+        example.getSyntacticParse());
+
+    System.out.println("Predicted: ");
+    for (LabeledDep dep : predictedDeps) {
+      if (trueDeps.contains(dep)) {
+        System.out.println(dep);
+      } else {
+        System.out.println(dep + "\tINCORRECT");
+      }
+    }
+
+    System.out.println("Missing true dependencies:");
+    for (LabeledDep dep : trueDeps) {
+      if (!predictedDeps.contains(dep)) {
+        System.out.println(dep);
+      }
+    }
+
+    // Compute the correct / incorrect labeled dependencies for
+    // the current example.
+    Set<LabeledDep> incorrectDeps = Sets.newHashSet(predictedDeps);
+    incorrectDeps.removeAll(trueDeps);
+    Set<LabeledDep> correctDeps = Sets.newHashSet(predictedDeps);
+    correctDeps.retainAll(trueDeps);
+    int correct = correctDeps.size();
+    int falsePositive = predictedDeps.size() - correctDeps.size();
+    int falseNegative = trueDeps.size() - correctDeps.size();
+    System.out.println();
+    double precision = ((double) correct) / (correct + falsePositive);
+    double recall = ((double) correct) / (correct + falseNegative);
+    System.out.println("Labeled Precision: " + precision);
+    System.out.println("Labeled Recall: " + recall);
+
+    // Update the labeled dependency score accumulators for the
+    // whole data set.
+    int labeledTp = correct;
+    int labeledFp = falsePositive;
+    int labeledFn = falseNegative;
+
+    // Compute the correct / incorrect unlabeled dependencies.
+    Set<LabeledDep> unlabeledPredicted = stripDependencyLabels(predictedDeps);
+    Set<LabeledDep> unlabeledTrueDeps = stripDependencyLabels(trueDeps);
+    incorrectDeps = Sets.newHashSet(unlabeledPredicted);
+    incorrectDeps.removeAll(unlabeledTrueDeps);
+    correctDeps = Sets.newHashSet(unlabeledPredicted);
+    correctDeps.retainAll(unlabeledTrueDeps);
+    correct = correctDeps.size();
+    falsePositive = unlabeledPredicted.size() - correctDeps.size();
+    falseNegative = unlabeledTrueDeps.size() - correctDeps.size();
+    precision = ((double) correct) / (correct + falsePositive);
+    recall = ((double) correct) / (correct + falseNegative);
+    System.out.println("Unlabeled Precision: " + precision);
+    System.out.println("Unlabeled Recall: " + recall);
+
+    int unlabeledTp = correct;
+    int unlabeledFp = falsePositive;
+    int unlabeledFn = falseNegative;
+
+    return new CcgLoss(labeledTp, labeledFp, labeledFn, unlabeledTp, unlabeledFp, unlabeledFn,
+        1, 1);
+  }
+
+  /*
+   * Maps dependencies produced by the parser into the dependencies required for
+   * evaluation.
+   */
+  private static List<LabeledDep> dependenciesToLabeledDeps(Collection<DependencyStructure> deps,
+      CcgSyntaxTree syntaxTree) {
+    List<LabeledDep> labeledDeps = Lists.newArrayList();
+    for (DependencyStructure dep : deps) {
+      int headIndex = dep.getHeadWordIndex();
+      labeledDeps.add(new LabeledDep(dep.getHeadWordIndex(), dep.getObjectWordIndex(),
+          syntaxTree.getLexiconEntryForWordIndex(headIndex).getWithoutFeatures(), dep.getArgIndex()));
+    }
+    return labeledDeps;
+  }
+
+  /*
+   * Removes the syntactic category and argument number from labeled dependencies,
+   * converting them into unlabeled dependencies.
+   */
+  private static Set<LabeledDep> stripDependencyLabels(Collection<LabeledDep> dependencies) {
+    Set<LabeledDep> deps = Sets.newHashSet();
+    for (LabeledDep oldDep : dependencies) {
+      deps.add(new LabeledDep(oldDep.getHeadWordIndex(), oldDep.getArgWordIndex(), null, -1));
+    }
+    return deps;
   }
 
   public static class CcgLoss {
@@ -286,117 +382,30 @@ public class ParseCcg extends AbstractCli {
   public static class CcgLossMapper extends Mapper<CcgExample, CcgLoss> {
     
     private final SupertaggingCcgParser parser;
+    private final boolean useCcgbankDerivation;
 
-    public CcgLossMapper(SupertaggingCcgParser parser) {
+    public CcgLossMapper(SupertaggingCcgParser parser, boolean useCcgbankDerivation) {
       this.parser = Preconditions.checkNotNull(parser);
+      this.useCcgbankDerivation = useCcgbankDerivation;
     }
 
     @Override
     public CcgLoss map(CcgExample example) {
-      int labeledTp = 0, labeledFp = 0, labeledFn = 0, unlabeledTp = 0, unlabeledFp = 0, unlabeledFn = 0;
-      int numParsed = 0;
-      List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags());
+      List<CcgParse> parses = null;
+      if (useCcgbankDerivation) {
+        SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse(), new DefaultCompatibilityFunction());
+        parses = parser.beamSearch(example.getWords(), example.getPosTags(), filter);
+      } else {
+        parses = parser.beamSearch(example.getWords(), example.getPosTags());
+      }
       System.out.println("SENT: " + example.getWords());
       printCcgParses(parses, 1, false, false);
 
       if (parses.size() > 0) {
-        List<SyntacticCategory> predictedLexicalCategories = parses.get(0)
-            .getSyntacticParse().getAllSpannedLexiconEntries();
-        List<LabeledDep> predictedDeps = dependenciesToLabeledDeps(
-            parses.get(0).getAllDependencies(), predictedLexicalCategories);
-
-        List<SyntacticCategory> trueLexicalCategories = example.getSyntacticParse().getAllSpannedLexiconEntries();
-        Set<LabeledDep> trueDeps = Sets.newHashSet(dependenciesToLabeledDeps(
-            example.getDependencies(),trueLexicalCategories));
-
-        System.out.println("Predicted: ");
-        for (LabeledDep dep : predictedDeps) {
-          if (trueDeps.contains(dep)) {
-            System.out.println(dep);
-          } else {
-            System.out.println(dep + "\tINCORRECT");
-          }
-        }
-
-        System.out.println("Missing true dependencies:");
-        for (LabeledDep dep : trueDeps) {
-          if (!predictedDeps.contains(dep)) {
-            System.out.println(dep);
-          }
-        }
-
-        // Compute the correct / incorrect labeled dependencies for
-        // the current example.
-        Set<LabeledDep> incorrectDeps = Sets.newHashSet(predictedDeps);
-        incorrectDeps.removeAll(trueDeps);
-        Set<LabeledDep> correctDeps = Sets.newHashSet(predictedDeps);
-        correctDeps.retainAll(trueDeps);
-        int correct = correctDeps.size();
-        int falsePositive = predictedDeps.size() - correctDeps.size();
-        int falseNegative = trueDeps.size() - correctDeps.size();
-        System.out.println();
-        double precision = ((double) correct) / (correct + falsePositive);
-        double recall = ((double) correct) / (correct + falseNegative);
-        System.out.println("Labeled Precision: " + precision);
-        System.out.println("Labeled Recall: " + recall);
-
-        // Update the labeled dependency score accumulators for the
-        // whole data set.
-        labeledTp += correct;
-        labeledFp += falsePositive;
-        labeledFn += falseNegative;
-
-        // Compute the correct / incorrect unlabeled dependencies.
-        Set<LabeledDep> unlabeledPredicted = stripDependencyLabels(predictedDeps);
-        trueDeps = stripDependencyLabels(trueDeps);
-        incorrectDeps = Sets.newHashSet(unlabeledPredicted);
-        incorrectDeps.removeAll(trueDeps);
-        correctDeps = Sets.newHashSet(unlabeledPredicted);
-        correctDeps.retainAll(trueDeps);
-        correct = correctDeps.size();
-        falsePositive = unlabeledPredicted.size() - correctDeps.size();
-        falseNegative = trueDeps.size() - correctDeps.size();
-        precision = ((double) correct) / (correct + falsePositive);
-        recall = ((double) correct) / (correct + falseNegative);
-        System.out.println("Unlabeled Precision: " + precision);
-        System.out.println("Unlabeled Recall: " + recall);
-
-        unlabeledTp += correct;
-        unlabeledFp += falsePositive;
-        unlabeledFn += falseNegative;
-
-        numParsed += 1;
+        return computeLoss(parses.get(0), example);
+      } else {
+        return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 1);
       }
-
-      return new CcgLoss(labeledTp, labeledFp, labeledFn, unlabeledTp, unlabeledFp, unlabeledFn,
-          numParsed, 1);
-    }
-    
-    /*
-     * Maps dependencies produced by the parser into the dependencies required for
-     * evaluation.
-     */
-    private List<LabeledDep> dependenciesToLabeledDeps(Collection<DependencyStructure> deps,
-        List<SyntacticCategory> lexicalCategories) {
-      List<LabeledDep> labeledDeps = Lists.newArrayList();
-      for (DependencyStructure dep : deps) {
-        int headIndex = dep.getHeadWordIndex();
-        labeledDeps.add(new LabeledDep(dep.getHeadWordIndex(), dep.getObjectWordIndex(),
-            lexicalCategories.get(headIndex), dep.getArgIndex()));
-      }
-      return labeledDeps;
-    }
-    
-    /*
-     * Removes the syntactic category and argument number from labeled dependencies,
-     * converting them into unlabeled dependencies.
-     */
-    private Set<LabeledDep> stripDependencyLabels(Collection<LabeledDep> dependencies) {
-      Set<LabeledDep> deps = Sets.newHashSet();
-      for (LabeledDep oldDep : dependencies) {
-        deps.add(new LabeledDep(oldDep.getHeadWordIndex(), oldDep.getArgWordIndex(), null, -1));
-      }
-      return deps;
     }
   }
   

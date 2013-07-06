@@ -32,14 +32,19 @@ public class SupertaggingCcgParser {
     this.multitagThreshold = multitagThreshold;
   }
 
-  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags) {
-    ChartFilter filter = null;
+  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, ChartFilter inputFilter) {
+    ChartFilter filter = inputFilter;
     if (supertagger != null) {
       List<WordAndPos> supertaggerInput = WordAndPos.createExample(terminals, posTags);
       SupertaggedSentence supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThreshold);
       
-      filter = new SupertagChartFilter(supertaggedSentence.getLabels(), new DefaultCompatibilityFunction());
+      filter = ConjunctionChartFilter.create(filter,
+          new SupertagChartFilter(supertaggedSentence.getLabels(), new DefaultCompatibilityFunction()));
     }
     return parser.beamSearch(terminals, posTags, beamSize, filter, new NullLogFunction(), maxParseTimeMillis);
+  }
+  
+  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags) {
+    return beamSearch(terminals, posTags, null);
   }
 }

@@ -279,6 +279,20 @@ public class CcgSyntaxTree {
       accumulator.add(originalSyntax);
     }
   }
+  
+  public SyntacticCategory getLexiconEntryForWordIndex(int wordIndex) {
+    Preconditions.checkArgument(spanStart <= wordIndex && wordIndex <= spanEnd);
+    
+    if (isTerminal()) {
+      return originalSyntax;
+    } else {
+      if (wordIndex <= left.getSpanEnd()) {
+        return left.getLexiconEntryForWordIndex(wordIndex);
+      } else {
+        return right.getLexiconEntryForWordIndex(wordIndex);
+      }
+    }
+  }
 
   public CcgSyntaxTree getLeft() {
     return left;

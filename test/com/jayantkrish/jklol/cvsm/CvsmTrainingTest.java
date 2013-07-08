@@ -12,14 +12,16 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
+import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmValueLoss;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.Pseudorandom;
@@ -150,6 +152,17 @@ public class CvsmTrainingTest extends TestCase {
       { 0, 0, 0 },
   };
 
+  private static final String[] valueExamples = {
+    "(op:matvecmul -1 (op:log (op:logistic (op:matvecmul vec:block vec:table))))",
+    "(op:matvecmul -1 (op:log (op:add 1 (op:matvecmul -1 (op:logistic (op:matvecmul vec:logistic vec:table))))))"
+  };
+
+  // These are irrelevant, since value training simply
+  // aims to minimize the function value.
+  private static final double[][] valueTargets = {
+      { 0 }, { 0 },
+  };
+
   private static final int NUM_DIMS = 3;
 
   private ParametricCcgParser family;
@@ -206,73 +219,79 @@ public class CvsmTrainingTest extends TestCase {
   }
 
   public void testCvsmAffineTraining() {
-    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testLowRankCvsmAffineTraining() {
-    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), lowRankCvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), lowRankCvsmFamily, new CvsmSquareLoss(), 5000);
   }
   
   public void testCvsmDiagTraining() {
-    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), cvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
 
   public void testLowRankCvsmDiagTraining() {
-    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), lowRankCvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), lowRankCvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testDiagCvsmDiagTraining() {
-    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), diagCvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), diagCvsmFamily, new CvsmSquareLoss(), -1);
   }
 
   public void testCvsmSoftmaxTraining() {
-    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), cvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testLowRankCvsmSoftmaxTraining() {
-    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), lowRankCvsmFamily, 5000);
+    runCvsmTrainingTest(parseExamples(softmaxExamples, softmaxTargets), lowRankCvsmFamily, new CvsmSquareLoss(), 5000);
   }
 
   public void testCvsmLogisticTraining() {
-    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), cvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testLowRankCvsmLogisticTraining() {
-    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), lowRankCvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), lowRankCvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testCvsmTanhTraining() {
-    runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), cvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testLowRankCvsmTanhTraining() {
-    runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), lowRankCvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), lowRankCvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testCvsmLogTraining() {
-    runCvsmTrainingTest(parseExamples(logExamples, logTargets), cvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(logExamples, logTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testLowRankCvsmLogTraining() {
-    runCvsmTrainingTest(parseExamples(logExamples, logTargets), lowRankCvsmFamily, -1);
+    runCvsmTrainingTest(parseExamples(logExamples, logTargets), lowRankCvsmFamily, new CvsmSquareLoss(), -1);
   }
 
   public void testCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
-    runCvsmTrainingTest(cvsmTensorExamples, cvsmFamily, -1);
+    runCvsmTrainingTest(cvsmTensorExamples, cvsmFamily, new CvsmSquareLoss(), -1);
   }
   
   public void testLowRankCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
-    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily, 10000);
+    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily, new CvsmSquareLoss(), 10000);
+  }
+  
+  public void testCvsmValueTraining() {
+    List<CvsmExample> examples = parseExamples(valueExamples, valueTargets);
+    runCvsmTrainingTest(examples, cvsmFamily, new CvsmValueLoss(), 1000);
   }
 
-  private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples, CvsmFamily cvsmFamily, int iterations) {
+  private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples,
+      CvsmFamily cvsmFamily, CvsmLoss loss, int iterations) {
     if (iterations == -1) { iterations = 1000; } 
 
-    CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, new CvsmSquareLoss());
+    CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, loss);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        iterations, 1, 1.0, true, 0.0, new DefaultLogFunction(1, false));
+        iterations, 1, 1.0, true, 0.0, new NullLogFunction());
 
     SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
     initializeParameters(cvsmFamily, initialParameters);
@@ -286,10 +305,9 @@ public class CvsmTrainingTest extends TestCase {
 
     for (CvsmExample example : cvsmExamples) {
       CvsmTree tree = cvsm.getInterpretationTree(example.getLogicalForm());
-      Tensor predictedValue = tree.getValue().getTensor();
+      CvsmTree augmentedTree = loss.augmentTreeWithLoss(tree, cvsm, example.getTargets());
 
-      Tensor deltas = predictedValue.elementwiseAddition(example.getTargets().elementwiseProduct(-1.0));
-      double squareLoss = deltas.innerProduct(deltas).getByDimKey();
+      double squareLoss = augmentedTree.getLoss();
       System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
       assertTrue(squareLoss <= 0.1);
     }
@@ -308,7 +326,7 @@ public class CvsmTrainingTest extends TestCase {
 
     List<CvsmExample> cvsmExamples = Lists.newArrayList();
     for (int i = 0; i < examples.length; i++) {
-      Tensor target = new DenseTensor(new int[] { 0 }, new int[] { NUM_DIMS }, targets[i]);
+      Tensor target = new DenseTensor(new int[] { 0 }, new int[] { targets[i].length }, targets[i]);
 
       cvsmExamples.add(new CvsmExample(exp.parseSingleExpression(examples[i]), target, null));
     }

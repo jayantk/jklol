@@ -6,7 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -34,25 +34,21 @@ public class Cvsm implements Serializable {
   private static final long serialVersionUID = 1L;
   
   private final IndexedList<String> tensorNames;
-  private final List<LazyLowRankTensor> tensors;
+  private final CvsmParameters tensors;
 
-  public Cvsm(IndexedList<String> tensorNames, List<LazyLowRankTensor> tensors) {
+  public Cvsm(IndexedList<String> tensorNames, CvsmParameters tensors) {
     this.tensorNames = Preconditions.checkNotNull(tensorNames);
-    this.tensors = Lists.newArrayList(Preconditions.checkNotNull(tensors));
+    this.tensors = Preconditions.checkNotNull(tensors);
     Preconditions.checkArgument(tensors.size() == tensorNames.size());
   }
   
   public static Cvsm fromTensors(IndexedList<String> tensorNames, List<LowRankTensor> tensors) {
-    List<LazyLowRankTensor> lazyTensors = Lists.newArrayList();
-    for (LowRankTensor tensor : tensors) {
-      lazyTensors.add(new TensorLazyLowRankTensor(tensor));
-    }
-    return new Cvsm(tensorNames, lazyTensors);
+    return new Cvsm(tensorNames, new TensorCvsmParameters(tensors));
   }
   
   public LowRankTensor getTensor(String name) {
     int index = tensorNames.getIndex(name);
-    return tensors.get(index).get();
+    return tensors.get(index);
   }
 
   public CvsmTree getInterpretationTree(Expression logicalForm) {
@@ -125,21 +121,27 @@ public class Cvsm implements Serializable {
     }
   }
   
-  public static interface LazyLowRankTensor extends Serializable {
-    public LowRankTensor get();
+  public static interface CvsmParameters extends Serializable {
+    public LowRankTensor get(int index);
+    
+    public int size();
   }
   
-  public static class TensorLazyLowRankTensor implements LazyLowRankTensor {
+  public static class TensorCvsmParameters implements CvsmParameters {
     private static final long serialVersionUID = 1L;
 
-    private final LowRankTensor tensor;
+    private final List<LowRankTensor> tensors;
     
-    public TensorLazyLowRankTensor(LowRankTensor tensor) {
-      this.tensor = Preconditions.checkNotNull(tensor);
+    public TensorCvsmParameters(List<LowRankTensor> tensors) {
+      this.tensors = ImmutableList.copyOf(tensors);
     }
 
-    public LowRankTensor get() {
-      return tensor;
+    public LowRankTensor get(int index) {
+      return tensors.get(index);
+    }
+    
+    public int size() {
+      return tensors.size();
     }
   }
 }

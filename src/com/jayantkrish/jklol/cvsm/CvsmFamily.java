@@ -4,8 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.cvsm.Cvsm.LazyLowRankTensor;
+import com.jayantkrish.jklol.cvsm.Cvsm.CvsmParameters;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -89,15 +88,8 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
 
   @Override
   public Cvsm getModelFromParameters(SufficientStatistics parameters) {
-    List<LazyLowRankTensor> tensors = Lists.newArrayList();
     CvsmSufficientStatistics cvsmStats = (CvsmSufficientStatistics) parameters;
-    
-    Preconditions.checkArgument(cvsmStats.size() == families.size());
-    for (int i = 0; i < families.size(); i++) {
-      tensors.add(new ParameterLazyLowRankTensor(families.get(i), cvsmStats, i));
-    }
-
-    return new Cvsm(valueNames, tensors);
+    return new Cvsm(valueNames, new ParameterCvsmParameters(families, cvsmStats));
   }
 
   public void incrementSufficientStatistics(CvsmGradient increment, Cvsm currentValues,
@@ -139,29 +131,31 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
     }
     return sb.toString();
   }
-  
-  
-  private static class ParameterLazyLowRankTensor implements LazyLowRankTensor {
+
+  private static class ParameterCvsmParameters implements CvsmParameters {
     private static final long serialVersionUID = 1L;
 
-    private final LrtFamily family;
+    private final List<LrtFamily> families;
     private final CvsmSufficientStatistics parameters;
-    private final int index;
-    private LowRankTensor tensor;
+    private LowRankTensor[] tensors;
     
-    public ParameterLazyLowRankTensor(LrtFamily family, 
-        CvsmSufficientStatistics parameters, int index) {
-      this.family = Preconditions.checkNotNull(family);
+    public ParameterCvsmParameters(List<LrtFamily> families, CvsmSufficientStatistics parameters) {
+      this.families = Preconditions.checkNotNull(families);
       this.parameters = Preconditions.checkNotNull(parameters);
-      this.index = index;
+      this.tensors = new LowRankTensor[parameters.size()];
+    }
+
+    public LowRankTensor get(int index) {
+      if (tensors[index] == null) {
+        LowRankTensor computed = families.get(index).getModelFromParameters(
+            parameters.getSufficientStatistics(index));
+        tensors[index] = computed;
+      }
+      return tensors[index];
     }
     
-    public LowRankTensor get() {
-      if (tensor == null) {
-        LowRankTensor computed = family.getModelFromParameters(parameters.getSufficientStatistics(index));
-        tensor = computed;
-      }
-      return tensor;
+    public int size() {
+      return parameters.size();
     }
   }
 }

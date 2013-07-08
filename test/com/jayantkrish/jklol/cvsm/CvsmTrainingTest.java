@@ -46,7 +46,8 @@ public class CvsmTrainingTest extends TestCase {
       "vec:block",
       "vec:table",
       "vec:distribution",
-      "vec:logistic"
+      "vec:logistic",
+      "vec:log",
   };
 
   private static final String[] matrixNames = {
@@ -121,6 +122,14 @@ public class CvsmTrainingTest extends TestCase {
 
   private static final double[][] tanhTargets = {
       { 1.0, 0.0, -0.5 },
+  };
+  
+  private static final String[] logExamples = {
+    "(op:log (op:logistic vec:log))"
+  };
+  
+  private static final double[][] logTargets = {
+    { 0.0, -0.5, -1.0 }
   };
 
   private static final String[] tprodExamples = {
@@ -239,6 +248,14 @@ public class CvsmTrainingTest extends TestCase {
   public void testLowRankCvsmTanhTraining() {
     runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), lowRankCvsmFamily, -1);
   }
+  
+  public void testCvsmLogTraining() {
+    runCvsmTrainingTest(parseExamples(logExamples, logTargets), cvsmFamily, -1);
+  }
+  
+  public void testLowRankCvsmLogTraining() {
+    runCvsmTrainingTest(parseExamples(logExamples, logTargets), lowRankCvsmFamily, -1);
+  }
 
   public void testCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
@@ -255,7 +272,7 @@ public class CvsmTrainingTest extends TestCase {
 
     CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, new CvsmSquareLoss());
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        iterations, 1, 1.0, true, 0.0001, new DefaultLogFunction(1, false));
+        iterations, 1, 1.0, true, 0.0, new DefaultLogFunction(1, false));
 
     SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
     initializeParameters(cvsmFamily, initialParameters);

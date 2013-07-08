@@ -1084,6 +1084,19 @@ public class CcgParser implements Serializable {
   public DiscreteFactor getSyntaxDistribution() {
     return compiledSyntaxDistribution;
   }
+  
+  public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
+    return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar, terminalSyntaxVar,
+        terminalPosDistribution, terminalSyntaxDistribution, dependencyHeadVar, dependencyArgNumVar, dependencyArgVar,
+        dependencyDistribution, wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
+        verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, 
+        binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, searchMoveVar,
+        newCompiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping);
+  }
+
+  public DiscreteFactor getBinaryRuleDistribution() {
+    return binaryRuleDistribution;
+  }
 
   /**
    * Performs a beam search to find the best CCG parses of

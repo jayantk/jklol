@@ -37,7 +37,7 @@ public class CvsmLogTree extends AbstractCvsmTree {
 
   @Override
   public void backpropagateGradient(LowRankTensor treeGradient, CvsmGradient gradient) {
-    Tensor nodeGradient = subtree.getValue().getTensor().elementwiseInverse();
+    Tensor nodeGradient = subtree.getValue().getTensor();
     Tensor treeGradientTensor = treeGradient.getTensor();
 
     LowRankTensor gradientLowRankTensor = new TensorLowRankTensor(treeGradientTensor.elementwiseProduct(nodeGradient)); 

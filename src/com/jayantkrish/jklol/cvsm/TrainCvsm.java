@@ -28,29 +28,53 @@ import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
+/**
+ * Trains a compositional vector space model. This program can also be used to
+ * perform general optimization of an objective function that decomposes into a
+ * sum of terms (which is the case for essentially all machine learning
+ * objectives).
+ * <p>
+ * The input to the program is a collection of training examples, where each
+ * example represents a term in an objective function, given as a mathematical
+ * function in LISP-like notation. These expressions may contain variables
+ * representing vectors, matrices or tensors whose dimensions, ranks, and
+ * initial values are given in a separate input. The output of the program is
+ * new values for each of these variables estimated by minimizing the given
+ * objective function.
+ * <p>
+ * Various optimization algorithms are supported, including stochastic gradient
+ * descent and LBFGS; see {@link AbstractCli} for information about configuring
+ * the optimization.
+ * 
+ * @author jayant
+ * 
+ */
 public class TrainCvsm extends AbstractCli {
 
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> initialVectors;
 
-  private OptionSpec<Void> fixInitializedVectors;  
-  private OptionSpec<Void> regularizeDeltas;  
+  private OptionSpec<Void> fixInitializedVectors;
+  private OptionSpec<Void> regularizeDeltas;
   private OptionSpec<Void> regularizeVectorDeltas;
   private OptionSpec<Void> initializeTensorsToIdentity;
   private OptionSpec<Void> squareLoss;
   private OptionSpec<Void> klLoss;
 
   public TrainCvsm() {
-    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE, CommonOptions.LBFGS);
+    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE,
+        CommonOptions.LBFGS);
   }
 
   @Override
   public void initializeOptions(OptionParser parser) {
     trainingFilename = parser.accepts("training").withRequiredArg()
         .ofType(String.class).required();
-    modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
-    initialVectors = parser.accepts("initialVectors").withRequiredArg().ofType(String.class).required();
+    modelOutput = parser.accepts("output").withRequiredArg()
+        .ofType(String.class).required();
+    initialVectors = parser.accepts("initialVectors").withRequiredArg()
+        .ofType(String.class).required();
 
     fixInitializedVectors = parser.accepts("fixInitializedVectors");
     regularizeDeltas = parser.accepts("regularizeDeltas");
@@ -62,16 +86,21 @@ public class TrainCvsm extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    List<CvsmExample> examples = CvsmUtils.readTrainingData(options.valueOf(trainingFilename));
-
+    // Parse the input files to create training examples and get the
+    // specifications of the vectors, matrices and tensors which are
+    // being optimized.
+    List<CvsmExample> examples = CvsmUtils.readTrainingData(options
+        .valueOf(trainingFilename));
     Map<String, TensorSpec> vectors = Maps.newTreeMap();
     vectors = readVectors(options.valueOf(initialVectors));
 
     CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
-    SufficientStatistics trainedParameters = estimateParameters(family, examples, vectors,
-        options.has(squareLoss), options.has(klLoss), options.has(initializeTensorsToIdentity),
-        options.has(lbfgs),  options.valueOf(lbfgsMinibatchSize), options.valueOf(lbfgsMinibatchIterations),
-        options.has(fixInitializedVectors), options.has(regularizeDeltas), options.has(regularizeVectorDeltas));
+
+    SufficientStatistics trainedParameters = estimateParameters(family,
+        examples, vectors, options.has(squareLoss), options.has(klLoss),
+        options.has(initializeTensorsToIdentity),
+        options.has(fixInitializedVectors), options.has(regularizeDeltas),
+        options.has(regularizeVectorDeltas));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -84,7 +113,8 @@ public class TrainCvsm extends AbstractCli {
       String name = parts[0].trim();
       int[] sizes = ArrayUtils.parseInts(parts[1].split(","));
       int rank = Integer.parseInt(parts[2].trim());
-      double[] values = parts.length > 3 ? ArrayUtils.parseDoubles(parts[3].split(",")) : null; 
+      double[] values = parts.length > 3 ? ArrayUtils.parseDoubles(parts[3]
+          .split(",")) : null;
 
       vectors.put(name, new TensorSpec(sizes, rank, values));
     }
@@ -94,7 +124,6 @@ public class TrainCvsm extends AbstractCli {
   private SufficientStatistics estimateParameters(CvsmFamily family,
       List<CvsmExample> examples, Map<String, TensorSpec> initialParameterMap,
       boolean useSquareLoss, boolean useKlLoss, boolean initializeTensorsToIdentity,
-      boolean useLbfgs, int lbfgsMinibatchSize, int lbfgsMinibatchIterations,
       boolean fixInitializedVectors, boolean regularizeDeltas, boolean regularizeVectorDeltas) {
 
     CvsmLoss loss = null;
@@ -106,8 +135,10 @@ public class TrainCvsm extends AbstractCli {
       loss = new CvsmValueLoss();
     }
 
-    GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(family, loss);
-    SufficientStatistics initialParameters = family.getNewSufficientStatistics();
+    GradientOracle<Cvsm, CvsmExample> oracle = new CvsmLoglikelihoodOracle(
+        family, loss);
+    SufficientStatistics initialParameters = family
+        .getNewSufficientStatistics();
     if (initializeTensorsToIdentity) {
       if (regularizeDeltas) {
         family.setInitialTensorsToIdentity();
@@ -130,7 +161,8 @@ public class TrainCvsm extends AbstractCli {
             TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) curStats;
             Tensor tensor = tensorStats.get();
             Tensor increment = new DenseTensor(tensor.getDimensionNumbers(),
-                tensor.getDimensionSizes(), initialParameterMap.get(name).getValues());
+                tensor.getDimensionSizes(), initialParameterMap.get(name)
+                    .getValues());
 
             if (!regularizeVectorDeltas) {
               tensorStats.increment(tensorStats, -1.0);
@@ -162,16 +194,20 @@ public class TrainCvsm extends AbstractCli {
       VariableNumMap vars = VariableNumMap.emptyMap();
       for (int i = 0; i < sizes.length; i++) {
         if (!varMap.containsKey(sizes[i])) {
-          varMap.put(sizes[i], DiscreteVariable.sequence("seq-" + sizes[i], sizes[i]));
+          varMap.put(sizes[i],
+              DiscreteVariable.sequence("seq-" + sizes[i], sizes[i]));
         }
         DiscreteVariable dimType = varMap.get(sizes[i]);
-        vars = vars.union(VariableNumMap.singleton(i, ("dim-" + i).intern(), dimType));
+        vars = vars.union(VariableNumMap.singleton(i, ("dim-" + i).intern(),
+            dimType));
       }
 
       LrtFamily family = null;
       if (spec.getRank() == -1 || sizes.length == 1) {
         if (spec.hasValues() && fixInitializedValues) {
-          family = new ConstantLrtFamily(vars, new TensorLowRankTensor(new DenseTensor(vars.getVariableNumsArray(), vars.getVariableSizes(), spec.getValues())));
+          family = new ConstantLrtFamily(vars, new TensorLowRankTensor(
+              new DenseTensor(vars.getVariableNumsArray(),
+                  vars.getVariableSizes(), spec.getValues())));
         } else {
           family = new TensorLrtFamily(vars);
         }
@@ -188,8 +224,13 @@ public class TrainCvsm extends AbstractCli {
 
   public static void main(String[] args) {
     new TrainCvsm().run(args);
-  } 
+  }
 
+  /**
+   * Dimensionality, rank, and initial value specification for a tensor.
+   * 
+   * @author jayant
+   */
   private static class TensorSpec {
     private final int[] sizes;
     private final int rank;

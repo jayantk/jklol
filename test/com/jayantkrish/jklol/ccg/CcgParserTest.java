@@ -124,10 +124,41 @@ public class CcgParserTest extends TestCase {
     exp = new ExpressionParser();
   }
 
-  public void testParse() {
+  public void testBeamSearch() {
     List<CcgParse> parses = parser.beamSearch(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
+    // CcgParse parse = parser.parse(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
+    
+    System.out.println(parse.getAllDependencies());
+
+    assertEquals(2.0, parse.getNodeProbability());
+    assertEquals(4.0, parse.getRight().getNodeProbability());
+    System.out.println(parse.getRight().getLeft());
+    assertEquals(4.0, parse.getRight().getLeft().getNodeProbability());
+    assertEquals(1.5, parse.getLeft().getNodeProbability());
+    assertEquals(1.5 * 0.3 * 4.0 * 4.0 * 2.0, parse.getSubtreeProbability());
+
+    assertEquals(5, parse.getAllDependencies().size());
+
+    assertEquals("eat", parse.getNodeDependencies().get(0).getHead());
+    assertEquals(1, parse.getNodeDependencies().get(0).getArgIndex());
+    assertEquals("i", parse.getNodeDependencies().get(0).getObject());
+    assertEquals("quickly", parse.getRight().getLeft().getAllDependencies().get(0).getHead());
+    assertEquals(1, parse.getRight().getLeft().getAllDependencies().get(0).getArgIndex());
+    assertEquals("eat", parse.getRight().getLeft().getAllDependencies().get(0).getObject());
+
+    assertEquals("eat", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
+    assertEquals("i", Iterables.getOnlyElement(parse.getLeft().getSemanticHeads()).getHead());
+
+    List<DependencyStructure> eatDeps = parse.getDependenciesWithHeadWord(2);
+    assertEquals(2, eatDeps.size());
+  }
+  
+  public void testExactParse() {
+    CcgParse parse = parser.parse(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
+
+    System.out.println(parse.getAllDependencies());
 
     assertEquals(2.0, parse.getNodeProbability());
     assertEquals(4.0, parse.getRight().getNodeProbability());
@@ -152,7 +183,7 @@ public class CcgParserTest extends TestCase {
     assertEquals(2, eatDeps.size());
   }
 
-  public void testParse2() {
+  public void testBeamSearch2() {
     List<CcgParse> parses = parser.beamSearch(
         Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 10);
 
@@ -196,13 +227,31 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(0.3 * 4 * 2 * 3 * 4, parse.getSubtreeProbability());
   }
+  
+  public void testExactParse2() {
+    CcgParse parse = parser.parse(
+        Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"));
 
-  public void testParse3() {
+    // The parse where "in" attaches to "people" should have higher
+    // probability.
+    assertEquals("in", parse.getNodeDependencies().get(0).getHead());
+    assertEquals(1, parse.getNodeDependencies().get(0).getArgIndex());
+    assertEquals("people", parse.getNodeDependencies().get(0).getObject());
+    assertEquals(0.3 * 4 * 2 * 2 * 3 * 4, parse.getSubtreeProbability());
+    assertEquals("people", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
+  }
+
+  public void testBeamSearch3() {
     List<CcgParse> parses = parser.beamSearch(
         Arrays.asList("green", "people"), 10);
 
     assertEquals(1, parses.size());
     assertEquals(2.0, parses.get(0).getSubtreeProbability());
+  }
+  
+  public void testExactParse3() {
+    CcgParse parse = parser.parse(Arrays.asList("green", "people"));
+    assertEquals(2.0, parse.getSubtreeProbability());
   }
 
   public void testParseLogicalFormApplication() {

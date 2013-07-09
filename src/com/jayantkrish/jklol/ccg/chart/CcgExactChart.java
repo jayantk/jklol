@@ -39,12 +39,11 @@ public class CcgExactChart extends AbstractCcgChart {
    * 
    * @param spanStart
    * @param spanEnd
-   * @param numParses
    * @param parser
    * @param syntaxVarType
    * @return
    */
-  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, int numParses,
+  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd,
       CcgParser parser, DiscreteVariable syntaxVarType) {
     double maxProb = -1;
     int maxEntryIndex = -1;
@@ -96,8 +95,8 @@ public class CcgExactChart extends AbstractCcgChart {
       double[] spanProbs = probabilities[spanStart][spanEnd];
       for (int i = 0; i < spanSize; i++) {
         ChartEntry other = spanChart[i];
-        if (other.getHeadedSyntax() == entryHeadedSyntax && unfilledDepsEqual(entry, other)
-            && assignmentEqual(entry, other)) {
+        if (other.getHeadedSyntax() == entryHeadedSyntax && longMultisetsEqual(entry.getUnfilledDependencies(), other.getUnfilledDependencies())
+            && longMultisetsEqual(entry.getAssignments(), other.getAssignments())) {
           // Both entries have the same syntactic category and
           // semantics. Retain the entry with the highest probability.
           if (probability > spanProbs[i]) {
@@ -134,36 +133,30 @@ public class CcgExactChart extends AbstractCcgChart {
     // This second part is unnecessary, but makes debugging easier.
     Arrays.fill(chart[spanStart][spanEnd], null);
   }
-  
+
   /**
-   * Checks if two chart entries have the same collection of unfilled dependencies.
+   * Checks if two multisets of long numbers contain the same keys
+   * with the same frequency
    * 
    * @param first
    * @param second
    * @return
    */
-  private static final boolean unfilledDepsEqual(ChartEntry first, ChartEntry second) {
-    long[] firstDeps = first.getUnfilledDependencies();
-    long[] secondDeps = second.getUnfilledDependencies();
-    
+  private static final boolean longMultisetsEqual(long[] firstDeps, long[] secondDeps) {
     if (firstDeps.length != secondDeps.length) {
       return false;
     }
-    
+
     long[] firstDepsCopy = Arrays.copyOf(firstDeps, firstDeps.length);
     long[] secondDepsCopy = Arrays.copyOf(secondDeps, secondDeps.length);
     Arrays.sort(firstDepsCopy);
     Arrays.sort(secondDepsCopy);
-    
+
     for (int i = 0; i < firstDepsCopy.length; i++) {
       if (firstDepsCopy[i] != secondDepsCopy[i]) {
         return false;
       }
     }
     return true;
-  }
-  
-  private static final boolean assignmentEqual(ChartEntry first, ChartEntry second) {
-    first.getAssignmentIndexes();
   }
 }

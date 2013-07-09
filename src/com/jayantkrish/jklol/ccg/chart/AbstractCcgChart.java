@@ -170,8 +170,7 @@ public abstract class AbstractCcgChart implements CcgChart {
       List<String> terminals = getWords();
       List<String> posTags = getPosTags();
       return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTriggerWords(), posTags.subList(spanStart, spanEnd + 1),
-          parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
-              entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
+          parser.variableToIndexedPredicateArray(syntax.getRootVariable(), entry.getAssignments()),
               Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
               terminals.subList(spanStart, spanEnd + 1), getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],
               entry.getRootUnaryRule(), spanStart, spanEnd);
@@ -194,8 +193,7 @@ public abstract class AbstractCcgChart implements CcgChart {
           (left.getSubtreeProbability() * right.getSubtreeProbability());
 
       return CcgParse.forNonterminal(syntax,
-          parser.variableToIndexedPredicateArray(syntax.getRootVariable(),
-              entry.getAssignmentVariableNums(), entry.getAssignmentPredicateNums(), entry.getAssignmentIndexes()),
+          parser.variableToIndexedPredicateArray(syntax.getRootVariable(), entry.getAssignments()),
               Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
               entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
     }

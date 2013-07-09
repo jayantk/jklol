@@ -101,8 +101,8 @@ public class ChartEntry {
   }
 
   public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, List<String> terminalWords,
-      UnaryCombinator rootUnaryRule, int[] assignmentVariableNums, int[] assignmentPredicateNums,
-      int[] assignmentIndexes, long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
+      UnaryCombinator rootUnaryRule,  long[] assignments, long[] unfilledDependencies, long[] deps,
+      int spanStart, int spanEnd) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
 
@@ -110,9 +110,7 @@ public class ChartEntry {
     this.leftUnaryRule = null;
     this.rightUnaryRule = null;
 
-    this.assignmentVariableNums = Preconditions.checkNotNull(assignmentVariableNums);
-    this.assignmentPredicateNums = Preconditions.checkNotNull(assignmentPredicateNums);
-    this.assignmentIndexes = Preconditions.checkNotNull(assignmentIndexes);
+    this.assignments = Preconditions.checkNotNull(assignments);
     this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
 
     this.lexiconEntry = ccgCategory;
@@ -156,9 +154,17 @@ public class ChartEntry {
   public UnaryCombinator getRightUnaryRule() {
     return rightUnaryRule;
   }
-
-  public int[] getAssignmentVariableNums() {
-    return assignmentVariableNums;
+  
+  public long[] getAssignments() {
+    return assignments;
+  }
+  
+  public int[] getAssignmentPredicateNums() {
+    int[] predicateNums = new int[assignments.length];
+    for (int i = 0; i < assignments.length; i++) {
+      predicateNums[i] = CcgParser.getAssignmentPredicateNum(assignments[i]);
+    }
+    return predicateNums;
   }
 
   /**
@@ -168,27 +174,21 @@ public class ChartEntry {
    * @param relabeling
    * @return
    */
-  public int[] getAssignmentVariableNumsRelabeled(int[] relabeling) {
+  public long[] getAssignmentsRelabeled(int[] relabeling) {
     int[] uniqueVars = syntaxUniqueVars;
-    int[] relabeledAssignmentVariableNums = new int[assignmentVariableNums.length];
-    Arrays.fill(relabeledAssignmentVariableNums, -1);
-    for (int i = 0; i < assignmentVariableNums.length; i++) {
+    long[] relabeledAssignments = new long[assignments.length];
+    Arrays.fill(relabeledAssignments, -1);
+    for (int i = 0; i < assignments.length; i++) {
+      int assignmentVarNum = CcgParser.getAssignmentVarNum(assignments[i]);
       for (int j = 0; j < uniqueVars.length; j++) {
-        if (uniqueVars[j] == assignmentVariableNums[i]) {
-          relabeledAssignmentVariableNums[i] = relabeling[j];
+        if (uniqueVars[j] == assignmentVarNum) {
+          relabeledAssignments[i] = CcgParser.replaceAssignmentVarNum(assignments[i],
+              assignmentVarNum, relabeling[j]);
         }
       }
     }
 
-    return relabeledAssignmentVariableNums;
-  }
-
-  public int[] getAssignmentPredicateNums() {
-    return assignmentPredicateNums;
-  }
-
-  public int[] getAssignmentIndexes() {
-    return assignmentIndexes;
+    return relabeledAssignments;
   }
 
   public long[] getUnfilledDependencies() {
@@ -262,23 +262,23 @@ public class ChartEntry {
   }
 
   public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
-      UnaryCombinator unaryRuleCombinator, int[] newVars, int[] newPredicates,
-      int[] newIndexes, long[] newUnfilledDeps, long[] newFilledDeps) {
+      UnaryCombinator unaryRuleCombinator, long[] newAssignments, long[] newUnfilledDeps,
+      long[] newFilledDeps) {
     Preconditions.checkState(rootUnaryRule == null);
     if (isTerminal()) {
       return new ChartEntry(resultSyntax, resultUniqueVars, lexiconEntry, lexiconTriggerWords,
-          unaryRuleCombinator, newVars, newPredicates, newIndexes, newUnfilledDeps,
+          unaryRuleCombinator, newAssignments, newUnfilledDeps,
           newFilledDeps, leftSpanStart, leftSpanEnd);
     } else {
       return new ChartEntry(resultSyntax, resultUniqueVars, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
-          newVars, newPredicates, newIndexes, newUnfilledDeps, newFilledDeps, leftSpanStart,
+          newAssignments, newUnfilledDeps, newFilledDeps, leftSpanStart,
           leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator);
     }
   }
 
   @Override
   public String toString() {
-    return "[" + Arrays.toString(assignmentPredicateNums) + ":" + syntax
+    return "[" + Arrays.toString(assignments) + ":" + syntax
              + " " + Arrays.toString(deps) + " " + Arrays.toString(unfilledDependencies) + "]";
   }
 }

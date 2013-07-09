@@ -21,6 +21,7 @@ import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.chart.CcgBeamSearchChart;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
+import com.jayantkrish.jklol.ccg.chart.CcgExactChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -70,6 +71,9 @@ public class CcgParser implements Serializable {
   private static final int ASSIGNMENT_PREDICATE_OFFSET = 0;
   private static final int ASSIGNMENT_WORD_IND_OFFSET = ASSIGNMENT_PREDICATE_OFFSET + PREDICATE_BITS;
   private static final int ASSIGNMENT_VAR_NUM_OFFSET = ASSIGNMENT_WORD_IND_OFFSET + WORD_IND_BITS;
+
+  private static final int VAR_NUM_BITS = 6;
+  private static final long VAR_NUM_MASK = ~(-1L << VAR_NUM_BITS);
 
   // Default names for the variables in the syntactic distribution
   // built by buildSyntacticDistribution
@@ -1129,6 +1133,11 @@ public class CcgParser implements Serializable {
     List<String> posTags = Collections.nCopies(terminals.size(), ParametricCcgParser.DEFAULT_POS_TAG);
     return beamSearch(terminals, posTags, beamSize, new NullLogFunction());
   }
+  
+  public CcgParse parse(List<String> terminals) {
+    List<String> posTags = Collections.nCopies(terminals.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+    return parse(terminals, posTags, null, new NullLogFunction(), -1);
+  }
 
   /**
    * 
@@ -1145,34 +1154,50 @@ public class CcgParser implements Serializable {
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
       ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
-    CcgBeamSearchChart chart = buildChartForInput(terminals, posTags, beamSize, beamFilter);
-    System.out.println(terminals);
-    System.out.println(posTags);
+    CcgBeamSearchChart chart = buildBeamSearchChart(terminals, posTags, beamSize, beamFilter);
 
-    // log.startTimer("ccg_parse/initialize_chart");
     initializeChart(terminals, posTags, chart, log);
-    // log.stopTimer("ccg_parse/initialize_chart");
-
     chart.applyChartFilterToTerminals();
 
     // Sparsifying the dependencies actually slows the code down.
     // (Possibly a cache issue?)
-    sparsifyDependencyDistribution(chart);
+    // sparsifyDependencyDistribution(chart);
 
-    // log.startTimer("ccg_parse/calculate_inside_beam");
     boolean finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
-    // log.stopTimer("ccg_parse/calculate_inside_beam");
 
     if (finishedParsing) {
       reweightRootEntries(chart);
-      return decodeParsesForRoot(chart, beamSize);
+      int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
+      return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this, syntaxVarType);
     } else {
       System.out.println("CCG Parser Timeout");
       return Lists.newArrayList();
     }
   }
 
-  public CcgBeamSearchChart buildChartForInput(List<String> terminals, List<String> posTags,
+  public CcgParse parse(List<String> terminals, List<String> posTags, ChartFilter beamFilter,
+      LogFunction log, long maxParseTimeMillis) {
+    CcgExactChart chart = buildExactChart(terminals, posTags, beamFilter);
+
+    initializeChart(terminals, posTags, chart, log);
+    chart.applyChartFilterToTerminals();
+
+    // Sparsifying the dependencies actually slows the code down.
+    // (Possibly a cache issue?)
+    // sparsifyDependencyDistribution(chart);
+
+    boolean finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
+
+    if (finishedParsing) {
+      reweightRootEntries(chart);
+      return chart.decodeBestParseForSpan(0, chart.size() - 1, this, syntaxVarType);
+    } else {
+      System.out.println("CCG Parser Timeout");
+      return null;
+    }
+  }
+
+  public CcgBeamSearchChart buildBeamSearchChart(List<String> terminals, List<String> posTags,
       int beamSize, ChartFilter beamFilter) {
     int numWords = terminals.size();
     int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
@@ -1192,6 +1217,35 @@ public class CcgParser implements Serializable {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, wordDistances, puncDistances, verbDistances,
         beamSize, beamFilter);
 
+    initializeChartDistributions(chart);
+    return chart;
+  }
+  
+  public CcgExactChart buildExactChart(List<String> terminals, List<String> posTags, 
+      ChartFilter beamFilter) {
+    int numWords = terminals.size();
+    int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
+    int[] verbCounts = computeDistanceCounts(posTags, verbTagSet);
+
+    int[] wordDistances = new int[numWords * numWords];
+    int[] puncDistances = new int[numWords * numWords];
+    int[] verbDistances = new int[numWords * numWords];
+    for (int i = 0; i < numWords; i++) {
+      for (int j = 0; j < numWords; j++) {
+        wordDistances[(i * numWords) + j] = computeWordDistance(i, j);
+        puncDistances[(i * numWords) + j] = computeArrayDistance(puncCounts, i, j);
+        verbDistances[(i * numWords) + j] = computeArrayDistance(verbCounts, i, j);
+      }
+    }
+
+    CcgExactChart chart = new CcgExactChart(terminals, posTags, wordDistances, puncDistances,
+        verbDistances, beamFilter);
+
+    initializeChartDistributions(chart);
+    return chart;
+  }
+
+  private void initializeChartDistributions(CcgChart chart) {
     // Default: initialize chart with no dependency distribution
     // pruning.
     chart.setDependencyTensor(dependencyTensor);
@@ -1199,8 +1253,6 @@ public class CcgParser implements Serializable {
     chart.setPuncDistanceTensor(puncDistanceTensor);
     chart.setVerbDistanceTensor(verbDistanceTensor);
     chart.setSyntaxDistribution(compiledSyntaxDistribution);
-
-    return chart;
   }
 
   public static int[] computeDistanceCounts(List<String> posTags, Set<String> tagSet) {
@@ -1295,19 +1347,6 @@ public class CcgParser implements Serializable {
       }
     }
     return true;
-  }
-
-  /**
-   * Gets the best parses for an entire sentence, given an
-   * already-filled {@code chart}.
-   * 
-   * @param chart
-   * @return
-   */
-  public List<CcgParse> decodeParsesForRoot(CcgBeamSearchChart chart, int maxParses) {
-    int numParses = Math.min(maxParses,
-        chart.getNumChartEntriesForSpan(0, chart.size() - 1));
-    return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this, syntaxVarType);
   }
 
   /**
@@ -1461,8 +1500,8 @@ public class CcgParser implements Serializable {
         ChartEntry[] entries = chart.getChartEntriesForSpan(spanStart, spanEnd);
         for (int i = 0; i < numEntries; i++) {
           // Identify possible predicates.
-          for (int assignmentPredicateNum : entries[i].getAssignmentPredicateNums()) {
-            possiblePredicates.add((long) assignmentPredicateNum);
+          for (long assignment : entries[i].getAssignments()) {
+            possiblePredicates.add((assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK);
           }
           for (long depLong : entries[i].getUnfilledDependencies()) {
             possiblePredicates.add(((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM);
@@ -1499,17 +1538,14 @@ public class CcgParser implements Serializable {
   public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
       int spanStart, int spanEnd) {
     // Assign each predicate in this category a unique word index.
-    List<Integer> variableNums = Lists.newArrayList();
-    List<Integer> predicateNums = Lists.newArrayList();
-    List<Integer> indexes = Lists.newArrayList();
-
+    List<Long> assignments = Lists.newArrayList();
     List<Set<String>> values = result.getAssignment();
     int[] semanticVariables = result.getSemanticVariables();
     for (int i = 0; i < values.size(); i++) {
       for (String value : values.get(i)) {
-        variableNums.add(semanticVariables[i]);
-        predicateNums.add(dependencyHeadType.getValueIndex(value));
-        indexes.add(spanEnd);
+        long assignment = marshalAssignment(semanticVariables[i],
+            dependencyHeadType.getValueIndex(value), spanEnd);
+        assignments.add(assignment);
       }
     }
 
@@ -1521,15 +1557,12 @@ public class CcgParser implements Serializable {
 
     int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
     return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), result, terminalWords,
-        null, Ints.toArray(variableNums), Ints.toArray(predicateNums), Ints.toArray(indexes),
-        unfilledDepArray, depArray, spanStart, spanEnd);
+        null, Longs.toArray(assignments), unfilledDepArray, depArray, spanStart, spanEnd);
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
     long[] depAccumulator = new long[20];
-    int[] assignmentVariableAccumulator = new int[50];
-    int[] assignmentPredicateAccumulator = new int[50];
-    int[] assignmentIndexAccumulator = new int[50];
+    long[] assignmentAccumulator = new long[50];
 
     Tensor syntaxDistributionTensor = chart.getSyntaxDistribution().getWeights();
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
@@ -1621,11 +1654,9 @@ public class CcgParser implements Serializable {
                     // Relabel assignments from the left and right
                     // chart entries.
                     int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftRelabeling(),
-                        assignmentVariableAccumulator, assignmentPredicateAccumulator,
-                        assignmentIndexAccumulator, 0);
+                        assignmentAccumulator, 0);
                     numAssignments = relabelAssignment(rightRoot, searchMove.getRightRelabeling(),
-                        assignmentVariableAccumulator, assignmentPredicateAccumulator,
-                        assignmentIndexAccumulator, numAssignments);
+                        assignmentAccumulator, numAssignments);
 
                     // Relabel and fill dependencies from the left and
                     // right chart entries.
@@ -1636,18 +1667,16 @@ public class CcgParser implements Serializable {
 
                     int numDeps = 0;
                     numDeps = accumulateDependencies(leftUnfilledDependenciesRelabeled,
-                        resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
-                        assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
-                        resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(),
-                        resultSyntaxUniqueVars, numDeps);
+                        resultCombinator.getUnifiedVariables(), assignmentAccumulator,
+                        numAssignments, depAccumulator, resultCombinator.getResultOriginalVars(),
+                        resultCombinator.getResultVariableRelabeling(), resultSyntaxUniqueVars, numDeps);
                     if (numDeps == -1) {
                       continue;
                     }
                     numDeps = accumulateDependencies(rightUnfilledDependenciesRelabeled,
-                        resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
-                        assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
-                        resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(),
-                        resultSyntaxUniqueVars, numDeps);
+                        resultCombinator.getUnifiedVariables(), assignmentAccumulator, 
+                        numAssignments, depAccumulator, resultCombinator.getResultOriginalVars(),
+                        resultCombinator.getResultVariableRelabeling(), resultSyntaxUniqueVars, numDeps);
                     if (numDeps == -1) {
                       continue;
                     }
@@ -1655,8 +1684,7 @@ public class CcgParser implements Serializable {
                     // Fill any dependencies from the combinator itself.
                     if (resultCombinator.hasUnfilledDependencies()) {
                       numDeps = accumulateDependencies(resultCombinator.getUnfilledDependencies(this, spanEnd),
-                          resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
-                          assignmentPredicateAccumulator, assignmentIndexAccumulator, numAssignments, depAccumulator,
+                          resultCombinator.getUnifiedVariables(), assignmentAccumulator, numAssignments, depAccumulator,
                           resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(),
                           resultSyntaxUniqueVars, numDeps);
                       if (numDeps == -1) {
@@ -1669,17 +1697,15 @@ public class CcgParser implements Serializable {
                     // log.stopTimer("ccg_parse/beam_loop/relabel");
 
                     // log.startTimer("ccg_parse/beam_loop/create_assignment_and_chart");
-                    numAssignments = filterAssignmentVariables(assignmentVariableAccumulator, assignmentPredicateAccumulator,
-                        assignmentIndexAccumulator, resultCombinator.getResultOriginalVars(),
-                        resultCombinator.getResultVariableRelabeling(), numAssignments);
-                    int[] newAssignmentVariableNums = ArrayUtils.copyOfRange(assignmentVariableAccumulator, 0, numAssignments);
-                    int[] newAssignmentPredicateNums = ArrayUtils.copyOfRange(assignmentPredicateAccumulator, 0, numAssignments);
-                    int[] newAssignmentIndexes = ArrayUtils.copyOfRange(assignmentIndexAccumulator, 0, numAssignments);
+                    numAssignments = filterAssignmentVariables(assignmentAccumulator,
+                        resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(), 
+                        numAssignments);
+                    long[] newAssignments = ArrayUtils.copyOfRange(assignmentAccumulator, 0, numAssignments);
 
                     ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars,
-                        null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVariableNums,
-                        newAssignmentPredicateNums, newAssignmentIndexes, unfilledDepArray, filledDepArray,
-                        spanStart, spanStart + i, leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
+                        null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignments,
+                        unfilledDepArray, filledDepArray, spanStart, spanStart + i,
+                        leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
                     // log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
 
                     // log.startTimer("ccg_parse/beam_loop/dependencies");
@@ -1800,13 +1826,12 @@ public class CcgParser implements Serializable {
       UnaryCombinator unaryRuleCombinator = (UnaryCombinator) unaryRuleVarType.getValue(unaryRuleIndex);
       double ruleProb = unaryRuleTensor.getByIndex(index);
 
-      int[] relabeledVars = result.getAssignmentVariableNumsRelabeled(unaryRuleCombinator.getVariableRelabeling());
+      long[] relabeledAssignments = result.getAssignmentsRelabeled(unaryRuleCombinator.getVariableRelabeling());
       long[] relabeledUnfilledDeps = result.getUnfilledDependenciesRelabeled(unaryRuleCombinator.getVariableRelabeling());
 
       ChartEntry unaryRuleResult = result.applyUnaryRule(unaryRuleCombinator.getSyntax(),
           unaryRuleCombinator.getSyntaxUniqueVars(), unaryRuleCombinator,
-          relabeledVars, result.getAssignmentPredicateNums(), result.getAssignmentIndexes(),
-          relabeledUnfilledDeps, result.getDependencies());
+          relabeledAssignments, relabeledUnfilledDeps, result.getDependencies());
       if (unaryRuleResult != null) {
         chart.addChartEntryForSpan(unaryRuleResult, resultProb * ruleProb, spanStart, spanEnd,
             syntaxVarType);
@@ -1826,30 +1851,30 @@ public class CcgParser implements Serializable {
   }
 
   private int relabelAssignment(ChartEntry entry, int[] relabeling,
-      int[] variableAccumulator, int[] predicateAccumulator, int[] indexAccumulator,
-      int startIndex) {
-    int[] assignmentVariableNums = entry.getAssignmentVariableNums();
-    int[] assignmentPredicateNums = entry.getAssignmentPredicateNums();
-    int[] assignmentIndexes = entry.getAssignmentIndexes();
+      long[] assignmentAccumulator, int startIndex) {
+    long[] assignments = entry.getAssignments();
 
-    for (int i = 0; i < assignmentVariableNums.length; i++) {
-      variableAccumulator[i + startIndex] = relabeling[assignmentVariableNums[i]];
-      predicateAccumulator[i + startIndex] = assignmentPredicateNums[i];
-      indexAccumulator[i + startIndex] = assignmentIndexes[i];
+    for (int i = 0; i < assignments.length; i++) {
+      int assignmentVarNum = (int) ((assignments[i] >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK);
+      int newVarNum = relabeling[assignmentVarNum];
+      assignmentAccumulator[i + startIndex] = CcgParser.replaceAssignmentVarNum(assignments[i],
+          assignmentVarNum, newVarNum);
     }
 
-    return startIndex + assignmentVariableNums.length;
+    return startIndex + assignments.length;
   }
 
-  private int filterAssignmentVariables(int[] variableAccumulator, int[] predicateAccumulator,
-      int[] indexAccumulator, int[] varsToRetain, int[] relabeling, int accumulatorSize) {
+  private int filterAssignmentVariables(long[] assignmentAccumulator,
+      int[] varsToRetain, int[] relabeling, int accumulatorSize) {
     int numRemoved = 0;
     for (int i = 0; i < accumulatorSize; i++) {
-      int index = Ints.indexOf(varsToRetain, variableAccumulator[i]);
+      long assignment = assignmentAccumulator[i];
+      int assignmentVarNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK);
+      int index = Ints.indexOf(varsToRetain, assignmentVarNum);
       if (index != -1) {
-        variableAccumulator[i - numRemoved] = relabeling[index];
-        predicateAccumulator[i - numRemoved] = predicateAccumulator[i];
-        indexAccumulator[i - numRemoved] = indexAccumulator[i];
+        int newVarNum = relabeling[index];
+        assignmentAccumulator[i - numRemoved] = CcgParser.replaceAssignmentVarNum(assignment,
+            assignmentVarNum, newVarNum);
       } else {
         numRemoved++;
       }
@@ -1872,17 +1897,8 @@ public class CcgParser implements Serializable {
    * @return
    */
   private int accumulateDependencies(long[] unfilledDependencies, int[] variablesToUnify,
-      int[] assignmentVariableNums, int[] assignmentPredicateNums, int[] assignmentIndexes,
-      int assignmentLength, long[] depAccumulator, int[] returnOriginalVars, int[] returnVarsRelabeling,
-      int[] returnVariableNums, int numDeps) {
-
-    /*
-     * System.out.println(Arrays.toString(unfilledDependencies));
-     * System.out.println(Arrays.toString(assignmentVariableNums));
-     * System.out.println(Arrays.toString(assignmentPredicateNums));
-     * System.out.println(Arrays.toString(assignmentIndexes));
-     * System.out.println(numDeps);
-     */
+      long[] assignments, int assignmentLength, long[] depAccumulator, int[] returnOriginalVars,
+      int[] returnVarsRelabeling, int[] returnVariableNums, int numDeps) {
 
     // Fill any dependencies that depend on this variable.
     for (long unfilledDependency : unfilledDependencies) {
@@ -1891,12 +1907,13 @@ public class CcgParser implements Serializable {
       boolean depWasFilled = false;
       if (Ints.contains(variablesToUnify, objectArgNum)) {
         for (int i = 0; i < assignmentLength; i++) {
-          if (assignmentVariableNums[i] == objectArgNum) {
+          long curAssignment = assignments[i];
+          if (CcgParser.getAssignmentVarNum(curAssignment) == objectArgNum) {
             // Create a new filled dependency by substituting in the
             // current object.
             long filledDep = unfilledDependency - (objectArgNum << OBJECT_OFFSET);
-            filledDep += ((long) assignmentPredicateNums[i] + MAX_ARG_NUM) << OBJECT_OFFSET;
-            filledDep += ((long) assignmentIndexes[i]) << OBJECT_WORD_IND_OFFSET;
+            filledDep += (((long) CcgParser.getAssignmentPredicateNum(curAssignment)) + MAX_ARG_NUM) << OBJECT_OFFSET;
+            filledDep += ((long) CcgParser.getAssignmentWordIndex(curAssignment)) << OBJECT_WORD_IND_OFFSET;
 
             if (numDeps >= depAccumulator.length) {
               return -1;
@@ -2095,6 +2112,7 @@ public class CcgParser implements Serializable {
   private long[] unfilledDependencyArrayToLongArray(List<UnfilledDependency> deps) {
     long[] values = new long[deps.size()];
     for (int i = 0; i < deps.size(); i++) {
+ 
       values[i] = unfilledDependencyToLong(deps.get(i));
     }
     return values;
@@ -2111,22 +2129,43 @@ public class CcgParser implements Serializable {
 
   /**
    * Converts the values assigned to a particular variable from
-   * {@code variableNums} into a set of {@code IndexedPredicate}.
+   * {@code assignments} into a set of {@code IndexedPredicate}.
    * 
    * @param varNum
-   * @param variableNums
-   * @param predicateNums
-   * @param indexes
+   * @param assignments
    * @return
    */
-  public Set<IndexedPredicate> variableToIndexedPredicateArray(int varNum, int[] variableNums,
-      int[] predicateNums, int[] indexes) {
+  public Set<IndexedPredicate> variableToIndexedPredicateArray(int varNum, long[] assignments) {
     Set<IndexedPredicate> predicates = Sets.newHashSet();
-    for (int i = 0; i < variableNums.length; i++) {
-      if (variableNums[i] == varNum) {
-        predicates.add(new IndexedPredicate((String) dependencyHeadType.getValue(predicateNums[i]), indexes[i]));
+    for (int i = 0; i < assignments.length; i++) {
+      if (CcgParser.getAssignmentVarNum(assignments[i]) == varNum) {
+        int predicateNum = CcgParser.getAssignmentPredicateNum(assignments[i]);
+        int index = CcgParser.getAssignmentWordIndex(assignments[i]);
+        predicates.add(new IndexedPredicate((String) dependencyHeadType.getValue(predicateNum), index));
       }
     }
     return predicates;
+  }
+   
+  public static long marshalAssignment(long variableNum, long predicateNum, long wordInd) {
+    return (variableNum << ASSIGNMENT_VAR_NUM_OFFSET) |
+        (predicateNum << ASSIGNMENT_PREDICATE_OFFSET) | (wordInd << ASSIGNMENT_WORD_IND_OFFSET);
+  }
+  
+  public static final int getAssignmentVarNum(long assignment) {
+    return (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK);
+  }
+
+  public static final int getAssignmentPredicateNum(long assignment) {
+    return (int) ((assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK);
+  }
+
+  private static final int getAssignmentWordIndex(long assignment) {
+    return (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
+  }
+  
+  public static long replaceAssignmentVarNum(long assignment, int oldVarNum, int newVarNum) {
+    // Switch the variable numbers using a fancy XOR trick.
+    return assignment ^ (((long) oldVarNum ^ newVarNum) << ASSIGNMENT_VAR_NUM_OFFSET);
   }
 }

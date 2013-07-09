@@ -7,7 +7,6 @@ import java.util.List;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;

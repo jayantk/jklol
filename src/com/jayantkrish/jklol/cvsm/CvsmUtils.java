@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.cvsm;
 
 import java.util.List;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;

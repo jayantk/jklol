@@ -1,11 +1,9 @@
-package com.jayantkrish.jklol.ccg;
+package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 
 /**

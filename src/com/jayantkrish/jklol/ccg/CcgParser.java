@@ -18,9 +18,11 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
+import com.jayantkrish.jklol.ccg.chart.CcgBeamSearchChart;
+import com.jayantkrish.jklol.ccg.chart.CcgChart;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
+import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -62,6 +64,12 @@ public class CcgParser implements Serializable {
   private static final int SUBJECT_OFFSET = ARG_NUM_OFFSET + ARG_NUM_BITS;
   private static final int OBJECT_WORD_IND_OFFSET = SUBJECT_OFFSET + PREDICATE_BITS;
   private static final int SUBJECT_WORD_IND_OFFSET = OBJECT_WORD_IND_OFFSET + WORD_IND_BITS;
+  
+  // Parameters for encoding assignments as longs. Field
+  // sizes are derived from dependencies (above).
+  private static final int ASSIGNMENT_PREDICATE_OFFSET = 0;
+  private static final int ASSIGNMENT_WORD_IND_OFFSET = ASSIGNMENT_PREDICATE_OFFSET + PREDICATE_BITS;
+  private static final int ASSIGNMENT_VAR_NUM_OFFSET = ASSIGNMENT_WORD_IND_OFFSET + WORD_IND_BITS;
 
   // Default names for the variables in the syntactic distribution
   // built by buildSyntacticDistribution
@@ -210,12 +218,10 @@ public class CcgParser implements Serializable {
     this.dependencyHeadType = dependencyHeadVar.getDiscreteVariables().get(0);
     this.dependencyArgNumType = dependencyArgNumVar.getDiscreteVariables().get(0);
     // TODO: This check can be made unnecessary by fixing the
-    // representation
-    // of unfilled dependencies as longs. Right now, the
-    // representation requires
-    // this condition to hold.
+    // representation of unfilled dependencies as longs. Right now, the
+    // representation requires this condition to hold.
     for (int i = 0; i < dependencyArgNumType.numValues(); i++) {
-      Preconditions.checkArgument(dependencyArgNumType.getValue(i) == (Integer) i);
+      Preconditions.checkArgument((int) ((Integer) dependencyArgNumType.getValue(i)) == i);
     }
 
     DiscreteVariable dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
@@ -1139,7 +1145,7 @@ public class CcgParser implements Serializable {
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
       ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
-    CcgChart chart = buildChartForInput(terminals, posTags, beamSize, beamFilter);
+    CcgBeamSearchChart chart = buildChartForInput(terminals, posTags, beamSize, beamFilter);
     System.out.println(terminals);
     System.out.println(posTags);
 
@@ -1159,21 +1165,14 @@ public class CcgParser implements Serializable {
 
     if (finishedParsing) {
       reweightRootEntries(chart);
-      return decodeParsesForRoot(chart);
+      return decodeParsesForRoot(chart, beamSize);
     } else {
       System.out.println("CCG Parser Timeout");
       return Lists.newArrayList();
     }
   }
 
-  /*
-   * public List<CcgParse> beamSearchWithSupertags(SupertaggedSentence
-   * sentence, int beamSize, ChartFilter beamFilter, LogFunction log)
-   * { // TODO: augment beamFilter with a chart filter for the
-   * supertags. }
-   */
-
-  public CcgChart buildChartForInput(List<String> terminals, List<String> posTags,
+  public CcgBeamSearchChart buildChartForInput(List<String> terminals, List<String> posTags,
       int beamSize, ChartFilter beamFilter) {
     int numWords = terminals.size();
     int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
@@ -1190,7 +1189,7 @@ public class CcgParser implements Serializable {
       }
     }
 
-    CcgChart chart = new CcgChart(terminals, posTags, wordDistances, puncDistances, verbDistances,
+    CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, wordDistances, puncDistances, verbDistances,
         beamSize, beamFilter);
 
     // Default: initialize chart with no dependency distribution
@@ -1200,14 +1199,6 @@ public class CcgParser implements Serializable {
     chart.setPuncDistanceTensor(puncDistanceTensor);
     chart.setVerbDistanceTensor(verbDistanceTensor);
     chart.setSyntaxDistribution(compiledSyntaxDistribution);
-
-    /*
-     * System.out.println("dependency tensor: " +
-     * dependencyTensor.size());
-     * System.out.println(wordDistanceTensor.size());
-     * System.out.println(puncDistanceTensor.size());
-     * System.out.println(verbDistanceTensor.size());
-     */
 
     return chart;
   }
@@ -1253,7 +1244,7 @@ public class CcgParser implements Serializable {
     int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
 
     // Apply unary rules.
-    ChartEntry[] entries = CcgChart.copyChartEntryArray(chart.getChartEntriesForSpan(spanStart, spanEnd),
+    ChartEntry[] entries = CcgBeamSearchChart.copyChartEntryArray(chart.getChartEntriesForSpan(spanStart, spanEnd),
         numChartEntries);
     double[] probs = ArrayUtils.copyOf(chart.getChartEntryProbsForSpan(spanStart, spanEnd),
         numChartEntries);
@@ -1263,7 +1254,7 @@ public class CcgParser implements Serializable {
 
     // Apply root factor.
     numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
-    entries = CcgChart.copyChartEntryArray(chart.getChartEntriesForSpan(spanStart, spanEnd),
+    entries = CcgBeamSearchChart.copyChartEntryArray(chart.getChartEntriesForSpan(spanStart, spanEnd),
         numChartEntries);
     probs = ArrayUtils.copyOf(chart.getChartEntryProbsForSpan(spanStart, spanEnd),
         numChartEntries);
@@ -1313,8 +1304,8 @@ public class CcgParser implements Serializable {
    * @param chart
    * @return
    */
-  public List<CcgParse> decodeParsesForRoot(CcgChart chart) {
-    int numParses = Math.min(chart.getBeamSize(),
+  public List<CcgParse> decodeParsesForRoot(CcgBeamSearchChart chart, int maxParses) {
+    int numParses = Math.min(maxParses,
         chart.getNumChartEntriesForSpan(0, chart.size() - 1));
     return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this, syntaxVarType);
   }
@@ -1628,8 +1619,7 @@ public class CcgParser implements Serializable {
 
                     // log.startTimer("ccg_parse/beam_loop/relabel");
                     // Relabel assignments from the left and right
-                    // chart
-                    // entries.
+                    // chart entries.
                     int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftRelabeling(),
                         assignmentVariableAccumulator, assignmentPredicateAccumulator,
                         assignmentIndexAccumulator, 0);
@@ -1662,8 +1652,7 @@ public class CcgParser implements Serializable {
                       continue;
                     }
 
-                    // Fill any dependencies from the combinator
-                    // itself.
+                    // Fill any dependencies from the combinator itself.
                     if (resultCombinator.hasUnfilledDependencies()) {
                       numDeps = accumulateDependencies(resultCombinator.getUnfilledDependencies(this, spanEnd),
                           resultCombinator.getUnifiedVariables(), assignmentVariableAccumulator,
@@ -1706,8 +1695,7 @@ public class CcgParser implements Serializable {
                       }
 
                       // Compute the keyNum containing the weight for
-                      // depLong
-                      // in dependencyTensor.
+                      // depLong in dependencyTensor.
                       int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
                       int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
                       int argNumNum = (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);

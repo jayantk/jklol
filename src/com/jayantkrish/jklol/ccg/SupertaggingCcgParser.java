@@ -3,8 +3,9 @@ package com.jayantkrish.jklol.ccg;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
-import com.jayantkrish.jklol.ccg.SyntacticChartFilter.DefaultCompatibilityFunction;
+import com.jayantkrish.jklol.ccg.chart.ChartFilter;
+import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;

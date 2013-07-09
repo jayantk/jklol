@@ -4,8 +4,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
-import com.jayantkrish.jklol.ccg.SyntacticChartFilter.SyntacticCompatibilityFunction;
+import com.jayantkrish.jklol.ccg.chart.ChartFilter;
+import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;

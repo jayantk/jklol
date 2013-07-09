@@ -1,12 +1,13 @@
-package com.jayantkrish.jklol.ccg;
+package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
+import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
+import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 
 /**

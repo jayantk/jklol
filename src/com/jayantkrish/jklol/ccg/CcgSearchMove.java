@@ -4,20 +4,28 @@ import java.io.Serializable;
 
 import com.google.common.base.Preconditions;
 
+/**
+ * A combination of unary and binary CCG combinators. A search move is
+ * a way to combine a pair of adjacent nonterminals by first applying
+ * the unary combinators to the left and right nonterminals, then
+ * applying the binary rule to combine the results.
+ * 
+ * @author jayantk
+ */
 public class CcgSearchMove implements Serializable {
   private static final long serialVersionUID = 1L;
-  
+
   private final Combinator binaryCombinator;
   private final UnaryCombinator leftUnary;
   private final UnaryCombinator rightUnary;
-  
+
   private final long binaryCombinatorKeyNum;
   private final long leftUnaryKeyNum;
   private final long rightUnaryKeyNum;
-  
+
   private final int[] leftRelabeling;
   private final int[] rightRelabeling;
-  
+
   public CcgSearchMove(Combinator binaryCombinator, UnaryCombinator leftUnary, UnaryCombinator rightUnary,
       long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum, int[] leftRelabeling,
       int[] rightRelabeling) {
@@ -27,10 +35,10 @@ public class CcgSearchMove implements Serializable {
     this.binaryCombinatorKeyNum = binaryCombinatorKeyNum;
     this.leftUnaryKeyNum = leftUnaryKeyNum;
     this.rightUnaryKeyNum = rightUnaryKeyNum;
-    
+
     this.leftRelabeling = Preconditions.checkNotNull(leftRelabeling);
     this.rightRelabeling = Preconditions.checkNotNull(rightRelabeling);
-    
+
     Preconditions.checkArgument(leftUnary != null || leftUnaryKeyNum == -1);
     Preconditions.checkArgument(rightUnary != null || rightUnaryKeyNum == -1);
   }
@@ -46,7 +54,7 @@ public class CcgSearchMove implements Serializable {
   public UnaryCombinator getRightUnary() {
     return rightUnary;
   }
-  
+
   public long getBinaryCombinatorKeyNum() {
     return binaryCombinatorKeyNum;
   }
@@ -58,15 +66,15 @@ public class CcgSearchMove implements Serializable {
   public long getRightUnaryKeyNum() {
     return rightUnaryKeyNum;
   }
-  
+
   public int[] getLeftRelabeling() {
     return leftRelabeling;
   }
-  
+
   public int[] getRightRelabeling() {
     return rightRelabeling;
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

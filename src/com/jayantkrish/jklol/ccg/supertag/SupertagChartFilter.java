@@ -3,12 +3,12 @@ package com.jayantkrish.jklol.ccg.supertag;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.CcgChart;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartEntry;
-import com.jayantkrish.jklol.ccg.CcgChart.ChartFilter;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
-import com.jayantkrish.jklol.ccg.SyntacticChartFilter.SyntacticCompatibilityFunction;
+import com.jayantkrish.jklol.ccg.chart.CcgChart;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
+import com.jayantkrish.jklol.ccg.chart.ChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 
 /**

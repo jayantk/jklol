@@ -29,6 +29,15 @@ public class CcgExactChart extends AbstractCcgChart {
     this.chart = new ChartEntry[numTerminals][numTerminals][];
     this.probabilities = new double[numTerminals][numTerminals][];
     this.chartSizes = new int[numTerminals][numTerminals];
+    
+    // Initialize chart arrays.
+    for (int spanStart = 0; spanStart < numTerminals; spanStart++) {
+      for (int spanEnd = 0; spanEnd < numTerminals; spanEnd++) {
+        chart[spanStart][spanEnd] = new ChartEntry[NUM_INITIAL_SPAN_ENTRIES];
+        probabilities[spanStart][spanEnd] = new double[NUM_INITIAL_SPAN_ENTRIES];
+        chartSizes[spanStart][spanEnd] = 0;
+      }
+    }
 
     this.entryFilter = entryFilter;
   }
@@ -82,12 +91,6 @@ public class CcgExactChart extends AbstractCcgChart {
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
     if (probability != 0.0 && (entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType))) {
-      if (chart[spanStart][spanEnd] == null) {
-        chart[spanStart][spanEnd] = new ChartEntry[NUM_INITIAL_SPAN_ENTRIES];
-        probabilities[spanStart][spanEnd] = new double[NUM_INITIAL_SPAN_ENTRIES];
-        chartSizes[spanStart][spanEnd] = 0;
-      }
-
       int entryHeadedSyntax = entry.getHeadedSyntax();
 
       int spanSize = chartSizes[spanStart][spanEnd];
@@ -146,14 +149,11 @@ public class CcgExactChart extends AbstractCcgChart {
     if (firstDeps.length != secondDeps.length) {
       return false;
     }
+    Arrays.sort(firstDeps);
+    Arrays.sort(secondDeps);
 
-    long[] firstDepsCopy = Arrays.copyOf(firstDeps, firstDeps.length);
-    long[] secondDepsCopy = Arrays.copyOf(secondDeps, secondDeps.length);
-    Arrays.sort(firstDepsCopy);
-    Arrays.sort(secondDepsCopy);
-
-    for (int i = 0; i < firstDepsCopy.length; i++) {
-      if (firstDepsCopy[i] != secondDepsCopy[i]) {
+    for (int i = 0; i < firstDeps.length; i++) {
+      if (firstDeps[i] != secondDeps[i]) {
         return false;
       }
     }

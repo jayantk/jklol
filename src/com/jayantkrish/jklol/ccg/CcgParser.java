@@ -1562,6 +1562,7 @@ public class CcgParser implements Serializable {
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
     long[] depAccumulator = new long[20];
+    long[] depFillingAccumulator = new long[20];
     long[] assignmentAccumulator = new long[50];
 
     Tensor syntaxDistributionTensor = chart.getSyntaxDistribution().getWeights();
@@ -1659,37 +1660,27 @@ public class CcgParser implements Serializable {
                         assignmentAccumulator, numAssignments);
 
                     // Relabel and fill dependencies from the left and
-                    // right chart entries.
-                    long[] leftUnfilledDependenciesRelabeled = leftRoot.getUnfilledDependenciesRelabeled(
-                        searchMove.getLeftRelabeling());
-                    long[] rightUnfilledDependenciesRelabeled = rightRoot.getUnfilledDependenciesRelabeled(
-                        searchMove.getRightRelabeling());
+                    // right chart entries, and the combinator (if necessary).
+                    int numDepFillingAccumulator = 0;
+                    numDepFillingAccumulator = leftRoot.getUnfilledDependenciesRelabeled(
+                        searchMove.getLeftRelabeling(), depFillingAccumulator, numDepFillingAccumulator);
+                    if (numDepFillingAccumulator == -1) { continue; }
+                    numDepFillingAccumulator = rightRoot.getUnfilledDependenciesRelabeled(
+                        searchMove.getRightRelabeling(), depFillingAccumulator, numDepFillingAccumulator);
+                    if (numDepFillingAccumulator == -1) { continue; }
+                    if (resultCombinator.hasUnfilledDependencies()) {
+                      numDepFillingAccumulator = resultCombinator.getUnfilledDependencies(this, spanEnd, 
+                          depFillingAccumulator, numDepFillingAccumulator);
+                      if (numDepFillingAccumulator == -1) { continue; }
+                    }
 
                     int numDeps = 0;
-                    numDeps = accumulateDependencies(leftUnfilledDependenciesRelabeled,
+                    numDeps = accumulateDependencies(depFillingAccumulator, numDepFillingAccumulator,
                         resultCombinator.getUnifiedVariables(), assignmentAccumulator,
                         numAssignments, depAccumulator, resultCombinator.getResultOriginalVars(),
                         resultCombinator.getResultVariableRelabeling(), resultSyntaxUniqueVars, numDeps);
                     if (numDeps == -1) {
                       continue;
-                    }
-                    numDeps = accumulateDependencies(rightUnfilledDependenciesRelabeled,
-                        resultCombinator.getUnifiedVariables(), assignmentAccumulator, 
-                        numAssignments, depAccumulator, resultCombinator.getResultOriginalVars(),
-                        resultCombinator.getResultVariableRelabeling(), resultSyntaxUniqueVars, numDeps);
-                    if (numDeps == -1) {
-                      continue;
-                    }
-
-                    // Fill any dependencies from the combinator itself.
-                    if (resultCombinator.hasUnfilledDependencies()) {
-                      numDeps = accumulateDependencies(resultCombinator.getUnfilledDependencies(this, spanEnd),
-                          resultCombinator.getUnifiedVariables(), assignmentAccumulator, numAssignments, depAccumulator,
-                          resultCombinator.getResultOriginalVars(), resultCombinator.getResultVariableRelabeling(),
-                          resultSyntaxUniqueVars, numDeps);
-                      if (numDeps == -1) {
-                        continue;
-                      }
                     }
 
                     long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
@@ -1887,21 +1878,22 @@ public class CcgParser implements Serializable {
    * accumulates them in {@code depAccumulator}.
    * 
    * @param unfilledDependencies
+   * @param unfilledDependenciesLength
    * @param variablesToUnify
-   * @param assignmentVariableNums
-   * @param assignmentPredicateNums
-   * @param assignmentIndexes
+   * @param assignments
    * @param depAccumulator
    * @param returnVariableNums
    * @param numDeps
    * @return
    */
-  private int accumulateDependencies(long[] unfilledDependencies, int[] variablesToUnify,
-      long[] assignments, int assignmentLength, long[] depAccumulator, int[] returnOriginalVars,
-      int[] returnVarsRelabeling, int[] returnVariableNums, int numDeps) {
+  private int accumulateDependencies(long[] unfilledDependencies, int unfilledDependenciesLength,
+      int[] variablesToUnify, long[] assignments, int assignmentLength, 
+      long[] depAccumulator, int[] returnOriginalVars, int[] returnVarsRelabeling,
+      int[] returnVariableNums, int numDeps) {
 
     // Fill any dependencies that depend on this variable.
-    for (long unfilledDependency : unfilledDependencies) {
+    for (int j = 0; j < unfilledDependenciesLength; j++) {
+      long unfilledDependency = unfilledDependencies[j];
       int objectArgNum = getObjectArgNumFromDep(unfilledDependency);
 
       boolean depWasFilled = false;

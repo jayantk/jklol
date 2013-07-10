@@ -97,14 +97,19 @@ public class Combinator implements Serializable {
     return subjects.length > 0;
   }
 
-  public long[] getUnfilledDependencies(CcgParser parser, int headWordIndex) {
-    long[] dependencies = new long[subjects.length];
+  public int getUnfilledDependencies(CcgParser parser, int headWordIndex, long[] depAccumulator, int accumulatorStartIndex) {
+    if (depAccumulator.length < accumulatorStartIndex + subjects.length) {
+      // The accumulator does not have enough space to store the dependencies
+      // in this combinator.
+      return -1;
+    }
+    
     for (int i = 0; i < subjects.length; i++) {
       UnfilledDependency dep = UnfilledDependency.createWithKnownSubject(subjects[i],
           headWordIndex, argumentNumbers[i], objects[i]);
-      dependencies[i] = parser.unfilledDependencyToLong(dep);
+      depAccumulator[i + accumulatorStartIndex] = parser.unfilledDependencyToLong(dep);
     }
-    return dependencies;
+    return accumulatorStartIndex + subjects.length;
   }
 
   public boolean isArgumentOnLeft() {

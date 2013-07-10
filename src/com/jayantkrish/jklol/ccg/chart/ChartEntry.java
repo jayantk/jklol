@@ -196,25 +196,35 @@ public class ChartEntry {
   }
 
   public long[] getUnfilledDependenciesRelabeled(int[] relabeling) {
-    int[] uniqueVars = syntaxUniqueVars;
-    long[] relabeledUnfilledDependencies = new long[unfilledDependencies.length];
+    long[] accumulator = new long[unfilledDependencies.length];
+    int numFilled = getUnfilledDependenciesRelabeled(relabeling, accumulator, 0);
+    Preconditions.checkState(numFilled != -1);
+    return accumulator;
+  }
+  
+  public int getUnfilledDependenciesRelabeled(int[] relabeling, long[] dependencyAccumulator, int accumulatorStartIndex) {
+    if (dependencyAccumulator.length < accumulatorStartIndex + unfilledDependencies.length) {
+      // The accumulator does not have enough space to store the dependencies
+      // in this chart entry.
+      return -1;
+    }
+
     for (int i = 0; i < unfilledDependencies.length; i++) {
       long unfilledDependency = unfilledDependencies[i];
       int objectVarNum = CcgParser.getObjectArgNumFromDep(unfilledDependency);
       int j;
-      for (j = 0; j < uniqueVars.length; j++) {
-        if (uniqueVars[j] == objectVarNum) {
+      for (j = 0; j < syntaxUniqueVars.length; j++) {
+        if (syntaxUniqueVars[j] == objectVarNum) {
           unfilledDependency -= CcgParser.marshalUnfilledDependency(objectVarNum, 0, 0, 0, 0);
           unfilledDependency += CcgParser.marshalUnfilledDependency(relabeling[j], 0, 0, 0, 0);
-          relabeledUnfilledDependencies[i] = unfilledDependency;
+          dependencyAccumulator[i + accumulatorStartIndex] = unfilledDependency;
           break;
         }
       }
-
-      Preconditions.checkState(j != uniqueVars.length, "No relabeling %s %s %s", syntax, i, objectVarNum);
+      Preconditions.checkState(j != syntaxUniqueVars.length, "No relabeling %s %s %s", syntax, i, objectVarNum);
     }
 
-    return relabeledUnfilledDependencies;
+    return unfilledDependencies.length + accumulatorStartIndex;
   }
 
   public CcgCategory getLexiconEntry() {

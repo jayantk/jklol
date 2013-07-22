@@ -1561,9 +1561,10 @@ public class CcgParser implements Serializable {
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
-    long[] depAccumulator = new long[20];
     long[] depFillingAccumulator = new long[20];
     long[] assignmentAccumulator = new long[50];
+    long[] filledDepAccumulator = new long[20];
+    long[] unfilledDepAccumulator = new long[20];
 
     Tensor syntaxDistributionTensor = chart.getSyntaxDistribution().getWeights();
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
@@ -1620,8 +1621,6 @@ public class CcgParser implements Serializable {
 
                 // Apply the binary rule.
                 Combinator resultCombinator = searchMove.getBinaryCombinator();
-                // double ruleProb =
-                // syntaxDistributionTensor.getByIndex(index);
                 // log.startTimer("ccg_parse/beam_loop/binary");
                 double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
                 // log.stopTimer("ccg_parse/beam_loop/binary");
@@ -1629,7 +1628,7 @@ public class CcgParser implements Serializable {
                 int resultSyntax = resultCombinator.getSyntax();
                 int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
 
-                for (Integer leftIndex : leftTypes.get(leftType)) {
+                for (int leftIndex : leftTypes.get(leftType)) {
                   ChartEntry leftRoot = leftTrees[leftIndex];
                   double leftProb = leftProbs[leftIndex];
 
@@ -1640,7 +1639,7 @@ public class CcgParser implements Serializable {
                   }
                   // log.stopTimer("ccg_parse/beam_loop/unary");
 
-                  for (Integer rightIndex : rightTypes.get(rightType)) {
+                  deploop: for (int rightIndex : rightTypes.get(rightType)) {
                     ChartEntry rightRoot = rightTrees[rightIndex];
                     double rightProb = rightProbs[rightIndex];
 
@@ -1659,8 +1658,9 @@ public class CcgParser implements Serializable {
                     numAssignments = relabelAssignment(rightRoot, searchMove.getRightRelabeling(),
                         assignmentAccumulator, numAssignments);
 
-                    // Relabel and fill dependencies from the left and
-                    // right chart entries, and the combinator (if necessary).
+                    // Relabel dependencies from the left and right chart entries, 
+                    // and the combinator (if necessary) so the assignment and the 
+                    // dependencies use a common variable numbering scheme.
                     int numDepFillingAccumulator = 0;
                     numDepFillingAccumulator = leftRoot.getUnfilledDependenciesRelabeled(
                         searchMove.getLeftRelabeling(), depFillingAccumulator, numDepFillingAccumulator);
@@ -1674,17 +1674,54 @@ public class CcgParser implements Serializable {
                       if (numDepFillingAccumulator == -1) { continue; }
                     }
 
-                    int numDeps = 0;
-                    numDeps = accumulateDependencies(depFillingAccumulator, numDepFillingAccumulator,
-                        resultCombinator.getUnifiedVariables(), assignmentAccumulator,
-                        numAssignments, depAccumulator, resultCombinator.getResultOriginalVars(),
-                        resultCombinator.getResultVariableRelabeling(), resultSyntaxUniqueVars, numDeps);
-                    if (numDeps == -1) {
-                      continue;
-                    }
+                    // Fill dependencies based on the current assignment.
+                    int numFilledDeps = 0;
+                    int numUnfilledDeps = 0;
+                    int[] variablesToUnify = resultCombinator.getUnifiedVariables();
+                    int[] returnOriginalVars = resultCombinator.getResultOriginalVars();
+                    int[] returnVarsRelabeling = resultCombinator.getResultVariableRelabeling();
+                    for (int k = 0; k < numDepFillingAccumulator; k++) {
+                      long unfilledDependency = depFillingAccumulator[k];
+                      int objectArgNum = getObjectArgNumFromDep(unfilledDependency);
 
-                    long[] filledDepArray = separateDependencies(depAccumulator, numDeps, true);
-                    long[] unfilledDepArray = separateDependencies(depAccumulator, numDeps, false);
+                      boolean depWasFilled = false;
+                      if (Ints.contains(variablesToUnify, objectArgNum)) {
+                        // Determine if the assignment contains a value for this variable.
+                        for (int l = 0; l < numAssignments; l++) {
+                          long curAssignment = assignmentAccumulator[l];
+                          if (CcgParser.getAssignmentVarNum(curAssignment) == objectArgNum) {
+                            // Create a new filled dependency by substituting in the
+                            // current object.
+                            long filledDep = unfilledDependency - (objectArgNum << OBJECT_OFFSET);
+                            filledDep |= (((long) CcgParser.getAssignmentPredicateNum(curAssignment)) + MAX_ARG_NUM) << OBJECT_OFFSET;
+                            filledDep |= ((long) CcgParser.getAssignmentWordIndex(curAssignment)) << OBJECT_WORD_IND_OFFSET;
+
+                            if (numFilledDeps >= filledDepAccumulator.length) {
+                              continue deploop;
+                            }
+                            filledDepAccumulator[numFilledDeps] = filledDep;
+                            numFilledDeps++;
+                            depWasFilled = true;
+                          }
+                        }
+                      }
+
+                      int returnOriginalVarIndex = Ints.indexOf(returnOriginalVars, objectArgNum);
+                      if (!depWasFilled && returnOriginalVarIndex != -1) {
+                        if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                          continue deploop;
+                        }
+                        int relabeledVarNum = returnVarsRelabeling[returnOriginalVarIndex];
+
+                        long relabeledDep = unfilledDependency - (objectArgNum << OBJECT_OFFSET);
+                        relabeledDep |= (relabeledVarNum << OBJECT_OFFSET);
+
+                        unfilledDepAccumulator[numUnfilledDeps] = relabeledDep;
+                        numUnfilledDeps++;
+                      }
+                    }
+                    long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
+                    long[] unfilledDepArray = Arrays.copyOf(unfilledDepAccumulator, numUnfilledDeps);
                     // log.stopTimer("ccg_parse/beam_loop/relabel");
 
                     // log.startTimer("ccg_parse/beam_loop/create_assignment_and_chart");
@@ -1704,7 +1741,8 @@ public class CcgParser implements Serializable {
                     // dependencies.
                     double depProb = 1.0;
                     double curDepProb = 1.0;
-                    for (int depIndex = 0; depIndex < filledDepArray.length; depIndex++) {
+                    int filledDepArrayLength = filledDepArray.length;
+                    for (int depIndex = 0; depIndex < filledDepArrayLength; depIndex++) {
                       long depLong = filledDepArray[depIndex];
                       if (depLong == depCache) {
                         depProb *= depProbCache;
@@ -1873,86 +1911,6 @@ public class CcgParser implements Serializable {
     return accumulatorSize - numRemoved;
   }
 
-  /**
-   * Fills any dependencies in {@code unfilledDependencies} and
-   * accumulates them in {@code depAccumulator}.
-   * 
-   * @param unfilledDependencies
-   * @param unfilledDependenciesLength
-   * @param variablesToUnify
-   * @param assignments
-   * @param depAccumulator
-   * @param returnVariableNums
-   * @param numDeps
-   * @return
-   */
-  private int accumulateDependencies(long[] unfilledDependencies, int unfilledDependenciesLength,
-      int[] variablesToUnify, long[] assignments, int assignmentLength, 
-      long[] depAccumulator, int[] returnOriginalVars, int[] returnVarsRelabeling,
-      int[] returnVariableNums, int numDeps) {
-
-    // Fill any dependencies that depend on this variable.
-    for (int j = 0; j < unfilledDependenciesLength; j++) {
-      long unfilledDependency = unfilledDependencies[j];
-      int objectArgNum = getObjectArgNumFromDep(unfilledDependency);
-
-      boolean depWasFilled = false;
-      if (Ints.contains(variablesToUnify, objectArgNum)) {
-        for (int i = 0; i < assignmentLength; i++) {
-          long curAssignment = assignments[i];
-          if (CcgParser.getAssignmentVarNum(curAssignment) == objectArgNum) {
-            // Create a new filled dependency by substituting in the
-            // current object.
-            long filledDep = unfilledDependency - (objectArgNum << OBJECT_OFFSET);
-            filledDep += (((long) CcgParser.getAssignmentPredicateNum(curAssignment)) + MAX_ARG_NUM) << OBJECT_OFFSET;
-            filledDep += ((long) CcgParser.getAssignmentWordIndex(curAssignment)) << OBJECT_WORD_IND_OFFSET;
-
-            if (numDeps >= depAccumulator.length) {
-              return -1;
-            }
-            depAccumulator[numDeps] = filledDep;
-            numDeps++;
-            depWasFilled = true;
-          }
-        }
-      }
-
-      if (!depWasFilled && Ints.contains(returnOriginalVars, objectArgNum)) {
-        if (numDeps >= depAccumulator.length) {
-          return -1;
-        }
-        int relabeledVarNum = returnVarsRelabeling[Ints.indexOf(returnOriginalVars, objectArgNum)];
-
-        long relabeledDep = unfilledDependency - (objectArgNum << OBJECT_OFFSET);
-        relabeledDep += (relabeledVarNum << OBJECT_OFFSET);
-
-        depAccumulator[numDeps] = relabeledDep;
-        numDeps++;
-      }
-    }
-    return numDeps;
-  }
-
-  private long[] separateDependencies(long[] deps, int numDeps, boolean getFilled) {
-    // Count filled/unfilled dependencies
-    int count = 0;
-    for (int i = 0; i < numDeps; i++) {
-      if (isFilledDependency(deps[i]) == getFilled) {
-        count++;
-      }
-    }
-
-    long[] filtered = new long[count];
-    count = 0;
-    for (int i = 0; i < numDeps; i++) {
-      if (isFilledDependency(deps[i]) == getFilled) {
-        filtered[count] = deps[i];
-        count++;
-      }
-    }
-    return filtered;
-  }
-
   // Methods for efficiently encoding dependencies as longs
   // //////////////////////////////
 
@@ -1981,7 +1939,7 @@ public class CcgParser implements Serializable {
     return marshalUnfilledDependency(objectNum, argNum, subjectNum, objectWordInd, subjectWordInd);
   }
 
-  public long predicateToLong(String predicate) {
+  public final long predicateToLong(String predicate) {
     if (dependencyHeadType.canTakeValue(predicate)) {
       return dependencyHeadType.getValueIndex(predicate);
     } else {
@@ -1989,7 +1947,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public static long marshalUnfilledDependency(long objectNum, long argNum, long subjectNum,
+  public static final long marshalUnfilledDependency(long objectNum, long argNum, long subjectNum,
       long objectWordInd, long subjectWordInd) {
     long value = 0L;
     value += objectNum << OBJECT_OFFSET;
@@ -2000,7 +1958,7 @@ public class CcgParser implements Serializable {
     return value;
   }
 
-  public static long marshalFilledDependency(long objectNum, long argNum, long subjectNum,
+  public static final long marshalFilledDependency(long objectNum, long argNum, long subjectNum,
       long objectWordInd, long subjectWordInd) {
     long value = 0L;
     value += (objectNum + MAX_ARG_NUM) << OBJECT_OFFSET;
@@ -2011,11 +1969,11 @@ public class CcgParser implements Serializable {
     return value;
   }
 
-  private int getArgNumFromDep(long depLong) {
+  private static final int getArgNumFromDep(long depLong) {
     return (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
   }
 
-  public static int getObjectArgNumFromDep(long depLong) {
+  public static final int getObjectArgNumFromDep(long depLong) {
     int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK);
     if (objectNum >= MAX_ARG_NUM) {
       return -1;
@@ -2024,7 +1982,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  private int getObjectPredicateFromDep(long depLong) {
+  private static final int getObjectPredicateFromDep(long depLong) {
     int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK);
     if (objectNum >= MAX_ARG_NUM) {
       return objectNum - MAX_ARG_NUM;
@@ -2033,7 +1991,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public static int getSubjectArgNumFromDep(long depLong) {
+  public static final int getSubjectArgNumFromDep(long depLong) {
     int subjectNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK);
     if (subjectNum >= MAX_ARG_NUM) {
       return -1;
@@ -2042,7 +2000,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public static int getSubjectPredicateFromDep(long depLong) {
+  public static final int getSubjectPredicateFromDep(long depLong) {
     int subjectNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK);
     if (subjectNum >= MAX_ARG_NUM) {
       return subjectNum - MAX_ARG_NUM;
@@ -2139,7 +2097,7 @@ public class CcgParser implements Serializable {
     return predicates;
   }
    
-  public static long marshalAssignment(long variableNum, long predicateNum, long wordInd) {
+  public static final long marshalAssignment(long variableNum, long predicateNum, long wordInd) {
     return (variableNum << ASSIGNMENT_VAR_NUM_OFFSET) |
         (predicateNum << ASSIGNMENT_PREDICATE_OFFSET) | (wordInd << ASSIGNMENT_WORD_IND_OFFSET);
   }
@@ -2156,7 +2114,7 @@ public class CcgParser implements Serializable {
     return (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
   }
   
-  public static long replaceAssignmentVarNum(long assignment, int oldVarNum, int newVarNum) {
+  public static final long replaceAssignmentVarNum(long assignment, int oldVarNum, int newVarNum) {
     // Switch the variable numbers using a fancy XOR trick.
     return assignment ^ (((long) oldVarNum ^ newVarNum) << ASSIGNMENT_VAR_NUM_OFFSET);
   }

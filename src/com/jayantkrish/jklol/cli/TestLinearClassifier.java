@@ -22,7 +22,6 @@ public class TestLinearClassifier extends AbstractCli {
   private OptionSpec<String> labelFile;
   
   private OptionSpec<String> delimiterOption;
-  private OptionSpec<Integer> printParameters;
 
   @Override
   public void initializeOptions(OptionParser parser) {
@@ -34,7 +33,6 @@ public class TestLinearClassifier extends AbstractCli {
     // Optional options
     delimiterOption = parser.accepts("delimiter").withRequiredArg().ofType(String.class)
         .defaultsTo(",");
-    printParameters = parser.accepts("printParameters").withOptionalArg().ofType(Integer.class).defaultsTo(-1);
   }
 
   @Override

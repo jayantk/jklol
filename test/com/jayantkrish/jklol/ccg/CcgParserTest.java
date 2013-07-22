@@ -667,12 +667,12 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseTimeout() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries"), 
-        Collections.nCopies(6, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), -1);
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
+        Collections.nCopies(7, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), -1);
     assertTrue(parses.size() > 0);
     
-    parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries"), 
-        Collections.nCopies(6, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), 1);
+    parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
+        Collections.nCopies(7, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), 1);
     assertEquals(0, parses.size());
   }
 

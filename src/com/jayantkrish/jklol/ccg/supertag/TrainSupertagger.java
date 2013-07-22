@@ -27,8 +27,15 @@ import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
 
+/**
+ * Trains a CCG supertagger. The supertagger takes as input a
+ * POS-tagged sentence, and predicts a sequence of CCG syntactic
+ * categories.
+ * 
+ * @author jayantk
+ */
 public class TrainSupertagger extends AbstractCli {
-  
+
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
 
@@ -36,7 +43,7 @@ public class TrainSupertagger extends AbstractCli {
   private OptionSpec<Void> noTransitions;
   private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
-  
+
   public TrainSupertagger() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.LBFGS, CommonOptions.MAP_REDUCE);
   }
@@ -46,7 +53,7 @@ public class TrainSupertagger extends AbstractCli {
     trainingFilename = parser.accepts("training").withRequiredArg()
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
-    
+
     noTransitions = parser.accepts("noTransitions");
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
@@ -59,10 +66,10 @@ public class TrainSupertagger extends AbstractCli {
     // feature generation.
     List<CcgExample> ccgExamples = CcgExample.readExamplesFromFile(
         options.valueOf(trainingFilename), true, true);
-    List<TaggedSequence<WordAndPos, SyntacticCategory>> trainingData = 
+    List<TaggedSequence<WordAndPos, SyntacticCategory>> trainingData =
         reformatTrainingExamples(ccgExamples);
 
-    FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen = 
+    FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold));
 
     Set<SyntacticCategory> validCategories = Sets.newHashSet();
@@ -83,11 +90,18 @@ public class TrainSupertagger extends AbstractCli {
 
     // Save model to disk.
     System.out.println("Serializing trained model...");
-    FactorGraphSupertagger supertagger = new FactorGraphSupertagger(tagger.getModelFamily(), 
+    FactorGraphSupertagger supertagger = new FactorGraphSupertagger(tagger.getModelFamily(),
         tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator());
     IoUtils.serializeObjectToFile(supertagger, options.valueOf(modelOutput));
   }
 
+  /**
+   * Converts {@code ccgExamples} into word sequences tagged with
+   * syntactic categories.
+   * 
+   * @param ccgExamples
+   * @return
+   */
   public static List<TaggedSequence<WordAndPos, SyntacticCategory>> reformatTrainingExamples(
       Collection<CcgExample> ccgExamples) {
     List<TaggedSequence<WordAndPos, SyntacticCategory>> examples = Lists.newArrayList();
@@ -99,21 +113,21 @@ public class TrainSupertagger extends AbstractCli {
     }
     return examples;
   }
-  
+
   private static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
       List<TaggedSequence<WordAndPos, SyntacticCategory>> trainingData, int commonWordCountThreshold) {
     List<LocalContext<WordAndPos>> contexts = TaggerUtils.extractContextsFromData(trainingData);
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (LocalContext<WordAndPos> context : contexts) {
       wordCounts.increment(context.getItem().getWord(), 1.0);
-    }    
+    }
     Set<String> commonWords = Sets.newHashSet(wordCounts.getKeysAboveCountThreshold(
         commonWordCountThreshold));
 
     // Build a dictionary of features which occur frequently enough
     // in the data set.
-    FeatureGenerator<LocalContext<WordAndPos>, String> featureGenerator = new 
-        WordAndPosContextFeatureGenerator(new int[] {-2, -1, 0, 1, 2}, commonWords);
+    FeatureGenerator<LocalContext<WordAndPos>, String> featureGenerator = new
+        WordAndPosContextFeatureGenerator(new int[] { -2, -1, 0, 1, 2 }, commonWords);
     return DictionaryFeatureVectorGenerator.createFromDataWithThreshold(contexts,
         featureGenerator, commonWordCountThreshold);
   }

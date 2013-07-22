@@ -176,13 +176,12 @@ public class TaggerUtils {
       Class<O> outputClass, FeatureVectorGenerator<LocalContext<I>> featureGen,
       GradientOptimizer optimizer, boolean useMaxMargin) {
 
-    // Estimate parameters.
+    // Generate the training data and estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
         .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
     SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples,
         optimizer, useMaxMargin);
-
-    // Save model to disk.
+    
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
     return new FactorGraphSequenceTagger<I, O>(sequenceModelFamily, parameters,
         factorGraph, featureGen, outputClass);

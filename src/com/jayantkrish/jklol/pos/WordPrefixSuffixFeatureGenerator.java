@@ -41,13 +41,13 @@ public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalC
     if (!commonWords.contains(word)) {
       generatePrefixSuffixFeatures(word, weights);
       
-      if (word.matches("\\d")) {
+      if (word.matches(".*\\d.*")) {
         weights.put("HAS_DIGIT", 1.0);
       }
-      if (word.matches("-")) {
+      if (word.matches(".*-.*")) {
         weights.put("HAS_HYPHEN", 1.0);
       }
-      if (word.matches("[A-Z]")) {
+      if (word.matches(".*[A-Z].*")) {
         weights.put("HAS_CAPITAL", 1.0);
       }
     }

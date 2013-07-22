@@ -105,7 +105,7 @@ public class IntMultimap implements Multimap<Integer, Integer> {
    * Moves all elements from the unsorted portion of this map into the
    * sorted portion.
    */
-  private void reindexItems() {
+  public void reindexItems() {
     if (numUnsortedItems > 0) {
       int[] newSortedKeys = Arrays.copyOf(sortedKeys, sortedKeys.length + numUnsortedItems);
       int[] newSortedValues = Arrays.copyOf(sortedValues, sortedValues.length + numUnsortedItems);

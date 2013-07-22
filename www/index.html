@@ -1,0 +1,70 @@
+
+
+<h1>jklol</h1>
+
+
+<p>
+<b>jklol</b> is a Java library for developing structured machine
+learning models. jklol supports linear classification, structured
+prediction, graphical models, likelihood-based and max-margin methods,
+semi-supervised and weakly-supervised learning, generalized matrix /
+tensor factorization, and neural networks. It is designed to be
+intuitive, fast, and modular, with the main goal of reducing
+development time for new machine learning models.
+</p>
+
+<h2>Why use jklol ...</h2>
+
+<p>
+... <em>at all?</em> <b>Because it will save you time.</b> Avoid
+reimplementing basic algorithmic building blocks. (How many times have
+you implemented gradient descent?)
+</p>
+
+<p>
+... <em>as opposed to something else?</em> <b>Because it is more
+flexible.</b> When developing a machine learning model, especially for
+research purposes, you need the ability to change your system in
+various ways. Maybe you want to use unlabeled data, or try out
+max-margin learning, or add a weird constraint to your
+objective. jklol's modular design allows you to independently swap out
+inference algorithms, model structures, parametrizations, objectives
+and optimization routines, making it easy to tinker.
+</p>
+
+<h2>Features</h2>
+
+jklol supports:
+<ul>
+<li>Training and inference for general graphical models. Both
+loglinear and max-margin training are supported, as are graphical
+models with repeated structure (e.g., sequence models).</li>
+<li>Semi-supervised and weakly-supervised training, using expectation
+maximization or stochastic gradient.</li>
+<li>Other structured prediction. (e.g., parsing)</li>
+<li>A tensor library for fast mathematical computation.</li>
+<li>Fast optimization via (stochastic) gradient descent or L-BFGS. All
+optimization algorithms exploit parallelization for reduced training
+times.</li>
+</ul>
+
+<h2>Sample Applications</h2>
+
+<p>
+I've used jklol for:
+
+<ul>
+<li>Part-of-speech tagging and CCG supertagging</li>
+<li>Broad coverage CCG parsing and semantic parsing</li>
+<li>Training models of vector space composition</li>
+<li>Miscellaneous miniature graphical models</li>
+<li>Matrix factorization ala universal schema</li>
+</ul>
+
+(Basically, <a href="http://www.jayantkrish.com/">the experiments for
+anything I've published in the past 2 years</a> use jklol.)
+</p>
+
+
+
+

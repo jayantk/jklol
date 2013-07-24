@@ -39,7 +39,7 @@ public class CvsmTanhTree extends AbstractCvsmTree {
     Tensor tanh = getValue().getTensor();
     Tensor nodeGradient = tanh.elementwiseProduct(tanh).elementwiseProduct(-1.0).elementwiseAddition(1.0);
 
-    Tensor subtreeGradient = nodeGradient.elementwiseInverse().elementwiseProduct(treeGradient.getTensor());
+    Tensor subtreeGradient = nodeGradient.elementwiseProduct(treeGradient.getTensor());
     subtree.backpropagateGradient(new TensorLowRankTensor(subtreeGradient), gradient);
   }
 

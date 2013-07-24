@@ -9,6 +9,11 @@ import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 
+/**
+ * A hyperbolic tangent operator.
+ * 
+ * @author jayantk
+ */
 public class CvsmTanhTree extends AbstractCvsmTree {
   
   private final CvsmTree subtree;
@@ -31,11 +36,10 @@ public class CvsmTanhTree extends AbstractCvsmTree {
 
   @Override
   public void backpropagateGradient(LowRankTensor treeGradient, CvsmGradient gradient) {
-    Tensor value = getValue().getTensor();
-    Tensor tanh = value.elementwiseTanh();
+    Tensor tanh = getValue().getTensor();
     Tensor nodeGradient = tanh.elementwiseProduct(tanh).elementwiseProduct(-1.0).elementwiseAddition(1.0);
-    
-    Tensor subtreeGradient = nodeGradient.elementwiseProduct(treeGradient.getTensor());
+
+    Tensor subtreeGradient = nodeGradient.elementwiseInverse().elementwiseProduct(treeGradient.getTensor());
     subtree.backpropagateGradient(new TensorLowRankTensor(subtreeGradient), gradient);
   }
 

@@ -15,7 +15,7 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
-import com.jayantkrish.jklol.cvsm.tree.CvsmZeroOneLossTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmValueLossTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -77,15 +77,14 @@ public class TestCvsm extends AbstractCli {
           tree = new CvsmKlLossTree(example.getTargets(),
               trainedModel.getInterpretationTree(example.getLogicalForm()));
         } else {
-          tree = new CvsmZeroOneLossTree(example.getTargets(),
+          tree = new CvsmValueLossTree(
               trainedModel.getInterpretationTree(example.getLogicalForm()));
         }
         double exampleLoss = tree.getLoss();
         loss += exampleLoss;
 
         if (relDict == null) {
-          System.out.println(exampleLoss + " " + Arrays.toString(example.getTargets().getValues()) 
-              + " " + Arrays.toString(tree.getValue().getTensor().getValues()) + " " + example.getLogicalForm());
+          System.out.println(exampleLoss + " " + example.getLogicalForm());
         } else { 
           Tensor targetTensor = example.getTargets();
           Tensor predictedTensor = tree.getValue().getTensor();
@@ -125,10 +124,12 @@ public class TestCvsm extends AbstractCli {
       Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
       // To make printing concise, remove values whose magnitude 
       // is too small.
-      Tensor positiveKeys = tensor.findKeysLargerThan(options.valueOf(minValueToPrint));
-      Tensor negativeKeys = tensor.elementwiseProduct(-1.0).findKeysLargerThan(options.valueOf(minValueToPrint));
-      Tensor indicators = positiveKeys.elementwiseAddition(negativeKeys);
-      tensor = tensor.elementwiseProduct(indicators);
+      if (options.has(minValueToPrint)) {
+	  Tensor positiveKeys = tensor.findKeysLargerThan(options.valueOf(minValueToPrint));
+	  Tensor negativeKeys = tensor.elementwiseProduct(-1.0).findKeysLargerThan(options.valueOf(minValueToPrint));
+	  Tensor indicators = positiveKeys.elementwiseAddition(negativeKeys);
+	  tensor = tensor.elementwiseProduct(indicators);
+      }
 
       if (relDict == null || tensor.getDimensionNumbers().length > 1 || tensor.getDimensionSizes()[0] != relDict.size()) {
 	  System.out.println(tensor);

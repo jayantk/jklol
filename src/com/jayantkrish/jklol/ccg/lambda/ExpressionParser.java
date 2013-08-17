@@ -55,10 +55,6 @@ public class ExpressionParser {
       tokens.add(expression.substring(exprStart, expression.length()));
     }
     return tokens;
-    /*
-    String transformedExpression = expression.replaceAll("([()])", " $1 ");
-    return Arrays.asList(transformedExpression.trim().split("\\s+"));
-    */
   }
 
   public Expression parseSingleExpression(String expression) {

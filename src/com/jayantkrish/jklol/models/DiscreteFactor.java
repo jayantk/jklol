@@ -184,6 +184,9 @@ public abstract class DiscreteFactor extends AbstractFactor {
   public DiscreteFactor product(List<Factor> factors) {
     List<DiscreteFactor> discreteFactors = Factors.coerceToDiscrete(factors);
 
+    // TODO: multiply together factors defined over a subset of
+    // the variables of this factor, to reduce computation time.
+
     // Multiply the factors in order from smallest to largest to keep
     // the intermediate results as sparse as possible.
     SortedSetMultimap<Double, DiscreteFactor> factorsBySize =

@@ -14,7 +14,7 @@ import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.CsvParser;
 
-public class TableAssignment {
+public class TableAssignment { 
   
   private final VariableNumMap vars;
   private final Tensor indicators;

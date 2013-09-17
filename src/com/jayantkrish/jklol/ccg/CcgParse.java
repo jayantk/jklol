@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -639,6 +640,66 @@ public class CcgParse {
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
     return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
         dependencies, probability, left, right, combinator, rule, spanStart, spanEnd);
+  }
+  
+  /**
+   * Returns a representation of this tree in HTML format.
+   * 
+   * @return
+   */
+  public String toHtmlString() {
+    StringBuilder sb = new StringBuilder();
+    toHtmlStringHelper(sb);
+    return sb.toString();
+  }
+  
+  private void toHtmlStringHelper(StringBuilder sb) {
+    String syntaxString = syntax.getSyntax().toString();
+    Expression logicalForm = getLogicalForm();
+    String lfString = logicalForm != null ? logicalForm.simplify().toString() : "";
+
+    /*
+    if (unaryRule != null) {
+      syntaxString += "_" + unaryRule.getUnaryRule().getInputSyntacticCategory();
+    }
+    */
+    if (left != null && right != null) {
+      sb.append("<div class=\"nonterminalNode\">");
+      sb.append("<div class=\"leftTree\">");
+      left.toHtmlStringHelper(sb);
+      sb.append("</div>");
+      
+      sb.append("<div class=\"rightTree\">");
+      right.toHtmlStringHelper(sb);
+      sb.append("</div>");
+      
+      sb.append("<div class=\"clear\">");
+      sb.append("<p class=\"nonterminalSyntax\">");
+      sb.append(syntaxString);
+      sb.append("</p>");
+
+      sb.append("<p class=\"nonterminalLf\">");
+      sb.append(lfString);
+      sb.append("</p>");
+      sb.append("</div>");
+      
+      sb.append("</div>");
+    } else {
+      sb.append("<div class=\"terminalNode\">");
+      sb.append("<p class=\"terminalWords\">");
+      sb.append(Joiner.on(" ").join(spannedWords));
+      sb.append("</p>");
+
+      sb.append("<p class=\"terminalSyntax\">");
+      sb.append(syntaxString);
+      sb.append("</p>");
+      
+      sb.append("<p class=\"terminalLf\">");
+      sb.append(lfString);
+      sb.append("</p>");
+      
+      sb.append("</div>");
+    }
   }
 
   @Override

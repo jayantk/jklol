@@ -738,6 +738,8 @@ public class CcgParserTest extends TestCase {
     for (CcgParse parse : parses) {
       assertEquals(expected, parse.getLexiconEntryForWordIndex(3).getSyntax().getSyntax());
     }
+    
+    System.out.println(parses.get(0).toHtmlString());
   }
 
   public void testChartFilterApplyToTerminals() {

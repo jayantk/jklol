@@ -88,11 +88,11 @@ public class ConvertCncToCvsm extends AbstractCli {
         if (ccgExpression != null) {
           int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
           while (expressions.size() < parseNum - 1) {
-	      expressions.add(convertParseExpressions(Lists.<Expression>newArrayList(), examples.get(expressions.size()), options.has(useEntityTypes)));
+            expressions.add(convertParseExpressions(Lists.<Expression>newArrayList(), examples.get(expressions.size()), options.has(useEntityTypes)));
           }
           RelationExtractionExample sentence = examples.get(parseNum - 1);
           expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
-					    options.has(generateSubexpressionExamples), options.has(useEntityTypes), options.valueOf(maxSpanLength)));
+              options.has(generateSubexpressionExamples), options.has(useEntityTypes), options.valueOf(maxSpanLength)));
         }
         ccgExpression = exp.parseSingleExpression(line);
         wordExpressions = Lists.newArrayList();
@@ -104,11 +104,11 @@ public class ConvertCncToCvsm extends AbstractCli {
     if (ccgExpression != null) {
       int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
       while (expressions.size() < parseNum - 1) {
-	  expressions.add(convertParseExpressions(Lists.<Expression>newArrayList(), examples.get(expressions.size()), options.has(useEntityTypes)));
+        expressions.add(convertParseExpressions(Lists.<Expression>newArrayList(), examples.get(expressions.size()), options.has(useEntityTypes)));
       }
       RelationExtractionExample sentence = examples.get(parseNum - 1);
       expressions.add(convertExpression(sentence, ccgExpression, wordExpressions,
-					options.has(generateSubexpressionExamples), options.has(useEntityTypes), options.valueOf(maxSpanLength)));
+          options.has(generateSubexpressionExamples), options.has(useEntityTypes), options.valueOf(maxSpanLength)));
     }
 
     System.err.println("expressions: " + expressions.size() + " examples: " + examples.size());
@@ -163,52 +163,52 @@ public class ConvertCncToCvsm extends AbstractCli {
     return examples;
   }
 
-    private List<Expression> convertExpression(RelationExtractionExample example, Expression ccgExpression, 
-					       List<Expression> initialWordExpressions, boolean generateSubexpressionExamples,
-					       boolean useEntityTypes, int maxSpanLength) {
-	List<Expression> parseExpressions = convertCcgExpression(example, ccgExpression, initialWordExpressions, 
-							       generateSubexpressionExamples, maxSpanLength);
-	return convertParseExpressions(parseExpressions, example, useEntityTypes);
+  private List<Expression> convertExpression(RelationExtractionExample example, Expression ccgExpression, 
+      List<Expression> initialWordExpressions, boolean generateSubexpressionExamples,
+      boolean useEntityTypes, int maxSpanLength) {
+    List<Expression> parseExpressions = convertCcgExpression(example, ccgExpression, initialWordExpressions, 
+        generateSubexpressionExamples, maxSpanLength);
+    return convertParseExpressions(parseExpressions, example, useEntityTypes);
+  }
+
+  private List<Expression> convertParseExpressions(List<Expression> parseExpressionsOrig, RelationExtractionExample example, boolean useEntityTypes) {
+    List<Expression> parseExpressions = Lists.newArrayList(parseExpressionsOrig);
+    if (parseExpressions.size() == 0) {
+      parseExpressions.add(new ConstantExpression("weights:no_conversion"));
     }
 
-    private List<Expression> convertParseExpressions(List<Expression> parseExpressionsOrig, RelationExtractionExample example, boolean useEntityTypes) {
-	List<Expression> parseExpressions = Lists.newArrayList(parseExpressionsOrig);
-	if (parseExpressions.size() == 0) {
-	    parseExpressions.add(new ConstantExpression("weights:no_conversion"));
-	}
+    Expression entityClassifiers = null;
+    if (useEntityTypes) {
+      Expression entity1Expression = reader.buildNpExpression(example.getE1Span().getWords());
+      Expression entity2Expression = reader.buildNpExpression(example.getE2Span().getWords());
 
-	Expression entityClassifiers = null;
-	if (useEntityTypes) {
-	    Expression entity1Expression = reader.buildNpExpression(example.getE1Span().getWords());
-	    Expression entity2Expression = reader.buildNpExpression(example.getE2Span().getWords());
-	    
-	    entityClassifiers = new ApplicationExpression(new ConstantExpression("op:add"),
-							  Arrays.asList(
-							      new ApplicationExpression(new ConstantExpression("op:matvecmul"),
-											Arrays.asList(new ConstantExpression("weights:softmax_e1"), entity1Expression)),
-							      new ApplicationExpression(new ConstantExpression("op:matvecmul"),
-											Arrays.asList(new ConstantExpression("weights:softmax_e2"), entity2Expression)),
-							      new ConstantExpression("weights:softmax_bias")));
-	} else {
-	    entityClassifiers = new ConstantExpression("weights:softmax_bias");
-	}
-
-	List<Expression> exampleExpressions = Lists.newArrayList();
-	for (Expression parseExpression  : parseExpressions) {
-	    Expression converted = new ApplicationExpression(new ConstantExpression("op:softmax"),
-            Arrays.asList(new ApplicationExpression(new ConstantExpression("op:add"), 
-                Arrays.asList(new ApplicationExpression(new ConstantExpression("op:matvecmul"),
-                    Arrays.asList(new ConstantExpression("weights:softmax"), parseExpression)),
-			      entityClassifiers))));
-	    exampleExpressions.add(converted.simplify());
-        }
-
-	return exampleExpressions;
+      entityClassifiers = new ApplicationExpression(new ConstantExpression("op:add"),
+          Arrays.asList(
+              new ApplicationExpression(new ConstantExpression("op:matvecmul"),
+                  Arrays.asList(new ConstantExpression("weights:softmax_e1"), entity1Expression)),
+                  new ApplicationExpression(new ConstantExpression("op:matvecmul"),
+                      Arrays.asList(new ConstantExpression("weights:softmax_e2"), entity2Expression)),
+                      new ConstantExpression("weights:softmax_bias")));
+    } else {
+      entityClassifiers = new ConstantExpression("weights:softmax_bias");
     }
+
+    List<Expression> exampleExpressions = Lists.newArrayList();
+    for (Expression parseExpression  : parseExpressions) {
+      Expression converted = new ApplicationExpression(new ConstantExpression("op:softmax"),
+          Arrays.asList(new ApplicationExpression(new ConstantExpression("op:add"), 
+              Arrays.asList(new ApplicationExpression(new ConstantExpression("op:matvecmul"),
+                  Arrays.asList(new ConstantExpression("weights:softmax"), parseExpression)),
+                  entityClassifiers))));
+      exampleExpressions.add(converted.simplify());
+    }
+
+    return exampleExpressions;
+  }
 
   private List<Expression> convertCcgExpression(RelationExtractionExample example, Expression ccgExpression, 
-					     List<Expression> initialWordExpressions, boolean generateSubexpressionExamples,
-					     int maxSpanLength) {
+      List<Expression> initialWordExpressions, boolean generateSubexpressionExamples,
+      int maxSpanLength) {
     int parseNum = Integer.parseInt(((ConstantExpression) ((ApplicationExpression) ccgExpression).getArguments().get(0)).getName());
     ccgExpression = ((ApplicationExpression) ccgExpression).getArguments().get(1);
 
@@ -240,16 +240,16 @@ public class ConvertCncToCvsm extends AbstractCli {
     spanningExpression = reader.pruneModifiers(spanningExpression, Arrays.asList(e1Span, e2Span));
 
     if (!CcgLfReader.getSyntacticCategory(spanningExpression).isAtomic()) {
-	int numArgs = CcgLfReader.getSyntacticCategory(spanningExpression).getArgumentList().size();
-	Expression originalSpanningExpression = spanningExpression;
-	for (int i = 0; i < numArgs && spanningExpression != null; i++) {
-	    spanningExpression = reader.eliminateArgument(spanningExpression, new int[] {0});
-	}
+      int numArgs = CcgLfReader.getSyntacticCategory(spanningExpression).getArgumentList().size();
+      Expression originalSpanningExpression = spanningExpression;
+      for (int i = 0; i < numArgs && spanningExpression != null; i++) {
+        spanningExpression = reader.eliminateArgument(spanningExpression, new int[] {0});
+      }
 
-	if (spanningExpression == null) {
-	    System.err.println("No conversion: could not eliminate arguments: " + originalSpanningExpression);
-	    return Lists.<Expression>newArrayList();
-	}
+      if (spanningExpression == null) {
+        System.err.println("No conversion: could not eliminate arguments: " + originalSpanningExpression);
+        return Lists.<Expression>newArrayList();
+      }
     }
 
     List<String> wordsInParse = reader.getWordsInCcgParse(spanningExpression, wordExpressions);
@@ -276,10 +276,10 @@ public class ConvertCncToCvsm extends AbstractCli {
     List<Expression> exampleExpressions = Lists.newArrayList();
     for (Expression subexpression : subexpressions) {
       try {
-	  Expression parsedExpression = reader.parse(subexpression, wordExpressions).simplify();
-	  exampleExpressions.add(parsedExpression);
+        Expression parsedExpression = reader.parse(subexpression, wordExpressions).simplify();
+        exampleExpressions.add(parsedExpression);
       } catch (LogicalFormConversionError error) {
-	  System.err.println("No conversion. " + error.getMessage());
+        System.err.println("No conversion. " + error.getMessage());
       }
     }
 

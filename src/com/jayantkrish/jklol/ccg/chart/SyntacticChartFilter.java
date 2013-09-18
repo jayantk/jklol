@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.chart;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
@@ -26,6 +27,7 @@ public class SyntacticChartFilter implements ChartFilter {
   private final SyntacticCategory expectedPostUnaryRoot;
 
   private final CcgSyntaxTree parse;
+  private final List<HeadedSyntacticCategory> headedTerminals;
 
   private final SyntacticCompatibilityFunction compatibilityFunction;
 
@@ -39,6 +41,7 @@ public class SyntacticChartFilter implements ChartFilter {
     this.expectedPostUnaryRoot = syntacticParse.getRootSyntax();
 
     this.parse = syntacticParse;
+    this.headedTerminals = syntacticParse.getAllSpannedHeadedSyntacticCategories();
 
     this.compatibilityFunction = Preconditions.checkNotNull(compatibilityFunction);
 
@@ -100,6 +103,18 @@ public class SyntacticChartFilter implements ChartFilter {
       }
     } else if (entry.getRightUnaryRule() != null) {
       return false;
+    }
+    
+    if (spanStart == spanEnd) {
+      // Terminals may have a specified headed syntactic
+      // category in the parse tree.
+      HeadedSyntacticCategory expectedHeadedSyntax = headedTerminals.get(spanStart);
+      if (expectedHeadedSyntax != null) {
+        int expectedHeadedSyntaxInt = syntaxVarType.getValueIndex(expectedHeadedSyntax);
+        if (expectedHeadedSyntaxInt != entry.getHeadedSyntax()) {
+          return false;
+        }
+      }
     }
     return true;
   }

@@ -213,7 +213,7 @@ public class CcgParse {
     }
 
     if (isTerminal()) {
-      return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax, spanStart, spanEnd, spannedWords, posTags);
+      return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax, spanStart, spanEnd, spannedWords, posTags, syntax);
     } else {
       CcgSyntaxTree leftTree = left.getSyntacticParse();
       CcgSyntaxTree rightTree = right.getSyntacticParse();

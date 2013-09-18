@@ -5,33 +5,82 @@ import java.util.List;
 import java.util.Stack;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
+/**
+ * A parser for LISP-style S-expressions. An example expression is:
+ * 
+ * <code>
+ * (abc (def g) (h "i j k"))
+ * </code>
+ * 
+ * @author jayantk
+ */
 public class ExpressionParser {
-  
-  private static final ConstantExpression OPEN_PAREN = new ConstantExpression("(");
-  private static final ConstantExpression CLOSE_PAREN = new ConstantExpression(")");
+  private final char openParen;
+  private final char closeParen;
+  private final char openQuote;
+  private final char closeQuote;
 
-  public ExpressionParser() {}
+  private final ConstantExpression openParenExpression;
+  private final ConstantExpression closeParenExpression;
   
+  private final ExpressionFactory factory;
+
+  private static final char DEFAULT_OPEN_PAREN = '(';
+  private static final char DEFAULT_CLOSE_PAREN = ')';
+  private static final char DEFAULT_QUOTE = '"';
+
+  /**
+   * Gets an expression parser for lambda calculus.
+   */
+  public ExpressionParser() {
+    this.openParen = DEFAULT_OPEN_PAREN;
+    this.closeParen = DEFAULT_CLOSE_PAREN;
+    this.openQuote = DEFAULT_QUOTE;
+    this.closeQuote = DEFAULT_QUOTE;
+
+    this.openParenExpression = new ConstantExpression(Character.toString(openParen));
+    this.closeParenExpression = new ConstantExpression(Character.toString(closeParen));
+    this.factory = ExpressionFactories.getLambdaCalculusFactory();
+  }
+
+  public ExpressionParser(char openParen, char closeParen, char openQuote, char closeQuote,
+      ExpressionFactory factory) {
+    this.openParen = openParen;
+    this.closeParen = closeParen;
+    this.openQuote = openQuote;
+    this.closeQuote = closeQuote;
+
+    this.openParenExpression = new ConstantExpression(Character.toString(openParen));
+    this.closeParenExpression = new ConstantExpression(Character.toString(closeParen));
+    
+    this.factory = factory;
+  }
+
   private List<String> tokenize(String expression) {
     boolean inQuotes = false;
     int exprStart = -1;
     List<String> tokens = Lists.newArrayList();
     for (int i = 0; i < expression.length(); i++) {
       char character = expression.charAt(i);
-      
-      if (character == '\"') {
+
+      boolean quoteOk = false;
+      if (character == openQuote) {
         if (exprStart == -1 && !inQuotes) {
           inQuotes = true;
           exprStart = i;
-        } else if (exprStart != -1 && inQuotes) {
-          inQuotes = false;
-        } else {
-          Preconditions.checkState(false, "Quoting error. Current: " + expression);
+          quoteOk = true;
         }
+      } 
+      if (!quoteOk && character == closeQuote) {
+        if (exprStart != -1 && inQuotes) {
+          inQuotes = false;
+          quoteOk = true;
+        } 
       }
+      Preconditions.checkState((character != openQuote && character != closeQuote) || quoteOk,
+          "Quoting error. Current: " + expression);
 
       if (!inQuotes) {
         if (Character.isWhitespace(character)) {
@@ -39,11 +88,11 @@ public class ExpressionParser {
             tokens.add(expression.substring(exprStart, i));
             exprStart = -1;
           }
-        } else if (character == '(' || character == ')') {
+        } else if (character == openParen || character == closeParen) {
           if (exprStart != -1) {
             tokens.add(expression.substring(exprStart, i));
           }
-          tokens.add(expression.substring(i, i+1));
+          tokens.add(expression.substring(i, i + 1));
           exprStart = -1;
         } else if (exprStart == -1) {
           // A meaningful, non whitespace, non parenthesis character.
@@ -60,7 +109,7 @@ public class ExpressionParser {
   public Expression parseSingleExpression(String expression) {
     return parseSingleExpression(tokenize(expression));
   }
-  
+
   public List<Expression> parse(String expressions) {
     return parse(tokenize(expressions));
   }
@@ -70,76 +119,49 @@ public class ExpressionParser {
     Preconditions.checkState(expressions.size() == 1, "Illegal input string: " + tokenizedExpressionString);
     return expressions.get(0);
   }
-  
+
   public List<Expression> parse(List<String> tokenizedExpressionString) {
     Stack<Expression> stack = new Stack<Expression>();
     try {
       for (String token : tokenizedExpressionString) {
         stack.push(new ConstantExpression(token));
-        if (stack.peek().equals(CLOSE_PAREN)) {
+        if (stack.peek().equals(closeParenExpression)) {
           stack.push(reduce(stack));
         }
       }
     } catch (EmptyStackException e) {
       throw new IllegalArgumentException("Invalid tokenized input: " + tokenizedExpressionString);
     }
-    
+
     return stack;
   }
-  
+
   private Expression reduce(Stack<Expression> stack) {
     // Pop the closing parenthesis
-    Preconditions.checkArgument(stack.peek().equals(CLOSE_PAREN));
+    Preconditions.checkArgument(stack.peek().equals(closeParenExpression));
     stack.pop();
-    
+
     // Pop all arguments.
     Stack<Expression> arguments = new Stack<Expression>();
-    while (!stack.peek().equals(OPEN_PAREN)) {
+    while (!stack.peek().equals(openParenExpression)) {
       arguments.push(stack.pop());
     }
-    
+
     // Pop the open parenthesis.
     stack.pop();
-    
+
     // Add the parsed expression.
     List<Expression> subexpressions = Lists.newArrayList();
     for (Expression argument : Lists.reverse(arguments)) {
       subexpressions.add(argument);
     }
-    
+
     if (subexpressions.size() > 0 && subexpressions.get(0) instanceof ConstantExpression) {
+      // This expression may be a special form.
       ConstantExpression constant = (ConstantExpression) subexpressions.get(0);
-      String constantName = constant.getName();
-      if (constantName.equals("lambda")) {
-        List<ConstantExpression> variables = Lists.newArrayList();
-        for (int i = 1; i < subexpressions.size() - 1; i++) {
-          variables.add((ConstantExpression) subexpressions.get(i));
-        }
-        Expression body = subexpressions.get(subexpressions.size() - 1);
-        return new LambdaExpression(variables, body);
-      } else if (constantName.equals("and")) {
-        return new CommutativeOperator(constant, subexpressions.subList(1, subexpressions.size()));
-      } else if (constantName.equals("set")) {
-        return new CommutativeOperator(constant, subexpressions.subList(1, subexpressions.size()));
-      } else if (constantName.equals("exists")) {
-        List<ConstantExpression> variables = Lists.newArrayList();
-        for (int i = 1; i < subexpressions.size() - 1; i++) {
-          variables.add((ConstantExpression) subexpressions.get(i));
-        }
-        Expression body = subexpressions.get(subexpressions.size() - 1);
-        return new QuantifierExpression(constantName, variables, body);
-      } else if (constantName.equals("forall")) {
-        List<ConstantExpression> variables = Lists.newArrayList();
-        List<Expression> values = Lists.newArrayList();
-        for (int i = 1; i < subexpressions.size() - 1; i++) {
-          ApplicationExpression app = (ApplicationExpression) subexpressions.get(i);
-          variables.add((ConstantExpression) app.getFunction());
-          values.add(Iterables.getOnlyElement(app.getArguments()));
-        }
-        Expression body = subexpressions.get(subexpressions.size() - 1);
-        return new ForAllExpression(variables, values, body);
-      }
+      return factory.createExpression(constant, subexpressions.subList(1, subexpressions.size()));
     }
+
     return new ApplicationExpression(subexpressions);
   }
 }

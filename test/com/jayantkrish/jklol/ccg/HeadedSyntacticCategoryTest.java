@@ -12,9 +12,12 @@ import com.google.common.collect.Sets;
  * @author jayantk
  */
 public class HeadedSyntacticCategoryTest extends TestCase {
+  String adjective = "(N{1}/N{1}){0}";
   String transVerb = "((S[ng]{0}\\N{1}){0}/N{2}){0}";
   String transVerb2 = "((S[b]{0}\\N{1}){0}/N{2}){0}";
   String transVerb3 = "((S{0}\\N{1}){0}/N{2}){0}";
+  String missingHeads = "((S\\N{1})/N{2})";
+  String missingHeads2 = "(N{1}/N{1})";
   String verbMod = "(((S[1]{1}\\N[9]{2}){1}/N{0}){1}/((S[1]{1}\\N[9]{2}){1}/N{0}){1}){3}";
   String verbModCanonical = "(((S[0]{0}\\N[1]{1}){0}/N{2}){0}/((S[0]{0}\\N[1]{1}){0}/N{2}){0}){3}";
   
@@ -61,6 +64,20 @@ public class HeadedSyntacticCategoryTest extends TestCase {
     assertEquals("num", cat2.getArgumentType().getSyntax().getRootFeature());
   }
   
+  public void testParseFrom4() {
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(missingHeads);
+    HeadedSyntacticCategory expected = HeadedSyntacticCategory.parseFrom(transVerb3);
+    
+    assertEquals(cat, expected);
+  }
+  
+  public void testParseFrom5() {
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(missingHeads2);
+    HeadedSyntacticCategory expected = HeadedSyntacticCategory.parseFrom(adjective);
+
+    assertEquals(cat, expected);
+  }
+
   public void testCanonicalize() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(transVerb);
     assertEquals(cat, cat.getCanonicalForm());

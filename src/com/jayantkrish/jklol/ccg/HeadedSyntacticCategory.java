@@ -106,20 +106,44 @@ public class HeadedSyntacticCategory implements Serializable {
 
     int lastLeftBraceIndex = typeString.lastIndexOf('{');
     int lastRightBraceIndex = typeString.lastIndexOf('}');
-    int lastParenIndex = typeString.lastIndexOf(')');
 
-    Preconditions.checkArgument(lastLeftBraceIndex > lastParenIndex,
-        "Illegal headed syntactic category: %s", typeString);
-    semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
-        lastLeftBraceIndex + 1, lastRightBraceIndex));
-    
-    if (!category.isAtomic()) {
+    if (category.isAtomic()) {
+      if (lastLeftBraceIndex != -1) {
+        semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
+            lastLeftBraceIndex + 1, lastRightBraceIndex));
+      } else {
+        semanticVariables[curIndex] = 0;
+      }
+    } else {
       int splitIndex = SyntacticCategory.findSlashIndex(typeString);
+      int lastParenIndex = -1;
+      // Determine if this category is wrapped in parentheses:
+      String argumentString = typeString.substring(splitIndex + 1);
+      int leftParenCount = 0;
+      int rightParenCount = 0;
+      for (int i = 0; i < argumentString.length(); i++) {
+        if (argumentString.charAt(i) == '(') {
+          leftParenCount++;
+        } else if (argumentString.charAt(i) == ')') {
+          rightParenCount++;
+        }
+      }
+      if (rightParenCount > leftParenCount) {
+        lastParenIndex = typeString.lastIndexOf(')');
+      }
 
       if (lastParenIndex != -1) {
+        if (lastLeftBraceIndex != -1 && lastLeftBraceIndex > lastParenIndex) {
+          semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
+              lastLeftBraceIndex + 1, lastRightBraceIndex));
+        } else {
+          semanticVariables[curIndex] = 0;
+        }
+
         parseSemanticVariables(category.getArgument(), typeString.substring(splitIndex + 1, lastParenIndex),
             semanticVariables, curIndex + 1);
       } else {
+        semanticVariables[curIndex] = 0;
         parseSemanticVariables(category.getArgument(), typeString.substring(splitIndex + 1),
             semanticVariables, curIndex + 1);
       }

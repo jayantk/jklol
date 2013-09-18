@@ -25,6 +25,10 @@ public class CcgExample {
   private final List<String> words;
   private final List<String> posTags;
 
+  // Optional field containing candidate supertags for the sentence.
+  // Null means all syntactic categories are acceptable for each word.
+  private final List<List<SyntacticCategory>> supertags;
+
   // May be null, in which case the true dependencies are
   // unobserved.
   private final Set<DependencyStructure> dependencies;
@@ -41,6 +45,8 @@ public class CcgExample {
    * @param words The input language to CCG parse.
    * @param posTags Part-of-speech tags for the input language. May be
    * {@code null}.
+   * @param supertags List of candidate syntactic categories for each 
+   * word. May be {@code null}.
    * @param dependencies The dependencies in the correct CCG parse of
    * {@code words}. May be {@code null}, in which case the
    * dependencies are unobserved.
@@ -51,11 +57,13 @@ public class CcgExample {
    * {@code words}. May be {@code null}, in which case the correct
    * value is treated as unobserved.
    */
-  public CcgExample(List<String> words, List<String> posTags, Set<DependencyStructure> dependencies,
-      CcgSyntaxTree syntacticParse, Expression logicalForm) {
+  public CcgExample(List<String> words, List<String> posTags, List<List<SyntacticCategory>> supertags,
+      Set<DependencyStructure> dependencies, CcgSyntaxTree syntacticParse, Expression logicalForm) {
     this.words = Preconditions.checkNotNull(words);
     this.posTags = Preconditions.checkNotNull(posTags);
+    this.supertags = supertags;
     Preconditions.checkArgument(words.size() == posTags.size());
+    Preconditions.checkArgument(supertags == null || supertags.size() == words.size());
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
     this.logicalForm = logicalForm;
@@ -113,8 +121,13 @@ public class CcgExample {
     if (parts.length >= 4 && parts[3].length() > 0) {
       logicalForm = (new ExpressionParser()).parseSingleExpression(parts[3]);
     }
+    
+    List<List<SyntacticCategory>> supertags = null;
+    if (parts.length >= 5 && parts[4].length() > 0) {
+      parts[4].split(" ");
+    }
 
-    return new CcgExample(words, posTags, dependencies, tree, logicalForm);
+    return new CcgExample(words, posTags, supertags, dependencies, tree, logicalForm);
   }
 
   /**
@@ -135,8 +148,9 @@ public class CcgExample {
       if (!ignoreSemantics) {
         examples.add(example);
       } else {
-        examples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
-            example.getSyntacticParse(), example.getLogicalForm()));
+        examples.add(new CcgExample(example.getWords(), example.getPosTags(),
+            example.getSupertags(), example.getDependencies(), example.getSyntacticParse(),
+            example.getLogicalForm()));
       }
     }
     return examples;
@@ -163,6 +177,10 @@ public class CcgExample {
 
   public List<String> getPosTags() {
     return posTags;
+  }
+  
+  public List<List<SyntacticCategory>> getSupertags() {
+    return supertags;
   }
 
   /**

@@ -5,18 +5,20 @@ import junit.framework.TestCase;
 public class ExpressionParserTest extends TestCase {
   
   ExpressionParser parser;
+  ExpressionParser unequalQuoteParser;
   
   public void setUp() {
     parser = new ExpressionParser();
+    unequalQuoteParser = new ExpressionParser('(', ')', '<', '>', ExpressionFactories.getDefaultFactory());
   }
-  
+
   public void testParseConstant() {
     Expression result = parser.parseSingleExpression("x");
     
     assertTrue(result instanceof ConstantExpression);    
     assertEquals("x", ((ConstantExpression) result).getName());
   }
-  
+
   public void testParse() {
     Expression result = parser.parseSingleExpression("(and (/m/abc x) (/m/bcd y) /m/cde)");
     
@@ -27,7 +29,7 @@ public class ExpressionParserTest extends TestCase {
     
     System.out.println(application);
   }
-  
+
   public void testParseQuotes() {
     Expression result = parser.parseSingleExpression("(and \"(/m/abc x) (/m/bcd y)\" /m/cde)");
     
@@ -37,6 +39,26 @@ public class ExpressionParserTest extends TestCase {
     assertEquals(2, application.getArguments().size());
     
     System.out.println(application);
+  }
 
+  public void testParseIgnoreQuotes() {
+    // Check that single quotes are ignored by this parser.
+    Expression result = unequalQuoteParser.parseSingleExpression("(and \"(/m/abc x) (/m/bcd y)\" /m/cde)");
+    
+    assertTrue(result instanceof ApplicationExpression);
+    ApplicationExpression application = (ApplicationExpression) result;
+    assertEquals("and", ((ConstantExpression) application.getFunction()).getName());
+    assertEquals(5, application.getArguments().size());
+  }
+  
+  public void testParseUnequalQuotes() {
+    // Check that the unequal quotes work properly.
+    Expression result = unequalQuoteParser.parseSingleExpression("(and <(/m/abc x) (/m/bcd y)> /m/cde)");
+
+    assertTrue(result instanceof ApplicationExpression);
+    ApplicationExpression application = (ApplicationExpression) result;
+    assertEquals("and", ((ConstantExpression) application.getFunction()).getName());
+    assertEquals(2, application.getArguments().size());
+    assertEquals("<(/m/abc x) (/m/bcd y)>", ((ConstantExpression) application.getArguments().get(0)).getName());
   }
 }

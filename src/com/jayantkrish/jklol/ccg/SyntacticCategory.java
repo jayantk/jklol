@@ -50,13 +50,13 @@ public class SyntacticCategory implements Serializable {
   private final Direction direction;
   private final SyntacticCategory returnType;
   private final SyntacticCategory argumentType;
-  
+
   // Either type of category may have an associated feature. No feature
   // is encoded as DEFAULT_FEATURE_VALUE. Features may be matched using a 
   // feature variable.
   private final String featureValue;
   private final int featureVariable;
-  
+
   private int cachedHashCode;
 
   private static final Map<String, SyntacticCategory> categoryInternmentMap =
@@ -139,7 +139,7 @@ public class SyntacticCategory implements Serializable {
     if (categoryInternmentMap.containsKey(typeString)) {
       return categoryInternmentMap.get(typeString);
     }
-    
+
     int minParenDepthIndex = findSlashIndex(typeString);
 
     // Features, if present, are always at the end of the string.
@@ -155,7 +155,7 @@ public class SyntacticCategory implements Serializable {
       } catch (NumberFormatException e) {
         featureValue = tempFeatureValue;
       }
-      
+
       // Strip the feature structure from the string.
       typeString = typeString.substring(0, nextFeatureIndex).trim();
       minParenDepthIndex = findSlashIndex(typeString);
@@ -212,7 +212,7 @@ public class SyntacticCategory implements Serializable {
   public String getValue() {
     return value;
   }
-  
+
   /**
    * Gets the value of the feature attached to the root node of {@code this}.
    * Returns {@code DEFAULT_FEATURE_VALUE} if no feature value is associated 
@@ -223,7 +223,7 @@ public class SyntacticCategory implements Serializable {
   public String getRootFeature() {
     return featureValue;
   }
-  
+
   /**
    * Gets the feature variable attached to the root node of {@code this}.
    * Returns {@code -1} if no feature variable is associated with the root.
@@ -258,7 +258,7 @@ public class SyntacticCategory implements Serializable {
   public SyntacticCategory addArgument(SyntacticCategory argument, Direction direction) {
     return SyntacticCategory.createFunctional(direction, this, argument);
   }
-  
+
   /**
    * Assigns values to or relabels feature variables in this category. 
    * 
@@ -276,7 +276,7 @@ public class SyntacticCategory implements Serializable {
     } else if (relabeledFeatures.containsKey(featureVariable)) {
       newFeatureVariable = relabeledFeatures.get(newFeatureVariable);
     }
-    
+
     if (isAtomic()) {
       return SyntacticCategory.createAtomic(value, newFeatureValue, newFeatureVariable);
     } else {
@@ -285,7 +285,7 @@ public class SyntacticCategory implements Serializable {
       return SyntacticCategory.createFunctional(direction, assignedReturn, assignedArgument, newFeatureValue, newFeatureVariable);
     }
   }
-    
+
   /**
    * Assigns value to all unfilled feature variables.
    *   
@@ -295,7 +295,7 @@ public class SyntacticCategory implements Serializable {
   public SyntacticCategory assignAllFeatures(String value) {
     Set<Integer> featureVars = Sets.newHashSet();
     getAllFeatureVariables(featureVars);
-    
+
     Map<Integer, String> valueMap = Maps.newHashMap();
     for (Integer var : featureVars) {
       valueMap.put(var, value);
@@ -303,7 +303,7 @@ public class SyntacticCategory implements Serializable {
     return assignFeatures(valueMap, Collections.<Integer, Integer>emptyMap());
   }
 
-  
+
   public SyntacticCategory getCanonicalForm() {
     Map<Integer, Integer> variableRelabeling = Maps.newHashMap();
     return getCanonicalFormHelper(variableRelabeling);
@@ -314,7 +314,7 @@ public class SyntacticCategory implements Serializable {
     if (!isAtomic()) {
       newReturn = returnType.getCanonicalFormHelper(variableRelabeling);
     }
-    
+
     int newFeatureVariable = featureVariable;
     if (featureVariable != -1) {
       if (!variableRelabeling.containsKey(featureVariable)) {
@@ -398,25 +398,23 @@ public class SyntacticCategory implements Serializable {
     }
   }
 
-    public List<Direction> getArgumentDirectionList() {
-	if (isAtomic()) {
-	    return Lists.newArrayList();
-	} else {
-	    List<Direction> args = getReturn().getArgumentDirectionList();
-	    args.add(getDirection());
-	    return args;
-	}
+  public List<Direction> getArgumentDirectionList() {
+    if (isAtomic()) {
+      return Lists.newArrayList();
+    } else {
+      List<Direction> args = getReturn().getArgumentDirectionList();
+      args.add(getDirection());
+      return args;
     }
+  }
 
-    public SyntacticCategory getFinalReturnCategory() {
-	if (isAtomic()) {
-	    return this;
-	} else {
-	    return getReturn().getFinalReturnCategory();
-	}
+  public SyntacticCategory getFinalReturnCategory() {
+    if (isAtomic()) {
+      return this;
+    } else {
+      return getReturn().getFinalReturnCategory();
     }
-
-    
+  }
 
   /**
    * If this is a functional category, this gets the type of the
@@ -456,9 +454,9 @@ public class SyntacticCategory implements Serializable {
     // System.err.println("unifying: " + this + " " + other);
     return isUnifiableWith(other, myAssignedVariables, otherAssignedVariables, variableRelabeling); 
   }
-  
+
   public boolean isUnifiableWith(SyntacticCategory other, Map<Integer, String> myAssignedFeatures,
-       Map<Integer, String> otherAssignedFeatures, Map<Integer, Integer> relabeledFeatures) {
+      Map<Integer, String> otherAssignedFeatures, Map<Integer, Integer> relabeledFeatures) {
     // Ensure that any associated features are compatible
     if (featureVariable != -1 && other.featureVariable != -1) {
       // Try relabeling the two variables to the same variable.
@@ -499,7 +497,7 @@ public class SyntacticCategory implements Serializable {
           returnType.isUnifiableWith(other.returnType, myAssignedFeatures, otherAssignedFeatures, relabeledFeatures);
     }
   }
-  
+
   private void getAllFeatureVariables(Set<Integer> featureVariables) {
     if (featureVariable != -1) {
       featureVariables.add(featureVariable);
@@ -521,7 +519,7 @@ public class SyntacticCategory implements Serializable {
   public Set<SyntacticCategory> getSubcategories(Set<String> featureValues) {
     Set<Integer> featureVariables = Sets.newHashSet();
     getAllFeatureVariables(featureVariables);
-    
+
     Preconditions.checkState(featureVariables.size() <= 2);
     if (featureVariables.size() == 0) {
       return Sets.newHashSet(this);
@@ -550,11 +548,11 @@ public class SyntacticCategory implements Serializable {
           assignment.put(varNum2, value2);
           subcategories.add(assignFeatures(assignment, relabeling));
         }
-        
+
         assignment.clear();
         assignment.put(varNum1, value1);
         subcategories.add(assignFeatures(assignment, relabeling));
-        
+
         assignment.clear();
         assignment.put(varNum2, value1);
         subcategories.add(assignFeatures(assignment, relabeling));
@@ -577,7 +575,7 @@ public class SyntacticCategory implements Serializable {
     result = prime * result + ((value == null) ? 0 : value.hashCode());
     return result;
   }
-  
+
   @Override
   public int hashCode() {
     if (cachedHashCode == 0) {

@@ -159,22 +159,11 @@ public class ExpressionTest extends TestCase {
     assertTrue(expected.functionallyEquals(expression.simplify()));
   }
   
-  /*
-  public void testSimplifyConjunction2() {
-    Expression expression = parser.parseSingleExpression("(forall (a (b)) (and (forall (c (d)) (a (e)) (and c (lambda x x) a e c b)) b a))");
-    Expression expected = parser.parseSingleExpression("(forall (a (b)) (c (d)) (new_a (e)) (and c (lambda x x) new_a e c b b a))");
-
-    System.out.println(expression.simplify());
-    
-    assertTrue(expected.functionallyEquals(expression.simplify()));
-  }
-  */
-  
   public void testExpandForAll() {
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression("(forall (b (set d e)) (exists g c (and (b c))))");
     Expression expected = parser.parseSingleExpression("(and (exists g c (and (d c))) (exists g c (and (e c))))");
     
-    assertEquals(expected, expression.expandQuantifier());
+    assertTrue(expected.functionallyEquals(expression.expandQuantifier()));
   }
   
   public void testExpandForAll2() {
@@ -201,6 +190,21 @@ public class ExpressionTest extends TestCase {
     assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
   }
   
+  public void testExpandForAll5() {
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(
+        "(forall (b (set d (lambda a (forall (x (set p q)) (x a))))) (exists d (b d)))");    
+    Expression expected = parser.parseSingleExpression("(exists w x y z (and (d w) (d x) (p y) (q z)))");
+    assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
+  }
+  
+  public void testExpandForAll6() {
+    String expressionString = "(forall (b (set (lambda f (forall (b (set (lambda e (mention e \"chad hurley\" concept:person)) (lambda e (mention e \"steve chen\" concept:person)))) (b f))) (lambda e (mention e \"jawed karim\" concept:person)))) (exists h c d g a (and (mention a \"youtube\" concept:company) (concept:company d) (equals c d) (mention g \"google\" concept:company) (concept:acquired g c) (equals d a) (b h) (concept:organizationhiredperson a h))))";
+ 
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(expressionString);
+
+    System.out.println(expression.expandQuantifier().simplify());
+  }
+
   public void testFunctionallyEquals() {
     assertTrue(application.functionallyEquals(application));
   }

@@ -42,7 +42,7 @@ public class ForAllExpression extends AbstractExpression {
     // Generate unique names for the bound variables to avoid
     // accidental substitutions. 
     List<ConstantExpression> newBoundVariables = ConstantExpression.generateUniqueVariables(boundVariables.size());
-    Expression baseClause = body.renameVariables(boundVariables, newBoundVariables);
+    Expression baseClause = body.renameVariables(boundVariables, newBoundVariables).freshenVariables(body.getBoundVariables());
     for (int i = 0; i < newBoundVariables.size(); i++) {
       ConstantExpression boundVar = newBoundVariables.get(i);
       CommutativeOperator set = (CommutativeOperator) restrictions.get(i);
@@ -53,8 +53,13 @@ public class ForAllExpression extends AbstractExpression {
       }
       baseClause = new CommutativeOperator(new ConstantExpression("and"), clauses);
     }
-
-    return baseClause;
+    
+    Expression simplified = baseClause.simplify();
+    if (simplified instanceof ForAllExpression) {
+      return ((ForAllExpression) simplified).expandQuantifier();
+    } else {
+      return baseClause;
+    }
   }
 
   @Override

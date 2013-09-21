@@ -57,10 +57,10 @@ public class CcgSyntaxTree {
     this.words = words;
     this.posTags = posTags;
     this.headedSyntax = headedSyntax;
-    Preconditions.checkArgument(headedSyntax == null ||
-        (headedSyntax.getSyntax().equals(originalSyntax) && headedSyntax.isCanonicalForm()));
+    Preconditions.checkArgument(headedSyntax == null || headedSyntax.isCanonicalForm(),
+        "Illegal headed syntactic category %s", headedSyntax);
   }
-  
+
   public static CcgSyntaxTree createTerminal(SyntacticCategory syntax,
       SyntacticCategory originalSyntax, int spanStart, int spanEnd, List<String> words,
       List<String> posTags, HeadedSyntacticCategory headedSyntax) {
@@ -171,8 +171,8 @@ public class CcgSyntaxTree {
         List<String> words = Arrays.asList(parts[4]);
         List<String> posTags = Arrays.asList(parts[2]);
         SyntacticCategory rootCat = SyntacticCategory.parseFrom(syntaxPart);
-
-        String reformattedCategory = parts[5].replaceAll("_([0-9]*)", "{$1}");
+        
+        String reformattedCategory = parts[5].replaceAll("_([0-9]*)(:[A-Z])?", "{$1}");
         HeadedSyntacticCategory headedSyntax = HeadedSyntacticCategory
             .parseFrom(reformattedCategory).getCanonicalForm();
 

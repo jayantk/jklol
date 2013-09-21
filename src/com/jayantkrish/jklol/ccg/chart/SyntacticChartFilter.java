@@ -110,8 +110,9 @@ public class SyntacticChartFilter implements ChartFilter {
       // category in the parse tree.
       HeadedSyntacticCategory expectedHeadedSyntax = headedTerminals.get(spanStart);
       if (expectedHeadedSyntax != null) {
-        int expectedHeadedSyntaxInt = syntaxVarType.getValueIndex(expectedHeadedSyntax);
-        if (expectedHeadedSyntaxInt != entry.getHeadedSyntax()) {
+        HeadedSyntacticCategory actual =(HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
+
+        if (!actual.assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(expectedHeadedSyntax)) {
           return false;
         }
       }

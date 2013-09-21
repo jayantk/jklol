@@ -395,6 +395,11 @@ public class HeadedSyntacticCategory implements Serializable {
         assignedFeatures, relabeledFeatures), semanticVariables, rootIndex);
   }
 
+  public HeadedSyntacticCategory assignAllFeatures(String value) {
+    return new HeadedSyntacticCategory(syntacticCategory.assignAllFeatures(value),
+        semanticVariables, rootIndex);
+  }
+
   /**
    * Gets all syntactic categories which can be formed by assigning values to the
    * feature variables of this category. Returned categories may not be in canonical

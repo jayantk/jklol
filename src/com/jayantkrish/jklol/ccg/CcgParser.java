@@ -1011,15 +1011,29 @@ public class CcgParser implements Serializable {
     }
 
     if (tree.isTerminal()) {
+      HeadedSyntacticCategory annotatedCategory = tree.getHeadedSyntacticCategory();
       boolean isPossible = false;
       for (HeadedSyntacticCategory category : syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax())) {
-        isPossible = isPossible || isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), category);
+        if (isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), category)) {
+          if (annotatedCategory == null || 
+              category.assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(annotatedCategory)) {
+            isPossible = true;
+          }
+        }
       }
 
       if (!isPossible) {
+        String annotatedCatString = (annotatedCategory == null) ? "(no head info)" : ("headed: " + annotatedCategory); 
         System.out.println("No such lexicon entry: " + tree.getWords() + " -> " +
-            syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax()));
+            syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax()) + " " + annotatedCatString);
       }
+
+      if (annotatedCategory != null && !annotatedCategory.getSyntax().equals(tree.getPreUnaryRuleSyntax())) {
+        System.out.println("Incompatible syntactic annotations: " + tree.getWords() + " -> " +
+            annotatedCategory + " "+ tree.getPreUnaryRuleSyntax());
+        isPossible = false;;
+      } 
+
       return isPossible;
     } else {
       return isPossibleBinaryRule(tree.getLeft().getRootSyntax(), tree.getRight().getRootSyntax(),

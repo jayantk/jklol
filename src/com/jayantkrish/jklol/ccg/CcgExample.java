@@ -149,8 +149,7 @@ public class CcgExample {
         examples.add(example);
       } else {
         examples.add(new CcgExample(example.getWords(), example.getPosTags(),
-            example.getSupertags(), example.getDependencies(), example.getSyntacticParse(),
-            example.getLogicalForm()));
+            example.getSupertags(), null, example.getSyntacticParse(), example.getLogicalForm()));
       }
     }
     return examples;

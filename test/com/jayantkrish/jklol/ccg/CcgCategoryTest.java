@@ -7,10 +7,10 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 
 public class CcgCategoryTest extends TestCase {
   
-  ExpressionParser parser;
+  ExpressionParser<Expression> parser;
   
   public void setUp() {
-    parser = new ExpressionParser();
+    parser = ExpressionParser.lambdaCalculus();
   }
 
   public void testInduceLogicalForm() {

@@ -9,7 +9,7 @@ import com.google.common.collect.Sets;
 
 public class ExpressionTest extends TestCase {
 
-  ExpressionParser parser;
+  ExpressionParser<Expression> parser;
   
   ApplicationExpression application;
   CommutativeOperator op;
@@ -17,7 +17,7 @@ public class ExpressionTest extends TestCase {
   QuantifierExpression exists;
   
   public void setUp() {
-    parser = new ExpressionParser();
+    parser = ExpressionParser.lambdaCalculus();
     application = (ApplicationExpression) parser.parseSingleExpression("(foo (a b) (c a))");
     op = (CommutativeOperator) parser.parseSingleExpression("(and (a b) (c a) ((foo) d))");
     lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (foo (a b) (c a)))");

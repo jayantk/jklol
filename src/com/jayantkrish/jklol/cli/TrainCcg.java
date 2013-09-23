@@ -1,26 +1,31 @@
 package com.jayantkrish.jklol.cli;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.CcgRuleSchema;
+import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.SyntacticCompatibilityFunction;
+import com.jayantkrish.jklol.ccg.data.CcgExampleReader;
+import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeReader;
+import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeReader;
+import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -68,9 +73,8 @@ public class TrainCcg extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    // Read in all of the provided training examples.
-    List<CcgExample> unfilteredTrainingExamples = CcgExample.readExamplesFromFile(
-        options.valueOf(trainingData), options.has(useCcgBankFormat), options.has(ignoreSemantics));
+    List<CcgExample> unfilteredTrainingExamples = readTrainingData(options.valueOf(trainingData),
+        options.has(ignoreSemantics), options.has(useCcgBankFormat), options.valueOf(syntaxMap));
     Set<String> posTags = CcgExample.getPosTagVocabulary(unfilteredTrainingExamples);
     System.out.println(posTags.size() + " POS tags");
 
@@ -118,20 +122,34 @@ public class TrainCcg extends AbstractCli {
     System.out.println("Trained model parameters:");
     System.out.println(family.getParameterDescription(parameters));
   }
+  
+  public static List<CcgExample> readTrainingData(String filename, boolean ignoreSemantics,
+      boolean useCcgBankFormat, String syntacticCategoryMapFilename) {
+    // Read in all of the provided training examples.
+    DataFormat<CcgSyntaxTree> syntaxTreeReader = null;
+    if (useCcgBankFormat) {
+      Map<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap;
+      if (syntacticCategoryMapFilename != null) {
+        syntacticCategoryMap = readSyntaxMap(syntacticCategoryMapFilename);
+      } else {
+        syntacticCategoryMap = Maps.newHashMap();
+      }
 
-  private SetMultimap<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {
-    SetMultimap<SyntacticCategory, HeadedSyntacticCategory> catMap = HashMultimap.create();
+      syntaxTreeReader = new CcgbankSyntaxTreeReader(syntacticCategoryMap);
+    } else {
+      syntaxTreeReader = new CcgSyntaxTreeReader();
+    }
+    CcgExampleReader exampleReader = new CcgExampleReader(syntaxTreeReader, ignoreSemantics);
+    return exampleReader.parseFromFile(filename);
+  }
+
+  private static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {
+    Map<SyntacticCategory, HeadedSyntacticCategory> catMap = Maps.newHashMap();
     for (String line : IoUtils.readLines(filename)) {
       String[] parts = line.split(" ");
-      System.out.println(line);
       SyntacticCategory syntax = SyntacticCategory.parseFrom(parts[0]).getCanonicalForm();
       HeadedSyntacticCategory headedSyntax = HeadedSyntacticCategory.parseFrom(parts[1])
           .getCanonicalForm();
-      while (!syntax.isAtomic()) {
-        catMap.put(syntax, headedSyntax);
-        syntax = syntax.getReturn();
-        headedSyntax = headedSyntax.getReturnType();
-      }
       catMap.put(syntax, headedSyntax);
     }
     return catMap;

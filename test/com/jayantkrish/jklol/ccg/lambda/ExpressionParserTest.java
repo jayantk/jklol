@@ -4,12 +4,13 @@ import junit.framework.TestCase;
 
 public class ExpressionParserTest extends TestCase {
   
-  ExpressionParser parser;
-  ExpressionParser unequalQuoteParser;
+  ExpressionParser<Expression> parser;
+  ExpressionParser<Expression> unequalQuoteParser;
   
   public void setUp() {
-    parser = new ExpressionParser();
-    unequalQuoteParser = new ExpressionParser('(', ')', '<', '>', ExpressionFactories.getDefaultFactory());
+    parser = ExpressionParser.lambdaCalculus();
+    unequalQuoteParser = new ExpressionParser<Expression>('(', ')', '<', '>',
+        ExpressionFactories.getDefaultFactory());
   }
 
   public void testParseConstant() {

@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -8,12 +7,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.ExpressionFactories;
-import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.util.ArrayUtils;
 
 public class CcgSyntaxTree {
   // The syntactic category at the root of this tree, 
@@ -37,7 +30,7 @@ public class CcgSyntaxTree {
   // for the syntactic category. If non-null, must be the same
   // base syntactic category as originalSyntax.
   private final HeadedSyntacticCategory headedSyntax;
-  
+
   private CcgSyntaxTree(SyntacticCategory syntax, SyntacticCategory originalSyntax, 
       int spanStart, int spanEnd, CcgSyntaxTree left, CcgSyntaxTree right, List<String> words,
       List<String> posTags, HeadedSyntacticCategory headedSyntax) {
@@ -61,6 +54,21 @@ public class CcgSyntaxTree {
         "Illegal headed syntactic category %s", headedSyntax);
   }
 
+  /**
+   * Create a terminal CCG parse tree, with an optional unary rule application.
+   * The tree has {@code syntax} as its root syntactic category, and spans the 
+   * given set of {@code words} and {@code posTags}. {@code spanStart} and 
+   * {@code spanEnd} are the word indexes of the tree's span in the sentence.
+   *  
+   * @param syntax
+   * @param originalSyntax
+   * @param spanStart
+   * @param spanEnd
+   * @param words
+   * @param posTags
+   * @param headedSyntax
+   * @return
+   */
   public static CcgSyntaxTree createTerminal(SyntacticCategory syntax,
       SyntacticCategory originalSyntax, int spanStart, int spanEnd, List<String> words,
       List<String> posTags, HeadedSyntacticCategory headedSyntax) {
@@ -77,140 +85,16 @@ public class CcgSyntaxTree {
     return new CcgSyntaxTree(syntax, originalSyntax, spanStart, spanEnd, left, right, null, null,
         null);
   }
-  
-  public static CcgSyntaxTree parseFromString(String treeString) {
-    return parseFromString(treeString, 0);
-  }
-  
-  private static CcgSyntaxTree parseFromString(String treeString, int numWordsOnLeft) {
-    int curDepth = 0;
-    List<Integer> treeStartIndexes = Lists.newArrayList();
-    List<Integer> treeEndIndexes = Lists.newArrayList();
-    for (int i = 0; i < treeString.length(); i++) {
-      if (treeString.charAt(i) == '<') {
-        if (curDepth == 0) {
-          treeStartIndexes.add(i);
-        }
-        curDepth++;
-      } else if (treeString.charAt(i) == '>') {
-        curDepth--;
-        if (curDepth == 0) {
-          treeEndIndexes.add(i);
-        }
-      }
-    }
-    
-    Preconditions.checkState(treeStartIndexes.size() == treeEndIndexes.size());
-    int size = treeStartIndexes.size();
-    Preconditions.checkState(size >= 0 || size <= 2);
-    if (size == 0) {
-      String[] parts = treeString.trim().split(" ");
-
-      String syntaxPart = parts[0];
-      SyntacticCategory rootCat = null;
-      SyntacticCategory preUnaryCat = null;
-      if (syntaxPart.trim().contains("_")) {
-        String[] syntaxPartParts = syntaxPart.split("_");
-        rootCat = SyntacticCategory.parseFrom(syntaxPartParts[0]);
-        preUnaryCat = SyntacticCategory.parseFrom(syntaxPartParts[1]);
-      } else {
-        rootCat = SyntacticCategory.parseFrom(syntaxPart);
-        preUnaryCat = rootCat;
-      }
-      
-      int numWords = (parts.length - 1)/ 2;
-      List<String> posTags = Arrays.asList(ArrayUtils.copyOfRange(parts, 1, 1 + numWords));
-      List<String> words = Arrays.asList(ArrayUtils.copyOfRange(parts, 1 + numWords, 1 + (numWords*2)));
-      Preconditions.checkState(posTags.size() == words.size());
-
-      return CcgSyntaxTree.createTerminal(rootCat, preUnaryCat, numWordsOnLeft, 
-          numWordsOnLeft + words.size() - 1, words, posTags, null);
-    } if (size == 1) {
-      return parseFromString(treeString.substring(treeStartIndexes.get(0) + 1, treeEndIndexes.get(0)),
-          numWordsOnLeft);
-    } else {
-      CcgSyntaxTree leftTree = parseFromString(treeString.substring(treeStartIndexes.get(0) + 1,
-          treeEndIndexes.get(0)), numWordsOnLeft);
-      CcgSyntaxTree rightTree = parseFromString(treeString.substring(treeStartIndexes.get(1) + 1,
-          treeEndIndexes.get(1)), leftTree.getSpanEnd() + 1);
-      
-      String syntaxPart = treeString.substring(0, treeStartIndexes.get(0));
-      SyntacticCategory rootCat = null;
-      SyntacticCategory preUnaryCat = null;
-      if (syntaxPart.trim().contains("_")) {
-        String[] syntaxPartParts = syntaxPart.split("_");
-        rootCat = SyntacticCategory.parseFrom(syntaxPartParts[0]);
-        preUnaryCat = SyntacticCategory.parseFrom(syntaxPartParts[1]);
-      } else {
-        rootCat = SyntacticCategory.parseFrom(syntaxPart);
-        preUnaryCat = rootCat;
-      }
-
-      return CcgSyntaxTree.createNonterminal(rootCat, preUnaryCat, leftTree, rightTree);
-    }
-  }
-
-  public static CcgSyntaxTree parseFromCcgBankString(String treeString) {
-    ExpressionParser parser = new ExpressionParser('(', ')', '<', '>', ExpressionFactories.getDefaultFactory());
-    Expression treeExpression = parser.parseSingleExpression(treeString);
-    return expressionToSyntaxTree(treeExpression, 0);
-  }
-
-  private static CcgSyntaxTree expressionToSyntaxTree(Expression expression, int numWordsOnLeft) { 
-      ApplicationExpression app = (ApplicationExpression) expression;
-      String constantName = ((ConstantExpression) app.getFunction()).getName();
-      String[] parts = constantName.replaceFirst("^<(.*)>$", "$1").split("\\s");
-      
-      List<Expression> arguments = app.getArguments();
-      if (arguments.size() == 0) {
-        // Terminal
-        Preconditions.checkArgument(parts.length == 6);
-        Preconditions.checkArgument(parts[0].equals("L"));
-
-        String syntaxPart = parts[1];
-        List<String> words = Arrays.asList(parts[4]);
-        List<String> posTags = Arrays.asList(parts[2]);
-        SyntacticCategory rootCat = SyntacticCategory.parseFrom(syntaxPart);
-        
-        String reformattedCategory = parts[5].replaceAll("_([0-9]*)(:[A-Z])?", "{$1}");
-        HeadedSyntacticCategory headedSyntax = HeadedSyntacticCategory
-            .parseFrom(reformattedCategory).getCanonicalForm();
-
-        return CcgSyntaxTree.createTerminal(rootCat, rootCat, numWordsOnLeft, 
-            numWordsOnLeft + words.size() - 1, words, posTags, headedSyntax);
-      } else if (arguments.size() == 1) {
-        // Unary rule        
-        SyntacticCategory rootCat = SyntacticCategory.parseFrom(parts[1]);
-        CcgSyntaxTree baseTree = expressionToSyntaxTree(app.getArguments().get(0), numWordsOnLeft);
-        return new CcgSyntaxTree(rootCat, baseTree.getPreUnaryRuleSyntax(), baseTree.getSpanStart(),
-            baseTree.getSpanEnd(), baseTree.getLeft(), baseTree.getRight(), baseTree.getWords(),
-            baseTree.getPosTags(), null);
-      } else if (arguments.size() == 2) {
-        // Binary rule
-        CcgSyntaxTree left = expressionToSyntaxTree(app.getArguments().get(0), numWordsOnLeft);
-        CcgSyntaxTree right = expressionToSyntaxTree(app.getArguments().get(1), left.getSpanEnd() + 1);
-
-        SyntacticCategory rootCat = SyntacticCategory.parseFrom(parts[1]);
-        return CcgSyntaxTree.createNonterminal(rootCat, rootCat, left, right);
-      } else {
-        Preconditions.checkState(false, "Illegal number of arguments to nonterminal: " + expression);
-      }
-    return null;
-  }
 
   public SyntacticCategory getRootSyntax() {
     return syntax;
   }
 
-  /*
-  public CcgSyntaxTree updateRootSyntax(SyntacticCategory newRoot) {
-    if (isTerminal()) {
-      return CcgSyntaxTree.createTerminal(newRoot, originalSyntax, spanStart, spanEnd, words);
-    } else {
-      return CcgSyntaxTree.createNonterminal(newRoot, originalSyntax, left, right);
-    }
+  public CcgSyntaxTree replaceRootSyntax(SyntacticCategory newRoot) {
+    return new CcgSyntaxTree(newRoot, getPreUnaryRuleSyntax(), getSpanStart(),
+        getSpanEnd(), getLeft(), getRight(), getWords(),
+        getPosTags(), null);
   }
-  */
 
   public SyntacticCategory getPreUnaryRuleSyntax() {
     return originalSyntax;

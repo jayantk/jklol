@@ -11,6 +11,7 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
@@ -322,7 +323,7 @@ public class CvsmTrainingTest extends TestCase {
 
   private static List<CvsmExample> parseExamples(String[] examples, double[][] targets) {
     Preconditions.checkArgument(examples.length == targets.length);
-    ExpressionParser exp = new ExpressionParser();
+    ExpressionParser<Expression> exp = ExpressionParser.lambdaCalculus();
 
     List<CvsmExample> cvsmExamples = Lists.newArrayList();
     for (int i = 0; i < examples.length; i++) {

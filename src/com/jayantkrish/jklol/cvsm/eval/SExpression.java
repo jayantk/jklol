@@ -9,17 +9,25 @@ import com.google.common.base.Preconditions;
  * 
  * @author jayantk
  */
-public class Expression {
+public class SExpression {
   
   // Null unless this expression is a constant.
   private final String constantName;
   // Null unless this expression is not a constant. 
-  private final List<Expression> subexpressions;
+  private final List<SExpression> subexpressions;
   
-  public Expression(String constantName, List<Expression> subexpressions) {
+  private SExpression(String constantName, List<SExpression> subexpressions) {
     Preconditions.checkArgument(constantName == null ^ subexpressions == null);
     this.constantName = constantName;
     this.subexpressions = subexpressions;
+  }
+
+  public static SExpression constant(String constantName) {
+    return new SExpression(constantName, null);
+  }
+
+  public static SExpression nested(List<SExpression> subexpressions) {
+    return new SExpression(null, subexpressions);
   }
 
   public boolean isConstant() {
@@ -30,7 +38,7 @@ public class Expression {
     return constantName;
   }
   
-  public List<Expression> getSubexpressions() {
+  public List<SExpression> getSubexpressions() {
     return subexpressions;
   }
 }

@@ -10,6 +10,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
+import com.jayantkrish.jklol.ccg.data.CcgExampleReader;
+import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeReader;
+import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -75,6 +78,7 @@ public class CcgTrainingTest extends TestCase {
   
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
 
+  private DataFormat<CcgExample> exampleReader;
   private ParametricCcgParser family;
   private List<CcgExample> trainingExamples;
   private List<CcgExample> trainingExamplesWithSyntax;
@@ -86,9 +90,11 @@ public class CcgTrainingTest extends TestCase {
   private static final double TOLERANCE = 1e-10;
 
   public void setUp() {
+    exampleReader = new CcgExampleReader(new CcgSyntaxTreeReader(), false);
+    
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {
-      trainingExamples.add(CcgExample.parseFromString(trainingData[i], false));
+      trainingExamples.add(exampleReader.parseFrom(trainingData[i]));
     }
     
     trainingExamplesLfOnly = Lists.newArrayList();
@@ -104,7 +110,7 @@ public class CcgTrainingTest extends TestCase {
 
     trainingExamplesWithSyntax = Lists.newArrayList();
     for (int i = 0; i < trainingDataWithSyntax.length; i++) {
-      trainingExamplesWithSyntax.add(CcgExample.parseFromString(trainingDataWithSyntax[i], false));
+      trainingExamplesWithSyntax.add(exampleReader.parseFrom(trainingDataWithSyntax[i]));
     }
     posTags = CcgExample.getPosTagVocabulary(trainingExamplesWithSyntax);
     posTags.add(ParametricCcgParser.DEFAULT_POS_TAG);

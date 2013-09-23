@@ -41,7 +41,6 @@ public class ParseCcg extends AbstractCli {
   private OptionSpec<Integer> numParses;
   private OptionSpec<Void> atomic;
   private OptionSpec<Void> pos;
-  private OptionSpec<Void> discardInvalid;
   private OptionSpec<Void> printLf;
   
   private OptionSpec<String> testFile;
@@ -67,7 +66,6 @@ public class ParseCcg extends AbstractCli {
     		"the given file. Otherwise, this program parses a string provided on the command line. " +
         "The format of testFile is the same as expected by TrainCcg to train a CCG parser.")
         .withRequiredArg().ofType(String.class);
-    discardInvalid = parser.accepts("discardInvalid");
     useCcgBankFormat = parser.accepts("useCcgBankFormat", "Reads the parses in testFile in CCGbank format.");
   }
 
@@ -78,21 +76,8 @@ public class ParseCcg extends AbstractCli {
 
     if (options.has(testFile)) {
       // Parse all test examples.
-      List<CcgExample> unfilteredTestExamples = Lists.newArrayList();
-      for (String line : IoUtils.readLines(options.valueOf(testFile))) {
-        unfilteredTestExamples.add(CcgExample.parseFromString(line, options.has(useCcgBankFormat)));
-      }
-      System.out.println(unfilteredTestExamples.size() + " test examples");
-      List<CcgExample> testExamples = Lists.newArrayList();
-      if (options.has(discardInvalid)) {
-        for (CcgExample example : unfilteredTestExamples) {
-          // if (ccgParser.isPossibleSyntacticTree(example.getSyntacticParse())) {
-            testExamples.add(example);
-            // }
-        }
-      } else {
-        testExamples = unfilteredTestExamples;
-      }
+      List<CcgExample> testExamples = TrainCcg.readTrainingData(options.valueOf(testFile),
+          false, options.has(useCcgBankFormat), null);
       System.out.println(testExamples.size() + " test examples after filtering.");
 
       SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,

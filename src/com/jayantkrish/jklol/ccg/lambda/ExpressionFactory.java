@@ -10,7 +10,9 @@ import java.util.List;
  *
  * @author jayantk
  */
-public interface ExpressionFactory {
+public interface ExpressionFactory<T> {
 
-  public Expression createExpression(ConstantExpression firstTerm, List<Expression> remainingTerms);
+  public T createTokenExpression(String token);
+
+  public T createExpression(List<T> subexpressions);
 }

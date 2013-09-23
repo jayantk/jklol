@@ -30,9 +30,9 @@ public class SemTypePattern implements CategoryPattern {
     Preconditions.checkArgument(parts.length == 2);
     
     return new SemTypePattern(SyntacticCategory.parseFrom(parts[0]),
-        (new ExpressionParser()).parseSingleExpression(parts[1]));
+        ExpressionParser.lambdaCalculus().parseSingleExpression(parts[1]));
   }
-  
+
   @Override
   public boolean matches(List<String> words, SyntacticCategory category) {
     return hasSameSemanticType(patternCategory, category, true);

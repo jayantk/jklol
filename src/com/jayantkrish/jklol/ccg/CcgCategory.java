@@ -124,7 +124,7 @@ public class CcgCategory implements Serializable {
 
     Expression logicalForm = null;
     if (categoryParts[1].trim().length() > 0) {
-      logicalForm = (new ExpressionParser()).parseSingleExpression(categoryParts[1]);
+      logicalForm = ExpressionParser.lambdaCalculus().parseSingleExpression(categoryParts[1]);
     }
 
     // Create an empty assignment to each variable in the syntactic

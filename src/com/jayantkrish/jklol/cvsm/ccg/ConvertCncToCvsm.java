@@ -70,7 +70,7 @@ public class ConvertCncToCvsm extends AbstractCli {
     }
 
     reader = CcgLfReader.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)));
-    ExpressionParser exp = new ExpressionParser();
+    ExpressionParser<Expression> exp = ExpressionParser.lambdaCalculus();
 
     List<RelationExtractionExample> examples = readExamples(IoUtils.readLines(options.valueOf(mentions)));
     IndexedList<String> relDict = IndexedList.create(IoUtils.readLines(options.valueOf(relationDictionary)));

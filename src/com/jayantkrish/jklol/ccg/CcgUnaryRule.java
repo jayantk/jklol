@@ -87,7 +87,7 @@ public class CcgUnaryRule implements Serializable {
 
     LambdaExpression logicalForm = null;
     if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
-      logicalForm = (LambdaExpression) (new ExpressionParser()).parseSingleExpression(chunks[1]);
+      logicalForm = (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(chunks[1]);
     }
 
     if (chunks.length >= 3) {

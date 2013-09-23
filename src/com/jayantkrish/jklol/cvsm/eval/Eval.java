@@ -8,12 +8,12 @@ import com.jayantkrish.jklol.cvsm.eval.Value.ConstantValue;
 
 public class Eval {
 
-  public EvalResult eval(Expression expression, Environment environment) {
+  public EvalResult eval(SExpression expression, Environment environment) {
     if (expression.isConstant()) {
       return new EvalResult(environment.getValue(expression.getConstant()), environment);
     } else {
-      List<Expression> subexpressions = expression.getSubexpressions();
-      Expression first = subexpressions.get(0); 
+      List<SExpression> subexpressions = expression.getSubexpressions();
+      SExpression first = subexpressions.get(0); 
       if (first.isConstant()) {
         String constantName = first.getConstant();
         // Check for syntactic primitives (define, lambda, etc.)
@@ -36,13 +36,13 @@ public class Eval {
           Preconditions.checkArgument(subexpressions.size() == 3);
           
           List<String> argumentNames = Lists.newArrayList();
-          List<Expression> argumentExpressions = subexpressions.get(1).getSubexpressions();
-          for (Expression argumentExpression : argumentExpressions) {
+          List<SExpression> argumentExpressions = subexpressions.get(1).getSubexpressions();
+          for (SExpression argumentExpression : argumentExpressions) {
             Preconditions.checkArgument(argumentExpression.isConstant());
             argumentNames.add(argumentExpression.getConstant());
           }
 
-          Expression functionBody = subexpressions.get(2); 
+          SExpression functionBody = subexpressions.get(2); 
           return new EvalResult(new FunctionValue(argumentNames, functionBody, environment),
               environment);
         }
@@ -50,7 +50,7 @@ public class Eval {
 
       // Default case: perform function application.
       List<Value> values = Lists.newArrayList();
-      for (Expression subexpression : subexpressions) {
+      for (SExpression subexpression : subexpressions) {
         values.add(eval(subexpression, environment).getValue());
       }
 

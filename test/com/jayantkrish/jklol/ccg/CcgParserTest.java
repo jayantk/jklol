@@ -39,7 +39,7 @@ public class CcgParserTest extends TestCase {
   CcgParser parser, parserWithComposition, parserWithUnary,
       parserWithUnaryAndComposition, parserWordSkip;
 
-  ExpressionParser exp;
+  ExpressionParser<Expression> exp;
 
   private static final String[] lexicon = { "i,N{0},i,0 i",
       "people,N{0},people,0 people",
@@ -121,7 +121,7 @@ public class CcgParserTest extends TestCase {
 
     parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true);
 
-    exp = new ExpressionParser();
+    exp = ExpressionParser.lambdaCalculus();
   }
 
   public void testBeamSearch() {

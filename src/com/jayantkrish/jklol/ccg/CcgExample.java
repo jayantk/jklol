@@ -1,17 +1,11 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.util.CsvParser;
-import com.jayantkrish.jklol.util.IoUtils;
 
 /**
  * A training example for {@code CcgLoglikelihoodOracle}. Stores an
@@ -74,85 +68,6 @@ public class CcgExample {
           "CCG syntax tree and example must agree on words: \"%s\" vs \"%s\" %s", syntaxWords,
           words, syntacticParse);
     }
-  }
-
-  /**
-   * Expected format is (space-separated words)###(,-separated
-   * dependency structures)###(@@@-separated lexicon entries
-   * (optional)).
-   * 
-   * @param exampleString
-   * @return
-   */
-  public static CcgExample parseFromString(String exampleString, boolean syntaxInCcgBankFormat) {
-    String[] parts = exampleString.split("###");
-    List<String> words = Arrays.asList(parts[0].split("\\s+"));
-
-    Set<DependencyStructure> dependencies = Sets.newHashSet();
-    String[] dependencyParts = new CsvParser(CsvParser.DEFAULT_SEPARATOR,
-        CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(parts[1]);
-    for (int i = 0; i < dependencyParts.length; i++) {
-      if (dependencyParts[i].trim().length() == 0) {
-        continue;
-      }
-      String[] dep = dependencyParts[i].split("\\s+");
-      Preconditions.checkState(dep.length >= 5, "Illegal dependency string: " + dependencyParts[i]);
-
-      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
-          Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
-    }
-
-    // Parse out a CCG syntactic tree, if one is provided.
-    CcgSyntaxTree tree = null;
-    List<String> posTags = null;
-    if (parts.length >= 3 && parts[2].length() > 0) {
-      if (syntaxInCcgBankFormat) {
-        tree = CcgSyntaxTree.parseFromCcgBankString(parts[2]);
-      } else {
-        tree = CcgSyntaxTree.parseFromString(parts[2]);
-      }
-      posTags = tree.getAllSpannedPosTags();
-    } else {
-      posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    }
-
-    // Parse out a logical form, if one is provided.
-    Expression logicalForm = null;
-    if (parts.length >= 4 && parts[3].length() > 0) {
-      logicalForm = (new ExpressionParser()).parseSingleExpression(parts[3]);
-    }
-    
-    List<List<SyntacticCategory>> supertags = null;
-    if (parts.length >= 5 && parts[4].length() > 0) {
-      parts[4].split(" ");
-    }
-
-    return new CcgExample(words, posTags, supertags, dependencies, tree, logicalForm);
-  }
-
-  /**
-   * Reads in a collection of examples stored one per line in
-   * {@code filename}.
-   * 
-   * @param filename
-   * @param useCcgBankFormat
-   * @param ignoreSemantics If {@code true}, annotated dependency
-   * structures are removed from the examples.
-   * @return
-   */
-  public static List<CcgExample> readExamplesFromFile(String filename, boolean useCcgBankFormat,
-      boolean ignoreSemantics) {
-    List<CcgExample> examples = Lists.newArrayList();
-    for (String line : IoUtils.readLines(filename)) {
-      CcgExample example = CcgExample.parseFromString(line, useCcgBankFormat);
-      if (!ignoreSemantics) {
-        examples.add(example);
-      } else {
-        examples.add(new CcgExample(example.getWords(), example.getPosTags(),
-            example.getSupertags(), null, example.getSyntacticParse(), example.getLogicalForm()));
-      }
-    }
-    return examples;
   }
 
   /**

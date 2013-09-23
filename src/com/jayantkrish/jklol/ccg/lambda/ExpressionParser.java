@@ -6,6 +6,7 @@ import java.util.Stack;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.cvsm.eval.SExpression;
 
 /**
  * A parser for LISP-style S-expressions. An example expression is:
@@ -16,46 +17,42 @@ import com.google.common.collect.Lists;
  * 
  * @author jayantk
  */
-public class ExpressionParser {
+public class ExpressionParser<T> {
   private final char openParen;
   private final char closeParen;
   private final char openQuote;
   private final char closeQuote;
 
-  private final ConstantExpression openParenExpression;
-  private final ConstantExpression closeParenExpression;
+  private final T openParenExpression;
+  private final T closeParenExpression;
   
-  private final ExpressionFactory factory;
+  private final ExpressionFactory<T> factory;
 
   private static final char DEFAULT_OPEN_PAREN = '(';
   private static final char DEFAULT_CLOSE_PAREN = ')';
   private static final char DEFAULT_QUOTE = '"';
 
-  /**
-   * Gets an expression parser for lambda calculus.
-   */
-  public ExpressionParser() {
-    this.openParen = DEFAULT_OPEN_PAREN;
-    this.closeParen = DEFAULT_CLOSE_PAREN;
-    this.openQuote = DEFAULT_QUOTE;
-    this.closeQuote = DEFAULT_QUOTE;
-
-    this.openParenExpression = new ConstantExpression(Character.toString(openParen));
-    this.closeParenExpression = new ConstantExpression(Character.toString(closeParen));
-    this.factory = ExpressionFactories.getLambdaCalculusFactory();
-  }
-
   public ExpressionParser(char openParen, char closeParen, char openQuote, char closeQuote,
-      ExpressionFactory factory) {
+      ExpressionFactory<T> factory) {
     this.openParen = openParen;
     this.closeParen = closeParen;
     this.openQuote = openQuote;
     this.closeQuote = closeQuote;
 
-    this.openParenExpression = new ConstantExpression(Character.toString(openParen));
-    this.closeParenExpression = new ConstantExpression(Character.toString(closeParen));
-    
     this.factory = factory;
+    
+    this.openParenExpression = factory.createTokenExpression(Character.toString(openParen));
+    this.closeParenExpression = factory.createTokenExpression(Character.toString(closeParen));
+  }
+
+  public static ExpressionParser<Expression> lambdaCalculus() {
+    return new ExpressionParser<Expression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
+        DEFAULT_QUOTE, DEFAULT_QUOTE, ExpressionFactories.getLambdaCalculusFactory());
+  }
+
+  public static ExpressionParser<SExpression> sExpression() {
+    return new ExpressionParser<SExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
+        DEFAULT_QUOTE, DEFAULT_QUOTE, ExpressionFactories.getSExpressionFactory());
   }
 
   private List<String> tokenize(String expression) {
@@ -106,25 +103,25 @@ public class ExpressionParser {
     return tokens;
   }
 
-  public Expression parseSingleExpression(String expression) {
+  public T parseSingleExpression(String expression) {
     return parseSingleExpression(tokenize(expression));
   }
 
-  public List<Expression> parse(String expressions) {
+  public List<T> parse(String expressions) {
     return parse(tokenize(expressions));
   }
 
-  public Expression parseSingleExpression(List<String> tokenizedExpressionString) {
-    List<Expression> expressions = parse(tokenizedExpressionString);
+  public T parseSingleExpression(List<String> tokenizedExpressionString) {
+    List<T> expressions = parse(tokenizedExpressionString);
     Preconditions.checkState(expressions.size() == 1, "Illegal input string: " + tokenizedExpressionString);
     return expressions.get(0);
   }
 
-  public List<Expression> parse(List<String> tokenizedExpressionString) {
-    Stack<Expression> stack = new Stack<Expression>();
+  public List<T> parse(List<String> tokenizedExpressionString) {
+    Stack<T> stack = new Stack<T>();
     try {
       for (String token : tokenizedExpressionString) {
-        stack.push(new ConstantExpression(token));
+        stack.push(factory.createTokenExpression(token));
         if (stack.peek().equals(closeParenExpression)) {
           stack.push(reduce(stack));
         }
@@ -136,13 +133,13 @@ public class ExpressionParser {
     return stack;
   }
 
-  private Expression reduce(Stack<Expression> stack) {
+  private T reduce(Stack<T> stack) {
     // Pop the closing parenthesis
     Preconditions.checkArgument(stack.peek().equals(closeParenExpression));
     stack.pop();
 
     // Pop all arguments.
-    Stack<Expression> arguments = new Stack<Expression>();
+    Stack<T> arguments = new Stack<T>();
     while (!stack.peek().equals(openParenExpression)) {
       arguments.push(stack.pop());
     }
@@ -151,17 +148,11 @@ public class ExpressionParser {
     stack.pop();
 
     // Add the parsed expression.
-    List<Expression> subexpressions = Lists.newArrayList();
-    for (Expression argument : Lists.reverse(arguments)) {
+    List<T> subexpressions = Lists.newArrayList();
+    for (T argument : Lists.reverse(arguments)) {
       subexpressions.add(argument);
     }
 
-    if (subexpressions.size() > 0 && subexpressions.get(0) instanceof ConstantExpression) {
-      // This expression may be a special form.
-      ConstantExpression constant = (ConstantExpression) subexpressions.get(0);
-      return factory.createExpression(constant, subexpressions.subList(1, subexpressions.size()));
-    }
-
-    return new ApplicationExpression(subexpressions);
+    return factory.createExpression(subexpressions);
   }
 }

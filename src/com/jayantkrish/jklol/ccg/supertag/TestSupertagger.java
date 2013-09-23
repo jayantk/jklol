@@ -6,8 +6,12 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.CcgExample;
+import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
+import com.jayantkrish.jklol.ccg.data.CcgExampleReader;
+import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeReader;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.sequence.TaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
@@ -39,11 +43,13 @@ public class TestSupertagger extends AbstractCli {
     Supertagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model), Supertagger.class);
 
     if (options.has(testFilename)) {
-      List<CcgExample> ccgExamples = CcgExample.readExamplesFromFile(
-          options.valueOf(testFilename), true, true);
+      CcgExampleReader exampleReader = new CcgExampleReader(
+          new CcgbankSyntaxTreeReader(Maps.<SyntacticCategory, HeadedSyntacticCategory>newHashMap()), true);
+      List<CcgExample> ccgExamples = exampleReader.parseFromFile(options.valueOf(testFilename));
+
       List<TaggedSequence<WordAndPos, SyntacticCategory>> testData = 
           TrainSupertagger.reformatTrainingExamples(ccgExamples);
-      
+
       SequenceTaggerError error = null;
       if (!options.has(multitagThreshold)) {
         error = TaggerUtils.evaluateTagger(trainedModel, testData);

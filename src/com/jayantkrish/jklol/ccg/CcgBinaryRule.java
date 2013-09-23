@@ -93,7 +93,7 @@ public class CcgBinaryRule implements Serializable {
 
     LambdaExpression logicalForm = null;
     if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
-      logicalForm = (LambdaExpression) (new ExpressionParser()).parseSingleExpression(chunks[1]);
+      logicalForm = (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(chunks[1]);
       Preconditions.checkArgument(logicalForm.getArguments().size() == 2, 
           "Illegal logical form for binary rule: " + logicalForm);
     }

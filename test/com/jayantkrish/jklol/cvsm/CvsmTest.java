@@ -6,6 +6,7 @@ import java.util.List;
 import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
@@ -18,7 +19,7 @@ import com.jayantkrish.jklol.util.IndexedList;
 public class CvsmTest extends TestCase {
 
   private Cvsm cvsm;
-  private ExpressionParser exp;
+  private ExpressionParser<Expression> exp;
   
   private static final String[] vectorNames = {
     "vec:block"
@@ -36,7 +37,7 @@ public class CvsmTest extends TestCase {
       tensors.add(new TensorLowRankTensor(new DenseTensor(new int[] {0}, new int[] {3}, vectorValues[i])));
     }
     cvsm = Cvsm.fromTensors(tensorNames, tensors);
-    exp = new ExpressionParser();
+    exp = ExpressionParser.lambdaCalculus();
   }
   
   public void testVector() {

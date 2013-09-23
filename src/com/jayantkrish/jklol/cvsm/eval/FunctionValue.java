@@ -7,10 +7,10 @@ import com.google.common.collect.ImmutableList;
 
 public class FunctionValue implements Value {
   private final List<String> argumentNames;
-  private final Expression body;
+  private final SExpression body;
   private final Environment environment;
 
-  public FunctionValue(List<String> argumentNames, Expression body, Environment environment) {
+  public FunctionValue(List<String> argumentNames, SExpression body, Environment environment) {
     this.argumentNames = ImmutableList.copyOf(argumentNames);
     this.body = Preconditions.checkNotNull(body);
     this.environment = Preconditions.checkNotNull(environment);

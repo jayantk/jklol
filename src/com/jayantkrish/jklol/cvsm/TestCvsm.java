@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.cvsm;
 
-import java.util.Arrays;
 import java.util.List;
 
 import joptsimple.OptionParser;
@@ -105,7 +104,7 @@ public class TestCvsm extends AbstractCli {
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");
     } else if (options.has(vectorDumpFilename)) {
-      ExpressionParser parser = new ExpressionParser(); 
+      ExpressionParser<Expression> parser = ExpressionParser.lambdaCalculus(); 
       for (String line : IoUtils.readLines(options.valueOf(vectorDumpFilename))) {
         Expression lf = parser.parseSingleExpression(line);
         Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
@@ -118,21 +117,21 @@ public class TestCvsm extends AbstractCli {
         System.out.print("\n");
       }
     } else {
-      Expression lf = (new ExpressionParser()).parseSingleExpression(
+      Expression lf = ExpressionParser.lambdaCalculus().parseSingleExpression(
           Joiner.on(" ").join(options.nonOptionArguments()));
 
       Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
       // To make printing concise, remove values whose magnitude 
       // is too small.
       if (options.has(minValueToPrint)) {
-	  Tensor positiveKeys = tensor.findKeysLargerThan(options.valueOf(minValueToPrint));
-	  Tensor negativeKeys = tensor.elementwiseProduct(-1.0).findKeysLargerThan(options.valueOf(minValueToPrint));
-	  Tensor indicators = positiveKeys.elementwiseAddition(negativeKeys);
-	  tensor = tensor.elementwiseProduct(indicators);
+        Tensor positiveKeys = tensor.findKeysLargerThan(options.valueOf(minValueToPrint));
+        Tensor negativeKeys = tensor.elementwiseProduct(-1.0).findKeysLargerThan(options.valueOf(minValueToPrint));
+        Tensor indicators = positiveKeys.elementwiseAddition(negativeKeys);
+        tensor = tensor.elementwiseProduct(indicators);
       }
 
       if (relDict == null || tensor.getDimensionNumbers().length > 1 || tensor.getDimensionSizes()[0] != relDict.size()) {
-	  System.out.println(tensor);
+        System.out.println(tensor);
       } else {
         DiscreteVariable varType = new DiscreteVariable("var", relDict.items());
         VariableNumMap var = VariableNumMap.singleton(0, "var", varType);

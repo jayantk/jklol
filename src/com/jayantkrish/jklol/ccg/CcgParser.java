@@ -1015,8 +1015,7 @@ public class CcgParser implements Serializable {
       boolean isPossible = false;
       for (HeadedSyntacticCategory category : syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax())) {
         if (isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), category)) {
-          if (annotatedCategory == null || 
-              category.assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(annotatedCategory)) {
+          if (annotatedCategory == null ||  category.equals(annotatedCategory)) {
             isPossible = true;
           }
         }
@@ -1028,7 +1027,8 @@ public class CcgParser implements Serializable {
             syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax()) + " " + annotatedCatString);
       }
 
-      if (annotatedCategory != null && !annotatedCategory.getSyntax().equals(tree.getPreUnaryRuleSyntax())) {
+      if (annotatedCategory != null && !annotatedCategory.getSyntax()
+          .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(tree.getPreUnaryRuleSyntax())) {
         System.out.println("Incompatible syntactic annotations: " + tree.getWords() + " -> " +
             annotatedCategory + " "+ tree.getPreUnaryRuleSyntax());
         isPossible = false;;

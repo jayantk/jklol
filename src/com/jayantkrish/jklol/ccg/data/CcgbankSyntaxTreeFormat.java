@@ -3,8 +3,11 @@ package com.jayantkrish.jklol.ccg.data;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
@@ -15,14 +18,24 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionFactories;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.data.LineDataFormat;
 
-public class CcgbankSyntaxTreeReader extends LineDataFormat<CcgSyntaxTree> {
+public class CcgbankSyntaxTreeFormat extends LineDataFormat<CcgSyntaxTree> {
 
   private final Map<SyntacticCategory, HeadedSyntacticCategory> syntaxMap;
+  private final Set<String> featurelessSyntacticCategories;
   
-  public CcgbankSyntaxTreeReader(Map<SyntacticCategory, HeadedSyntacticCategory> syntaxMap) {
+  public static Set<String> DEFAULT_CATEGORIES_TO_STRIP = Sets.newHashSet("N", "NP", "PP");
+  
+  public CcgbankSyntaxTreeFormat(Map<SyntacticCategory, HeadedSyntacticCategory> syntaxMap,
+      Set<String> featurelessSyntacticCategories) {
     this.syntaxMap = Preconditions.checkNotNull(syntaxMap);
+    this.featurelessSyntacticCategories = Sets.newHashSet(featurelessSyntacticCategories);
   }
-  
+
+  public static CcgbankSyntaxTreeFormat defaultFormat() {
+    return new CcgbankSyntaxTreeFormat(Maps.<SyntacticCategory, HeadedSyntacticCategory>newHashMap(),
+        DEFAULT_CATEGORIES_TO_STRIP);
+  }
+
   @Override
   public CcgSyntaxTree parseFrom(String treeString) {
     ExpressionParser<Expression> parser = new ExpressionParser<Expression>('(', ')', '<', '>', ExpressionFactories.getDefaultFactory());
@@ -49,11 +62,13 @@ public class CcgbankSyntaxTreeReader extends LineDataFormat<CcgSyntaxTree> {
         // May be null, in which case the true headed syntactic category is unobserved.
         HeadedSyntacticCategory headedSyntax = syntaxMap.get(rootCat);
 
+        rootCat = stripFeatures(rootCat);
+        
         return CcgSyntaxTree.createTerminal(rootCat, rootCat, numWordsOnLeft, 
             numWordsOnLeft + words.size() - 1, words, posTags, headedSyntax);
       } else if (arguments.size() == 1) {
         // Unary rule        
-        SyntacticCategory rootCat = SyntacticCategory.parseFrom(parts[1]);
+        SyntacticCategory rootCat = stripFeatures(SyntacticCategory.parseFrom(parts[1]));
         CcgSyntaxTree baseTree = expressionToSyntaxTree(app.getArguments().get(0),
             numWordsOnLeft);
         return baseTree.replaceRootSyntax(rootCat);
@@ -64,11 +79,15 @@ public class CcgbankSyntaxTreeReader extends LineDataFormat<CcgSyntaxTree> {
         CcgSyntaxTree right = expressionToSyntaxTree(app.getArguments().get(1),
             left.getSpanEnd() + 1);
 
-        SyntacticCategory rootCat = SyntacticCategory.parseFrom(parts[1]);
+        SyntacticCategory rootCat = stripFeatures(SyntacticCategory.parseFrom(parts[1]));
         return CcgSyntaxTree.createNonterminal(rootCat, rootCat, left, right);
       } else {
         Preconditions.checkState(false, "Illegal number of arguments to nonterminal: " + expression);
       }
     return null;
+  }
+  
+  private final SyntacticCategory stripFeatures(SyntacticCategory syntax) {
+    return syntax.stripFeatures(featurelessSyntacticCategories);
   }
 }

@@ -18,12 +18,12 @@ import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.data.LineDataFormat;
 import com.jayantkrish.jklol.util.CsvParser;
 
-public class CcgExampleReader extends LineDataFormat<CcgExample> {
+public class CcgExampleFormat extends LineDataFormat<CcgExample> {
   
   private final DataFormat<CcgSyntaxTree> syntaxTreeReader;
   private final boolean ignoreSemantics;
   
-  public CcgExampleReader(DataFormat<CcgSyntaxTree> syntaxTreeReader, boolean ignoreSemantics) {
+  public CcgExampleFormat(DataFormat<CcgSyntaxTree> syntaxTreeReader, boolean ignoreSemantics) {
     this.syntaxTreeReader = Preconditions.checkNotNull(syntaxTreeReader);
     this.ignoreSemantics = ignoreSemantics;
   }

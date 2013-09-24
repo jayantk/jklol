@@ -112,7 +112,7 @@ public class SyntacticChartFilter implements ChartFilter {
       if (expectedHeadedSyntax != null) {
         HeadedSyntacticCategory actual =(HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
 
-        if (!actual.assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(expectedHeadedSyntax)) {
+        if (!actual.equals(expectedHeadedSyntax)) {
           return false;
         }
       }

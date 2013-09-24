@@ -22,9 +22,9 @@ import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.SyntacticCompatibilityFunction;
-import com.jayantkrish.jklol.ccg.data.CcgExampleReader;
-import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeReader;
-import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeReader;
+import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
+import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOptimizer;
@@ -135,11 +135,12 @@ public class TrainCcg extends AbstractCli {
         syntacticCategoryMap = Maps.newHashMap();
       }
 
-      syntaxTreeReader = new CcgbankSyntaxTreeReader(syntacticCategoryMap);
+      syntaxTreeReader = new CcgbankSyntaxTreeFormat(syntacticCategoryMap,
+          CcgbankSyntaxTreeFormat.DEFAULT_CATEGORIES_TO_STRIP);
     } else {
-      syntaxTreeReader = new CcgSyntaxTreeReader();
+      syntaxTreeReader = new CcgSyntaxTreeFormat();
     }
-    CcgExampleReader exampleReader = new CcgExampleReader(syntaxTreeReader, ignoreSemantics);
+    CcgExampleFormat exampleReader = new CcgExampleFormat(syntaxTreeReader, ignoreSemantics);
     return exampleReader.parseFromFile(filename);
   }
 

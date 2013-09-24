@@ -4,9 +4,8 @@ import java.util.Arrays;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeReader;
-import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeReader;
+import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
 import com.jayantkrish.jklol.data.DataFormat;
 
 public class CcgSyntaxTreeTest extends TestCase {
@@ -15,8 +14,8 @@ public class CcgSyntaxTreeTest extends TestCase {
   private DataFormat<CcgSyntaxTree> ccgbankReader;
   
   public void setUp() {
-    reader = new CcgSyntaxTreeReader();
-    ccgbankReader = new CcgbankSyntaxTreeReader(Maps.<SyntacticCategory, HeadedSyntacticCategory>newHashMap());
+    reader = new CcgSyntaxTreeFormat();
+    ccgbankReader = CcgbankSyntaxTreeFormat.defaultFormat();
   }
 
   public void testParseTerminal() {

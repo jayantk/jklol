@@ -10,13 +10,11 @@ import joptsimple.OptionSpec;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
-import com.jayantkrish.jklol.ccg.data.CcgExampleReader;
-import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeReader;
+import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
+import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
@@ -68,8 +66,8 @@ public class TrainSupertagger extends AbstractCli {
   public void run(OptionSet options) {
     // Read in the training data as sentences, to use for
     // feature generation.
-    CcgExampleReader exampleReader = new CcgExampleReader(
-        new CcgbankSyntaxTreeReader(Maps.<SyntacticCategory, HeadedSyntacticCategory>newHashMap()), true);
+    CcgExampleFormat exampleReader = new CcgExampleFormat(
+        CcgbankSyntaxTreeFormat.defaultFormat(), true);
     
     List<CcgExample> ccgExamples = exampleReader.parseFromFile(options.valueOf(trainingFilename));
     List<TaggedSequence<WordAndPos, SyntacticCategory>> trainingData =

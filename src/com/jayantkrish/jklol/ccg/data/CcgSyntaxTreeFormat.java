@@ -10,7 +10,7 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.data.LineDataFormat;
 import com.jayantkrish.jklol.util.ArrayUtils;
 
-public class CcgSyntaxTreeReader extends LineDataFormat<CcgSyntaxTree> {
+public class CcgSyntaxTreeFormat extends LineDataFormat<CcgSyntaxTree> {
   
   public CcgSyntaxTree parseFrom(String treeString) {
     return parseFromString(treeString, 0);

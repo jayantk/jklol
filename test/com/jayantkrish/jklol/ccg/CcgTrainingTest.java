@@ -10,8 +10,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
-import com.jayantkrish.jklol.ccg.data.CcgExampleReader;
-import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeReader;
+import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
+import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
@@ -90,7 +90,7 @@ public class CcgTrainingTest extends TestCase {
   private static final double TOLERANCE = 1e-10;
 
   public void setUp() {
-    exampleReader = new CcgExampleReader(new CcgSyntaxTreeReader(), false);
+    exampleReader = new CcgExampleFormat(new CcgSyntaxTreeFormat(), false);
     
     trainingExamples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {

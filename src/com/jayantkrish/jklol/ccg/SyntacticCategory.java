@@ -303,6 +303,26 @@ public class SyntacticCategory implements Serializable {
     return assignFeatures(valueMap, Collections.<Integer, Integer>emptyMap());
   }
 
+  /**
+   * Gets a new syntactic category identical to this one, except that
+   * all features have been removed from atomic categories in
+   * {@code atomicCategoriesToStrip}.
+   *  
+   * @param atomicCategoriesToStrip
+   * @return
+   */
+  public SyntacticCategory stripFeatures(Set<String> atomicCategoriesToStrip) {
+    if (isAtomic()) {
+      if (atomicCategoriesToStrip.contains(value) && !featureValue.equals(DEFAULT_FEATURE_VALUE)) {
+        return SyntacticCategory.createAtomic(value, DEFAULT_FEATURE_VALUE, -1);
+      } else {
+        return this;
+      }
+    } else {
+      return SyntacticCategory.createFunctional(direction, returnType.stripFeatures(atomicCategoriesToStrip), 
+          argumentType.stripFeatures(atomicCategoriesToStrip), featureValue, featureVariable);
+    }
+  }
 
   public SyntacticCategory getCanonicalForm() {
     Map<Integer, Integer> variableRelabeling = Maps.newHashMap();

@@ -13,6 +13,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cli.TrainCcg;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -115,6 +116,14 @@ public class TrainSupertagger extends AbstractCli {
 
       if (!ignoreInvalid || !syntacticCategories.contains(null)) {
         examples.add(new ListTaggedSequence<WordAndPos, HeadedSyntacticCategory>(taggedWords, syntacticCategories));
+      } else {
+        List<SyntacticCategory> unheadedCategories = example.getSyntacticParse().getAllSpannedLexiconEntries();
+        System.out.println("Discarding sentence: " + taggedWords);
+        for (int i = 0; i < taggedWords.size(); i++) {
+          if (syntacticCategories.get(i) == null) {
+            System.out.println("No headed syntactic category for: " + unheadedCategories.get(i));
+          }
+        }
       }
     }
     return examples;

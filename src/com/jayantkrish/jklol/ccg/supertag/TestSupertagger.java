@@ -46,7 +46,7 @@ public class TestSupertagger extends AbstractCli {
           true, options.valueOf(syntaxMap));
 
       List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> testData = 
-          TrainSupertagger.reformatTrainingExamples(ccgExamples);
+          TrainSupertagger.reformatTrainingExamples(ccgExamples, false);
 
       SequenceTaggerError error = null;
       if (!options.has(multitagThreshold)) {

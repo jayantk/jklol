@@ -70,7 +70,7 @@ public class TrainSupertagger extends AbstractCli {
     List<CcgExample> ccgExamples = TrainCcg.readTrainingData(options.valueOf(trainingFilename),
         true, true, options.valueOf(syntaxMap));
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData =
-        reformatTrainingExamples(ccgExamples);
+        reformatTrainingExamples(ccgExamples, true);
 
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold));
@@ -106,14 +106,16 @@ public class TrainSupertagger extends AbstractCli {
    * @return
    */
   public static List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> reformatTrainingExamples(
-      Collection<CcgExample> ccgExamples) {
+      Collection<CcgExample> ccgExamples, boolean ignoreInvalid) {
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> examples = Lists.newArrayList();
     for (CcgExample example : ccgExamples) {
       Preconditions.checkArgument(example.hasSyntacticParse());
       List<WordAndPos> taggedWords = WordAndPos.createExample(example.getWords(), example.getPosTags());
       List<HeadedSyntacticCategory> syntacticCategories = example.getSyntacticParse().getAllSpannedHeadedSyntacticCategories();
-      Preconditions.checkArgument(!syntacticCategories.contains(null));
-      examples.add(new ListTaggedSequence<WordAndPos, HeadedSyntacticCategory>(taggedWords, syntacticCategories));
+
+      if (!ignoreInvalid || !syntacticCategories.contains(null)) {
+        examples.add(new ListTaggedSequence<WordAndPos, HeadedSyntacticCategory>(taggedWords, syntacticCategories));
+      }
     }
     return examples;
   }

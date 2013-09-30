@@ -54,10 +54,14 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     log.startTimer("update_gradient/unconditional_max_marginal");
     // Calculate the best predicted parse, i.e., the highest weight parse
     // without conditioning on the true parse.
+    
+    /*
     List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(),
         beamSize, searchFilter, log, -1);
-    CcgParse bestPredictedParse = parses.size() > 0 ? parses.get(0) : null;
     System.out.println("num predicted: " + parses.size());
+    */
+
+    CcgParse bestPredictedParse = instantiatedParser.parse(example.getWords(), example.getPosTags(), searchFilter, log, -1);
     if (bestPredictedParse == null) {
       System.out.println("Search error (Predicted): " + example.getWords());
       throw new ZeroProbabilityError();
@@ -75,7 +79,8 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
       possibleParses = instantiatedParser.beamSearch(example.getWords(),
           example.getPosTags(), beamSize, conditionalChartFilter, log, -1);
     } else {
-      possibleParses = parses;
+      possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(),
+        beamSize, searchFilter, log, -1);
     }
     List<CcgParse> correctParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(example, possibleParses);
     CcgParse bestCorrectParse = correctParses.size() > 0 ? correctParses.get(0) : null;

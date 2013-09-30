@@ -61,8 +61,6 @@ public class CcgSyntaxTreeTest extends TestCase {
     
     CcgSyntaxTree msTerminal = tree.getLeft().getLeft().getLeft();
     assertTrue(msTerminal.isTerminal());
-    assertTrue(HeadedSyntacticCategory.parseFrom("(N{1}/N{1}){0}")
-        .isUnifiableWith(msTerminal.getHeadedSyntacticCategory()));
     assertEquals(0, msTerminal.getSpanStart());
     assertEquals(0, msTerminal.getSpanEnd());
   }

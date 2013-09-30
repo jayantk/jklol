@@ -5,7 +5,6 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
@@ -29,12 +28,9 @@ public class SyntacticChartFilter implements ChartFilter {
   private final CcgSyntaxTree parse;
   private final List<HeadedSyntacticCategory> headedTerminals;
 
-  private final SyntacticCompatibilityFunction compatibilityFunction;
-
   private static final int SPAN_START_OFFSET = 100000;
 
-  public SyntacticChartFilter(CcgSyntaxTree syntacticParse,
-      SyntacticCompatibilityFunction compatibilityFunction) {
+  public SyntacticChartFilter(CcgSyntaxTree syntacticParse) {
     this.binaryRuleResult = Maps.newHashMap();
     this.leftUnaryRuleResult = Maps.newHashMap();
     this.rightUnaryRuleResult = Maps.newHashMap();
@@ -42,8 +38,6 @@ public class SyntacticChartFilter implements ChartFilter {
 
     this.parse = syntacticParse;
     this.headedTerminals = syntacticParse.getAllSpannedHeadedSyntacticCategories();
-
-    this.compatibilityFunction = Preconditions.checkNotNull(compatibilityFunction);
 
     populateRuleMaps(syntacticParse);
   }
@@ -129,51 +123,7 @@ public class SyntacticChartFilter implements ChartFilter {
 
   private boolean isSyntaxCompatible(SyntacticCategory expected, int actual, DiscreteVariable syntaxType) {
     HeadedSyntacticCategory headedSyntax = (HeadedSyntacticCategory) syntaxType.getValue(actual);
-    return compatibilityFunction.apply(expected, headedSyntax);
-  }
-
-  /**
-   * Predicate for determining whether a headed syntactic category is
-   * equivalent to a given syntactic category.
-   * 
-   * @author jayantk
-   */
-  public interface SyntacticCompatibilityFunction {
-    boolean apply(SyntacticCategory expected, HeadedSyntacticCategory actual);
-  }
-
-  /**
-   * Checks compatibility by assigning all features in the headed
-   * category to the default value.
-   * 
-   * @author jayantk
-   */
-  public static class DefaultCompatibilityFunction implements SyntacticCompatibilityFunction {
-    @Override
-    public boolean apply(SyntacticCategory expected, HeadedSyntacticCategory actual) {
-      SyntacticCategory syntax = actual.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);
-      return expected.equals(syntax);
-    }
-  }
-
-  /**
-   * Checks compatibility using a map from each un-headed syntactic
-   * category to headed syntactic categories.
-   * 
-   * @author jayantk
-   */
-  public static class MapCompatibilityFunction implements SyntacticCompatibilityFunction {
-    private final SetMultimap<SyntacticCategory, HeadedSyntacticCategory> categoryMarkup;
-
-    public MapCompatibilityFunction(SetMultimap<SyntacticCategory, HeadedSyntacticCategory> categoryMarkup) {
-      this.categoryMarkup = Preconditions.checkNotNull(categoryMarkup);
-      
-      // TODO: check for canonical form.
-    }
-
-    @Override
-    public boolean apply(SyntacticCategory expected, HeadedSyntacticCategory actual) {
-      return categoryMarkup.containsKey(expected) && categoryMarkup.get(expected).contains(actual);
-    }
+    SyntacticCategory syntax = headedSyntax.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);
+    return expected.equals(syntax);
   }
 }

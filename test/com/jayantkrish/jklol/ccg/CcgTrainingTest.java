@@ -9,7 +9,6 @@ import junit.framework.TestCase;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.data.DataFormat;
@@ -129,8 +128,7 @@ public class CcgTrainingTest extends TestCase {
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
     CcgExample example = trainingExamplesSyntaxOnly.get(0);
     
-    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse(), 
-        new DefaultCompatibilityFunction());
+    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction(), -1);
     
     for (CcgParse correct : correctParses) {
@@ -149,8 +147,7 @@ public class CcgTrainingTest extends TestCase {
       System.out.println(parse);
     }
 
-    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse(),
-        new DefaultCompatibilityFunction());
+    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction(), -1);
     
     for (CcgParse correct : correctParses) {
@@ -227,7 +224,7 @@ public class CcgTrainingTest extends TestCase {
   }
 
   private CcgParser trainLoglikelihoodParser(List<CcgExample> examples) {
-    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, new DefaultCompatibilityFunction(), 100);
+    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 100);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
         true, 0.1, new DefaultLogFunction());
 
@@ -238,7 +235,8 @@ public class CcgTrainingTest extends TestCase {
   }
 
   private CcgParser trainPerceptronParser(List<CcgExample> examples) {
-    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, null, new DefaultCompatibilityFunction(), 100);
+    CcgInference inferenceAlg = new CcgBeamSearchInference(null, 100, -1);
+    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(21, 1, 1,
         false, 0.0, new DefaultLogFunction());
 

@@ -6,14 +6,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.inference.MaxMarginalSet;
-import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
-import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**

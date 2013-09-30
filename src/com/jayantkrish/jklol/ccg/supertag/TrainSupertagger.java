@@ -12,10 +12,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.SyntacticCategory;
-import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
-import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.cli.TrainCcg;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
@@ -40,6 +39,7 @@ public class TrainSupertagger extends AbstractCli {
 
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
+  private OptionSpec<String> syntaxMap;
 
   // Model construction options.
   private OptionSpec<Void> noTransitions;
@@ -56,6 +56,7 @@ public class TrainSupertagger extends AbstractCli {
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
 
+    syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
     noTransitions = parser.accepts("noTransitions");
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
@@ -66,18 +67,16 @@ public class TrainSupertagger extends AbstractCli {
   public void run(OptionSet options) {
     // Read in the training data as sentences, to use for
     // feature generation.
-    CcgExampleFormat exampleReader = new CcgExampleFormat(
-        CcgbankSyntaxTreeFormat.defaultFormat(), true);
-    
-    List<CcgExample> ccgExamples = exampleReader.parseFromFile(options.valueOf(trainingFilename));
-    List<TaggedSequence<WordAndPos, SyntacticCategory>> trainingData =
+    List<CcgExample> ccgExamples = TrainCcg.readTrainingData(options.valueOf(trainingFilename),
+        true, true, options.valueOf(syntaxMap));
+    List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData =
         reformatTrainingExamples(ccgExamples);
 
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold));
 
-    Set<SyntacticCategory> validCategories = Sets.newHashSet();
-    for (TaggedSequence<WordAndPos, SyntacticCategory> trainingDatum : trainingData) {
+    Set<HeadedSyntacticCategory> validCategories = Sets.newHashSet();
+    for (TaggedSequence<WordAndPos, HeadedSyntacticCategory> trainingDatum : trainingData) {
       validCategories.addAll(trainingDatum.getLabels());
     }
 
@@ -88,8 +87,8 @@ public class TrainSupertagger extends AbstractCli {
     ParametricFactorGraph sequenceModelFamily = TaggerUtils.buildFeaturizedSequenceModel(
         validCategories, featureGen.getFeatureDictionary(), options.has(noTransitions));
     GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
-    FactorGraphSequenceTagger<WordAndPos, SyntacticCategory> tagger = TaggerUtils.trainSequenceModel(
-        sequenceModelFamily, trainingData, SyntacticCategory.class, featureGen, trainer,
+    FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> tagger = TaggerUtils.trainSequenceModel(
+        sequenceModelFamily, trainingData, HeadedSyntacticCategory.class, featureGen, trainer,
         options.has(maxMargin));
 
     // Save model to disk.
@@ -106,20 +105,21 @@ public class TrainSupertagger extends AbstractCli {
    * @param ccgExamples
    * @return
    */
-  public static List<TaggedSequence<WordAndPos, SyntacticCategory>> reformatTrainingExamples(
+  public static List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> reformatTrainingExamples(
       Collection<CcgExample> ccgExamples) {
-    List<TaggedSequence<WordAndPos, SyntacticCategory>> examples = Lists.newArrayList();
+    List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> examples = Lists.newArrayList();
     for (CcgExample example : ccgExamples) {
       Preconditions.checkArgument(example.hasSyntacticParse());
       List<WordAndPos> taggedWords = WordAndPos.createExample(example.getWords(), example.getPosTags());
-      List<SyntacticCategory> syntacticCategories = example.getSyntacticParse().getAllSpannedLexiconEntries();
-      examples.add(new ListTaggedSequence<WordAndPos, SyntacticCategory>(taggedWords, syntacticCategories));
+      List<HeadedSyntacticCategory> syntacticCategories = example.getSyntacticParse().getAllSpannedHeadedSyntacticCategories();
+      Preconditions.checkArgument(!syntacticCategories.contains(null));
+      examples.add(new ListTaggedSequence<WordAndPos, HeadedSyntacticCategory>(taggedWords, syntacticCategories));
     }
     return examples;
   }
 
   private static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
-      List<TaggedSequence<WordAndPos, SyntacticCategory>> trainingData, int commonWordCountThreshold) {
+      List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData, int commonWordCountThreshold) {
     List<LocalContext<WordAndPos>> contexts = TaggerUtils.extractContextsFromData(trainingData);
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (LocalContext<WordAndPos> context : contexts) {

@@ -20,7 +20,6 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
@@ -757,11 +756,11 @@ public class CcgParserTest extends TestCase {
         Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10, new NullLogFunction());
     assertEquals(2, parses.size());
 
-    List<List<SyntacticCategory>> supertags = Lists.newArrayList();
-    supertags.add(Lists.newArrayList(SyntacticCategory.parseFrom("N")));
-    supertags.add(Lists.newArrayList(SyntacticCategory.parseFrom("N")));
+    List<List<HeadedSyntacticCategory>> supertags = Lists.newArrayList();
+    supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
+    supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
 
-    ChartFilter supertagChartFilter = new SupertagChartFilter(supertags, new DefaultCompatibilityFunction());
+    ChartFilter supertagChartFilter = new SupertagChartFilter(supertags);
 
     parses = parser.beamSearch(Arrays.asList("blue", "berries"),
         Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10,

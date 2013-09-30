@@ -21,7 +21,6 @@ import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
@@ -378,7 +377,7 @@ public class ParseCcg extends AbstractCli {
     public CcgLoss map(CcgExample example) {
       List<CcgParse> parses = null;
       if (useCcgbankDerivation) {
-        SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse(), new DefaultCompatibilityFunction());
+        SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
         parses = parser.beamSearch(example.getWords(), example.getPosTags(), filter);
       } else {
         parses = parser.beamSearch(example.getWords(), example.getPosTags());

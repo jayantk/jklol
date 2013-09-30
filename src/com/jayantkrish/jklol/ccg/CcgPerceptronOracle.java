@@ -1,13 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.chart.ChartFilter;
-import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -16,24 +9,11 @@ import com.jayantkrish.jklol.training.LogFunction;
 public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample> {
 
   private final ParametricCcgParser family;
-    
-  // Optional constraint to use during inference. Null if
-  // no constraints are imposed on the search.
-  private final ChartFilter searchFilter;
-  
-  // Mapping from un-headed syntactic parses to headed 
-  // syntactic parses.
-  private final SyntacticCompatibilityFunction compatibilityFunction;
+  private final CcgInference inferenceAlgorithm;
 
-  // Size of the beam used during inference (which uses beam search).
-  private final int beamSize;
-
-  public CcgPerceptronOracle(ParametricCcgParser family, ChartFilter searchFilter, 
-      SyntacticCompatibilityFunction compatibilityFunction, int beamSize) {
+  public CcgPerceptronOracle(ParametricCcgParser family, CcgInference inferenceAlgorithm) {
     this.family = Preconditions.checkNotNull(family);
-    this.searchFilter = searchFilter;
-    this.compatibilityFunction = Preconditions.checkNotNull(compatibilityFunction);
-    this.beamSize = beamSize;
+    this.inferenceAlgorithm = Preconditions.checkNotNull(inferenceAlgorithm);
   }
 
   @Override
@@ -51,41 +31,24 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
       CcgExample example, LogFunction log) {
     // Gradient is the features of the correct CCG parse minus the
     // features of the best predicted parse.
-    log.startTimer("update_gradient/unconditional_max_marginal");
+
     // Calculate the best predicted parse, i.e., the highest weight parse
     // without conditioning on the true parse.
-    
-    /*
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(),
-        beamSize, searchFilter, log, -1);
-    System.out.println("num predicted: " + parses.size());
-    */
-
-    CcgParse bestPredictedParse = instantiatedParser.parse(example.getWords(), example.getPosTags(), searchFilter, log, -1);
+    log.startTimer("update_gradient/unconditional_max_marginal");
+    CcgParse bestPredictedParse = inferenceAlgorithm.getBestParse(instantiatedParser, example.getWords(),
+        example.getPosTags(), null, log);
     if (bestPredictedParse == null) {
       System.out.println("Search error (Predicted): " + example.getWords());
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/unconditional_max_marginal");
 
+    // Calculate the best conditional parse, i.e., the highest weight parse
+    // with the correct syntactic tree and set of semantic dependencies.
     log.startTimer("update_gradient/conditional_max_marginal");
-
-    List<CcgParse> possibleParses = null; 
-    if (example.hasSyntacticParse()) {
-      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse(), compatibilityFunction);
-      if (searchFilter != null) {
-        conditionalChartFilter = new ConjunctionChartFilter(Arrays.asList(conditionalChartFilter, searchFilter));
-      }
-      possibleParses = instantiatedParser.beamSearch(example.getWords(),
-          example.getPosTags(), beamSize, conditionalChartFilter, log, -1);
-    } else {
-      possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(),
-        beamSize, searchFilter, log, -1);
-    }
-    List<CcgParse> correctParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(example, possibleParses);
-    CcgParse bestCorrectParse = correctParses.size() > 0 ? correctParses.get(0) : null;
-
-    System.out.println("num correct: " + possibleParses.size());
+    CcgParse bestCorrectParse = inferenceAlgorithm.getBestConditionalParse(instantiatedParser,
+        example.getWords(), example.getPosTags(), null, log, example.getSyntacticParse(),
+        example.getDependencies(), example.getLogicalForm());
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
       System.out.println("Search error (Correct): " + example.getWords());
@@ -93,10 +56,6 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
       // System.out.println("Search error cause: " + conditionalChartFilter.analyzeParseFailure());
       throw new ZeroProbabilityError();
     }
-    for (CcgParse correctParse : possibleParses) {
-      System.out.println("correct: " + correctParse);
-    }
-
     log.stopTimer("update_gradient/conditional_max_marginal");
     System.out.println("best predicted: " + bestPredictedParse + " " + bestPredictedParse.getSubtreeProbability());
     System.out.println("best correct: " + bestCorrectParse + " " + bestCorrectParse.getSubtreeProbability());

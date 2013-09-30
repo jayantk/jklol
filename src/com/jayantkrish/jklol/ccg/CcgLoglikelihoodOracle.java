@@ -8,7 +8,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -24,17 +23,11 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
   private final ParametricCcgParser family;
 
-  // Mapping from un-headed syntactic parses to headed 
-  // syntactic parses.
-  private final SyntacticCompatibilityFunction compatibilityFunction;
-  
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
 
-  public CcgLoglikelihoodOracle(ParametricCcgParser family, 
-      SyntacticCompatibilityFunction compatibilityFunction, int beamSize) {
+  public CcgLoglikelihoodOracle(ParametricCcgParser family, int beamSize) {
     this.family = Preconditions.checkNotNull(family);
-    this.compatibilityFunction = Preconditions.checkNotNull(compatibilityFunction);
     this.beamSize = beamSize;
   }
 
@@ -68,7 +61,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Condition parses on provided syntactic information, if any is provided.
     List<CcgParse> possibleParses = null;
     if (example.hasSyntacticParse()) {
-      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse(), compatibilityFunction);
+      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
       possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
         conditionalChartFilter, log, -1);
     } else {
@@ -76,7 +69,8 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     }
 
     // Condition on true dependency structures, if provided.
-    List<CcgParse> correctParses = filterSemanticallyCompatibleParses(example, possibleParses);
+    List<CcgParse> correctParses = filterSemanticallyCompatibleParses(example.getDependencies(),
+        example.getLogicalForm(), possibleParses);
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
@@ -105,11 +99,10 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
   }
   
-  public static List<CcgParse> filterSemanticallyCompatibleParses(CcgExample example,
-      Iterable<CcgParse> parses) {
+  public static List<CcgParse> filterSemanticallyCompatibleParses(Set<DependencyStructure> observedDependencies,
+      Expression observedLogicalForm, Iterable<CcgParse> parses) {
     List<CcgParse> correctParses = Lists.newArrayList();
-    Set<DependencyStructure> observedDependencies = example.getDependencies();
-    Expression observedLogicalForm = example.getLogicalForm();
+    
     for (CcgParse parse : parses) {
       boolean compatible = true;
       if (observedDependencies != null && !Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {

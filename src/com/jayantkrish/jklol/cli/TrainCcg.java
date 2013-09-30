@@ -11,7 +11,9 @@ import joptsimple.OptionSpec;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
+import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
@@ -20,8 +22,6 @@ import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.SyntacticCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
@@ -105,11 +105,11 @@ public class TrainCcg extends AbstractCli {
     
     // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
-    SyntacticCompatibilityFunction compatibilityFunction = new DefaultCompatibilityFunction();
     if (options.has(perceptron)) {
-      oracle = new CcgPerceptronOracle(family, null, compatibilityFunction, options.valueOf(beamSize));
+      CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), -1);
+      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm);
     } else {
-      oracle = new CcgLoglikelihoodOracle(family, compatibilityFunction, options.valueOf(beamSize));
+      oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
     }
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),

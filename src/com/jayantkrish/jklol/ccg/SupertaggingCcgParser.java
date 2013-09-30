@@ -5,7 +5,6 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
@@ -40,7 +39,7 @@ public class SupertaggingCcgParser {
       SupertaggedSentence supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThreshold);
       
       filter = ConjunctionChartFilter.create(filter,
-          new SupertagChartFilter(supertaggedSentence.getLabels(), new DefaultCompatibilityFunction()));
+          new SupertagChartFilter(supertaggedSentence.getLabels()));
     }
     return parser.beamSearch(terminals, posTags, beamSize, filter, new NullLogFunction(), maxParseTimeMillis);
   }

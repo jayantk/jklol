@@ -15,11 +15,11 @@ public class SupertaggingCcgParser {
   private final CcgParser parser;
   private final int beamSize;
   private final long maxParseTimeMillis;
-  
+
   // May be null, in which case supertagging is not used.
   private final Supertagger supertagger;
   private final double multitagThreshold;
-  
+
   public SupertaggingCcgParser(CcgParser parser, int beamSize, long maxParseTimeMillis,
       Supertagger supertagger, double multitagThreshold) {
     this.parser = Preconditions.checkNotNull(parser);

@@ -208,18 +208,23 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrainPerceptronLogicalFormOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesLfOnly);
+    CcgParser parser = trainPerceptronParser(trainingExamplesLfOnly, false);
     assertZeroDependencyError(parser, trainingExamples);
   }
 
   public void testTrainPerceptronWithSyntax() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax);
+    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly);
+    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false);
+    assertTrainedParserUsesSyntax(parser);
+  }
+
+  public void testTrainPerceptronSyntaxOnlyExactInference() {
+    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true);
     assertTrainedParserUsesSyntax(parser);
   }
 
@@ -234,8 +239,13 @@ public class CcgTrainingTest extends TestCase {
     return parser;
   }
 
-  private CcgParser trainPerceptronParser(List<CcgExample> examples) {
-    CcgInference inferenceAlg = new CcgBeamSearchInference(null, 100, -1);
+  private CcgParser trainPerceptronParser(List<CcgExample> examples, boolean exactInference) {
+    CcgInference inferenceAlg = null;
+    if (exactInference) {
+      inferenceAlg = new CcgExactInference(null, -1);
+    } else {
+      inferenceAlg = new CcgBeamSearchInference(null, 100, -1);
+    }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(21, 1, 1,
         false, 0.0, new DefaultLogFunction());

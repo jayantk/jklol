@@ -121,7 +121,7 @@ public class TrainSupertagger extends AbstractCli {
         System.out.println("Discarding sentence: " + taggedWords);
         for (int i = 0; i < taggedWords.size(); i++) {
           if (syntacticCategories.get(i) == null) {
-            System.out.println("No headed syntactic category for: " + unheadedCategories.get(i));
+            System.out.println("No headed syntactic category for: " + taggedWords.get(i) + " " + unheadedCategories.get(i));
           }
         }
       }

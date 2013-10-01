@@ -8,6 +8,8 @@ import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
 public class CcgExactInference implements CcgInference {
@@ -25,27 +27,32 @@ public class CcgExactInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestParse(CcgParser parser, List<String> words,
-      List<String> posTags, ChartFilter chartFilter, LogFunction log) {
-    ChartFilter filter = ConjunctionChartFilter.create(searchFilter, chartFilter);
+  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
+      ChartFilter chartFilter, LogFunction log) {
+    ChartFilter filter = ConjunctionChartFilter.create(searchFilter, chartFilter,
+        new SupertagChartFilter(sentence.getSupertags()));
 
-    return parser.parse(words, posTags, filter, log, maxParseTimeMillis);
+    return parser.parse(sentence.getWords(), sentence.getPosTags(), filter, log, maxParseTimeMillis);
   }
 
   @Override
-  public CcgParse getBestConditionalParse(CcgParser parser, List<String> words,
-      List<String> posTags, ChartFilter chartFilter, LogFunction log,
-      CcgSyntaxTree observedSyntacticTree, Set<DependencyStructure> observedDependencies,
-      Expression observedLogicalForm) {
+  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
+      ChartFilter chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
+      Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
     Preconditions.checkArgument(observedDependencies == null && observedLogicalForm == null);
 
     List<CcgParse> possibleParses = null; 
     if (observedSyntacticTree != null) {
       ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
-          new SyntacticChartFilter(observedSyntacticTree), searchFilter);
-      possibleParses = parser.beamSearch(words, posTags, 100, conditionalChartFilter, log, -1);
+          new SyntacticChartFilter(observedSyntacticTree), searchFilter,
+          new SupertagChartFilter(sentence.getSupertags()));
+      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), 100,
+          conditionalChartFilter, log, -1);
     } else {
-      possibleParses = parser.beamSearch(words, posTags, 100, searchFilter, log, -1);
+      ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
+          new SupertagChartFilter(sentence.getSupertags()), searchFilter);
+      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), 100,
+          conditionalChartFilter, log, -1);
     }
 
     System.out.println("num correct: " + possibleParses.size());

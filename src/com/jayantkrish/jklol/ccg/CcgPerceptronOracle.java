@@ -35,10 +35,10 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // Calculate the best predicted parse, i.e., the highest weight parse
     // without conditioning on the true parse.
     log.startTimer("update_gradient/unconditional_max_marginal");
-    CcgParse bestPredictedParse = inferenceAlgorithm.getBestParse(instantiatedParser, example.getWords(),
-        example.getPosTags(), null, log);
+    CcgParse bestPredictedParse = inferenceAlgorithm.getBestParse(instantiatedParser, example.getSentence(),
+        null, log);
     if (bestPredictedParse == null) {
-      System.out.println("Search error (Predicted): " + example.getWords());
+      System.out.println("Search error (Predicted): " + example.getSentence());
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/unconditional_max_marginal");
@@ -47,11 +47,11 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // with the correct syntactic tree and set of semantic dependencies.
     log.startTimer("update_gradient/conditional_max_marginal");
     CcgParse bestCorrectParse = inferenceAlgorithm.getBestConditionalParse(instantiatedParser,
-        example.getWords(), example.getPosTags(), null, log, example.getSyntacticParse(),
+        example.getSentence(), null, log, example.getSyntacticParse(),
         example.getDependencies(), example.getLogicalForm());
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
-      System.out.println("Search error (Correct): " + example.getWords());
+      System.out.println("Search error (Correct): " + example.getSentence());
       System.out.println("Expected tree: " + example.getSyntacticParse());
       // System.out.println("Search error cause: " + conditionalChartFilter.analyzeParseFailure());
       throw new ZeroProbabilityError();

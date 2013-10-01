@@ -26,8 +26,9 @@ public class SupertagChartFilter implements ChartFilter {
 
   @Override
   public boolean apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxType) {
-    // This filter only applies to single word terminal entries.
-    if (spanStart != spanEnd) {
+    // This filter only applies to single word terminal entries where
+    // the example has a specified set of valid supertags.
+    if (spanStart != spanEnd || supertags.get(spanStart).size() == 0) {
       return true;
     } 
 

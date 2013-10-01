@@ -6,22 +6,23 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 
 /**
- * A training example for {@code CcgLoglikelihoodOracle}. Stores an
- * input word sequence and its expected set of dependencies. May
- * optionally contain the expected syntactic structure.
+ * A training example for training a CCG parser. The input
+ * portion of the training example is a part-of-speech tagged 
+ * (and tokenized) sentence, and optionally a collection of supertags to use.
+ * The output portion optionally contains the correct syntactic parse of
+ * the sentence, its predicate-argument dependencies, and its logical form.
+ * If any output field is unspecified, it is presumed to be unobserved.
  * 
  * @author jayant
  */
 public class CcgExample {
 
-  private final List<String> words;
-  private final List<String> posTags;
-
-  // Optional field containing candidate supertags for the sentence.
-  // Null means all syntactic categories are acceptable for each word.
-  private final List<List<SyntacticCategory>> supertags;
+  // The sentence to parse, along with part-of-speech tags for each word
+  // and optional supertags (syntactic categories to consider for each word).
+  private final SupertaggedSentence sentence;
 
   // May be null, in which case the true dependencies are
   // unobserved.
@@ -51,22 +52,18 @@ public class CcgExample {
    * {@code words}. May be {@code null}, in which case the correct
    * value is treated as unobserved.
    */
-  public CcgExample(List<String> words, List<String> posTags, List<List<SyntacticCategory>> supertags,
-      Set<DependencyStructure> dependencies, CcgSyntaxTree syntacticParse, Expression logicalForm) {
-    this.words = Preconditions.checkNotNull(words);
-    this.posTags = Preconditions.checkNotNull(posTags);
-    this.supertags = supertags;
-    Preconditions.checkArgument(words.size() == posTags.size());
-    Preconditions.checkArgument(supertags == null || supertags.size() == words.size());
+  public CcgExample(SupertaggedSentence sentence, Set<DependencyStructure> dependencies,
+      CcgSyntaxTree syntacticParse, Expression logicalForm) {
+    this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
     this.logicalForm = logicalForm;
 
     if (syntacticParse != null) {
       List<String> syntaxWords = syntacticParse.getAllSpannedWords();
-      Preconditions.checkArgument(syntaxWords.equals(words),
+      Preconditions.checkArgument(syntaxWords.equals(sentence.getWords()),
           "CCG syntax tree and example must agree on words: \"%s\" vs \"%s\" %s", syntaxWords,
-          words, syntacticParse);
+          sentence.getWords(), syntacticParse);
     }
   }
 
@@ -85,16 +82,23 @@ public class CcgExample {
     return posTagVocabulary;
   }
 
-  public List<String> getWords() {
-    return words;
-  }
-
-  public List<String> getPosTags() {
-    return posTags;
+  public SupertaggedSentence getSentence() {
+    return sentence;
   }
   
-  public List<List<SyntacticCategory>> getSupertags() {
-    return supertags;
+  @Deprecated
+  public List<String> getWords() {
+    return sentence.getWords();
+  }
+
+  @Deprecated
+  public List<String> getPosTags() {
+    return sentence.getPosTags();
+  }
+  
+  @Deprecated
+  public List<List<HeadedSyntacticCategory>> getSupertags() {
+    return sentence.getSupertags();
   }
 
   /**
@@ -129,6 +133,6 @@ public class CcgExample {
 
   @Override
   public String toString() {
-    return words + " " + dependencies + " " + syntacticParse;
+    return sentence + " " + dependencies + " " + syntacticParse;
   }
 }

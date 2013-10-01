@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -8,6 +7,8 @@ import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
 public class CcgBeamSearchInference implements CcgInference {
@@ -29,11 +30,13 @@ public class CcgBeamSearchInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestParse(CcgParser parser, List<String> words,
-      List<String> posTags, ChartFilter chartFilter, LogFunction log) {
-    ChartFilter filter = ConjunctionChartFilter.create(searchFilter, chartFilter);
+  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
+      ChartFilter chartFilter, LogFunction log) {
+    ChartFilter filter = ConjunctionChartFilter.create(searchFilter, chartFilter,
+        new SupertagChartFilter(sentence.getSupertags()));
 
-    List<CcgParse> parses = parser.beamSearch(words, posTags, beamSize, filter, log, maxParseTimeMillis);
+    List<CcgParse> parses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(),
+        beamSize, filter, log, maxParseTimeMillis);
     if (parses.size() > 0) {
       return parses.get(0);
     } else {
@@ -42,21 +45,21 @@ public class CcgBeamSearchInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestConditionalParse(CcgParser parser, List<String> words,
-      List<String> posTags, ChartFilter chartFilter, LogFunction log,
-      CcgSyntaxTree observedSyntacticTree, Set<DependencyStructure> observedDependencies,
-      Expression observedLogicalForm) {
+  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
+      ChartFilter chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
+      Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
 
     List<CcgParse> possibleParses = null; 
     if (observedSyntacticTree != null) {
-      ChartFilter conditionalChartFilter = new SyntacticChartFilter(observedSyntacticTree);
-      if (searchFilter != null) {
-        conditionalChartFilter = new ConjunctionChartFilter(
-            Arrays.asList(conditionalChartFilter, searchFilter));
-      }
-      possibleParses = parser.beamSearch(words, posTags, beamSize, conditionalChartFilter, log, -1);
+      ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(new SyntacticChartFilter(observedSyntacticTree),
+          new SupertagChartFilter(sentence.getSupertags()), searchFilter);
+      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
+          conditionalChartFilter, log, -1);
     } else {
-      possibleParses = parser.beamSearch(words, posTags, beamSize, searchFilter, log, -1);
+      ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
+          new SupertagChartFilter(sentence.getSupertags()), searchFilter);
+      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
+          conditionalChartFilter, log, -1);
     }
 
     possibleParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(

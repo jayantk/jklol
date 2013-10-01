@@ -14,9 +14,9 @@ import com.jayantkrish.jklol.util.CsvParser;
 /**
  * A binary combination rule applicable to two adjacent CCG
  * categories. These rules represent operations like type-changing,
- * which can be applied in addition to the standard CCG
- * application/combination rules. For example, {@code CcgBinaryRule}
- * can be used to absorb punctuation marks.
+ * in addition to the standard CCG application/combination rules.
+ * For example, {@code CcgBinaryRule} can be used to absorb
+ * punctuation marks.
  * <p>
  * Each combination rule matches a pair of adjacent
  * {@code SyntacticCategory}s, and returns a new category for their

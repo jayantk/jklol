@@ -98,13 +98,14 @@ public class CcgTrainingTest extends TestCase {
     
     trainingExamplesLfOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
-      trainingExamplesLfOnly.add(new CcgExample(example.getWords(), example.getPosTags(), null, null, null, example.getLogicalForm()));
+      trainingExamplesLfOnly.add(new CcgExample(example.getSentence().removeSupertags(), null,
+          null, example.getLogicalForm()));
     }
     
     trainingExamplesDepsOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
-      trainingExamplesDepsOnly.add(new CcgExample(example.getWords(), example.getPosTags(), null, example.getDependencies(), null,
-          null));
+      trainingExamplesDepsOnly.add(new CcgExample(example.getSentence().removeSupertags(),
+          example.getDependencies(), null, null));
     }
 
     trainingExamplesWithSyntax = Lists.newArrayList();
@@ -116,7 +117,7 @@ public class CcgTrainingTest extends TestCase {
 
     trainingExamplesSyntaxOnly = Lists.newArrayList();
     for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
-      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getWords(), syntaxExample.getPosTags(), null, 
+      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence().removeSupertags(), 
           null, syntaxExample.getSyntacticParse(), null));
     }
 

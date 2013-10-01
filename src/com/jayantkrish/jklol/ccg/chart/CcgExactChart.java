@@ -98,7 +98,8 @@ public class CcgExactChart extends AbstractCcgChart {
       double[] spanProbs = probabilities[spanStart][spanEnd];
       for (int i = 0; i < spanSize; i++) {
         ChartEntry other = spanChart[i];
-        if (other.getHeadedSyntax() == entryHeadedSyntax && longMultisetsEqual(entry.getUnfilledDependencies(), other.getUnfilledDependencies())
+        if (other.getHeadedSyntax() == entryHeadedSyntax
+            && longMultisetsEqual(entry.getUnfilledDependencies(), other.getUnfilledDependencies())
             && longMultisetsEqual(entry.getAssignments(), other.getAssignments())) {
           // Both entries have the same syntactic category and
           // semantics. Retain the entry with the highest probability.

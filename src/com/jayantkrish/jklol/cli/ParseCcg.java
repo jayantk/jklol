@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -44,6 +45,9 @@ public class ParseCcg extends AbstractCli {
   
   private OptionSpec<String> testFile;
   private OptionSpec<Void> useCcgBankFormat;
+
+  private OptionSpec<String> supertagger;
+  private OptionSpec<Double> multitagThreshold;
   
   public ParseCcg() {
     super(CommonOptions.MAP_REDUCE);
@@ -66,6 +70,9 @@ public class ParseCcg extends AbstractCli {
         "The format of testFile is the same as expected by TrainCcg to train a CCG parser.")
         .withRequiredArg().ofType(String.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat", "Reads the parses in testFile in CCGbank format.");
+
+    supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
+    multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
   }
 
   @Override
@@ -79,8 +86,16 @@ public class ParseCcg extends AbstractCli {
           false, options.has(useCcgBankFormat), null);
       System.out.println(testExamples.size() + " test examples after filtering.");
 
+      Supertagger tagger = null;
+      double tagThreshold = 0.0;
+      if (options.has(supertagger)) {
+        Preconditions.checkState(options.has(multitagThreshold));
+        tagger = IoUtils.readSerializedObject(options.valueOf(supertagger), Supertagger.class);
+        tagThreshold = options.valueOf(multitagThreshold);
+      }
+
       SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
-          options.valueOf(beamSize), -1, null, 0.0);
+          options.valueOf(beamSize), -1, tagger, tagThreshold);
       CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, false);
       System.out.println(loss);
     } else {

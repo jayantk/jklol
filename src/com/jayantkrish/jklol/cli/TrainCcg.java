@@ -8,10 +8,13 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgExactInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
@@ -25,8 +28,13 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -45,15 +53,19 @@ public class TrainCcg extends AbstractCli {
 
   private OptionSpec<String> syntaxMap;
   private OptionSpec<Integer> beamSize;
+  private OptionSpec<Long> maxParseTimeMillis;
+  private OptionSpec<String> supertagger;
+  private OptionSpec<Double> multitagThreshold;
   private OptionSpec<Void> useCcgBankFormat;
   private OptionSpec<Void> perceptron;
   private OptionSpec<Void> discardInvalid;
   private OptionSpec<Void> ignoreSemantics;
   private OptionSpec<Void> onlyObservedBinaryRules;
+  private OptionSpec<Void> exactInference;
 
   public TrainCcg() {
-    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE, 
-        CommonOptions.PARAMETRIC_CCG_PARSER); 
+    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE,
+        CommonOptions.PARAMETRIC_CCG_PARSER);
   }
 
   @Override
@@ -61,14 +73,19 @@ public class TrainCcg extends AbstractCli {
     // Required arguments.
     trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+
     // Optional options
     syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    maxParseTimeMillis = parser.accepts("maxParseTimeMillis").withRequiredArg().ofType(Long.class).defaultsTo(-1L);
+    supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
+    multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
     perceptron = parser.accepts("perceptron");
     discardInvalid = parser.accepts("discardInvalid");
     ignoreSemantics = parser.accepts("ignoreSemantics");
     onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
+    exactInference = parser.accepts("exactInference");
   }
 
   @Override
@@ -77,6 +94,13 @@ public class TrainCcg extends AbstractCli {
         options.has(ignoreSemantics), options.has(useCcgBankFormat), options.valueOf(syntaxMap));
     Set<String> posTags = CcgExample.getPosTagVocabulary(unfilteredTrainingExamples);
     System.out.println(posTags.size() + " POS tags");
+
+    if (options.has(supertagger)) {
+      Preconditions.checkState(options.has(multitagThreshold));
+      Supertagger supertaggerModel = IoUtils.readSerializedObject(options.valueOf(supertagger), Supertagger.class);
+      unfilteredTrainingExamples = supertagExamples(unfilteredTrainingExamples, supertaggerModel,
+          options.valueOf(multitagThreshold), true);
+    }
 
     Set<CcgRuleSchema> observedRules = null;
     if (options.has(onlyObservedBinaryRules)) {
@@ -102,11 +126,16 @@ public class TrainCcg extends AbstractCli {
     System.out.println(trainingExamples.size() + " training examples.");
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");
-    
+
     // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
     if (options.has(perceptron)) {
-      CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), -1);
+      CcgInference inferenceAlgorithm = null;
+      if (options.has(exactInference)) {
+        inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis));
+      } else {
+        inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), options.valueOf(maxParseTimeMillis));
+      }
       oracle = new CcgPerceptronOracle(family, inferenceAlgorithm);
     } else {
       oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
@@ -122,7 +151,7 @@ public class TrainCcg extends AbstractCli {
     System.out.println("Trained model parameters:");
     System.out.println(family.getParameterDescription(parameters));
   }
-  
+
   public static List<CcgExample> readTrainingData(String filename, boolean ignoreSemantics,
       boolean useCcgBankFormat, String syntacticCategoryMapFilename) {
     // Read in all of the provided training examples.
@@ -144,6 +173,16 @@ public class TrainCcg extends AbstractCli {
     return exampleReader.parseFromFile(filename);
   }
 
+  private static List<CcgExample> supertagExamples(List<CcgExample> examples,
+      Supertagger supertagger, double multitagThreshold, boolean includeGoldSupertags) {
+    System.out.println("Supertagging examples...");
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+    List<CcgExample> newExamples = executor.map(examples,
+        new SupertaggerMapper(supertagger, multitagThreshold, includeGoldSupertags));
+    System.out.println("Done supertagging.");
+    return newExamples;
+  }
+
   private static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {
     Map<SyntacticCategory, HeadedSyntacticCategory> catMap = Maps.newHashMap();
     for (String line : IoUtils.readLines(filename)) {
@@ -158,5 +197,62 @@ public class TrainCcg extends AbstractCli {
 
   public static void main(String[] args) {
     new TrainCcg().run(args);
+  }
+
+  private static class SupertaggerMapper extends Mapper<CcgExample, CcgExample> {
+
+    private final Supertagger supertagger;
+    private final double multitagThreshold;
+    private final boolean includeGoldSupertags;
+    
+    public SupertaggerMapper(Supertagger supertagger, double multitagThreshold,
+        boolean includeGoldSupertags) {
+      this.supertagger = Preconditions.checkNotNull(supertagger);
+      this.multitagThreshold = multitagThreshold;
+      this.includeGoldSupertags = includeGoldSupertags;
+    }
+
+    @Override
+    public CcgExample map(CcgExample item) {
+      SupertaggedSentence taggedSentence = supertagger.multitag(item.getSentence().getItems(), multitagThreshold);
+
+      if (includeGoldSupertags) {
+        // Make sure the correct headed syntactic category for each
+        // word is included in the set of candidate syntactic
+        // categories.
+        List<List<HeadedSyntacticCategory>> predictedLabels = taggedSentence.getLabels();
+        List<List<Double>> predictedProbs = taggedSentence.getLabelProbabilities();
+
+        List<HeadedSyntacticCategory> goldSupertags = item.getSyntacticParse().getAllSpannedHeadedSyntacticCategories();
+        List<List<HeadedSyntacticCategory>> newLabels = Lists.newArrayList();
+        List<List<Double>> newProbs = Lists.newArrayList();
+        for (int i = 0; i < predictedLabels.size(); i++) {
+          List<HeadedSyntacticCategory> labels = predictedLabels.get(i);
+          List<Double> probs = predictedProbs.get(i);
+          HeadedSyntacticCategory goldSupertag = goldSupertags.get(i);
+
+          if (goldSupertag == null || labels.contains(goldSupertag)) {
+            newLabels.add(labels);
+            newProbs.add(probs);
+          } else {
+            List<HeadedSyntacticCategory> labelsCopy = Lists.newArrayList(labels);
+            List<Double> probsCopy = Lists.newArrayList(probs);
+
+            // The probability of the added label has been arbitrarily
+            // set to 0. These probabilities should not be used during
+            // training.
+            labelsCopy.add(goldSupertag);
+            probsCopy.add(0.0);
+            newLabels.add(labelsCopy);
+            newProbs.add(probsCopy);
+          }
+        }
+        
+        taggedSentence = taggedSentence.replaceSupertags(newLabels, newProbs);
+      }
+
+      return new CcgExample(taggedSentence, item.getDependencies(), item.getSyntacticParse(),
+          item.getLogicalForm());
+    }
   }
 }

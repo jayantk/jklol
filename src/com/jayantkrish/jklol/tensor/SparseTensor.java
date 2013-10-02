@@ -17,9 +17,9 @@ import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;
 
 /**
- * Sparse tensor representation, where all values are presumed to be 0 unless
- * otherwise specified. This implementation maintains paired arrays of the
- * non-zero keys and their values.
+ * Sparse tensor representation, where all values are presumed to be 0
+ * unless otherwise specified. This implementation maintains paired
+ * arrays of the non-zero keys and their values.
  */
 public class SparseTensor extends AbstractTensor implements Serializable {
 
@@ -145,8 +145,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     if (dimensionNumbers.length == 0) {
       return this;
     }
-    // Check for an efficient case, where the dimensions are the first elements
-    // of this.
+    // Check for an efficient case, where the dimensions are the first
+    // elements of this.
     if (ArrayUtils.subarrayEquals(getDimensionNumbers(), dimensionNumbers, 0)) {
       long minKeyInt = 0;
       for (int i = 0; i < dimensionNumbers.length; i++) {
@@ -168,7 +168,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       return new SparseTensor(newDimensionNumbers, newDimensionSizes, newKeyInts, newValues);
     }
 
-    // TODO(jayantk): This is an extremely naive implementation of slice.
+    // TODO(jayantk): This is an extremely naive implementation of
+    // slice.
     // Figure out the appropriate sizes for the subset of dimensions.
     int[] dimensionSizes = new int[dimensionNumbers.length];
     for (int i = 0; i < dimensionNumbers.length; i++) {
@@ -180,19 +181,19 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     builder.put(key, 1.0);
     return elementwiseProduct(builder.build()).sumOutDimensions(Ints.asList(dimensionNumbers));
   }
-  
+
   @Override
   public SparseTensor retainKeys(Tensor indicatorTensor) {
     return elementwiseProduct(indicatorTensor);
   }
-  
+
   @Override
   public Tensor findKeysLargerThan(double thresholdValue) {
     Preconditions.checkArgument(thresholdValue > 0.0);
     long[] resultKeyNums = new long[keyNums.length];
     double[] resultValues = new double[values.length];
-    
-    int resultInd = 0;    
+
+    int resultInd = 0;
     int numKeys = keyNums.length;
     for (int i = 0; i < numKeys; i++) {
       if (values[i] > thresholdValue) {
@@ -201,19 +202,18 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         resultInd++;
       }
     }
-    
-    return resizeIntoTable(getDimensionNumbers(), getDimensionSizes(), 
+
+    return resizeIntoTable(getDimensionNumbers(), getDimensionSizes(),
         resultKeyNums, resultValues, resultInd);
   }
 
   /**
-   * Elementwise multiplies {@code this} and {@code other}, returning the result
-   * as a newly allocated object. {@code other}'s dimensions must be a subset of
-   * the dimensions of {@code this}. If {@code other} contains fewer dimensions
-   * than {@code this}, it is treated as if it were replicated across all
-   * missing dimensions. (In Matlab terms, this is equivalent to doing a
-   * repmat() across the missing dimensions of {@code other}, then performing
-   * elementwise multiplication).
+   * {@inheritDoc}
+   * 
+   * This multiplication algorithm is efficient when the dimensions of
+   * {@code other} align with the leftmost dimensions of {@code this}.
+   * This case enables the use of a special-purpose algorithm which
+   * rapidly scans through the
    * 
    * @param other
    * @return
@@ -224,11 +224,12 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     Set<Integer> myDims = Sets.newHashSet(Ints.asList(dimensionNums));
     Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.getDimensionNumbers())));
 
-    // There are two possible multiplication operations: an extremely fast
-    // one for the case when the dimensions of other line up against the
-    // leftmost dimensions of this, and another for all other cases.
-    // The left-aligned case can be made more efficient than the other
-    // case. Check which case applies, then use the faster algorithm.
+    // There are two possible multiplication operations: an extremely
+    // fast one for the case when the dimensions of other line up
+    // against the leftmost dimensions of this, and another for all
+    // other cases. The left-aligned case can be made more efficient
+    // than the other case. Check which case applies, then use the
+    // faster algorithm.
     int[] otherDimensions = other.getDimensionNumbers();
     for (int i = 0; i < otherDimensions.length; i++) {
       if (otherDimensions[i] != dimensionNums[i]) {
@@ -241,18 +242,19 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Elementwise multiplies two tensors. {@code big} must contain a superset of
-   * the dimensions of {@code small}, and the dimensions must be arranged such
-   * that all dimensions shared by {@code big} and {@code small} are aligned on
-   * the left side of their respective {@code keyNums} arrays.
+   * Elementwise multiplies two tensors. {@code big} must contain a
+   * superset of the dimensions of {@code small}, and the dimensions
+   * must be arranged such that all dimensions shared by {@code big}
+   * and {@code small} are aligned on the left side of their
+   * respective {@code keyNums} arrays.
    * 
    * @param big
    * @param small
    * @return
    */
   protected static final SparseTensor elementwiseMultiplyLeftAligned(SparseTensor big, Tensor small) {
-    // The result tensor is no larger than the larger (superset of dimensions)
-    // tensor.
+    // The result tensor is no larger than the larger (superset of
+    // dimensions) tensor.
     long[] resultKeyInts = new long[big.size()];
     double[] resultValues = new double[big.size()];
     // How many result values have been filled so far.
@@ -297,9 +299,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       } else {
         // Advance bigInd by a large amount.
 
-        // Find a block of outcomes with the correct starting coordinates.
-        // This performs a binary search between the starting value of bigInd
-        // and the end of the array.
+        // Find a block of outcomes with the correct starting
+        // coordinates. This performs a binary search between the
+        // starting value of bigInd and the end of the array.
         startInd = bigInd + 1;
         endInd = big.keyNums.length;
         targetKeyNum = smallKeyNum * smallIndexMultiplier;
@@ -327,8 +329,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Naive elementwise multiplication: for each element of {@code big}, find a
-   * corresponding element in {@code small} and multiply them.
+   * Naive elementwise multiplication: for each element of {@code big}
+   * , find a corresponding element in {@code small} and multiply
+   * them.
    * 
    * @param big
    * @param small
@@ -341,9 +344,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int[] bigDimensionSizes = big.getDimensionSizes();
     int smallDimensionInd = smallDimensions.length - 1;
     int bigDimensionInd = bigDimensions.length - 1;
-    // divisors, modulos and multipliers store the mapping from bigKeyNum to
+    // divisors, modulos and multipliers store the mapping from
+    // bigKeyNum to
     // smallKeyNum.
-    // They contain a series of division, modulo and multiplication operations
+    // They contain a series of division, modulo and multiplication
+    // operations
     // whose results are added to get a smallKeyNum.
     long[] divisors = new long[smallDimensions.length];
     long[] modulos = new long[smallDimensions.length];
@@ -373,7 +378,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       multiplier *= modulo;
     }
 
-    // The result tensor is no larger than the larger (superset of dimensions)
+    // The result tensor is no larger than the larger (superset of
+    // dimensions)
     // tensor.
     long[] resultKeyInts = new long[big.size()];
     double[] resultValues = new double[big.size()];
@@ -407,7 +413,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   public SparseTensor innerProduct(Tensor other) {
     return elementwiseProduct(other).sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
   }
-  
+
   @Override
   public Tensor matrixInnerProduct(Tensor other) {
     return AbstractTensor.innerProduct(this, other, SparseTensorBuilder.getFactory());
@@ -429,10 +435,10 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     } else if (otherDimensionNums[otherDimensionNums.length - 1] < dimensionNums[0]) {
       return fastOuterProduct(other, 1, getMaxKeyNum(), false);
     }
-    
+
     return slowOuterProduct(other);
   }
-  
+
   private final SparseTensor fastOuterProduct(Tensor other, long myKeyNumMultiplier,
       long otherKeyNumMultiplier, boolean otherOnRight) {
     int[] dimensionNums = getDimensionNumbers();
@@ -460,7 +466,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int[] otherDimensionSizes = other.getDimensionSizes();
     int[] resultDims = new int[dimensionNums.length + otherDimensionNums.length];
     int[] resultSizes = new int[dimensionNums.length + otherDimensionNums.length];
-    
+
     int[] first, second, firstSizes, secondSizes;
     if (otherOnRight) {
       first = dimensionNums;
@@ -504,7 +510,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       int[] otherDims = otherTensor.getDimensionNumbers();
       int[] myDims = getDimensionNumbers();
       int[] mySizes = getDimensionSizes();
-      
+
       int[] outerProductDims = new int[myDims.length - otherDims.length];
       int[] outerProductSizes = new int[myDims.length - otherDims.length];
       int outerProductIndex = 0;
@@ -543,13 +549,15 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
   /**
    * Helper method for performing {@link #elementwiseAddition} and
-   * {@link #elementwiseMaximum}. If {@code useSum == true} this adds the values
-   * of equivalent outcomes; otherwise, it takes the maximum of the two
-   * outcomes.
+   * {@link #elementwiseMaximum}. If {@code useSum == true} this adds
+   * the values of equivalent outcomes; otherwise, it takes the
+   * maximum of the two outcomes.
    */
   private final SparseTensor doElementwise(Tensor other, boolean useSum) {
-    // TODO(jayantk): This method could be generalized by taking a Function
-    // instead of a boolean flag. However, it's unclear how this change
+    // TODO(jayantk): This method could be generalized by taking a
+    // Function
+    // instead of a boolean flag. However, it's unclear how this
+    // change
     // affects performance.
     Preconditions.checkArgument(Arrays.equals(getDimensionNumbers(), other.getDimensionNumbers()));
     long[] resultKeyInts = new long[size() + other.size()];
@@ -610,7 +618,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     for (int i = 0; i < size(); i++) {
       newValues[i] = (values[i] == 0) ? 0.0 : 1.0 / values[i];
     }
-    // We don't have to copy outcomes because this class is immutable, and it
+    // We don't have to copy outcomes because this class is immutable,
+    // and it
     // treats both outcomes and values as immutable.
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
@@ -621,14 +630,16 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     for (int i = 0; i < size(); i++) {
       newValues[i] = Math.sqrt(values[i]);
     }
-    // We don't have to copy outcomes because this class is immutable, and it
+    // We don't have to copy outcomes because this class is immutable,
+    // and it
     // treats both outcomes and values as immutable.
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 
   @Override
   public DenseTensor elementwiseLog() {
-    // Zero entries of this map to negative infinity in the returned tensor.
+    // Zero entries of this map to negative infinity in the returned
+    // tensor.
     DenseTensorBuilder builder = new DenseTensorBuilder(this.getDimensionNumbers(),
         this.getDimensionSizes(), Double.NEGATIVE_INFINITY);
     for (int i = 0; i < size(); i++) {
@@ -647,7 +658,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     }
     return builder.buildNoCopy();
   }
-  
+
   public Tensor elementwiseTanh() {
     // The tanh of 0 is 0, so this operation preserves sparsity.
     double[] newValues = new double[size()];
@@ -686,10 +697,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Sparsely computes e to the power of each element in this tensor. For keys
-   * which are present in this {@code SparseTensor}, this operation is identical
-   * to {@link #elementwiseExp()}. Keys which are not present in this tensor are
-   * also not present in the result (and therefore have value 0).
+   * Sparsely computes e to the power of each element in this tensor.
+   * For keys which are present in this {@code SparseTensor}, this
+   * operation is identical to {@link #elementwiseExp()}. Keys which
+   * are not present in this tensor are also not present in the result
+   * (and therefore have value 0).
    * 
    * @return
    */
@@ -718,7 +730,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Eliminates {@code dimensionsToEliminate}, either by summing or maximizing.
+   * Eliminates {@code dimensionsToEliminate}, either by summing or
+   * maximizing.
    * 
    * @param dimensionsToEliminate
    * @param useSum
@@ -726,7 +739,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
    */
   private SparseTensor reduceDimensions(Set<Integer> dimensionsToEliminate,
       boolean useSum, Backpointers backpointers) {
-    // TODO(jayantk): This method can be generalized to support a generic reduce
+    // TODO(jayantk): This method can be generalized to support a
+    // generic reduce
     // operation (as a function), but it's unclear what the effect on
     // performance will be.
 
@@ -752,7 +766,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         newDimensionSizes[i - numEliminated] = dimensionSizes[i];
       }
     }
-    // If none of the dimensions being eliminated are actually part of this
+    // If none of the dimensions being eliminated are actually part of
+    // this
     // tensor, then there's no need to do any more work.
     if (numEliminated == 0) {
       if (backpointers != null) {
@@ -764,7 +779,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     SparseTensor relabeled = relabelDimensions(newLabels);
     int resultNumDimensions = dimensionNums.length - numEliminated;
 
-    // Get a number which we can divide each key by to map it to a key in the
+    // Get a number which we can divide each key by to map it to a key
+    // in the
     // reduced dimensional tensor.
     long keyNumDenominator = (resultNumDimensions > 0) ? relabeled.indexOffsets[resultNumDimensions - 1] :
         relabeled.indexOffsets[0] * relabeled.getDimensionSizes()[0];
@@ -790,7 +806,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         }
       } else {
         if (resultInd > 0 && resultValues[resultInd - 1] == 0.0) {
-          // Make sure the result tensor contains no zero-valued entries.
+          // Make sure the result tensor contains no zero-valued
+          // entries.
           resultInd--;
         }
 
@@ -802,20 +819,23 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
       int prevIndex = resultInd - 1;
       if (!useSum && resultValues[prevIndex] < 0.0) {
-        // Ensure that, if values is negative, we include missing keys in the
+        // Ensure that, if values is negative, we include missing keys
+        // in the
         // maximization.
         long prevKeyNum = relabeled.keyNums[i] - 1;
         long nextKeyNum = relabeled.keyNums[i] + 1;
 
         if (i > 0 && relabeled.keyNums[i - 1] != prevKeyNum
             && prevKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
-          // prevKeyNum is not in relabeled, but has a higher value than the
+          // prevKeyNum is not in relabeled, but has a higher value
+          // than the
           // current key.
           resultValues[prevIndex] = 0.0;
           backpointerKeyInts[prevIndex] = prevKeyNum;
         } else if (i + 1 < relabeled.keyNums.length && relabeled.keyNums[i + 1] != nextKeyNum
             && nextKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
-          // nextKeyNum is not in relabeled, but has a higher value than the
+          // nextKeyNum is not in relabeled, but has a higher value
+          // than the
           // current key.
           // Delete the current key from the tensor.
           resultValues[prevIndex] = 0.0;
@@ -825,7 +845,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     }
 
     if (backpointers != null) {
-      // backpointerKeyInts needs to have the inverse dimension relabeling
+      // backpointerKeyInts needs to have the inverse dimension
+      // relabeling
       // applied to it.
       long[] transformedBackpointers = transformKeyNums(backpointerKeyInts, relabeled.indexOffsets,
           this.indexOffsets, inversionPermutation);
@@ -838,9 +859,10 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Relabels the dimensions of {@code this}. Each dimension is relabeled to its
-   * value in {@code relabeling}. {@code relabeling} must contain a unique value
-   * for each of {@code this.getDimensionNumbers()}.
+   * Relabels the dimensions of {@code this}. Each dimension is
+   * relabeled to its value in {@code relabeling}. {@code relabeling}
+   * must contain a unique value for each of
+   * {@code this.getDimensionNumbers()}.
    * 
    * @param relabeling
    * @see #relabelDimensions(int[])
@@ -851,7 +873,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int[] newDimensions = new int[numDimensions()];
     int[] dimensionNums = getDimensionNumbers();
     for (int i = 0; i < dimensionNums.length; i++) {
-      Preconditions.checkArgument(relabeling.containsKey(dimensionNums[i]), 
+      Preconditions.checkArgument(relabeling.containsKey(dimensionNums[i]),
           "Dimension %s not in relabeling %s", dimensionNums[i], relabeling);
       newDimensions[i] = relabeling.get(dimensionNums[i]);
     }
@@ -859,11 +881,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Relabels the dimension numbers of {@code this} and returns the result.
-   * {@code newDimensions.length} must equal
-   * {@code this.getDimensionNumbers().length}. The {@code ith} entry in
-   * {@code this.getDimensionNumbers()} is relabeled as {@code newDimensions[i]}
-   * in the result.
+   * Relabels the dimension numbers of {@code this} and returns the
+   * result. {@code newDimensions.length} must equal
+   * {@code this.getDimensionNumbers().length}. The {@code ith} entry
+   * in {@code this.getDimensionNumbers()} is relabeled as
+   * {@code newDimensions[i]} in the result.
    * 
    * @param newDimensions
    * @return
@@ -872,9 +894,12 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   public SparseTensor relabelDimensions(int[] newDimensions) {
     Preconditions.checkArgument(newDimensions.length == numDimensions());
     if (Ordering.natural().isOrdered(Ints.asList(newDimensions))) {
-      // If the new dimension labels are in sorted order, then we don't have to
-      // re-sort the outcome and value arrays. This is a big efficiency win if
-      // it happens. Note that keyNums and values are (treated as) immutable, 
+      // If the new dimension labels are in sorted order, then we
+      // don't have to
+      // re-sort the outcome and value arrays. This is a big
+      // efficiency win if
+      // it happens. Note that keyNums and values are (treated as)
+      // immutable,
       // and hence we don't need to copy them.
       return new SparseTensor(newDimensions, getDimensionSizes(), keyNums, values);
     }
@@ -882,7 +907,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int[] sortedDims = ArrayUtils.copyOf(newDimensions, newDimensions.length);
     Arrays.sort(sortedDims);
 
-    // Figure out the mapping from the new, sorted dimension indices to
+    // Figure out the mapping from the new, sorted dimension indices
+    // to
     // the current indices of the outcome table.
     Map<Integer, Integer> currentDimInds = Maps.newHashMap();
     for (int i = 0; i < newDimensions.length; i++) {
@@ -930,7 +956,6 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 
- 
   @Override
   public long[] getLargestValues(int n) {
     long[] largestKeyIndexes = HeapUtils.findLargestItemIndexes(values, n);
@@ -975,9 +1000,10 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   // ///////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Gets a {@code SparseTensor} representing a scalar value. The returned table
-   * has no dimensions. Multiplying another table by the returned value is
-   * equivalent to multiplying each entry of the table by {@code value}.
+   * Gets a {@code SparseTensor} representing a scalar value. The
+   * returned table has no dimensions. Multiplying another table by
+   * the returned value is equivalent to multiplying each entry of the
+   * table by {@code value}.
    * 
    * @param value
    * @return
@@ -987,9 +1013,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Gets an empty {@code SparseTensor} over {@code dimensionNumbers}. The value
-   * of every key in the returned table is 0. Note that {@code dimensionNumbers}
-   * must be sorted in ascending order.
+   * Gets an empty {@code SparseTensor} over {@code dimensionNumbers}.
+   * The value of every key in the returned table is 0. Note that
+   * {@code dimensionNumbers} must be sorted in ascending order.
    * 
    * @param dimensionNumbers
    * @return
@@ -1000,8 +1026,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Same as {@link #empty}, except with a {@code List} of dimensions instead of
-   * an array.
+   * Same as {@link #empty}, except with a {@code List} of dimensions
+   * instead of an array.
    * 
    * @param dimensionNumbers
    * @return
@@ -1011,9 +1037,10 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Creates a one-dimensional tensor (a vector) with the given dimension number
-   * and size. {@code values} is a dense representation of the vector, i.e., its
-   * {@code i}th value will be the {@code i}th value of the returned tensor.
+   * Creates a one-dimensional tensor (a vector) with the given
+   * dimension number and size. {@code values} is a dense
+   * representation of the vector, i.e., its {@code i}th value will be
+   * the {@code i}th value of the returned tensor.
    * 
    * @param dimensionNumber
    * @param dimensionSize
@@ -1038,7 +1065,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Creates a tensor whose only non-zero entries are on its main diagonal.
+   * Creates a tensor whose only non-zero entries are on its main
+   * diagonal.
    * 
    * @param dimensionNumbers
    * @param dimensionSizes
@@ -1049,10 +1077,10 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int minDimensionSize = Ints.min(dimensionSizes);
     double[] values = new double[minDimensionSize];
     Arrays.fill(values, value);
-    
+
     return diagonal(dimensionNumbers, dimensionSizes, values);
   }
-  
+
   public static SparseTensor diagonal(int[] dimensionNumbers, int[] dimensionSizes, double[] values) {
     int minDimensionSize = Ints.min(dimensionSizes);
     Preconditions.checkArgument(values.length == minDimensionSize);
@@ -1071,8 +1099,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   /**
-   * Similar to the constructor, except does not require {@code keyNums} to
-   * occur in ascending order.
+   * Similar to the constructor, except does not require
+   * {@code keyNums} to occur in ascending order.
    * 
    * @param dimensionNumbers
    * @param dimensionSizes
@@ -1086,18 +1114,18 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     double[] valuesCopy = ArrayUtils.copyOf(values, values.length);
     return fromUnorderedKeyValuesNoCopy(dimensionNumbers, dimensionSizes, keyNumsCopy, valuesCopy);
   }
-  
+
   /**
-   * Same as {@link #fromUnorderedKeyValues}, except that neither input
-   * array is copied. These arrays must not be modified by the caller after
-   * invoking this method.
+   * Same as {@link #fromUnorderedKeyValues}, except that neither
+   * input array is copied. These arrays must not be modified by the
+   * caller after invoking this method.
    * 
    * @param dimensionNumbers
    * @param dimensionSizes
    * @param keyNums
    * @param values
    */
-  public static SparseTensor fromUnorderedKeyValuesNoCopy(int[] dimensionNumbers, 
+  public static SparseTensor fromUnorderedKeyValuesNoCopy(int[] dimensionNumbers,
       int[] dimensionSizes, long[] keyNums, double[] values) {
     ArrayUtils.sortKeyValuePairs(keyNums, values, 0, keyNums.length);
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
@@ -1113,15 +1141,16 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
   }
-  
-  public static SparseTensor copyOf(Tensor tensor) { 
+
+  public static SparseTensor copyOf(Tensor tensor) {
     if (tensor instanceof SparseTensor) {
       return (SparseTensor) tensor;
     } else {
       SparseTensorBuilder builder = new SparseTensorBuilder(tensor.getDimensionNumbers(),
           tensor.getDimensionSizes());
       double[] otherValues = tensor.getValues();
-      // TODO: this could be made a lot faster using fromUnorderedKeyValues
+      // TODO: this could be made a lot faster using
+      // fromUnorderedKeyValues
       for (int i = 0; i < otherValues.length; i++) {
         if (otherValues[i] != 0.0) {
           builder.putByKeyNum(tensor.indexToKeyNum(i), otherValues[i]);
@@ -1138,9 +1167,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   // ///////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Takes the data structures for a {@code SparseTensor}, but possibly with the
-   * wrong number of filled-in entries, resizes them and constructs a
-   * {@code SparseTensor} with them.
+   * Takes the data structures for a {@code SparseTensor}, but
+   * possibly with the wrong number of filled-in entries, resizes them
+   * and constructs a {@code SparseTensor} with them.
    * 
    * @param keyNums
    * @param values
@@ -1152,7 +1181,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     if (values.length == size) {
       return new SparseTensor(dimensions, dimensionSizes, keyNums, values);
     } else {
-      // Resize the result array to fit the actual number of result keyNums.
+      // Resize the result array to fit the actual number of result
+      // keyNums.
       long[] shrunkResultKeyInts = ArrayUtils.copyOf(keyNums, size);
       double[] shrunkResultValues = ArrayUtils.copyOf(values, size);
       return new SparseTensor(dimensions, dimensionSizes, shrunkResultKeyInts, shrunkResultValues);

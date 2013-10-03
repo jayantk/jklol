@@ -104,7 +104,9 @@ public interface CcgChart {
 
   /**
    * Adds {@code entry} as a chart entry spanning {@code spanStart}-
-   * {@code spanEnd}, with probability {@code probability}.
+   * {@code spanEnd}, with probability {@code probability}. Note that
+   * {@link #doneAddingChartEntriesForSpan} must be invoked after
+   * adding entries to a span but before reading those same entries.
    * 
    * @param entry
    * @param probability
@@ -115,6 +117,17 @@ public interface CcgChart {
       int spanEnd, DiscreteVariable syntaxVarType);
 
   /**
+   * Does clean-up work for the given span after entries have been
+   * added. This method must be called after adding entries to a span
+   * before reading those entries. Calling this method multiple times
+   * after adding entries (for a given span) has no harmful effects.
+   * 
+   * @param spanStart
+   * @param spanEnd
+   */
+  public void doneAddingChartEntriesForSpan(int spanStart, int spanEnd);
+
+  /**
    * Deletes all chart entries spanning {@code spanStart} to
    * {@code spanEnd}.
    * 
@@ -122,5 +135,4 @@ public interface CcgChart {
    * @param spanEnd
    */
   public void clearChartEntriesForSpan(int spanStart, int spanEnd);
-
 }

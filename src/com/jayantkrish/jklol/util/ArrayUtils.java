@@ -258,6 +258,75 @@ public class ArrayUtils {
     values[i] = values[j];
     values[j] = swapValue;
   }
+  
+    /**
+   * Sorts a portion of the given key/value pairs by key. This method
+   * sorts the section of {@code keys} from {@code startInd}
+   * (inclusive) to {@code endInd} (not inclusive), simultaneously
+   * swapping the corresponding entries of {@code values}.
+   * <p>
+   * {@code probs} are treated like secondary keys during the sort.
+   * If multiple entries in {@code keys} have the same value, these
+   * keys are sorted by their probs.
+   * 
+   * @param keys
+   * @param values
+   * @param probs
+   * @param startInd
+   * @param endInd
+   */
+  public static <T> void sortKeyValuePairs(long[] keys, T[] values,
+      double[] probs, int startInd, int endInd) {
+    // Base case.
+    if (startInd == endInd) {
+      return;
+    }
+
+    // Choose pivot.
+    int pivotInd = (int) (Math.random() * (endInd - startInd)) + startInd;
+
+    // Perform swaps to partition array around the pivot.
+    swap(keys, values, probs, startInd, pivotInd);
+    pivotInd = startInd;
+
+    for (int i = startInd + 1; i < endInd; i++) {
+      if (keys[i] < keys[pivotInd]
+          || (keys[i] == keys[pivotInd] && probs[i] < probs[pivotInd])
+          || (keys[i] == keys[pivotInd] && probs[i] == probs[pivotInd] && Math.random() < 0.5)) {
+        swap(keys, values, probs, pivotInd, pivotInd + 1);
+        if (i != pivotInd + 1) {
+          swap(keys, values, probs, pivotInd, i);
+        }
+        pivotInd++;
+      }
+    }
+
+    // Recursively sort the subcomponents of the arrays.
+    sortKeyValuePairs(keys, values, probs, startInd, pivotInd);
+    sortKeyValuePairs(keys, values, probs, pivotInd + 1, endInd);
+  }
+
+  /**
+   * Swaps the keys and values at {@code i} with those at {@code j}
+   * 
+   * @param keys
+   * @param values
+   * @param i
+   * @param j
+   */
+  private static <T> void swap(long[] keys, T[] values, double[] probs, int i, int j) {
+    long keySwap = keys[i];
+    keys[i] = keys[j];
+    keys[j] = keySwap;
+
+    T swapValue = values[i];
+    values[i] = values[j];
+    values[j] = swapValue;
+    
+    double swapProb = probs[i];
+    probs[i] = probs[j];
+    probs[j] = swapProb;
+  }
 
   private ArrayUtils() {
     // Prevent instantiation.

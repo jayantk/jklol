@@ -21,7 +21,7 @@ import com.google.common.primitives.Longs;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.chart.CcgBeamSearchChart;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.chart.CcgExactChart;
+import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -1191,7 +1191,7 @@ public class CcgParser implements Serializable {
 
   public CcgParse parse(List<String> terminals, List<String> posTags, ChartFilter beamFilter,
       LogFunction log, long maxParseTimeMillis) {
-    CcgExactChart chart = buildExactChart(terminals, posTags, beamFilter);
+    CcgExactHashTableChart chart = buildExactChart(terminals, posTags, beamFilter);
 
     initializeChart(terminals, posTags, chart, log);
     chart.applyChartFilterToTerminals();
@@ -1235,7 +1235,7 @@ public class CcgParser implements Serializable {
     return chart;
   }
   
-  public CcgExactChart buildExactChart(List<String> terminals, List<String> posTags, 
+  public CcgExactHashTableChart buildExactChart(List<String> terminals, List<String> posTags, 
       ChartFilter beamFilter) {
     int numWords = terminals.size();
     int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
@@ -1252,7 +1252,7 @@ public class CcgParser implements Serializable {
       }
     }
 
-    CcgExactChart chart = new CcgExactChart(terminals, posTags, wordDistances, puncDistances,
+    CcgExactHashTableChart chart = new CcgExactHashTableChart(terminals, posTags, wordDistances, puncDistances,
         verbDistances, beamFilter);
 
     initializeChartDistributions(chart);
@@ -1332,6 +1332,7 @@ public class CcgParser implements Serializable {
       double rootProb = rootSyntaxTensor.get(entry.getHeadedSyntax());
       chart.addChartEntryForSpan(entry, probs[i] * rootProb, spanStart, spanEnd, syntaxVarType);
     }
+    chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
   }
 
   /**
@@ -1480,6 +1481,7 @@ public class CcgParser implements Serializable {
           spanStart, spanEnd, syntaxVarType);
       numEntries++;
     }
+    chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
     return numEntries;
   }
 
@@ -1827,6 +1829,8 @@ public class CcgParser implements Serializable {
         // log.stopTimer("ccg_parse/beam_loop");
       }
     }
+
+    chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
   }
 
   private Multimap<Integer, Integer> aggregateBySyntacticType(

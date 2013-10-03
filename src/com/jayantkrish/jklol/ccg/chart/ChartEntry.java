@@ -48,6 +48,11 @@ public class ChartEntry {
   // Complete dependency structures, encoded into longs for
   // efficiency.
   private final long[] deps;
+  
+  // A hash code for the headed syntactic category, unfilled dependencies,
+  // and assignments of this entry. Two chart entries with different hash
+  // codes differ in at least one of these three values. 
+  private final long syntaxHeadHashCode;
 
   // If this is a terminal, lexiconEntry contains the CcgCategory
   // from the lexicon used to create this chartEntry. This variable
@@ -84,6 +89,7 @@ public class ChartEntry {
 
     this.assignments = Preconditions.checkNotNull(assignments);
     this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
+    this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies);
 
     this.lexiconEntry = null;
     this.lexiconTriggerWords = null;
@@ -112,6 +118,7 @@ public class ChartEntry {
 
     this.assignments = Preconditions.checkNotNull(assignments);
     this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
+    this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies);
 
     this.lexiconEntry = ccgCategory;
     this.lexiconTriggerWords = terminalWords;
@@ -227,6 +234,10 @@ public class ChartEntry {
     return unfilledDependencies.length + accumulatorStartIndex;
   }
 
+  public long getSyntaxHeadHashCode() {
+    return syntaxHeadHashCode;
+  }
+
   public CcgCategory getLexiconEntry() {
     return lexiconEntry;
   }
@@ -290,5 +301,21 @@ public class ChartEntry {
   public String toString() {
     return "[" + Arrays.toString(assignments) + ":" + syntax
              + " " + Arrays.toString(deps) + " " + Arrays.toString(unfilledDependencies) + "]";
+  }
+  
+  private static long computeSyntaxHeadHashCode(int syntax, long[] assignments,
+      long[] unfilledDependencies) {
+
+    long assignmentHashCode = 3;
+    for (int i = 0; i < assignments.length; i++) {
+      assignmentHashCode *= assignments[i];
+    }
+    
+    long depHashCode = 5;
+    for (int i = 0; i < unfilledDependencies.length; i++) {
+      depHashCode *= unfilledDependencies[i];
+    }
+    
+    return ((((long) syntax) * 31) + assignmentHashCode + depHashCode) * 63;
   }
 }

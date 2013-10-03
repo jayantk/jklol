@@ -131,6 +131,11 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
     // This second part is unnecessary, but makes debugging easier.
     Arrays.fill(chart[spanStart][spanEnd], null);
   }
+  
+  @Override
+  public void doneAddingChartEntriesForSpan(int spanStart, int spanEnd) {
+    // No work needs to be done.
+  }
 
   /**
    * Adds a chart entry to the heap for {@code spanStart} to

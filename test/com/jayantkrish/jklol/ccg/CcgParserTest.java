@@ -68,7 +68,8 @@ public class CcgParserTest extends TestCase {
       "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0",
       "blue,N{0},blue,0 blue",
       "blue,(N{0}/N{0}){1},blue,0 blue",
-      "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1" };
+      "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
+      "a,(NP{1}/N{1}){0},,0 a,a 1 1"};
 
   private static final double[] weights = { 0.5, 1.0, 1.0, 1.0,
       0.3, 1.0, 1.0,
@@ -79,7 +80,7 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
+      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
 
   private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
@@ -88,7 +89,8 @@ public class CcgParserTest extends TestCase {
       "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"special:compound 1 0\",\"special:compound 2 1\"" };
 
   private static final String[] unaryRuleArray = { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
-      "N{0} (N{1}/N{1}){0}", "((S[0]{0}\\N{1}){0}/N{2}){0} ((S[0]{0}/NP{1}){0}/NP{2}){0}" };
+      "N{0} (N{1}/N{1}){0}", "((S[0]{0}\\N{1}){0}/N{2}){0} ((S[0]{0}/NP{1}){0}/NP{2}){0}",
+      "(S[ng]{0}\\N{1}){0} (N{2}\\N{2}){0}"};
 
   // Syntactic CCG weights to set. All unlisted combinations get
   // weight 1.0, all
@@ -724,6 +726,16 @@ public class CcgParserTest extends TestCase {
       actualCats.add(parse.getSyntacticCategory());
     }
     assertEquals(expectedCats, actualCats);
+  }
+  
+  public void testParseUnaryRulesDropArgument() {
+    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("a", "people", "eating", "berries"), 10);
+    
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    assertEquals("NP", parse.getHeadedSyntacticCategory().getSyntax().getValue());
+    assertEquals(2, parse.getAllDependencies().size());
+    assertEquals(Sets.newHashSet(1), parse.getHeadWordIndexes());
   }
 
   public void testChartFilterApply() {

@@ -13,9 +13,10 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
-import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
+import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -50,10 +51,13 @@ public class ParseCcg extends AbstractCli {
   private OptionSpec<Void> exactInference;
   
   private OptionSpec<String> testFile;
+  private OptionSpec<String> syntaxMap;
   private OptionSpec<Void> useCcgBankFormat;
+  private OptionSpec<Void> useGoldSyntacticTrees;
+  private OptionSpec<Void> filterDependenciesCcgbank;
 
   private OptionSpec<String> supertagger;
-  private OptionSpec<Double> multitagThreshold;
+  private OptionSpec<Double> multitagThresholds;
   
   public ParseCcg() {
     super(CommonOptions.MAP_REDUCE);
@@ -77,10 +81,13 @@ public class ParseCcg extends AbstractCli {
     		"the given file. Otherwise, this program parses a string provided on the command line. " +
         "The format of testFile is the same as expected by TrainCcg to train a CCG parser.")
         .withRequiredArg().ofType(String.class);
+    syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat", "Reads the parses in testFile in CCGbank format.");
+    useGoldSyntacticTrees = parser.accepts("useGoldSyntacticTrees");
+    filterDependenciesCcgbank = parser.accepts("filterDependenciesCcgbank");
 
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
-    multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
+    multitagThresholds = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class).withValuesSeparatedBy(',');
   }
 
   @Override
@@ -99,20 +106,21 @@ public class ParseCcg extends AbstractCli {
     if (options.has(testFile)) {
       // Parse all test examples.
       List<CcgExample> testExamples = TrainCcg.readTrainingData(options.valueOf(testFile),
-          false, options.has(useCcgBankFormat), null);
+          false, options.has(useCcgBankFormat), options.valueOf(syntaxMap));
       System.out.println(testExamples.size() + " test examples after filtering.");
 
       Supertagger tagger = null;
-      double tagThreshold = 0.0;
+      double[] tagThresholds = new double[0];
       if (options.has(supertagger)) {
-        Preconditions.checkState(options.has(multitagThreshold));
+        Preconditions.checkState(options.has(multitagThresholds));
         tagger = IoUtils.readSerializedObject(options.valueOf(supertagger), Supertagger.class);
-        tagThreshold = options.valueOf(multitagThreshold);
+        tagThresholds = Doubles.toArray(options.valuesOf(multitagThresholds));
       }
 
       SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
-          inferenceAlgorithm, tagger, tagThreshold);
-      CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, false);
+          inferenceAlgorithm, tagger, tagThresholds);
+      CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, options.has(useGoldSyntacticTrees),
+          options.has(filterDependenciesCcgbank));
       System.out.println(loss);
     } else {
       // Parse a string from the command line.
@@ -172,15 +180,22 @@ public class ParseCcg extends AbstractCli {
   }
 
   public static CcgLoss runTestSetEvaluation(Collection<CcgExample> testExamples, 
-      SupertaggingCcgParser ccgParser, boolean useCcgbankDerivations) {
-    CcgLossMapper mapper = new CcgLossMapper(ccgParser, useCcgbankDerivations);
+      SupertaggingCcgParser ccgParser, boolean useCcgbankDerivations, boolean filterDependenciesCcgbank) {
+    CcgLossMapper mapper = new CcgLossMapper(ccgParser, useCcgbankDerivations, filterDependenciesCcgbank);
     CcgLossReducer reducer = new CcgLossReducer();
     return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
   }
   
-  public static CcgLoss computeLoss(CcgParse predictedParse, CcgExample example) {
+  public static CcgLoss computeLoss(CcgParse parse, CcgExample example, boolean filterDependenciesCcgbank) {
+    List<DependencyStructure> parseDeps = null;
+    if (filterDependenciesCcgbank) {
+      parseDeps = getDependenciesCcgbank(parse);
+    } else {
+      parseDeps = parse.getAllDependencies();
+    }
+
     List<LabeledDep> predictedDeps = dependenciesToLabeledDeps(
-        predictedParse.getAllDependencies(), predictedParse.getSyntacticParse()); 
+        parseDeps, parse.getSyntacticParse()); 
     List<LabeledDep> trueDeps = dependenciesToLabeledDeps(example.getDependencies(),
         example.getSyntacticParse());
 
@@ -242,6 +257,21 @@ public class ParseCcg extends AbstractCli {
 
     return new CcgLoss(labeledTp, labeledFp, labeledFn, unlabeledTp, unlabeledFp, unlabeledFn,
         1, 1);
+  }
+  
+  private static List<DependencyStructure> getDependenciesCcgbank(CcgParse parse) {
+    SyntacticCategory toCat = SyntacticCategory.parseFrom("((S[to]\\NP)/(S[b]\\NP))");
+    CcgSyntaxTree syntaxTree = parse.getSyntacticParse();
+    List<DependencyStructure> filteredDependencies = Lists.newArrayList();
+    for (DependencyStructure dep : parse.getAllDependencies()) {
+      int headIndex = dep.getHeadWordIndex();
+      SyntacticCategory cat = syntaxTree.getLexiconEntryForWordIndex(headIndex);
+      if (cat.equals(toCat) && dep.getArgIndex() == 1) {
+        continue;
+      }
+      filteredDependencies.add(dep);
+    }
+    return filteredDependencies;
   }
 
   /*
@@ -398,10 +428,13 @@ public class ParseCcg extends AbstractCli {
     
     private final SupertaggingCcgParser parser;
     private final boolean useCcgbankDerivation;
+    private final boolean filterDependenciesCcgbank;
 
-    public CcgLossMapper(SupertaggingCcgParser parser, boolean useCcgbankDerivation) {
+    public CcgLossMapper(SupertaggingCcgParser parser, boolean useCcgbankDerivation,
+        boolean filterDependenciesCcgbank) {
       this.parser = Preconditions.checkNotNull(parser);
       this.useCcgbankDerivation = useCcgbankDerivation;
+      this.filterDependenciesCcgbank = filterDependenciesCcgbank;
     }
 
     @Override
@@ -417,8 +450,9 @@ public class ParseCcg extends AbstractCli {
 
       if (parse != null) {
         printCcgParses(Arrays.asList(parse), 1, false, false);
-        return computeLoss(parse, example);
+        return computeLoss(parse, example, filterDependenciesCcgbank);
       } else {
+        System.out.println("NO ANALYSIS: " + example.getWords());
         return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 1);
       }
     }
@@ -465,7 +499,7 @@ public class ParseCcg extends AbstractCli {
     public int getArgNum() {
       return argNum;
     }
-    
+
     @Override
     public String toString() {
       return headWordIndex + "," + syntax + "," + argNum + "," + argWordIndex;

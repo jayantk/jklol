@@ -31,12 +31,6 @@ public class CcgUnaryRule implements Serializable {
         "Illegal logical form for unary rule: " + logicalForm);
 
     Preconditions.checkArgument(returnSyntax.isCanonicalForm());
-
-    // Ensure that the return type has all of the variables in
-    // inputSyntax.
-    Set<Integer> returnVars = Sets.newHashSet(Ints.asList(returnSyntax.getUniqueVariables()));
-    Preconditions.checkState(returnVars.containsAll(
-        Ints.asList(inputSyntax.getUniqueVariables())));
   }
 
   /**

@@ -185,17 +185,25 @@ public class ChartEntry {
     int[] uniqueVars = syntaxUniqueVars;
     long[] relabeledAssignments = new long[assignments.length];
     Arrays.fill(relabeledAssignments, -1);
+    int numFilled = 0;
     for (int i = 0; i < assignments.length; i++) {
       int assignmentVarNum = CcgParser.getAssignmentVarNum(assignments[i]);
       for (int j = 0; j < uniqueVars.length; j++) {
         if (uniqueVars[j] == assignmentVarNum) {
-          relabeledAssignments[i] = CcgParser.replaceAssignmentVarNum(assignments[i],
-              assignmentVarNum, relabeling[j]);
+          if (relabeling[j] != -1) {
+            relabeledAssignments[numFilled] = CcgParser.replaceAssignmentVarNum(assignments[i],
+                assignmentVarNum, relabeling[j]);
+            numFilled++;
+          }
         }
       }
     }
 
-    return relabeledAssignments;
+    if (numFilled < assignments.length) {
+      return Arrays.copyOf(relabeledAssignments, numFilled);
+    } else {
+      return relabeledAssignments;
+    }
   }
 
   public long[] getUnfilledDependencies() {
@@ -216,22 +224,29 @@ public class ChartEntry {
       return -1;
     }
 
+    int numDepsRelabeled = 0;
     for (int i = 0; i < unfilledDependencies.length; i++) {
       long unfilledDependency = unfilledDependencies[i];
       int objectVarNum = CcgParser.getObjectArgNumFromDep(unfilledDependency);
       int j;
       for (j = 0; j < syntaxUniqueVars.length; j++) {
         if (syntaxUniqueVars[j] == objectVarNum) {
-          unfilledDependency -= CcgParser.marshalUnfilledDependency(objectVarNum, 0, 0, 0, 0);
-          unfilledDependency += CcgParser.marshalUnfilledDependency(relabeling[j], 0, 0, 0, 0);
-          dependencyAccumulator[i + accumulatorStartIndex] = unfilledDependency;
+          // Relabel this variable unless the relabeling drops it.
+          // Either way, the search for the variable is finished.
+          if (relabeling[j] != -1) {
+            unfilledDependency -= CcgParser.marshalUnfilledDependency(objectVarNum, 0, 0, 0, 0);
+            unfilledDependency += CcgParser.marshalUnfilledDependency(relabeling[j], 0, 0, 0, 0);
+            dependencyAccumulator[numDepsRelabeled + accumulatorStartIndex] = unfilledDependency;
+            numDepsRelabeled++;
+          }
           break;
         }
       }
-      Preconditions.checkState(j != syntaxUniqueVars.length, "No relabeling %s %s %s", syntax, i, objectVarNum);
+      Preconditions.checkState(j != syntaxUniqueVars.length || relabeling[j] == -1,
+          "No relabeling %s %s %s", syntax, i, objectVarNum);
     }
 
-    return unfilledDependencies.length + accumulatorStartIndex;
+    return accumulatorStartIndex + numDepsRelabeled;
   }
 
   public long getSyntaxHeadHashCode() {

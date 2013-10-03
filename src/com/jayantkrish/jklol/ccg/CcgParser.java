@@ -865,7 +865,14 @@ public class CcgParser implements Serializable {
       int[] leftUnaryRelabeling = leftUnary.getVariableRelabeling();
       newLeftRelabeling = new int[leftUnaryRelabeling.length];
       for (int i = 0; i < newLeftRelabeling.length; i++) {
-        newLeftRelabeling[i] = leftRelabeling[leftUnaryRelabeling[i]];
+        if (leftUnaryRelabeling[i] < leftRelabeling.length) {
+          newLeftRelabeling[i] = leftRelabeling[leftUnaryRelabeling[i]];
+        } else {
+          // This variable isn't referenced in the syntactic category
+          // returned by the unary rule. -1 is a special value which
+          // causes the value of this variable to be dropped.
+          newLeftRelabeling[i] = -1;
+        }
       }
     }
 
@@ -873,7 +880,12 @@ public class CcgParser implements Serializable {
       int[] rightUnaryRelabeling = rightUnary.getVariableRelabeling();
       newRightRelabeling = new int[rightUnaryRelabeling.length];
       for (int i = 0; i < newRightRelabeling.length; i++) {
-        newRightRelabeling[i] = rightRelabeling[rightUnaryRelabeling[i]];
+        if (rightUnaryRelabeling[i] < rightRelabeling.length) {
+          newRightRelabeling[i] = rightRelabeling[rightUnaryRelabeling[i]];
+        } else {
+          // See comment above for the left unary rule.
+          newRightRelabeling[i] = -1;
+        }
       }
     }
 
@@ -1689,7 +1701,7 @@ public class CcgParser implements Serializable {
                           depFillingAccumulator, numDepFillingAccumulator);
                       if (numDepFillingAccumulator == -1) { continue; }
                     }
-
+                    
                     // Fill dependencies based on the current assignment.
                     int numFilledDeps = 0;
                     int numUnfilledDeps = 0;
@@ -1901,14 +1913,18 @@ public class CcgParser implements Serializable {
       long[] assignmentAccumulator, int startIndex) {
     long[] assignments = entry.getAssignments();
 
+    int numAssigned = 0;
     for (int i = 0; i < assignments.length; i++) {
       int assignmentVarNum = (int) ((assignments[i] >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK);
       int newVarNum = relabeling[assignmentVarNum];
-      assignmentAccumulator[i + startIndex] = CcgParser.replaceAssignmentVarNum(assignments[i],
-          assignmentVarNum, newVarNum);
+      if (newVarNum != -1) {
+        assignmentAccumulator[startIndex + numAssigned] = CcgParser.replaceAssignmentVarNum(assignments[i],
+            assignmentVarNum, newVarNum);
+        numAssigned++;
+      }
     }
 
-    return startIndex + assignments.length;
+    return startIndex + numAssigned;
   }
 
   private int filterAssignmentVariables(long[] assignmentAccumulator,

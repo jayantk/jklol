@@ -13,38 +13,38 @@ import com.jayantkrish.jklol.training.NullLogFunction;
 
 public class SupertaggingCcgParser {
   private final CcgParser parser;
-  private final int beamSize;
-  private final long maxParseTimeMillis;
+  private final CcgInference inference;
 
   // May be null, in which case supertagging is not used.
   private final Supertagger supertagger;
   private final double multitagThreshold;
 
-  public SupertaggingCcgParser(CcgParser parser, int beamSize, long maxParseTimeMillis,
+  public SupertaggingCcgParser(CcgParser parser, CcgInference inference,
       Supertagger supertagger, double multitagThreshold) {
     this.parser = Preconditions.checkNotNull(parser);
-    Preconditions.checkArgument(beamSize > 0);
-    this.beamSize = beamSize;
-    this.maxParseTimeMillis = maxParseTimeMillis;
+    this.inference = Preconditions.checkNotNull(inference);
     
     Preconditions.checkArgument(supertagger == null || multitagThreshold >= 0.0);
     this.supertagger = supertagger;
     this.multitagThreshold = multitagThreshold;
   }
 
-  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, ChartFilter inputFilter) {
+  public CcgParse parse(List<String> terminals, List<String> posTags, ChartFilter inputFilter) {
     ChartFilter filter = inputFilter;
+    SupertaggedSentence supertaggedSentence = null;
     if (supertagger != null) {
       List<WordAndPos> supertaggerInput = WordAndPos.createExample(terminals, posTags);
-      SupertaggedSentence supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThreshold);
+      supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThreshold);
       
       filter = ConjunctionChartFilter.create(filter,
           new SupertagChartFilter(supertaggedSentence.getLabels()));
+    } else {
+      supertaggedSentence = SupertaggedSentence.createWithUnobservedSupertags(terminals, posTags);
     }
-    return parser.beamSearch(terminals, posTags, beamSize, filter, new NullLogFunction(), maxParseTimeMillis);
+    return inference.getBestParse(parser, supertaggedSentence, filter, new NullLogFunction());
   }
-  
-  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags) {
-    return beamSearch(terminals, posTags, null);
+
+  public CcgParse parse(List<String> terminals, List<String> posTags) {
+    return parse(terminals, posTags, null);
   }
 }

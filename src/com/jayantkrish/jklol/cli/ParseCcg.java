@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cli;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -12,7 +13,10 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
+import com.jayantkrish.jklol.ccg.CcgExactInference;
+import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
@@ -39,9 +43,11 @@ public class ParseCcg extends AbstractCli {
   
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Integer> numParses;
+  private OptionSpec<Long> maxParseTimeMillis;
   private OptionSpec<Void> atomic;
   private OptionSpec<Void> pos;
   private OptionSpec<Void> printLf;
+  private OptionSpec<Void> exactInference;
   
   private OptionSpec<String> testFile;
   private OptionSpec<Void> useCcgBankFormat;
@@ -61,9 +67,11 @@ public class ParseCcg extends AbstractCli {
     // Optional arguments
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
+    maxParseTimeMillis = parser.accepts("maxParseTimeMillis").withRequiredArg().ofType(Long.class).defaultsTo(-1L);
     atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
     pos = parser.accepts("pos", "Treat input as POS-tagged text, in the format word/POS.");
     printLf = parser.accepts("printLf", "Print logical forms for the generated parses.");
+    exactInference = parser.accepts("exactInference");
 
     testFile = parser.accepts("test", "If provided, running this program computes test error using " +
     		"the given file. Otherwise, this program parses a string provided on the command line. " +
@@ -80,6 +88,14 @@ public class ParseCcg extends AbstractCli {
     // Read the parser.
     CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
 
+    // Configure inference options
+    CcgInference inferenceAlgorithm = null;
+    if (options.has(exactInference)) {
+      inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis));
+    } else {
+      inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), options.valueOf(maxParseTimeMillis));
+    }
+    
     if (options.has(testFile)) {
       // Parse all test examples.
       List<CcgExample> testExamples = TrainCcg.readTrainingData(options.valueOf(testFile),
@@ -95,7 +111,7 @@ public class ParseCcg extends AbstractCli {
       }
 
       SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
-          options.valueOf(beamSize), -1, tagger, tagThreshold);
+          inferenceAlgorithm, tagger, tagThreshold);
       CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, false);
       System.out.println(loss);
     } else {
@@ -390,18 +406,18 @@ public class ParseCcg extends AbstractCli {
 
     @Override
     public CcgLoss map(CcgExample example) {
-      List<CcgParse> parses = null;
+      CcgParse parse = null;
       if (useCcgbankDerivation) {
         SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
-        parses = parser.beamSearch(example.getWords(), example.getPosTags(), filter);
+        parse = parser.parse(example.getWords(), example.getPosTags(), filter);
       } else {
-        parses = parser.beamSearch(example.getWords(), example.getPosTags());
+        parse = parser.parse(example.getWords(), example.getPosTags());
       }
       System.out.println("SENT: " + example.getWords());
-      printCcgParses(parses, 1, false, false);
 
-      if (parses.size() > 0) {
-        return computeLoss(parses.get(0), example);
+      if (parse != null) {
+        printCcgParses(Arrays.asList(parse), 1, false, false);
+        return computeLoss(parse, example);
       } else {
         return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 1);
       }

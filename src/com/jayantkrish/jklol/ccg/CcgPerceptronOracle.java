@@ -58,7 +58,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     }
     log.stopTimer("update_gradient/conditional_max_marginal");
     System.out.println("best predicted: " + bestPredictedParse + " " + bestPredictedParse.getSubtreeProbability());
-    System.out.println("best correct: " + bestCorrectParse + " " + bestCorrectParse.getSubtreeProbability());
+    System.out.println("best correct:   " + bestCorrectParse + " " + bestCorrectParse.getSubtreeProbability());
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the predicted feature counts.

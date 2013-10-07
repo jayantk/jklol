@@ -15,9 +15,26 @@ public interface CcgChart {
    */
   public int size();
 
+  /**
+   * Gets the words being parsed.
+   * 
+   * @return
+   */
   public List<String> getWords();
 
+  /**
+   * Gets the POS tag of each word being parsed.
+   * 
+   * @return
+   */
   public List<String> getPosTags();
+
+  /**
+   * Gets the POS tag of each word being parsed encoded as an integer.
+   * 
+   * @return
+   */
+  public int[] getPosTagsInt();
 
   public int[] getWordDistances();
 

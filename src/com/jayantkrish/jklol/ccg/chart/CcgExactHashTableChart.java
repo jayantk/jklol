@@ -26,9 +26,9 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
 
-  public CcgExactHashTableChart(List<String> terminals, List<String> posTags,
+  public CcgExactHashTableChart(List<String> terminals, List<String> posTags, int[] posTagsInt,
       int[] wordDistances, int[] puncDistances, int[] verbDistances, ChartFilter entryFilter) {
-    super(terminals, posTags, wordDistances, puncDistances, verbDistances, entryFilter);
+    super(terminals, posTags, posTagsInt, wordDistances, puncDistances, verbDistances, entryFilter);
     int numTerminals = terminals.size();
 
     this.chart = new ChartEntry[numTerminals][numTerminals][NUM_INITIAL_SPAN_ENTRIES];

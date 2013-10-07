@@ -52,6 +52,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final VariableNumMap dependencySyntaxVar;
   private final VariableNumMap dependencyArgNumVar;
   private final VariableNumMap dependencyArgVar;
+  private final VariableNumMap dependencyHeadPosVar;
+  private final VariableNumMap dependencyArgPosVar;
   private final ParametricFactor dependencyFamily;
 
   private final VariableNumMap wordDistanceVar;
@@ -123,8 +125,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       ParametricFactor terminalFamily, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar, ParametricFactor terminalPosFamily, ParametricFactor terminalSyntaxFamily, 
       VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
-      VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
-      ParametricFactor dependencyFamily, VariableNumMap wordDistanceVar,
+      VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar, VariableNumMap dependencyHeadPosVar,
+      VariableNumMap dependencyArgPosVar, ParametricFactor dependencyFamily, VariableNumMap wordDistanceVar,
       ParametricFactor wordDistanceFamily, VariableNumMap puncDistanceVar,
       ParametricFactor puncDistanceFamily, Set<String> puncTagSet, VariableNumMap verbDistanceVar,
       ParametricFactor verbDistanceFamily, Set<String> verbTagSet, VariableNumMap leftSyntaxVar,
@@ -147,6 +149,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.dependencySyntaxVar = Preconditions.checkNotNull(dependencySyntaxVar);
     this.dependencyArgNumVar = Preconditions.checkNotNull(dependencyArgNumVar);
     this.dependencyArgVar = Preconditions.checkNotNull(dependencyArgVar);
+    this.dependencyHeadPosVar = Preconditions.checkNotNull(dependencyHeadPosVar);
+    this.dependencyArgPosVar = Preconditions.checkNotNull(dependencyArgPosVar);
     this.dependencyFamily = Preconditions.checkNotNull(dependencyFamily);
 
     this.wordDistanceVar = wordDistanceVar;
@@ -351,21 +355,23 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap dependencySyntaxVar = VariableNumMap.singleton(1, "dependencySyntax", ccgSyntaxType);
     VariableNumMap dependencyArgNumVar = VariableNumMap.singleton(2, "dependencyArgNum", argumentNums);
     VariableNumMap dependencyArgVar = VariableNumMap.singleton(3, "dependencyArg", semanticPredicateType);
+    VariableNumMap dependencyHeadPosVar = VariableNumMap.singleton(4, "dependencyHeadPos", posType);
+    VariableNumMap dependencyArgPosVar = VariableNumMap.singleton(5, "dependencyArgPos", posType);
 
     // Create features over argument distances for each dependency.
-    VariableNumMap wordDistanceVar = VariableNumMap.singleton(3, "wordDistance", CcgParser.wordDistanceVarType);
+    VariableNumMap wordDistanceVar = VariableNumMap.singleton(6, "wordDistance", CcgParser.wordDistanceVarType);
     ParametricFactor wordDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
-        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, wordDistanceVar);
-    VariableNumMap puncDistanceVar = VariableNumMap.singleton(3, "puncDistance", CcgParser.puncDistanceVarType);
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, wordDistanceVar);
+    VariableNumMap puncDistanceVar = VariableNumMap.singleton(6, "puncDistance", CcgParser.puncDistanceVarType);
     ParametricFactor puncDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
-        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, puncDistanceVar);
-    VariableNumMap verbDistanceVar = VariableNumMap.singleton(3, "verbDistance", CcgParser.verbDistanceVarType);
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, puncDistanceVar);
+    VariableNumMap verbDistanceVar = VariableNumMap.singleton(6, "verbDistance", CcgParser.verbDistanceVarType);
     ParametricFactor verbDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
-        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, verbDistanceVar);
-    
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, verbDistanceVar);
+
     // Create features over dependency structures.
     ParametricFactor dependencyParametricFactor = featureFactory.getDependencyFeatures(dependencyHeadVar,
-        dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar);
+        dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar);
 
     Set<String> puncTagSet = DEFAULT_PUNC_TAGS;
     Set<String> verbTagSet = DEFAULT_VERB_TAGS;
@@ -376,8 +382,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         posVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor, dependencyHeadVar,
-        dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyParametricFactor,
-        wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet, verbDistanceVar,
+        dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, 
+        dependencyParametricFactor, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
+        puncDistanceFactor, puncTagSet, verbDistanceVar,
         verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
         parametricSyntacticDistribution, unaryRuleInputVar, unaryRuleVar,
         parametricUnaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution, 
@@ -427,8 +434,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public ParametricCcgParser replaceTerminalFamily(ParametricFactor newTerminalFamily) {
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, newTerminalFamily, 
         terminalPosVar, terminalSyntaxVar, terminalPosFamily, terminalSyntaxFamily, dependencyHeadVar, 
-        dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyFamily, wordDistanceVar,
-        wordDistanceFamily, puncDistanceVar, puncDistanceFamily, puncTagSet,
+        dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, 
+        dependencyFamily, wordDistanceVar, wordDistanceFamily, puncDistanceVar, puncDistanceFamily, puncTagSet,
         verbDistanceVar, verbDistanceFamily, verbTagSet, leftSyntaxVar,
         rightSyntaxVar, parentSyntaxVar, syntaxFamily, unaryRuleInputVar, unaryRuleVar,
         unaryRuleFamily, searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxFamily,
@@ -496,7 +503,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
         terminalPosVar, terminalSyntaxVar, terminalPosDistribution, terminalSyntaxDistribution, 
-        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyDistribution,
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
+        dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceDistribution, puncDistanceVar, puncDistanceDistribution,
         puncTagSet, verbDistanceVar, verbDistanceDistribution, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution,
@@ -525,18 +533,21 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     SufficientStatistics puncDistanceGradient = gradient.coerceToList().getStatisticByName(PUNC_DISTANCE_PARAMETERS);
     SufficientStatistics verbDistanceGradient = gradient.coerceToList().getStatisticByName(VERB_DISTANCE_PARAMETERS);
     for (DependencyStructure dependency : dependencies) {
+      int headWordIndex = dependency.getHeadWordIndex();
+      int objectWordIndex = dependency.getObjectWordIndex();
+
       Assignment predicateAssignment = Assignment.unionAll(
           dependencyHeadVar.outcomeArrayToAssignment(dependency.getHead()),
           dependencySyntaxVar.outcomeArrayToAssignment(dependency.getHeadSyntacticCategory()),
-          dependencyArgNumVar.outcomeArrayToAssignment(dependency.getArgIndex()));
+          dependencyArgNumVar.outcomeArrayToAssignment(dependency.getArgIndex()),
+          dependencyHeadPosVar.outcomeArrayToAssignment(posTags.get(headWordIndex)),
+          dependencyArgPosVar.outcomeArrayToAssignment(posTags.get(objectWordIndex)));
       Assignment assignment = predicateAssignment.union(
           dependencyArgVar.outcomeArrayToAssignment(dependency.getObject()));
 
       dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient, assignment, count);
 
       // Update distance parameters.
-      int headWordIndex = dependency.getHeadWordIndex();
-      int objectWordIndex = dependency.getObjectWordIndex();
       int wordDistance = CcgParser.computeWordDistance(headWordIndex, objectWordIndex);
       int puncDistance = CcgParser.computeArrayDistance(puncCounts, headWordIndex, objectWordIndex);
       int verbDistance = CcgParser.computeArrayDistance(verbCounts, headWordIndex, objectWordIndex);

@@ -22,6 +22,7 @@ public abstract class AbstractCcgChart implements CcgChart {
   // The words and pos tags of the sentence being parsed.
   private final List<String> terminals;
   private final List<String> posTags;
+  private final int[] posTagsInt;
 
   // Various kinds of distances between words in the sentence.
   private final int[] wordDistances;
@@ -42,10 +43,11 @@ public abstract class AbstractCcgChart implements CcgChart {
   // while parsing this sentence.
   private DiscreteFactor syntaxDistribution;
   
-  public AbstractCcgChart(List<String> terminals, List<String> posTags, int[] wordDistances,
-      int[] puncDistances, int[] verbDistances, ChartFilter entryFilter) {
+  public AbstractCcgChart(List<String> terminals, List<String> posTags, int[] posTagsInt,
+      int[] wordDistances, int[] puncDistances, int[] verbDistances, ChartFilter entryFilter) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.posTags = ImmutableList.copyOf(posTags);
+    this.posTagsInt = Preconditions.checkNotNull(posTagsInt);
     
     this.wordDistances = Preconditions.checkNotNull(wordDistances);
     this.puncDistances = Preconditions.checkNotNull(puncDistances);
@@ -76,6 +78,11 @@ public abstract class AbstractCcgChart implements CcgChart {
   @Override
   public List<String> getPosTags() {
     return posTags;
+  }
+  
+  @Override
+  public int[] getPosTagsInt() {
+    return posTagsInt;
   }
 
   @Override

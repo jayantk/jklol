@@ -70,6 +70,8 @@ public class CcgParserTest extends TestCase {
       "blue,(N{0}/N{0}){1},blue,0 blue",
       "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
       "a,(NP{1}/N{1}){0},,0 a,a 1 1"};
+  
+  private static final String DEFAULT_POS = ParametricCcgParser.DEFAULT_POS_TAG;
 
   private static final double[] weights = { 0.5, 1.0, 1.0, 1.0,
       0.3, 1.0, 1.0,
@@ -104,16 +106,17 @@ public class CcgParserTest extends TestCase {
   };
   
   private static final String[][] dependencyCombinations = {
-    {"eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", "2", "berries"},
-    {"eat", "((S[ng]{0}\\N{1}){0}/N{2}){0}", "2", "berries"},
-    {"quickly", "(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0}", "1", "eat"},
-    {"in", "((N{1}\\N{1}){0}/N{2}){0}", "1", "people"},
-    {"special:compound", "N{0}", "1", "people"},
-    {"green_(N{0}/N{0}){1}", "(N{1}/N{1}){0}", "1", "people"}
+    {"eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", "2", "berries", DEFAULT_POS, DEFAULT_POS},
+    {"eat", "((S[ng]{0}\\N{1}){0}/N{2}){0}", "2", "berries", DEFAULT_POS, DEFAULT_POS},
+    {"quickly", "(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0}", "1", "eat", DEFAULT_POS, DEFAULT_POS},
+    {"in", "((N{1}\\N{1}){0}/N{2}){0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
+    {"special:compound", "N{0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
+    {"green_(N{0}/N{0}){1}", "(N{1}/N{1}){0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
+    {"tasty", "(N{1}/N{1}){0}", "1", "berries", "JJ", "NN"}
   };
 
   private static final double[] dependencyWeightIncrements = {
-    1.0, 1.0, 3.0, 1.0, 1.0, 1.0
+    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0
   };
 
   private VariableNumMap terminalVar;
@@ -122,10 +125,8 @@ public class CcgParserTest extends TestCase {
   private VariableNumMap posTagVar;
   private VariableNumMap terminalSyntaxVar;
 
-  private VariableNumMap semanticHeadVar;
-  private VariableNumMap semanticSyntaxVar;
-  private VariableNumMap semanticArgNumVar;
-  private VariableNumMap semanticArgVar;
+  private VariableNumMap semanticHeadVar, semanticSyntaxVar, semanticArgNumVar,
+  semanticArgVar, semanticHeadPosVar, semanticArgPosVar;
 
   public void setUp() {
     parser = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, false);
@@ -527,6 +528,36 @@ public class CcgParserTest extends TestCase {
     }
   }
 
+  public void testLexiconPosParameters() {
+    List<CcgParse> nnParses = parser.beamSearch(
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList(DEFAULT_POS, "NN"), 10);
+    
+    List<CcgParse> basicParses = parser.beamSearch(
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList(DEFAULT_POS, DEFAULT_POS), 10);
+    
+    assertEquals(1, nnParses.size());
+    assertEquals(1, basicParses.size());
+    assertEquals(2 * basicParses.get(0).getSubtreeProbability(), nnParses.get(0).getSubtreeProbability());
+  }
+  
+  public void testDependencyPosParameters() {
+    List<CcgParse> nnParses = parser.beamSearch(
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList("JJ", "NN"), 10);
+    
+    List<CcgParse> basicParses = parser.beamSearch(
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList(DEFAULT_POS, "NN"), 10);
+    
+    assertEquals(1, nnParses.size());
+    assertEquals(1, basicParses.size());
+    // The tasty JJ dependency is 4x as likely as the DEFAULT_POS one,
+    // and the word distance weights contribute a factor of 2. 
+    assertEquals(4 * 2 * basicParses.get(0).getSubtreeProbability(), nnParses.get(0).getSubtreeProbability());
+  }
+
   public void testParseUnfilledDep() {
     List<CcgParse> parses = parser.beamSearch(
         Arrays.asList("about", "eating", "berries"), 10);
@@ -684,11 +715,11 @@ public class CcgParserTest extends TestCase {
 
   public void testParseTimeout() {
     List<CcgParse> parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), -1);
+        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), -1);
     assertTrue(parses.size() > 0);
     
     parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), 1);
+        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), 1);
     assertEquals(0, parses.size());
   }
 
@@ -756,7 +787,7 @@ public class CcgParserTest extends TestCase {
   public void testChartFilterApply() {
     ChartFilter filter = new TestChartFilter();
     List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
-        Collections.nCopies(6, ParametricCcgParser.DEFAULT_POS_TAG), 10, filter, new NullLogFunction(), -1);
+        Collections.nCopies(6, DEFAULT_POS), 10, filter, new NullLogFunction(), -1);
 
     // The filter disallows the verb modifier syntactic category for
     // "in"
@@ -771,7 +802,7 @@ public class CcgParserTest extends TestCase {
   public void testChartFilterApplyToTerminals() {
     ChartFilter filter = new TestChartFilter();
     List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("berries", "in", "people", "houses"),
-        Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG), 10, filter, new NullLogFunction(), -1);
+        Collections.nCopies(4, DEFAULT_POS), 10, filter, new NullLogFunction(), -1);
 
     for (CcgParse parse : parses) {
       assertNoNounCompound(parse);
@@ -780,7 +811,7 @@ public class CcgParserTest extends TestCase {
 
   public void testSupertagChartFilter() {
     List<CcgParse> parses = parser.beamSearch(Arrays.asList("blue", "berries"),
-        Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10, new NullLogFunction());
+        Collections.nCopies(2, DEFAULT_POS), 10, new NullLogFunction());
     assertEquals(2, parses.size());
 
     List<List<HeadedSyntacticCategory>> supertags = Lists.newArrayList();
@@ -790,7 +821,7 @@ public class CcgParserTest extends TestCase {
     ChartFilter supertagChartFilter = new SupertagChartFilter(supertags);
 
     parses = parser.beamSearch(Arrays.asList("blue", "berries"),
-        Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10,
+        Collections.nCopies(2, DEFAULT_POS), 10,
         supertagChartFilter, new NullLogFunction(), -1);
     assertEquals(1, parses.size());
   }
@@ -864,7 +895,7 @@ public class CcgParserTest extends TestCase {
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories);
     DiscreteVariable wordType = new DiscreteVariable("words", words);
     DiscreteVariable posType = new DiscreteVariable("pos",
-        Lists.newArrayList(ParametricCcgParser.DEFAULT_POS_TAG));
+        Lists.newArrayList(DEFAULT_POS, "NN", "JJ"));
 
     terminalVar = VariableNumMap.singleton(0, "words", wordType);
     ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
@@ -902,7 +933,10 @@ public class CcgParserTest extends TestCase {
     semanticSyntaxVar = VariableNumMap.singleton(1, "semanticSyntax", syntaxType);
     semanticArgNumVar = VariableNumMap.singleton(2, "semanticArgNum", argumentNums);
     semanticArgVar = VariableNumMap.singleton(3, "semanticArg", semanticPredicateType);
-    vars = VariableNumMap.unionAll(semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticArgVar);
+    semanticHeadPosVar = VariableNumMap.singleton(4, "semanticHeadPos", posType);
+    semanticArgPosVar = VariableNumMap.singleton(5, "semanticArgPos", posType);
+    vars = VariableNumMap.unionAll(semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticArgVar,
+        semanticHeadPosVar, semanticArgPosVar);
 
     TableFactorBuilder dependencyFactorBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     Preconditions.checkState(dependencyCombinations.length == dependencyWeightIncrements.length);
@@ -910,7 +944,8 @@ public class CcgParserTest extends TestCase {
       HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(dependencyCombinations[i][1]).getCanonicalForm();
       int argNum = Integer.parseInt(dependencyCombinations[i][2]);
       dependencyFactorBuilder.setWeight(vars.outcomeArrayToAssignment(
-          dependencyCombinations[i][0], cat, argNum, dependencyCombinations[i][3]), Math.log(1 + dependencyWeightIncrements[i]));
+          dependencyCombinations[i][0], cat, argNum, dependencyCombinations[i][3],
+          dependencyCombinations[i][4], dependencyCombinations[i][5]), Math.log(1 + dependencyWeightIncrements[i]));
     }
     TableFactor dependencyFactor = dependencyFactorBuilder.buildSparseInLogSpace();
 
@@ -936,7 +971,11 @@ public class CcgParserTest extends TestCase {
     // for smoothing sparse word counts.
     posTagVar = VariableNumMap.singleton(0, "posTag", posType);
     terminalSyntaxVar = VariableNumMap.singleton(1, "terminalSyntax", leftSyntaxVar.getDiscreteVariables().get(0));
-    DiscreteFactor posDistribution = TableFactor.unity(posTagVar.union(terminalSyntaxVar));
+    VariableNumMap terminalPosVars = posTagVar.union(terminalSyntaxVar);
+    DiscreteFactor posDistribution = TableFactor.unity(terminalPosVars);
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("N{0}");
+    posDistribution = posDistribution.add(TableFactor.pointDistribution(terminalPosVars, 
+        terminalPosVars.outcomeArrayToAssignment("NN", cat)));
 
     // Distribution over syntactic categories assigned to each word.
     VariableNumMap terminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
@@ -946,10 +985,10 @@ public class CcgParserTest extends TestCase {
             HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
 
     // Distribution over predicate-argument distances.
-    VariableNumMap distancePredicateVars = VariableNumMap.unionAll(semanticHeadVar, semanticSyntaxVar, semanticArgNumVar);
-    VariableNumMap wordDistanceVar = VariableNumMap.singleton(3, "wordDistance", CcgParser.wordDistanceVarType);
-    VariableNumMap puncDistanceVar = VariableNumMap.singleton(3, "puncDistance", CcgParser.puncDistanceVarType);
-    VariableNumMap verbDistanceVar = VariableNumMap.singleton(3, "verbDistance", CcgParser.verbDistanceVarType);
+    VariableNumMap distancePredicateVars = VariableNumMap.unionAll(semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticHeadPosVar);
+    VariableNumMap wordDistanceVar = VariableNumMap.singleton(6, "wordDistance", CcgParser.wordDistanceVarType);
+    VariableNumMap puncDistanceVar = VariableNumMap.singleton(6, "puncDistance", CcgParser.puncDistanceVarType);
+    VariableNumMap verbDistanceVar = VariableNumMap.singleton(6, "verbDistance", CcgParser.verbDistanceVarType);
     DiscreteFactor wordDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(wordDistanceVar));
     DiscreteFactor puncDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(puncDistanceVar));
     DiscreteFactor verbDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(verbDistanceVar));
@@ -959,14 +998,17 @@ public class CcgParserTest extends TestCase {
     VariableNumMap wordDistanceVars = wordDistanceFactor.getVars();
     TableFactorBuilder wordFactorIncrementBuilder = new TableFactorBuilder(wordDistanceFactor.getVars(), SparseTensorBuilder.getFactory());
     HeadedSyntacticCategory eatCategory = HeadedSyntacticCategory.parseFrom("((S[b]{0}\\N{1}){0}/N{2}){0}").getCanonicalForm();
-    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, 0), 3.0);
-    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, 1), 2.0);
-    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, 2), 1.0);
+    HeadedSyntacticCategory tastyCategory = HeadedSyntacticCategory.parseFrom("(N{1}/N{1}){0}").getCanonicalForm();
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 0), 3.0);
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 1), 2.0);
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 2), 1.0);
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("tasty", tastyCategory, 1, "JJ", 0), 1.0);
     wordDistanceFactor = wordDistanceFactor.add(wordFactorIncrementBuilder.build());
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution,
-        semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticArgVar, dependencyFactor,
+        semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticArgVar,
+        semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,

@@ -1,9 +1,12 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.Arrays;
+
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 
 /**
@@ -16,31 +19,62 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   public DefaultCcgFeatureFactory() {}
 
   @Override
-  public ParametricFactor getDependencyFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap semanticArgVar) {
-    VariableNumMap vars = VariableNumMap.unionAll(semanticHeadVar, headSyntaxVar, semanticArgNumVar, semanticArgVar);
-    return new DenseIndicatorLogLinearFactor(vars);
+  public ParametricFactor getDependencyFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar) {
+    
+    ParametricFactor wordWordFactor = new DenseIndicatorLogLinearFactor(
+        VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, dependencyArgVar));
+    ParametricFactor wordPosFactor = new DenseIndicatorLogLinearFactor(
+        VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, dependencyArgPosVar));
+    ParametricFactor posWordFactor = new DenseIndicatorLogLinearFactor(
+        VariableNumMap.unionAll(headSyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar));
+    ParametricFactor posPosFactor = new DenseIndicatorLogLinearFactor(
+        VariableNumMap.unionAll(headSyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, dependencyArgPosVar));
+    
+    VariableNumMap allVars = VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar,
+        dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar);
+    return new CombiningParametricFactor(allVars, Arrays.asList("word-word", "word-pos", "pos-word", "pos-pos"),
+        Arrays.asList(wordWordFactor, wordPosFactor, posWordFactor, posPosFactor), true);
+  }
+  
+  private ParametricFactor getDistanceFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap distanceVar) {
+
+    ParametricFactor wordDistanceFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
+        dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, distanceVar));
+    ParametricFactor posDistanceFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
+        headSyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, distanceVar));
+
+    VariableNumMap allVars = VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar,
+        dependencyArgNumVar, dependencyHeadPosVar, distanceVar);
+    return new CombiningParametricFactor(allVars, Arrays.asList("distance", "pos-backoff-distance"),
+        Arrays.asList(wordDistanceFactor, posDistanceFactor), true);
   }
 
   @Override
-  public ParametricFactor getDependencyWordDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap wordDistanceVar) {
-    return new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        semanticHeadVar, headSyntaxVar, semanticArgNumVar, wordDistanceVar));
+  public ParametricFactor getDependencyWordDistanceFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap wordDistanceVar) {
+    return getDistanceFeatures(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar,
+        dependencyHeadPosVar, wordDistanceVar);
   }
 
   @Override
-  public ParametricFactor getDependencyPuncDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap puncDistanceVar) {
-    return new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        semanticHeadVar, headSyntaxVar, semanticArgNumVar, puncDistanceVar));
+  public ParametricFactor getDependencyPuncDistanceFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap puncDistanceVar) {
+    return getDistanceFeatures(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar,
+        dependencyHeadPosVar, puncDistanceVar);
   }
 
   @Override
-  public ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap verbDistanceVar) {
-    return new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        semanticHeadVar, headSyntaxVar, semanticArgNumVar, verbDistanceVar));
+  public ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap verbDistanceVar) {
+    return getDistanceFeatures(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar,
+        dependencyHeadPosVar, verbDistanceVar);
   }
 
   @Override

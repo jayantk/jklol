@@ -716,6 +716,8 @@ public class VariableNumMap implements Serializable {
     int index = 0;
     for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
       if (entry.getValue() instanceof DiscreteVariable) {
+        Preconditions.checkArgument(assignment.contains(entry.getKey()),
+            "Partial assignment provided to assignmentToIntArray. Assignment: %s, variables: %s", assignment, this);
         value[index] = ((DiscreteVariable) entry.getValue()).getValueIndex(assignment
             .getValue(entry.getKey()));
       }

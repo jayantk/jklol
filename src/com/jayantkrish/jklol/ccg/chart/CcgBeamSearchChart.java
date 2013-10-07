@@ -33,15 +33,16 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
    * 
    * @param terminals
    * @param posTags
+   * @param posTagsInt
    * @param puncCount
    * @param verbCount
    * @param beamSize
    * @param entryFilter filter for discarding portions of the beam.
    * May be {@code null}, in which case all beam entries are retained.
    */
-  public CcgBeamSearchChart(List<String> terminals, List<String> posTags, int[] wordDistances,
-      int[] puncDistances, int[] verbDistances, int beamSize, ChartFilter entryFilter) {
-    super(terminals, posTags, wordDistances, puncDistances, verbDistances, entryFilter);
+  public CcgBeamSearchChart(List<String> terminals, List<String> posTags, int[] posTagsInt,
+      int[] wordDistances, int[] puncDistances, int[] verbDistances, int beamSize, ChartFilter entryFilter) {
+    super(terminals, posTags, posTagsInt, wordDistances, puncDistances, verbDistances, entryFilter);
     this.beamSize = beamSize;
 
     numTerminals = terminals.size();

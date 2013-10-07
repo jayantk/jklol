@@ -237,7 +237,6 @@ public class CcgTrainingTest extends TestCase {
 
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), examples);
     CcgParser parser = family.getModelFromParameters(parameters);
-    System.out.println(family.getParameterDescription(parameters));
     return parser;
   }
 

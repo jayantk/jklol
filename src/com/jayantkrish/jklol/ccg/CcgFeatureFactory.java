@@ -25,60 +25,69 @@ public interface CcgFeatureFactory {
   /**
    * Gets a parametric factor defining the features of CCG dependency
    * structures. Given parameters, the returned parametric factor
-   * produces a distribution over the four argument variables. This
+   * produces a distribution over the six argument variables. This
    * distribution is also a distribution over CCG dependency
    * structures.
    * 
-   * @param semanticHeadVar
+   * @param dependencyHeadVar
    * @param headSyntaxVar
-   * @param semanticArgNumVar
-   * @param semanticArgVar
+   * @param dependencyArgNumVar
+   * @param dependencyArgVar
+   * @param dependencyHeadPosVar
+   * @param dependencyArgPosVar
    * @return
    */
-  ParametricFactor getDependencyFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap semanticArgVar);
+  ParametricFactor getDependencyFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar);
 
   /**
    * Gets a parametric factor defining features over the distance between
    * a dependency and its arguments. Distance is measured as the number of
    * intervening words.
    *  
-   * @param semanticHeadVar
+   * @param dependencyHeadVar
    * @param headSyntaxVar
-   * @param semanticArgNumVar
+   * @param dependencyArgNumVar
+   * @param dependencyHeadPosVar
    * @param wordDistanceVar
    * @return
    */
-  ParametricFactor getDependencyWordDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap wordDistanceVar);
+  ParametricFactor getDependencyWordDistanceFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap wordDistanceVar);
   
   /**
    * Gets a parametric factor defining features over the distance between
    * a dependency and its arguments. Distance is measured as the number of
    * intervening punctuation marks.
    * 
-   * @param semanticHeadVar
+   * @param dependencyHeadVar
    * @param headSyntaxVar
-   * @param semanticArgNumVar
+   * @param dependencyArgNumVar
+   * @param dependencyHeadPosVar
    * @param puncDistanceVar
    * @return
    */
-  ParametricFactor getDependencyPuncDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap puncDistanceVar);
+  ParametricFactor getDependencyPuncDistanceFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap puncDistanceVar);
 
   /**
    * Gets a parametric factor defining features over the distance between
    * a dependency and its arguments. Distance is measured as the number of
    * intervening verbs (detected using part-of-speech tags).
    * 
-   * @param semanticHeadVar
+   * @param dependencyHeadVar
    * @param headSyntaxVar
-   * @param semanticArgNumVar
+   * @param dependencyArgNumVar
+   * @param dependencyHeadPosVar
    * @param verbDistanceVar
    * @return
    */
-  ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap verbDistanceVar);
+  ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap dependencyHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar, 
+      VariableNumMap dependencyHeadPosVar, VariableNumMap verbDistanceVar);
 
   /**
    * Gets a parametric factor defining the features of lexicon entries

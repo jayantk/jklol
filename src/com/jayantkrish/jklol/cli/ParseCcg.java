@@ -454,7 +454,6 @@ public class ParseCcg extends AbstractCli {
   }
   
   public static class CcgLossMapper extends Mapper<CcgExample, CcgLoss> {
-    
     private final SupertaggingCcgParser parser;
     private final boolean useCcgbankDerivation;
     private final boolean filterDependenciesCcgbank;
@@ -486,7 +485,7 @@ public class ParseCcg extends AbstractCli {
       }
     }
   }
-  
+
   public static class CcgLossReducer extends SimpleReducer<CcgLoss> {
     @Override
     public CcgLoss getInitialValue() {

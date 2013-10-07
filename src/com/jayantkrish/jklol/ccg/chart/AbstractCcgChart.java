@@ -22,14 +22,14 @@ public abstract class AbstractCcgChart implements CcgChart {
   // The words and pos tags of the sentence being parsed.
   private final List<String> terminals;
   private final List<String> posTags;
-  private final int[] posTagsInt;
+  private int[] posTagsInt;
 
   // Various kinds of distances between words in the sentence.
-  private final int[] wordDistances;
-  private final int[] puncDistances;
-  private final int[] verbDistances;
+  private int[] wordDistances;
+  private int[] puncDistances;
+  private int[] verbDistances;
   
-  private final ChartFilter entryFilter;
+  protected ChartFilter entryFilter;
   
   // The parser weights which might be used in this sentence.
   // This is a subset of all parser weights, which is precomputed
@@ -43,26 +43,16 @@ public abstract class AbstractCcgChart implements CcgChart {
   // while parsing this sentence.
   private DiscreteFactor syntaxDistribution;
   
-  public AbstractCcgChart(List<String> terminals, List<String> posTags, int[] posTagsInt,
-      int[] wordDistances, int[] puncDistances, int[] verbDistances, ChartFilter entryFilter) {
+  private boolean finishedParsing;
+  
+  public AbstractCcgChart(List<String> terminals, List<String> posTags) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.posTags = ImmutableList.copyOf(posTags);
-    this.posTagsInt = Preconditions.checkNotNull(posTagsInt);
     
-    this.wordDistances = Preconditions.checkNotNull(wordDistances);
-    this.puncDistances = Preconditions.checkNotNull(puncDistances);
-    this.verbDistances = Preconditions.checkNotNull(verbDistances);
-    
-    int n = terminals.size();
-    Preconditions.checkArgument(posTags.size() == n);
-    Preconditions.checkArgument(wordDistances.length == n * n);
-    Preconditions.checkArgument(puncDistances.length == n * n);
-    Preconditions.checkArgument(verbDistances.length == n * n);
-    
-    this.entryFilter = entryFilter;
-
-    // dependencyTensor, the distance tensors, and syntax distribution are
+    // dependencyTensor, the distance arrays / tensors, and syntax distribution are
     // left null, and must be manually set.
+    
+    this.finishedParsing = false;
   }
 
   @Override
@@ -80,6 +70,35 @@ public abstract class AbstractCcgChart implements CcgChart {
     return posTags;
   }
   
+  @Override
+  public void setPosTagsInt(int[] posTagsInt) {
+    Preconditions.checkArgument(posTagsInt.length == size());
+    this.posTagsInt = posTagsInt;
+  }
+
+  @Override
+  public void setWordDistances(int[] wordDistances) {
+    Preconditions.checkArgument(wordDistances.length == size() * size());
+    this.wordDistances = wordDistances;
+  }
+
+  @Override
+  public void setPuncDistances(int[] puncDistances) {
+    Preconditions.checkArgument(puncDistances.length == size() * size());
+    this.puncDistances = puncDistances;
+  }
+
+  @Override
+  public void setVerbDistances(int[] verbDistances) {
+    Preconditions.checkArgument(verbDistances.length == size() * size());
+    this.verbDistances = verbDistances;
+  }
+
+  @Override
+  public void setChartFilter(ChartFilter entryFilter) {
+    this.entryFilter = entryFilter;
+  }
+
   @Override
   public int[] getPosTagsInt() {
     return posTagsInt;
@@ -157,6 +176,16 @@ public abstract class AbstractCcgChart implements CcgChart {
     }
   }
   
+  @Override
+  public boolean isFinishedParsing() {
+    return finishedParsing;
+  }
+
+  @Override
+  public void setFinishedParsing(boolean finished) {
+    this.finishedParsing = finished;
+  }
+
   /**
    * Decodes the CCG parse which is the {@code beamIndex}'th parse in
    * the beam for the given span.
@@ -166,8 +195,8 @@ public abstract class AbstractCcgChart implements CcgChart {
    * @param beamIndex
    * @return
    */
-  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex,
-      CcgParser parser, DiscreteVariable syntaxVarType) {
+  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, CcgParser parser) {
+    DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
     ChartEntry entry = getChartEntriesForSpan(spanStart, spanEnd)[beamIndex];
 
     HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(
@@ -183,9 +212,9 @@ public abstract class AbstractCcgChart implements CcgChart {
               entry.getRootUnaryRule(), spanStart, spanEnd);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
-          entry.getLeftChartIndex(), parser, syntaxVarType);
+          entry.getLeftChartIndex(), parser);
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
-          entry.getRightChartIndex(), parser, syntaxVarType);
+          entry.getRightChartIndex(), parser);
 
       if (entry.getLeftUnaryRule() != null) {
         left = left.addUnaryRule(entry.getLeftUnaryRule(), (HeadedSyntacticCategory)

@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -25,24 +26,16 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   private final double[][][] probabilities;
   private final int[] chartSizes;
 
-  private final ChartFilter entryFilter;
-
   /**
    * Creates a CCG chart for storing the current state of a beam
    * search trying to parse {@code terminals}.
    * 
    * @param terminals
    * @param posTags
-   * @param posTagsInt
-   * @param puncCount
-   * @param verbCount
    * @param beamSize
-   * @param entryFilter filter for discarding portions of the beam.
-   * May be {@code null}, in which case all beam entries are retained.
    */
-  public CcgBeamSearchChart(List<String> terminals, List<String> posTags, int[] posTagsInt,
-      int[] wordDistances, int[] puncDistances, int[] verbDistances, int beamSize, ChartFilter entryFilter) {
-    super(terminals, posTags, posTagsInt, wordDistances, puncDistances, verbDistances, entryFilter);
+  public CcgBeamSearchChart(List<String> terminals, List<String> posTags, int beamSize) {
+    super(terminals, posTags);
     this.beamSize = beamSize;
 
     numTerminals = terminals.size();
@@ -50,8 +43,6 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
     this.probabilities = new double[numTerminals][numTerminals][beamSize + 1];
     this.chartSizes = new int[numTerminals * numTerminals];
     Arrays.fill(chartSizes, 0);
-
-    this.entryFilter = entryFilter;
   }
 
   /**
@@ -72,11 +63,10 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
    * @param spanEnd
    * @param numParses
    * @param parser
-   * @param syntaxVarType
    * @return
    */
   public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses,
-      CcgParser parser, DiscreteVariable syntaxVarType) {
+      CcgParser parser) {
     // Perform a heap sort on the array indexes paired with the
     // probabilities.
     double[] probsCopy = ArrayUtils.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
@@ -91,8 +81,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
     int numChartEntries = getNumChartEntriesForSpan(spanStart, spanEnd);
     while (numChartEntries > 0) {
       if (numChartEntries <= numParses) {
-        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0],
-            parser, syntaxVarType));
+        bestParses.add(decodeParseFromSpan(spanStart, spanEnd, chartEntryIndexes[0], parser));
       }
 
       HeapUtils.removeMin(chartEntryIndexes, probsCopy, numChartEntries);
@@ -101,6 +90,12 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
 
     Collections.reverse(bestParses);
     return bestParses;
+  }
+  
+  @Override
+  public CcgParse decodeBestParse(CcgParser parser) {
+    List<CcgParse> bestParses = decodeBestParsesForSpan(0, size() - 1, 1, parser);
+    return Iterables.getFirst(bestParses, null);
   }
 
   @Override

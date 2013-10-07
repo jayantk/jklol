@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.List;
 
+import com.jayantkrish.jklol.ccg.CcgParse;
+import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -28,6 +30,16 @@ public interface CcgChart {
    * @return
    */
   public List<String> getPosTags();
+  
+  public void setPosTagsInt(int[] posTagsInt);
+  
+  public void setWordDistances(int[] wordDistances);
+  
+  public void setPuncDistances(int[] puncDistances);
+  
+  public void setVerbDistances(int[] verbDistances);
+
+  public void setChartFilter(ChartFilter chartFilter);
 
   /**
    * Gets the POS tag of each word being parsed encoded as an integer.
@@ -152,4 +164,17 @@ public interface CcgChart {
    * @param spanEnd
    */
   public void clearChartEntriesForSpan(int spanStart, int spanEnd);
+  
+  /**
+   * Retrieves the highest-scoring parse from the parse chart. Returns
+   * {@code null} if no complete parse was found.
+   * 
+   * @param parser Parser that produced this parse chart.
+   * @return
+   */
+  public CcgParse decodeBestParse(CcgParser parser);
+  
+  public boolean isFinishedParsing();
+  
+  public void setFinishedParsing(boolean finished);
 }

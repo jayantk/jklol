@@ -59,4 +59,8 @@ public class SupertaggingCcgParser {
   public CcgParse parse(List<String> terminals, List<String> posTags) {
     return parse(terminals, posTags, null);
   }
+  
+  public CcgParser getParser() {
+    return parser;
+  }
 }

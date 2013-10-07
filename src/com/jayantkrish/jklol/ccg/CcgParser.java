@@ -1222,21 +1222,12 @@ public class CcgParser implements Serializable {
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
       ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
-    CcgBeamSearchChart chart = buildBeamSearchChart(terminals, posTags, beamSize, beamFilter);
+    CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, beamSize);
+    parseCommon(chart, terminals, posTags, beamFilter, log, maxParseTimeMillis);
 
-    initializeChart(terminals, posTags, chart, log);
-    chart.applyChartFilterToTerminals();
-
-    // Sparsifying the dependencies actually slows the code down.
-    // (Possibly a cache issue?)
-    // sparsifyDependencyDistribution(chart);
-
-    boolean finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
-
-    if (finishedParsing) {
-      reweightRootEntries(chart);
+    if (chart.isFinishedParsing()) {
       int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
-      return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this, syntaxVarType);
+      return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this);
     } else {
       System.out.println("CCG Parser Timeout");
       return Lists.newArrayList();
@@ -1245,54 +1236,33 @@ public class CcgParser implements Serializable {
 
   public CcgParse parse(List<String> terminals, List<String> posTags, ChartFilter beamFilter,
       LogFunction log, long maxParseTimeMillis) {
-    CcgExactHashTableChart chart = buildExactChart(terminals, posTags, beamFilter);
+    CcgExactHashTableChart chart = new CcgExactHashTableChart(terminals, posTags);
+    parseCommon(chart, terminals, posTags, beamFilter, log, maxParseTimeMillis);
 
-    initializeChart(terminals, posTags, chart, log);
-    chart.applyChartFilterToTerminals();
-
-    // Sparsifying the dependencies actually slows the code down.
-    // (Possibly a cache issue?)
-    // sparsifyDependencyDistribution(chart);
-
-    boolean finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
-
-    if (finishedParsing) {
-      reweightRootEntries(chart);
-      return chart.decodeBestParseForSpan(0, chart.size() - 1, this, syntaxVarType);
+    if (chart.isFinishedParsing()) {
+      return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
     } else {
       System.out.println("CCG Parser Timeout");
       return null;
     }
   }
 
-  public CcgBeamSearchChart buildBeamSearchChart(List<String> terminals, List<String> posTags,
-      int beamSize, ChartFilter beamFilter) {
-    int numWords = terminals.size();
-    int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
-    int[] verbCounts = computeDistanceCounts(posTags, verbTagSet);
+  public void parseCommon(CcgChart chart, List<String> terminals, List<String> posTags,
+      ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
+    initializeChart(chart, terminals, posTags, beamFilter);
+    initializeChartTerminals(terminals, posTags, chart, log);
+    chart.applyChartFilterToTerminals();
 
-    int[] wordDistances = new int[numWords * numWords];
-    int[] puncDistances = new int[numWords * numWords];
-    int[] verbDistances = new int[numWords * numWords];
-    for (int i = 0; i < numWords; i++) {
-      for (int j = 0; j < numWords; j++) {
-        wordDistances[(i * numWords) + j] = computeWordDistance(i, j);
-        puncDistances[(i * numWords) + j] = computeArrayDistance(puncCounts, i, j);
-        verbDistances[(i * numWords) + j] = computeArrayDistance(verbCounts, i, j);
-      }
+    boolean finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
+
+    if (finishedParsing) {
+      reweightRootEntries(chart);
     }
-    
-    int[] posTagsInt = getPosTagsInt(posTags);
-
-    CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, posTagsInt,
-        wordDistances, puncDistances, verbDistances, beamSize, beamFilter);
-
-    initializeChartDistributions(chart);
-    return chart;
+    chart.setFinishedParsing(finishedParsing);
   }
 
-  public CcgExactHashTableChart buildExactChart(List<String> terminals, List<String> posTags, 
-      ChartFilter beamFilter) {
+  private void initializeChart(CcgChart chart, List<String> terminals, List<String> posTags,
+      ChartFilter chartFilter) {
     int numWords = terminals.size();
     int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
     int[] verbCounts = computeDistanceCounts(posTags, verbTagSet);
@@ -1308,13 +1278,13 @@ public class CcgParser implements Serializable {
       }
     }
 
-    int[] posTagsInt = getPosTagsInt(posTags); 
-
-    CcgExactHashTableChart chart = new CcgExactHashTableChart(terminals, posTags, posTagsInt,
-        wordDistances, puncDistances, verbDistances, beamFilter);
+    chart.setPosTagsInt(getPosTagsInt(posTags));
+    chart.setWordDistances(wordDistances);
+    chart.setPuncDistances(puncDistances);
+    chart.setVerbDistances(verbDistances);
+    chart.setChartFilter(chartFilter);
 
     initializeChartDistributions(chart);
-    return chart;
   }
 
   private void initializeChartDistributions(CcgChart chart) {
@@ -1325,6 +1295,10 @@ public class CcgParser implements Serializable {
     chart.setPuncDistanceTensor(puncDistanceTensor);
     chart.setVerbDistanceTensor(verbDistanceTensor);
     chart.setSyntaxDistribution(compiledSyntaxDistribution);
+
+    // Sparsifying the dependencies actually slows the code down.
+    // (Possibly a cache issue?)
+    // sparsifyDependencyDistribution(chart);
   }
 
   public static int[] computeDistanceCounts(List<String> posTags, Set<String> tagSet) {
@@ -1479,7 +1453,7 @@ public class CcgParser implements Serializable {
    * @param terminals
    * @param chart
    */
-  public void initializeChart(List<String> terminals, List<String> posTags, CcgChart chart,
+  public void initializeChartTerminals(List<String> terminals, List<String> posTags, CcgChart chart,
       LogFunction log) {
     initializeChartWithDistribution(terminals, posTags, chart, log, terminalVar, ccgCategoryVar,
         terminalDistribution, true);

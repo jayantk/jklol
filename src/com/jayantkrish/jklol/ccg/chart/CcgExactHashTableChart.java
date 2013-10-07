@@ -22,13 +22,10 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   private final double[][][] probabilitiesList;
   private final int[][] chartSizes;
 
-  private final ChartFilter entryFilter;
-
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
 
-  public CcgExactHashTableChart(List<String> terminals, List<String> posTags, int[] posTagsInt,
-      int[] wordDistances, int[] puncDistances, int[] verbDistances, ChartFilter entryFilter) {
-    super(terminals, posTags, posTagsInt, wordDistances, puncDistances, verbDistances, entryFilter);
+  public CcgExactHashTableChart(List<String> terminals, List<String> posTags) {
+    super(terminals, posTags);
     int numTerminals = terminals.size();
 
     this.chart = new ChartEntry[numTerminals][numTerminals][NUM_INITIAL_SPAN_ENTRIES];
@@ -39,8 +36,6 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     this.chartList = new ChartEntry[numTerminals][numTerminals][];
     this.probabilitiesList = new double[numTerminals][numTerminals][];
     this.chartSizes = new int[numTerminals][numTerminals];
-
-    this.entryFilter = entryFilter;
   }
 
   /**
@@ -50,11 +45,9 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
    * @param spanStart
    * @param spanEnd
    * @param parser
-   * @param syntaxVarType
    * @return
    */
-  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd,
-      CcgParser parser, DiscreteVariable syntaxVarType) {
+  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser parser) {
     double maxProb = -1;
     int maxEntryIndex = -1;
     double[] probs = getChartEntryProbsForSpan(spanStart, spanEnd);
@@ -69,8 +62,13 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
       // No parses.
       return null;
     } else {
-      return decodeParseFromSpan(spanStart, spanEnd, maxEntryIndex, parser, syntaxVarType);
+      return decodeParseFromSpan(spanStart, spanEnd, maxEntryIndex, parser);
     }
+  }
+
+  @Override
+  public CcgParse decodeBestParse(CcgParser parser) {
+    return decodeBestParseForSpan(0, size() - 1, parser);
   }
 
   @Override

@@ -13,6 +13,8 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
+import com.jayantkrish.jklol.tensor.SparseLogSpaceTensorAdapter;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
@@ -280,5 +282,10 @@ public class TableFactorBuilder {
   public TableFactor buildInLogSpace() {
     return new TableFactor(vars, new LogSpaceTensorAdapter(
         DenseTensor.copyOf(weightBuilder.build())));
+  }
+  
+  public TableFactor buildSparseInLogSpace() {
+    return new TableFactor(vars, new SparseLogSpaceTensorAdapter(
+        SparseTensor.copyOf(weightBuilder.build())));
   }
 }

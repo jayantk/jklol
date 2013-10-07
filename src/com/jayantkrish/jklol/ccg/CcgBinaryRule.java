@@ -42,13 +42,14 @@ public class CcgBinaryRule implements Serializable {
 
   // Unfilled dependencies created by this rule.
   private final String[] subjects;
+  private final HeadedSyntacticCategory[] subjectSyntacticCategories;
   private final int[] argumentNumbers;
   // The variables each dependency accepts.
   private final int[] objects;
 
   public CcgBinaryRule(HeadedSyntacticCategory leftSyntax, HeadedSyntacticCategory rightSyntax,
       HeadedSyntacticCategory returnSyntax, LambdaExpression logicalForm, List<String> subjects,
-      List<Integer> argumentNumbers, List<Integer> objects) {
+      List<HeadedSyntacticCategory> subjectSyntaxes, List<Integer> argumentNumbers, List<Integer> objects) {
     this.leftSyntax = leftSyntax;
     this.rightSyntax = rightSyntax;
     this.parentSyntax = returnSyntax;
@@ -56,6 +57,7 @@ public class CcgBinaryRule implements Serializable {
     this.logicalForm = logicalForm;
 
     this.subjects = subjects.toArray(new String[0]);
+    this.subjectSyntacticCategories = subjectSyntaxes.toArray(new HeadedSyntacticCategory[0]);
     this.argumentNumbers = Ints.toArray(argumentNumbers);
     this.objects = Ints.toArray(objects);
   }
@@ -99,6 +101,7 @@ public class CcgBinaryRule implements Serializable {
     }
 
     List<String> subjects = Lists.newArrayList();
+    List<HeadedSyntacticCategory> subjectSyntacticCategories = Lists.newArrayList();
     List<Integer> argNums = Lists.newArrayList();
     List<Integer> objects = Lists.newArrayList();
     if (chunks.length >= 3) {
@@ -106,13 +109,14 @@ public class CcgBinaryRule implements Serializable {
         String[] newDeps = chunks[i].split(" ");
         Preconditions.checkArgument(newDeps.length == 3);
         subjects.add(newDeps[0]);
+        subjectSyntacticCategories.add(rightSyntax.getCanonicalForm());
         argNums.add(Integer.parseInt(newDeps[1]));
         objects.add(Integer.parseInt(newDeps[2]));
       }
     }
 
     return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, logicalForm,
-        subjects, argNums, objects);
+        subjects, subjectSyntacticCategories, argNums, objects);
   }
 
   /**
@@ -166,6 +170,10 @@ public class CcgBinaryRule implements Serializable {
    */
   public String[] getSubjects() {
     return subjects;
+  }
+  
+  public HeadedSyntacticCategory[] getSubjectSyntacticCategories() {
+    return subjectSyntacticCategories;
   }
 
   /**

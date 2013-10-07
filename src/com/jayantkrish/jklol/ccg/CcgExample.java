@@ -86,17 +86,14 @@ public class CcgExample {
     return sentence;
   }
   
-  @Deprecated
   public List<String> getWords() {
     return sentence.getWords();
   }
 
-  @Deprecated
   public List<String> getPosTags() {
     return sentence.getPosTags();
   }
-  
-  @Deprecated
+
   public List<List<HeadedSyntacticCategory>> getSupertags() {
     return sentence.getSupertags();
   }

@@ -12,7 +12,7 @@ import com.google.common.base.Preconditions;
  * @author jayantk
  */
 public class Combinator implements Serializable {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
 
   private final int syntax;
   private final int[] syntaxUniqueVars;
@@ -25,6 +25,7 @@ public class Combinator implements Serializable {
 
   // Unfilled dependencies created by this operation.
   private final String[] subjects;
+  private final HeadedSyntacticCategory[] subjectSyntacticCategories;
   private final int[] argumentNumbers;
   // The variables each dependency accepts.
   private final int[] objects;
@@ -39,8 +40,9 @@ public class Combinator implements Serializable {
 
   public Combinator(int syntax, int[] syntaxUniqueVars, int[] leftVariableRelabeling,
       int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,
-      int[] unifiedVariables, String[] subjects, int[] argumentNumbers, int[] objects,
-      boolean isArgumentOnLeft, int argumentReturnDepth, CcgBinaryRule binaryRule) {
+      int[] unifiedVariables, String[] subjects, HeadedSyntacticCategory[] subjectSyntacticCategories, 
+      int[] argumentNumbers, int[] objects, boolean isArgumentOnLeft, int argumentReturnDepth,
+      CcgBinaryRule binaryRule) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
 
@@ -51,8 +53,14 @@ public class Combinator implements Serializable {
     this.unifiedVariables = unifiedVariables;
 
     Preconditions.checkArgument(subjects.length == objects.length);
+    Preconditions.checkArgument(subjects.length == subjectSyntacticCategories.length);
     Preconditions.checkArgument(subjects.length == argumentNumbers.length);
+    for (int i = 0; i < subjectSyntacticCategories.length; i++) {
+      Preconditions.checkArgument(subjectSyntacticCategories[i].isCanonicalForm());
+    }
+    
     this.subjects = subjects;
+    this.subjectSyntacticCategories = subjectSyntacticCategories;
     this.argumentNumbers = argumentNumbers;
     this.objects = objects;
 
@@ -106,7 +114,7 @@ public class Combinator implements Serializable {
     
     for (int i = 0; i < subjects.length; i++) {
       UnfilledDependency dep = UnfilledDependency.createWithKnownSubject(subjects[i],
-          headWordIndex, argumentNumbers[i], objects[i]);
+          subjectSyntacticCategories[i], headWordIndex, argumentNumbers[i], objects[i]);
       depAccumulator[i + accumulatorStartIndex] = parser.unfilledDependencyToLong(dep);
     }
     return accumulatorStartIndex + subjects.length;
@@ -154,6 +162,7 @@ public class Combinator implements Serializable {
     result = prime * result + Arrays.hashCode(resultOriginalVars);
     result = prime * result + Arrays.hashCode(resultVariableRelabeling);
     result = prime * result + Arrays.hashCode(rightVariableRelabeling);
+    result = prime * result + Arrays.hashCode(subjectSyntacticCategories);
     result = prime * result + Arrays.hashCode(subjects);
     result = prime * result + syntax;
     result = prime * result + Arrays.hashCode(syntaxUniqueVars);
@@ -190,6 +199,8 @@ public class Combinator implements Serializable {
     if (!Arrays.equals(resultVariableRelabeling, other.resultVariableRelabeling))
       return false;
     if (!Arrays.equals(rightVariableRelabeling, other.rightVariableRelabeling))
+      return false;
+    if (!Arrays.equals(subjectSyntacticCategories, other.subjectSyntacticCategories))
       return false;
     if (!Arrays.equals(subjects, other.subjects))
       return false;

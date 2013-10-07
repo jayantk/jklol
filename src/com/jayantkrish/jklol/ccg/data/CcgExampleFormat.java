@@ -10,6 +10,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
+import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -49,10 +50,11 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample> {
         continue;
       }
       String[] dep = dependencyParts[i].split("\\s+");
-      Preconditions.checkState(dep.length >= 5, "Illegal dependency string: " + dependencyParts[i]);
+      Preconditions.checkState(dep.length >= 6, "Illegal dependency string: " + dependencyParts[i]);
 
-      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
-          Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
+      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[2]), 
+          HeadedSyntacticCategory.parseFrom(dep[1]).getCanonicalForm(), dep[4],
+          Integer.parseInt(dep[5]), Integer.parseInt(dep[3])));
     }
 
     // Parse out a CCG syntactic tree, if one is provided.

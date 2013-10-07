@@ -25,17 +25,18 @@ public interface CcgFeatureFactory {
   /**
    * Gets a parametric factor defining the features of CCG dependency
    * structures. Given parameters, the returned parametric factor
-   * produces a distribution over the three argument variables. This
+   * produces a distribution over the four argument variables. This
    * distribution is also a distribution over CCG dependency
    * structures.
    * 
    * @param semanticHeadVar
+   * @param headSyntaxVar
    * @param semanticArgNumVar
    * @param semanticArgVar
    * @return
    */
-  ParametricFactor getDependencyFeatures(VariableNumMap semanticHeadVar, VariableNumMap
-      semanticArgNumVar, VariableNumMap semanticArgVar);
+  ParametricFactor getDependencyFeatures(VariableNumMap semanticHeadVar,
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap semanticArgVar);
 
   /**
    * Gets a parametric factor defining features over the distance between
@@ -43,12 +44,13 @@ public interface CcgFeatureFactory {
    * intervening words.
    *  
    * @param semanticHeadVar
+   * @param headSyntaxVar
    * @param semanticArgNumVar
    * @param wordDistanceVar
    * @return
    */
   ParametricFactor getDependencyWordDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap semanticArgNumVar, VariableNumMap wordDistanceVar);
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap wordDistanceVar);
   
   /**
    * Gets a parametric factor defining features over the distance between
@@ -56,12 +58,13 @@ public interface CcgFeatureFactory {
    * intervening punctuation marks.
    * 
    * @param semanticHeadVar
+   * @param headSyntaxVar
    * @param semanticArgNumVar
    * @param puncDistanceVar
    * @return
    */
   ParametricFactor getDependencyPuncDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap semanticArgNumVar, VariableNumMap puncDistanceVar);
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap puncDistanceVar);
 
   /**
    * Gets a parametric factor defining features over the distance between
@@ -69,12 +72,13 @@ public interface CcgFeatureFactory {
    * intervening verbs (detected using part-of-speech tags).
    * 
    * @param semanticHeadVar
+   * @param headSyntaxVar
    * @param semanticArgNumVar
    * @param verbDistanceVar
    * @return
    */
   ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap semanticArgNumVar, VariableNumMap verbDistanceVar);
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap verbDistanceVar);
 
   /**
    * Gets a parametric factor defining the features of lexicon entries

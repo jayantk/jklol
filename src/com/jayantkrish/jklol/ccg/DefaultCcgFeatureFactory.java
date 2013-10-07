@@ -17,30 +17,30 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
 
   @Override
   public ParametricFactor getDependencyFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap semanticArgNumVar, VariableNumMap semanticArgVar) {
-    VariableNumMap vars = VariableNumMap.unionAll(semanticHeadVar, semanticArgNumVar, semanticArgVar);
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap semanticArgVar) {
+    VariableNumMap vars = VariableNumMap.unionAll(semanticHeadVar, headSyntaxVar, semanticArgNumVar, semanticArgVar);
     return new DenseIndicatorLogLinearFactor(vars);
   }
 
   @Override
   public ParametricFactor getDependencyWordDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap semanticArgNumVar, VariableNumMap wordDistanceVar) {
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap wordDistanceVar) {
     return new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        semanticHeadVar, semanticArgNumVar, wordDistanceVar));
+        semanticHeadVar, headSyntaxVar, semanticArgNumVar, wordDistanceVar));
   }
 
   @Override
   public ParametricFactor getDependencyPuncDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap semanticArgNumVar, VariableNumMap puncDistanceVar) {
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap puncDistanceVar) {
     return new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        semanticHeadVar, semanticArgNumVar, puncDistanceVar));
+        semanticHeadVar, headSyntaxVar, semanticArgNumVar, puncDistanceVar));
   }
 
   @Override
   public ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap semanticHeadVar,
-      VariableNumMap semanticArgNumVar, VariableNumMap verbDistanceVar) {
+      VariableNumMap headSyntaxVar, VariableNumMap semanticArgNumVar, VariableNumMap verbDistanceVar) {
     return new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        semanticHeadVar, semanticArgNumVar, verbDistanceVar));
+        semanticHeadVar, headSyntaxVar, semanticArgNumVar, verbDistanceVar));
   }
 
   @Override

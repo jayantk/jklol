@@ -359,7 +359,7 @@ public class CcgCategory implements Serializable {
     List<UnfilledDependency> unfilledDependencies = Lists.newArrayListWithCapacity(subjects.size());
     for (int i = 0; i < subjects.size(); i++) {
       IndexedPredicate subject = new IndexedPredicate(subjects.get(i), wordIndex);
-      UnfilledDependency dep = new UnfilledDependency(subject, -1, argumentNumbers.get(i),
+      UnfilledDependency dep = new UnfilledDependency(subject, syntax, -1, argumentNumbers.get(i),
           null, objects.get(i));
 
       // Technically, this is unnecessary since removing the

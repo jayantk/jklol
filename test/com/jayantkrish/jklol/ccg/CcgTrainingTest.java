@@ -43,7 +43,8 @@ public class CcgTrainingTest extends TestCase {
       "\",\",((N{1}\\N{1}){0}/N{2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 x)))),\"0 ,\",\", 1 1\",\", 2 2\"",
       "2,N{0},pred:num,0 NUM", 
       "2,(N{1}/N{1}){0},,0 NUM,NUM 1 1",
-      "\"#\",(N{1}/N{1}){0},,0 #,# 1 1", "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
+      "\"#\",(N{1}/N{1}){0},,0 #,# 1 1",
+      "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
       "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo",
       "unk-jj,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
       "unk-jj,N{0},,0 pred:unk-jj",
@@ -52,27 +53,27 @@ public class CcgTrainingTest extends TestCase {
   };
 
   private static final String[] trainingData = {
-      "red block###pred:red 0 1 pred:block 1######(lambda x (and (pred:red x) (pred:block x)))",
-      "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2######(lambda x (and (pred:red x) (pred:green x) (pred:block x)))",
-      "red object near the green block###pred:red 0 1 pred:object 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:object 1,pred:near 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:object x) (pred:near x y) (pred:green y) (pred:block y))))",
-      "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:block x) (pred:near x y) (pred:green y) (pred:block y))))",
-      "the kinda red block###pred:red 2 1 pred:block 3,pred:almost 1 1 pred:red 2######(lambda x (and (pred:block x) ((pred:almost pred:red) x)))",
-      "near the object is the red block###pred:near 0 2 pred:object 2,pred:equals 3 1 pred:near 0,pred:equals 3 2 pred:block 6,pred:red 5 1 pred:block 6######(exists x y z (and (pred:object x) (pred:near y x) (pred:equals y z) (pred:red z) (pred:block z)))",
-      "block , object###\", 1 1 pred:block 0\",\", 1 2 pred:object 2\"######(lambda x (and (pred:block x) (pred:object x)))",
+      "red block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1######(lambda x (and (pred:red x) (pred:block x)))",
+      "red green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 2,pred:green (N{1}/N{1}){0} 1 1 pred:block 2######(lambda x (and (pred:red x) (pred:green x) (pred:block x)))",
+      "red object near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:object 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:object 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:object x) (pred:near x y) (pred:green y) (pred:block y))))",
+      "red block near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:block 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:block x) (pred:near x y) (pred:green y) (pred:block y))))",
+      "the kinda red block###pred:red (N{1}/N{1}){0} 2 1 pred:block 3,pred:almost ((N{1}/N{1}){2}/(N{1}/N{1}){2}){0} 1 1 pred:red 2######(lambda x (and (pred:block x) ((pred:almost pred:red) x)))",
+      "near the object is the red block###pred:near ((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0} 0 2 pred:object 2,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 1 pred:near 0,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 2 pred:block 6,pred:red (N{1}/N{1}){0} 5 1 pred:block 6######(exists x y z (and (pred:object x) (pred:near y x) (pred:equals y z) (pred:red z) (pred:block z)))",
+      "block , object###\", ((N{1}\\N{1}){0}/N{2}){0} 1 1 pred:block 0\",\", ((N{1}\\N{1}){0}/N{2}){0} 1 2 pred:object 2\"######(lambda x (and (pred:block x) (pred:object x)))",
   };
 
   private static final String[] trainingDataWithSyntax = {
-    "the block is green###pred:equals 2 1 pred:block 1,pred:equals 2 2 pred:green 3###<S <N <(N/N) DT the> <N NN block>> <(S\\N) <(S\\N)/N VB is> <N NN green>>>",
-    "block that block is###that 1 1 pred:block 0,that 1 2 pred:equals 3,pred:equals 3 1 pred:block 2,pred:equals 3 2 pred:block 0###"
+    "the block is green###pred:equals ((S{0}\\N{1}){0}/N{2}){0} 2 1 pred:block 1,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 2 2 pred:green 3###<S <N <(N/N) DT the> <N NN block>> <(S\\N) <(S\\N)/N VB is> <N NN green>>>",
+    "block that block is###that ((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0} 1 1 pred:block 0,that ((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0} 1 2 pred:equals 3,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 1 pred:block 2,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 2 pred:block 0###"
         + "<N <N NN block> <(N\\N) <((N\\N)/(S/N)) NN that> <(S/N) <(S/(S\\N)_N NN block> <(S\\N)/N VB is>>>> ",
-    "red block###pred:red 0 1 pred:block 1###<N <(N/N) JJ red> <N NN block>>",
-    "red green block###pred:red 0 1 pred:block 2,pred:green 1 1 pred:block 2###<N <(N/N) JJ red> <N <(N/N) JJ green> <N NN block>>>",
-    "red block near the green block###pred:red 0 1 pred:block 1,pred:green 4 1 pred:block 5,pred:near 2 1 pred:block 1,pred:near 2 2 pred:block 5###"
+    "red block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1###<N <(N/N) JJ red> <N NN block>>",
+    "red green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 2,pred:green (N{1}/N{1}){0} 1 1 pred:block 2###<N <(N/N) JJ red> <N <(N/N) JJ green> <N NN block>>>",
+    "red block near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:block 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5###"
         + "<N <N <(N/N) JJ red> <N NN block>> <N\\N <(N\\N)/N IN near> <N <N/N DT the> <N <(N/N) JJ green> <N NN block>>>>>",
-    "# 2 block###\"# 0 1 NUM 1\",\"NUM 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) JJ #> <(N/N) JJ 2>> <N NN block>>",
+    "# 2 block###\"# ((N{1}/N{1}){2}/(N{1}/N{1}){2}){0} 0 1 NUM 1\",\"NUM (N{1}/N{1}){0} 1 1 pred:block 2\"###<N <N/N <((N/N)/(N/N)) JJ #> <(N/N) JJ 2>> <N NN block>>",
     "foo######<ABCD NN foo>",
     "block######<N NN block>",
-    "not_in_lexicon block###pred:unk-jj 0 1 pred:block 1###<N <(N/N) JJ not_in_lexicon> <N NN block>>"
+    "not_in_lexicon block###pred:unk-jj (N{1}/N{1}){0} 0 1 pred:block 1###<N <(N/N) JJ not_in_lexicon> <N NN block>>"
   };
   
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};

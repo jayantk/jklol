@@ -234,8 +234,8 @@ public class ChartEntry {
           // Relabel this variable unless the relabeling drops it.
           // Either way, the search for the variable is finished.
           if (relabeling[j] != -1) {
-            unfilledDependency -= CcgParser.marshalUnfilledDependency(objectVarNum, 0, 0, 0, 0);
-            unfilledDependency += CcgParser.marshalUnfilledDependency(relabeling[j], 0, 0, 0, 0);
+            unfilledDependency -= CcgParser.marshalUnfilledDependency(objectVarNum, 0, 0, 0, 0, 0);
+            unfilledDependency += CcgParser.marshalUnfilledDependency(relabeling[j], 0, 0, 0, 0, 0);
             dependencyAccumulator[numDepsRelabeled + accumulatorStartIndex] = unfilledDependency;
             numDepsRelabeled++;
           }

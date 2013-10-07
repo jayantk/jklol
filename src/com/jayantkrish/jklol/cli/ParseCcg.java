@@ -261,6 +261,15 @@ public class ParseCcg extends AbstractCli {
   
   private static List<DependencyStructure> getDependenciesCcgbank(CcgParse parse) {
     SyntacticCategory toCat = SyntacticCategory.parseFrom("((S[to]\\NP)/(S[b]\\NP))");
+    
+    Set<SyntacticCategory> beLightVerbCats = Sets.newHashSet();
+    String[] beLightVerbStrings = new String[] {"((S[dcl]\\NP)/(S[ng]\\NP))",                                                                                                        
+        "((S[dcl]\\NP)/(S[pt]\\NP))", "((S[dcl]\\NP)/(S[b]\\NP))"};
+    for (String lightVerb : beLightVerbStrings) {
+      beLightVerbCats.add(SyntacticCategory.parseFrom(lightVerb));
+    }
+
+    Set<Integer> beIndexesToCheck = Sets.newHashSet();
     CcgSyntaxTree syntaxTree = parse.getSyntacticParse();
     List<DependencyStructure> filteredDependencies = Lists.newArrayList();
     for (DependencyStructure dep : parse.getAllDependencies()) {
@@ -269,6 +278,26 @@ public class ParseCcg extends AbstractCli {
       if (cat.equals(toCat) && dep.getArgIndex() == 1) {
         continue;
       }
+      
+      for (SyntacticCategory beLightVerbCat : beLightVerbCats) {
+        if (beLightVerbCat.equals(cat) && dep.getArgIndex() == 2) {
+          beIndexesToCheck.add(dep.getObjectWordIndex());
+        }
+      }
+      
+      filteredDependencies.add(dep);
+    }
+    
+    Set<String> beForms = Sets.newHashSet("be", "being", "been");
+    List<DependencyStructure> toReCheck = filteredDependencies;
+    filteredDependencies = Lists.newArrayList();
+    List<String> words = parse.getSpannedWords();
+    for (DependencyStructure dep : toReCheck) {
+      int depHeadIndex = dep.getHeadWordIndex();
+      if (beIndexesToCheck.contains(depHeadIndex) && beForms.contains(words.get(depHeadIndex).toLowerCase()) && dep.getArgIndex() == 1) {
+        continue;
+      }
+
       filteredDependencies.add(dep);
     }
     return filteredDependencies;

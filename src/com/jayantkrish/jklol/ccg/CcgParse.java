@@ -422,6 +422,17 @@ public class CcgParse {
   public List<String> getLexiconTriggerWords() {
     return lexiconTriggerWords;
   }
+  
+  public List<String> getSpannedWords() {
+    if (isTerminal()) {
+      return spannedWords;
+    } else {
+      List<String> words = Lists.newArrayList();
+      words.addAll(left.getSpannedWords());
+      words.addAll(right.getSpannedWords());
+      return words;
+    }
+  }
 
   public List<String> getSpannedPosTags() {
     if (isTerminal()) {

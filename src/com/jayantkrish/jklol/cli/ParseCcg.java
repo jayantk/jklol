@@ -25,6 +25,8 @@ import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
+import com.jayantkrish.jklol.ccg.chart.CcgChart;
+import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
@@ -137,7 +139,6 @@ public class ParseCcg extends AbstractCli {
       List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, posTags, options.valueOf(beamSize));
       printCcgParses(parses, options.valueOf(numParses), options.has(atomic), options.has(printLf));
     }
-    System.exit(0);
   }
   
   public static void parsePosTaggedInput(List<String> input, List<String> wordAccumulator,
@@ -259,6 +260,36 @@ public class ParseCcg extends AbstractCli {
         1, 1);
   }
   
+  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart) {
+    boolean foundFailurePoint = false;
+    if (!tree.isTerminal()) {
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart);
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart);
+    }
+    
+    if (foundFailurePoint) {
+      return true;
+    } else {
+      int spanStart = tree.getSpanStart();
+      int spanEnd = tree.getSpanEnd();
+
+      int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
+      if (numChartEntries == 0) {
+        if (tree.isTerminal()) {
+          System.out.println("Parse failure terminal: " + tree.getWords() + " -> " +
+              tree.getRootSyntax() + " headed: " + tree.getHeadedSyntacticCategory());
+        } else {
+          System.out.println("Parse failure nonterminal: " + tree.getLeft().getRootSyntax() + " "
+              + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());
+        }
+
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
   private static List<DependencyStructure> getDependenciesCcgbank(CcgParse parse) {
     SyntacticCategory toCat = SyntacticCategory.parseFrom("((S[to]\\NP)/(S[b]\\NP))");
     
@@ -468,12 +499,11 @@ public class ParseCcg extends AbstractCli {
     @Override
     public CcgLoss map(CcgExample example) {
       CcgParse parse = null;
+      SyntacticChartFilter filter = null;
       if (useCcgbankDerivation) {
-        SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
-        parse = parser.parse(example.getWords(), example.getPosTags(), filter);
-      } else {
-        parse = parser.parse(example.getWords(), example.getPosTags());
+        filter = new SyntacticChartFilter(example.getSyntacticParse());
       }
+      parse = parser.parse(example.getWords(), example.getPosTags(), filter);
       System.out.println("SENT: " + example.getWords());
 
       if (parse != null) {
@@ -481,6 +511,15 @@ public class ParseCcg extends AbstractCli {
         return computeLoss(parse, example, filterDependenciesCcgbank);
       } else {
         System.out.println("NO ANALYSIS: " + example.getWords());
+        
+        if (useCcgbankDerivation) {
+          // Provide a deeper analysis of why parsing failed.
+          CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
+          parser.getParser().parseCommon(chart, example.getWords(), example.getPosTags(), filter,
+              null, -1);
+          analyzeParseFailure(example.getSyntacticParse(), chart);
+        }
+
         return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 1);
       }
     }

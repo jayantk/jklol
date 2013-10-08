@@ -348,7 +348,18 @@ public class TaggerUtils {
         numLabels += prediction.get(i).size();
       }
 
-      System.out.println(item.getItems() + "\n" + prediction + "\n" + actual);
+      StringBuilder sb = new StringBuilder();
+      sb.append(item.getItems());
+      sb.append("\n");
+      for (int i = 0; i < item.getItems().size(); i++) {
+        sb.append(item.getItems().get(i) + "\t" + actual.get(i) + "\t" + prediction.get(i));
+        if (!prediction.get(i).contains(actual.get(i))) {
+          sb.append("\t" + "INCORRECT");
+        }
+        sb.append("\n");
+      }
+      
+      System.out.println(sb.toString());
       int numSentencesCorrect = (numTagsCorrect == actual.size()) ? 1 : 0;
       return new SequenceTaggerError(numTagsCorrect, actual.size(), numLabels, numSentencesCorrect, 1);
     }

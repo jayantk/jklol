@@ -303,6 +303,10 @@ public class SyntacticCategory implements Serializable {
     return assignFeatures(valueMap, Collections.<Integer, Integer>emptyMap());
   }
 
+  public SyntacticCategory discardFeaturePassingMarkup() {
+    return assignAllFeatures(DEFAULT_FEATURE_VALUE);
+  }
+
   /**
    * Gets a new syntactic category identical to this one, except that
    * all features have been removed from atomic categories in

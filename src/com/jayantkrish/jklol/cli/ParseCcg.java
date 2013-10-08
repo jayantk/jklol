@@ -22,6 +22,8 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
+import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
@@ -255,9 +257,26 @@ public class ParseCcg extends AbstractCli {
     int unlabeledTp = correct;
     int unlabeledFp = falsePositive;
     int unlabeledFn = falseNegative;
+    
+    // Compute the accuracies of the lexical categories.
+    int correctSyntacticCategories = 0;
+    List<SyntacticCategory> predictedSyntacticCategories = Lists.newArrayList();
+    for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {
+      predictedSyntacticCategories.add(entry.getCategory().getSyntax().getSyntax().discardFeaturePassingMarkup());
+    }
+    List<SyntacticCategory> actualSyntacticCategories = example.getSyntacticParse().getAllSpannedHeadedSyntacticCategories();
+    Preconditions.checkArgument(predictedSyntacticCategories.size() == actualSyntacticCategories.size());
+    for (int i = 0; i < predictedSyntacticCategories.size(); i++) {
+      if (predictedSyntacticCategories.get(i).equals(actualSyntacticCategories.get(i))) {
+        correctSyntacticCategories++;
+      } else {
+        System.out.println("Incorrect category: " + predictedSyntacticCategories.get(i) + " -> " + actualSyntacticCategories.get(i));
+      }
+    }
+    System.out.println("Syntactic Category Accuracy: " + (((double) correctSyntacticCategories) / actualSyntacticCategories.size()));
 
     return new CcgLoss(labeledTp, labeledFp, labeledFn, unlabeledTp, unlabeledFp, unlabeledFn,
-        1, 1);
+        correctSyntacticCategories, actualSyntacticCategories.size(), 1, 1);
   }
   
   public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart) {
@@ -344,7 +363,7 @@ public class ParseCcg extends AbstractCli {
     for (DependencyStructure dep : deps) {
       int headIndex = dep.getHeadWordIndex();
       labeledDeps.add(new LabeledDep(dep.getHeadWordIndex(), dep.getObjectWordIndex(),
-          syntaxTree.getLexiconEntryForWordIndex(headIndex).getWithoutFeatures(), dep.getArgIndex()));
+          syntaxTree.getLexiconEntryForWordIndex(headIndex).discardFeaturePassingMarkup(), dep.getArgIndex()));
     }
     return labeledDeps;
   }
@@ -369,13 +388,16 @@ public class ParseCcg extends AbstractCli {
     private final int unlabeledTruePositives;
     private final int unlabeledFalsePositives;
     private final int unlabeledFalseNegatives;
+    
+    private final int correctSyntacticCategories;
+    private final int totalSyntacticCategories;
 
     private final int numExamplesParsed;
     private final int numExamples;
 
     public CcgLoss(int labeledTruePositives, int labeledFalsePositives, int labeledFalseNegatives,
         int unlabeledTruePositives, int unlabeledFalsePositives, int unlabeledFalseNegatives,
-        int numExamplesParsed, int numExamples) {
+        int correctSyntacticCategories, int totalSyntacticCategories, int numExamplesParsed, int numExamples) {
       this.labeledTruePositives = labeledTruePositives;
       this.labeledFalsePositives = labeledFalsePositives;
       this.labeledFalseNegatives = labeledFalseNegatives;
@@ -383,6 +405,9 @@ public class ParseCcg extends AbstractCli {
       this.unlabeledTruePositives = unlabeledTruePositives;
       this.unlabeledFalsePositives = unlabeledFalsePositives;
       this.unlabeledFalseNegatives = unlabeledFalseNegatives;
+      
+      this.correctSyntacticCategories = correctSyntacticCategories;
+      this.totalSyntacticCategories = totalSyntacticCategories;
 
       this.numExamplesParsed = numExamplesParsed;
       this.numExamples = numExamples;
@@ -447,6 +472,10 @@ public class ParseCcg extends AbstractCli {
       double recall = getUnlabeledDependencyRecall();
       return (2 * precision * recall) / (precision + recall);
     }
+    
+    public double getSyntacticCategoryAccuracy() {
+      return ((double) correctSyntacticCategories) / totalSyntacticCategories;
+    }
 
     /**
      * Gets the fraction of examples in the test set for which a CCG
@@ -471,6 +500,7 @@ public class ParseCcg extends AbstractCli {
       return new CcgLoss(labeledTruePositives + loss.labeledTruePositives, labeledFalsePositives + loss.labeledFalsePositives,
           labeledFalseNegatives + loss.labeledFalseNegatives, unlabeledTruePositives + loss.unlabeledTruePositives,
           unlabeledFalsePositives + loss.unlabeledFalsePositives, unlabeledFalseNegatives + loss.unlabeledFalseNegatives, 
+          correctSyntacticCategories + loss.correctSyntacticCategories, totalSyntacticCategories + loss.totalSyntacticCategories,
           numExamplesParsed + loss.numExamplesParsed, numExamples + loss.numExamples);
     }
 
@@ -480,6 +510,7 @@ public class ParseCcg extends AbstractCli {
           + getLabeledDependencyRecall() + "\nLabeled F Score: " + getLabeledDependencyFScore()
           + "\nUnlabeled Precision: " + getUnlabeledDependencyPrecision() + "\nUnlabeled Recall: "
           + getUnlabeledDependencyRecall() + "\nUnlabeled F Score: " + getUnlabeledDependencyFScore()
+          + "\nSyntactic Category Accuracy: " + getSyntacticCategoryAccuracy()
           + "\nCoverage: " + getCoverage();
     }
   }
@@ -520,7 +551,7 @@ public class ParseCcg extends AbstractCli {
           analyzeParseFailure(example.getSyntacticParse(), chart);
         }
 
-        return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 1);
+        return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
       }
     }
   }
@@ -528,7 +559,7 @@ public class ParseCcg extends AbstractCli {
   public static class CcgLossReducer extends SimpleReducer<CcgLoss> {
     @Override
     public CcgLoss getInitialValue() {
-      return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 0);
+      return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 
     @Override

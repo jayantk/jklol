@@ -16,26 +16,34 @@ public class SemTypePattern implements CategoryPattern {
   
   private final SyntacticCategory patternCategory;
   private final Expression template;
+  private final boolean matchOnSemanticType;
   
   private static final String WORD_SEP = "_";
   private static final String WORD_PATTERN = "<word>";
 
-  public SemTypePattern(SyntacticCategory patternCategory, Expression template) {
+  public SemTypePattern(SyntacticCategory patternCategory, Expression template,
+      boolean matchOnSemanticType) {
     this.patternCategory = Preconditions.checkNotNull(patternCategory);
     this.template = Preconditions.checkNotNull(template);
+    this.matchOnSemanticType = matchOnSemanticType;
   }
 
   public static SemTypePattern parseFrom(String string) {
     String[] parts = new CsvParser(',', '"', CsvParser.NULL_ESCAPE).parseLine(string);
-    Preconditions.checkArgument(parts.length == 2);
+    Preconditions.checkArgument(parts.length == 3);
     
     return new SemTypePattern(SyntacticCategory.parseFrom(parts[0]),
-        ExpressionParser.lambdaCalculus().parseSingleExpression(parts[1]));
+        ExpressionParser.lambdaCalculus().parseSingleExpression(parts[1]),
+        parts[3].equals("T"));
   }
 
   @Override
   public boolean matches(List<String> words, SyntacticCategory category) {
-    return hasSameSemanticType(patternCategory, category, true);
+    if (matchOnSemanticType) {
+      return hasSameSemanticType(patternCategory, category, true);
+    } else {
+      return patternCategory.isUnifiableWith(category);
+    }
   }
 
   public static boolean hasSameSemanticType(SyntacticCategory pattern,

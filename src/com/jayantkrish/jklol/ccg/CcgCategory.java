@@ -75,6 +75,9 @@ public class CcgCategory implements Serializable {
   public CcgCategory(HeadedSyntacticCategory syntax, Expression logicalForm, List<String> subjects,
       List<Integer> argumentNumbers, List<Integer> objects, List<Set<String>> variableAssignments) {
     this.syntax = Preconditions.checkNotNull(syntax);
+    // TODO: is this check really necessary? Seems useful, but could be 
+    // weird edge cases where we don't want this.
+    Preconditions.checkArgument(syntax.isCanonicalForm());
     this.logicalForm = logicalForm;
 
     this.subjects = ImmutableList.copyOf(subjects);

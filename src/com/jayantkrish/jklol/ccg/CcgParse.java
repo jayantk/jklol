@@ -120,21 +120,21 @@ public class CcgParse {
    * @param heads
    * @param deps
    * @param spannedWords
-   * @param lexicalProbability
+   * @param probability
    * @return
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
       List<String> lexiconTriggerWords, List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
-      List<String> spannedWords, double lexicalProbability, UnaryCombinator unaryRule,
+      List<String> spannedWords, double probability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd) {
     return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, deps,
-        lexicalProbability, null, null, null, unaryRule, spanStart, spanEnd);
+        probability, null, null, null, unaryRule, spanStart, spanEnd);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
-      List<DependencyStructure> dependencies, double dependencyProbability, CcgParse left,
+      List<DependencyStructure> dependencies, double probability, CcgParse left,
       CcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
-    return new CcgParse(syntax, null, null, null, null, heads, dependencies, dependencyProbability, left,
+    return new CcgParse(syntax, null, null, null, null, heads, dependencies, probability, left,
         right, combinator, unaryRule, spanStart, spanEnd);
   }
 
@@ -413,6 +413,10 @@ public class CcgParse {
    */
   public List<String> getWords() {
     return spannedWords;
+  }
+  
+  public List<String> getPosTags() {
+    return posTags;
   }
   
   /**

@@ -43,7 +43,7 @@ import com.jayantkrish.jklol.util.IoUtils;
  * Parses input sentences using a trained CCG parser.
  * 
  * @author jayant
- */
+n */
 public class ParseCcg extends AbstractCli {
   
   private OptionSpec<String> model;

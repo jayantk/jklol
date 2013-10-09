@@ -9,11 +9,10 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
 
-
 /**
- * An entry of a CCG parse chart, containing both a syntactic
- * and semantic type. The semantic type consists of yet-unfilled
- * semantic dependencies.
+ * An entry of a CCG parse chart, containing both a syntactic and
+ * semantic type. The semantic type consists of yet-unfilled semantic
+ * dependencies.
  * <p>
  * Chart entries also include any filled dependencies instantiated
  * during the parsing operation that produced the entry. Finally,
@@ -38,7 +37,8 @@ public class ChartEntry {
   private final UnaryCombinator leftUnaryRule;
   private final UnaryCombinator rightUnaryRule;
 
-  // An assignment to the semantic variables in the syntactic category.
+  // An assignment to the semantic variables in the syntactic
+  // category.
   // Each value is both a predicate and its index in the sentence.
   private final long[] assignments;
 
@@ -48,10 +48,12 @@ public class ChartEntry {
   // Complete dependency structures, encoded into longs for
   // efficiency.
   private final long[] deps;
-  
-  // A hash code for the headed syntactic category, unfilled dependencies,
-  // and assignments of this entry. Two chart entries with different hash
-  // codes differ in at least one of these three values. 
+
+  // A hash code for the headed syntactic category, unfilled
+  // dependencies,
+  // and assignments of this entry. Two chart entries with different
+  // hash
+  // codes differ in at least one of these three values.
   private final long syntaxHeadHashCode;
 
   // If this is a terminal, lexiconEntry contains the CcgCategory
@@ -75,7 +77,26 @@ public class ChartEntry {
   private final int rightChartIndex;
 
   private final Combinator combinator;
-
+  
+  /**
+   * Use this constructor for nonterminals in the parse tree.
+   * 
+   * @param syntax
+   * @param syntaxUniqueVars
+   * @param rootUnaryRule
+   * @param leftUnaryRule
+   * @param rightUnaryRule
+   * @param assignments
+   * @param unfilledDependencies
+   * @param deps
+   * @param leftSpanStart
+   * @param leftSpanEnd
+   * @param leftChartIndex
+   * @param rightSpanStart
+   * @param rightSpanEnd
+   * @param rightChartIndex
+   * @param combinator
+   */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, UnaryCombinator rootUnaryRule, UnaryCombinator leftUnaryRule,
       UnaryCombinator rightUnaryRule, long[] assignments, long[] unfilledDependencies,
       long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
@@ -106,8 +127,22 @@ public class ChartEntry {
     this.combinator = combinator;
   }
 
+  /**
+   * Use this constructor for terminals in the parse tree.
+   * 
+   * @param syntax
+   * @param syntaxUniqueVars
+   * @param ccgCategory
+   * @param terminalWords
+   * @param rootUnaryRule
+   * @param assignments
+   * @param unfilledDependencies
+   * @param deps
+   * @param spanStart
+   * @param spanEnd
+   */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, List<String> terminalWords,
-      UnaryCombinator rootUnaryRule,  long[] assignments, long[] unfilledDependencies, long[] deps,
+      UnaryCombinator rootUnaryRule, long[] assignments, long[] unfilledDependencies, long[] deps,
       int spanStart, int spanEnd) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
@@ -145,8 +180,21 @@ public class ChartEntry {
   }
 
   /**
-   * Gets the unary rule used to produce this chart entry. If no
-   * rule was used, returns {@code null}.
+   * Gets the type of the combinator used to produce this chart entry.
+   * 
+   * @return
+   */
+  public Combinator.Type getDerivingCombinatorType() {
+    if (combinator == null) {
+      return Combinator.Type.OTHER;
+    } else {
+      return combinator.getType();
+    }
+  }
+
+  /**
+   * Gets the unary rule used to produce this chart entry. If no rule
+   * was used, returns {@code null}.
    * 
    * @return
    */
@@ -161,11 +209,11 @@ public class ChartEntry {
   public UnaryCombinator getRightUnaryRule() {
     return rightUnaryRule;
   }
-  
+
   public long[] getAssignments() {
     return assignments;
   }
-  
+
   public int[] getAssignmentPredicateNums() {
     int[] predicateNums = new int[assignments.length];
     for (int i = 0; i < assignments.length; i++) {
@@ -175,8 +223,8 @@ public class ChartEntry {
   }
 
   /**
-   * Replaces the {@code i}th unique variable in {@code this} with
-   * the {@code i}th variable in {@code relabeling}.
+   * Replaces the {@code i}th unique variable in {@code this} with the
+   * {@code i}th variable in {@code relabeling}.
    * 
    * @param relabeling
    * @return
@@ -216,10 +264,11 @@ public class ChartEntry {
     Preconditions.checkState(numFilled != -1);
     return accumulator;
   }
-  
+
   public int getUnfilledDependenciesRelabeled(int[] relabeling, long[] dependencyAccumulator, int accumulatorStartIndex) {
     if (dependencyAccumulator.length < accumulatorStartIndex + unfilledDependencies.length) {
-      // The accumulator does not have enough space to store the dependencies
+      // The accumulator does not have enough space to store the
+      // dependencies
       // in this chart entry.
       return -1;
     }
@@ -315,9 +364,9 @@ public class ChartEntry {
   @Override
   public String toString() {
     return "[" + Arrays.toString(assignments) + ":" + syntax
-             + " " + Arrays.toString(deps) + " " + Arrays.toString(unfilledDependencies) + "]";
+        + " " + Arrays.toString(deps) + " " + Arrays.toString(unfilledDependencies) + "]";
   }
-  
+
   private static long computeSyntaxHeadHashCode(int syntax, long[] assignments,
       long[] unfilledDependencies) {
 
@@ -325,12 +374,12 @@ public class ChartEntry {
     for (int i = 0; i < assignments.length; i++) {
       assignmentHashCode *= assignments[i];
     }
-    
+
     long depHashCode = 5;
     for (int i = 0; i < unfilledDependencies.length; i++) {
       depHashCode *= unfilledDependencies[i];
     }
-    
+
     return ((((long) syntax) * 31) + assignmentHashCode + depHashCode) * 63;
   }
 }

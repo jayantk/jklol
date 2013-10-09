@@ -195,6 +195,7 @@ public class CcgParser implements Serializable {
   private final Set<Long> predicatesInRules;
 
   private final boolean allowWordSkipping;
+  private final boolean normalFormOnly;
 
   public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
@@ -209,7 +210,7 @@ public class CcgParser implements Serializable {
       DiscreteFactor binaryRuleDistribution, VariableNumMap unaryRuleInputVar,
       VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap searchMoveVar,
       DiscreteFactor compiledSyntaxDistribution, VariableNumMap rootSyntaxVar, DiscreteFactor rootSyntaxDistribution,
-      boolean allowWordSkipping) {
+      boolean allowWordSkipping, boolean normalFormOnly) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
@@ -227,11 +228,12 @@ public class CcgParser implements Serializable {
     Preconditions.checkArgument(expectedTerminalSyntaxVars.equals(terminalSyntaxDistribution.getVars()));
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(VariableNumMap.unionAll(
-        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar)));
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
+        dependencyHeadPosVar, dependencyArgPosVar)));
     List<Integer> dependencyVarNums = Ints.asList(new int[] {
-        dependencyHeadVar.getOnlyVariableNum(), dependencySyntaxVar.getOnlyVariableNum(), dependencyArgNumVar.getOnlyVariableNum(),
-        dependencyArgVar.getOnlyVariableNum(), dependencyHeadPosVar.getOnlyVariableNum(),  dependencyArgPosVar.getOnlyVariableNum()
-    });
+        dependencyHeadVar.getOnlyVariableNum(), dependencySyntaxVar.getOnlyVariableNum(),
+        dependencyArgNumVar.getOnlyVariableNum(), dependencyArgVar.getOnlyVariableNum(),
+        dependencyHeadPosVar.getOnlyVariableNum(),  dependencyArgPosVar.getOnlyVariableNum()});
     Preconditions.checkArgument(Ordering.natural().isOrdered(dependencyVarNums),
         "Variables of the dependency distribution are given in the wrong order: " + dependencyVarNums);
     this.dependencyHeadVar = dependencyHeadVar;
@@ -332,6 +334,7 @@ public class CcgParser implements Serializable {
     }
 
     this.allowWordSkipping = allowWordSkipping;
+    this.normalFormOnly = normalFormOnly;
   }
 
   public static DiscreteVariable buildSyntacticCategoryDictionary(Iterable<HeadedSyntacticCategory> syntacticCategories) {
@@ -594,11 +597,13 @@ public class CcgParser implements Serializable {
     if (argumentOnLeft) {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, argumentRelabeling,
           functionRelabeling, resultRelabeling, resultRelabeling, unifiedVariables,
-          new String[0], new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft, 0, null);
+          new String[0], new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft, 0, null, 
+          Combinator.Type.BACKWARD_APPLICATION);
     } else {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionRelabeling,
           argumentRelabeling, resultRelabeling, resultRelabeling, unifiedVariables, new String[0],
-          new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft, 0, null);
+          new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft, 0, null,
+          Combinator.Type.FORWARD_APPLICATION);
     }
   }
 
@@ -622,6 +627,8 @@ public class CcgParser implements Serializable {
         Collections.<Integer, Integer> emptyMap());
     HeadedSyntacticCategory resultType = functionCat.assignFeatures(assignedFeatures, relabeledFeatures)
         .getReturnType();
+    
+    Direction firstDirection = null;
     for (int i = argumentReturnDepth; i > 0; i--) {
       HeadedSyntacticCategory curArg = relabeledArgumentType;
       int headVariable = argumentAsHead ? relabeledArgumentType.getRootVariable() : functionCat.getRootVariable();
@@ -630,6 +637,9 @@ public class CcgParser implements Serializable {
         headVariable = curArg.getRootVariable();
       }
       Direction curDirection = curArg.getDirection();
+      if (firstDirection == null) {
+        firstDirection = curDirection;
+      }
       curArg = curArg.getArgumentType();
       resultType = resultType.addArgument(curArg, curDirection, headVariable);
     }
@@ -654,6 +664,18 @@ public class CcgParser implements Serializable {
       // syntactic categories. Such composition rules are discarded.
       return null;
     }
+    
+    Combinator.Type combinatorType = null;
+    if (firstDirection == functionCat.getDirection()) {
+      if (argumentOnLeft) {
+        combinatorType = Combinator.Type.BACKWARD_COMPOSITION;
+      } else {
+        combinatorType = Combinator.Type.FORWARD_COMPOSITION;
+      }
+    } else {
+      // Crossed composition.
+      combinatorType = Combinator.Type.OTHER;
+    }
 
     int functionReturnTypeInt = syntaxVarType.getValueIndex(canonicalResultType);
     int[] functionReturnTypeVars = canonicalResultType.getUniqueVariables();
@@ -661,12 +683,12 @@ public class CcgParser implements Serializable {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, argumentCatRelabeling,
           functionCatRelabeling, resultUniqueVars, resultCatRelabeling, unifiedVariables,
           new String[0], new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft,
-          argumentReturnDepth, null);
+          argumentReturnDepth, null, combinatorType);
     } else {
       return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionCatRelabeling,
           argumentCatRelabeling, resultUniqueVars, resultCatRelabeling, unifiedVariables,
           new String[0], new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft,
-          argumentReturnDepth, null);
+          argumentReturnDepth, null, combinatorType);
     }
   }
 
@@ -727,7 +749,8 @@ public class CcgParser implements Serializable {
     int[] parentVars = parent.getUniqueVariables();
     return new Combinator(parentInt, parentVars, leftRelabelingArray, rightRelabelingArray,
         parentOriginalVars, parentRelabelingArray, unifiedVariables, rule.getSubjects(),
-        rule.getSubjectSyntacticCategories(), rule.getArgumentNumbers(), rule.getObjects(), false, -1, rule);
+        rule.getSubjectSyntacticCategories(), rule.getArgumentNumbers(), rule.getObjects(),
+        false, -1, rule, Combinator.Type.OTHER);
   }
 
   private static int[] relabelingMapToArray(Map<Integer, Integer> relabelingMap, int[] originalVars) {
@@ -1161,7 +1184,7 @@ public class CcgParser implements Serializable {
   public DiscreteFactor getSyntaxDistribution() {
     return compiledSyntaxDistribution;
   }
-  
+
   public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
     return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar, terminalSyntaxVar,
         terminalPosDistribution, terminalSyntaxDistribution, dependencyHeadVar, dependencySyntaxVar,
@@ -1169,7 +1192,7 @@ public class CcgParser implements Serializable {
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
         binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, searchMoveVar,
-        newCompiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping);
+        newCompiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping, normalFormOnly);
   }
 
   public DiscreteFactor getBinaryRuleDistribution() {
@@ -1690,11 +1713,12 @@ public class CcgParser implements Serializable {
             if (syntaxValues[index] != 0.0) {
               int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
               if (rightTypes.containsKey(rightType)) {
+                // Get the operation we're supposed to apply at this chart entry.
                 CcgSearchMove searchMove = (CcgSearchMove) searchMoveType.getValue(
                     (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
+                Combinator resultCombinator = searchMove.getBinaryCombinator();
 
                 // Apply the binary rule.
-                Combinator resultCombinator = searchMove.getBinaryCombinator();
                 // log.startTimer("ccg_parse/beam_loop/binary");
                 double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
                 // log.stopTimer("ccg_parse/beam_loop/binary");
@@ -1716,6 +1740,29 @@ public class CcgParser implements Serializable {
                   deploop: for (int rightIndex : rightTypes.get(rightType)) {
                     ChartEntry rightRoot = rightTrees[rightIndex];
                     double rightProb = rightProbs[rightIndex];
+
+                    // Determine if these chart entries can be combined under the
+                    // normal form constraints. Normal form constraints state that 
+                    // the result of a forward (backward) composition cannot be the
+                    // left (right) element of a forward (backward) combinator.
+                    if (normalFormOnly) {
+                      Combinator.Type leftCombinator = leftRoot.getDerivingCombinatorType();
+                      Combinator.Type resultCombinatorType = resultCombinator.getType();
+                      if (leftCombinator == Combinator.Type.FORWARD_COMPOSITION
+                          && searchMove.getLeftUnaryKeyNum() == -1
+                          && (resultCombinatorType == Combinator.Type.FORWARD_APPLICATION
+                              || resultCombinatorType == Combinator.Type.FORWARD_COMPOSITION)) {
+                        continue;
+                      }
+
+                      Combinator.Type rightCombinator = rightRoot.getDerivingCombinatorType();
+                      if (rightCombinator == Combinator.Type.BACKWARD_COMPOSITION
+                          && searchMove.getRightUnaryKeyNum() == -1
+                          && (resultCombinator.getType() == Combinator.Type.BACKWARD_APPLICATION
+                          || resultCombinator.getType() == Combinator.Type.BACKWARD_COMPOSITION)) {
+                        continue;
+                      }
+                    }
 
                     // log.startTimer("ccg_parse/beam_loop/unary");
                     long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();

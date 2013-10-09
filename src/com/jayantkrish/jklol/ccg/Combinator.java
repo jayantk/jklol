@@ -14,6 +14,10 @@ import com.google.common.base.Preconditions;
 public class Combinator implements Serializable {
   private static final long serialVersionUID = 2L;
 
+  public static enum Type {
+    FORWARD_APPLICATION, BACKWARD_APPLICATION, FORWARD_COMPOSITION, BACKWARD_COMPOSITION, OTHER
+  };
+
   private final int syntax;
   private final int[] syntaxUniqueVars;
 
@@ -33,16 +37,19 @@ public class Combinator implements Serializable {
   // Backpointer information for the combinator, describing
   // the CCG operation which created it.
   private final boolean isArgumentOnLeft;
-  private int argumentReturnDepth;
+  private final int argumentReturnDepth;
   // May be null, in which case the combinator did not originate
   // from a binary rule.
-  private CcgBinaryRule binaryRule;
+  private final CcgBinaryRule binaryRule;
+
+  // The type of this combinator (e.g., forward application)
+  private final Type type;
 
   public Combinator(int syntax, int[] syntaxUniqueVars, int[] leftVariableRelabeling,
       int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,
       int[] unifiedVariables, String[] subjects, HeadedSyntacticCategory[] subjectSyntacticCategories, 
       int[] argumentNumbers, int[] objects, boolean isArgumentOnLeft, int argumentReturnDepth,
-      CcgBinaryRule binaryRule) {
+      CcgBinaryRule binaryRule, Type type) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
 
@@ -67,6 +74,8 @@ public class Combinator implements Serializable {
     this.isArgumentOnLeft = isArgumentOnLeft;
     this.argumentReturnDepth = argumentReturnDepth;
     this.binaryRule = binaryRule;
+    
+    this.type = Preconditions.checkNotNull(type);
   }
 
   public int getSyntax() {
@@ -122,6 +131,15 @@ public class Combinator implements Serializable {
 
   public boolean isArgumentOnLeft() {
     return isArgumentOnLeft;
+  }
+
+  /**
+   * Gets the type of this combinator, e.g., forward application.
+   * 
+   * @return
+   */
+  public Type getType() {
+    return type;
   }
 
   /**

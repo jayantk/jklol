@@ -129,6 +129,7 @@ public abstract class AbstractCli {
   protected OptionSpec<String> ccgRules;
   protected OptionSpec<String> ccgDependencyFeatures;
   protected OptionSpec<Void> ccgApplicationOnly;
+  protected OptionSpec<Void> ccgNormalFormOnly;
 
   // Functional gradient ascent options
   protected OptionSpec<Integer> fgaIterations;
@@ -319,6 +320,8 @@ public abstract class AbstractCli {
           .withRequiredArg().ofType(String.class);
       ccgApplicationOnly = parser.accepts("applicationOnly",
           "Use only function application during parsing, i.e., no composition.");
+      ccgNormalFormOnly = parser.accepts("normalFormOnly",
+          "Only permit CCG derivations in Eisner normal form.");
     }
 
     if (opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT)) {
@@ -455,7 +458,7 @@ public abstract class AbstractCli {
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
-        posTagSet, !parsedOptions.has(ccgApplicationOnly), rules, false);
+        posTagSet, !parsedOptions.has(ccgApplicationOnly), rules, false, parsedOptions.has(ccgNormalFormOnly));
   }
 
   protected FunctionalGradientAscent createFunctionalGradientAscent(int numExamples) {

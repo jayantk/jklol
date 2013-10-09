@@ -173,7 +173,7 @@ public class CvsmTrainingTest extends TestCase {
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(rules),
-        null, null, true, null, false);
+        null, null, true, null, false, false);
     parser = family.getModelFromParameters(family.getNewSufficientStatistics());
 
     DiscreteVariable dimType = DiscreteVariable.sequence("seq", NUM_DIMS);

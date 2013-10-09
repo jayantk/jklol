@@ -35,7 +35,7 @@ import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
 
-  CcgParser parser, parserWithComposition, parserWithUnary,
+  CcgParser parser, parserWithComposition, parserWithCompositionNormalForm, parserWithUnary,
       parserWithUnaryAndComposition, parserWordSkip;
 
   ExpressionParser<Expression> exp;
@@ -129,13 +129,14 @@ public class CcgParserTest extends TestCase {
   semanticArgVar, semanticHeadPosVar, semanticArgPosVar;
 
   public void setUp() {
-    parser = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, false);
-    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false);
-    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false, false);
+    parser = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, false, false);
+    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false, false);
+    parserWithCompositionNormalForm = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false, true);
+    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false, false, false);
     parserWithUnaryAndComposition = parseLexicon(lexicon, binaryRuleArray,
-        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, true, false);
+        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, true, false, false);
 
-    parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true);
+    parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true, false);
 
     exp = ExpressionParser.lambdaCalculus();
   }
@@ -467,6 +468,28 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(HeadedSyntacticCategory.parseFrom("((S[b]{0}\\N{1}){0}/N{2}){0}"),
         parses.get(0).getHeadedSyntacticCategory());
+  }
+  
+  public void testParseCompositionNormalForm() {
+    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("green", "green", "berries"), 10);
+    // The parser with composition really permits 2 derivations, one using
+    // composition of the greens, and one only using application. However,
+    // means there are 2 parses using composition. 
+    assertEquals(3, parses.size());
+
+    // The normal form parser only permits the application-only derivation
+    parses = parserWithCompositionNormalForm.beamSearch(Arrays.asList("green", "green", "berries"), 10);
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+
+    assertTrue(parse.getLeft().isTerminal());
+    assertFalse(parse.getRight().isTerminal());
+    assertEquals("N", parse.getRight().getSyntacticCategory().getValue());
+
+    // The same property should generalize to much longer sentences.
+    parses = parserWithCompositionNormalForm.beamSearch(Arrays.asList("green", "green", "green", "green",
+        "green", "green", "green", "green", "green", "berries"), 1000);
+    assertEquals(1, parses.size());
   }
 
   public void testParseHeadUnification() {
@@ -852,7 +875,8 @@ public class CcgParserTest extends TestCase {
   }
 
   private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray,
-      String[] unaryRuleArray, double[] weights, boolean allowComposition, boolean allowWordSkipping) {
+      String[] unaryRuleArray, double[] weights, boolean allowComposition, boolean allowWordSkipping,
+      boolean normalFormOnly) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
     Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
@@ -1013,7 +1037,7 @@ public class CcgParserTest extends TestCase {
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
-        leftSyntaxVar, rootDistribution, allowWordSkipping);
+        leftSyntaxVar, rootDistribution, allowWordSkipping, normalFormOnly);
   }
 
   private static class TestChartFilter implements ChartFilter {

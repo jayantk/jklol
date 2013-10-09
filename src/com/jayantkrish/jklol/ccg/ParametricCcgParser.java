@@ -81,6 +81,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final ParametricFactor rootSyntaxFamily;
   
   private final boolean allowWordSkipping;
+  private final boolean normalFormOnly;
 
   /**
    * Names of the parameter vectors governing lexicon entries.
@@ -134,7 +135,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       ParametricFactor syntaxFamily, VariableNumMap unaryRuleInputVar,
       VariableNumMap unaryRuleVar, ParametricFactor unaryRuleFamily,
       VariableNumMap searchMoveVar, DiscreteFactor compiledSyntaxDistribution,
-      VariableNumMap rootSyntaxVar, ParametricFactor rootSyntaxFamily, boolean allowWordSkipping) {
+      VariableNumMap rootSyntaxVar, ParametricFactor rootSyntaxFamily, boolean allowWordSkipping,
+      boolean normalFormOnly) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalFamily = Preconditions.checkNotNull(terminalFamily);
@@ -178,6 +180,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.rootSyntaxFamily = Preconditions.checkNotNull(rootSyntaxFamily);
     
     this.allowWordSkipping = allowWordSkipping;
+    this.normalFormOnly = normalFormOnly;
   }
 
   /**
@@ -202,7 +205,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
       Iterable<String> unfilteredRuleLines, CcgFeatureFactory featureFactory,
       Set<String> posTagSet, boolean allowComposition, Iterable<CcgRuleSchema> allowedCombinationRules,
-      boolean allowWordSkipping) {
+      boolean allowWordSkipping, boolean normalFormOnly) {
 
     if (featureFactory == null) {
       featureFactory = new DefaultCcgFeatureFactory();
@@ -388,7 +391,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
         parametricSyntacticDistribution, unaryRuleInputVar, unaryRuleVar,
         parametricUnaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution, 
-        leftSyntaxVar, parametricRootDistribution, allowWordSkipping);
+        leftSyntaxVar, parametricRootDistribution, allowWordSkipping, normalFormOnly);
   }
 
   /**
@@ -439,7 +442,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         verbDistanceVar, verbDistanceFamily, verbTagSet, leftSyntaxVar,
         rightSyntaxVar, parentSyntaxVar, syntaxFamily, unaryRuleInputVar, unaryRuleVar,
         unaryRuleFamily, searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxFamily,
-        allowWordSkipping);
+        allowWordSkipping, normalFormOnly);
   }
 
   /**
@@ -509,7 +512,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         puncTagSet, verbDistanceVar, verbDistanceDistribution, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution,
         unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, searchMoveVar,
-        compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping);
+        compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping, normalFormOnly);
   }
 
   /**

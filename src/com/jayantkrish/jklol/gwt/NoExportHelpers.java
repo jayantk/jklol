@@ -43,7 +43,7 @@ public class NoExportHelpers {
     String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
 
     ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
-        Arrays.asList(lexicon), Arrays.asList(rules), null, null, false, null, false);
+        Arrays.asList(lexicon), Arrays.asList(rules), null, null, false, null, false, false);
     CcgParser parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
     
     List<String> words = Arrays.asList(input.split(" "));

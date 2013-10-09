@@ -12,6 +12,7 @@ import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
@@ -74,7 +75,14 @@ public class ParseToLogicalForm extends AbstractCli {
       } else {
         CcgParse parse = result.getParse();
         CcgParse augmentedParse = augmenter.addLogicalForms(parse);
-        System.out.println(augmentedParse.getLogicalForm());
+
+        Expression lf = augmentedParse.getLogicalForm();
+        if (lf != null) {
+          System.out.println(parse);
+          System.out.println(lf.simplify());
+        } else {
+          System.out.println("NO LF CONVERSION");
+        }
       }
     }
   }

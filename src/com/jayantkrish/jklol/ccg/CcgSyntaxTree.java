@@ -93,7 +93,7 @@ public class CcgSyntaxTree {
   public CcgSyntaxTree replaceRootSyntax(SyntacticCategory newRoot) {
     return new CcgSyntaxTree(newRoot, getPreUnaryRuleSyntax(), getSpanStart(),
         getSpanEnd(), getLeft(), getRight(), getWords(),
-        getPosTags(), null);
+        getPosTags(), headedSyntax);
   }
 
   public SyntacticCategory getPreUnaryRuleSyntax() {

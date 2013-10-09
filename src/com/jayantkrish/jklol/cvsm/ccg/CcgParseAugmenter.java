@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 
 public class CcgParseAugmenter {
   
@@ -28,19 +29,22 @@ public class CcgParseAugmenter {
   public CcgParse addLogicalForms(CcgParse input) {
     if (input.isTerminal()) {
       HeadedSyntacticCategory cat = input.getHeadedSyntacticCategory();
+      CcgCategory currentEntry = input.getLexiconEntry();
+      Expression logicalForm = null;
       for (CategoryPattern pattern : patterns) {
         if (pattern.matches(input.getWords(), cat.getSyntax())) {
-          CcgCategory currentEntry = input.getLexiconEntry();
-          CcgCategory lexiconEntry = new CcgCategory(cat, pattern.getLogicalForm(input.getWords(), cat.getSyntax()), currentEntry.getSubjects(), 
-              currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
-          
-          return CcgParse.forTerminal(cat, lexiconEntry, input.getLexiconTriggerWords(), 
-              input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(), 
-              input.getWords(), input.getNodeProbability(), input.getUnaryRule(),
-              input.getSpanStart(), input.getSpanEnd()); 
+          logicalForm = pattern.getLogicalForm(input.getWords(), cat.getSyntax());
+          break;
         }
       }
-      throw new IllegalArgumentException("Unsupported category: " + cat);
+
+      CcgCategory lexiconEntry = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
+                                                 currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
+
+      return CcgParse.forTerminal(cat, lexiconEntry, input.getLexiconTriggerWords(), 
+                                  input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(), 
+                                  input.getWords(), input.getNodeProbability(), input.getUnaryRule(),
+                                  input.getSpanStart(), input.getSpanEnd()); 
     } else {
       CcgParse left = addLogicalForms(input.getLeft());
       CcgParse right = addLogicalForms(input.getRight());

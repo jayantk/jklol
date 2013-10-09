@@ -38,12 +38,12 @@ public class ParseToLogicalForm extends AbstractCli {
     // Required arguments.
     parser = optionParser.accepts("parser", "File containing serialized CCG parser.").withRequiredArg()
         .ofType(String.class).required();
-    supertagger = optionParser.accepts("supertagger").withRequiredArg().ofType(String.class);
+    supertagger = optionParser.accepts("supertagger").withRequiredArg().ofType(String.class).required();
     multitagThresholds = optionParser.accepts("multitagThreshold").withRequiredArg()
-        .ofType(Double.class).withValuesSeparatedBy(',');
+        .ofType(Double.class).withValuesSeparatedBy(',').required();
     
-    lfTemplates = optionParser.accepts("lfTemplates").withRequiredArg().ofType(String.class);
-    inputFile = optionParser.accepts("inputFile").withRequiredArg().ofType(String.class);
+    lfTemplates = optionParser.accepts("lfTemplates").withRequiredArg().ofType(String.class).required();
+    inputFile = optionParser.accepts("inputFile").withRequiredArg().ofType(String.class).required();
     
     // Optional arguments
     maxParseTimeMillis = optionParser.accepts("maxParseTimeMillis").withRequiredArg()
@@ -61,7 +61,7 @@ public class ParseToLogicalForm extends AbstractCli {
         new CcgExactInference(null, options.valueOf(maxParseTimeMillis)), tagger, tagThresholds);
 
     // Read the logical form templates.
-    // CcgParseAugmenter augmenter = CcgParseAugmenter.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)));
+    CcgParseAugmenter augmenter = CcgParseAugmenter.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)));
     
     for (String line : IoUtils.readLines(options.valueOf(inputFile))) {
       List<String> words = Lists.newArrayList();
@@ -70,10 +70,11 @@ public class ParseToLogicalForm extends AbstractCli {
       
       CcgParseResult result = supertaggingParser.parse(words, posTags);
       if (result == null) {
-        System.out.println();
+        System.out.println("NO PARSE");
       } else {
         CcgParse parse = result.getParse();
-        System.out.println(parse.getSyntacticParse());
+        CcgParse augmentedParse = augmenter.addLogicalForms(parse);
+        System.out.println(augmentedParse.getLogicalForm());
       }
     }
   }

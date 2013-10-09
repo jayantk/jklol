@@ -30,7 +30,7 @@ public class SupertaggingCcgParser {
     this.multitagThresholds = Arrays.copyOf(multitagThresholds, multitagThresholds.length);
   }
 
-  public CcgParse parse(List<String> terminals, List<String> posTags, ChartFilter inputFilter) {
+  public CcgParseResult parse(List<String> terminals, List<String> posTags, ChartFilter inputFilter) {
     SupertaggedSentence supertaggedSentence = null;
     if (supertagger != null) {
       for (int i = 0; i < multitagThresholds.length; i++) {
@@ -45,22 +45,47 @@ public class SupertaggingCcgParser {
         
         CcgParse parse = inference.getBestParse(parser, supertaggedSentence, filter, new NullLogFunction());
         if (parse != null) {
-          return parse;
+          return new CcgParseResult(parse, supertaggedSentence, multitagThresholds[i]);
         }
       }
       // Parsing was unsuccessful at all thresholds
       return null;
     } else {
       supertaggedSentence = SupertaggedSentence.createWithUnobservedSupertags(terminals, posTags);
-      return inference.getBestParse(parser, supertaggedSentence, inputFilter, new NullLogFunction());
+      CcgParse parse = inference.getBestParse(parser, supertaggedSentence, inputFilter, new NullLogFunction());
+      return new CcgParseResult(parse, supertaggedSentence, 0.0);
     }
   }
 
-  public CcgParse parse(List<String> terminals, List<String> posTags) {
+  public CcgParseResult parse(List<String> terminals, List<String> posTags) {
     return parse(terminals, posTags, null);
   }
   
   public CcgParser getParser() {
     return parser;
+  }
+  
+  public static class CcgParseResult {
+    private final CcgParse parse;
+    private final SupertaggedSentence sentence;
+    private final double tagThreshold;
+
+    public CcgParseResult(CcgParse parse, SupertaggedSentence sentence, double tagThreshold) {
+      this.parse = Preconditions.checkNotNull(parse);
+      this.sentence = Preconditions.checkNotNull(sentence);
+      this.tagThreshold = tagThreshold;
+    }
+
+    public CcgParse getParse() {
+      return parse;
+    }
+
+    public SupertaggedSentence getSentence() {
+      return sentence;
+    }
+
+    public double getTagThreshold() {
+      return tagThreshold;
+    }
   }
 }

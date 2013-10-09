@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.sequence.ListMultitaggedSequence;
 
 public class SupertaggedSentence extends ListMultitaggedSequence<WordAndPos, HeadedSyntacticCategory> {
@@ -74,7 +75,7 @@ public class SupertaggedSentence extends ListMultitaggedSequence<WordAndPos, Hea
   public List<List<HeadedSyntacticCategory>> getSupertags() {
     return getLabels();
   }
-  
+
   @Override
   public String toString() {
     return Joiner.on(" ").join(getItems());

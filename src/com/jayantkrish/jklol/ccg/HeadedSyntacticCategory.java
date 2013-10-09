@@ -2,10 +2,12 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -150,6 +152,14 @@ public class HeadedSyntacticCategory implements Serializable {
       parseSemanticVariables(category.getReturn(), typeString.substring(0, splitIndex),
           semanticVariables, firstFillableIndex);
     }
+  }
+
+  public static List<SyntacticCategory> convertToCcgbank(List<HeadedSyntacticCategory> headedCats) {
+    List<SyntacticCategory> cats = Lists.newArrayList();
+    for (HeadedSyntacticCategory headedCat : headedCats) {
+      cats.add(headedCat.getSyntax().discardFeaturePassingMarkup());
+    }
+    return cats;
   }
 
   /**

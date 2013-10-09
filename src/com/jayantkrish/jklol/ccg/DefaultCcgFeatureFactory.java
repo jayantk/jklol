@@ -3,10 +3,12 @@ package com.jayantkrish.jklol.ccg;
 import java.util.Arrays;
 
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
+import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 
 /**
@@ -87,7 +89,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   @Override
   public ParametricFactor getLexiconSyntaxFeatures(VariableNumMap terminalWordVar,
       VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconSyntaxIndicatorFactor) {
-    return new IndicatorLogLinearFactor(terminalWordVar.union(terminalSyntaxVar),
-        lexiconSyntaxIndicatorFactor);
+    VariableNumMap vars = terminalWordVar.union(terminalSyntaxVar);
+    return new ConstantParametricFactor(vars, TableFactor.logUnity(vars));
   }
 }

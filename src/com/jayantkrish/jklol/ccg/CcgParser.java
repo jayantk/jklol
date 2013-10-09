@@ -1416,6 +1416,23 @@ public class CcgParser implements Serializable {
   public List<LexiconEntry> getLexiconEntries(List<String> wordSequence) {
     return getLexiconEntriesFromFactor(wordSequence, terminalDistribution, terminalVar, ccgCategoryVar);
   }
+  
+  public List<LexiconEntry> getLexiconEntriesWithUnknown(List<String> originalWords, List<String> posTags) {
+    Preconditions.checkArgument(originalWords.size() == posTags.size());
+    List<String> words = preprocessInput(originalWords);    
+    if (terminalVar.isValidOutcomeArray(words)) {
+      return getLexiconEntries(words);
+    } else if (words.size() == 1) {
+      List<String> posTagBackoff = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(0)));
+      return getLexiconEntries(posTagBackoff);
+    } else {
+      return Collections.emptyList();
+    }
+  }
+  
+  public List<LexiconEntry> getLexiconEntriesWithUnknown(String word, String posTag) {
+    return getLexiconEntriesWithUnknown(Arrays.asList(word), Arrays.asList(posTag));
+  }
 
   /**
    * Gets the possible lexicon entries for {@code wordSequence} from

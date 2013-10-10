@@ -385,6 +385,8 @@ public class CcgParse {
         } else {
           // Composition.
           LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
+          Preconditions.checkArgument(argumentAsLambda.getArguments().size() >= numArgsToKeep,
+              "Invalid logical form for category: " + argumentAsLambda);
 
           List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
           List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());

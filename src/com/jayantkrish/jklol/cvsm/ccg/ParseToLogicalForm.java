@@ -77,8 +77,15 @@ public class ParseToLogicalForm extends AbstractCli {
       List<String> words = Lists.newArrayList();
       List<String> posTags = Lists.newArrayList();
       ParseCcg.parsePosTaggedInput(Arrays.asList(line.split("\\s")), words, posTags);
-      
-      CcgParseResult result = supertaggingParser.parse(words, posTags);
+
+      CcgParseResult result = null;
+      try { 
+        result = supertaggingParser.parse(words, posTags);
+      } catch (Exception e) {
+        System.err.println("Error parsing sentence: " + words);
+        System.err.print(e.getStackTrace());
+      }
+
       if (result == null || !result.getParse().getSyntacticCategory().isAtomic()) {
         System.out.println("NO PARSE");
       } else {

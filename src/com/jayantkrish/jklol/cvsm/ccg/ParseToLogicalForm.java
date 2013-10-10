@@ -78,6 +78,10 @@ public class ParseToLogicalForm extends AbstractCli {
       List<String> posTags = Lists.newArrayList();
       ParseCcg.parsePosTaggedInput(Arrays.asList(line.split("\\s")), words, posTags);
 
+      StringBuilder sb = new StringBuilder();
+      sb.append(line);
+      sb.append("\t");
+
       CcgParseResult result = null;
       Expression lf = null;
       try { 
@@ -93,52 +97,48 @@ public class ParseToLogicalForm extends AbstractCli {
       }
 
       if (result == null || !result.getParse().getSyntacticCategory().isAtomic()) {
-        System.out.println("NO PARSE");
+        sb.append("NO PARSE");
+      } else if (lf == null) {
+        sb.append("NO LF CONVERSION");
       } else {
-        if (lf != null) {
-          lf = lf.simplify();
-          if (lf instanceof LambdaExpression) {
-            LambdaExpression lambdaExp = (LambdaExpression) lf;
-            List<ConstantExpression> arguments = ConstantExpression.generateUniqueVariables(
+        lf = lf.simplify();
+        if (lf instanceof LambdaExpression) {
+          LambdaExpression lambdaExp = (LambdaExpression) lf;
+          List<ConstantExpression> arguments = ConstantExpression.generateUniqueVariables(
               lambdaExp.getArguments().size());
-            lf = new QuantifierExpression("exists", arguments, new ApplicationExpression(lambdaExp, arguments));
-            lf = lf.simplify();
-          }
-
-          if (lf instanceof ForAllExpression) {
-            lf = ((ForAllExpression) lf).expandQuantifier().simplify();
-          }
-          StringBuilder sb = new StringBuilder();
-          sb.append(lf);
-          sb.append("\t");
-          
-          Multimap<String, String> categoryInstances = HashMultimap.create();
-          Multimap<String, List<String>> relationInstances = HashMultimap.create();
-          getCategoryExpressions(lf, categoryInstances, relationInstances);
-          
-          sb.append(Joiner.on(",").join(categoryInstances.keySet()));
-          sb.append("\t");
-          List<String> catInstances = Lists.newArrayList();
-          for (String varName : categoryInstances.keySet()) {
-            for (String predName : categoryInstances.get(varName)) {
-              catInstances.add(predName + " " + varName);
-            }
-          }
-          sb.append(Joiner.on(",").join(catInstances));
-          sb.append("\t");
-          List<String> relInstances = Lists.newArrayList();
-          for (String predName : relationInstances.keySet()) {
-            for (List<String> entities : relationInstances.get(predName)) {
-              relInstances.add(predName + " " + Joiner.on(" ").join(entities));
-            }
-          }
-          sb.append(Joiner.on(",").join(relInstances));
-
-          System.out.println(sb.toString());
-        } else {
-          System.out.println("NO LF CONVERSION");
+          lf = new QuantifierExpression("exists", arguments, new ApplicationExpression(lambdaExp, arguments));
+          lf = lf.simplify();
         }
+
+        if (lf instanceof ForAllExpression) {
+          lf = ((ForAllExpression) lf).expandQuantifier().simplify();
+        }
+        sb.append(lf);
+        sb.append("\t");
+
+        Multimap<String, String> categoryInstances = HashMultimap.create();
+        Multimap<String, List<String>> relationInstances = HashMultimap.create();
+        getCategoryExpressions(lf, categoryInstances, relationInstances);
+
+        sb.append(Joiner.on(",").join(categoryInstances.keySet()));
+        sb.append("\t");
+        List<String> catInstances = Lists.newArrayList();
+        for (String varName : categoryInstances.keySet()) {
+          for (String predName : categoryInstances.get(varName)) {
+            catInstances.add(predName + " " + varName);
+          }
+        }
+        sb.append(Joiner.on(",").join(catInstances));
+        sb.append("\t");
+        List<String> relInstances = Lists.newArrayList();
+        for (String predName : relationInstances.keySet()) {
+          for (List<String> entities : relationInstances.get(predName)) {
+            relInstances.add(predName + " " + Joiner.on(" ").join(entities));
+          }
+        }
+        sb.append(Joiner.on(",").join(relInstances));
       }
+      System.out.println(sb.toString());
     }
   }
 

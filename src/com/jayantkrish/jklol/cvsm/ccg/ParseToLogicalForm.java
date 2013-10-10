@@ -105,9 +105,25 @@ public class ParseToLogicalForm extends AbstractCli {
           sb.append(lf);
           sb.append("\t");
           
-          Multimap<String, String> categoryInstances = getCategoryExpressions(lf);
+          Multimap<String, String> categoryInstances = HashMultimap.create();
+          Multimap<String, List<String>> relationInstances = HashMultimap.create();
+          getCategoryExpressions(lf, categoryInstances, relationInstances);
+          
+          sb.append(Joiner.on(",").join(categoryInstances.keySet()));
+          sb.append("\t");
           for (String varName : categoryInstances.keySet()) {
-            sb.append(varName + ": " + Joiner.on(" ").join(categoryInstances.get(varName)));
+            for (String predName : categoryInstances.get(varName)) {
+              sb.append(predName + " " + varName);
+            }
+            sb.append(",");
+          }
+          sb.delete(sb.length() - 1, sb.length());
+          
+          sb.append("\t");
+          for (String predName : relationInstances.keySet()) {
+            for (List<String> entities : relationInstances.get(predName)) {
+              sb.append(predName + " " + Joiner.on(" ").join(entities));
+            }
             sb.append(",");
           }
           sb.delete(sb.length() - 1, sb.length());
@@ -138,8 +154,8 @@ public class ParseToLogicalForm extends AbstractCli {
   }
   */
   
-  private static Multimap<String, String> getCategoryExpressions(Expression expression) {
-    Multimap<String, String> categoryPredicateInstances = HashMultimap.create();
+  private static void getCategoryExpressions(Expression expression, Multimap<String, String> categoryPredicateInstances,
+      Multimap<String, List<String>> relationPredicateInstances) {
     if (expression instanceof QuantifierExpression) {
       QuantifierExpression quantifier = ((QuantifierExpression) expression);
       
@@ -156,17 +172,24 @@ public class ParseToLogicalForm extends AbstractCli {
           Expression functionExpression = ((ApplicationExpression) conjunctionClause).getFunction();
           List<Expression> argumentExpressions = ((ApplicationExpression) conjunctionClause).getArguments();
           
-          if (argumentExpressions.size() == 1 && functionExpression instanceof ConstantExpression &&
-              argumentExpressions.get(0) instanceof ConstantExpression) {
-            String varName = ((ConstantExpression) argumentExpressions.get(0)).getName();
+          if (functionExpression instanceof ConstantExpression) {
             String predName = ((ConstantExpression) functionExpression).getName();
-
-            categoryPredicateInstances.put(varName, predName);
+            if (argumentExpressions.size() == 1 && 
+                argumentExpressions.get(0) instanceof ConstantExpression) {
+              String varName = ((ConstantExpression) argumentExpressions.get(0)).getName();
+              categoryPredicateInstances.put(varName, predName);
+            } else if (argumentExpressions.size() == 2 && 
+                argumentExpressions.get(0) instanceof ConstantExpression &&
+                argumentExpressions.get(1) instanceof ConstantExpression) {
+              String arg1 = ((ConstantExpression) argumentExpressions.get(0)).getName();
+              String arg2 = ((ConstantExpression) argumentExpressions.get(1)).getName();
+              
+              relationPredicateInstances.put(predName, Arrays.asList(arg1, arg2));
+            }
           }
         }
       }
     }
-    return categoryPredicateInstances;
   }
 
   public static void main(String[] args) {

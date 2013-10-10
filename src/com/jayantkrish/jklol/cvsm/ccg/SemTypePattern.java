@@ -32,7 +32,7 @@ public class SemTypePattern implements CategoryPattern {
   public static SemTypePattern parseFrom(String string) {
     String[] parts = new CsvParser(',', '"', CsvParser.NULL_ESCAPE).parseLine(string);
     Preconditions.checkArgument(parts.length == 3);
-    
+
     return new SemTypePattern(SyntacticCategory.parseFrom(parts[0]),
         ExpressionParser.lambdaCalculus().parseSingleExpression(parts[1]),
         parts[2].equals("T"));

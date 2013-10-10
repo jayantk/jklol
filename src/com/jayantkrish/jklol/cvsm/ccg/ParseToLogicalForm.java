@@ -89,7 +89,7 @@ public class ParseToLogicalForm extends AbstractCli {
         }
       } catch (Exception e) {
         System.err.println("Error processing sentence: " + words);
-        System.err.print(e.getStackTrace());
+        e.printStackTrace(System.err);
       }
 
       if (result == null || !result.getParse().getSyntacticCategory().isAtomic()) {

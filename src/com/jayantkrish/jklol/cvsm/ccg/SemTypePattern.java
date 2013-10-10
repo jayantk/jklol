@@ -20,6 +20,7 @@ public class SemTypePattern implements CategoryPattern {
   
   private static final String WORD_SEP = "_";
   private static final String WORD_PATTERN = "<word>";
+  private static final String WORD_LC_PATTERN = "<lc_word>";
 
   public SemTypePattern(SyntacticCategory patternCategory, Expression template,
       boolean matchOnSemanticType) {
@@ -34,7 +35,7 @@ public class SemTypePattern implements CategoryPattern {
     
     return new SemTypePattern(SyntacticCategory.parseFrom(parts[0]),
         ExpressionParser.lambdaCalculus().parseSingleExpression(parts[1]),
-        parts[3].equals("T"));
+        parts[2].equals("T"));
   }
 
   @Override
@@ -75,6 +76,10 @@ public class SemTypePattern implements CategoryPattern {
       if (name.contains(WORD_PATTERN)) {
         newName = name.replace(WORD_PATTERN, parameterName);
       }
+      if (name.contains(WORD_LC_PATTERN)) {
+        newName = name.replace(WORD_LC_PATTERN, parameterName.toLowerCase());
+      }
+
       // TODO: possibly include part of speech tags, etc.
       if (!newName.equals(name)) {
         result = result.renameVariable(expression, new ConstantExpression(newName));

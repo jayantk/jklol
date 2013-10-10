@@ -12,7 +12,12 @@ import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
+import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
+import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
@@ -70,16 +75,30 @@ public class ParseToLogicalForm extends AbstractCli {
       ParseCcg.parsePosTaggedInput(Arrays.asList(line.split("\\s")), words, posTags);
       
       CcgParseResult result = supertaggingParser.parse(words, posTags);
-      if (result == null) {
+      if (result == null || !result.getParse().getSyntacticCategory().isAtomic()) {
         System.out.println("NO PARSE");
       } else {
         CcgParse parse = result.getParse();
         CcgParse augmentedParse = augmenter.addLogicalForms(parse);
 
         Expression lf = augmentedParse.getLogicalForm();
+
+        // System.out.println(parse);
         if (lf != null) {
-          System.out.println(parse);
-          System.out.println(lf.simplify());
+          lf = lf.simplify();
+          if (lf instanceof LambdaExpression) {
+            LambdaExpression lambdaExp = (LambdaExpression) lf;
+            List<ConstantExpression> arguments = ConstantExpression.generateUniqueVariables(
+              lambdaExp.getArguments().size());
+            lf = new QuantifierExpression("exists", arguments, new ApplicationExpression(lambdaExp, arguments));
+            lf = lf.simplify();
+          }
+
+          if (lf instanceof ForAllExpression) {
+            lf = ((ForAllExpression) lf).expandQuantifier().simplify();
+          }
+
+          System.out.println(lf);
         } else {
           System.out.println("NO LF CONVERSION");
         }

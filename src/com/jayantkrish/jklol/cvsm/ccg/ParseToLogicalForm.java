@@ -7,19 +7,23 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
+import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
+import com.jayantkrish.jklol.ccg.lambda.CommutativeOperator;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
-import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
-import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cli.ParseCcg;
@@ -97,13 +101,72 @@ public class ParseToLogicalForm extends AbstractCli {
           if (lf instanceof ForAllExpression) {
             lf = ((ForAllExpression) lf).expandQuantifier().simplify();
           }
+          StringBuilder sb = new StringBuilder();
+          sb.append(lf);
+          sb.append("\t");
+          
+          Multimap<String, String> categoryInstances = getCategoryExpressions(lf);
+          for (String varName : categoryInstances.keySet()) {
+            sb.append(varName + ": " + Joiner.on(" ").join(categoryInstances.get(varName)));
+            sb.append(",");
+          }
+          sb.delete(sb.length() - 1, sb.length());
 
-          System.out.println(lf);
+          System.out.println(sb.toString());
         } else {
           System.out.println("NO LF CONVERSION");
         }
       }
     }
+  }
+  
+  /*
+  private static void simplifyEquals(Expression expression) {
+    if (expression instanceof QuantifierExpression) {
+      QuantifierExpression quantifier = ((QuantifierExpression) expression);
+      if (quantifier.getBody() instanceof CommutativeOperator) {
+        CommutativeOperator conjunction = (CommutativeOperator) quantifier.getBody();
+        
+        List<Expression> newArguments = Lists.newArrayList();
+        for (Expression argument : conjunction.getArguments()) {
+          if (argument instanceof ApplicationExpression) {
+            String functionName = ((ApplicationExpression) argument).getFunction();
+          }
+        }
+      }
+    }
+  }
+  */
+  
+  private static Multimap<String, String> getCategoryExpressions(Expression expression) {
+    Multimap<String, String> categoryPredicateInstances = HashMultimap.create();
+    if (expression instanceof QuantifierExpression) {
+      QuantifierExpression quantifier = ((QuantifierExpression) expression);
+      
+      List<Expression> conjunctionClauses = Lists.newArrayList();
+      if (quantifier.getBody() instanceof CommutativeOperator) {
+        CommutativeOperator conjunction = (CommutativeOperator) quantifier.getBody();
+        conjunctionClauses.addAll(conjunction.getArguments());
+      } else {
+        conjunctionClauses.add(quantifier.getBody());
+      }
+      
+      for (Expression conjunctionClause : conjunctionClauses) {
+        if (conjunctionClause instanceof ApplicationExpression) {
+          Expression functionExpression = ((ApplicationExpression) conjunctionClause).getFunction();
+          List<Expression> argumentExpressions = ((ApplicationExpression) conjunctionClause).getArguments();
+          
+          if (argumentExpressions.size() == 1 && functionExpression instanceof ConstantExpression &&
+              argumentExpressions.get(0) instanceof ConstantExpression) {
+            String varName = ((ConstantExpression) argumentExpressions.get(0)).getName();
+            String predName = ((ConstantExpression) functionExpression).getName();
+
+            categoryPredicateInstances.put(varName, predName);
+          }
+        }
+      }
+    }
+    return categoryPredicateInstances;
   }
 
   public static void main(String[] args) {

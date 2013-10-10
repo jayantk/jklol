@@ -32,6 +32,7 @@ import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IoUtils;
 import com.jayantkrish.jklol.util.Pseudorandom;
+import com.jayantkrish.jklol.util.TimeUtils;
 
 /**
  * Common framework for command line programs. This class provides
@@ -98,6 +99,8 @@ public abstract class AbstractCli {
   // Always available options.
   // Seed the random number generator
   protected OptionSpec<Long> randomSeed;
+  // Prevents the program from printing out the input options
+  protected OptionSpec<Void> noPrintOptions;
 
   // Stochastic gradient options.
   protected OptionSpec<Integer> sgdIterations;
@@ -198,24 +201,28 @@ public abstract class AbstractCli {
     }
 
     // Log any passed-in options.
-    System.out.println("Command-line options:");
-    for (OptionSpec<?> optionSpec : parsedOptions.specs()) {
-      if (parsedOptions.hasArgument(optionSpec)) {
-        System.out.println("--" + Iterables.getFirst(optionSpec.options(), "") + " "
-            + Joiner.on(" ").join(parsedOptions.valuesOf(optionSpec)));
-      } else {
-        System.out.println("--" + Iterables.getFirst(optionSpec.options(), ""));
+    if (!parsedOptions.has(noPrintOptions)) {
+      System.out.println("Command-line options:");
+      for (OptionSpec<?> optionSpec : parsedOptions.specs()) {
+        if (parsedOptions.hasArgument(optionSpec)) {
+          System.out.println("--" + Iterables.getFirst(optionSpec.options(), "") + " "
+              + Joiner.on(" ").join(parsedOptions.valuesOf(optionSpec)));
+        } else {
+          System.out.println("--" + Iterables.getFirst(optionSpec.options(), ""));
+        }
       }
+      System.out.println("");
     }
-    System.out.println("");
 
     // Run the program.
     long startTime = System.currentTimeMillis();
     processOptions(parsedOptions);
     run(parsedOptions);
     long endTime = System.currentTimeMillis();
-    double timeElapsed = ((double) (endTime - startTime)) / 1000;
-    System.out.println("Total time elapsed: " + timeElapsed + " seconds");
+
+    if (!parsedOptions.has(noPrintOptions)) {
+      System.out.println("Total time elapsed: " + TimeUtils.durationToString(endTime - startTime));
+    }
 
     System.exit(0);
   }
@@ -247,6 +254,9 @@ public abstract class AbstractCli {
     randomSeed = parser.accepts("randomSeed", "Seed to use for generating random numbers. "
         + "Program execution may still be nondeterministic, if multithreading is used.").
         withRequiredArg().ofType(Long.class).defaultsTo(0L);
+    
+    noPrintOptions = parser.accepts("noPrintOptions", "Don't print out the command-line options "
+        + "passed in to this program or final runtime statistics.");
 
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT)) {
       sgdIterations = parser.accepts("iterations",
@@ -359,8 +369,8 @@ public abstract class AbstractCli {
     }
 
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) || opts.contains(CommonOptions.LBFGS)) {
-      LogFunction log = (parsedOptions.has(logBrief) ? new NullLogFunction() 
-      : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
+      LogFunction log = (parsedOptions.has(logBrief) ? new NullLogFunction()
+          : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
       LogFunctions.setLogFunction(log);
     }
   }
@@ -395,12 +405,12 @@ public abstract class AbstractCli {
 
   private GradientOptimizer createLbfgs(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.LBFGS));
-    
+
     if (parsedOptions.has(lbfgsAdaptiveMinibatches)) {
       int lbfgsMinibatchSizeInt = parsedOptions.valueOf(lbfgsMinibatchSize);
       Preconditions.checkState(lbfgsMinibatchSizeInt != -1, "Must specify initial adaptive batch size using --lbfgsMinibatchSize");
-      
-      return MinibatchLbfgs.createAdaptiveSchedule(parsedOptions.valueOf(lbfgsHessianRank), 
+
+      return MinibatchLbfgs.createAdaptiveSchedule(parsedOptions.valueOf(lbfgsHessianRank),
           parsedOptions.valueOf(lbfgsL2Regularization), numExamples, lbfgsMinibatchSizeInt,
           -1, LogFunctions.getLogFunction());
     }
@@ -408,10 +418,10 @@ public abstract class AbstractCli {
     int lbfgsMinibatchSizeInt = parsedOptions.valueOf(lbfgsMinibatchSize);
     int lbfgsMinibatchIterationsInt = parsedOptions.valueOf(lbfgsMinibatchIterations);
     if (lbfgsMinibatchSizeInt != -1 && lbfgsMinibatchIterationsInt != -1) {
-      // Using these options triggers minibatch LBFGS with a fixed 
+      // Using these options triggers minibatch LBFGS with a fixed
       // sized schedule.
       int batchIterations = (int) Math.ceil(((double) parsedOptions.valueOf(lbfgsIterations)) / lbfgsMinibatchIterationsInt);
-      return MinibatchLbfgs.createFixedSchedule(parsedOptions.valueOf(lbfgsHessianRank), 
+      return MinibatchLbfgs.createFixedSchedule(parsedOptions.valueOf(lbfgsHessianRank),
           parsedOptions.valueOf(lbfgsL2Regularization), batchIterations,
           lbfgsMinibatchSizeInt, lbfgsMinibatchIterationsInt, LogFunctions.getLogFunction());
     } else if (lbfgsMinibatchIterationsInt == -1 && lbfgsMinibatchSizeInt == -1) {
@@ -427,15 +437,15 @@ public abstract class AbstractCli {
    * Creates a gradient-based optimization algorithm based on the
    * given command-line parameters. To use this method, pass at least
    * one of {@link CommonOptions#STOCHASTIC_GRADIENT} or
-   * {@link CommonOptions#LBFGS} to the constructor. This method allows
-   * users to easily select different optimization algorithms and
-   * parameterizations. 
+   * {@link CommonOptions#LBFGS} to the constructor. This method
+   * allows users to easily select different optimization algorithms
+   * and parameterizations.
    * 
    * @param numExamples
    * @return
    */
   protected GradientOptimizer createGradientOptimizer(int numExamples) {
-    if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) && 
+    if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) &&
         opts.contains(CommonOptions.LBFGS)) {
       if (parsedOptions.has(lbfgs)) {
         return createLbfgs(numExamples);

@@ -134,7 +134,7 @@ public class ParseToLogicalForm extends AbstractCli {
       }
     }
   }
-  
+
   /*
   private static void simplifyEquals(Expression expression) {
     if (expression instanceof QuantifierExpression) {

@@ -79,22 +79,22 @@ public class ParseToLogicalForm extends AbstractCli {
       ParseCcg.parsePosTaggedInput(Arrays.asList(line.split("\\s")), words, posTags);
 
       CcgParseResult result = null;
+      Expression lf = null;
       try { 
         result = supertaggingParser.parse(words, posTags);
+        if (result != null && result.getParse().getSyntacticCategory().isAtomic()) {
+          CcgParse parse = result.getParse();
+          CcgParse augmentedParse = augmenter.addLogicalForms(parse);
+          lf = augmentedParse.getLogicalForm();
+        }
       } catch (Exception e) {
-        System.err.println("Error parsing sentence: " + words);
+        System.err.println("Error processing sentence: " + words);
         System.err.print(e.getStackTrace());
       }
 
       if (result == null || !result.getParse().getSyntacticCategory().isAtomic()) {
         System.out.println("NO PARSE");
       } else {
-        CcgParse parse = result.getParse();
-        CcgParse augmentedParse = augmenter.addLogicalForms(parse);
-
-        Expression lf = augmentedParse.getLogicalForm();
-
-        // System.out.println(parse);
         if (lf != null) {
           lf = lf.simplify();
           if (lf instanceof LambdaExpression) {

@@ -111,22 +111,21 @@ public class ParseToLogicalForm extends AbstractCli {
           
           sb.append(Joiner.on(",").join(categoryInstances.keySet()));
           sb.append("\t");
+          List<String> catInstances = Lists.newArrayList();
           for (String varName : categoryInstances.keySet()) {
             for (String predName : categoryInstances.get(varName)) {
-              sb.append(predName + " " + varName);
+              catInstances.add(predName + " " + varName);
             }
-            sb.append(",");
           }
-          sb.delete(sb.length() - 1, sb.length());
-          
+          sb.append(Joiner.on(",").join(catInstances));
           sb.append("\t");
+          List<String> relInstances = Lists.newArrayList();
           for (String predName : relationInstances.keySet()) {
             for (List<String> entities : relationInstances.get(predName)) {
-              sb.append(predName + " " + Joiner.on(" ").join(entities));
+              relInstances.add(predName + " " + Joiner.on(" ").join(entities));
             }
-            sb.append(",");
           }
-          sb.delete(sb.length() - 1, sb.length());
+          sb.append(Joiner.on(",").join(relInstances));
 
           System.out.println(sb.toString());
         } else {

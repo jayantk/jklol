@@ -285,12 +285,11 @@ public class HeadedSyntacticCategory implements Serializable {
   }
 
   /**
-   * Gets the variable assigned to the root node of {@code this}
-   * category.
+   * Gets the variable representing the semantic head of this category.
    * 
    * @return
    */
-  public int getRootVariable() {
+  public int getHeadVariable() {
     return semanticVariables[rootIndex];
   }
   

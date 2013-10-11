@@ -167,14 +167,14 @@ public class CcgParser implements Serializable {
     verbDistanceVarType = DiscreteVariable.sequence("verbDistance", MAX_DISTANCE + 1);
   }
 
-  // Weights on binary combination rules syntactic structures.
+  // Weights on binary combination rules.
   private final VariableNumMap leftSyntaxVar;
   private final VariableNumMap rightSyntaxVar;
-  private final VariableNumMap parentSyntaxVar;
+  private final VariableNumMap combinatorVar;
   private final DiscreteVariable syntaxVarType;
   private final DiscreteVariable combinatorVarType;
   private final DiscreteFactor binaryRuleDistribution;
-
+  
   // Unary type changing/raising rules.
   private final VariableNumMap unaryRuleInputVar;
   private final VariableNumMap unaryRuleVar;
@@ -183,6 +183,16 @@ public class CcgParser implements Serializable {
   private final DiscreteVariable unaryRuleVarType;
   private final Tensor unaryRuleTensor;
 
+  // Weights on binary combination rules incorporating head information
+  private final VariableNumMap headedBinaryPredicateVar;
+  private final VariableNumMap headedBinaryPosVar;
+  private final DiscreteFactor headedBinaryRuleDistribution;
+  private final long headedBinaryRuleCombinatorOffset;
+  private final long headedBinaryRulePredicateOffset;
+  private final long headedBinaryRulePosOffset;
+  private final Tensor headedBinaryRuleTensor;
+
+  // Indicator tensor specifying possible ways to combine pairs of
   private final VariableNumMap searchMoveVar;
   private final DiscreteVariable searchMoveType;
   private final DiscreteFactor compiledSyntaxDistribution;
@@ -208,8 +218,10 @@ public class CcgParser implements Serializable {
       DiscreteFactor verbDistanceFactor, Set<String> verbTagSet, VariableNumMap leftSyntaxVar,
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       DiscreteFactor binaryRuleDistribution, VariableNumMap unaryRuleInputVar,
-      VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap searchMoveVar,
-      DiscreteFactor compiledSyntaxDistribution, VariableNumMap rootSyntaxVar, DiscreteFactor rootSyntaxDistribution,
+      VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap headedBinaryPredicateVar,
+      VariableNumMap headedBinaryPosVar, DiscreteFactor headedBinaryRuleDistribution,
+      VariableNumMap searchMoveVar, DiscreteFactor compiledSyntaxDistribution,
+      VariableNumMap rootSyntaxVar, DiscreteFactor rootSyntaxDistribution,
       boolean allowWordSkipping, boolean normalFormOnly) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
@@ -296,7 +308,7 @@ public class CcgParser implements Serializable {
 
     this.leftSyntaxVar = Preconditions.checkNotNull(leftSyntaxVar);
     this.rightSyntaxVar = Preconditions.checkNotNull(rightSyntaxVar);
-    this.parentSyntaxVar = Preconditions.checkNotNull(parentSyntaxVar);
+    this.combinatorVar = Preconditions.checkNotNull(parentSyntaxVar);
     Preconditions.checkArgument(binaryRuleDistribution.getVars().equals(
         VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar, parentSyntaxVar)));
     this.syntaxVarType = leftSyntaxVar.getDiscreteVariables().get(0);
@@ -309,6 +321,20 @@ public class CcgParser implements Serializable {
     this.unaryRuleFactor = Preconditions.checkNotNull(unaryRuleFactor);
     this.unaryRuleVarType = unaryRuleVar.getDiscreteVariables().get(0);
     this.unaryRuleTensor = unaryRuleFactor.getWeights();
+
+    this.headedBinaryPredicateVar = headedBinaryPredicateVar;
+    Preconditions.checkArgument(headedBinaryPredicateVar.getDiscreteVariables().get(0).equals(dependencyHeadType));
+    this.headedBinaryPosVar = headedBinaryPosVar;
+    Preconditions.checkArgument(headedBinaryPosVar.getDiscreteVariables().get(0).equals(dependencyPosType));
+    this.headedBinaryRuleDistribution = headedBinaryRuleDistribution;
+    Preconditions.checkArgument(headedBinaryRuleDistribution.getVars().equals(
+        VariableNumMap.unionAll(binaryRuleDistribution.getVars(), headedBinaryPredicateVar, headedBinaryPosVar)));
+    
+    headedBinaryRuleTensor = headedBinaryRuleDistribution.getWeights();
+    long[] headedBinaryOffsets = headedBinaryRuleTensor.getDimensionOffsets();
+    headedBinaryRuleCombinatorOffset = headedBinaryOffsets[2];
+    headedBinaryRulePredicateOffset = headedBinaryOffsets[3];
+    headedBinaryRulePosOffset = headedBinaryOffsets[4];
 
     this.searchMoveVar = Preconditions.checkNotNull(searchMoveVar);
     this.searchMoveType = (DiscreteVariable) searchMoveVar.getOnlyVariable();
@@ -594,13 +620,14 @@ public class CcgParser implements Serializable {
 
     int functionReturnTypeInt = syntaxVarType.getValueIndex(functionReturnType);
     int[] functionReturnTypeVars = functionReturnType.getUniqueVariables();
+    int functionReturnHead = functionReturnType.getHeadVariable();
     if (argumentOnLeft) {
-      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, argumentRelabeling,
+      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionReturnHead, argumentRelabeling,
           functionRelabeling, resultRelabeling, resultRelabeling, unifiedVariables,
           new String[0], new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft, 0, null, 
           Combinator.Type.BACKWARD_APPLICATION);
     } else {
-      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionRelabeling,
+      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionReturnHead, functionRelabeling,
           argumentRelabeling, resultRelabeling, resultRelabeling, unifiedVariables, new String[0],
           new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft, 0, null,
           Combinator.Type.FORWARD_APPLICATION);
@@ -631,10 +658,10 @@ public class CcgParser implements Serializable {
     Direction firstDirection = null;
     for (int i = argumentReturnDepth; i > 0; i--) {
       HeadedSyntacticCategory curArg = relabeledArgumentType;
-      int headVariable = argumentAsHead ? relabeledArgumentType.getRootVariable() : functionCat.getRootVariable();
+      int headVariable = argumentAsHead ? relabeledArgumentType.getHeadVariable() : functionCat.getHeadVariable();
       for (int j = 0; j < (i - 1); j++) {
         curArg = curArg.getReturnType();
-        headVariable = curArg.getRootVariable();
+        headVariable = curArg.getHeadVariable();
       }
       Direction curDirection = curArg.getDirection();
       if (firstDirection == null) {
@@ -679,13 +706,14 @@ public class CcgParser implements Serializable {
 
     int functionReturnTypeInt = syntaxVarType.getValueIndex(canonicalResultType);
     int[] functionReturnTypeVars = canonicalResultType.getUniqueVariables();
+    int functionHead = canonicalResultType.getHeadVariable();
     if (argumentOnLeft) {
-      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, argumentCatRelabeling,
+      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionHead, argumentCatRelabeling,
           functionCatRelabeling, resultUniqueVars, resultCatRelabeling, unifiedVariables,
           new String[0], new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft,
           argumentReturnDepth, null, combinatorType);
     } else {
-      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionCatRelabeling,
+      return new Combinator(functionReturnTypeInt, functionReturnTypeVars, functionHead, functionCatRelabeling,
           argumentCatRelabeling, resultUniqueVars, resultCatRelabeling, unifiedVariables,
           new String[0], new HeadedSyntacticCategory[0], new int[0], new int[0], argumentOnLeft,
           argumentReturnDepth, null, combinatorType);
@@ -747,7 +775,8 @@ public class CcgParser implements Serializable {
 
     int parentInt = syntaxVarType.getValueIndex(parent);
     int[] parentVars = parent.getUniqueVariables();
-    return new Combinator(parentInt, parentVars, leftRelabelingArray, rightRelabelingArray,
+    int parentHead = parent.getHeadVariable();
+    return new Combinator(parentInt, parentVars, parentHead, leftRelabelingArray, rightRelabelingArray,
         parentOriginalVars, parentRelabelingArray, unifiedVariables, rule.getSubjects(),
         rule.getSubjectSyntacticCategories(), rule.getArgumentNumbers(), rule.getObjects(),
         false, -1, rule, Combinator.Type.OTHER);
@@ -787,7 +816,7 @@ public class CcgParser implements Serializable {
             otherAssignedFeatures, Collections.<Integer, Integer> emptyMap());
         int resultAsInt = syntaxVariableType.getValueIndex(returnType);
         UnaryCombinator combinator = new UnaryCombinator(cat, resultAsInt,
-            returnType.getUniqueVariables(), patternToChart, rule);
+            returnType.getUniqueVariables(), returnType.getHeadVariable(), patternToChart, rule);
 
         validCombinators.add(combinator);
         validOutcomes.add(Lists.<Object> newArrayList(cat, combinator));
@@ -1037,7 +1066,7 @@ public class CcgParser implements Serializable {
           while (outcomeIter.hasNext()) {
             Outcome outcome = outcomeIter.next();
             Combinator resultCombinator = (Combinator) outcome.getAssignment().getValue(
-                parentSyntaxVar.getOnlyVariableNum());
+                combinatorVar.getOnlyVariableNum());
             HeadedSyntacticCategory parentCategory = (HeadedSyntacticCategory)
                 syntaxVarType.getValue(resultCombinator.getSyntax());
 
@@ -1190,9 +1219,10 @@ public class CcgParser implements Serializable {
         terminalPosDistribution, terminalSyntaxDistribution, dependencyHeadVar, dependencySyntaxVar,
         dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
-        verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
-        binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, searchMoveVar,
-        newCompiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping, normalFormOnly);
+        verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
+        binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, 
+        headedBinaryPredicateVar, headedBinaryPosVar, headedBinaryRuleDistribution,
+        searchMoveVar, newCompiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping, normalFormOnly);
   }
 
   public DiscreteFactor getBinaryRuleDistribution() {
@@ -1652,8 +1682,10 @@ public class CcgParser implements Serializable {
     long[] depArray = unfilledDependencyArrayToLongArray(deps);
 
     int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
-    return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), result, terminalWords,
-        null, Longs.toArray(assignments), unfilledDepArray, depArray, spanStart, spanEnd);
+    int syntaxHeadVar = result.getSyntax().getHeadVariable();
+    return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), syntaxHeadVar, 
+        result, terminalWords, null, Longs.toArray(assignments), unfilledDepArray, depArray,
+        spanStart, spanEnd);
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
@@ -1725,6 +1757,7 @@ public class CcgParser implements Serializable {
 
                 int resultSyntax = resultCombinator.getSyntax();
                 int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
+                int resultSyntaxHead = resultCombinator.getSyntaxHeadVar();
 
                 for (int leftIndex : leftTypes.get(leftType)) {
                   ChartEntry leftRoot = leftTrees[leftIndex];
@@ -1851,30 +1884,30 @@ public class CcgParser implements Serializable {
                         numAssignments);
                     long[] newAssignments = ArrayUtils.copyOfRange(assignmentAccumulator, 0, numAssignments);
 
-                    ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars,
+                    ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars, resultSyntaxHead,
                         null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignments,
                         unfilledDepArray, filledDepArray, spanStart, spanStart + i,
                         leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
                     // log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
-                    
+
                     // Get the weights of applying this syntactic combination rule 
                     // given the word and POS tag of the result's head.
                     double headedRuleProb = 1.0;
-                    long binaryCombinatorKeyNumWordOffset = searchMove.getBinaryCombinatorKeyNum()
-                        * wordCombinatorOffset;
-                    long binaryCombinatorKeyNumPosOffset = searchMove.getBinaryCombinatorKeyNum()
-                        * posCombinatorOffset;
-                    long[] headAssignments = result.getHeadAssignments();
-                    for (int assignmentIndex = 0; i < headAssignments.length; i++) {
-                      long assignment = headAssignments[assignmentIndex];
-                      long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
-                      long wordCombinatorKeyNum = binaryCombinatorKeyNumPosOffset + predicate;
-                      headedRuleProb *= currentSyntaxWordTensor.get(wordCombinatorKeyNum);
+                    long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
+                        * headedBinaryRuleCombinatorOffset;
+                    for (int assignmentIndex = 0; i < newAssignments.length; i++) {
+                      long assignment = newAssignments[assignmentIndex];
+                      int varNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK); 
+                      if (varNum == resultSyntaxHead) {
+                        long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
+                        int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
+                        int posTag = currentPosTags[wordIndex];
 
-                      int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
-                      int posTag = currentPosTags[wordIndex];
-                      long posCombinatorKeyNum = binaryCombinatorKeyNumWordOffset + posTag;
-                      headedRuleProb *= currentSyntaxPosTensor.get(posCombinatorKeyNum);
+                        long combinatorWordPosKeyNum = binaryCombinatorKeyNumWithOffset 
+                            + (predicate * headedBinaryRulePredicateOffset)
+                            + (posTag * headedBinaryRulePosOffset);
+                        headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
+                      }
                     }
 
                     // log.startTimer("ccg_parse/beam_loop/dependencies");
@@ -1941,7 +1974,7 @@ public class CcgParser implements Serializable {
                     // log.stopTimer("ccg_parse/beam_loop/dependencies");
 
                     // log.startTimer("chart_entry/add_chart_entry");
-                    double totalProb = ruleProb * leftProb * rightProb * depProb;
+                    double totalProb = ruleProb * headedRuleProb * leftProb * rightProb * depProb;
                     chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
                     // log.stopTimer("chart_entry/add_chart_entry");
                   }
@@ -2007,7 +2040,7 @@ public class CcgParser implements Serializable {
       long[] relabeledUnfilledDeps = result.getUnfilledDependenciesRelabeled(unaryRuleCombinator.getVariableRelabeling());
 
       ChartEntry unaryRuleResult = result.applyUnaryRule(unaryRuleCombinator.getSyntax(),
-          unaryRuleCombinator.getSyntaxUniqueVars(), unaryRuleCombinator,
+          unaryRuleCombinator.getSyntaxUniqueVars(), unaryRuleCombinator.getSyntaxHeadVar(), unaryRuleCombinator,
           relabeledAssignments, relabeledUnfilledDeps, result.getDependencies());
       if (unaryRuleResult != null) {
         chart.addChartEntryForSpan(unaryRuleResult, resultProb * ruleProb, spanStart, spanEnd,

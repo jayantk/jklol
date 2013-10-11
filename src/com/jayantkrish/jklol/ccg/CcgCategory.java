@@ -188,12 +188,12 @@ public class CcgCategory implements Serializable {
     while (!syntax.isAtomic()) {
       HeadedSyntacticCategory argument = syntax.getArgumentType();
       argumentCats.add(argument);
-      argumentRoots.add(argument.getRootVariable());
-      argumentVariables.add(varMap.get(argument.getRootVariable()));
+      argumentRoots.add(argument.getHeadVariable());
+      argumentVariables.add(varMap.get(argument.getHeadVariable()));
       syntax = syntax.getReturnType();
       
       if (argument.getSyntax().getWithoutFeatures().isUnifiableWith(syntax.getSyntax().getWithoutFeatures())) {
-        heuristicRootVariable = argument.getRootVariable();
+        heuristicRootVariable = argument.getHeadVariable();
       }
     }
     Set<Integer> argumentRootSet = Sets.newHashSet(argumentRoots);
@@ -209,7 +209,7 @@ public class CcgCategory implements Serializable {
     }
 
     Expression body = null;
-    int argumentIndex = argumentRoots.indexOf(syntax.getRootVariable());
+    int argumentIndex = argumentRoots.indexOf(syntax.getHeadVariable());
     if (argumentIndex == -1) {
       // The head of the returned category is not one of the argument variables.
       // Try guessing a head based on syntactic unifiability.
@@ -226,7 +226,7 @@ public class CcgCategory implements Serializable {
         body = argumentVariables.get(argumentIndex);
       } else {
         while (!argument.isAtomic()) {
-          int argumentArgumentRoot = argument.getArgumentType().getRootVariable();
+          int argumentArgumentRoot = argument.getArgumentType().getHeadVariable();
           usedVariables.add(argumentArgumentRoot);
           argumentArguments.add(varMap.get(argumentArgumentRoot));
           argument = argument.getReturnType();
@@ -322,7 +322,7 @@ public class CcgCategory implements Serializable {
    * @return
    */
   public List<String> getSemanticHeads() {
-    int headSemanticVariable = syntax.getRootVariable();
+    int headSemanticVariable = syntax.getHeadVariable();
     int[] allSemanticVariables = getSemanticVariables();
     for (int i = 0; i < allSemanticVariables.length; i++) {
       if (allSemanticVariables[i] == headSemanticVariable) {

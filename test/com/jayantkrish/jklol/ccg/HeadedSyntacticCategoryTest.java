@@ -29,16 +29,16 @@ public class HeadedSyntacticCategoryTest extends TestCase {
   public void testParseFrom() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(transVerb);
     
-    assertEquals(0, cat.getRootVariable());
+    assertEquals(0, cat.getHeadVariable());
     assertEquals(SyntacticCategory.DEFAULT_FEATURE_VALUE, cat.getRootFeature());
-    assertEquals(2, cat.getArgumentType().getRootVariable());
+    assertEquals(2, cat.getArgumentType().getHeadVariable());
     assertEquals(SyntacticCategory.DEFAULT_FEATURE_VALUE, cat.getArgumentType().getRootFeature());
     assertTrue(cat.getArgumentType().getSyntax().isAtomic());
-    assertEquals(0, cat.getReturnType().getRootVariable());
+    assertEquals(0, cat.getReturnType().getHeadVariable());
     assertEquals(SyntacticCategory.DEFAULT_FEATURE_VALUE, cat.getReturnType().getRootFeature());
-    assertEquals(0, cat.getReturnType().getReturnType().getRootVariable());
+    assertEquals(0, cat.getReturnType().getReturnType().getHeadVariable());
     assertEquals("ng", cat.getReturnType().getReturnType().getRootFeature());
-    assertEquals(1, cat.getReturnType().getArgumentType().getRootVariable());
+    assertEquals(1, cat.getReturnType().getArgumentType().getHeadVariable());
     
     assertEquals("S", cat.getReturnType().getReturnType().getSyntax().getValue());
   }
@@ -46,14 +46,14 @@ public class HeadedSyntacticCategoryTest extends TestCase {
   public void testParseFrom2() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(verbMod);
     
-    assertEquals(3, cat.getRootVariable());
-    assertEquals(1, cat.getArgumentType().getRootVariable());
-    assertEquals(0, cat.getArgumentType().getArgumentType().getRootVariable());
-    assertEquals(1, cat.getArgumentType().getReturnType().getRootVariable());
-    assertEquals(1, cat.getArgumentType().getReturnType().getReturnType().getRootVariable());
-    assertEquals(1, cat.getReturnType().getRootVariable());
-    assertEquals(1, cat.getReturnType().getReturnType().getRootVariable());
-    assertEquals(0, cat.getReturnType().getArgumentType().getRootVariable());
+    assertEquals(3, cat.getHeadVariable());
+    assertEquals(1, cat.getArgumentType().getHeadVariable());
+    assertEquals(0, cat.getArgumentType().getArgumentType().getHeadVariable());
+    assertEquals(1, cat.getArgumentType().getReturnType().getHeadVariable());
+    assertEquals(1, cat.getArgumentType().getReturnType().getReturnType().getHeadVariable());
+    assertEquals(1, cat.getReturnType().getHeadVariable());
+    assertEquals(1, cat.getReturnType().getReturnType().getHeadVariable());
+    assertEquals(0, cat.getReturnType().getArgumentType().getHeadVariable());
   }
   
   public void testParseFrom3() {

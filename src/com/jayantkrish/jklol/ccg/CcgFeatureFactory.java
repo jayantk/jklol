@@ -117,4 +117,20 @@ public interface CcgFeatureFactory {
   ParametricFactor getLexiconSyntaxFeatures(VariableNumMap terminalWordVar,
       VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconSyntaxIndicatorFactor);
 
+  /**
+   * Gets a parametric factor defining features over binary combinators
+   * along with their semantic heads and parts-of-speech. This distribution
+   * should not include features which depend only on the syntactic variables
+   * -- such parameters are included in the parser by default. 
+   * 
+   * @param leftSyntaxVar
+   * @param rightSyntaxVar
+   * @param parentSyntaxVar
+   * @param headedBinaryRulePredicateVar
+   * @param headedBinaryRulePosVar
+   * @return
+   */
+  ParametricFactor getHeadedBinaryRuleFeatures(VariableNumMap leftSyntaxVar,
+      VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
+      VariableNumMap headedBinaryRulePredicateVar, VariableNumMap headedBinaryRulePosVar);
 }

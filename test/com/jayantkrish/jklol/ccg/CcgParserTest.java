@@ -1029,6 +1029,15 @@ public class CcgParserTest extends TestCase {
     wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("tasty", tastyCategory, 1, "JJ", 0), 1.0);
     wordDistanceFactor = wordDistanceFactor.add(wordFactorIncrementBuilder.build());
 
+    // Create a distribution over headed binary rules.
+    int maxVarNum = Ints.max(syntaxDistribution.getVars().getVariableNumsArray());
+    VariableNumMap headedBinaryRulePredicateVar = VariableNumMap.singleton(maxVarNum + 1, 
+        "headedBinaryRulePredicate", semanticPredicateType); 
+    VariableNumMap headedBinaryRulePosVar = VariableNumMap.singleton(maxVarNum + 2, 
+        "headedBinaryRulePos", posType);
+    DiscreteFactor headedBinaryRuleFactor = TableFactor.logUnity(VariableNumMap.unionAll(
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar));
+
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution,
         semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticArgVar,
@@ -1036,7 +1045,8 @@ public class CcgParserTest extends TestCase {
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
-        unaryRuleVar, unaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
+        unaryRuleVar, unaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
+        headedBinaryRuleFactor, searchMoveVar, compiledSyntaxDistribution,
         leftSyntaxVar, rootDistribution, allowWordSkipping, normalFormOnly);
   }
 

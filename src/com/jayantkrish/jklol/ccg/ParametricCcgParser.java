@@ -73,6 +73,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final VariableNumMap unaryRuleInputVar;
   private final VariableNumMap unaryRuleVar;
   private final ParametricFactor unaryRuleFamily;
+  
+  private final VariableNumMap headedBinaryRulePredicateVar;
+  private final VariableNumMap headedBinaryRulePosVar;
+  private final ParametricFactor headedBinaryRuleFamily;
 
   private final VariableNumMap searchMoveVar;
   private final DiscreteFactor compiledSyntaxDistribution;
@@ -105,6 +109,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public static final String SYNTAX_PARAMETERS = "syntax";
   public static final String UNARY_RULE_PARAMETERS = "unaryRules";
+  public static final String HEADED_SYNTAX_PARAMETERS = "headedBinaryRules";
   public static final String ROOT_SYNTAX_PARAMETERS = "rootSyntax";
 
   /**
@@ -134,6 +139,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       ParametricFactor syntaxFamily, VariableNumMap unaryRuleInputVar,
       VariableNumMap unaryRuleVar, ParametricFactor unaryRuleFamily,
+      VariableNumMap headedBinaryRulePredicateVar, VariableNumMap headedBinaryRulePosVar,
+      ParametricFactor headedBinaryRuleFamily,
       VariableNumMap searchMoveVar, DiscreteFactor compiledSyntaxDistribution,
       VariableNumMap rootSyntaxVar, ParametricFactor rootSyntaxFamily, boolean allowWordSkipping,
       boolean normalFormOnly) {
@@ -172,6 +179,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.unaryRuleInputVar = Preconditions.checkNotNull(unaryRuleInputVar);
     this.unaryRuleVar = Preconditions.checkNotNull(unaryRuleVar);
     this.unaryRuleFamily = Preconditions.checkNotNull(unaryRuleFamily);
+    
+    this.headedBinaryRulePredicateVar = Preconditions.checkNotNull(headedBinaryRulePredicateVar);
+    this.headedBinaryRulePosVar = Preconditions.checkNotNull(headedBinaryRulePosVar);
+    this.headedBinaryRuleFamily = Preconditions.checkNotNull(headedBinaryRuleFamily);
 
     this.searchMoveVar = Preconditions.checkNotNull(searchMoveVar);
     this.compiledSyntaxDistribution = Preconditions.checkNotNull(compiledSyntaxDistribution);
@@ -294,7 +305,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
     IndicatorLogLinearFactor parametricUnaryRuleDistribution = new IndicatorLogLinearFactor(
         unaryRuleInputVar.union(unaryRuleVar), unaryRuleDistribution);
-    
+
     DiscreteFactor compiledSyntaxDistribution = CcgParser.compileUnaryAndBinaryRules(unaryRuleDistribution,
         binaryRuleDistribution, syntaxType);
     VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
@@ -383,6 +394,15 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     DiscreteLogLinearFactor parametricRootDistribution = DiscreteLogLinearFactor
         .createIndicatorFactor(leftSyntaxVar);
 
+    // Create features over headed binary rules
+    int maxVarNum = Ints.max(binaryRuleDistribution.getVars().getVariableNumsArray());
+    VariableNumMap headedBinaryRulePredicateVar = VariableNumMap.singleton(maxVarNum + 1, 
+        "headedBinaryRulePredicate", semanticPredicateType); 
+    VariableNumMap headedBinaryRulePosVar = VariableNumMap.singleton(maxVarNum + 2, 
+        "headedBinaryRulePos", posType);
+    ParametricFactor headedBinaryRuleFamily = featureFactory.getHeadedBinaryRuleFeatures(
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar);
+
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         posVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor, dependencyHeadVar,
         dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, 
@@ -390,7 +410,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         puncDistanceFactor, puncTagSet, verbDistanceVar,
         verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
         parametricSyntacticDistribution, unaryRuleInputVar, unaryRuleVar,
-        parametricUnaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution, 
+        parametricUnaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
+        headedBinaryRuleFamily, searchMoveVar, compiledSyntaxDistribution, 
         leftSyntaxVar, parametricRootDistribution, allowWordSkipping, normalFormOnly);
   }
 
@@ -441,7 +462,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         dependencyFamily, wordDistanceVar, wordDistanceFamily, puncDistanceVar, puncDistanceFamily, puncTagSet,
         verbDistanceVar, verbDistanceFamily, verbTagSet, leftSyntaxVar,
         rightSyntaxVar, parentSyntaxVar, syntaxFamily, unaryRuleInputVar, unaryRuleVar,
-        unaryRuleFamily, searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxFamily,
+        unaryRuleFamily, headedBinaryRulePredicateVar, headedBinaryRulePosVar, headedBinaryRuleFamily,
+        searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxFamily,
         allowWordSkipping, normalFormOnly);
   }
 
@@ -501,6 +523,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parameterList.getStatisticByName(SYNTAX_PARAMETERS)).coerceToDiscrete();
     DiscreteFactor unaryRuleDistribution = unaryRuleFamily.getModelFromParameters(
         parameterList.getStatisticByName(UNARY_RULE_PARAMETERS)).coerceToDiscrete();
+    DiscreteFactor headedSyntaxDistribution = headedBinaryRuleFamily.getModelFromParameters(
+        parameterList.getStatisticByName(HEADED_SYNTAX_PARAMETERS)).coerceToDiscrete();
+    
     DiscreteFactor rootSyntaxDistribution = rootSyntaxFamily.getModelFromParameters(
         parameterList.getStatisticByName(ROOT_SYNTAX_PARAMETERS)).coerceToDiscrete();
 
@@ -511,7 +536,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         wordDistanceVar, wordDistanceDistribution, puncDistanceVar, puncDistanceDistribution,
         puncTagSet, verbDistanceVar, verbDistanceDistribution, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution,
-        unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, searchMoveVar,
+        unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution, 
+        headedBinaryRulePredicateVar, headedBinaryRulePosVar, headedSyntaxDistribution, searchMoveVar,
         compiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping, normalFormOnly);
   }
 
@@ -573,8 +599,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   }
 
   public void incrementSyntaxSufficientStatistics(SufficientStatistics gradient, CcgParse parse,
-      double count) {
+      List<String> posTags, double count) {
     SufficientStatistics syntaxGradient = gradient.coerceToList().getStatisticByName(SYNTAX_PARAMETERS);
+    SufficientStatistics headedSyntaxGradient = gradient.coerceToList().getStatisticByName(HEADED_SYNTAX_PARAMETERS);
     if (!parse.isTerminal()) {
       CcgParse left = parse.getLeft();
       CcgParse right = parse.getRight();
@@ -585,10 +612,20 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           rightSyntaxVar.outcomeArrayToAssignment(right.getHeadedSyntacticCategory()),
           parentSyntaxVar.outcomeArrayToAssignment(combinator));
       syntaxFamily.incrementSufficientStatisticsFromAssignment(syntaxGradient, assignment, count);
+      
+      // Increment the headed syntax gradient.
+      for (IndexedPredicate semanticHead : parse.getSemanticHeads()) {
+        String posTag = posTags.get(semanticHead.getHeadIndex());
+        Assignment headedSyntaxAssignment = Assignment.unionAll(assignment,
+            headedBinaryRulePredicateVar.outcomeArrayToAssignment(semanticHead.getHead()),
+            headedBinaryRulePosVar.outcomeArrayToAssignment(posTag));
+        headedBinaryRuleFamily.incrementSufficientStatisticsFromAssignment(headedSyntaxGradient,
+            headedSyntaxAssignment, count);
+      }
 
       // Recursively increment gradient for rules in subtrees.
-      incrementSyntaxSufficientStatistics(gradient, left, count);
-      incrementSyntaxSufficientStatistics(gradient, right, count);
+      incrementSyntaxSufficientStatistics(gradient, left, posTags, count);
+      incrementSyntaxSufficientStatistics(gradient, right, posTags, count);
     }
 
     // Increment unary rule parameters.
@@ -679,7 +716,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parse.getAllDependencies(), count);
     // Update syntactic combination parameters. (Both unary and binary
     // rules)
-    incrementSyntaxSufficientStatistics(gradient, parse, count);
+    incrementSyntaxSufficientStatistics(gradient, parse, parse.getSpannedPosTags(), count);
     incrementRootSyntaxSufficientStatistics(gradient, parse.getHeadedSyntacticCategory(), count);
     // Update terminal distribution parameters.
     incrementLexiconSufficientStatistics(gradient, parse.getSpannedLexiconEntries(),

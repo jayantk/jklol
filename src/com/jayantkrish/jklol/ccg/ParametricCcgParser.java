@@ -576,8 +576,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           dependencyArgVar.outcomeArrayToAssignment(dependency.getObject()));
 
       dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient, assignment, count);
-      
-      System.out.println(dependencyGradient.getDescription());
 
       // Update distance parameters.
       int wordDistance = CcgParser.computeWordDistance(headWordIndex, objectWordIndex);

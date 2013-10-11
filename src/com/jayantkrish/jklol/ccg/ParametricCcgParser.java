@@ -482,15 +482,16 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     SufficientStatistics verbDistanceParameters = verbDistanceFamily.getNewSufficientStatistics();
     SufficientStatistics syntaxParameters = syntaxFamily.getNewSufficientStatistics();
     SufficientStatistics unaryRuleParameters = unaryRuleFamily.getNewSufficientStatistics();
+    SufficientStatistics headedBinaryRuleParameters = headedBinaryRuleFamily.getNewSufficientStatistics();
     SufficientStatistics rootSyntaxParameters = rootSyntaxFamily.getNewSufficientStatistics();
 
     return new ListSufficientStatistics(
         Arrays.asList(TERMINAL_PARAMETERS, TERMINAL_POS_PARAMETERS, TERMINAL_SYNTAX_PARAMETERS,
             DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS, PUNC_DISTANCE_PARAMETERS, VERB_DISTANCE_PARAMETERS,
-            SYNTAX_PARAMETERS, UNARY_RULE_PARAMETERS, ROOT_SYNTAX_PARAMETERS),
+            SYNTAX_PARAMETERS, UNARY_RULE_PARAMETERS, HEADED_SYNTAX_PARAMETERS, ROOT_SYNTAX_PARAMETERS),
         Arrays.asList(terminalParameters, terminalPosParameters, terminalSyntaxParameters, dependencyParameters,
             wordDistanceParameters, puncDistanceParameters, verbDistanceParameters, syntaxParameters, unaryRuleParameters,
-            rootSyntaxParameters));
+            headedBinaryRuleParameters, rootSyntaxParameters));
   }
 
   /**
@@ -564,7 +565,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     for (DependencyStructure dependency : dependencies) {
       int headWordIndex = dependency.getHeadWordIndex();
       int objectWordIndex = dependency.getObjectWordIndex();
-
+      
       Assignment predicateAssignment = Assignment.unionAll(
           dependencyHeadVar.outcomeArrayToAssignment(dependency.getHead()),
           dependencySyntaxVar.outcomeArrayToAssignment(dependency.getHeadSyntacticCategory()),
@@ -575,6 +576,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           dependencyArgVar.outcomeArrayToAssignment(dependency.getObject()));
 
       dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient, assignment, count);
+      
+      System.out.println(dependencyGradient.getDescription());
 
       // Update distance parameters.
       int wordDistance = CcgParser.computeWordDistance(headWordIndex, objectWordIndex);
@@ -751,6 +754,11 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parameterList.getStatisticByName(SYNTAX_PARAMETERS), numFeatures));
     sb.append(unaryRuleFamily.getParameterDescription(
         parameterList.getStatisticByName(UNARY_RULE_PARAMETERS), numFeatures));
+    sb.append(headedBinaryRuleFamily.getParameterDescription(
+        parameterList.getStatisticByName(HEADED_SYNTAX_PARAMETERS), numFeatures));
+    sb.append(rootSyntaxFamily.getParameterDescription(
+        parameterList.getStatisticByName(ROOT_SYNTAX_PARAMETERS), numFeatures));
+
     sb.append(dependencyFamily.getParameterDescription(
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS), numFeatures));
 
@@ -760,9 +768,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parameterList.getStatisticByName(PUNC_DISTANCE_PARAMETERS), numFeatures));
     sb.append(verbDistanceFamily.getParameterDescription(
         parameterList.getStatisticByName(VERB_DISTANCE_PARAMETERS), numFeatures));
-
-    sb.append(rootSyntaxFamily.getParameterDescription(
-        parameterList.getStatisticByName(ROOT_SYNTAX_PARAMETERS), numFeatures));
 
     return sb.toString();
   }

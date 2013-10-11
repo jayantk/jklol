@@ -198,7 +198,6 @@ public abstract class AbstractCcgChart implements CcgChart {
   protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, CcgParser parser) {
     DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
     ChartEntry entry = getChartEntriesForSpan(spanStart, spanEnd)[beamIndex];
-
     HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(
         entry.getHeadedSyntax());
 

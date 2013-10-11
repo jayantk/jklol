@@ -1895,7 +1895,7 @@ public class CcgParser implements Serializable {
                     double headedRuleProb = 1.0;
                     long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
                         * headedBinaryRuleCombinatorOffset;
-                    for (int assignmentIndex = 0; i < newAssignments.length; i++) {
+                    for (int assignmentIndex = 0; assignmentIndex < newAssignments.length; assignmentIndex++) {
                       long assignment = newAssignments[assignmentIndex];
                       int varNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK); 
                       if (varNum == resultSyntaxHead) {

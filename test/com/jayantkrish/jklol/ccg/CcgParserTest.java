@@ -43,6 +43,7 @@ public class CcgParserTest extends TestCase {
   private static final String[] lexicon = { "i,N{0},i,0 i",
       "people,N{0},people,0 people",
       "berries,N{0},berries,0 berries",
+      "apple,N{0},apple,0 apple",
       "houses,N{0},houses,0 houses",
       "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2",
       "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
@@ -73,7 +74,7 @@ public class CcgParserTest extends TestCase {
   
   private static final String DEFAULT_POS = ParametricCcgParser.DEFAULT_POS_TAG;
 
-  private static final double[] weights = { 0.5, 1.0, 1.0, 1.0,
+  private static final double[] weights = { 0.5, 1.0, 1.0, 1.0, 1.0,
       0.3, 1.0, 1.0,
       1.0, 1.0,
       1.0, 1.0,
@@ -490,6 +491,21 @@ public class CcgParserTest extends TestCase {
     parses = parserWithCompositionNormalForm.beamSearch(Arrays.asList("green", "green", "green", "green",
         "green", "green", "green", "green", "green", "berries"), 1000);
     assertEquals(1, parses.size());
+  }
+  
+  public void testParseHeadedSyntaxWeights() {
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("tasty", "apple"), 10);
+    assertEquals(1, parses.size());
+    assertEquals(2.0, parses.get(0).getSubtreeProbability());
+    
+    parses = parser.beamSearch(Arrays.asList("tasty", "apple", "or", "berries"), 
+        Arrays.asList(DEFAULT_POS, DEFAULT_POS, DEFAULT_POS, "JJ"), 10);
+    assertEquals(2, parses.size());
+    
+    CcgParse parse = parses.get(0);
+    assertEquals(HeadedSyntacticCategory.parseFrom("(N{0}/N{0}){1}").getCanonicalForm(),
+        parse.getLeft().getHeadedSyntacticCategory());
+    assertEquals(3.0, parse.getSubtreeProbability(), 0.00001);
   }
 
   public void testParseHeadUnification() {
@@ -1013,21 +1029,20 @@ public class CcgParserTest extends TestCase {
     VariableNumMap wordDistanceVar = VariableNumMap.singleton(6, "wordDistance", CcgParser.wordDistanceVarType);
     VariableNumMap puncDistanceVar = VariableNumMap.singleton(6, "puncDistance", CcgParser.puncDistanceVarType);
     VariableNumMap verbDistanceVar = VariableNumMap.singleton(6, "verbDistance", CcgParser.verbDistanceVarType);
-    DiscreteFactor wordDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(wordDistanceVar));
     DiscreteFactor puncDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(puncDistanceVar));
     DiscreteFactor verbDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(verbDistanceVar));
     Set<String> puncTagSet = ParametricCcgParser.DEFAULT_PUNC_TAGS;
     Set<String> verbTagSet = ParametricCcgParser.DEFAULT_VERB_TAGS;
 
-    VariableNumMap wordDistanceVars = wordDistanceFactor.getVars();
-    TableFactorBuilder wordFactorIncrementBuilder = new TableFactorBuilder(wordDistanceFactor.getVars(), SparseTensorBuilder.getFactory());
+    VariableNumMap wordDistanceVars = distancePredicateVars.union(wordDistanceVar);
+    TableFactorBuilder wordFactorIncrementBuilder = new TableFactorBuilder(wordDistanceVars, SparseTensorBuilder.getFactory());
     HeadedSyntacticCategory eatCategory = HeadedSyntacticCategory.parseFrom("((S[b]{0}\\N{1}){0}/N{2}){0}").getCanonicalForm();
     HeadedSyntacticCategory tastyCategory = HeadedSyntacticCategory.parseFrom("(N{1}/N{1}){0}").getCanonicalForm();
-    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 0), 3.0);
-    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 1), 2.0);
-    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 2), 1.0);
-    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("tasty", tastyCategory, 1, "JJ", 0), 1.0);
-    wordDistanceFactor = wordDistanceFactor.add(wordFactorIncrementBuilder.build());
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 0), Math.log(4.0));
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 1), Math.log(3.0));
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 2), Math.log(2.0));
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("tasty", tastyCategory, 1, "JJ", 0), Math.log(2.0));
+    DiscreteFactor wordDistanceFactor = wordFactorIncrementBuilder.buildSparseInLogSpace();
 
     // Create a distribution over headed binary rules.
     int maxVarNum = Ints.max(syntaxDistribution.getVars().getVariableNumsArray());
@@ -1035,8 +1050,22 @@ public class CcgParserTest extends TestCase {
         "headedBinaryRulePredicate", semanticPredicateType); 
     VariableNumMap headedBinaryRulePosVar = VariableNumMap.singleton(maxVarNum + 2, 
         "headedBinaryRulePos", posType);
-    DiscreteFactor headedBinaryRuleFactor = TableFactor.logUnity(VariableNumMap.unionAll(
-        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar));
+    VariableNumMap syntaxVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar);
+    VariableNumMap binaryHeadVars = VariableNumMap.unionAll(headedBinaryRulePredicateVar, headedBinaryRulePosVar);
+    VariableNumMap headedBinaryVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar,
+        parentSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar);
+    TableFactorBuilder headedBinaryFactorBuilder = new TableFactorBuilder(headedBinaryVars, SparseTensorBuilder.getFactory());
+    HeadedSyntacticCategory nounCategory = HeadedSyntacticCategory.parseFrom("N{0}").getCanonicalForm();
+    Assignment tastyAssignment = syntaxVars.outcomeArrayToAssignment(tastyCategory, nounCategory);
+    Iterator<Outcome> possibleRuleIter = syntaxDistribution.conditional(tastyAssignment).outcomeIterator();
+    while (possibleRuleIter.hasNext()) {
+      Assignment ruleAssignment = possibleRuleIter.next().getAssignment().union(tastyAssignment);
+      Assignment predicateAssignmentDefault = binaryHeadVars.outcomeArrayToAssignment("apple", DEFAULT_POS);
+      Assignment predicateAssignmentJj = binaryHeadVars.outcomeArrayToAssignment("berries", "JJ");
+      headedBinaryFactorBuilder.incrementWeight(ruleAssignment.union(predicateAssignmentDefault), Math.log(2.0));
+      headedBinaryFactorBuilder.incrementWeight(ruleAssignment.union(predicateAssignmentJj), Math.log(3.0));
+    }
+    DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
 
     return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution,

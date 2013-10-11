@@ -110,7 +110,7 @@ public class TableFactor extends DiscreteFactor {
    */
   public static TableFactor logUnity(VariableNumMap vars) {
     TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
-    return builder.buildInLogSpace();
+    return builder.buildSparseInLogSpace();
   }
 
   /**

@@ -176,16 +176,16 @@ public class ChartEntry {
     this.combinator = null;
   }
 
-  public int getHeadVariable() {
-    return syntaxHeadVar;
-  }
-
   public int getHeadedSyntax() {
     return syntax;
   }
 
   public int[] getHeadedSyntaxUniqueVars() {
     return syntaxUniqueVars;
+  }
+  
+  public int getHeadVariable() {
+    return syntaxHeadVar;
   }
 
   /**

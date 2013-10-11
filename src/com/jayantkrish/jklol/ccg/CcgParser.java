@@ -1856,10 +1856,29 @@ public class CcgParser implements Serializable {
                         unfilledDepArray, filledDepArray, spanStart, spanStart + i,
                         leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
                     // log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
+                    
+                    // Get the weights of applying this syntactic combination rule 
+                    // given the word and POS tag of the result's head.
+                    double headedRuleProb = 1.0;
+                    long binaryCombinatorKeyNumWordOffset = searchMove.getBinaryCombinatorKeyNum()
+                        * wordCombinatorOffset;
+                    long binaryCombinatorKeyNumPosOffset = searchMove.getBinaryCombinatorKeyNum()
+                        * posCombinatorOffset;
+                    long[] headAssignments = result.getHeadAssignments();
+                    for (int assignmentIndex = 0; i < headAssignments.length; i++) {
+                      long assignment = headAssignments[assignmentIndex];
+                      long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
+                      long wordCombinatorKeyNum = binaryCombinatorKeyNumPosOffset + predicate;
+                      headedRuleProb *= currentSyntaxWordTensor.get(wordCombinatorKeyNum);
+
+                      int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
+                      int posTag = currentPosTags[wordIndex];
+                      long posCombinatorKeyNum = binaryCombinatorKeyNumWordOffset + posTag;
+                      headedRuleProb *= currentSyntaxPosTensor.get(posCombinatorKeyNum);
+                    }
 
                     // log.startTimer("ccg_parse/beam_loop/dependencies");
-                    // Get the probabilities of the generated
-                    // dependencies.
+                    // Get the weights of the generated dependencies.
                     double depProb = 1.0;
                     double curDepProb = 1.0;
                     int filledDepArrayLength = filledDepArray.length;

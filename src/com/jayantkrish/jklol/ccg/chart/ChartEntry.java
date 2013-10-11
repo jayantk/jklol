@@ -170,6 +170,10 @@ public class ChartEntry {
 
     this.combinator = null;
   }
+  
+  public int getHeadVariable() {
+    
+  }
 
   public int getHeadedSyntax() {
     return syntax;

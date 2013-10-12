@@ -16,6 +16,8 @@ import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -150,10 +152,13 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
       Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
           .relabelDimensions(inputVar.getVariableNumsArray());
 
+      LogFunction log = LogFunctions.getLogFunction();
       // The expected feature counts are equal to the outer product of
       // inputTensor and outputMarginal.
+      log.startTimer("outer_product");
       ((TensorSufficientStatistics) statistics).incrementOuterProduct(inputTensor,
           outputMarginal.getWeights(), count / partitionFunction);
+      log.stopTimer("outer_product");
     }
   }
 

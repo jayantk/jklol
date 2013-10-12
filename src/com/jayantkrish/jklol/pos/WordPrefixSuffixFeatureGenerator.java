@@ -17,20 +17,26 @@ import com.jayantkrish.jklol.sequence.LocalContext;
 public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalContext<String>, String> {
 
   private static final long serialVersionUID = 1L;
-  
+
+  private final int minPrefixLength;
   private final int maxPrefixLength;
+  private final int minSuffixLength;
   private final int maxSuffixLength;
   
   private final Set<String> commonWords;
   
-  public WordPrefixSuffixFeatureGenerator(int maxPrefixLength, int maxSuffixLength,
-      Set<String> commonWords) {
-    Preconditions.checkArgument(maxPrefixLength >= 0);
-    Preconditions.checkArgument(maxSuffixLength >= 0);
+  public WordPrefixSuffixFeatureGenerator(int minPrefixLength, int maxPrefixLength,
+      int minSuffixLength, int maxSuffixLength, Set<String> commonWords) {
+    Preconditions.checkArgument(minPrefixLength >= 1);
+    Preconditions.checkArgument(maxPrefixLength >= minPrefixLength);
+    Preconditions.checkArgument(minSuffixLength >= 1);
+    Preconditions.checkArgument(maxSuffixLength >= minSuffixLength);
     
+    this.minPrefixLength = minPrefixLength;
     this.maxPrefixLength = maxPrefixLength;
+    this.minSuffixLength = minSuffixLength;
     this.maxSuffixLength = maxSuffixLength;
-    
+
     this.commonWords = ImmutableSet.copyOf(commonWords);
   }
 
@@ -59,15 +65,15 @@ public class WordPrefixSuffixFeatureGenerator implements FeatureGenerator<LocalC
       return;
     }
 
-    int maxPrefixIndex = Math.min(word.length(), maxPrefixLength);
-    for (int i = 1; i <= maxPrefixIndex; i++) {
+    int maxPrefixIndex = Math.min(word.length(), (maxPrefixLength - 1));
+    for (int i = minPrefixLength; i <= maxPrefixIndex; i++) {
       String featureName = "PREFIX=" + word.substring(0, i).intern();
       weights.put(featureName, 1.0);
     }
 
     int len = word.length();
-    int minSuffixIndex = Math.max(0, len - maxSuffixLength);
-    for (int i = len - 1; i >= minSuffixIndex; i--) {
+    int minSuffixIndex = Math.max(0, len - (maxSuffixLength - 1));
+    for (int i = len - minSuffixLength; i >= minSuffixIndex; i--) {
       String featureName = "SUFFIX=" + word.substring(i, len).intern();
       weights.put(featureName, 1.0);
     }

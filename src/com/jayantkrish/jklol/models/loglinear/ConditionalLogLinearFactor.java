@@ -132,13 +132,17 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, Factor marginal, 
       Assignment conditionalAssignment, double count, double partitionFunction) {
     Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNums()));
+    LogFunction log = LogFunctions.getLogFunction();
 
     if (conditionalAssignment.containsAll(getVars().getVariableNums())) {
+      log.startTimer("conditional_increment_statistics");
       Preconditions.checkState(marginal.getVars().size() == 0);
       // Easy case where all variables' values are known.
       double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
       incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);
+      log.stopTimer("conditional_increment_statistics");
     } else {
+      log.startTimer("increment_statistics_first_part");
       // Construct a factor representing the unnormalized probability distribution over all
       // of the output variables.
       VariableNumMap conditionedVars = outputVars.intersection(conditionalAssignment.getVariableNums());
@@ -151,8 +155,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
       Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
           .relabelDimensions(inputVar.getVariableNumsArray());
+      log.stopTimer("increment_statistics_first_part");
 
-      LogFunction log = LogFunctions.getLogFunction();
       // The expected feature counts are equal to the outer product of
       // inputTensor and outputMarginal.
       log.startTimer("outer_product");

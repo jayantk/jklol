@@ -150,9 +150,10 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
       Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
           .relabelDimensions(inputVar.getVariableNumsArray());
 
-      Tensor expectedCounts = inputTensor.outerProduct(outputMarginal.getWeights());
-
-      ((TensorSufficientStatistics) statistics).increment(expectedCounts, count / partitionFunction);
+      // The expected feature counts are equal to the outer product of
+      // inputTensor and outputMarginal.
+      ((TensorSufficientStatistics) statistics).incrementOuterProduct(inputTensor,
+          outputMarginal.getWeights(), count / partitionFunction);
     }
   }
 

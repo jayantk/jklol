@@ -170,6 +170,30 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
+  public void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier) {
+    int[] leftDimensionNums = leftTensor.getDimensionNumbers();
+    int[] rightDimensionNums = rightTensor.getDimensionNumbers();
+    Preconditions.checkArgument(leftDimensionNums[leftDimensionNums.length - 1] < rightDimensionNums[0]);
+  
+    long leftKeyNumMultiplier = rightTensor.getMaxKeyNum();
+
+    int leftSize = leftTensor.size();
+    int rightSize = rightTensor.size();
+    for (int i = 0; i < leftSize; i++) {
+      long leftKeyNumOffset = leftTensor.indexToKeyNum(i) * leftKeyNumMultiplier;
+      double leftValue = leftTensor.getByIndex(i) * multiplier;
+      for (int j = 0; j < rightSize; j++) {
+        double otherValue = rightTensor.getByIndex(j);
+        if (otherValue != 0.0) {
+          long rightKeyNum = rightTensor.indexToKeyNum(j);
+          values[(int) (leftKeyNumOffset + rightKeyNum)] += leftValue * otherValue;
+        }
+      }
+    }
+  }
+
+  @Override
   public void multiply(TensorBase other) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
     if (other instanceof DenseTensorBase) {

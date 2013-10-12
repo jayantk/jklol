@@ -114,6 +114,12 @@ public class AppendOnlySparseTensorBuilder extends AbstractTensorBase implements
   }
 
   @Override
+  public void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public void incrementEntry(double amount, int... key) {
     throw new UnsupportedOperationException();
   }

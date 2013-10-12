@@ -27,6 +27,9 @@ public interface TensorBuilder extends TensorBase, Serializable {
   void increment(double amount);
 
   void incrementWithMultiplier(TensorBase other, double multiplier);
+  
+  void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier);
 
   void incrementEntry(double amount, int... key);
   

@@ -172,6 +172,15 @@ public class TensorSufficientStatistics implements SufficientStatistics {
       statisticsTensor = statisticsTensor.elementwiseAddition(other.elementwiseProduct(multiplier));
     }
   }
+  
+  public void incrementOuterProduct(Tensor leftTensor, Tensor rightTensor, double multiplier) {
+    if (isDense) {
+      statistics.incrementOuterProductWithMultiplier(leftTensor, rightTensor, multiplier);
+    } else {
+      Tensor other = leftTensor.outerProduct(rightTensor);
+      statisticsTensor = statisticsTensor.elementwiseAddition(other.elementwiseProduct(multiplier));
+    }
+  }
 
   /**
    * Increments the element of that corresponds to the statistic/parameter

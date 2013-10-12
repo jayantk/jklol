@@ -230,6 +230,12 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
       incrementEntry(keyValue.getValue() * multiplier, keyValue.getKey());
     }
   }
+  
+  @Override
+  public void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier) {
+    incrementWithMultiplier(leftTensor.outerProduct(rightTensor), multiplier);
+  }
 
   @Override
   public void incrementEntry(double amount, int... key) {

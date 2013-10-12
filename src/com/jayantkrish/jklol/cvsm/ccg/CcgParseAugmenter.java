@@ -34,6 +34,7 @@ public class CcgParseAugmenter {
       patterns.add(SemTypePattern.parseFrom(lines.get(i)));
       i++;
     }
+    i++;
 
     List<UnaryRulePattern> unaryRulePatterns = Lists.newArrayList();
     while (i < lines.size()) {

@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -63,6 +65,19 @@ public class FeatureGenerators {
     return FeatureGenerators.productFeatureGenerator(Arrays.asList(generators));
   }
   
+  /**
+   * Gets a feature generator that first converts the data,
+   * then applies a given feature generator. 
+   *  
+   * @param generator
+   * @param converter
+   * @return
+   */
+  public static <A, B, C> FeatureGenerator<A, C> convertingFeatureGenerator(
+      FeatureGenerator<B, C> generator, Function<A, B> converter) {
+    return new ConvertingFeatureGenerator<A, B, C>(generator, converter);
+  }
+
   public static <A, B> CountAccumulator<B> getFeatureCounts(FeatureGenerator<A, B> featureGenerator,
       Iterable<? extends A> data) {
     CountAccumulator<B> featureCounts = CountAccumulator.create();
@@ -138,6 +153,23 @@ public class FeatureGenerators {
           recursivelyPopulateCounts(index + 1, generatedFeatures, currentKey, currentWeight * currentFeatures.get(key), counts);
         }
       }
+    }
+  }
+  
+  private static class ConvertingFeatureGenerator<A, B, C> implements FeatureGenerator<A, C> {
+    private static final long serialVersionUID = 1L;
+
+    private final FeatureGenerator<B, C> generator;
+    private final Function<A, B> converter;
+
+    public ConvertingFeatureGenerator(FeatureGenerator<B, C> generator, Function<A, B> converter) {
+      this.generator = Preconditions.checkNotNull(generator);
+      this.converter = Preconditions.checkNotNull(converter);
+    }
+
+    @Override
+    public Map<C, Double> generateFeatures(A item) {
+      return generator.generateFeatures(converter.apply(item));
     }
   }
 }

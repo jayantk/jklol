@@ -8,6 +8,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -17,9 +18,12 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cli.TrainCcg;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.pos.WordPrefixSuffixFeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerators;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.sequence.ConvertingLocalContext;
 import com.jayantkrish.jklol.sequence.FactorGraphSequenceTagger;
 import com.jayantkrish.jklol.sequence.ListTaggedSequence;
 import com.jayantkrish.jklol.sequence.LocalContext;
@@ -27,6 +31,7 @@ import com.jayantkrish.jklol.sequence.TaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.util.CountAccumulator;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -46,6 +51,7 @@ public class TrainSupertagger extends AbstractCli {
   private OptionSpec<Void> noTransitions;
   private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
+  private OptionSpec<Integer> prefixSuffixFeatureCountThreshold; 
 
   public TrainSupertagger() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.LBFGS, CommonOptions.MAP_REDUCE);
@@ -62,6 +68,8 @@ public class TrainSupertagger extends AbstractCli {
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(5);
+    prefixSuffixFeatureCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
+        .ofType(Integer.class).defaultsTo(35);
   }
 
   @Override
@@ -74,7 +82,8 @@ public class TrainSupertagger extends AbstractCli {
         reformatTrainingExamples(ccgExamples, true);
 
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
-        buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold));
+        buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold),
+            options.valueOf(prefixSuffixFeatureCountThreshold));
 
     Set<HeadedSyntacticCategory> validCategories = Sets.newHashSet();
     for (TaggedSequence<WordAndPos, HeadedSyntacticCategory> trainingDatum : trainingData) {
@@ -130,7 +139,8 @@ public class TrainSupertagger extends AbstractCli {
   }
 
   private static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
-      List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData, int commonWordCountThreshold) {
+      List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData,
+      int commonWordCountThreshold, int prefixSuffixCountThreshold) {
     List<LocalContext<WordAndPos>> contexts = TaggerUtils.extractContextsFromData(trainingData);
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (LocalContext<WordAndPos> context : contexts) {
@@ -139,15 +149,45 @@ public class TrainSupertagger extends AbstractCli {
     Set<String> commonWords = Sets.newHashSet(wordCounts.getKeysAboveCountThreshold(
         commonWordCountThreshold));
 
-    // Build a dictionary of features which occur frequently enough
-    // in the data set.
-    FeatureGenerator<LocalContext<WordAndPos>, String> featureGenerator = new
+    // Build a dictionary of words and POS tags which occur frequently
+    // enough in the data set.
+    FeatureGenerator<LocalContext<WordAndPos>, String> wordGen = new
         WordAndPosContextFeatureGenerator(new int[] { -2, -1, 0, 1, 2 }, commonWords);
-    return DictionaryFeatureVectorGenerator.createFromDataWithThreshold(contexts,
-        featureGenerator, commonWordCountThreshold);
+    CountAccumulator<String> wordPosFeatureCounts = FeatureGenerators.getFeatureCounts(wordGen, contexts);
+
+    // Generate prefix/suffix features for common prefixes and suffixes.
+    final WordAndPosToWord wordPosConverter = new WordAndPosToWord();
+    FeatureGenerator<LocalContext<WordAndPos>, String> prefixGen = 
+        FeatureGenerators.convertingFeatureGenerator(new WordPrefixSuffixFeatureGenerator(4, 4, commonWords),
+            new Function<LocalContext<WordAndPos>, LocalContext<String>>() {
+          @Override
+          public LocalContext<String> apply(LocalContext<WordAndPos> context) {
+            return new ConvertingLocalContext<WordAndPos, String>(context, wordPosConverter);
+          }
+        });
+
+    // Count feature occurrences and discard infrequent features.
+    CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
+    IndexedList<String> featureDictionary = IndexedList.create();
+    featureDictionary.addAll(wordPosFeatureCounts.getKeysAboveCountThreshold(commonWordCountThreshold));
+    featureDictionary.addAll(prefixFeatureCounts.getKeysAboveCountThreshold(prefixSuffixCountThreshold));
+
+    @SuppressWarnings("unchecked")
+    FeatureGenerator<LocalContext<WordAndPos>, String> featureGen = FeatureGenerators
+          .combinedFeatureGenerator(wordGen, prefixGen);
+
+    return new DictionaryFeatureVectorGenerator<LocalContext<WordAndPos>, String>(
+        featureDictionary, featureGen, true);
   }
 
   public static void main(String[] args) {
     new TrainSupertagger().run(args);
+  }
+
+  private static class WordAndPosToWord implements Function<WordAndPos, String> {
+    @Override
+    public String apply(WordAndPos wordAndPos) {
+      return wordAndPos.getWord();
+    }
   }
 }

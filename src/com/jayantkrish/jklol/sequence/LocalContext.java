@@ -1,29 +1,15 @@
 package com.jayantkrish.jklol.sequence;
 
-import java.util.List;
-
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 
-public class LocalContext<I> {
-  private final List<I> items;
-  private final int wordIndex;
-
-  public LocalContext(List<I> items, int wordIndex) {
-    this.items = Preconditions.checkNotNull(items);
-    this.wordIndex = wordIndex;
-
-    Preconditions.checkArgument(wordIndex >= 0 && wordIndex < items.size());
-  }
+public interface LocalContext<I> {
 
   /**
    * Gets the central item which this context surrounds.
    * 
    * @return
    */
-  public I getItem() {
-    return items.get(wordIndex);
-  }
+  I getItem();
 
   /**
    * Gets an item to the left or right of the central item in this
@@ -36,16 +22,20 @@ public class LocalContext<I> {
    * @param relativeOffset
    * @return
    */
-  public I getItem(int relativeOffset, Function<Integer, I> endFunction) {
-    int index = wordIndex + relativeOffset;
+  I getItem(int relativeOffset, Function<? super Integer, I> endFunction);
 
-    if (index < 0) {
-      return endFunction.apply(index);
-    } else if (index >= items.size()) {
-      int endWordIndex = index - (items.size() - 1);
-      return endFunction.apply(endWordIndex);
-    } else {
-      return items.get(index);
-    }
-  }
+  /**
+   * Gets the largest offset for which {@code getItem} will remain within
+   * the elements of the sequence.
+   * 
+   * @return
+   */
+  int getMaxOffset();
+  
+  /**
+   * Gets the smallest offset for which {@code getItem} will remain within
+   * the elements of the sequence.
+   * @return
+   */
+  int getMinOffset();
 }

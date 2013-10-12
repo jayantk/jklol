@@ -76,11 +76,14 @@ public class TrainSupertagger extends AbstractCli {
   public void run(OptionSet options) {
     // Read in the training data as sentences, to use for
     // feature generation.
+    System.out.println("Reading training data...");
     List<CcgExample> ccgExamples = TrainCcg.readTrainingData(options.valueOf(trainingFilename),
         true, true, options.valueOf(syntaxMap));
+    System.out.println("Reformatting training data...");
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData =
         reformatTrainingExamples(ccgExamples, true);
 
+    System.out.println("Generating features...");
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold),
             options.valueOf(prefixSuffixFeatureCountThreshold));
@@ -169,8 +172,13 @@ public class TrainSupertagger extends AbstractCli {
     // Count feature occurrences and discard infrequent features.
     CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
     IndexedList<String> featureDictionary = IndexedList.create();
-    featureDictionary.addAll(wordPosFeatureCounts.getKeysAboveCountThreshold(commonWordCountThreshold));
-    featureDictionary.addAll(prefixFeatureCounts.getKeysAboveCountThreshold(prefixSuffixCountThreshold));
+    Set<String> frequentWordFeatures = wordPosFeatureCounts.getKeysAboveCountThreshold(commonWordCountThreshold);
+    Set<String> frequentPrefixFeatures = prefixFeatureCounts.getKeysAboveCountThreshold(prefixSuffixCountThreshold);
+    featureDictionary.addAll(frequentWordFeatures);
+    featureDictionary.addAll(frequentPrefixFeatures);
+
+    System.out.println(frequentWordFeatures.size() + " word and POS features");
+    System.out.println(frequentPrefixFeatures.size() + " prefix/suffix features");
 
     @SuppressWarnings("unchecked")
     FeatureGenerator<LocalContext<WordAndPos>, String> featureGen = FeatureGenerators

@@ -27,6 +27,7 @@ public class ChartEntry {
   // encoded as an integer.
   private final int syntax;
   private final int[] syntaxUniqueVars;
+  private final int syntaxHeadVar;
 
   // If non-null, this unary rule was applied at this entry to
   // produce syntax from the original category.
@@ -83,6 +84,7 @@ public class ChartEntry {
    * 
    * @param syntax
    * @param syntaxUniqueVars
+   * @param syntaxHeadVar
    * @param rootUnaryRule
    * @param leftUnaryRule
    * @param rightUnaryRule
@@ -97,12 +99,13 @@ public class ChartEntry {
    * @param rightChartIndex
    * @param combinator
    */
-  public ChartEntry(int syntax, int[] syntaxUniqueVars, UnaryCombinator rootUnaryRule, UnaryCombinator leftUnaryRule,
-      UnaryCombinator rightUnaryRule, long[] assignments, long[] unfilledDependencies,
+  public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, UnaryCombinator rootUnaryRule,
+      UnaryCombinator leftUnaryRule, UnaryCombinator rightUnaryRule, long[] assignments, long[] unfilledDependencies,
       long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
       int rightSpanStart, int rightSpanEnd, int rightChartIndex, Combinator combinator) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
+    this.syntaxHeadVar = syntaxHeadVar;
 
     this.rootUnaryRule = rootUnaryRule;
     this.leftUnaryRule = leftUnaryRule;
@@ -132,6 +135,7 @@ public class ChartEntry {
    * 
    * @param syntax
    * @param syntaxUniqueVars
+   * @param syntaxHeadVar
    * @param ccgCategory
    * @param terminalWords
    * @param rootUnaryRule
@@ -141,11 +145,12 @@ public class ChartEntry {
    * @param spanStart
    * @param spanEnd
    */
-  public ChartEntry(int syntax, int[] syntaxUniqueVars, CcgCategory ccgCategory, List<String> terminalWords,
-      UnaryCombinator rootUnaryRule, long[] assignments, long[] unfilledDependencies, long[] deps,
-      int spanStart, int spanEnd) {
+  public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, CcgCategory ccgCategory,
+      List<String> terminalWords, UnaryCombinator rootUnaryRule, long[] assignments,
+      long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
+    this.syntaxHeadVar = syntaxHeadVar;
 
     this.rootUnaryRule = rootUnaryRule;
     this.leftUnaryRule = null;
@@ -177,6 +182,10 @@ public class ChartEntry {
 
   public int[] getHeadedSyntaxUniqueVars() {
     return syntaxUniqueVars;
+  }
+  
+  public int getHeadVariable() {
+    return syntaxHeadVar;
   }
 
   /**
@@ -347,15 +356,15 @@ public class ChartEntry {
   }
 
   public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
-      UnaryCombinator unaryRuleCombinator, long[] newAssignments, long[] newUnfilledDeps,
+      int resultHeadVar, UnaryCombinator unaryRuleCombinator, long[] newAssignments, long[] newUnfilledDeps,
       long[] newFilledDeps) {
     Preconditions.checkState(rootUnaryRule == null);
     if (isTerminal()) {
-      return new ChartEntry(resultSyntax, resultUniqueVars, lexiconEntry, lexiconTriggerWords,
+      return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, lexiconEntry, lexiconTriggerWords,
           unaryRuleCombinator, newAssignments, newUnfilledDeps,
           newFilledDeps, leftSpanStart, leftSpanEnd);
     } else {
-      return new ChartEntry(resultSyntax, resultUniqueVars, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
+      return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
           newAssignments, newUnfilledDeps, newFilledDeps, leftSpanStart,
           leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator);
     }

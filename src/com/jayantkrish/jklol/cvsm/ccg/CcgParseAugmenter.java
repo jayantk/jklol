@@ -88,7 +88,7 @@ public class CcgParseAugmenter {
       CcgUnaryRule newRule = new CcgUnaryRule(rule.getInputSyntacticCategory(),
           rule.getResultSyntacticCategory(), logicalForm);
       UnaryCombinator newCombinator = new UnaryCombinator(combinator.getInputType(),
-          combinator.getSyntax(), combinator.getSyntaxUniqueVars(),
+          combinator.getSyntax(), combinator.getSyntaxUniqueVars(), combinator.getSyntaxHeadVar(),
           combinator.getVariableRelabeling(), newRule);
       result = result.addUnaryRule(newCombinator, result.getHeadedSyntacticCategory());
     }

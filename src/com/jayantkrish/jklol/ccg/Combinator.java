@@ -20,6 +20,7 @@ public class Combinator implements Serializable {
 
   private final int syntax;
   private final int[] syntaxUniqueVars;
+  private final int syntaxHeadVar;
 
   private final int[] leftVariableRelabeling;
   private final int[] rightVariableRelabeling;
@@ -45,13 +46,14 @@ public class Combinator implements Serializable {
   // The type of this combinator (e.g., forward application)
   private final Type type;
 
-  public Combinator(int syntax, int[] syntaxUniqueVars, int[] leftVariableRelabeling,
+  public Combinator(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, int[] leftVariableRelabeling,
       int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,
       int[] unifiedVariables, String[] subjects, HeadedSyntacticCategory[] subjectSyntacticCategories, 
       int[] argumentNumbers, int[] objects, boolean isArgumentOnLeft, int argumentReturnDepth,
       CcgBinaryRule binaryRule, Type type) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
+    this.syntaxHeadVar = syntaxHeadVar;
 
     this.leftVariableRelabeling = leftVariableRelabeling;
     this.rightVariableRelabeling = rightVariableRelabeling;
@@ -84,6 +86,10 @@ public class Combinator implements Serializable {
 
   public int[] getSyntaxUniqueVars() {
     return syntaxUniqueVars;
+  }
+  
+  public int getSyntaxHeadVar() {
+    return syntaxHeadVar;
   }
 
   public int[] getLeftVariableRelabeling() {

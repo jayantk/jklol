@@ -3,10 +3,8 @@ package com.jayantkrish.jklol.ccg;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;

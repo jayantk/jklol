@@ -92,4 +92,20 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
     VariableNumMap vars = terminalWordVar.union(terminalSyntaxVar);
     return new ConstantParametricFactor(vars, TableFactor.logUnity(vars));
   }
+  
+  @Override
+  public ParametricFactor getHeadedBinaryRuleFeatures(VariableNumMap leftSyntaxVar,
+      VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
+      VariableNumMap headedBinaryRulePredicateVar, VariableNumMap headedBinaryRulePosVar) {
+    ParametricFactor wordFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePredicateVar));
+    ParametricFactor posFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePosVar));
+
+    VariableNumMap allVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, 
+        headedBinaryRulePredicateVar, headedBinaryRulePosVar);
+
+    return new CombiningParametricFactor(allVars, Arrays.asList("word-binary-rule",
+        "pos-binary-rule"), Arrays.asList(wordFactor, posFactor), true);
+  }
 }

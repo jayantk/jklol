@@ -108,4 +108,18 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
     return new CombiningParametricFactor(allVars, Arrays.asList("word-binary-rule",
         "pos-binary-rule"), Arrays.asList(wordFactor, posFactor), true);
   }
+  
+  @Override
+  public ParametricFactor getHeadedRootFeatures(VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar,
+      VariableNumMap rootPosVar) {
+    ParametricFactor wordFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
+        rootSyntaxVar, rootPredicateVar));
+    ParametricFactor posFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
+        rootSyntaxVar, rootPosVar));
+
+    VariableNumMap allVars = VariableNumMap.unionAll(rootSyntaxVar, rootPredicateVar, rootPosVar);
+
+    return new CombiningParametricFactor(allVars, Arrays.asList("root-word",
+        "root-pos"), Arrays.asList(wordFactor, posFactor), true);
+  }
 }

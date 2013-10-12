@@ -121,7 +121,7 @@ public interface CcgFeatureFactory {
    * Gets a parametric factor defining features over binary combinators
    * along with their semantic heads and parts-of-speech. This distribution
    * should not include features which depend only on the syntactic variables
-   * -- such parameters are included in the parser by default. 
+   * -- such features are included in the parser by default. 
    * 
    * @param leftSyntaxVar
    * @param rightSyntaxVar
@@ -133,4 +133,18 @@ public interface CcgFeatureFactory {
   ParametricFactor getHeadedBinaryRuleFeatures(VariableNumMap leftSyntaxVar,
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       VariableNumMap headedBinaryRulePredicateVar, VariableNumMap headedBinaryRulePosVar);
+
+  /**
+   * Gets a parametric factor defining features over the root syntactic category
+   * of the parse tree along with its semantic head and part-of-speech tag.
+   * This factor should not include features which depend solely on the syntactic
+   * category -- such features are included in the parser by default.
+   *   
+   * @param rootSyntaxVar
+   * @param rootPredicateVar
+   * @param rootPosVar
+   * @return
+   */
+  ParametricFactor getHeadedRootFeatures(VariableNumMap rootSyntaxVar,
+      VariableNumMap rootPredicateVar, VariableNumMap rootPosVar);
 }

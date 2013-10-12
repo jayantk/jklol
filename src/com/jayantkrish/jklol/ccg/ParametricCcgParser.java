@@ -410,8 +410,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     // Create root syntax factor.
     DiscreteLogLinearFactor parametricRootDistribution = DiscreteLogLinearFactor
         .createIndicatorFactor(leftSyntaxVar);
-    ParametricFactor parametricHeadedRootDistribution = new DenseIndicatorLogLinearFactor(
-        VariableNumMap.unionAll(leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar));
+    ParametricFactor parametricHeadedRootDistribution = featureFactory.getHeadedRootFeatures(
+        leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar);
 
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
         posVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor, dependencyHeadVar,

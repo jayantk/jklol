@@ -55,20 +55,20 @@ public class WordAndPosContextFeatureGenerator implements FeatureGenerator<Local
       WordAndPos prevWord = item.getItem(i - 1, endFunction);
       WordAndPos curWord = item.getItem(i, endFunction);
       
-      String featureName = ("POS_" + (i - 1) + "_" + i + "=" + prevWord +"_" + curWord).intern();
+      String featureName = ("POS_" + (i - 1) + "_" + i + "=" + prevWord.getPos() +"_" + curWord.getPos()).intern();
       weights.put(featureName, 1.0);
     }
     return weights;
   }
 
   private static String formatFeature(String word, int offset) {
-    String featureName = ("WORD_" + offset + "=" + word).intern();
+    String featureName = "WORD_" + offset + "=" + word;
     featureName = featureName.intern();
     return featureName;
   }
   
   private static String formatPosFeature(String pos, int offset) {
-    String featureName = ("POS_" + offset + "=" + pos).intern();
+    String featureName = "POS_" + offset + "=" + pos;
     featureName = featureName.intern();
     return featureName;
   }

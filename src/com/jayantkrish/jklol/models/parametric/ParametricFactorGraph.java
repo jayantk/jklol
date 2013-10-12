@@ -16,6 +16,8 @@ import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -170,14 +172,19 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
    */
   public void incrementSufficientStatistics(SufficientStatistics statistics,
       MarginalSet marginals, double count) {
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("parametric_factor_graph_increment");
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
     
     List<Integer> conditionedVariableNums = marginals.getConditionedValues().getVariableNums();
     for (int i = 0; i < statisticsList.size(); i++) {
+      log.startTimer("parametric_factor_graph_match");
       VariablePattern pattern = factorPatterns.get(i);
       List<VariableMatch> matches = pattern.matchVariables(marginals.getVariables());
+      log.stopTimer("parametric_factor_graph_match");
       for (VariableMatch match : matches) {
+        log.startTimer("parametric_factor_graph_factor_stuff");
         VariableNumMap matchVars = match.getMatchedVariables();
         // These calls take ~ 4 microseconds
         VariableNumMap fixedVars = matchVars.intersection(conditionedVariableNums);
@@ -191,13 +198,14 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
         Factor relabeledMarginal = factorMarginal.relabelVariables(match.getMappingToTemplate());
         Assignment relabeledAssignment = factorAssignment.mapVariables(match.getMappingToTemplate()
             .getVariableIndexReplacementMap());
-
+        log.stopTimer("parametric_factor_graph_factor_stuff");
         // to here: 18 microsecs
         parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i),
             relabeledMarginal, relabeledAssignment, count, 1.0);
         // to here: 27 microsecs
       }
     }
+    log.stopTimer("parametric_factor_graph_increment");
   }
 
   /**

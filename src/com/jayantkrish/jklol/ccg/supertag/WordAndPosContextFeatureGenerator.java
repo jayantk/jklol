@@ -55,7 +55,7 @@ public class WordAndPosContextFeatureGenerator implements FeatureGenerator<Local
       WordAndPos prevWord = item.getItem(i - 1, endFunction);
       WordAndPos curWord = item.getItem(i, endFunction);
       
-      String featureName = ("POS_" + (i - 1) + "_" + i + "_" + prevWord +"_" + curWord).intern();
+      String featureName = ("POS_" + (i - 1) + "_" + i + "=" + prevWord +"_" + curWord).intern();
       weights.put(featureName, 1.0);
     }
     return weights;

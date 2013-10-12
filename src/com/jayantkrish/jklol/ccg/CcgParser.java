@@ -199,7 +199,15 @@ public class CcgParser implements Serializable {
 
   // Weights on the syntactic category of the root of the CCG parse.
   private final VariableNumMap rootSyntaxVar;
+  private final VariableNumMap rootPredicateVar;
+  private final VariableNumMap rootPosVar;
+  // Defined solely over rootSyntaxVar
   private final DiscreteFactor rootSyntaxDistribution;
+  // Defined over all three of the above variables
+  private final DiscreteFactor headedRootSyntaxDistribution;
+  private final long headedRootSyntaxOffset;
+  private final long headedRootPredicateOffset;
+  private final long headedRootPosOffset;
 
   // All predicates used in CCG rules.
   private final Set<Long> predicatesInRules;
@@ -221,7 +229,8 @@ public class CcgParser implements Serializable {
       VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleFactor, VariableNumMap headedBinaryPredicateVar,
       VariableNumMap headedBinaryPosVar, DiscreteFactor headedBinaryRuleDistribution,
       VariableNumMap searchMoveVar, DiscreteFactor compiledSyntaxDistribution,
-      VariableNumMap rootSyntaxVar, DiscreteFactor rootSyntaxDistribution,
+      VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar, VariableNumMap rootPosVar, 
+      DiscreteFactor rootSyntaxDistribution, DiscreteFactor headedRootSyntaxDistribution,
       boolean allowWordSkipping, boolean normalFormOnly) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
@@ -343,7 +352,17 @@ public class CcgParser implements Serializable {
     this.compiledSyntaxDistribution = Preconditions.checkNotNull(compiledSyntaxDistribution);
 
     this.rootSyntaxVar = Preconditions.checkNotNull(rootSyntaxVar);
+    this.rootPredicateVar = Preconditions.checkNotNull(rootPredicateVar);
+    this.rootPosVar = Preconditions.checkNotNull(rootPosVar);
     this.rootSyntaxDistribution = Preconditions.checkNotNull(rootSyntaxDistribution);
+    Preconditions.checkArgument(rootSyntaxDistribution.getVars().equals(rootSyntaxVar));
+    this.headedRootSyntaxDistribution = Preconditions.checkNotNull(headedRootSyntaxDistribution);
+    Preconditions.checkArgument(headedRootSyntaxDistribution.getVars().equals(
+        VariableNumMap.unionAll(rootSyntaxVar, rootPredicateVar, rootPosVar)));
+    long[] headedRootSyntaxOffsets = headedRootSyntaxDistribution.getWeights().getDimensionOffsets();
+    this.headedRootSyntaxOffset = headedRootSyntaxOffsets[0];
+    this.headedRootPredicateOffset = headedRootSyntaxOffsets[1];
+    this.headedRootPosOffset = headedRootSyntaxOffsets[2];
 
     // Cache predicates in rules.
     predicatesInRules = Sets.newHashSet();
@@ -1222,7 +1241,8 @@ public class CcgParser implements Serializable {
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
         binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, 
         headedBinaryPredicateVar, headedBinaryPosVar, headedBinaryRuleDistribution,
-        searchMoveVar, newCompiledSyntaxDistribution, rootSyntaxVar, rootSyntaxDistribution, allowWordSkipping, normalFormOnly);
+        searchMoveVar, newCompiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar, rootPosVar, 
+        rootSyntaxDistribution, headedRootSyntaxDistribution, allowWordSkipping, normalFormOnly);
   }
 
   public DiscreteFactor getBinaryRuleDistribution() {
@@ -1420,10 +1440,32 @@ public class CcgParser implements Serializable {
     chart.clearChartEntriesForSpan(spanStart, spanEnd);
 
     Tensor rootSyntaxTensor = rootSyntaxDistribution.getWeights();
+    Tensor headedRootTensor = headedRootSyntaxDistribution.getWeights();
+    int[] currentPosTags = chart.getPosTagsInt();
     for (int i = 0; i < entries.length; i++) {
       ChartEntry entry = entries[i];
       double rootProb = rootSyntaxTensor.get(entry.getHeadedSyntax());
-      chart.addChartEntryForSpan(entry, probs[i] * rootProb, spanStart, spanEnd, syntaxVarType);
+      
+      double headedRootProb = 1.0;
+      int headSyntax = entry.getHeadedSyntax();
+      int headVar = entry.getHeadVariable();
+      long[] assignments = entry.getAssignments();
+      for (int j = 0; j < assignments.length; j++) {
+        long assignment = assignments[j];
+        int varNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK); 
+        if (varNum == headVar) {
+          long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
+          int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
+          int posTag = currentPosTags[wordIndex];
+
+          long headedRootKeyNum = (headSyntax * headedRootSyntaxOffset)
+              + (predicate * headedRootPredicateOffset)
+              + (posTag * headedRootPosOffset);
+          headedRootProb *= headedRootTensor.get(headedRootKeyNum);
+        }
+      }
+      chart.addChartEntryForSpan(entry, probs[i] * rootProb * headedRootProb, spanStart, spanEnd,
+          syntaxVarType);
     }
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
   }

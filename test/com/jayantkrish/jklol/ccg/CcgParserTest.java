@@ -496,7 +496,7 @@ public class CcgParserTest extends TestCase {
   public void testParseHeadedSyntaxWeights() {
     List<CcgParse> parses = parser.beamSearch(Arrays.asList("tasty", "apple"), 10);
     assertEquals(1, parses.size());
-    assertEquals(2.0, parses.get(0).getSubtreeProbability());
+    assertEquals(4.0, parses.get(0).getSubtreeProbability(), 0.0001);
     
     parses = parser.beamSearch(Arrays.asList("tasty", "apple", "or", "berries"), 
         Arrays.asList(DEFAULT_POS, DEFAULT_POS, DEFAULT_POS, "JJ"), 10);
@@ -505,7 +505,7 @@ public class CcgParserTest extends TestCase {
     CcgParse parse = parses.get(0);
     assertEquals(HeadedSyntacticCategory.parseFrom("(N{0}/N{0}){1}").getCanonicalForm(),
         parse.getLeft().getHeadedSyntacticCategory());
-    assertEquals(3.0, parse.getSubtreeProbability(), 0.00001);
+    assertEquals(6.0, parse.getSubtreeProbability(), 0.00001);
   }
 
   public void testParseHeadUnification() {
@@ -1006,6 +1006,13 @@ public class CcgParserTest extends TestCase {
     rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
     assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S[ng]{0}"));
     rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
+    
+    VariableNumMap headedRootPredicateVar = VariableNumMap.singleton(3, "headedRootSemanticPredicate", semanticPredicateType);
+    VariableNumMap headedRootPosVar = VariableNumMap.singleton(4, "headedRootPos", posType);
+    VariableNumMap headedRootVars = VariableNumMap.unionAll(leftSyntaxVar, headedRootPredicateVar, headedRootPosVar);
+    TableFactorBuilder headedRootBuilder = new TableFactorBuilder(headedRootVars, SparseTensorBuilder.getFactory());
+    headedRootBuilder.setWeight(Math.log(2.0), HeadedSyntacticCategory.parseFrom("N{0}"), "apple", DEFAULT_POS);
+    DiscreteFactor headedRootDistribution = headedRootBuilder.buildSparseInLogSpace();
 
     // Distribution over pos tags and terminal syntactic types,
     // for smoothing sparse word counts.
@@ -1075,8 +1082,8 @@ public class CcgParserTest extends TestCase {
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
-        headedBinaryRuleFactor, searchMoveVar, compiledSyntaxDistribution,
-        leftSyntaxVar, rootDistribution, allowWordSkipping, normalFormOnly);
+        headedBinaryRuleFactor, searchMoveVar, compiledSyntaxDistribution, leftSyntaxVar,
+        headedRootPredicateVar, headedRootPosVar, rootDistribution, headedRootDistribution, allowWordSkipping, normalFormOnly);
   }
 
   private static class TestChartFilter implements ChartFilter {

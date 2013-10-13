@@ -34,13 +34,13 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
   private static final long serialVersionUID = 1L;
 
   private final FeatureVectorGenerator<LocalContext<I>> featureGenerator;
-  private final Function<LocalContext<I>, ? extends Object> inputGen;
+  private final Function<? super LocalContext<I>, ? extends Object> inputGen;
   private final Class<O> outputClass;
 
   public FactorGraphSequenceTagger(ParametricFactorGraph modelFamily,
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
       FeatureVectorGenerator<LocalContext<I>> featureGenerator, 
-      Function<LocalContext<I>, ? extends Object> inputGen, Class<O> outputClass) {
+      Function<? super LocalContext<I>, ? extends Object> inputGen, Class<O> outputClass) {
     super(modelFamily, parameters, instantiatedModel);
     this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
     this.inputGen = Preconditions.checkNotNull(inputGen);
@@ -53,7 +53,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
   }
   
   @Override
-  public Function<LocalContext<I>, ? extends Object> getInputGenerator() {
+  public Function<? super LocalContext<I>, ? extends Object> getInputGenerator() {
     return inputGen;
   }
 

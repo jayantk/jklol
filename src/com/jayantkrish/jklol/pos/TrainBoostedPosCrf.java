@@ -111,7 +111,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
     System.out.println("Serializing trained model...");    
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
     TrainedBoostedPosTagger trainedModel = new TrainedBoostedPosTagger(sequenceModelFamily, parameters, 
-        factorGraph, featureGen);
+        factorGraph, featureGen, TaggerUtils.getDefaultInputGenerator());
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
 

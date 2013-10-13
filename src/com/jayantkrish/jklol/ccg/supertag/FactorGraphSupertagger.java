@@ -25,7 +25,7 @@ FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> implements Supert
   public FactorGraphSupertagger(ParametricFactorGraph modelFamily,
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
       FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator,
-      Function<LocalContext<WordAndPos>, ? extends Object> inputGen) {
+      Function<? super LocalContext<WordAndPos>, ? extends Object> inputGen) {
     super(modelFamily, parameters, instantiatedModel, featureGenerator, inputGen,
         HeadedSyntacticCategory.class);
   }

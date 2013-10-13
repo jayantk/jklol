@@ -4,8 +4,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -54,6 +56,8 @@ public class TaggerUtils {
   public static final String WORD_LABEL_FACTOR = "wordLabelFactor";
   public static final String LABEL_RESTRICTION_FACTOR = "labelRestrictionFactor";
   public static final String TRANSITION_FACTOR = "transition";
+  
+  public static final String DEFAULT_INPUT_VALUE="*DEFAULT*";
 
   public static <I, O> List<LocalContext<I>> extractContextsFromData(
       List<? extends TaggedSequence<I, O>> sequences) {
@@ -63,15 +67,31 @@ public class TaggerUtils {
     }
     return contexts;
   }
+  
+  public static Function<Object, String> getDefaultInputGenerator() {
+    return Functions.constant(DEFAULT_INPUT_VALUE);
+  }
 
   public static <I, O> Example<DynamicAssignment, DynamicAssignment> reformatTrainingData(
       TaggedSequence<I, O> sequence, FeatureVectorGenerator<LocalContext<I>> featureGen,
-      Function<LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables) {
+      DynamicVariableSet modelVariables) {
+    return reformatTrainingData(sequence, featureGen, getDefaultInputGenerator(), modelVariables);
+  }
+
+  public static <I, O> Example<DynamicAssignment, DynamicAssignment> reformatTrainingData(
+      TaggedSequence<I, O> sequence, FeatureVectorGenerator<LocalContext<I>> featureGen,
+      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables) {
     List<TaggedSequence<I, O>> sequences = Lists.newArrayList();
     sequences.add(sequence);
     List<Example<DynamicAssignment, DynamicAssignment>> examples = reformatTrainingData(
         sequences, featureGen, inputGen, modelVariables);
     return examples.get(0);
+  }
+  
+  public static <I, O> List<Example<DynamicAssignment, DynamicAssignment>> reformatTrainingData(
+      List<? extends TaggedSequence<I, O>> sequences, FeatureVectorGenerator<LocalContext<I>> featureGen,
+      DynamicVariableSet modelVariables) {
+    return reformatTrainingData(sequences, featureGen, getDefaultInputGenerator(), modelVariables);
   }
 
   /**
@@ -85,7 +105,7 @@ public class TaggerUtils {
    */
   public static <I, O> List<Example<DynamicAssignment, DynamicAssignment>> reformatTrainingData(
       List<? extends TaggedSequence<I, O>> sequences, FeatureVectorGenerator<LocalContext<I>> featureGen,
-      Function<LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables) {
+      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables) {
     DynamicVariableSet plate = modelVariables.getPlate(PLATE_NAME);
     VariableNumMap x = plate.getFixedVariables().getVariablesByName(INPUT_FEATURES_NAME);
     VariableNumMap xInput = plate.getFixedVariables().getVariablesByName(INPUT_NAME);
@@ -116,6 +136,19 @@ public class TaggerUtils {
     }
 
     return examples;
+  }
+  
+  public static <O> ParametricFactorGraph buildFeaturizedSequenceModel(Set<O> labels, 
+      DiscreteVariable featureDictionary, boolean noTransitions) {
+    DiscreteVariable inputType = new DiscreteVariable("inputs", Lists.newArrayList(DEFAULT_INPUT_VALUE));
+    DiscreteVariable labelType = new DiscreteVariable("labels", labels);
+
+    VariableNumMap vars = new VariableNumMap(Ints.asList(0, 1), Lists.newArrayList("inputs", "labels"),
+        Lists.newArrayList(inputType, labelType)); 
+    TableFactor labelRestrictions = TableFactor.unity(vars);
+    
+    return buildFeaturizedSequenceModel(inputType, labelType, featureDictionary,
+        labelRestrictions.getWeights(), noTransitions);
   }
 
   /**
@@ -180,6 +213,14 @@ public class TaggerUtils {
     return builder.build();
   }
 
+  public static <I, O> FactorGraphSequenceTagger<I, O> trainSequenceModel(
+      ParametricFactorGraph sequenceModelFamily, List<? extends TaggedSequence<I, O>> trainingData,
+          Class<O> outputClass, FeatureVectorGenerator<LocalContext<I>> featureGen, 
+          GradientOptimizer optimizer, boolean useMaxMargin) {
+    return trainSequenceModel(sequenceModelFamily, trainingData, outputClass, featureGen,
+        getDefaultInputGenerator(), optimizer, useMaxMargin);
+  }
+
   /**
    * Trains a sequence model.
    * 
@@ -187,6 +228,7 @@ public class TaggerUtils {
    * @param trainingData
    * @param outputClass
    * @param featureGen
+   * @param inputGen
    * @param optimizer
    * @param useMaxMargin
    * @return
@@ -194,7 +236,7 @@ public class TaggerUtils {
   public static <I, O> FactorGraphSequenceTagger<I, O> trainSequenceModel(
       ParametricFactorGraph sequenceModelFamily, List<? extends TaggedSequence<I, O>> trainingData,
       Class<O> outputClass, FeatureVectorGenerator<LocalContext<I>> featureGen, 
-      Function<LocalContext<I>, ? extends Object> inputGen, GradientOptimizer optimizer, boolean useMaxMargin) {
+      Function<? super LocalContext<I>, ? extends Object> inputGen, GradientOptimizer optimizer, boolean useMaxMargin) {
 
     // Generate the training data and estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils

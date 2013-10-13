@@ -88,7 +88,7 @@ public class TrainPosCrf extends AbstractCli {
     // Save model to disk.
     System.out.println("Serializing trained model...");
     TrainedPosTagger posTagger = new TrainedPosTagger(tagger.getModelFamily(), 
-        tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator());
+        tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator(), tagger.getInputGenerator());
     IoUtils.serializeObjectToFile(posTagger, options.valueOf(modelOutput));
   }
 

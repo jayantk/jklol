@@ -16,7 +16,7 @@ public interface SequenceTagger<I, O> {
 
   FeatureVectorGenerator<LocalContext<I>> getFeatureGenerator();
 
-  Function<LocalContext<I>, ? extends Object> getInputGenerator();
+  Function<? super LocalContext<I>, ? extends Object> getInputGenerator();
 
   TaggedSequence<I, O> tag(List<I> input);
   

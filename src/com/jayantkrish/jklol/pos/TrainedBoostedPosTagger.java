@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.boost.ParametricFactorGraphEnsemble;
@@ -27,15 +28,18 @@ public class TrainedBoostedPosTagger implements PosTagger, Serializable {
   private final DynamicFactorGraph factorGraph;
   
   private final FeatureVectorGenerator<LocalContext<String>> featureGenerator;
+  private final Function<? super LocalContext<String>, ? extends Object> inputGenerator;
   
   public TrainedBoostedPosTagger(ParametricFactorGraphEnsemble parametricFamily, 
       SufficientStatisticsEnsemble parameters, DynamicFactorGraph factorGraph,
-      FeatureVectorGenerator<LocalContext<String>> featureGenerator) {
+      FeatureVectorGenerator<LocalContext<String>> featureGenerator,
+      Function<? super LocalContext<String>, ? extends Object> inputGenerator) {
     this.parametricFamily = Preconditions.checkNotNull(parametricFamily);
     this.parameters = Preconditions.checkNotNull(parameters);
     this.factorGraph = Preconditions.checkNotNull(factorGraph);
     
     this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
+    this.inputGenerator = Preconditions.checkNotNull(inputGenerator);
   }
   
   public SufficientStatisticsEnsemble getParameters() {
@@ -45,6 +49,11 @@ public class TrainedBoostedPosTagger implements PosTagger, Serializable {
   @Override
   public FeatureVectorGenerator<LocalContext<String>> getFeatureGenerator() {
     return featureGenerator;
+  }
+  
+  @Override
+  public Function<? super LocalContext<String>, ? extends Object> getInputGenerator() {
+    return inputGenerator;
   }
 
   @Override

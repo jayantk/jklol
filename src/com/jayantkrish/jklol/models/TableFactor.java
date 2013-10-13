@@ -44,7 +44,8 @@ public class TableFactor extends DiscreteFactor {
     super(vars);
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
     Preconditions.checkArgument(vars.getVariableNums().equals(
-        Ints.asList(weights.getDimensionNumbers())));
+                                  Ints.asList(weights.getDimensionNumbers())), "Dimension numbers do not match. Variables %s, tensor %s",
+                                vars.getVariableNums(), Ints.asList(weights.getDimensionNumbers()));
     this.weights = weights;
   }
 

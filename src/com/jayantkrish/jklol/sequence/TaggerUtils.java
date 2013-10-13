@@ -131,7 +131,6 @@ public class TaggerUtils {
         }
         output = DynamicAssignment.createPlateAssignment(PLATE_NAME, outputs);
       }
-
       examples.add(Example.create(input, output));
     }
 
@@ -176,7 +175,7 @@ public class TaggerUtils {
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
     builder.addPlate(TaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2, 3),
         Arrays.asList(TaggerUtils.INPUT_FEATURES_NAME, TaggerUtils.INPUT_NAME, TaggerUtils.OUTPUT_NAME),
-        Arrays.<Variable> asList(inputVectorType, labelType)), 10000);
+        Arrays.<Variable> asList(inputVectorType, inputType, labelType)), 10000);
     String inputFeaturesPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_FEATURES_NAME;
     String inputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_NAME;
     String outputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
@@ -195,7 +194,7 @@ public class TaggerUtils {
     // Add a constant factor for encoding label restrictions.
     plateVars = new VariableNumMap(Ints.asList(2, 3),
         Arrays.asList(inputPattern, outputPattern), Arrays.<Variable> asList(inputType, labelType));
-    VariableNumMap wordVar = plateVars.getVariablesByName(inputFeaturesPattern);
+    VariableNumMap wordVar = plateVars.getVariablesByName(inputPattern);
     VariableNumMap labelVar = plateVars.getVariablesByName(outputPattern);
     DiscreteFactor restrictions = new TableFactor(wordVar.union(labelVar), labelRestrictions.relabelDimensions(new int[] {2, 3}));
     ConstantParametricFactor labelRestrictionFactor = new ConstantParametricFactor(plateVars, restrictions);

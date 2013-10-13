@@ -168,7 +168,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
 
     public VariableNameMatcher(String variableNamePrefix, String variableNameSuffix, int indexOffset) {
       this.indexOffset = indexOffset;
-      this.pattern = variableNamePrefix + "(\\d+)" + variableNameSuffix;
+      this.pattern = "^" + variableNamePrefix + "(\\d+)" + variableNameSuffix + "$";
     }
     
     public VariableNameMatcher(String pattern, int indexOffset) {

@@ -106,7 +106,7 @@ public class TrainSupertagger extends AbstractCli {
     DiscreteVariable inputVariable = (DiscreteVariable) labelRestrictions.getVars().getVariable(0);
     DiscreteVariable labelVariable = (DiscreteVariable) labelRestrictions.getVars().getVariable(1);
     ParametricFactorGraph sequenceModelFamily = TaggerUtils.buildFeaturizedSequenceModel(
-        labelVariable, inputVariable, featureGen.getFeatureDictionary(), labelRestrictions.getWeights(),
+      inputVariable, labelVariable, featureGen.getFeatureDictionary(), labelRestrictions.getWeights(),
         options.has(noTransitions));
     GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
     Function<LocalContext<WordAndPos>, String> inputGen = new WordAndPosToInput(inputVariable); 

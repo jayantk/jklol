@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg.supertag;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -23,10 +24,12 @@ FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> implements Supert
   
   public FactorGraphSupertagger(ParametricFactorGraph modelFamily,
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
-      FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator) {
-    super(modelFamily, parameters, instantiatedModel, featureGenerator, HeadedSyntacticCategory.class);
+      FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator,
+      Function<LocalContext<WordAndPos>, ? extends Object> inputGen) {
+    super(modelFamily, parameters, instantiatedModel, featureGenerator, inputGen,
+        HeadedSyntacticCategory.class);
   }
-  
+
   @Override
   public SupertaggedSentence multitag(List<WordAndPos> input, double threshold) {
     MultitaggedSequence<WordAndPos, HeadedSyntacticCategory> sequence = super.multitag(input, threshold);

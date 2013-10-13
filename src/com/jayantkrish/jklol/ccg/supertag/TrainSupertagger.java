@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.supertag;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -12,11 +13,16 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cli.TrainCcg;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.pos.WordPrefixSuffixFeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
@@ -29,10 +35,12 @@ import com.jayantkrish.jklol.sequence.ListTaggedSequence;
 import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.sequence.TaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
+import com.jayantkrish.jklol.util.PairCountAccumulator;
 
 /**
  * Trains a CCG supertagger. The supertagger takes as input a
@@ -51,6 +59,7 @@ public class TrainSupertagger extends AbstractCli {
   private OptionSpec<Void> noTransitions;
   private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
+  private OptionSpec<Integer> labelRestrictionCountThreshold;
   private OptionSpec<Integer> prefixSuffixFeatureCountThreshold; 
 
   public TrainSupertagger() {
@@ -68,6 +77,8 @@ public class TrainSupertagger extends AbstractCli {
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(5);
+    labelRestrictionCountThreshold = parser.accepts("labelRestrictionThreshold").withRequiredArg()
+        .ofType(Integer.class).defaultsTo(20);
     prefixSuffixFeatureCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(35);
   }
@@ -87,27 +98,26 @@ public class TrainSupertagger extends AbstractCli {
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold),
             options.valueOf(prefixSuffixFeatureCountThreshold));
-
-    Set<HeadedSyntacticCategory> validCategories = Sets.newHashSet();
-    for (TaggedSequence<WordAndPos, HeadedSyntacticCategory> trainingDatum : trainingData) {
-      validCategories.addAll(trainingDatum.getLabels());
-    }
-
-    System.out.println(validCategories.size() + " CCG categories");
     System.out.println(featureGen.getNumberOfFeatures() + " word/CCG category features");
 
-    // Build the factor graph.
+    System.out.println("Generating label restrictions...");
+    TableFactor labelRestrictions = getLabelRestrictions(trainingData, options.valueOf(labelRestrictionCountThreshold));
+    
+    DiscreteVariable inputVariable = (DiscreteVariable) labelRestrictions.getVars().getVariable(0);
+    DiscreteVariable labelVariable = (DiscreteVariable) labelRestrictions.getVars().getVariable(1);
     ParametricFactorGraph sequenceModelFamily = TaggerUtils.buildFeaturizedSequenceModel(
-        validCategories, featureGen.getFeatureDictionary(), options.has(noTransitions));
+        labelVariable, inputVariable, featureGen.getFeatureDictionary(), labelRestrictions.getWeights(),
+        options.has(noTransitions));
     GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
+    Function<LocalContext<WordAndPos>, String> inputGen = new WordAndPosToInput(inputVariable); 
     FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> tagger = TaggerUtils.trainSequenceModel(
-        sequenceModelFamily, trainingData, HeadedSyntacticCategory.class, featureGen, trainer,
+        sequenceModelFamily, trainingData, HeadedSyntacticCategory.class, featureGen, inputGen, trainer,
         options.has(maxMargin));
 
     // Save model to disk.
     System.out.println("Serializing trained model...");
     FactorGraphSupertagger supertagger = new FactorGraphSupertagger(tagger.getModelFamily(),
-        tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator());
+        tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator(), tagger.getInputGenerator());
     IoUtils.serializeObjectToFile(supertagger, options.valueOf(modelOutput));
   }
 
@@ -187,6 +197,55 @@ public class TrainSupertagger extends AbstractCli {
     return new DictionaryFeatureVectorGenerator<LocalContext<WordAndPos>, String>(
         featureDictionary, featureGen, true);
   }
+  
+  private static TableFactor getLabelRestrictions(List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData,
+      int minWordCount) {
+    PairCountAccumulator<String, HeadedSyntacticCategory> wordCategoryCounts = PairCountAccumulator.create();
+    PairCountAccumulator<String, HeadedSyntacticCategory> posCategoryCounts = PairCountAccumulator.create();
+    Set<HeadedSyntacticCategory> validCategories = Sets.newHashSet();
+
+    // Count cooccurrences between words/POS-tags and their labels.
+    for (TaggedSequence<WordAndPos, HeadedSyntacticCategory> seq : trainingData) {
+      List<WordAndPos> items = seq.getItems();
+      List<HeadedSyntacticCategory> labels = seq.getLabels();
+      for (int i = 0; i < items.size(); i++) {
+        wordCategoryCounts.incrementOutcome(items.get(i).getWord(), labels.get(i), 1.0);
+        posCategoryCounts.incrementOutcome(items.get(i).getPos(), labels.get(i), 1.0);
+      }
+      
+      validCategories.addAll(labels);
+    }
+    System.out.println(validCategories.size() + " CCG categories");
+    
+    Set<String> inputSet = Sets.newHashSet();
+    for (String word : wordCategoryCounts.keySet()) {
+      if (wordCategoryCounts.getTotalCount(word) >= minWordCount) {
+        inputSet.add(word);
+      }
+    }
+    System.out.println(inputSet.size() + " words with count >= " + minWordCount);
+    inputSet.addAll(posCategoryCounts.keySet());
+    
+    DiscreteVariable inputVariable = new DiscreteVariable("input", inputSet);
+    DiscreteVariable labelVariable = new DiscreteVariable("labels", validCategories);
+    VariableNumMap inputLabelVars = new VariableNumMap(Ints.asList(0, 1),
+        Lists.newArrayList("input", "label"), Lists.newArrayList(inputVariable, labelVariable));
+    TableFactorBuilder builder = new TableFactorBuilder(inputLabelVars, SparseTensorBuilder.getFactory());
+    for (String word : wordCategoryCounts.keySet()) {
+      if (wordCategoryCounts.getTotalCount(word) >= minWordCount) {
+        for (HeadedSyntacticCategory cat : wordCategoryCounts.getValues(word)) {
+          builder.setWeight(1.0, word, cat);
+        }
+      }
+    }
+
+    for (String pos : posCategoryCounts.keySet()) {
+      for (HeadedSyntacticCategory cat : posCategoryCounts.getValues(pos)) {
+        builder.setWeight(1.0, pos, cat);
+      }
+    }
+    return builder.build();
+  }
 
   public static void main(String[] args) {
     new TrainSupertagger().run(args);
@@ -196,6 +255,24 @@ public class TrainSupertagger extends AbstractCli {
     @Override
     public String apply(WordAndPos wordAndPos) {
       return wordAndPos.getWord();
+    }
+  }
+  
+  private static class WordAndPosToInput implements Function<LocalContext<WordAndPos>, String>, Serializable {
+    private static final long serialVersionUID = 1L;
+    private final DiscreteVariable inputVar;
+    
+    public WordAndPosToInput(DiscreteVariable inputVar) {
+      this.inputVar = Preconditions.checkNotNull(inputVar);
+    }
+
+    @Override
+    public String apply(LocalContext<WordAndPos> wordAndPos) {
+      if (inputVar.canTakeValue(wordAndPos.getItem().getWord())) {
+        return wordAndPos.getItem().getWord();
+      } else {
+        return wordAndPos.getItem().getPos();
+      }
     }
   }
 }

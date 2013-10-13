@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.sequence;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cli.TrainedModelSet;
@@ -33,13 +34,16 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
   private static final long serialVersionUID = 1L;
 
   private final FeatureVectorGenerator<LocalContext<I>> featureGenerator;
+  private final Function<LocalContext<I>, ? extends Object> inputGen;
   private final Class<O> outputClass;
 
   public FactorGraphSequenceTagger(ParametricFactorGraph modelFamily,
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
-      FeatureVectorGenerator<LocalContext<I>> featureGenerator, Class<O> outputClass) {
+      FeatureVectorGenerator<LocalContext<I>> featureGenerator, 
+      Function<LocalContext<I>, ? extends Object> inputGen, Class<O> outputClass) {
     super(modelFamily, parameters, instantiatedModel);
     this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
+    this.inputGen = Preconditions.checkNotNull(inputGen);
     this.outputClass = outputClass;
   }
 
@@ -47,13 +51,18 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
   public FeatureVectorGenerator<LocalContext<I>> getFeatureGenerator() {
     return featureGenerator;
   }
+  
+  @Override
+  public Function<LocalContext<I>, ? extends Object> getInputGenerator() {
+    return inputGen;
+  }
 
   @Override
   public TaggedSequence<I, O> tag(List<I> items) {
     TaggedSequence<I, O> sequence = new ListTaggedSequence<I, O>(items, null);
 
     DynamicAssignment input = TaggerUtils.reformatTrainingData(sequence,
-        getFeatureGenerator(), getModelFamily().getVariables()).getInput();
+        getFeatureGenerator(), inputGen, getModelFamily().getVariables()).getInput();
 
     DynamicFactorGraph dfg = getInstantiatedModel();
     FactorGraph fg = dfg.conditional(input);
@@ -78,7 +87,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
 
     TaggedSequence<I, O> sequence = new ListTaggedSequence<I, O>(items, null);
     DynamicAssignment input = TaggerUtils.reformatTrainingData(sequence,
-        getFeatureGenerator(), getModelFamily().getVariables()).getInput();
+        getFeatureGenerator(), inputGen, getModelFamily().getVariables()).getInput();
 
     DynamicFactorGraph dfg = getInstantiatedModel();
     DynamicVariableSet dynamicVariables = dfg.getVariables();

@@ -124,9 +124,9 @@ public class TrainBoostedPosCrf extends AbstractCli {
     // the input/output variables.
     ParametricFactorGraphEnsembleBuilder builder = new ParametricFactorGraphEnsembleBuilder();
     builder.addPlate(TaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
-        Arrays.asList(TaggerUtils.INPUT_NAME, TaggerUtils.OUTPUT_NAME),
+        Arrays.asList(TaggerUtils.INPUT_FEATURES_NAME, TaggerUtils.OUTPUT_NAME),
         Arrays.<Variable>asList(wordVectorType, posType)), 10000);
-    String inputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_NAME;
+    String inputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_FEATURES_NAME;
     String outputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
     String nextOutputPattern = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.OUTPUT_NAME;
 

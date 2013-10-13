@@ -169,15 +169,9 @@ public class TrainSupertagger extends AbstractCli {
     CountAccumulator<String> wordPosFeatureCounts = FeatureGenerators.getFeatureCounts(wordGen, contexts);
 
     // Generate prefix/suffix features for common prefixes and suffixes.
-    final WordAndPosToWord wordPosConverter = new WordAndPosToWord();
     FeatureGenerator<LocalContext<WordAndPos>, String> prefixGen = 
-        FeatureGenerators.convertingFeatureGenerator(new WordPrefixSuffixFeatureGenerator(1, 1, 2, 5, commonWords),
-            new Function<LocalContext<WordAndPos>, LocalContext<String>>() {
-          @Override
-          public LocalContext<String> apply(LocalContext<WordAndPos> context) {
-            return new ConvertingLocalContext<WordAndPos, String>(context, wordPosConverter);
-          }
-        });
+      FeatureGenerators.convertingFeatureGenerator(new WordPrefixSuffixFeatureGenerator(1, 1, 2, 5, commonWords),
+                                                   new WordAndPosContextToWordContext());
 
     // Count feature occurrences and discard infrequent features.
     CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
@@ -251,7 +245,9 @@ public class TrainSupertagger extends AbstractCli {
     new TrainSupertagger().run(args);
   }
 
-  private static class WordAndPosToWord implements Function<WordAndPos, String> {
+  private static class WordAndPosToWord implements Function<WordAndPos, String>, Serializable {
+    private static final long serialVersionUID = 1L;
+    
     @Override
     public String apply(WordAndPos wordAndPos) {
       return wordAndPos.getWord();
@@ -273,6 +269,20 @@ public class TrainSupertagger extends AbstractCli {
       } else {
         return wordAndPos.getItem().getPos();
       }
+    }
+  }
+
+  private static class WordAndPosContextToWordContext implements Function<LocalContext<WordAndPos>, LocalContext<String>>, Serializable {
+    private static final long serialVersionUID = 1L;
+    private final Function<WordAndPos, String> wordPosConverter;
+
+    public WordAndPosContextToWordContext() {
+      this.wordPosConverter = new WordAndPosToWord();
+    }
+
+    @Override
+    public LocalContext<String> apply(LocalContext<WordAndPos> context) {
+      return new ConvertingLocalContext<WordAndPos, String>(context, wordPosConverter);
     }
   }
 }

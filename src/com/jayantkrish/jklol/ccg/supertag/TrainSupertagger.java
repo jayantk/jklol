@@ -161,7 +161,8 @@ public class TrainSupertagger extends AbstractCli {
 
     // Generate prefix/suffix features for common prefixes and suffixes.
     FeatureGenerator<LocalContext<WordAndPos>, String> prefixGen = 
-      FeatureGenerators.convertingFeatureGenerator(new WordPrefixSuffixFeatureGenerator(1, 1, 2, 5, commonWords), new WordAndPosContextToWordContext());
+      FeatureGenerators.convertingFeatureGenerator(new WordPrefixSuffixFeatureGenerator(1, 1, 2, 5, commonWords),
+                                                   new WordAndPosContextToWordContext());
 
     // Count feature occurrences and discard infrequent features.
     CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);

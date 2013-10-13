@@ -191,8 +191,10 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
         VariableNumMap marginalVars = matchVars.removeAll(conditionedVariableNums);
 
         // to here: 6 microsecs
+        log.startTimer("parametric_factor_graph_marginal");
         Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
         Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
+        log.stopTimer("parametric_factor_graph_marginal");
 
         // to here: 13 microsecs
         Factor relabeledMarginal = factorMarginal.relabelVariables(match.getMappingToTemplate());

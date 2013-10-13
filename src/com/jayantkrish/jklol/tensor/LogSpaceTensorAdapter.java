@@ -209,7 +209,7 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public double[] getValues() {
-    throw new UnsupportedOperationException("Not implemented.");
+    return logWeights.elementwiseExp().getValues();
   }
 
   @Override

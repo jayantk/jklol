@@ -13,6 +13,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.TimeUtils;
 
 /**
  * A simple default logging function.
@@ -115,11 +116,11 @@ public class DefaultLogFunction extends AbstractLogFunction {
     Collections.sort(timers);
     for (String timer : timers) {
       long total = getTimerElapsedTime(timer);
-      long totalSecs = total / 1000;
-      long totalDecimal = total % 1000;
       long invocations = getTimerInvocations(timer);
       double average = ((double) total) / invocations;
-      print(String.format("%s: %d.%03d sec (%.3f ms * %d)", timer, totalSecs, totalDecimal, average, invocations));
+      String totalTimeString = TimeUtils.durationToString(total);
+      String averageTimeString = TimeUtils.durationToString(average);
+      print(String.format("%s: %s (%s * %d)", timer, totalTimeString, averageTimeString, invocations));
     }
   }
   

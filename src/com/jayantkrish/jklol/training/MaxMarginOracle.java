@@ -11,12 +11,14 @@ import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
@@ -162,17 +164,14 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
       FactorGraph augmentedGraph = factorGraph;
       for (Integer varNum : outputVariables.getVariableNums()) {
         List<Integer> varNumList = Ints.asList(varNum);
-        TableFactorBuilder builder = new TableFactorBuilder(outputVariables.intersection(varNumList),
-            SparseTensorBuilder.getFactory());
+        VariableNumMap curOutputVar = outputVariables.intersection(varNumList);
+        Assignment curTrueAssignment = trueLabel.intersection(varNumList);
+        DenseTensorBuilder costWeightsBuilder = new DenseTensorBuilder(curOutputVar.getVariableNumsArray(), curOutputVar.getVariableSizes(), Math.E);
+        costWeightsBuilder.put(curOutputVar.assignmentToIntArray(curTrueAssignment), 1.0);
 
-        Iterator<Assignment> varAssignments = new AllAssignmentIterator(outputVariables.intersection(varNumList));
-        while (varAssignments.hasNext()) {
-          builder.incrementWeight(varAssignments.next(), Math.E);
-        }
-        // Set the cost of the true label to 0. (It was multiplied by e in the loop.)
-        builder.multiplyWeight(trueLabel.intersection(varNumList), Math.exp(-1.0));
+        TableFactor costFactor = new TableFactor(curOutputVar, costWeightsBuilder.buildNoCopy());
 
-        augmentedGraph = augmentedGraph.addFactor("hamming_cost_factor-" + varNum, builder.build());
+        augmentedGraph = augmentedGraph.addFactor("hamming_cost_factor-" + varNum, costFactor);
       }
       return augmentedGraph;
     }

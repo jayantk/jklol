@@ -84,6 +84,8 @@ Example<DynamicAssignment, DynamicAssignment>> {
         || Double.isInfinite(outputLogPartitionFunction) || Double.isNaN(outputLogPartitionFunction)) {
       // Search error from numerical issues.
       System.out.println("This search error: " + inputLogPartitionFunction + " " + outputLogPartitionFunction);
+      System.out.println("input: " + input);
+      System.out.println("output: " + observed);
       throw new ZeroProbabilityError();
     }
 

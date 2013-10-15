@@ -62,6 +62,8 @@ public class TrainSupertagger extends AbstractCli {
   private OptionSpec<Integer> labelRestrictionCountThreshold;
   private OptionSpec<Integer> prefixSuffixFeatureCountThreshold; 
 
+  private static final String UNK_PREFIX = "UNK-";
+
   public TrainSupertagger() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.LBFGS, CommonOptions.MAP_REDUCE);
   }
@@ -218,7 +220,9 @@ public class TrainSupertagger extends AbstractCli {
       }
     }
     System.out.println(inputSet.size() + " words with count >= " + minWordCount);
-    inputSet.addAll(posCategoryCounts.keySet());
+    for (String pos : posCategoryCounts.keySet()) {
+      inputSet.add(UNK_PREFIX + pos);
+    }
     
     DiscreteVariable inputVariable = new DiscreteVariable("input", inputSet);
     DiscreteVariable labelVariable = new DiscreteVariable("labels", validCategories);
@@ -235,7 +239,7 @@ public class TrainSupertagger extends AbstractCli {
 
     for (String pos : posCategoryCounts.keySet()) {
       for (HeadedSyntacticCategory cat : posCategoryCounts.getValues(pos)) {
-        builder.setWeight(1.0, pos, cat);
+        builder.setWeight(1.0, UNK_PREFIX + pos, cat);
       }
     }
     return builder.build();
@@ -267,7 +271,7 @@ public class TrainSupertagger extends AbstractCli {
       if (inputVar.canTakeValue(wordAndPos.getItem().getWord())) {
         return wordAndPos.getItem().getWord();
       } else {
-        return wordAndPos.getItem().getPos();
+        return UNK_PREFIX + wordAndPos.getItem().getPos();
       }
     }
   }

@@ -115,12 +115,10 @@ public class DefaultLogFunction extends AbstractLogFunction {
     List<String> timers = Lists.newArrayList(getAllTimers());
     Collections.sort(timers);
     for (String timer : timers) {
-      long total = getTimerElapsedTime(timer);
+      double total = (double) getTimerElapsedTime(timer);
       long invocations = getTimerInvocations(timer);
-      double average = ((double) total) / invocations;
-      String totalTimeString = TimeUtils.durationToString(total);
-      String averageTimeString = TimeUtils.durationToString(average);
-      print(String.format("%s: %s (%s * %d)", timer, totalTimeString, averageTimeString, invocations));
+      double average = total / invocations;
+      print(String.format("%s: %.3f sec (%.3f ms * %d)", timer, (total / 1000), average, invocations));
     }
   }
   

@@ -23,7 +23,7 @@ public class GradientReducer<M, E> implements Reducer<E, GradientEvaluation> {
     this.oracle = Preconditions.checkNotNull(oracle);
     this.log = log;
   }
-  
+
   @Override
   public GradientEvaluation getInitialValue() {
     log.startTimer("mr_gradient_initialize");

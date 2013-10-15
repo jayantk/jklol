@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
+import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
@@ -197,9 +198,8 @@ public class TaggerUtils {
     VariableNumMap wordVar = plateVars.getVariablesByName(inputPattern);
     VariableNumMap labelVar = plateVars.getVariablesByName(outputPattern);
     DiscreteFactor restrictions = new TableFactor(wordVar.union(labelVar), labelRestrictions.relabelDimensions(new int[] {2, 3}));
-    ConstantParametricFactor labelRestrictionFactor = new ConstantParametricFactor(plateVars, restrictions);
-    builder.addFactor(TaggerUtils.LABEL_RESTRICTION_FACTOR, labelRestrictionFactor,
-        VariableNumPattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+    builder.addConstantFactor(TaggerUtils.LABEL_RESTRICTION_FACTOR, new ReplicatedFactor(restrictions,
+                                                                                         VariableNumPattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet())));
 
     // Add a factor connecting adjacent labels.
     if (!noTransitions) {

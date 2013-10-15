@@ -75,7 +75,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     List<O> labels = Lists.newArrayList();
     for (Assignment plateAssignment : prediction.getPlateFixedAssignments(TaggerUtils.PLATE_NAME)) {
       List<Object> values = plateAssignment.getValues();
-      labels.add(outputClass.cast(values.get(1)));
+      labels.add(outputClass.cast(values.get(2)));
     }
 
     return new ListTaggedSequence<I, O>(items, labels);

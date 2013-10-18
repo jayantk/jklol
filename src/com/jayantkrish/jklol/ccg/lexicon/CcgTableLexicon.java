@@ -19,6 +19,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgTableLexicon extends AbstractCcgLexicon {
+  private static final long serialVersionUID = 1L;
 
   // Weights and word -> ccg category mappings for the
   // lexicon (terminals).

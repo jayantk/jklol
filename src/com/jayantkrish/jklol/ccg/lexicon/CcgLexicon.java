@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -16,7 +17,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * @author jayant
  *
  */
-public interface CcgLexicon {
+public interface CcgLexicon extends Serializable {
   public static final String UNKNOWN_WORD_PREFIX = "UNK-";
 
   void initializeChartTerminals(List<String> terminals, List<String> posTags, CcgChart chart,

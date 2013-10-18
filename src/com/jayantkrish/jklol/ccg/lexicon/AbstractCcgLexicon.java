@@ -12,7 +12,8 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
  *
  */
 public abstract class AbstractCcgLexicon implements CcgLexicon {
-  
+  private static final long serialVersionUID = 1L;
+
   @Override
   public List<LexiconEntry> getLexiconEntriesWithUnknown(String word, String posTag) {
     return getLexiconEntriesWithUnknown(Arrays.asList(word), Arrays.asList(posTag));

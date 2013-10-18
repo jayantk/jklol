@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg;
+ package com.jayantkrish.jklol.ccg;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -13,6 +13,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgTableLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -37,16 +40,8 @@ import com.jayantkrish.jklol.util.IndexedList;
 public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
   private static final long serialVersionUID = 1L;
-
-  private final VariableNumMap terminalVar;
-  private final VariableNumMap ccgCategoryVar;
-  private final ParametricFactor terminalFamily;
-
-  private final VariableNumMap terminalPosVar;
-  private final VariableNumMap terminalSyntaxVar;
-  private final ParametricFactor terminalPosFamily;
   
-  private final ParametricFactor terminalSyntaxFamily;
+  private final ParametricCcgLexicon lexiconFamily;
 
   private final VariableNumMap dependencyHeadVar;
   private final VariableNumMap dependencySyntaxVar;
@@ -91,12 +86,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final boolean normalFormOnly;
 
   /**
-   * Names of the parameter vectors governing lexicon entries.
+   * Name of the parameters governing lexicon entries.
    */
-  public static final String TERMINAL_PARAMETERS = "terminals";
-  public static final String TERMINAL_POS_PARAMETERS = "terminalPos";
-  public static final String TERMINAL_SYNTAX_PARAMETERS = "terminalSyntax";
-
+  public static final String LEXICON_PARAMETERS = "lexicon";
+  
   /**
    * Name of the parameter vector governing dependency structures.
    */
@@ -131,9 +124,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public static final Set<String> DEFAULT_VERB_TAGS = Sets.newHashSet("VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
 
-  public ParametricCcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
-      ParametricFactor terminalFamily, VariableNumMap terminalPosVar,
-      VariableNumMap terminalSyntaxVar, ParametricFactor terminalPosFamily, ParametricFactor terminalSyntaxFamily, 
+  public ParametricCcgParser(ParametricCcgLexicon lexiconFamily, 
       VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar, VariableNumMap dependencyHeadPosVar,
       VariableNumMap dependencyArgPosVar, ParametricFactor dependencyFamily, VariableNumMap wordDistanceVar,
@@ -149,16 +140,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar, VariableNumMap rootPosVar, 
       ParametricFactor rootSyntaxFamily, ParametricFactor headedRootSyntaxFamily, boolean allowWordSkipping,
       boolean normalFormOnly) {
-    this.terminalVar = Preconditions.checkNotNull(terminalVar);
-    this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
-    this.terminalFamily = Preconditions.checkNotNull(terminalFamily);
-
-    this.terminalPosVar = Preconditions.checkNotNull(terminalPosVar);
-    this.terminalSyntaxVar = Preconditions.checkNotNull(terminalSyntaxVar);
-    this.terminalPosFamily = Preconditions.checkNotNull(terminalPosFamily);
+    this.lexiconFamily = Preconditions.checkNotNull(lexiconFamily);
     
-    this.terminalSyntaxFamily = Preconditions.checkNotNull(terminalSyntaxFamily);
-
     this.dependencyHeadVar = Preconditions.checkNotNull(dependencyHeadVar);
     this.dependencySyntaxVar = Preconditions.checkNotNull(dependencySyntaxVar);
     this.dependencyArgNumVar = Preconditions.checkNotNull(dependencyArgNumVar);
@@ -360,6 +343,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap terminalPosVars = VariableNumMap.unionAll(posVar, terminalSyntaxVar);
     ParametricFactor terminalPosParametricFactor = new DenseIndicatorLogLinearFactor(terminalPosVars);
 
+    ParametricCcgLexicon lexiconFamily = new ParametricCcgTableLexicon(terminalVar,
+        ccgCategoryVar, terminalParametricFactor, posVar, terminalSyntaxVar,
+        terminalPosParametricFactor, terminalSyntaxFactor);
+
     // Create variables for representing the CCG parser's dependency
     // structures.
     DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates",
@@ -413,8 +400,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     ParametricFactor parametricHeadedRootDistribution = featureFactory.getHeadedRootFeatures(
         leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar);
 
-    return new ParametricCcgParser(terminalVar, ccgCategoryVar, terminalParametricFactor,
-        posVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor, dependencyHeadVar,
+    return new ParametricCcgParser(lexiconFamily, dependencyHeadVar,
         dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, 
         dependencyParametricFactor, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
         puncDistanceFactor, puncTagSet, verbDistanceVar,
@@ -453,7 +439,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       }
     }
   }
-  
+
+  public DiscreteVariable getPredicateVar() {
+    return dependencyHeadVar.getDiscreteVariables().get(0);
+  }
+
+  /*// This code is presumably used in the mention ccg parser.  
   public VariableNumMap getTerminalVar() {
     return terminalVar;
   }
@@ -461,11 +452,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   public VariableNumMap getCcgCategoryVar() {
     return ccgCategoryVar;
   }
-
-  public DiscreteVariable getPredicateVar() {
-    return dependencyHeadVar.getDiscreteVariables().get(0);
-  }
-
+  
   public ParametricCcgParser replaceTerminalFamily(ParametricFactor newTerminalFamily) {
     return new ParametricCcgParser(terminalVar, ccgCategoryVar, newTerminalFamily, 
         terminalPosVar, terminalSyntaxVar, terminalPosFamily, terminalSyntaxFamily, dependencyHeadVar, 
@@ -478,6 +465,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         rootSyntaxVar, rootPredicateVar, rootPosVar, rootSyntaxFamily,
         headedRootSyntaxFamily, allowWordSkipping, normalFormOnly);
   }
+  */
 
   /**
    * Gets a new all-zero parameter vector.
@@ -485,9 +473,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @return
    */
   public SufficientStatistics getNewSufficientStatistics() {
-    SufficientStatistics terminalParameters = terminalFamily.getNewSufficientStatistics();
-    SufficientStatistics terminalPosParameters = terminalPosFamily.getNewSufficientStatistics();
-    SufficientStatistics terminalSyntaxParameters = terminalSyntaxFamily.getNewSufficientStatistics();
+    SufficientStatistics lexiconParameters = lexiconFamily.getNewSufficientStatistics();
     SufficientStatistics dependencyParameters = dependencyFamily.getNewSufficientStatistics();
     SufficientStatistics wordDistanceParameters = wordDistanceFamily.getNewSufficientStatistics();
     SufficientStatistics puncDistanceParameters = puncDistanceFamily.getNewSufficientStatistics();
@@ -499,11 +485,11 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     SufficientStatistics headedRootSyntaxParameters = headedRootSyntaxFamily.getNewSufficientStatistics();
 
     return new ListSufficientStatistics(
-        Arrays.asList(TERMINAL_PARAMETERS, TERMINAL_POS_PARAMETERS, TERMINAL_SYNTAX_PARAMETERS,
-            DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS, PUNC_DISTANCE_PARAMETERS, VERB_DISTANCE_PARAMETERS,
+        Arrays.asList(LEXICON_PARAMETERS, DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS,
+            PUNC_DISTANCE_PARAMETERS, VERB_DISTANCE_PARAMETERS,
             SYNTAX_PARAMETERS, UNARY_RULE_PARAMETERS, HEADED_SYNTAX_PARAMETERS, 
             ROOT_SYNTAX_PARAMETERS, HEADED_ROOT_SYNTAX_PARAMETERS),
-        Arrays.asList(terminalParameters, terminalPosParameters, terminalSyntaxParameters, dependencyParameters,
+        Arrays.asList(lexiconParameters, dependencyParameters,
             wordDistanceParameters, puncDistanceParameters, verbDistanceParameters, syntaxParameters, unaryRuleParameters,
             headedBinaryRuleParameters, rootSyntaxParameters, headedRootSyntaxParameters));
   }
@@ -517,12 +503,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public CcgParser getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
-    DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(
-        parameterList.getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
-    DiscreteFactor terminalPosDistribution = terminalPosFamily.getModelFromParameters(
-        parameterList.getStatisticByName(TERMINAL_POS_PARAMETERS)).coerceToDiscrete();
-    DiscreteFactor terminalSyntaxDistribution = terminalSyntaxFamily.getModelFromParameters(
-        parameterList.getStatisticByName(TERMINAL_SYNTAX_PARAMETERS)).coerceToDiscrete();
+    CcgLexicon lexiconDistribution = lexiconFamily.getModelFromParameters(
+        parameterList.getStatisticByName(LEXICON_PARAMETERS));
 
     DiscreteFactor dependencyDistribution = dependencyFamily.getModelFromParameters(
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS)).coerceToDiscrete();
@@ -546,8 +528,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     DiscreteFactor headedRootSyntaxDistribution = headedRootSyntaxFamily.getModelFromParameters(
         parameterList.getStatisticByName(HEADED_ROOT_SYNTAX_PARAMETERS)).coerceToDiscrete();
 
-    return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution,
-        terminalPosVar, terminalSyntaxVar, terminalPosDistribution, terminalSyntaxDistribution, 
+    return new CcgParser(lexiconDistribution, 
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
         dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceDistribution, puncDistanceVar, puncDistanceDistribution,
@@ -681,57 +662,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   }
 
   /**
-   * Increments {@code gradient} by
-   * {@code count * features(lexiconEntry)} for all lexicon entries in
-   * {@code lexiconEntries}.
-   * 
-   * @param gradient
-   * @param lexiconEntries
-   * @param posTags
-   * @param count
-   */
-  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      List<LexiconEntry> lexiconEntries, List<String> posTags, double count) {
-    Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
-    int numEntries = lexiconEntries.size();
-    for (int i = 0; i < numEntries; i++) {
-      LexiconEntry lexiconEntry = lexiconEntries.get(i);
-      incrementLexiconSufficientStatistics(gradient, lexiconEntry, count);
-      incrementPosSufficientStatistics(gradient, posTags.get(i), 
-          lexiconEntry.getCategory().getSyntax(), count);
-      incrementLexiconSyntaxSufficientStatistics(gradient, lexiconEntry.getWords(),
-          lexiconEntry.getCategory().getSyntax(), count);
-    }
-  }
-  
-  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, 
-      LexiconEntry entry, double count) {
-    SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
-    Assignment assignment = Assignment.unionAll(
-          terminalVar.outcomeArrayToAssignment(entry.getWords()),
-          ccgCategoryVar.outcomeArrayToAssignment(entry.getCategory()));
-    terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
-        assignment, count);
-  }
-
-  public void incrementPosSufficientStatistics(SufficientStatistics gradient, String posTag,
-      HeadedSyntacticCategory syntax, double count) {
-    SufficientStatistics terminalPosGradient = gradient.coerceToList().getStatisticByName(TERMINAL_POS_PARAMETERS);
-    Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTag).union(
-        terminalSyntaxVar.outcomeArrayToAssignment(syntax));
-    terminalPosFamily.incrementSufficientStatisticsFromAssignment(terminalPosGradient,
-        posAssignment, count);
-  }
-  
-  public void incrementLexiconSyntaxSufficientStatistics(SufficientStatistics gradient, 
-      List<String> words, HeadedSyntacticCategory syntax, double count) {
-    SufficientStatistics terminalSyntaxGradient = gradient.coerceToList().getStatisticByName(TERMINAL_SYNTAX_PARAMETERS);    
-    Assignment assignment = terminalVar.outcomeArrayToAssignment(words).union(
-        terminalSyntaxVar.outcomeArrayToAssignment(syntax));
-    terminalSyntaxFamily.incrementSufficientStatisticsFromAssignment(terminalSyntaxGradient, assignment, count);
-  }
-
-  /**
    * Increments {@code gradient} by {@code count * features(parse)},
    * where {@code features} is a function from CCG parses to a feature
    * vectors.
@@ -752,8 +682,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     incrementRootSyntaxSufficientStatistics(gradient, parse.getHeadedSyntacticCategory(),
         parse.getSemanticHeads(), parse.getSpannedPosTags(), count);
     // Update terminal distribution parameters.
-    incrementLexiconSufficientStatistics(gradient, parse.getSpannedLexiconEntries(),
-        parse.getSpannedPosTagsByLexiconEntry(), count);
+    SufficientStatistics lexiconParameters = gradient.coerceToList().getStatisticByName(LEXICON_PARAMETERS);
+    lexiconFamily.incrementLexiconSufficientStatistics(lexiconParameters, parse, count);
   }
 
   public String getParameterDescription(SufficientStatistics parameters) {
@@ -773,12 +703,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     ListSufficientStatistics parameterList = parameters.coerceToList();
 
     StringBuilder sb = new StringBuilder();
-    sb.append(terminalFamily.getParameterDescription(
-        parameterList.getStatisticByName(TERMINAL_PARAMETERS), numFeatures));
-    sb.append(terminalPosFamily.getParameterDescription(
-        parameterList.getStatisticByName(TERMINAL_POS_PARAMETERS), numFeatures));
-    sb.append(terminalSyntaxFamily.getParameterDescription(
-        parameterList.getStatisticByName(TERMINAL_SYNTAX_PARAMETERS), numFeatures));
+    sb.append(lexiconFamily.getParameterDescription(
+        parameterList.getStatisticByName(LEXICON_PARAMETERS), numFeatures));
 
     sb.append(syntaxFamily.getParameterDescription(
         parameterList.getStatisticByName(SYNTAX_PARAMETERS), numFeatures));

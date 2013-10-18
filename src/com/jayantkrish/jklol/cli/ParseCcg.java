@@ -286,7 +286,7 @@ public class ParseCcg extends AbstractCli {
         // internal weights or (3) a missing lexicon entry.
         List<SyntacticCategory> supertags = HeadedSyntacticCategory.convertToCcgbank(sentence.getSupertags().get(i));
         List<SyntacticCategory> possibleLexiconEntries = Lists.newArrayList();
-        for (LexiconEntry lexiconEntry : parser.getLexiconEntriesWithUnknown(words.get(i), posTags.get(i))) {
+        for (LexiconEntry lexiconEntry : parser.getLexicon().getLexiconEntriesWithUnknown(words.get(i), posTags.get(i))) {
           possibleLexiconEntries.add(lexiconEntry.getCategory().getSyntax().getSyntax().discardFeaturePassingMarkup());
         }
         if (!supertags.contains(actual)) {

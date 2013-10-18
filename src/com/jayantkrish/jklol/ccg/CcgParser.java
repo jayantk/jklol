@@ -25,6 +25,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
+import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -89,27 +90,10 @@ public class CcgParser implements Serializable {
   public static final String UNARY_RULE_INPUT_VAR_NAME = "unaryRuleInputVar";
   public static final String UNARY_RULE_VAR_NAME = "unaryRuleVar";
 
-  public static final String UNKNOWN_WORD_PREFIX = "UNK-";
-
   // Member variables ////////////////////////////////////
 
-  // Weights and word -> ccg category mappings for the
-  // lexicon (terminals).
-  private final VariableNumMap terminalVar;
-  private final VariableNumMap ccgCategoryVar;
-  private final DiscreteFactor terminalDistribution;
-
-  // Weights and pos tag -> syntactic category mappings for the
-  // lexicon (terminals).
-  private final VariableNumMap terminalPosVar;
-  private final VariableNumMap terminalSyntaxVar;
-  private final DiscreteFactor terminalPosDistribution;
-
-  // Weights for word -> syntactic category mappings for
-  // the lexicon. This factor is defined over terminalVar
-  // and terminalSyntaxVar, and provides backoff weights
-  // for different semantic realizations of the same word.
-  private final DiscreteFactor terminalSyntaxDistribution;
+  // Weights on lexicon entries
+  private final CcgLexicon lexicon; 
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -215,11 +199,9 @@ public class CcgParser implements Serializable {
   private final boolean allowWordSkipping;
   private final boolean normalFormOnly;
 
-  public CcgParser(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
-      DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
-      DiscreteFactor terminalPosDistribution, DiscreteFactor terminalSyntaxDistribution,
-      VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar, VariableNumMap dependencyArgNumVar,
-      VariableNumMap dependencyArgVar, VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar,
+  public CcgParser(CcgLexicon lexicon, VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
+      VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
+      VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar,
       DiscreteFactor dependencyDistribution, VariableNumMap wordDistanceVar,
       DiscreteFactor wordDistanceFactor, VariableNumMap puncDistanceVar,
       DiscreteFactor puncDistanceFactor, Set<String> puncTagSet, VariableNumMap verbDistanceVar,
@@ -232,21 +214,7 @@ public class CcgParser implements Serializable {
       VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar, VariableNumMap rootPosVar, 
       DiscreteFactor rootSyntaxDistribution, DiscreteFactor headedRootSyntaxDistribution,
       boolean allowWordSkipping, boolean normalFormOnly) {
-    this.terminalVar = Preconditions.checkNotNull(terminalVar);
-    this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
-    this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
-    VariableNumMap expectedTerminalVars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
-    Preconditions.checkArgument(expectedTerminalVars.equals(terminalDistribution.getVars()));
-
-    this.terminalPosVar = Preconditions.checkNotNull(terminalPosVar);
-    this.terminalSyntaxVar = Preconditions.checkNotNull(terminalSyntaxVar);
-    this.terminalPosDistribution = Preconditions.checkNotNull(terminalPosDistribution);
-    VariableNumMap expectedTerminalPosVars = terminalPosVar.union(terminalSyntaxVar);
-    Preconditions.checkArgument(expectedTerminalPosVars.equals(terminalPosDistribution.getVars()));
-
-    this.terminalSyntaxDistribution = Preconditions.checkNotNull(terminalSyntaxDistribution);
-    VariableNumMap expectedTerminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
-    Preconditions.checkArgument(expectedTerminalSyntaxVars.equals(terminalSyntaxDistribution.getVars()));
+    this.lexicon = Preconditions.checkNotNull(lexicon);
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(VariableNumMap.unionAll(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
@@ -268,7 +236,7 @@ public class CcgParser implements Serializable {
     this.dependencySyntaxType = dependencySyntaxVar.getDiscreteVariables().get(0);
     this.dependencyArgNumType = dependencyArgNumVar.getDiscreteVariables().get(0);
     this.dependencyPosType = dependencyHeadPosVar.getDiscreteVariables().get(0);
-    Preconditions.checkArgument(terminalPosVar.getDiscreteVariables().get(0).equals(dependencyPosType));
+    Preconditions.checkArgument(lexicon.getTerminalPosVar().getDiscreteVariables().get(0).equals(dependencyPosType));
     Preconditions.checkArgument(dependencyArgPosVar.getDiscreteVariables().get(0).equals(dependencyPosType));
     // TODO: This check can be made unnecessary by fixing the
     // representation of unfilled dependencies as longs. Right now, the
@@ -999,12 +967,8 @@ public class CcgParser implements Serializable {
         newLeftRelabeling, newRightRelabeling);
   }
 
-  private static List<String> preprocessInput(List<String> terminals) {
-    List<String> preprocessedTerminals = Lists.newArrayList();
-    for (String terminal : terminals) {
-      preprocessedTerminals.add(terminal.toLowerCase());
-    }
-    return preprocessedTerminals;
+  public CcgLexicon getLexicon() {
+    return lexicon;
   }
 
   public boolean isPossibleDependencyStructure(DependencyStructure dependency, List<String> posTags) {
@@ -1036,37 +1000,6 @@ public class CcgParser implements Serializable {
     } else {
       return dependencyDistribution.getUnnormalizedLogProbability(assignment);
     }
-  }
-
-  public boolean isPossibleLexiconEntry(List<String> originalWords, List<String> posTags, HeadedSyntacticCategory category) {
-    Preconditions.checkArgument(originalWords.size() == posTags.size());
-
-    List<String> words = preprocessInput(originalWords);
-    List<List<String>> terminalOutcomes = Lists.newArrayList();
-    terminalOutcomes.add(words);
-    if (words.size() == 1) {
-      List<String> posTagBackoff = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(0)));
-      terminalOutcomes.add(posTagBackoff);
-    }
-
-    for (List<String> terminalOutcome : terminalOutcomes) {
-      if (terminalVar.isValidOutcomeArray(terminalOutcome)) {
-        Assignment assignment = terminalVar.outcomeArrayToAssignment(terminalOutcome);
-
-        Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
-        while (iterator.hasNext()) {
-          Outcome bestOutcome = iterator.next();
-          CcgCategory lexicalEntry = (CcgCategory) bestOutcome.getAssignment().getValue(
-              ccgCategoryVar.getOnlyVariableNum());
-          if (lexicalEntry.getSyntax().equals(category)) {
-            return true;
-          }
-        }
-      }
-    }
-    // System.out.println("No such lexicon entry: " + words + " -> " +
-    // category);
-    return false;
   }
 
   public boolean isPossibleBinaryRule(SyntacticCategory left, SyntacticCategory right,
@@ -1138,7 +1071,7 @@ public class CcgParser implements Serializable {
       HeadedSyntacticCategory annotatedCategory = tree.getHeadedSyntacticCategory();
       boolean isPossible = false;
       for (HeadedSyntacticCategory category : syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax())) {
-        if (isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), category)) {
+        if (lexicon.isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), category)) {
           if (annotatedCategory == null ||  category.equals(annotatedCategory)) {
             isPossible = true;
           }
@@ -1234,8 +1167,7 @@ public class CcgParser implements Serializable {
   }
 
   public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
-    return new CcgParser(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar, terminalSyntaxVar,
-        terminalPosDistribution, terminalSyntaxDistribution, dependencyHeadVar, dependencySyntaxVar,
+    return new CcgParser(lexicon, dependencyHeadVar, dependencySyntaxVar,
         dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
@@ -1323,7 +1255,7 @@ public class CcgParser implements Serializable {
   public void parseCommon(CcgChart chart, List<String> terminals, List<String> posTags,
       ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
     initializeChart(chart, terminals, posTags, beamFilter);
-    initializeChartTerminals(terminals, posTags, chart, log);
+    lexicon.initializeChartTerminals(terminals, posTags, chart, this);
     chart.applyChartFilterToTerminals();
 
     boolean finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
@@ -1372,6 +1304,33 @@ public class CcgParser implements Serializable {
     // Sparsifying the dependencies actually slows the code down.
     // (Possibly a cache issue?)
     // sparsifyDependencyDistribution(chart);
+  }
+
+  public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
+      int spanStart, int spanEnd) {
+    // Assign each predicate in this category a unique word index.
+    List<Long> assignments = Lists.newArrayList();
+    List<Set<String>> values = result.getAssignment();
+    int[] semanticVariables = result.getSemanticVariables();
+    for (int i = 0; i < values.size(); i++) {
+      for (String value : values.get(i)) {
+        long assignment = marshalAssignment(semanticVariables[i],
+            dependencyHeadType.getValueIndex(value), spanEnd);
+        assignments.add(assignment);
+      }
+    }
+
+    List<UnfilledDependency> deps = Lists.newArrayList();
+    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, deps);
+
+    long[] unfilledDepArray = unfilledDependencyArrayToLongArray(unfilledDeps);
+    long[] depArray = unfilledDependencyArrayToLongArray(deps);
+
+    int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
+    int syntaxHeadVar = result.getSyntax().getHeadVariable();
+    return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), syntaxHeadVar, 
+        result, terminalWords, null, Longs.toArray(assignments), unfilledDepArray, depArray,
+        spanStart, spanEnd);
   }
 
   public static int[] computeDistanceCounts(List<String> posTags, Set<String> tagSet) {
@@ -1499,163 +1458,6 @@ public class CcgParser implements Serializable {
     return true;
   }
 
-  /**
-   * Gets the possible lexicon entries for {@code wordSequence} that
-   * can be used in this parser. The returned entries do not include
-   * lexicon entries for unknown words, which may occur in the parse
-   * if {@code wordSequence} is unrecognized.
-   * 
-   * @param wordSequence
-   * @return
-   */
-  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence) {
-    return getLexiconEntriesFromFactor(wordSequence, terminalDistribution, terminalVar, ccgCategoryVar);
-  }
-  
-  public List<LexiconEntry> getLexiconEntriesWithUnknown(List<String> originalWords, List<String> posTags) {
-    Preconditions.checkArgument(originalWords.size() == posTags.size());
-    List<String> words = preprocessInput(originalWords);    
-    if (terminalVar.isValidOutcomeArray(words)) {
-      return getLexiconEntries(words);
-    } else if (words.size() == 1) {
-      List<String> posTagBackoff = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(0)));
-      return getLexiconEntries(posTagBackoff);
-    } else {
-      return Collections.emptyList();
-    }
-  }
-  
-  public List<LexiconEntry> getLexiconEntriesWithUnknown(String word, String posTag) {
-    return getLexiconEntriesWithUnknown(Arrays.asList(word), Arrays.asList(posTag));
-  }
-
-  /**
-   * Gets the possible lexicon entries for {@code wordSequence} from
-   * {@code terminalDistribution}, a distribution over CCG categories
-   * given word sequences.
-   * 
-   * @param wordSequence
-   * @param terminalDistribution
-   * @param terminalVar
-   * @param ccgCategoryVar
-   * @return
-   */
-  public static List<LexiconEntry> getLexiconEntriesFromFactor(List<String> wordSequence,
-      DiscreteFactor terminalDistribution, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar) {
-    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-    if (terminalVar.isValidOutcomeArray(wordSequence)) {
-      Assignment assignment = terminalVar.outcomeArrayToAssignment(wordSequence);
-
-      Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
-      while (iterator.hasNext()) {
-        Outcome bestOutcome = iterator.next();
-        CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
-            ccgCategoryVar.getOnlyVariableNum());
-
-        lexiconEntries.add(new LexiconEntry(wordSequence, ccgCategory));
-      }
-    }
-    return lexiconEntries;
-  }
-
-  /**
-   * Initializes the parse chart with entries from the CCG lexicon for
-   * {@code terminals}.
-   * 
-   * @param terminals
-   * @param chart
-   */
-  public void initializeChartTerminals(List<String> terminals, List<String> posTags, CcgChart chart,
-      LogFunction log) {
-    initializeChartWithDistribution(terminals, posTags, chart, log, terminalVar, ccgCategoryVar,
-        terminalDistribution, true);
-  }
-
-  /**
-   * This method is a hack.
-   * 
-   * @param terminals
-   * @param posTags
-   * @param chart
-   * @param log
-   * @param terminalVar
-   * @param terminalSyntaxVar
-   * @param ccgCategoryVar
-   * @param terminalPosVar
-   * @param terminalDistribution
-   * @param terminalPosDistribution
-   */
-  public void initializeChartWithDistribution(List<String> terminals, List<String> posTags, CcgChart chart,
-      LogFunction log, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
-      DiscreteFactor terminalDistribution, boolean useUnknownWords) {
-    Preconditions.checkArgument(terminals.size() == posTags.size());
-
-    List<String> preprocessedTerminals = preprocessInput(terminals);
-    for (int i = 0; i < preprocessedTerminals.size(); i++) {
-      for (int j = i; j < preprocessedTerminals.size(); j++) {
-        List<String> terminalValue = preprocessedTerminals.subList(i, j + 1);
-        String posTag = posTags.get(j);
-        int numAdded = addChartEntriesForTerminal(terminalValue, posTag, i, j, chart,
-            log, terminalVar, ccgCategoryVar, terminalDistribution);
-        if (numAdded == 0 && i == j && useUnknownWords) {
-          // Backoff to POS tags if the input is unknown.
-          terminalValue = preprocessInput(Arrays.asList(UNKNOWN_WORD_PREFIX + posTags.get(i)));
-          addChartEntriesForTerminal(terminalValue, posTag, i, j, chart, log,
-              terminalVar, ccgCategoryVar, terminalDistribution);
-        }
-      }
-    }
-  }
-
-  private int addChartEntriesForTerminal(List<String> terminalValue, String posTag,
-      int spanStart, int spanEnd, CcgChart chart, LogFunction log,
-      VariableNumMap terminalVar, VariableNumMap ccgCategoryVar, DiscreteFactor terminalDistribution) {
-    int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
-    Assignment assignment = terminalVar.outcomeArrayToAssignment(terminalValue);
-    if (!terminalVar.isValidAssignment(assignment)) {
-      return 0;
-    }
-
-    Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
-    int numEntries = 0;
-    while (iterator.hasNext()) {
-      Outcome bestOutcome = iterator.next();
-      CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
-
-      // Look up how likely this syntactic entry is to occur with
-      // this part of speech.
-      double posProb = getTerminalPosProbability(posTag, category.getSyntax());
-      double syntaxProb = getTerminalSyntaxProbability(terminalValue, category.getSyntax());
-
-      // Add all possible chart entries to the ccg chart.
-      ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, spanStart, spanEnd);
-      chart.addChartEntryForSpan(entry, bestOutcome.getProbability() * posProb * syntaxProb,
-          spanStart, spanEnd, syntaxVarType);
-      numEntries++;
-    }
-    chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
-    return numEntries;
-  }
-
-  public double getTerminalPosProbability(String posTag, HeadedSyntacticCategory syntax) {
-    Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTag);
-    Assignment syntaxAssignment = terminalSyntaxVar.outcomeArrayToAssignment(syntax);
-    // TODO: this check should be made unnecessary by preprocessing.
-    if (terminalPosVar.isValidAssignment(posAssignment)) {
-      return terminalPosDistribution.getUnnormalizedProbability(posAssignment.union(syntaxAssignment));
-    } else {
-      return 1.0;
-    }
-  }
-
-  public double getTerminalSyntaxProbability(List<String> terminal, HeadedSyntacticCategory syntax) {
-    if (terminalVar.isValidAssignment(terminalVar.outcomeArrayToAssignment(terminal))) {
-      return terminalSyntaxDistribution.getUnnormalizedProbability(terminal, syntax);
-    } else {
-      return 1.0;
-    }
-  }
-
   public void sparsifyDependencyDistribution(CcgChart chart) {
     // Identify all possible assignments to the dependency head and
     // argument variables, so that we can look up probabilities in a
@@ -1701,33 +1503,6 @@ public class CcgParser implements Serializable {
     chart.setWordDistanceTensor(smallWordDistanceTensor);
     chart.setPuncDistanceTensor(smallPuncDistanceTensor);
     chart.setVerbDistanceTensor(smallVerbDistanceTensor);
-  }
-
-  public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
-      int spanStart, int spanEnd) {
-    // Assign each predicate in this category a unique word index.
-    List<Long> assignments = Lists.newArrayList();
-    List<Set<String>> values = result.getAssignment();
-    int[] semanticVariables = result.getSemanticVariables();
-    for (int i = 0; i < values.size(); i++) {
-      for (String value : values.get(i)) {
-        long assignment = marshalAssignment(semanticVariables[i],
-            dependencyHeadType.getValueIndex(value), spanEnd);
-        assignments.add(assignment);
-      }
-    }
-
-    List<UnfilledDependency> deps = Lists.newArrayList();
-    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, deps);
-
-    long[] unfilledDepArray = unfilledDependencyArrayToLongArray(unfilledDeps);
-    long[] depArray = unfilledDependencyArrayToLongArray(deps);
-
-    int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
-    int syntaxHeadVar = result.getSyntax().getHeadVariable();
-    return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), syntaxHeadVar, 
-        result, terminalWords, null, Longs.toArray(assignments), unfilledDepArray, depArray,
-        spanStart, spanEnd);
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {

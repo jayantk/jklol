@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lexicon.CcgTableLexicon;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -1073,11 +1074,12 @@ public class CcgParserTest extends TestCase {
       headedBinaryFactorBuilder.incrementWeight(ruleAssignment.union(predicateAssignmentJj), Math.log(3.0));
     }
     DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
+    
+    CcgTableLexicon tableLexicon = new CcgTableLexicon(terminalVar, ccgCategoryVar, terminalBuilder.build(),
+        posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution);
 
-    return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
-        posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution,
-        semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticArgVar,
-        semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
+    return new CcgParser(tableLexicon, semanticHeadVar, semanticSyntaxVar, semanticArgNumVar,
+        semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,

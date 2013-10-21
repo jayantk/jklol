@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  *
  */
-public class ParametricCcgTableLexicon implements ParametricCcgLexicon {
+public class ParametricTableLexicon implements ParametricCcgLexicon {
   private static final long serialVersionUID = 1L;
   
   private final VariableNumMap terminalVar;
@@ -42,7 +42,7 @@ public class ParametricCcgTableLexicon implements ParametricCcgLexicon {
   public static final String TERMINAL_POS_PARAMETERS = "terminalPos";
   public static final String TERMINAL_SYNTAX_PARAMETERS = "terminalSyntax";
 
-  public ParametricCcgTableLexicon(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
+  public ParametricTableLexicon(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       ParametricFactor terminalFamily, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar, ParametricFactor terminalPosFamily,
       ParametricFactor terminalSyntaxFamily) {
@@ -78,7 +78,7 @@ public class ParametricCcgTableLexicon implements ParametricCcgLexicon {
     DiscreteFactor terminalSyntaxDistribution = terminalSyntaxFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS)).coerceToDiscrete();
 
-    return new CcgTableLexicon(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar,
+    return new TableLexicon(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar,
         terminalSyntaxVar, terminalPosDistribution, terminalSyntaxDistribution);
   }
 

@@ -15,7 +15,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
-import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgTableLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -312,7 +312,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap terminalVar = VariableNumMap.singleton(0, "words", wordType);
     VariableNumMap ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
     VariableNumMap terminalSyntaxVar = VariableNumMap.singleton(1, "terminalSyntax", ccgSyntaxType);
-    
+
     VariableNumMap terminalWordVars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
     VariableNumMap terminalWordSyntaxVars = VariableNumMap.unionAll(terminalVar, terminalSyntaxVar);
 
@@ -343,7 +343,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap terminalPosVars = VariableNumMap.unionAll(posVar, terminalSyntaxVar);
     ParametricFactor terminalPosParametricFactor = new DenseIndicatorLogLinearFactor(terminalPosVars);
 
-    ParametricCcgLexicon lexiconFamily = new ParametricCcgTableLexicon(terminalVar,
+    ParametricCcgLexicon lexiconFamily = new ParametricTableLexicon(terminalVar,
         ccgCategoryVar, terminalParametricFactor, posVar, terminalSyntaxVar,
         terminalPosParametricFactor, terminalSyntaxFactor);
 

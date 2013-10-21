@@ -142,7 +142,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     builder.multiply(this);
     return builder.build();
   }
-  
+
   @Override
   public DenseTensor innerProduct(Tensor other) {
     int[] otherDims = other.getDimensionNumbers();

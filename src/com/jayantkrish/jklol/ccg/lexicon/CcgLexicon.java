@@ -25,8 +25,15 @@ public interface CcgLexicon extends Serializable {
 
   VariableNumMap getTerminalVar();
   
-  VariableNumMap getTerminalPosVar();
-  
+  /**
+   * Gets the possible lexicon entries for {@code wordSequence} that
+   * can be used in this parser. The returned entries do not include
+   * lexicon entries for unknown words, which may occur in the parse
+   * if {@code wordSequence} is unrecognized.
+   * 
+   * @param wordSequence
+   * @return
+   */
   List<LexiconEntry> getLexiconEntries(List<String> wordSequence);
   
   List<LexiconEntry> getLexiconEntriesWithUnknown(String word, String posTag);

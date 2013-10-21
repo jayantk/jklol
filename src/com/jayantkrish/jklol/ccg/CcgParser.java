@@ -236,7 +236,6 @@ public class CcgParser implements Serializable {
     this.dependencySyntaxType = dependencySyntaxVar.getDiscreteVariables().get(0);
     this.dependencyArgNumType = dependencyArgNumVar.getDiscreteVariables().get(0);
     this.dependencyPosType = dependencyHeadPosVar.getDiscreteVariables().get(0);
-    Preconditions.checkArgument(lexicon.getTerminalPosVar().getDiscreteVariables().get(0).equals(dependencyPosType));
     Preconditions.checkArgument(dependencyArgPosVar.getDiscreteVariables().get(0).equals(dependencyPosType));
     // TODO: This check can be made unnecessary by fixing the
     // representation of unfilled dependencies as longs. Right now, the

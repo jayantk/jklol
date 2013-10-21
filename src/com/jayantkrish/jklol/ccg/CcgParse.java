@@ -486,6 +486,17 @@ public class CcgParse {
       return lexiconEntries;
     }
   }
+  
+  public List<Integer> getWordIndexesWithLexiconEntries() {
+    if (isTerminal()) {
+      return Arrays.asList(spanEnd);
+    } else {
+      List<Integer> wordIndexes = Lists.newArrayList();
+      wordIndexes.addAll(left.getWordIndexesWithLexiconEntries());
+      wordIndexes.addAll(right.getWordIndexesWithLexiconEntries());
+      return wordIndexes;
+    }
+  }
 
   /**
    * The result is null unless this is a terminal in the parse tree.
@@ -495,7 +506,7 @@ public class CcgParse {
   public CcgCategory getLexiconEntry() {
     return lexiconEntry;
   }
-  
+
   public CcgCategory getLexiconEntryForWordIndex(int index) {
     Preconditions.checkArgument(spanStart <= index && index <= spanEnd, 
         "Illegal word index: %s (current span: %s,%s)", index, spanStart, spanEnd);

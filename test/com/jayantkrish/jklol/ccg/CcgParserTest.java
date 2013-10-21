@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lexicon.CcgTableLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -1075,7 +1075,7 @@ public class CcgParserTest extends TestCase {
     }
     DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
     
-    CcgTableLexicon tableLexicon = new CcgTableLexicon(terminalVar, ccgCategoryVar, terminalBuilder.build(),
+    TableLexicon tableLexicon = new TableLexicon(terminalVar, ccgCategoryVar, terminalBuilder.build(),
         posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution);
 
     return new CcgParser(tableLexicon, semanticHeadVar, semanticSyntaxVar, semanticArgNumVar,

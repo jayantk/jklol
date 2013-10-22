@@ -145,7 +145,7 @@ public class UnfilledDependency implements Serializable {
     if (hasObject()) {
       return getSubject() + " " + subjectArgIndex + " " + getObject();
     } else {
-      return getSubject() + " " + subjectArgIndex + " " + objectArgumentIndex;
+      return getSubject() + " " + subjectArgIndex + " (argvar: " + objectArgumentIndex  + ")";
     }
   }
 

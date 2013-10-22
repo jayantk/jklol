@@ -114,8 +114,7 @@ public class TrainCcg extends AbstractCli {
 
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
-    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory
-        .getPosFeatureGenerator(unfilteredTrainingExamples));
+    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null);
     ParametricCcgParser family = createCcgParser(posTags, observedRules, featureFactory);
     System.out.println("Done creating ParametricCcgParser.");
 

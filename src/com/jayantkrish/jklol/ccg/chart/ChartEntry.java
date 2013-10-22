@@ -43,11 +43,12 @@ public class ChartEntry {
   // in the sentence. Assignments to each semantic variable are
   // stored consecutively in assignments, with the starting index
   // for each variable's assignments stored in assignmentVarIndex. 
-  // private final int[] assignmentVarIndex;
+  private final int[] assignmentVarIndex;
   private final long[] assignments;
 
   // Partially complete dependency structures, encoded into longs
   // for efficiency.
+  private final int[] unfilledDependencyVarIndex;
   private final long[] unfilledDependencies;
   // Complete dependency structures, encoded into longs for
   // efficiency.
@@ -91,7 +92,9 @@ public class ChartEntry {
    * @param rootUnaryRule
    * @param leftUnaryRule
    * @param rightUnaryRule
+   * @param assignmentVarIndex
    * @param assignments
+   * @param unfilledDependencyVarIndex
    * @param unfilledDependencies
    * @param deps
    * @param leftSpanStart
@@ -103,9 +106,10 @@ public class ChartEntry {
    * @param combinator
    */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, UnaryCombinator rootUnaryRule,
-      UnaryCombinator leftUnaryRule, UnaryCombinator rightUnaryRule, long[] assignments, long[] unfilledDependencies,
-      long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex,
-      int rightSpanStart, int rightSpanEnd, int rightChartIndex, Combinator combinator) {
+      UnaryCombinator leftUnaryRule, UnaryCombinator rightUnaryRule, int[] assignmentVarIndex,
+      long[] assignments, int[] unfilledDependencyVarIndex, long[] unfilledDependencies,
+      long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex, int rightSpanStart,
+      int rightSpanEnd, int rightChartIndex, Combinator combinator) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
     this.syntaxHeadVar = syntaxHeadVar;
@@ -114,7 +118,9 @@ public class ChartEntry {
     this.leftUnaryRule = leftUnaryRule;
     this.rightUnaryRule = rightUnaryRule;
 
+    this.assignmentVarIndex = Preconditions.checkNotNull(assignmentVarIndex);
     this.assignments = Preconditions.checkNotNull(assignments);
+    this.unfilledDependencyVarIndex = Preconditions.checkNotNull(unfilledDependencyVarIndex);
     this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
     this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies);
 
@@ -142,15 +148,18 @@ public class ChartEntry {
    * @param ccgCategory
    * @param terminalWords
    * @param rootUnaryRule
+   * @param assignmentVarIndex
    * @param assignments
+   * @param unfilledDependenciesVarIndex
    * @param unfilledDependencies
    * @param deps
    * @param spanStart
    * @param spanEnd
    */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, CcgCategory ccgCategory,
-      List<String> terminalWords, UnaryCombinator rootUnaryRule, long[] assignments,
-      long[] unfilledDependencies, long[] deps, int spanStart, int spanEnd) {
+      List<String> terminalWords, UnaryCombinator rootUnaryRule, int[] assignmentVarIndex,
+      long[] assignments, int[] unfilledDependencyVarIndex, long[] unfilledDependencies,
+      long[] deps, int spanStart, int spanEnd) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
     this.syntaxHeadVar = syntaxHeadVar;
@@ -159,7 +168,9 @@ public class ChartEntry {
     this.leftUnaryRule = null;
     this.rightUnaryRule = null;
 
+    this.assignmentVarIndex = Preconditions.checkNotNull(assignmentVarIndex);
     this.assignments = Preconditions.checkNotNull(assignments);
+    this.unfilledDependencyVarIndex = Preconditions.checkNotNull(unfilledDependencyVarIndex);
     this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
     this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies);
 
@@ -183,9 +194,11 @@ public class ChartEntry {
     return syntax;
   }
 
+  /*
   public int[] getHeadedSyntaxUniqueVars() {
     return syntaxUniqueVars;
   }
+  */
   
   public int getHeadVariable() {
     return syntaxHeadVar;
@@ -221,11 +234,16 @@ public class ChartEntry {
   public UnaryCombinator getRightUnaryRule() {
     return rightUnaryRule;
   }
+  
+  public int[] getAssignmentVarIndex() {
+    return assignmentVarIndex;
+  }
 
   public long[] getAssignments() {
     return assignments;
   }
 
+  /*
   public int[] getAssignmentPredicateNums() {
     int[] predicateNums = new int[assignments.length];
     for (int i = 0; i < assignments.length; i++) {
@@ -233,6 +251,7 @@ public class ChartEntry {
     }
     return predicateNums;
   }
+  */
 
   /**
    * Replaces the {@code i}th unique variable in {@code this} with the
@@ -246,13 +265,43 @@ public class ChartEntry {
     long[] relabeledAssignments = new long[assignments.length];
     Arrays.fill(relabeledAssignments, -1);
     int numFilled = 0;
+
+    /*
+    // Invert relabeling to get which current assignment variable 
+    // to put in each result assignment slot.
+    int maxResultVarNum = Ints.max(relabeling);
+    int[] inverseRelabeling = new int[maxResultVarNum];
+    int[] relabeledAssignmentVarIndex = new int[maxResultVarNum + 1];
+    Arrays.fill(inverseRelabeling, -1);
+    for (int j = 0; j < relabeling.length; j++) {
+      if (relabeling[j] != -1) { 
+        inverseRelabeling[relabeling[j]] = uniqueVars[j];
+      }
+    }
+
+    for (int j = 0; j < inverseRelabeling.length; j++) {
+      relabeledAssignmentVarIndex[j] = numFilled;
+      int originalVarNum = inverseRelabeling[j];
+      if (originalVarNum != -1) {
+        int startIndex = assignmentVarIndex[originalVarNum];
+        int endIndex = assignmentVarIndex[originalVarNum + 1];
+        for (int i = startIndex; i < endIndex; i++) {
+          relabeledAssignments[numFilled] = CcgParser.replaceAssignmentVarNum(assignments[i],
+                originalVarNum, relabeling[j]);
+          numFilled++;
+        }
+      }
+    }
+    relabeledAssignmentVarIndex[inverseRelabeling.length] = numFilled;
+    */
+
     for (int i = 0; i < assignments.length; i++) {
       int assignmentVarNum = CcgParser.getAssignmentVarNum(assignments[i]);
       for (int j = 0; j < uniqueVars.length; j++) {
         if (uniqueVars[j] == assignmentVarNum) {
           if (relabeling[j] != -1) {
             relabeledAssignments[numFilled] = CcgParser.replaceAssignmentVarNum(assignments[i],
-                assignmentVarNum, relabeling[j]);
+                assignmentVarNum, relabeling[j]); 
             numFilled++;
           }
         }
@@ -264,6 +313,10 @@ public class ChartEntry {
     } else {
       return relabeledAssignments;
     }
+  }
+
+  public int[] getUnfilledDependencyVarIndex() {
+    return unfilledDependencyVarIndex;
   }
 
   public long[] getUnfilledDependencies() {
@@ -359,16 +412,17 @@ public class ChartEntry {
   }
 
   public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
-      int resultHeadVar, UnaryCombinator unaryRuleCombinator, long[] newAssignments, long[] newUnfilledDeps,
+      int resultHeadVar, UnaryCombinator unaryRuleCombinator, int[] newAssignmentVarIndex,
+      long[] newAssignments, int[] newUnfilledDepVarIndex, long[] newUnfilledDeps,
       long[] newFilledDeps) {
     Preconditions.checkState(rootUnaryRule == null);
     if (isTerminal()) {
       return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, lexiconEntry, lexiconTriggerWords,
-          unaryRuleCombinator, newAssignments, newUnfilledDeps,
+          unaryRuleCombinator, newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex, newUnfilledDeps,
           newFilledDeps, leftSpanStart, leftSpanEnd);
     } else {
       return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
-          newAssignments, newUnfilledDeps, newFilledDeps, leftSpanStart,
+          newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex, newUnfilledDeps, newFilledDeps, leftSpanStart,
           leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator);
     }
   }

@@ -15,6 +15,8 @@ import com.google.common.base.Preconditions;
 public class CcgSearchMove implements Serializable {
   private static final long serialVersionUID = 1L;
 
+  // The operations which this search move combines into
+  // a single operation.
   private final Combinator binaryCombinator;
   private final UnaryCombinator leftUnary;
   private final UnaryCombinator rightUnary;
@@ -24,11 +26,13 @@ public class CcgSearchMove implements Serializable {
   private final long rightUnaryKeyNum;
 
   private final int[] leftRelabeling;
+  private final int[] leftInverseRelabeling;
   private final int[] rightRelabeling;
+  private final int[] rightInverseRelabeling;
 
   public CcgSearchMove(Combinator binaryCombinator, UnaryCombinator leftUnary, UnaryCombinator rightUnary,
       long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum, int[] leftRelabeling,
-      int[] rightRelabeling) {
+      int[] leftInverseRelabeling, int[] rightRelabeling, int[] rightInverseRelabeling) {
     this.binaryCombinator = Preconditions.checkNotNull(binaryCombinator);
     this.leftUnary = leftUnary;
     this.rightUnary = rightUnary;
@@ -37,8 +41,11 @@ public class CcgSearchMove implements Serializable {
     this.rightUnaryKeyNum = rightUnaryKeyNum;
 
     this.leftRelabeling = Preconditions.checkNotNull(leftRelabeling);
+    this.leftInverseRelabeling = Preconditions.checkNotNull(leftInverseRelabeling);
     this.rightRelabeling = Preconditions.checkNotNull(rightRelabeling);
-
+    this.rightInverseRelabeling = Preconditions.checkNotNull(rightInverseRelabeling);
+    
+    Preconditions.checkArgument(leftInverseRelabeling.length == rightInverseRelabeling.length);
     Preconditions.checkArgument(leftUnary != null || leftUnaryKeyNum == -1);
     Preconditions.checkArgument(rightUnary != null || rightUnaryKeyNum == -1);
   }
@@ -70,9 +77,17 @@ public class CcgSearchMove implements Serializable {
   public int[] getLeftRelabeling() {
     return leftRelabeling;
   }
+  
+  public int[] getLeftInverseRelabeling() {
+    return leftInverseRelabeling;
+  }
 
   public int[] getRightRelabeling() {
     return rightRelabeling;
+  }
+
+  public int[] getRightInverseRelabeling() {
+    return rightInverseRelabeling;
   }
 
   @Override

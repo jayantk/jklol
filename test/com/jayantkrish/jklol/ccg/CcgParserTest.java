@@ -97,8 +97,7 @@ public class CcgParserTest extends TestCase {
       "(S[ng]{0}\\N{1}){0} (N{2}\\N{2}){0}"};
 
   // Syntactic CCG weights to set. All unlisted combinations get
-  // weight 1.0, all
-  // listed combinations get weight 1.0 + given weight
+  // weight 1.0, all listed combinations get weight 1.0 + given weight
   private static final String[][] syntacticCombinations = {
       { "(N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0}", "(S[b]{2}\\N{1}){2}" },
       { "(NP{0}/(S[1]{1}\\N{2}){1}){0}", "((S[ng]{0}\\N{1}){0}/N{2}){0}" },
@@ -721,6 +720,8 @@ public class CcgParserTest extends TestCase {
         parseDependency("special:compound", "N{0}", 1, "berries", 1, 2),
         parseDependency("special:compound", "N{0}", 1, "people", 0, 1));
     assertEquals(expectedDeps, observedDeps);
+
+    assertEquals("berries", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
   }
 
   public void testBinaryRulesNounCompoundHeadIndex() {

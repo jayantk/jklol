@@ -2,8 +2,10 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * A combinator combines a pair of syntactic categories into a result
@@ -23,9 +25,12 @@ public class Combinator implements Serializable {
   private final int syntaxHeadVar;
 
   private final int[] leftVariableRelabeling;
+  private final int[] leftInverseRelabeling;
   private final int[] rightVariableRelabeling;
+  private final int[] rightInverseRelabeling;
   private final int[] resultOriginalVars;
   private final int[] resultVariableRelabeling;
+  private final int[] resultInverseRelabeling;
   private final int[] unifiedVariables;
 
   // Unfilled dependencies created by this operation.
@@ -47,7 +52,8 @@ public class Combinator implements Serializable {
   private final Type type;
 
   public Combinator(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, int[] leftVariableRelabeling,
-      int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,
+      int[] leftInverseRelabeling, int[] rightVariableRelabeling, int[] rightInverseRelabeling,
+      int[] resultOriginalVars, int[] resultVariableRelabeling, int[] resultInverseRelabeling,
       int[] unifiedVariables, String[] subjects, HeadedSyntacticCategory[] subjectSyntacticCategories, 
       int[] argumentNumbers, int[] objects, boolean isArgumentOnLeft, int argumentReturnDepth,
       CcgBinaryRule binaryRule, Type type) {
@@ -56,11 +62,15 @@ public class Combinator implements Serializable {
     this.syntaxHeadVar = syntaxHeadVar;
 
     this.leftVariableRelabeling = leftVariableRelabeling;
+    this.leftInverseRelabeling = leftInverseRelabeling;
     this.rightVariableRelabeling = rightVariableRelabeling;
+    this.rightInverseRelabeling = rightInverseRelabeling;
     this.resultOriginalVars = resultOriginalVars;
     this.resultVariableRelabeling = resultVariableRelabeling;
+    this.resultInverseRelabeling = resultInverseRelabeling;
     this.unifiedVariables = unifiedVariables;
 
+    Preconditions.checkArgument(leftInverseRelabeling.length == rightInverseRelabeling.length);
     Preconditions.checkArgument(subjects.length == objects.length);
     Preconditions.checkArgument(subjects.length == subjectSyntacticCategories.length);
     Preconditions.checkArgument(subjects.length == argumentNumbers.length);
@@ -95,9 +105,17 @@ public class Combinator implements Serializable {
   public int[] getLeftVariableRelabeling() {
     return leftVariableRelabeling;
   }
+  
+  public int[] getLeftInverseRelabeling() {
+    return leftInverseRelabeling;
+  }
 
   public int[] getRightVariableRelabeling() {
     return rightVariableRelabeling;
+  }
+  
+  public int[] getRightInverseRelabeling() {
+    return rightInverseRelabeling;
   }
 
   public int[] getResultOriginalVars() {
@@ -106,6 +124,10 @@ public class Combinator implements Serializable {
 
   public int[] getResultVariableRelabeling() {
     return resultVariableRelabeling;
+  }
+
+  public int[] getResultInverseRelabeling() {
+    return resultInverseRelabeling;
   }
 
   public int[] getUnifiedVariables() {
@@ -119,20 +141,14 @@ public class Combinator implements Serializable {
   public boolean hasUnfilledDependencies() {
     return subjects.length > 0;
   }
-
-  public int getUnfilledDependencies(CcgParser parser, int headWordIndex, long[] depAccumulator, int accumulatorStartIndex) {
-    if (depAccumulator.length < accumulatorStartIndex + subjects.length) {
-      // The accumulator does not have enough space to store the dependencies
-      // in this combinator.
-      return -1;
-    }
-    
+  
+  public List<UnfilledDependency> getUnfilledDependencies(int headWordIndex) {
+    List<UnfilledDependency> deps = Lists.newArrayList();
     for (int i = 0; i < subjects.length; i++) {
-      UnfilledDependency dep = UnfilledDependency.createWithKnownSubject(subjects[i],
-          subjectSyntacticCategories[i], headWordIndex, argumentNumbers[i], objects[i]);
-      depAccumulator[i + accumulatorStartIndex] = parser.unfilledDependencyToLong(dep);
+      deps.add(UnfilledDependency.createWithKnownSubject(subjects[i],
+          subjectSyntacticCategories[i], headWordIndex, argumentNumbers[i], objects[i]));
     }
-    return accumulatorStartIndex + subjects.length;
+    return deps;
   }
 
   public boolean isArgumentOnLeft() {

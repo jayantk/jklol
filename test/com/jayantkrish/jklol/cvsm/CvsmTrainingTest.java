@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -8,8 +9,10 @@ import junit.framework.TestCase;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -173,7 +176,7 @@ public class CvsmTrainingTest extends TestCase {
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(rules),
-        null, null, true, null, false, false);
+        new DefaultCcgFeatureFactory(null), null, true, null, false, false);
     parser = family.getModelFromParameters(family.getNewSufficientStatistics());
 
     DiscreteVariable dimType = DiscreteVariable.sequence("seq", NUM_DIMS);

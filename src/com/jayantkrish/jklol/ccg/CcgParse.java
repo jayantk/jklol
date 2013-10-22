@@ -440,6 +440,17 @@ public class CcgParse {
     }
   }
 
+  public List<String> getSpannedLexiconTriggerWords() {
+    if (isTerminal()) {
+      return lexiconTriggerWords;
+    } else {
+      List<String> words = Lists.newArrayList();
+      words.addAll(left.getSpannedLexiconTriggerWords());
+      words.addAll(right.getSpannedLexiconTriggerWords());
+      return words;
+    }
+  }
+
   public List<String> getSpannedPosTags() {
     if (isTerminal()) {
       return posTags;

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
@@ -80,11 +81,11 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public Factor getModelFromParameters(SufficientStatistics parameters) {
+  public ClassifierFactor getModelFromParameters(SufficientStatistics parameters) {
     return new LinearClassifierFactor(inputVar, outputVars, conditionalVars, featureDictionary, 
         getWeightTensorFromStatistics(parameters));
   }
-  
+
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     Tensor weightTensor = getWeightTensorFromStatistics(parameters);

@@ -71,8 +71,9 @@ public class LinearClassifierFactorTest extends TestCase {
     assertEquals(11.0, Math.log(output.getUnnormalizedProbability("B")), 0.001);
     assertEquals(14.0, Math.log(output.getUnnormalizedProbability("C")), 0.001);
     assertEquals(17.0, Math.log(output.getUnnormalizedProbability("D")), 0.001);
-        
+
     a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "A"));
+    assertEquals(8.0, Math.log(factor.getUnnormalizedProbability(a)), 0.001);
     output = factor.conditional(a);
     assertEquals(0, output.getVars().size());
     assertEquals(8.0, Math.log(output.getUnnormalizedProbability(Assignment.EMPTY)), 0.001);
@@ -85,6 +86,7 @@ public class LinearClassifierFactorTest extends TestCase {
     assertEquals(1.0, output.getTotalUnnormalizedProbability(), .001);
         
     a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "D"));
+    assertEquals(-0.051, Math.log(normedFactor.getUnnormalizedProbability(a)), 0.001);
     output = normedFactor.conditional(a);
     assertEquals(0, output.getVars().size());
     assertEquals(-0.051, Math.log(output.getUnnormalizedProbability(Assignment.EMPTY)), 0.001);

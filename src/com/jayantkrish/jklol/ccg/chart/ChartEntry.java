@@ -39,8 +39,11 @@ public class ChartEntry {
   private final UnaryCombinator rightUnaryRule;
 
   // An assignment to the semantic variables in the syntactic
-  // category.
-  // Each value is both a predicate and its index in the sentence.
+  // category. Each value is both a predicate and its index
+  // in the sentence. Assignments to each semantic variable are
+  // stored consecutively in assignments, with the starting index
+  // for each variable's assignments stored in assignmentVarIndex. 
+  // private final int[] assignmentVarIndex;
   private final long[] assignments;
 
   // Partially complete dependency structures, encoded into longs

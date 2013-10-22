@@ -1,14 +1,15 @@
 package com.jayantkrish.jklol.ccg;
 
+import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 
 /**
  * Interface for determining the featurization of a CCG parser. CCG
- * parsers have a set of events which can be parameterized, such as the
- * lexicon entries used for a word, or the expected syntactic category
- * given a part-of-speech tag. Typically, these events are
+ * parsers have a set of events which can be parameterized, such as
+ * the lexicon entries used for a word, or the expected syntactic
+ * category given a part-of-speech tag. Typically, these events are
  * parameterized using indicator features; however, other
  * parameterizations are also possible, e.g., to capture commonalities
  * between a single word's syntactic behavior across different
@@ -16,7 +17,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
  * these other parameterizations.
  * <p>
  * To obtain the default indicator parameterization, see
- * {@link DefaultCcgFeatureFactory}. 
+ * {@link DefaultCcgFeatureFactory}.
  * 
  * @author jayantk
  */
@@ -42,10 +43,10 @@ public interface CcgFeatureFactory {
       VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar);
 
   /**
-   * Gets a parametric factor defining features over the distance between
-   * a dependency and its arguments. Distance is measured as the number of
-   * intervening words.
-   *  
+   * Gets a parametric factor defining features over the distance
+   * between a dependency and its arguments. Distance is measured as
+   * the number of intervening words.
+   * 
    * @param dependencyHeadVar
    * @param headSyntaxVar
    * @param dependencyArgNumVar
@@ -56,11 +57,11 @@ public interface CcgFeatureFactory {
   ParametricFactor getDependencyWordDistanceFeatures(VariableNumMap dependencyHeadVar,
       VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap wordDistanceVar);
-  
+
   /**
-   * Gets a parametric factor defining features over the distance between
-   * a dependency and its arguments. Distance is measured as the number of
-   * intervening punctuation marks.
+   * Gets a parametric factor defining features over the distance
+   * between a dependency and its arguments. Distance is measured as
+   * the number of intervening punctuation marks.
    * 
    * @param dependencyHeadVar
    * @param headSyntaxVar
@@ -74,9 +75,10 @@ public interface CcgFeatureFactory {
       VariableNumMap dependencyHeadPosVar, VariableNumMap puncDistanceVar);
 
   /**
-   * Gets a parametric factor defining features over the distance between
-   * a dependency and its arguments. Distance is measured as the number of
-   * intervening verbs (detected using part-of-speech tags).
+   * Gets a parametric factor defining features over the distance
+   * between a dependency and its arguments. Distance is measured as
+   * the number of intervening verbs (detected using part-of-speech
+   * tags).
    * 
    * @param dependencyHeadVar
    * @param headSyntaxVar
@@ -86,42 +88,34 @@ public interface CcgFeatureFactory {
    * @return
    */
   ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap dependencyHeadVar,
-      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar, 
+      VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap verbDistanceVar);
 
   /**
-   * Gets a parametric factor defining the features of lexicon entries
-   * in a CCG parser. {@code lexiconIndicatorFactor} is an indicator
-   * distribution where each outcome with value 1.0 represents a entry
-   * in the lexicon.
-   * 
-   * @param terminalWordVard
-   * @param ccgCategoryVar
-   * @param lexiconIndicatorFactor
-   * @return
-   */
-  ParametricFactor getLexiconFeatures(VariableNumMap terminalWordVard,
-      VariableNumMap ccgCategoryVar, DiscreteFactor lexiconIndicatorFactor);
-
-  /**
-   * Gets a parametric factor defining features of words sequences and
-   * their syntactic category. These features are backoff features for
-   * the lexicon features (see {@link #getLexiconFeatures}) which
-   * ignore the semantics of the lexicon entry.
+   * Gets a parameterization for the lexicon of a CCG parser. This
+   * parameterization controls the weights assigned to CCG categories
+   * for terminals in the parse tree, given a sentence. The
+   * parameterization may include features on e.g., the word itself and
+   * its part-of-speech tag.
    * 
    * @param terminalWordVar
+   * @param ccgCategoryVar
+   * @param terminalPosVar
    * @param terminalSyntaxVar
-   * @param lexiconSyntaxIndicatorFactor
+   * @param lexiconIndicatorFactor an indicator distribution where
+   * each outcome with value 1.0 represents a entry in the lexicon.
    * @return
    */
-  ParametricFactor getLexiconSyntaxFeatures(VariableNumMap terminalWordVar,
-      VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconSyntaxIndicatorFactor);
+  ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
+      VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
+      VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconIndicatorFactor);
 
   /**
-   * Gets a parametric factor defining features over binary combinators
-   * along with their semantic heads and parts-of-speech. This distribution
-   * should not include features which depend only on the syntactic variables
-   * -- such features are included in the parser by default. 
+   * Gets a parametric factor defining features over binary
+   * combinators along with their semantic heads and parts-of-speech.
+   * This distribution should not include features which depend only
+   * on the syntactic variables -- such features are included in the
+   * parser by default.
    * 
    * @param leftSyntaxVar
    * @param rightSyntaxVar
@@ -135,11 +129,12 @@ public interface CcgFeatureFactory {
       VariableNumMap headedBinaryRulePredicateVar, VariableNumMap headedBinaryRulePosVar);
 
   /**
-   * Gets a parametric factor defining features over the root syntactic category
-   * of the parse tree along with its semantic head and part-of-speech tag.
-   * This factor should not include features which depend solely on the syntactic
-   * category -- such features are included in the parser by default.
-   *   
+   * Gets a parametric factor defining features over the root
+   * syntactic category of the parse tree along with its semantic head
+   * and part-of-speech tag. This factor should not include features
+   * which depend solely on the syntactic category -- such features
+   * are included in the parser by default.
+   * 
    * @param rootSyntaxVar
    * @param rootPredicateVar
    * @param rootPosVar

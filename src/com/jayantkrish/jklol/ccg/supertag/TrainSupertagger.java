@@ -81,7 +81,7 @@ public class TrainSupertagger extends AbstractCli {
         .ofType(Integer.class).defaultsTo(5);
     labelRestrictionCountThreshold = parser.accepts("labelRestrictionThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(20);
-    prefixSuffixFeatureCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
+    prefixSuffixFeatureCountThreshold = parser.accepts("prefixSuffixThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(35);
   }
 
@@ -98,7 +98,7 @@ public class TrainSupertagger extends AbstractCli {
 
     System.out.println("Generating features...");
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
-        buildFeatureVectorGenerator(trainingData, options.valueOf(commonWordCountThreshold),
+        buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData), options.valueOf(commonWordCountThreshold), options.valueOf(commonWordCountThreshold),
             options.valueOf(prefixSuffixFeatureCountThreshold));
     System.out.println(featureGen.getNumberOfFeatures() + " word/CCG category features");
 
@@ -153,10 +153,9 @@ public class TrainSupertagger extends AbstractCli {
     return examples;
   }
 
-  private static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
-      List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData,
-      int commonWordCountThreshold, int prefixSuffixCountThreshold) {
-    List<LocalContext<WordAndPos>> contexts = TaggerUtils.extractContextsFromData(trainingData);
+  public static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
+      List<LocalContext<WordAndPos>> contexts, int commonWordCountThreshold, int wordPosCountThreshold,
+      int prefixSuffixCountThreshold) {
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (LocalContext<WordAndPos> context : contexts) {
       wordCounts.increment(context.getItem().getWord(), 1.0);
@@ -178,7 +177,7 @@ public class TrainSupertagger extends AbstractCli {
     // Count feature occurrences and discard infrequent features.
     CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
     IndexedList<String> featureDictionary = IndexedList.create();
-    Set<String> frequentWordFeatures = wordPosFeatureCounts.getKeysAboveCountThreshold(commonWordCountThreshold);
+    Set<String> frequentWordFeatures = wordPosFeatureCounts.getKeysAboveCountThreshold(wordPosCountThreshold);
     Set<String> frequentPrefixFeatures = prefixFeatureCounts.getKeysAboveCountThreshold(prefixSuffixCountThreshold);
     featureDictionary.addAll(frequentWordFeatures);
     featureDictionary.addAll(frequentPrefixFeatures);

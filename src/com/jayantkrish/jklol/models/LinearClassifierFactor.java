@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.models;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -25,7 +26,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class LinearClassifierFactor extends ClassifierFactor {
 
   private static final long serialVersionUID = 7300787304056125779L;
-  
+
   private final int[] inputVarNums;
   private final VariableNumMap conditionalVars;
 
@@ -93,6 +94,30 @@ public class LinearClassifierFactor extends ClassifierFactor {
           .elementwiseLog();
     }
     return logProbs;
+  }
+
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Tensor inputFeatureVector = (Tensor) assignment.getValue(getInputVariable()
+        .getOnlyVariableNum());
+
+    if (conditionalVars.size() == 0) {
+      // No normalization for any conditioned-on variables. This case 
+      // allows a more efficient implementation than the default
+      // in ClassifierFactor.
+      VariableNumMap outputVars = getOutputVariables();
+      Tensor outputTensor = SparseTensor.singleElement(outputVars.getVariableNumsArray(),
+          outputVars.getVariableSizes(), outputVars.assignmentToIntArray(assignment), 1.0);
+
+      Tensor featureIndicator = outputTensor.outerProduct(inputFeatureVector);
+      return logWeights.innerProduct(featureIndicator).getByDimKey();
+    } else {
+      // Default to looking up the answer in the output log probabilities
+      int[] outputIndexes = getOutputVariables().assignmentToIntArray(assignment);
+      Tensor logProbs = getOutputLogProbTensor(inputFeatureVector);
+      return logProbs.getByDimKey(outputIndexes);
+    }
   }
 
   @Override

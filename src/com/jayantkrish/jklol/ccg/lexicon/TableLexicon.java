@@ -5,8 +5,10 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class TableLexicon extends AbstractCcgLexicon {
@@ -27,7 +29,7 @@ public class TableLexicon extends AbstractCcgLexicon {
   public TableLexicon(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
       DiscreteFactor terminalPosDistribution, DiscreteFactor terminalSyntaxDistribution) {
-    super(terminalVar, ccgCategoryVar, terminalDistribution);
+    super(terminalVar, ccgCategoryVar, terminalDistribution, null);
 
     this.terminalPosVar = Preconditions.checkNotNull(terminalPosVar);
     this.terminalSyntaxVar = Preconditions.checkNotNull(terminalSyntaxVar);
@@ -41,8 +43,9 @@ public class TableLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  protected double getCategoryWeight(List<String> words, List<String> pos,
-      int spanStart, int spanEnd, List<String> terminals, CcgCategory category) {
+  protected double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,
+      List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors, int spanStart,
+      int spanEnd, List<String> terminals, CcgCategory category) {
     double posProb = getTerminalPosProbability(pos.get(spanEnd), category.getSyntax());
     double syntaxProb = getTerminalSyntaxProbability(terminals, category.getSyntax());
     return posProb * syntaxProb;

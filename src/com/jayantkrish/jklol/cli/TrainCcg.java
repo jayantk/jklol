@@ -16,12 +16,14 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
+import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.CcgRuleSchema;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
+import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
@@ -112,7 +114,9 @@ public class TrainCcg extends AbstractCli {
 
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
-    ParametricCcgParser family = createCcgParser(posTags, observedRules, null);
+    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory
+        .getPosFeatureGenerator(unfilteredTrainingExamples));
+    ParametricCcgParser family = createCcgParser(posTags, observedRules, featureFactory);
     System.out.println("Done creating ParametricCcgParser.");
 
     // Read in training data and confirm its validity.
@@ -149,7 +153,7 @@ public class TrainCcg extends AbstractCli {
     IoUtils.serializeObjectToFile(ccgParser, options.valueOf(modelOutput));
 
     System.out.println("Trained model parameters:");
-    System.out.println(family.getParameterDescription(parameters));
+    System.out.println(family.getParameterDescription(parameters, 10000));
   }
 
   public static List<CcgExample> readTrainingData(String filename, boolean ignoreSemantics,

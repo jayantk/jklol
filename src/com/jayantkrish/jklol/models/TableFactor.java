@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
@@ -44,8 +45,8 @@ public class TableFactor extends DiscreteFactor {
     super(vars);
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
     Preconditions.checkArgument(vars.getVariableNums().equals(
-                                  Ints.asList(weights.getDimensionNumbers())), "Dimension numbers do not match. Variables %s, tensor %s",
-                                vars.getVariableNums(), Ints.asList(weights.getDimensionNumbers()));
+        Ints.asList(weights.getDimensionNumbers())), "Dimension numbers do not match. Variables %s, tensor %s",
+        vars.getVariableNums(), Ints.asList(weights.getDimensionNumbers()));
     this.weights = weights;
   }
 
@@ -65,7 +66,7 @@ public class TableFactor extends DiscreteFactor {
       builder.setWeight(assignments[i], 1.0);
     }
     // TODO: support for implicit repmat of the assignments.
-    
+
     return builder.build();
   }
   

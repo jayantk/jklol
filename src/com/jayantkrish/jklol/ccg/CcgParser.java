@@ -177,6 +177,7 @@ public class CcgParser implements Serializable {
   private final Tensor headedBinaryRuleTensor;
 
   // Indicator tensor specifying possible ways to combine pairs of
+  // syntactic categories.
   private final VariableNumMap searchMoveVar;
   private final DiscreteVariable searchMoveType;
   private final DiscreteFactor compiledSyntaxDistribution;

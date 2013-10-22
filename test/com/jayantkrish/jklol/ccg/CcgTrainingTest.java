@@ -75,7 +75,7 @@ public class CcgTrainingTest extends TestCase {
     "block######<N NN block>",
     "not_in_lexicon block###pred:unk-jj (N{1}/N{1}){0} 0 1 pred:block 1###<N <(N/N) JJ not_in_lexicon> <N NN block>>"
   };
-  
+
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
 
   private DataFormat<CcgExample> exampleReader;
@@ -123,7 +123,8 @@ public class CcgTrainingTest extends TestCase {
     }
 
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        null, posTags, true, null, false, false);
+        new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax)),
+        posTags, true, null, false, false);
   }
   
   public void testSyntacticChartFilter1() {

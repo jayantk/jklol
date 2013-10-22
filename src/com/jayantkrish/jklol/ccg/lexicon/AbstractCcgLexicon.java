@@ -13,9 +13,14 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
+import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.sequence.ListLocalContext;
+import com.jayantkrish.jklol.sequence.LocalContext;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -32,14 +37,18 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
   private final DiscreteFactor terminalDistribution;
+  
+  private final FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator;
 
-  public AbstractCcgLexicon(VariableNumMap terminalVar,
-      VariableNumMap ccgCategoryVar, DiscreteFactor terminalDistribution) {
+  public AbstractCcgLexicon(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
+      DiscreteFactor terminalDistribution, FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
     VariableNumMap expectedTerminalVars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
     Preconditions.checkArgument(expectedTerminalVars.equals(terminalDistribution.getVars()));
+    
+    this.featureGenerator = featureGenerator;
   }
 
   @Override
@@ -107,7 +116,8 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
         getTerminalDistribution(), true, parser);
   }
 
-  protected abstract double getCategoryWeight(List<String> words, List<String> pos,
+  protected abstract double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords, 
+      List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors,
       int spanStart, int spanEnd, List<String> terminals, CcgCategory category);
 
   /**
@@ -128,23 +138,36 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
     Preconditions.checkArgument(terminals.size() == posTags.size());
 
     List<String> preprocessedTerminals = preprocessInput(terminals);
+    List<WordAndPos> ccgWordList = WordAndPos.createExample(terminals, posTags);
+    List<Tensor> featureVectors = null;
+    if (featureGenerator != null) {
+      featureVectors = Lists.newArrayList();
+      for (int i = 0; i < preprocessedTerminals.size(); i++) {
+        LocalContext<WordAndPos> context = new ListLocalContext<WordAndPos>(ccgWordList, i);
+        featureVectors.add(featureGenerator.apply(context));
+      }
+    }
+
     for (int i = 0; i < preprocessedTerminals.size(); i++) {
       for (int j = i; j < preprocessedTerminals.size(); j++) {
         List<String> terminalValue = preprocessedTerminals.subList(i, j + 1);
         String posTag = posTags.get(j);
-        int numAdded = addChartEntriesForTerminal(terminals, posTags, terminalValue, posTag, i, j, chart,
-            terminalVar, ccgCategoryVar, terminalDistribution, parser);
+        int numAdded = addChartEntriesForTerminal(terminals, preprocessedTerminals, posTags,
+            ccgWordList, featureVectors, terminalValue, posTag, i, j, chart, terminalVar,
+            ccgCategoryVar, terminalDistribution, parser);
         if (numAdded == 0 && i == j && useUnknownWords) {
           // Backoff to POS tags if the input is unknown.
           terminalValue = preprocessInput(Arrays.asList(CcgLexicon.UNKNOWN_WORD_PREFIX + posTags.get(i)));
-          addChartEntriesForTerminal(terminals, posTags, terminalValue, posTag, i, j, chart, terminalVar,
-              ccgCategoryVar, terminalDistribution, parser);
+          addChartEntriesForTerminal(terminals, preprocessedTerminals, posTags, ccgWordList, 
+              featureVectors, terminalValue, posTag, i, j, chart, terminalVar, ccgCategoryVar,
+              terminalDistribution, parser);
         }
       }
     }
   }
 
-  private int addChartEntriesForTerminal(List<String> terminals, List<String> posTags, List<String> terminalValue, String posTag,
+  private int addChartEntriesForTerminal(List<String> originalTerminals, List<String> preprocessedTerminals,
+      List<String> posTags, List<WordAndPos> ccgWordList, List<Tensor> featureVectors, List<String> terminalValue, String posTag,
       int spanStart, int spanEnd, CcgChart chart, VariableNumMap terminalVar,
       VariableNumMap ccgCategoryVar, DiscreteFactor terminalDistribution, CcgParser parser) {
     int ccgCategoryVarNum = ccgCategoryVar.getOnlyVariableNum();
@@ -161,7 +184,8 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
 
       // Look up how likely this syntactic entry is to occur with
       // this part of speech.
-      double subclassProb = getCategoryWeight(terminals, posTags, spanStart, spanEnd, terminalValue, category);
+      double subclassProb = getCategoryWeight(originalTerminals, preprocessedTerminals, posTags, ccgWordList,
+          featureVectors, spanStart, spanEnd, terminalValue, category);
 
       // Add all possible chart entries to the ccg chart.
       ChartEntry entry = parser.ccgCategoryToChartEntry(terminalValue, category, spanStart, spanEnd);

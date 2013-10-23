@@ -110,7 +110,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       }
       if (observedLogicalForm != null) {
         Expression predictedLogicalForm = parse.getLogicalForm();
-        if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm)) {
+        if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm.simplify())) {
           compatible = false;
         }
       }

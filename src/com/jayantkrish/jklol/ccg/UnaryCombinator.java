@@ -48,11 +48,11 @@ public class UnaryCombinator implements Serializable {
   public int[] getVariableRelabeling() {
     return variableRelabeling;
   }
-  
+
   public int[] getInverseRelabeling() {
     return inverseRelabeling;
   }
-  
+
   public CcgUnaryRule getUnaryRule() {
     return unaryRule;
   }

@@ -34,8 +34,6 @@ public class CcgSearchMove implements Serializable {
   private final int[] rightToReturnInverseRelabeling;
   private final int[] rightDepRelabeling;
   
-  
-
   public CcgSearchMove(Combinator binaryCombinator, UnaryCombinator leftUnary, UnaryCombinator rightUnary,
       long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum, int[] leftRelabeling,
       int[] leftInverseRelabeling, int[] leftToReturnInverseRelabeling, int[] leftDepRelabeling, int[] rightRelabeling,
@@ -61,59 +59,59 @@ public class CcgSearchMove implements Serializable {
     Preconditions.checkArgument(rightUnary != null || rightUnaryKeyNum == -1);
   }
 
-  public Combinator getBinaryCombinator() {
+  public final Combinator getBinaryCombinator() {
     return binaryCombinator;
   }
 
-  public UnaryCombinator getLeftUnary() {
+  public final UnaryCombinator getLeftUnary() {
     return leftUnary;
   }
 
-  public UnaryCombinator getRightUnary() {
+  public final UnaryCombinator getRightUnary() {
     return rightUnary;
   }
 
-  public long getBinaryCombinatorKeyNum() {
+  public final long getBinaryCombinatorKeyNum() {
     return binaryCombinatorKeyNum;
   }
 
-  public long getLeftUnaryKeyNum() {
+  public final long getLeftUnaryKeyNum() {
     return leftUnaryKeyNum;
   }
 
-  public long getRightUnaryKeyNum() {
+  public final long getRightUnaryKeyNum() {
     return rightUnaryKeyNum;
   }
 
-  public int[] getLeftRelabeling() {
+  public final int[] getLeftRelabeling() {
     return leftRelabeling;
   }
   
-  public int[] getLeftInverseRelabeling() {
+  public final int[] getLeftInverseRelabeling() {
     return leftInverseRelabeling;
   }
   
-  public int[] getLeftToReturnInverseRelabeling() {
+  public final int[] getLeftToReturnInverseRelabeling() {
     return leftToReturnInverseRelabeling;
   }
   
-  public int[] getLeftDepRelabeling() {
+  public final int[] getLeftDepRelabeling() {
     return leftDepRelabeling;
   }
 
-  public int[] getRightRelabeling() {
+  public final int[] getRightRelabeling() {
     return rightRelabeling;
   }
 
-  public int[] getRightInverseRelabeling() {
+  public final int[] getRightInverseRelabeling() {
     return rightInverseRelabeling;
   }
   
-  public int[] getRightToReturnInverseRelabeling() {
+  public final int[] getRightToReturnInverseRelabeling() {
     return rightToReturnInverseRelabeling;
   }
   
-  public int[] getRightDepRelabeling() {
+  public final int[] getRightDepRelabeling() {
     return rightDepRelabeling;
   }
 

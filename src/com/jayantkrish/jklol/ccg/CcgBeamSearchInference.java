@@ -22,11 +22,17 @@ public class CcgBeamSearchInference implements CcgInference {
   
   // Maximum number of milliseconds to spend parsing a single sentence.
   private final long maxParseTimeMillis;
+
+  // Whether to print out information about correct parses, etc.
+  private final boolean verbose;
   
-  public CcgBeamSearchInference(ChartFilter searchFilter, int beamSize, long maxParseTimeMillis) {
+  public CcgBeamSearchInference(ChartFilter searchFilter, int beamSize, long maxParseTimeMillis,
+      boolean verbose) {
     this.searchFilter = searchFilter;
     this.beamSize = beamSize;
     this.maxParseTimeMillis = maxParseTimeMillis;
+
+    this.verbose = verbose;
   }
 
   @Override
@@ -65,9 +71,11 @@ public class CcgBeamSearchInference implements CcgInference {
     possibleParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(
         observedDependencies, observedLogicalForm, possibleParses);
 
-    System.out.println("num correct: " + possibleParses.size());
-    for (CcgParse correctParse : possibleParses) {
-      System.out.println("correct: " + correctParse);
+    if (verbose) {
+      System.out.println("num correct: " + possibleParses.size());
+      for (CcgParse correctParse : possibleParses) {
+        System.out.println("correct: " + correctParse);
+      }
     }
 
     if (possibleParses.size() > 0) {

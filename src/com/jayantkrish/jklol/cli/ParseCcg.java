@@ -106,7 +106,7 @@ public class ParseCcg extends AbstractCli {
     if (options.has(exactInference)) {
       inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis));
     } else {
-      inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), options.valueOf(maxParseTimeMillis));
+      inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), options.valueOf(maxParseTimeMillis), true);
     }
     
     if (options.has(testFile)) {

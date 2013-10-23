@@ -37,11 +37,7 @@ public class CcgExample {
   /**
    * Create a new training example for a CCG parser.
    * 
-   * @param words The input language to CCG parse.
-   * @param posTags Part-of-speech tags for the input language. May be
-   * {@code null}.
-   * @param supertags List of candidate syntactic categories for each 
-   * word. May be {@code null}.
+   * @param sentence The sentence to be parsed with optional supertags.
    * @param dependencies The dependencies in the correct CCG parse of
    * {@code words}. May be {@code null}, in which case the
    * dependencies are unobserved.
@@ -130,6 +126,6 @@ public class CcgExample {
 
   @Override
   public String toString() {
-    return sentence + " " + dependencies + " " + syntacticParse;
+    return sentence + " " + dependencies + " " + syntacticParse + " " + logicalForm;
   }
 }

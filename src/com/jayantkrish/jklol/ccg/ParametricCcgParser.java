@@ -198,7 +198,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * {@code ParametricCcgParser.DEFAULT_POS_TAG} is the only POS tag.
    * @param allowComposition allow function composition in addition to
    * other CCG rules.
+   * @param allowedCombinationRules
    * @param allowWordSkipping
+   * @param normalFormOnly
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,

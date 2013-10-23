@@ -90,59 +90,59 @@ public class Combinator implements Serializable {
     this.type = Preconditions.checkNotNull(type);
   }
 
-  public int getSyntax() {
+  public final int getSyntax() {
     return syntax;
   }
 
-  public int[] getSyntaxUniqueVars() {
+  public final int[] getSyntaxUniqueVars() {
     return syntaxUniqueVars;
   }
   
-  public int getSyntaxHeadVar() {
+  public final int getSyntaxHeadVar() {
     return syntaxHeadVar;
   }
 
-  public int[] getLeftVariableRelabeling() {
+  public final int[] getLeftVariableRelabeling() {
     return leftVariableRelabeling;
   }
   
-  public int[] getLeftInverseRelabeling() {
+  public final int[] getLeftInverseRelabeling() {
     return leftInverseRelabeling;
   }
 
-  public int[] getRightVariableRelabeling() {
+  public final int[] getRightVariableRelabeling() {
     return rightVariableRelabeling;
   }
   
-  public int[] getRightInverseRelabeling() {
+  public final int[] getRightInverseRelabeling() {
     return rightInverseRelabeling;
   }
 
-  public int[] getResultOriginalVars() {
+  public final int[] getResultOriginalVars() {
     return resultOriginalVars;
   }
 
-  public int[] getResultVariableRelabeling() {
+  public final int[] getResultVariableRelabeling() {
     return resultVariableRelabeling;
   }
 
-  public int[] getResultInverseRelabeling() {
+  public final int[] getResultInverseRelabeling() {
     return resultInverseRelabeling;
   }
 
-  public int[] getUnifiedVariables() {
+  public final int[] getUnifiedVariables() {
     return unifiedVariables;
   }
 
-  public String[] getSubjects() {
+  public final String[] getSubjects() {
     return subjects;
   }
   
-  public boolean hasUnfilledDependencies() {
+  public final boolean hasUnfilledDependencies() {
     return subjects.length > 0;
   }
   
-  public List<UnfilledDependency> getUnfilledDependencies(int headWordIndex) {
+  public final List<UnfilledDependency> getUnfilledDependencies(int headWordIndex) {
     List<UnfilledDependency> deps = Lists.newArrayList();
     for (int i = 0; i < subjects.length; i++) {
       deps.add(UnfilledDependency.createWithKnownSubject(subjects[i],
@@ -151,7 +151,7 @@ public class Combinator implements Serializable {
     return deps;
   }
 
-  public boolean isArgumentOnLeft() {
+  public final boolean isArgumentOnLeft() {
     return isArgumentOnLeft;
   }
 
@@ -160,7 +160,7 @@ public class Combinator implements Serializable {
    * 
    * @return
    */
-  public Type getType() {
+  public final Type getType() {
     return type;
   }
 
@@ -172,11 +172,11 @@ public class Combinator implements Serializable {
    * 
    * @return
    */
-  public int getArgumentReturnDepth() {
+  public final int getArgumentReturnDepth() {
     return argumentReturnDepth;
   }
 
-  public CcgBinaryRule getBinaryRule() {
+  public final CcgBinaryRule getBinaryRule() {
     return binaryRule;
   }
 

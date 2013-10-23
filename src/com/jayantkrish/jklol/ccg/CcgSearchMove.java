@@ -27,12 +27,15 @@ public class CcgSearchMove implements Serializable {
 
   private final int[] leftRelabeling;
   private final int[] leftInverseRelabeling;
+  private final int[] leftToReturnInverseRelabeling;
   private final int[] rightRelabeling;
   private final int[] rightInverseRelabeling;
+  private final int[] rightToReturnInverseRelabeling;
 
   public CcgSearchMove(Combinator binaryCombinator, UnaryCombinator leftUnary, UnaryCombinator rightUnary,
       long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum, int[] leftRelabeling,
-      int[] leftInverseRelabeling, int[] rightRelabeling, int[] rightInverseRelabeling) {
+      int[] leftInverseRelabeling, int[] leftToReturnInverseRelabeling, int[] rightRelabeling,
+      int[] rightInverseRelabeling, int[] rightToReturnInverseRelabeling) {
     this.binaryCombinator = Preconditions.checkNotNull(binaryCombinator);
     this.leftUnary = leftUnary;
     this.rightUnary = rightUnary;
@@ -42,9 +45,11 @@ public class CcgSearchMove implements Serializable {
 
     this.leftRelabeling = Preconditions.checkNotNull(leftRelabeling);
     this.leftInverseRelabeling = Preconditions.checkNotNull(leftInverseRelabeling);
+    this.leftToReturnInverseRelabeling = Preconditions.checkNotNull(leftToReturnInverseRelabeling);
     this.rightRelabeling = Preconditions.checkNotNull(rightRelabeling);
     this.rightInverseRelabeling = Preconditions.checkNotNull(rightInverseRelabeling);
-    
+    this.rightToReturnInverseRelabeling = Preconditions.checkNotNull(rightToReturnInverseRelabeling);
+
     Preconditions.checkArgument(leftInverseRelabeling.length == rightInverseRelabeling.length);
     Preconditions.checkArgument(leftUnary != null || leftUnaryKeyNum == -1);
     Preconditions.checkArgument(rightUnary != null || rightUnaryKeyNum == -1);
@@ -81,6 +86,10 @@ public class CcgSearchMove implements Serializable {
   public int[] getLeftInverseRelabeling() {
     return leftInverseRelabeling;
   }
+  
+  public int[] getLeftToReturnInverseRelabeling() {
+    return leftToReturnInverseRelabeling;
+  }
 
   public int[] getRightRelabeling() {
     return rightRelabeling;
@@ -88,6 +97,10 @@ public class CcgSearchMove implements Serializable {
 
   public int[] getRightInverseRelabeling() {
     return rightInverseRelabeling;
+  }
+  
+  public int[] getRightToReturnInverseRelabeling() {
+    return rightToReturnInverseRelabeling;
   }
 
   @Override

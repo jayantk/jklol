@@ -310,7 +310,7 @@ public class CcgParserTest extends TestCase {
   public void testParseLogicalFormComposition() {
     List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
         "the", "colorful", "tasty"), 10);
-    assertEquals(8, parses.size());
+    assertEquals(2, parses.size());
 
     Expression expectedLf = exp.parseSingleExpression("(lambda $1 (lambda e (and (colorful e) (tasty e) ($1 e))))")
         .simplify();
@@ -473,10 +473,9 @@ public class CcgParserTest extends TestCase {
   
   public void testParseCompositionNormalForm() {
     List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("green", "green", "berries"), 10);
-    // The parser with composition really permits 2 derivations, one using
-    // composition of the greens, and one only using application. However,
-    // means there are 2 parses using composition. 
-    assertEquals(3, parses.size());
+    // The parser with composition permits 2 derivations, one using
+    // composition of the greens, and one only using application.
+    assertEquals(2, parses.size());
 
     // The normal form parser only permits the application-only derivation
     parses = parserWithCompositionNormalForm.beamSearch(Arrays.asList("green", "green", "berries"), 10);

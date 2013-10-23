@@ -28,14 +28,18 @@ public class CcgSearchMove implements Serializable {
   private final int[] leftRelabeling;
   private final int[] leftInverseRelabeling;
   private final int[] leftToReturnInverseRelabeling;
+  private final int[] leftDepRelabeling;
   private final int[] rightRelabeling;
   private final int[] rightInverseRelabeling;
   private final int[] rightToReturnInverseRelabeling;
+  private final int[] rightDepRelabeling;
+  
+  
 
   public CcgSearchMove(Combinator binaryCombinator, UnaryCombinator leftUnary, UnaryCombinator rightUnary,
       long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum, int[] leftRelabeling,
-      int[] leftInverseRelabeling, int[] leftToReturnInverseRelabeling, int[] rightRelabeling,
-      int[] rightInverseRelabeling, int[] rightToReturnInverseRelabeling) {
+      int[] leftInverseRelabeling, int[] leftToReturnInverseRelabeling, int[] leftDepRelabeling, int[] rightRelabeling,
+      int[] rightInverseRelabeling, int[] rightToReturnInverseRelabeling, int[] rightDepRelabeling) {
     this.binaryCombinator = Preconditions.checkNotNull(binaryCombinator);
     this.leftUnary = leftUnary;
     this.rightUnary = rightUnary;
@@ -46,9 +50,11 @@ public class CcgSearchMove implements Serializable {
     this.leftRelabeling = Preconditions.checkNotNull(leftRelabeling);
     this.leftInverseRelabeling = Preconditions.checkNotNull(leftInverseRelabeling);
     this.leftToReturnInverseRelabeling = Preconditions.checkNotNull(leftToReturnInverseRelabeling);
+    this.leftDepRelabeling = Preconditions.checkNotNull(leftDepRelabeling);
     this.rightRelabeling = Preconditions.checkNotNull(rightRelabeling);
     this.rightInverseRelabeling = Preconditions.checkNotNull(rightInverseRelabeling);
     this.rightToReturnInverseRelabeling = Preconditions.checkNotNull(rightToReturnInverseRelabeling);
+    this.rightDepRelabeling = Preconditions.checkNotNull(rightDepRelabeling);
 
     Preconditions.checkArgument(leftInverseRelabeling.length == rightInverseRelabeling.length);
     Preconditions.checkArgument(leftUnary != null || leftUnaryKeyNum == -1);
@@ -90,6 +96,10 @@ public class CcgSearchMove implements Serializable {
   public int[] getLeftToReturnInverseRelabeling() {
     return leftToReturnInverseRelabeling;
   }
+  
+  public int[] getLeftDepRelabeling() {
+    return leftDepRelabeling;
+  }
 
   public int[] getRightRelabeling() {
     return rightRelabeling;
@@ -101,6 +111,10 @@ public class CcgSearchMove implements Serializable {
   
   public int[] getRightToReturnInverseRelabeling() {
     return rightToReturnInverseRelabeling;
+  }
+  
+  public int[] getRightDepRelabeling() {
+    return rightDepRelabeling;
   }
 
   @Override

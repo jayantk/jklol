@@ -175,7 +175,9 @@ public class CcgTrainingTest extends TestCase {
     assertEquals(2, parses.size());
 
     parses = parser.beamSearch(Arrays.asList("#", "2", "block"), 10);
-    assertEquals(8, parses.size());
+    // 3 parses that produce a noun at the root, times 2 because
+    // of the N -> (S/(S\N)) type-raising rule.
+    assertEquals(6, parses.size());
   }
 
   public void testTrainLoglikelihoodDependenciesOnly() {
@@ -265,7 +267,7 @@ public class CcgTrainingTest extends TestCase {
 
     // Check that syntactic information is being used in the learned
     // parser.
-    assertEquals(3, parses.size());
+    assertEquals(2, parses.size());
     CcgParse bestParse = parses.get(0);
     // Best parse should be <N <N/N> <N <N/N> <N>>>
     assertTrue(bestParse.getLeft().isTerminal());

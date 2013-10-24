@@ -55,29 +55,14 @@ public class ParametricCcgParserTest extends TestCase {
     parser = family.getModelFromParameters(parameters);
   }
 
-  public void testDependency() {
-    
-  }
-  
-  public void testDependencyPosBackoff() {
-    
-  }
-  
-  public void testDependencyDistance() {
-    
-  }
-  
-  public void testDependencyDistancePosBackoff() {
-    
-  }
-
   public void testTerminals() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("green"), Arrays.asList("NN"), 10);
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("Green"), Arrays.asList("NN"), 10);
 
     CcgParse nounParse = null;
     CcgParse adjParse = null;
     SyntacticCategory nounCat = SyntacticCategory.parseFrom("N");
     SyntacticCategory adjCat = SyntacticCategory.parseFrom("N/N");
+    SyntacticCategory typeRaisedCat = SyntacticCategory.parseFrom("S/(S\\N)");
     for (CcgParse parse : parses) {
       if (parse.getSyntacticCategory().equals(nounCat)) {
         nounParse = parse;
@@ -88,28 +73,50 @@ public class ParametricCcgParserTest extends TestCase {
     Preconditions.checkState(nounParse != null);
     Preconditions.checkState(adjParse != null);
 
+    parses = parser.beamSearch(Arrays.asList("unknown_adjective"), Arrays.asList("JJ"), 10);
+    CcgParse unknownAdjParse = null;
+    for (CcgParse parse : parses) {
+      if (parse.getSyntacticCategory().equals(adjCat)) {
+        unknownAdjParse = parse;
+      }
+    }
+    Preconditions.checkState(unknownAdjParse != null);
+
     family.incrementSufficientStatistics(parameters, nounParse, 1.0);
     family.incrementSufficientStatistics(parameters, adjParse, -0.5);
+    family.incrementSufficientStatistics(parameters, unknownAdjParse, 0.75);
     CcgParser newParser = family.getModelFromParameters(parameters);
 
     System.out.println(family.getParameterDescription(parameters));
 
     // The NN -> N{0} parameter has a weight of 1, as does the root
     // NN -> N{0} parameter and root N{0} parameter.
-    parses = newParser.beamSearch(Arrays.asList("block"), Arrays.asList("NN"), 10);
+    parses = newParser.beamSearch(Arrays.asList("BLOCK"), Arrays.asList("NN"), 10);
     assertEquals(2, parses.size());
     assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
     assertEquals(nounCat, parses.get(0).getSyntacticCategory());
     // This parse only triggers the lexicon parameter.
     assertEquals(1.0, Math.log(parses.get(1).getSubtreeProbability()), TOLERANCE);
-    
+
+    // the green -> N{0} parameter has weight 1, as do the 
+    // green -> N{0} root and N{0} root parameters. 
     parses = newParser.beamSearch(Arrays.asList("green"), Arrays.asList("JJ"), 10);
     assertEquals(3, parses.size());
-  }
+    assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
+    assertEquals(nounCat, parses.get(0).getSyntacticCategory());
+    assertEquals(1.0, Math.log(parses.get(1).getSubtreeProbability()), TOLERANCE);
+    assertEquals(typeRaisedCat, parses.get(1).getSyntacticCategory());
+    assertEquals(3 * (-0.5) + 3 * 0.75, Math.log(parses.get(2).getSubtreeProbability()), TOLERANCE);
+    assertEquals(adjCat, parses.get(2).getSyntacticCategory());
 
-  
-  public void testTerminalsPos() {
-    
+    // Check that other unknown words get correct parameterizations.
+    parses = newParser.beamSearch(Arrays.asList("another_unknown_adjective"),
+        Arrays.asList("JJ"), 10);
+    assertEquals(4, parses.size());
+    assertEquals(5 * 0.75 - 0.5, Math.log(parses.get(0).getSubtreeProbability()));
+    assertEquals(adjCat, parses.get(0).getSyntacticCategory());
+    assertEquals(1.0, Math.log(parses.get(1).getSubtreeProbability()));
+    assertEquals(nounCat, parses.get(1).getSyntacticCategory());
   }
 }
 

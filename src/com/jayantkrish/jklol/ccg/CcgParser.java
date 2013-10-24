@@ -1430,6 +1430,7 @@ public class CcgParser implements Serializable {
     for (int i = 0; i < entries.length; i++) {
       applyUnaryRules(chart, entries[i], probs[i], spanStart, spanEnd);
     }
+    chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
 
     // Apply root factor.
     numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);

@@ -251,7 +251,7 @@ public class CcgTrainingTest extends TestCase {
       inferenceAlg = new CcgBeamSearchInference(null, 100, -1, true);
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg);
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(21, 1, 1,
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(42, 1, 1,
         false, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
@@ -276,7 +276,9 @@ public class CcgTrainingTest extends TestCase {
     // Check that weights are being learned for unary rules.
     parses = parser.beamSearch(Arrays.asList("foo"), Arrays.asList("NN"), 100);
     assertEquals(3, parses.size());
-    System.out.println(parses);
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
     assertNull(parses.get(0).getUnaryRule());
     assertEquals("ABCD", parses.get(0).getSyntacticCategory().getValue());
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);

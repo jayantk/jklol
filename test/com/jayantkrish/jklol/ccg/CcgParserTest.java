@@ -71,7 +71,8 @@ public class CcgParserTest extends TestCase {
       "blue,N{0},blue,0 blue",
       "blue,(N{0}/N{0}){1},blue,0 blue",
       "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
-      "a,(NP{1}/N{1}){0},,0 a,a 1 1"};
+      "a,(NP{1}/N{1}){0},,0 a,a 1 1",
+      "unk-nn,N{0},,0 unk-nn"};
   
   private static final String DEFAULT_POS = ParametricCcgParser.DEFAULT_POS_TAG;
 
@@ -84,7 +85,7 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
+      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 3.0 };
 
   private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
@@ -140,6 +141,48 @@ public class CcgParserTest extends TestCase {
     parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true, false);
 
     exp = ExpressionParser.lambdaCalculus();
+  }
+  
+  public void testLexiconPosBackoff() {
+    // test that backoff occurs for out-of-lexicon words.
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("NOT_IN_LEXICON"), Arrays.asList("NN"), 10);
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    assertEquals(6.0, parse.getSubtreeProbability());
+    assertEquals("N", parse.getSyntacticCategory().getValue());
+    assertEquals(Arrays.asList("unk-nn"), parse.getLexiconTriggerWords());
+    assertEquals(Arrays.asList("unk-nn"), parse.getSpannedLexiconEntries().get(0).getWords());
+    
+    // No backoff should happen if the word is in the lexicon.
+    parses = parser.beamSearch(Arrays.asList("a"), Arrays.asList("NN"), 10);
+    assertEquals(1, parses.size());
+    parse = parses.get(0);
+    assertEquals(1.0, parse.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
+    assertEquals(Arrays.asList("a"), parse.getLexiconTriggerWords());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getWords());
+
+    // Capitalization doesn't affect whether the word is in the lexicon or not.
+    parses = parser.beamSearch(Arrays.asList("A"), Arrays.asList("NN"), 10);
+    assertEquals(1, parses.size());
+    parse = parses.get(0);
+    assertEquals(1.0, parse.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
+    assertEquals(Arrays.asList("a"), parse.getLexiconTriggerWords());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getWords());
+  }
+
+  public void testSyntacticCategoryBackoff() {
+    // Test that word / syntactic category weights work.
+    List<CcgParse> parses = parser.beamSearch(Arrays.asList("blue"), 10);
+    assertEquals(2, parses.size());
+    CcgParse best = parses.get(0);
+    assertEquals(3.0, best.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("N"), best.getSyntacticCategory());
+    
+    CcgParse second = parses.get(1);
+    assertEquals(1.0, second.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("N/N"), second.getSyntacticCategory());
   }
 
   public void testBeamSearch() {
@@ -1030,6 +1073,9 @@ public class CcgParserTest extends TestCase {
     DiscreteFactor terminalSyntaxDistribution = TableFactor.unity(terminalSyntaxVars);
     terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
         terminalSyntaxVars, terminalSyntaxVars.outcomeArrayToAssignment(Arrays.asList("i"),
+            HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
+    terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
+        terminalSyntaxVars, terminalSyntaxVars.outcomeArrayToAssignment(Arrays.asList("blue"),
             HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
 
     // Distribution over predicate-argument distances.

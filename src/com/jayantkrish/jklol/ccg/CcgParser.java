@@ -83,9 +83,9 @@ public class CcgParser implements Serializable {
   // Parameters for controlling the maximum sizes of CCG categories
   // (specifically, their semantics) during parsing.
   // Largest number of values that a single semantic variable can take.
-  private static final int MAX_ASSIGNMENT_SIZE = 5;
+  private static final int MAX_ASSIGNMENT_SIZE = 20;
   // Largest number of dependencies that can depend on a single variable.
-  private static final int MAX_PROJECTED_DEPS = 6;
+  private static final int MAX_PROJECTED_DEPS = 20;
 
   // Default names for the variables in the syntactic distribution
   // built by buildSyntacticDistribution

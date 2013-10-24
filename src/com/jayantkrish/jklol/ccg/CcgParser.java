@@ -1298,12 +1298,7 @@ public class CcgParser implements Serializable {
 
     log.startTimer("calculate_inside_beam");
     boolean finishedParsing = false;
-    try {
-      finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
-    } catch (ArrayIndexOutOfBoundsException e) {
-      System.out.println("ERROR PARSING: " + terminals);
-      e.printStackTrace(System.out);
-    }
+    finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
     log.stopTimer("calculate_inside_beam");
 
     if (finishedParsing) {
@@ -1447,7 +1442,9 @@ public class CcgParser implements Serializable {
         numChartEntries);
     double[] probs = ArrayUtils.copyOf(chart.getChartEntryProbsForSpan(spanStart, spanEnd),
         numChartEntries);
+    chart.clearChartEntriesForSpan(spanStart, spanEnd);
     for (int i = 0; i < entries.length; i++) {
+      chart.addChartEntryForSpan(entries[i], probs[i], spanStart, spanEnd, syntaxVarType);
       applyUnaryRules(chart, entries[i], probs[i], spanStart, spanEnd);
     }
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
@@ -1690,9 +1687,11 @@ public class CcgParser implements Serializable {
                     numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
                         rightRoot.getUnfilledDependencyVarIndex(), rightRoot.getUnfilledDependencies(), 
                         searchMove.getRightDepRelabeling(), filledDepAccumulator, numFilledDeps);
+                    if (numFilledDeps == -1) { continue deploop; }
                     numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
                         leftRoot.getUnfilledDependencyVarIndex(), leftRoot.getUnfilledDependencies(), 
                         searchMove.getLeftDepRelabeling(), filledDepAccumulator, numFilledDeps);
+                    if (numFilledDeps == -1) { continue deploop; }
                     
                     // Fill dependencies created by the binary rule.
                     if (resultCombinator.hasUnfilledDependencies()) {
@@ -1708,23 +1707,19 @@ public class CcgParser implements Serializable {
                       numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
                           combinatorVarIndex, combinatorDeps, searchMove.getLeftInverseRelabeling(),
                           filledDepAccumulator, numFilledDeps);
+                      if (numFilledDeps == -1) { continue deploop; }
                       numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
                           combinatorVarIndex, combinatorDeps, searchMove.getRightInverseRelabeling(),
                           filledDepAccumulator, numFilledDeps);
+                      if (numFilledDeps == -1) { continue deploop; }
                     }
-                    
+
                     // Determine the variable assignments for the result syntactic
                     // category.
                     int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftToReturnInverseRelabeling(),
                         rightRoot, searchMove.getRightToReturnInverseRelabeling(), assignmentVarIndexAccumulator,
                         assignmentAccumulator);
-                    // Discard assignments with too many values for a single variable.
-                    int numVars = searchMove.getLeftToReturnInverseRelabeling().length;
-                    for (int k = 0; k < numVars; k++) {
-                      if (assignmentVarIndexAccumulator[k + 1] - assignmentVarIndexAccumulator[k] > MAX_ASSIGNMENT_SIZE) {
-                        continue deploop;
-                      }
-                    }
+                    if (numAssignments == -1) { continue deploop; }
 
                     // Determine which unfilled dependencies should be propagated to
                     // the result.
@@ -1734,6 +1729,7 @@ public class CcgParser implements Serializable {
                     long[] rightUnfilledDeps = rightRoot.getUnfilledDependencies();
                     int[] leftToReturnInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
                     int[] rightToReturnInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
+                    int numVars = searchMove.getLeftToReturnInverseRelabeling().length;
                     int numUnfilledDeps = 0;
                     int startIndex, endIndex, originalVarNum;
                     long unfilledDependency;
@@ -1785,12 +1781,6 @@ public class CcgParser implements Serializable {
                             numUnfilledDeps++;
                           }
                         }
-                      }
-
-                      if (numUnfilledDeps - unfilledDepVarIndexAccumulator[k] > MAX_PROJECTED_DEPS) {
-                        // Discard entries where the number of unfilled dependencies 
-                        // depending on a single variable is too large.
-                        continue deploop;
                       }
                     }
                     unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
@@ -2005,6 +1995,9 @@ public class CcgParser implements Serializable {
         int startIndex = leftAssignmentVarIndex[leftVarNum];
         int endIndex = leftAssignmentVarIndex[leftVarNum + 1];
         for (int j = startIndex; j < endIndex; j++) {
+          if (numFilled >= assignmentAccumulator.length) {
+            return -1;
+          }
           assignmentAccumulator[numFilled] = CcgParser.replaceAssignmentVarNum(leftAssignment[j],
             leftVarNum, i);
           numFilled++;
@@ -2016,6 +2009,9 @@ public class CcgParser implements Serializable {
         int startIndex = rightAssignmentVarIndex[rightVarNum];
         int endIndex = rightAssignmentVarIndex[rightVarNum + 1];
         for (int j = startIndex; j < endIndex; j++) {
+          if (numFilled >= assignmentAccumulator.length) {
+            return -1;
+          }
           assignmentAccumulator[numFilled] = replaceAssignmentVarNum(rightAssignment[j],
             rightVarNum, i);
           numFilled++;
@@ -2046,6 +2042,9 @@ public class CcgParser implements Serializable {
       for (int j = startIndex; j < endIndex; j++) {
         long unfilledDependency = unfilledDeps[j];
         for (int k = assignmentStartIndex; k < assignmentEndIndex; k++) {
+          if (numFilledDeps >= filledDepAccumulator.length) {
+            return -1;
+          }
           long curAssignment = assignment[k];
 
           long filledDep = unfilledDependency - (i << OBJECT_OFFSET);

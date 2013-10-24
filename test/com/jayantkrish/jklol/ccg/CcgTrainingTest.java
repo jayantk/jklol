@@ -251,7 +251,7 @@ public class CcgTrainingTest extends TestCase {
       inferenceAlg = new CcgBeamSearchInference(null, 100, -1, true);
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg);
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(42, 1, 1,
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1,
         false, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
@@ -268,6 +268,9 @@ public class CcgTrainingTest extends TestCase {
     // Check that syntactic information is being used in the learned
     // parser.
     assertEquals(2, parses.size());
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
     CcgParse bestParse = parses.get(0);
     // Best parse should be <N <N/N> <N <N/N> <N>>>
     assertTrue(bestParse.getLeft().isTerminal());

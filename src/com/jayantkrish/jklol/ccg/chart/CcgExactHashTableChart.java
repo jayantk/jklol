@@ -132,8 +132,6 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     chartList[spanStart][spanEnd] = spanEntries;
     probabilitiesList[spanStart][spanEnd] = spanProbabilities;
     chartSizes[spanStart][spanEnd] = numPopulated;
-    
-    System.out.println("span: " + spanStart + " " + spanEnd + " num: " + numPopulated);
   }
 
   @Override

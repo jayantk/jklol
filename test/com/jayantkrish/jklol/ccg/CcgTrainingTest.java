@@ -248,7 +248,7 @@ public class CcgTrainingTest extends TestCase {
     if (exactInference) {
       inferenceAlg = new CcgExactInference(null, -1);
     } else {
-      inferenceAlg = new CcgBeamSearchInference(null, 100, -1);
+      inferenceAlg = new CcgBeamSearchInference(null, 100, -1, true);
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(21, 1, 1,

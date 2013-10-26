@@ -1714,9 +1714,48 @@ public class CcgParser implements Serializable {
                     // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
                     // Determine the variable assignments for the result syntactic
                     // category.
-                    int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftToReturnInverseRelabeling(),
-                        rightRoot, searchMove.getRightToReturnInverseRelabeling(), assignmentVarIndexAccumulator,
-                        assignmentAccumulator);
+                    int[] leftInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
+                    int[] rightInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
+                    int numResultVars = leftInverseRelabeling.length;
+
+                    int[] leftAssignmentVarIndex = leftRoot.getAssignmentVarIndex();
+                    long[] leftAssignment = leftRoot.getAssignments();
+                    int[] rightAssignmentVarIndex = rightRoot.getAssignmentVarIndex();
+                    long[] rightAssignment = rightRoot.getAssignments();
+
+                    int numAssignments = 0;
+                    for (int k = 0; k < numResultVars; k++) {
+                    	assignmentVarIndexAccumulator[k] = numAssignments;
+                    	int leftVarNum = leftInverseRelabeling[k];
+                    	if (leftVarNum != -1) {
+                    		int startIndex = leftAssignmentVarIndex[leftVarNum];
+                    		int endIndex = leftAssignmentVarIndex[leftVarNum + 1];
+                    		for (int l = startIndex; l < endIndex; l++) {
+                    			if (numAssignments >= assignmentAccumulator.length) {
+                    				continue deploop;
+                    			}
+                    			assignmentAccumulator[numAssignments] = CcgParser.replaceAssignmentVarNum(leftAssignment[l],
+                    					leftVarNum, k);
+                    			numAssignments++;
+                    		}
+                    	}
+
+                    	int rightVarNum = rightInverseRelabeling[k];
+                    	if (rightVarNum != -1) {
+                    		int startIndex = rightAssignmentVarIndex[rightVarNum];
+                    		int endIndex = rightAssignmentVarIndex[rightVarNum + 1];
+                    		for (int l = startIndex; l < endIndex; l++) {
+                    			if (numAssignments >= assignmentAccumulator.length) {
+                    				continue deploop;
+                    			}
+                    			assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(rightAssignment[l],
+                    					rightVarNum, k);
+                    			numAssignments++;
+                    		}
+                    	}
+                    }
+                    assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
+                    
                     if (numAssignments == -1) { continue deploop; }
                     // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
 
@@ -1788,7 +1827,6 @@ public class CcgParser implements Serializable {
                     unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
                     // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
 
-                    
                     // log.startTimer("ccg_parse/beam_loop/copy_stuff");
                     long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
                     int[] unfilledDepVarIndex = Arrays.copyOf(unfilledDepVarIndexAccumulator, numVars + 1);
@@ -1979,51 +2017,6 @@ public class CcgParser implements Serializable {
         curKeyNum = unaryRuleTensor.indexToKeyNum(index);
       }
     }
-  }
-
-  private int relabelAssignment(ChartEntry leftEntry, int[] leftInverseRelabeling,
-      ChartEntry rightEntry, int[] rightInverseRelabeling, int[] assignmentVarIndexAccumulator, 
-      long[] assignmentAccumulator) {
-    int numResultVars = leftInverseRelabeling.length;
-
-    int[] leftAssignmentVarIndex = leftEntry.getAssignmentVarIndex();
-    long[] leftAssignment = leftEntry.getAssignments();
-    int[] rightAssignmentVarIndex = rightEntry.getAssignmentVarIndex();
-    long[] rightAssignment = rightEntry.getAssignments();
-
-    int numFilled = 0;
-    for (int i = 0; i < numResultVars; i++) {
-      assignmentVarIndexAccumulator[i] = numFilled;
-      int leftVarNum = leftInverseRelabeling[i];
-      if (leftVarNum != -1) {
-        int startIndex = leftAssignmentVarIndex[leftVarNum];
-        int endIndex = leftAssignmentVarIndex[leftVarNum + 1];
-        for (int j = startIndex; j < endIndex; j++) {
-          if (numFilled >= assignmentAccumulator.length) {
-            return -1;
-          }
-          assignmentAccumulator[numFilled] = CcgParser.replaceAssignmentVarNum(leftAssignment[j],
-            leftVarNum, i);
-          numFilled++;
-        }
-      }
-      
-      int rightVarNum = rightInverseRelabeling[i];
-      if (rightVarNum != -1) {
-        int startIndex = rightAssignmentVarIndex[rightVarNum];
-        int endIndex = rightAssignmentVarIndex[rightVarNum + 1];
-        for (int j = startIndex; j < endIndex; j++) {
-          if (numFilled >= assignmentAccumulator.length) {
-            return -1;
-          }
-          assignmentAccumulator[numFilled] = replaceAssignmentVarNum(rightAssignment[j],
-            rightVarNum, i);
-          numFilled++;
-        }
-      }
-    }
-    assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numFilled;
-    return numFilled;
   }
 
   private static final int fillDependencies(int[] assignmentVarIndex, long[] assignment, int[] unfilledDepVarIndex,

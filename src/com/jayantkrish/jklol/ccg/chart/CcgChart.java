@@ -130,6 +130,14 @@ public interface CcgChart {
    * @return
    */
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd);
+  
+  /**
+   * Gets the total number of entries in this parse chart, which is the
+   * sum of the number of entries for all spans.
+   * 
+   * @return
+   */
+  public int getTotalNumChartEntries();
 
   /**
    * Adds {@code entry} as a chart entry spanning {@code spanStart}-

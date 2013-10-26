@@ -21,6 +21,8 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   private final ChartEntry[][][] chartList;
   private final double[][][] probabilitiesList;
   private final int[][] chartSizes;
+  
+  private int totalChartSize;
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
 
@@ -36,6 +38,8 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     this.chartList = new ChartEntry[numTerminals][numTerminals][];
     this.probabilitiesList = new double[numTerminals][numTerminals][];
     this.chartSizes = new int[numTerminals][numTerminals];
+    
+    this.totalChartSize = 0;
   }
 
   /**
@@ -85,6 +89,11 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd) {
     return chartSizes[spanStart][spanEnd];
   }
+  
+  @Override
+  public int getTotalNumChartEntries() {
+    return totalChartSize;
+  }
 
   @Override
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
@@ -132,10 +141,12 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     chartList[spanStart][spanEnd] = spanEntries;
     probabilitiesList[spanStart][spanEnd] = spanProbabilities;
     chartSizes[spanStart][spanEnd] = numPopulated;
+    totalChartSize += numPopulated;
   }
 
   @Override
   public void clearChartEntriesForSpan(int spanStart, int spanEnd) {
+    totalChartSize -= chartSizes[spanStart][spanEnd];
     chartSizes[spanStart][spanEnd] = 0;
     numPopulatedIndexes[spanStart][spanEnd] = 0;
     Arrays.fill(chart[spanStart][spanEnd], null);

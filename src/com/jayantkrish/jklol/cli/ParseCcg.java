@@ -37,6 +37,8 @@ import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -123,10 +125,12 @@ public class ParseCcg extends AbstractCli {
         tagThresholds = Doubles.toArray(options.valuesOf(multitagThresholds));
       }
 
+      LogFunctions.getLogFunction().notifyIterationStart(0);
       SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
           inferenceAlgorithm, tagger, tagThresholds);
       CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, options.has(useGoldSyntacticTrees),
           options.has(filterDependenciesCcgbank));
+      LogFunctions.getLogFunction().notifyIterationEnd(0);
       System.out.println(loss);
     } else {
       // Parse a string from the command line.
@@ -568,12 +572,14 @@ public class ParseCcg extends AbstractCli {
     private final SupertaggingCcgParser parser;
     private final boolean useCcgbankDerivation;
     private final boolean filterDependenciesCcgbank;
+    private final LogFunction log;
 
     public CcgLossMapper(SupertaggingCcgParser parser, boolean useCcgbankDerivation,
         boolean filterDependenciesCcgbank) {
       this.parser = Preconditions.checkNotNull(parser);
       this.useCcgbankDerivation = useCcgbankDerivation;
       this.filterDependenciesCcgbank = filterDependenciesCcgbank;
+      this.log = LogFunctions.getLogFunction();
     }
 
     @Override
@@ -583,7 +589,9 @@ public class ParseCcg extends AbstractCli {
       if (useCcgbankDerivation) {
         filter = new SyntacticChartFilter(example.getSyntacticParse());
       }
+      log.startTimer("parse_sentence");
       parse = parser.parse(example.getWords(), example.getPosTags(), filter);
+      log.stopTimer("parse_sentence");
       System.out.println("SENT: " + example.getWords());
 
       if (parse != null) {

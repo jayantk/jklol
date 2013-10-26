@@ -35,6 +35,7 @@ import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
@@ -1510,6 +1511,10 @@ public class CcgParser implements Serializable {
             return false;
           }
         }
+
+        if (chart.getTotalNumChartEntries() > 1000000) {
+          return false;
+        }
         // System.out.println(spanStart + "." + spanEnd + " : " +
         // chart.getNumChartEntriesForSpan(spanStart, spanEnd));
       }
@@ -1627,10 +1632,7 @@ public class CcgParser implements Serializable {
                 Combinator resultCombinator = searchMove.getBinaryCombinator();
 
                 // Apply the binary rule.
-                // log.startTimer("ccg_parse/beam_loop/binary");
                 double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
-                // log.stopTimer("ccg_parse/beam_loop/binary");
-
                 int resultSyntax = resultCombinator.getSyntax();
                 int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
                 int resultSyntaxHead = resultCombinator.getSyntaxHeadVar();
@@ -1639,12 +1641,10 @@ public class CcgParser implements Serializable {
                   ChartEntry leftRoot = leftTrees[leftIndex];
                   double leftProb = leftProbs[leftIndex];
 
-                  // log.startTimer("ccg_parse/beam_loop/unary");
                   long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
                   if (leftUnaryKeyNum != -1) {
                     leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
                   }
-                  // log.stopTimer("ccg_parse/beam_loop/unary");
 
                   deploop: for (int rightIndex : rightTypes.get(rightType)) {
                     ChartEntry rightRoot = rightTrees[rightIndex];
@@ -1673,25 +1673,20 @@ public class CcgParser implements Serializable {
                       }
                     }
 
-                    // log.startTimer("ccg_parse/beam_loop/unary");
                     long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
                     if (rightUnaryKeyNum != -1) {
                       rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
                     }
-                    // log.stopTimer("ccg_parse/beam_loop/unary");
 
-                    // log.startTimer("ccg_parse/beam_loop/relabel");
-
+                    // log.startTimer("ccg_parse/beam_loop/fill_dependencies");
                     // Fill dependencies based on the current assignment.
                     int numFilledDeps = 0;
                     numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
                         rightRoot.getUnfilledDependencyVarIndex(), rightRoot.getUnfilledDependencies(), 
                         searchMove.getRightDepRelabeling(), filledDepAccumulator, numFilledDeps);
-                    if (numFilledDeps == -1) { continue deploop; }
                     numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
                         leftRoot.getUnfilledDependencyVarIndex(), leftRoot.getUnfilledDependencies(), 
                         searchMove.getLeftDepRelabeling(), filledDepAccumulator, numFilledDeps);
-                    if (numFilledDeps == -1) { continue deploop; }
                     
                     // Fill dependencies created by the binary rule.
                     if (resultCombinator.hasUnfilledDependencies()) {
@@ -1707,22 +1702,28 @@ public class CcgParser implements Serializable {
                       numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
                           combinatorVarIndex, combinatorDeps, searchMove.getLeftInverseRelabeling(),
                           filledDepAccumulator, numFilledDeps);
-                      if (numFilledDeps == -1) { continue deploop; }
                       numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
                           combinatorVarIndex, combinatorDeps, searchMove.getRightInverseRelabeling(),
                           filledDepAccumulator, numFilledDeps);
-                      if (numFilledDeps == -1) { continue deploop; }
+                    }
+                    // log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
+
+                    if (numFilledDeps == -1) { 
+                      continue deploop; 
                     }
 
+                    // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
                     // Determine the variable assignments for the result syntactic
                     // category.
                     int numAssignments = relabelAssignment(leftRoot, searchMove.getLeftToReturnInverseRelabeling(),
                         rightRoot, searchMove.getRightToReturnInverseRelabeling(), assignmentVarIndexAccumulator,
                         assignmentAccumulator);
                     if (numAssignments == -1) { continue deploop; }
+                    // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
 
                     // Determine which unfilled dependencies should be propagated to
                     // the result.
+                    // log.startTimer("ccg_parse/beam_loop/propagate_dependencies");
                     int[] leftUnfilledDepsVarIndex = leftRoot.getUnfilledDependencyVarIndex();
                     long[] leftUnfilledDeps = leftRoot.getUnfilledDependencies();
                     int[] rightUnfilledDepsVarIndex = rightRoot.getUnfilledDependencyVarIndex();
@@ -1740,15 +1741,16 @@ public class CcgParser implements Serializable {
                         // dependencies on this variable have already been filled.
                         continue;
                       }
-                      
+
                       originalVarNum = leftToReturnInverseRelabeling[k];
                       if (originalVarNum != -1) {
                         startIndex = leftUnfilledDepsVarIndex[originalVarNum];
                         endIndex = leftUnfilledDepsVarIndex[originalVarNum + 1];
-                        
+
                         if (startIndex != endIndex) {
                           for (int m = startIndex; m < endIndex; m++) {
                             if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                              // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
                               continue deploop;
                             }
 
@@ -1770,6 +1772,7 @@ public class CcgParser implements Serializable {
                         if (startIndex != endIndex) {
                           for (int m = startIndex; m < endIndex; m++) {
                             if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                              // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
                               continue deploop;
                             }
 
@@ -1784,13 +1787,13 @@ public class CcgParser implements Serializable {
                       }
                     }
                     unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
+                    // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
 
+                    
+                    // log.startTimer("ccg_parse/beam_loop/copy_stuff");
                     long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
                     int[] unfilledDepVarIndex = Arrays.copyOf(unfilledDepVarIndexAccumulator, numVars + 1);
                     long[] unfilledDepArray = Arrays.copyOf(unfilledDepAccumulator, numUnfilledDeps);
-                    // log.stopTimer("ccg_parse/beam_loop/relabel");
-
-                    // log.startTimer("ccg_parse/beam_loop/create_assignment_and_chart");
 
                     int[] newAssignmentVarIndex = Arrays.copyOfRange(assignmentVarIndexAccumulator, 0,
                         searchMove.getLeftToReturnInverseRelabeling().length + 1);
@@ -1800,10 +1803,11 @@ public class CcgParser implements Serializable {
                         null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVarIndex, newAssignments,
                         unfilledDepVarIndex, unfilledDepArray, filledDepArray, spanStart, spanStart + i,
                         leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
-                    // log.stopTimer("ccg_parse/beam_loop/create_assignment_and_chart");
+                    // log.stopTimer("ccg_parse/beam_loop/copy_stuff");
 
                     // Get the weights of applying this syntactic combination rule 
                     // given the word and POS tag of the result's head.
+                    // log.startTimer("ccg_parse/beam_loop/headed_rule_weights");
                     double headedRuleProb = 1.0;
                     long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
                         * headedBinaryRuleCombinatorOffset;
@@ -1821,6 +1825,7 @@ public class CcgParser implements Serializable {
                         headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
                       }
                     }
+                    // log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
 
                     // log.startTimer("ccg_parse/beam_loop/dependencies");
                     // Get the weights of the generated dependencies.
@@ -2024,6 +2029,10 @@ public class CcgParser implements Serializable {
 
   private static final int fillDependencies(int[] assignmentVarIndex, long[] assignment, int[] unfilledDepVarIndex,
       long[] unfilledDeps, int[] depToAssignmentRelabeling, long[] filledDepAccumulator, int numFilledDeps) {
+    if (numFilledDeps == -1) {
+      return -1;
+    }
+
     int numVars = depToAssignmentRelabeling.length;
     for (int i = 0; i < numVars; i++) {
       int assignmentVar = depToAssignmentRelabeling[i];

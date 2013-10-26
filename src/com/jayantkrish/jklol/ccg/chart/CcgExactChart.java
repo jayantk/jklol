@@ -17,6 +17,8 @@ public class CcgExactChart extends AbstractCcgChart {
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
   private final int[][] chartSizes;
+  
+  private int totalChartSize;
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 100;
 
@@ -35,6 +37,7 @@ public class CcgExactChart extends AbstractCcgChart {
         chartSizes[spanStart][spanEnd] = 0;
       }
     }
+    totalChartSize = 0;
   }
 
   /**
@@ -84,6 +87,11 @@ public class CcgExactChart extends AbstractCcgChart {
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd) {
     return chartSizes[spanStart][spanEnd];
   }
+  
+  @Override
+  public int getTotalNumChartEntries() {
+    return totalChartSize;
+  }
 
   @Override
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
@@ -122,12 +130,14 @@ public class CcgExactChart extends AbstractCcgChart {
 
       chart[spanStart][spanEnd][spanSize] = entry;
       probabilities[spanStart][spanEnd][spanSize] = probability;
-      chartSizes[spanStart][spanEnd] = spanSize + 1;
+      chartSizes[spanStart][spanEnd] += 1;
+      totalChartSize += 1;
     }
   }
 
   @Override
   public void clearChartEntriesForSpan(int spanStart, int spanEnd) {
+    totalChartSize -= chartSizes[spanStart][spanEnd];
     chartSizes[spanStart][spanEnd] = 0;
     // This second part is unnecessary, but makes debugging easier.
     Arrays.fill(chart[spanStart][spanEnd], null);

@@ -25,6 +25,8 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
   private final int[] chartSizes;
+  
+  private int totalChartSize;
 
   /**
    * Creates a CCG chart for storing the current state of a beam
@@ -43,6 +45,8 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
     this.probabilities = new double[numTerminals][numTerminals][beamSize + 1];
     this.chartSizes = new int[numTerminals * numTerminals];
     Arrays.fill(chartSizes, 0);
+    
+    this.totalChartSize = 0;
   }
 
   /**
@@ -112,6 +116,11 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd) {
     return chartSizes[spanEnd + (numTerminals * spanStart)];
   }
+  
+  @Override
+  public int getTotalNumChartEntries() {
+    return totalChartSize;
+  }
 
   @Override
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
@@ -123,6 +132,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
 
   @Override
   public void clearChartEntriesForSpan(int spanStart, int spanEnd) {
+    totalChartSize -= chartSizes[spanEnd + (numTerminals * spanStart)];
     chartSizes[spanEnd + (numTerminals * spanStart)] = 0;
     // This second part is unnecessary, but makes debugging easier.
     Arrays.fill(chart[spanStart][spanEnd], null);
@@ -143,11 +153,13 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
     HeapUtils.offer(chart[spanStart][spanEnd], probabilities[spanStart][spanEnd],
         chartSizes[spanEnd + (numTerminals * spanStart)], entry, probability);
     chartSizes[spanEnd + (numTerminals * spanStart)]++;
+    totalChartSize++;
 
     if (chartSizes[spanEnd + (numTerminals * spanStart)] > beamSize) {
       HeapUtils.removeMin(chart[spanStart][spanEnd], probabilities[spanStart][spanEnd],
           chartSizes[spanEnd + (numTerminals * spanStart)]);
       chartSizes[spanEnd + (numTerminals * spanStart)]--;
+      totalChartSize--;
     }
   }
 

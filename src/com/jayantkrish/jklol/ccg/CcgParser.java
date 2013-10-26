@@ -35,7 +35,6 @@ import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
@@ -1512,7 +1511,7 @@ public class CcgParser implements Serializable {
           }
         }
 
-        if (chart.getTotalNumChartEntries() > 1000000) {
+        if (chart.getTotalNumChartEntries() > 100000) {
           return false;
         }
         // System.out.println(spanStart + "." + spanEnd + " : " +

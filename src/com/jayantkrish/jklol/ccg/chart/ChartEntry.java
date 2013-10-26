@@ -42,7 +42,7 @@ public class ChartEntry {
   // category. Each value is both a predicate and its index
   // in the sentence. Assignments to each semantic variable are
   // stored consecutively in assignments, with the starting index
-  // for each variable's assignments stored in assignmentVarIndex. 
+  // for each variable's assignments stored in assignmentVarIndex.
   private final int[] assignmentVarIndex;
   private final long[] assignments;
 

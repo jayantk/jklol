@@ -76,6 +76,16 @@ public interface CcgChart {
   public void setVerbDistanceTensor(Tensor tensor);
 
   public void setSyntaxDistribution(DiscreteFactor syntaxDistribution);
+  
+  public void setAssignmentVarIndexAccumulator(int[] assignmentVarIndexAccumulator);
+  
+  public void setAssignmentAccumulator(long[] assignmentAccumulator);
+  
+  public void setFilledDepAccumulator(long[] filledDepAccumulator);
+  
+  public void setUnfilledDepVarIndexAccumulator(int[] unfilledDepVarIndexAccumulator);
+  
+  public void setUnfilledDepAccumulator(long[] unfilledDepAccumulator);
 
   /**
    * Gets the subset of all parser weights which may be used in this
@@ -92,6 +102,16 @@ public interface CcgChart {
   public Tensor getVerbDistanceTensor();
 
   public DiscreteFactor getSyntaxDistribution();
+  
+  public int[] getAssignmentVarIndexAccumulator();
+  
+  public long[] getAssignmentAccumulator();
+  
+  public long[] getFilledDepAccumulator();
+  
+  public int[] getUnfilledDepVarIndexAccumulator();
+  
+  public long[] getUnfilledDepAccumulator();
 
   public void applyChartFilterToTerminals();
 

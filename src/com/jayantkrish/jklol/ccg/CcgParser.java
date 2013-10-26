@@ -80,12 +80,11 @@ public class CcgParser implements Serializable {
   private static final int VAR_NUM_BITS = 6;
   private static final long VAR_NUM_MASK = ~(-1L << VAR_NUM_BITS);
   
-  // Parameters for controlling the maximum sizes of CCG categories
-  // (specifically, their semantics) during parsing.
-  // Largest number of values that a single semantic variable can take.
-  private static final int MAX_ASSIGNMENT_SIZE = 20;
-  // Largest number of dependencies that can depend on a single variable.
-  private static final int MAX_PROJECTED_DEPS = 20;
+  // Parameters for controlling the maximum sizes of the CCG chart
+  private static final int MAX_CCG_CHART_ENTRIES = 100000;
+  private static final int MAX_CHART_ASSIGNMENTS = MAX_CCG_CHART_ENTRIES * 10;
+  private static final int MAX_CHART_DEPS = MAX_CCG_CHART_ENTRIES * 10;
+  private static final int MAX_CHART_VAR_INDEX = MAX_CCG_CHART_ENTRIES * 10;
 
   // Default names for the variables in the syntactic distribution
   // built by buildSyntacticDistribution
@@ -1332,6 +1331,12 @@ public class CcgParser implements Serializable {
     chart.setVerbDistances(verbDistances);
     chart.setChartFilter(chartFilter);
 
+    chart.setAssignmentVarIndexAccumulator(new int[MAX_CHART_VAR_INDEX]);
+    chart.setAssignmentAccumulator(new long[MAX_CHART_ASSIGNMENTS]);
+    chart.setFilledDepAccumulator(new long[MAX_CHART_DEPS]);
+    chart.setUnfilledDepVarIndexAccumulator(new int[MAX_CHART_VAR_INDEX]);
+    chart.setUnfilledDepAccumulator(new long[MAX_CHART_DEPS]);
+
     initializeChartDistributions(chart);
   }
 
@@ -1511,7 +1516,7 @@ public class CcgParser implements Serializable {
           }
         }
 
-        if (chart.getTotalNumChartEntries() > 100000) {
+        if (chart.getTotalNumChartEntries() > MAX_CCG_CHART_ENTRIES) {
           return false;
         }
         // System.out.println(spanStart + "." + spanEnd + " : " +
@@ -1569,11 +1574,11 @@ public class CcgParser implements Serializable {
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
-    int[] assignmentVarIndexAccumulator = new int[50];
-    long[] assignmentAccumulator = new long[50];
-    long[] filledDepAccumulator = new long[20];
-    int[] unfilledDepVarIndexAccumulator = new int[50];
-    long[] unfilledDepAccumulator = new long[20];
+    int[] assignmentVarIndexAccumulator = chart.getAssignmentVarIndexAccumulator();
+    long[] assignmentAccumulator = chart.getAssignmentAccumulator();
+    long[] filledDepAccumulator = chart.getFilledDepAccumulator();
+    int[] unfilledDepVarIndexAccumulator = chart.getUnfilledDepVarIndexAccumulator();
+    long[] unfilledDepAccumulator = chart.getUnfilledDepAccumulator();
 
     Tensor syntaxDistributionTensor = chart.getSyntaxDistribution().getWeights();
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();

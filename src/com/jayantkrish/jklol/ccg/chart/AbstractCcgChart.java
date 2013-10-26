@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
  * @author jayantk
  */
 public abstract class AbstractCcgChart implements CcgChart {
-  
+
   // The words and pos tags of the sentence being parsed.
   private final List<String> terminals;
   private final List<String> posTags;
@@ -28,9 +28,9 @@ public abstract class AbstractCcgChart implements CcgChart {
   private int[] wordDistances;
   private int[] puncDistances;
   private int[] verbDistances;
-  
+
   protected ChartFilter entryFilter;
-  
+
   // The parser weights which might be used in this sentence.
   // This is a subset of all parser weights, which is precomputed
   // to make lookups more efficient during parsing.
@@ -42,16 +42,22 @@ public abstract class AbstractCcgChart implements CcgChart {
   // The syntactic category combinations that will be considered
   // while parsing this sentence.
   private DiscreteFactor syntaxDistribution;
-  
+
+  private int[] assignmentVarIndexAccumulator;
+  private long[] assignmentAccumulator;
+  private long[] filledDepAccumulator;
+  private int[] unfilledDepVarIndexAccumulator;
+  private long[] unfilledDepAccumulator;
+
   private boolean finishedParsing;
-  
+
   public AbstractCcgChart(List<String> terminals, List<String> posTags) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.posTags = ImmutableList.copyOf(posTags);
-    
+
     // dependencyTensor, the distance arrays / tensors, and syntax distribution are
     // left null, and must be manually set.
-    
+
     this.finishedParsing = false;
   }
 
@@ -59,17 +65,17 @@ public abstract class AbstractCcgChart implements CcgChart {
   public int size() {
     return terminals.size();
   }
-  
+
   @Override
   public List<String> getWords() {
     return terminals;
   }
-  
+
   @Override
   public List<String> getPosTags() {
     return posTags;
   }
-  
+
   @Override
   public void setPosTagsInt(int[] posTagsInt) {
     Preconditions.checkArgument(posTagsInt.length == size());
@@ -145,6 +151,31 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
 
   @Override
+  public void setAssignmentVarIndexAccumulator(int[] assignmentVarIndexAccumulator) {
+    this.assignmentVarIndexAccumulator = assignmentVarIndexAccumulator;
+  }
+
+  @Override
+  public void setAssignmentAccumulator(long[] assignmentAccumulator) {
+    this.assignmentAccumulator = assignmentAccumulator;
+  }
+
+  @Override
+  public void setFilledDepAccumulator(long[] filledDepAccumulator) {
+    this.filledDepAccumulator = filledDepAccumulator;
+  }
+
+  @Override
+  public void setUnfilledDepVarIndexAccumulator(int[] unfilledDepVarIndexAccumulator) {
+    this.unfilledDepVarIndexAccumulator = unfilledDepVarIndexAccumulator;
+  }
+
+  @Override
+  public void setUnfilledDepAccumulator(long[] unfilledDepAccumulator) {
+    this.unfilledDepAccumulator = unfilledDepAccumulator;
+  }
+
+  @Override
   public Tensor getDependencyTensor() {
     return dependencyTensor;
   }
@@ -168,6 +199,31 @@ public abstract class AbstractCcgChart implements CcgChart {
   public DiscreteFactor getSyntaxDistribution() {
     return syntaxDistribution;
   }
+
+  @Override
+  public int[] getAssignmentVarIndexAccumulator() {
+    return assignmentVarIndexAccumulator;
+  }
+  
+  @Override
+  public long[] getAssignmentAccumulator() {
+    return assignmentAccumulator;
+  }
+  
+  @Override
+  public long[] getFilledDepAccumulator() {
+    return filledDepAccumulator;
+  }
+  
+  @Override
+  public int[] getUnfilledDepVarIndexAccumulator() {
+    return unfilledDepVarIndexAccumulator;
+  }
+  
+  @Override
+  public long[] getUnfilledDepAccumulator() {
+    return unfilledDepAccumulator;
+  }
   
   @Override
   public void applyChartFilterToTerminals() {
@@ -175,7 +231,7 @@ public abstract class AbstractCcgChart implements CcgChart {
       entryFilter.applyToTerminals(this);
     }
   }
-  
+
   @Override
   public boolean isFinishedParsing() {
     return finishedParsing;
@@ -206,9 +262,9 @@ public abstract class AbstractCcgChart implements CcgChart {
       List<String> posTags = getPosTags();
       return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTriggerWords(), posTags.subList(spanStart, spanEnd + 1),
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
-              Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
-              terminals.subList(spanStart, spanEnd + 1), getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],
-              entry.getRootUnaryRule(), spanStart, spanEnd);
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
+          terminals.subList(spanStart, spanEnd + 1), getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],
+          entry.getRootUnaryRule(), spanStart, spanEnd);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
           entry.getLeftChartIndex(), parser);
@@ -229,8 +285,8 @@ public abstract class AbstractCcgChart implements CcgChart {
 
       return CcgParse.forNonterminal(syntax,
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
-              Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
-              entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
+          entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
     }
   }
 }

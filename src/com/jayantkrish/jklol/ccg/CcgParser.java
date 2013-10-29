@@ -82,9 +82,9 @@ public class CcgParser implements Serializable {
   
   // Parameters for controlling the maximum sizes of the CCG chart
   private static final int MAX_CCG_CHART_ENTRIES = 100000;
-  private static final int MAX_CHART_ASSIGNMENTS = MAX_CCG_CHART_ENTRIES * 10;
-  private static final int MAX_CHART_DEPS = MAX_CCG_CHART_ENTRIES * 10;
-  private static final int MAX_CHART_VAR_INDEX = MAX_CCG_CHART_ENTRIES * 10;
+  private static final int MAX_CHART_ASSIGNMENTS = 100;
+  private static final int MAX_CHART_DEPS = 100;
+  private static final int MAX_CHART_VAR_INDEX = 100;
 
   // Default names for the variables in the syntactic distribution
   // built by buildSyntacticDistribution
@@ -1739,7 +1739,7 @@ public class CcgParser implements Serializable {
                     			if (numAssignments >= assignmentAccumulator.length) {
                     				continue deploop;
                     			}
-                    			assignmentAccumulator[numAssignments] = CcgParser.replaceAssignmentVarNum(leftAssignment[l],
+                    			assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(leftAssignment[l],
                     					leftVarNum, k);
                     			numAssignments++;
                     		}
@@ -1760,8 +1760,6 @@ public class CcgParser implements Serializable {
                     	}
                     }
                     assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
-                    
-                    if (numAssignments == -1) { continue deploop; }
                     // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
 
                     // Determine which unfilled dependencies should be propagated to
@@ -1955,8 +1953,7 @@ public class CcgParser implements Serializable {
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
   }
 
-  private Multimap<Integer, Integer> aggregateBySyntacticType(
-      ChartEntry[] entries, int numEntries) {
+  private Multimap<Integer, Integer> aggregateBySyntacticType(ChartEntry[] entries, int numEntries) {
     Multimap<Integer, Integer> map = HashMultimap.create();
     for (int i = 0; i < numEntries; i++) {
       map.put(entries[i].getHeadedSyntax(), i);

@@ -116,7 +116,6 @@ public class IntMultimap implements Multimap<Integer, Integer> {
         newSortedValues[i + oldLength] = unsortedValues[i];
       }
 
-      // TODO: re-sort the key/value pairs.
       ArrayUtils.sortKeyValuePairs(newSortedKeys, newSortedValues, 0, newSortedKeys.length);
 
       sortedKeys = newSortedKeys;
@@ -197,6 +196,8 @@ public class IntMultimap implements Multimap<Integer, Integer> {
    */
   @Override
   public boolean containsValue(Object valObj) {
+    reindexItems();
+
     if (valObj instanceof Integer) {
       int val = (Integer) valObj;
       for (int i = 0; i < sortedValues.length; i++) {
@@ -242,11 +243,13 @@ public class IntMultimap implements Multimap<Integer, Integer> {
 
   @Override
   public Set<Integer> keySet() {
+    reindexItems();
     return Sets.newHashSet(Ints.asList(sortedKeys));
   }
 
   @Override
   public Multiset<Integer> keys() {
+    reindexItems();
     return HashMultiset.create(Ints.asList(sortedKeys));
   }
 

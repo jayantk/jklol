@@ -1603,13 +1603,11 @@ public class CcgParser implements Serializable {
       for (int j = i + 1; j < maxInd; j++) {
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
-        int numLeftTrees = chart.getNumChartEntriesForSpan(spanStart, spanStart + i);
-        Multimap<Integer, Integer> leftTypes = aggregateBySyntacticType(leftTrees, numLeftTrees);
+        Multimap<Integer, Integer> leftTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart, spanStart + i);
 
         ChartEntry[] rightTrees = chart.getChartEntriesForSpan(spanStart + j, spanEnd);
         double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
-        int numRightTrees = chart.getNumChartEntriesForSpan(spanStart + j, spanEnd);
-        Multimap<Integer, Integer> rightTypes = aggregateBySyntacticType(rightTrees, numRightTrees);
+        Multimap<Integer, Integer> rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + j, spanEnd);
 
         int[] key = new int[1];
         // log.startTimer("ccg_parse/beam_loop");

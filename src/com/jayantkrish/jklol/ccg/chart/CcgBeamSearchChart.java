@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * Data structure for performing beam search inference with a CCG.
@@ -110,6 +111,11 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   @Override
   public double[] getChartEntryProbsForSpan(int spanStart, int spanEnd) {
     return probabilities[spanStart][spanEnd];
+  }
+
+  @Override
+  public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd) {
+    return aggregateBySyntacticType(chart[spanStart][spanEnd], getNumChartEntriesForSpan(spanStart, spanEnd));
   }
 
   @Override

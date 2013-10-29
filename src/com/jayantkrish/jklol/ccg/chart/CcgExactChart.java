@@ -6,6 +6,7 @@ import java.util.List;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * CCG chart for performing exact inference.
@@ -88,6 +89,11 @@ public class CcgExactChart extends AbstractCcgChart {
     return chartSizes[spanStart][spanEnd];
   }
   
+  @Override
+  public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd) {
+    return aggregateBySyntacticType(chart[spanStart][spanEnd], getNumChartEntriesForSpan(spanStart, spanEnd));
+  }
+
   @Override
   public int getTotalNumChartEntries() {
     return totalChartSize;

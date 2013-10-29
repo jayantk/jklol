@@ -236,11 +236,21 @@ public class IntMultimap implements Multimap<Integer, Integer> {
     return values;
   }
 
+  public int[] getArray(int key) {
+    int firstIndex = getKeyIndex(key);
+    
+    int lastIndex = firstIndex;
+    while (firstIndex < sortedKeys.length && sortedKeys[firstIndex] == key) {
+      lastIndex++;
+    }
+    return Arrays.copyOfRange(sortedKeys, firstIndex, lastIndex);
+  }
+
   @Override
   public boolean isEmpty() {
     return numUnsortedItems == 0 && sortedKeys.length == 0;
   }
-
+  
   @Override
   public Set<Integer> keySet() {
     reindexItems();

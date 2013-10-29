@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * Common implementations of CCG parse chart methods.
@@ -288,5 +289,13 @@ public abstract class AbstractCcgChart implements CcgChart {
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
           entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
     }
+  }
+  
+  protected  IntMultimap aggregateBySyntacticType(ChartEntry[] entries, int numEntries) {
+    IntMultimap map = IntMultimap.create();
+    for (int i = 0; i < numEntries; i++) {
+      map.put(entries[i].getHeadedSyntax(), i);
+    }
+    return map;
   }
 }

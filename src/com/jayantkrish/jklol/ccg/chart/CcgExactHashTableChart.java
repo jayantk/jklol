@@ -6,6 +6,7 @@ import java.util.List;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 public class CcgExactHashTableChart extends AbstractCcgChart {
 
@@ -21,7 +22,8 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   private final ChartEntry[][][] chartList;
   private final double[][][] probabilitiesList;
   private final int[][] chartSizes;
-  
+  private final IntMultimap[][] chartEntriesBySyntacticCategory;
+
   private int totalChartSize;
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
@@ -38,7 +40,9 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     this.chartList = new ChartEntry[numTerminals][numTerminals][];
     this.probabilitiesList = new double[numTerminals][numTerminals][];
     this.chartSizes = new int[numTerminals][numTerminals];
-    
+
+    this.chartEntriesBySyntacticCategory = new IntMultimap[numTerminals][numTerminals];
+
     this.totalChartSize = 0;
   }
 
@@ -88,6 +92,11 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   @Override
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd) {
     return chartSizes[spanStart][spanEnd];
+  }
+  
+  @Override
+  public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd) {
+    return chartEntriesBySyntacticCategory[spanStart][spanEnd];
   }
   
   @Override
@@ -141,6 +150,9 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     chartList[spanStart][spanEnd] = spanEntries;
     probabilitiesList[spanStart][spanEnd] = spanProbabilities;
     chartSizes[spanStart][spanEnd] = numPopulated;
+    chartEntriesBySyntacticCategory[spanStart][spanEnd] = aggregateBySyntacticType(
+        spanEntries, spanEntries.length);
+
     totalChartSize += numPopulated;
   }
 
@@ -149,6 +161,7 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     totalChartSize -= chartSizes[spanStart][spanEnd];
     chartSizes[spanStart][spanEnd] = 0;
     numPopulatedIndexes[spanStart][spanEnd] = 0;
+    chartEntriesBySyntacticCategory[spanStart][spanEnd] = null;
     Arrays.fill(chart[spanStart][spanEnd], null);
   }
 }

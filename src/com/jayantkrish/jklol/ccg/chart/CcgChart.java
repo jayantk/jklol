@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 public interface CcgChart {
 
@@ -150,6 +151,8 @@ public interface CcgChart {
    * @return
    */
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd);
+  
+  public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd);
   
   /**
    * Gets the total number of entries in this parse chart, which is the

@@ -1595,7 +1595,7 @@ public class CcgParser implements Serializable {
     int[] verbDistances = chart.getVerbDistances();
     int numTerminals = chart.size();
 
-    double[] syntaxValues = syntaxDistributionTensor.getValues();
+    long[] syntaxKeyNums = syntaxDistributionTensor.getKeyNums();
     long[] dimensionOffsets = syntaxDistributionTensor.getDimensionOffsets();
     int tensorSize = syntaxDistributionTensor.size();
 
@@ -1622,317 +1622,317 @@ public class CcgParser implements Serializable {
             continue;
           }
           long maxKeyNum = keyNumPrefix + dimensionOffsets[0];
-          long curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
+          long curKeyNum = syntaxKeyNums[index];
 
           while (curKeyNum < maxKeyNum && index < tensorSize) {
-            if (syntaxValues[index] != 0.0) {
-              int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
-              if (rightTypes.containsKey(rightType)) {
-                // Get the operation we're supposed to apply at this chart entry.
-                CcgSearchMove searchMove = (CcgSearchMove) searchMoveType.getValue(
-                    (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
-                Combinator resultCombinator = searchMove.getBinaryCombinator();
+            int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
+            if (rightTypes.containsKey(rightType)) {
+              // Get the operation we're supposed to apply at this chart entry.
+              CcgSearchMove searchMove = (CcgSearchMove) searchMoveType.getValue(
+                  (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
+              Combinator resultCombinator = searchMove.getBinaryCombinator();
 
-                // Apply the binary rule.
-                double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
-                int resultSyntax = resultCombinator.getSyntax();
-                int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
-                int resultSyntaxHead = resultCombinator.getSyntaxHeadVar();
+              // Apply the binary rule.
+              double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
+              int resultSyntax = resultCombinator.getSyntax();
+              int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
+              int resultSyntaxHead = resultCombinator.getSyntaxHeadVar();
 
-                for (int leftIndex : leftTypes.getArray(leftType)) {
-                  ChartEntry leftRoot = leftTrees[leftIndex];
-                  double leftProb = leftProbs[leftIndex];
+              for (int leftIndex : leftTypes.getArray(leftType)) {
+                ChartEntry leftRoot = leftTrees[leftIndex];
+                double leftProb = leftProbs[leftIndex];
 
-                  long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
-                  if (leftUnaryKeyNum != -1) {
-                    leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
+                long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
+                if (leftUnaryKeyNum != -1) {
+                  leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
+                }
+
+                deploop: for (int rightIndex : rightTypes.getArray(rightType)) {
+                  ChartEntry rightRoot = rightTrees[rightIndex];
+                  double rightProb = rightProbs[rightIndex];
+
+                  // Determine if these chart entries can be combined under the
+                  // normal form constraints. Normal form constraints state that 
+                  // the result of a forward (backward) composition cannot be the
+                  // left (right) element of a forward (backward) combinator.
+                  if (normalFormOnly) {
+                    Combinator.Type leftCombinator = leftRoot.getDerivingCombinatorType();
+                    Combinator.Type resultCombinatorType = resultCombinator.getType();
+                    if (leftCombinator == Combinator.Type.FORWARD_COMPOSITION
+                        && searchMove.getLeftUnaryKeyNum() == -1
+                        && (resultCombinatorType == Combinator.Type.FORWARD_APPLICATION
+                        || resultCombinatorType == Combinator.Type.FORWARD_COMPOSITION)) {
+                      continue;
+                    }
+
+                    Combinator.Type rightCombinator = rightRoot.getDerivingCombinatorType();
+                    if (rightCombinator == Combinator.Type.BACKWARD_COMPOSITION
+                        && searchMove.getRightUnaryKeyNum() == -1
+                        && (resultCombinator.getType() == Combinator.Type.BACKWARD_APPLICATION
+                        || resultCombinator.getType() == Combinator.Type.BACKWARD_COMPOSITION)) {
+                      continue;
+                    }
                   }
 
-                  deploop: for (int rightIndex : rightTypes.getArray(rightType)) {
-                    ChartEntry rightRoot = rightTrees[rightIndex];
-                    double rightProb = rightProbs[rightIndex];
+                  long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
+                  if (rightUnaryKeyNum != -1) {
+                    rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
+                  }
 
-                    // Determine if these chart entries can be combined under the
-                    // normal form constraints. Normal form constraints state that 
-                    // the result of a forward (backward) composition cannot be the
-                    // left (right) element of a forward (backward) combinator.
-                    if (normalFormOnly) {
-                      Combinator.Type leftCombinator = leftRoot.getDerivingCombinatorType();
-                      Combinator.Type resultCombinatorType = resultCombinator.getType();
-                      if (leftCombinator == Combinator.Type.FORWARD_COMPOSITION
-                          && searchMove.getLeftUnaryKeyNum() == -1
-                          && (resultCombinatorType == Combinator.Type.FORWARD_APPLICATION
-                              || resultCombinatorType == Combinator.Type.FORWARD_COMPOSITION)) {
-                        continue;
-                      }
+                  // log.startTimer("ccg_parse/beam_loop/fill_dependencies");
+                  // Fill dependencies based on the current assignment.
+                  // (Filling dependencies takes a trivial amount of time.) 
+                  int numFilledDeps = 0;
+                  numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
+                      rightRoot.getUnfilledDependencyVarIndex(), rightRoot.getUnfilledDependencies(), 
+                      searchMove.getRightDepRelabeling(), filledDepAccumulator, numFilledDeps);
+                  numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
+                      leftRoot.getUnfilledDependencyVarIndex(), leftRoot.getUnfilledDependencies(), 
+                      searchMove.getLeftDepRelabeling(), filledDepAccumulator, numFilledDeps);
 
-                      Combinator.Type rightCombinator = rightRoot.getDerivingCombinatorType();
-                      if (rightCombinator == Combinator.Type.BACKWARD_COMPOSITION
-                          && searchMove.getRightUnaryKeyNum() == -1
-                          && (resultCombinator.getType() == Combinator.Type.BACKWARD_APPLICATION
-                          || resultCombinator.getType() == Combinator.Type.BACKWARD_COMPOSITION)) {
-                        continue;
-                      }
-                    }
+                  // Fill dependencies created by the binary rule.
+                  if (resultCombinator.hasUnfilledDependencies()) {
+                    List<UnfilledDependency> unfilledDeps = resultCombinator.getUnfilledDependencies(spanEnd);
+                    long[] unfilledDepsOrig = unfilledDependencyArrayToLongArray(unfilledDeps);
 
-                    long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
-                    if (rightUnaryKeyNum != -1) {
-                      rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
-                    }
+                    int maxVarNum = Ints.max(Ints.max(resultCombinator.getLeftVariableRelabeling()),
+                        Ints.max(resultCombinator.getRightVariableRelabeling()));
+                    long[] combinatorDeps = new long[unfilledDepsOrig.length];
+                    int[] combinatorVarIndex = new int[maxVarNum + 2];
+                    orderUnfilledDependencies(unfilledDepsOrig, combinatorDeps, combinatorVarIndex);
 
-                    // log.startTimer("ccg_parse/beam_loop/fill_dependencies");
-                    // Fill dependencies based on the current assignment.
-                    int numFilledDeps = 0;
                     numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
-                        rightRoot.getUnfilledDependencyVarIndex(), rightRoot.getUnfilledDependencies(), 
-                        searchMove.getRightDepRelabeling(), filledDepAccumulator, numFilledDeps);
+                        combinatorVarIndex, combinatorDeps, searchMove.getLeftInverseRelabeling(),
+                        filledDepAccumulator, numFilledDeps);
                     numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
-                        leftRoot.getUnfilledDependencyVarIndex(), leftRoot.getUnfilledDependencies(), 
-                        searchMove.getLeftDepRelabeling(), filledDepAccumulator, numFilledDeps);
-                    
-                    // Fill dependencies created by the binary rule.
-                    if (resultCombinator.hasUnfilledDependencies()) {
-                      List<UnfilledDependency> unfilledDeps = resultCombinator.getUnfilledDependencies(spanEnd);
-                      long[] unfilledDepsOrig = unfilledDependencyArrayToLongArray(unfilledDeps);
-
-                      int maxVarNum = Ints.max(Ints.max(resultCombinator.getLeftVariableRelabeling()),
-                          Ints.max(resultCombinator.getRightVariableRelabeling()));
-                      long[] combinatorDeps = new long[unfilledDepsOrig.length];
-                      int[] combinatorVarIndex = new int[maxVarNum + 2];
-                      orderUnfilledDependencies(unfilledDepsOrig, combinatorDeps, combinatorVarIndex);
-
-                      numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
-                          combinatorVarIndex, combinatorDeps, searchMove.getLeftInverseRelabeling(),
-                          filledDepAccumulator, numFilledDeps);
-                      numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
-                          combinatorVarIndex, combinatorDeps, searchMove.getRightInverseRelabeling(),
-                          filledDepAccumulator, numFilledDeps);
-                    }
-                    // log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
-
-                    if (numFilledDeps == -1) { 
-                      continue deploop; 
-                    }
-
-                    // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
-                    // Determine the variable assignments for the result syntactic
-                    // category.
-                    int[] leftInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
-                    int[] rightInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
-                    int numResultVars = leftInverseRelabeling.length;
-
-                    int[] leftAssignmentVarIndex = leftRoot.getAssignmentVarIndex();
-                    long[] leftAssignment = leftRoot.getAssignments();
-                    int[] rightAssignmentVarIndex = rightRoot.getAssignmentVarIndex();
-                    long[] rightAssignment = rightRoot.getAssignments();
-
-                    int numAssignments = 0;
-                    for (int k = 0; k < numResultVars; k++) {
-                    	assignmentVarIndexAccumulator[k] = numAssignments;
-                    	int leftVarNum = leftInverseRelabeling[k];
-                    	if (leftVarNum != -1) {
-                    		int startIndex = leftAssignmentVarIndex[leftVarNum];
-                    		int endIndex = leftAssignmentVarIndex[leftVarNum + 1];
-                    		for (int l = startIndex; l < endIndex; l++) {
-                    			if (numAssignments >= assignmentAccumulator.length) {
-                    				continue deploop;
-                    			}
-                    			assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(leftAssignment[l],
-                    					leftVarNum, k);
-                    			numAssignments++;
-                    		}
-                    	}
-
-                    	int rightVarNum = rightInverseRelabeling[k];
-                    	if (rightVarNum != -1) {
-                    		int startIndex = rightAssignmentVarIndex[rightVarNum];
-                    		int endIndex = rightAssignmentVarIndex[rightVarNum + 1];
-                    		for (int l = startIndex; l < endIndex; l++) {
-                    			if (numAssignments >= assignmentAccumulator.length) {
-                    				continue deploop;
-                    			}
-                    			assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(rightAssignment[l],
-                    					rightVarNum, k);
-                    			numAssignments++;
-                    		}
-                    	}
-                    }
-                    assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
-                    // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
-
-                    // Determine which unfilled dependencies should be propagated to
-                    // the result.
-                    // log.startTimer("ccg_parse/beam_loop/propagate_dependencies");
-                    int[] leftUnfilledDepsVarIndex = leftRoot.getUnfilledDependencyVarIndex();
-                    long[] leftUnfilledDeps = leftRoot.getUnfilledDependencies();
-                    int[] rightUnfilledDepsVarIndex = rightRoot.getUnfilledDependencyVarIndex();
-                    long[] rightUnfilledDeps = rightRoot.getUnfilledDependencies();
-                    int[] leftToReturnInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
-                    int[] rightToReturnInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
-                    int numVars = searchMove.getLeftToReturnInverseRelabeling().length;
-                    int numUnfilledDeps = 0;
-                    int startIndex, endIndex, originalVarNum;
-                    long unfilledDependency;
-                    for (int k = 0; k < numVars; k++) {
-                      unfilledDepVarIndexAccumulator[k] = numUnfilledDeps;
-                      if (assignmentVarIndexAccumulator[k] != assignmentVarIndexAccumulator[k + 1]) {
-                        // This variable has an assignment in the result, meaning any
-                        // dependencies on this variable have already been filled.
-                        continue;
-                      }
-
-                      originalVarNum = leftToReturnInverseRelabeling[k];
-                      if (originalVarNum != -1) {
-                        startIndex = leftUnfilledDepsVarIndex[originalVarNum];
-                        endIndex = leftUnfilledDepsVarIndex[originalVarNum + 1];
-
-                        if (startIndex != endIndex) {
-                          for (int m = startIndex; m < endIndex; m++) {
-                            if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                              // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
-                              continue deploop;
-                            }
-
-                            unfilledDependency = leftUnfilledDeps[m];
-                            unfilledDependency = unfilledDependency - (originalVarNum << OBJECT_OFFSET);
-                            unfilledDependency |= (k << OBJECT_OFFSET);
-
-                            unfilledDepAccumulator[numUnfilledDeps] = unfilledDependency;
-                            numUnfilledDeps++;
-                          }
-                        }
-                      }
-
-                      originalVarNum = rightToReturnInverseRelabeling[k];
-                      if (originalVarNum != -1) {
-                        startIndex = rightUnfilledDepsVarIndex[originalVarNum];
-                        endIndex = rightUnfilledDepsVarIndex[originalVarNum + 1];
-
-                        if (startIndex != endIndex) {
-                          for (int m = startIndex; m < endIndex; m++) {
-                            if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                              // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
-                              continue deploop;
-                            }
-
-                            unfilledDependency = rightUnfilledDeps[m];
-                            unfilledDependency = unfilledDependency - (originalVarNum << OBJECT_OFFSET);
-                            unfilledDependency |= (k << OBJECT_OFFSET);
-
-                            unfilledDepAccumulator[numUnfilledDeps] = unfilledDependency;
-                            numUnfilledDeps++;
-                          }
-                        }
-                      }
-                    }
-                    unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
-                    // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
-
-                    // log.startTimer("ccg_parse/beam_loop/copy_stuff");
-                    long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
-                    int[] unfilledDepVarIndex = Arrays.copyOf(unfilledDepVarIndexAccumulator, numVars + 1);
-                    long[] unfilledDepArray = Arrays.copyOf(unfilledDepAccumulator, numUnfilledDeps);
-
-                    int[] newAssignmentVarIndex = Arrays.copyOfRange(assignmentVarIndexAccumulator, 0,
-                        searchMove.getLeftToReturnInverseRelabeling().length + 1);
-                    long[] newAssignments = Arrays.copyOfRange(assignmentAccumulator, 0, numAssignments);
-
-                    ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars, resultSyntaxHead,
-                        null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVarIndex, newAssignments,
-                        unfilledDepVarIndex, unfilledDepArray, filledDepArray, spanStart, spanStart + i,
-                        leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
-                    // log.stopTimer("ccg_parse/beam_loop/copy_stuff");
-
-                    // Get the weights of applying this syntactic combination rule 
-                    // given the word and POS tag of the result's head.
-                    // log.startTimer("ccg_parse/beam_loop/headed_rule_weights");
-                    double headedRuleProb = 1.0;
-                    long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
-                        * headedBinaryRuleCombinatorOffset;
-                    for (int assignmentIndex = 0; assignmentIndex < newAssignments.length; assignmentIndex++) {
-                      long assignment = newAssignments[assignmentIndex];
-                      int varNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK); 
-                      if (varNum == resultSyntaxHead) {
-                        long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
-                        int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
-                        int posTag = currentPosTags[wordIndex];
-
-                        long combinatorWordPosKeyNum = binaryCombinatorKeyNumWithOffset 
-                            + (predicate * headedBinaryRulePredicateOffset)
-                            + (posTag * headedBinaryRulePosOffset);
-                        headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
-                      }
-                    }
-                    // log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
-
-                    // log.startTimer("ccg_parse/beam_loop/dependencies");
-                    // Get the weights of the generated dependencies.
-                    double depProb = 1.0;
-                    double curDepProb = 1.0;
-                    int filledDepArrayLength = filledDepArray.length;
-                    for (int depIndex = 0; depIndex < filledDepArrayLength; depIndex++) {
-                      long depLong = filledDepArray[depIndex];
-                      if (depLong == depCache) {
-                        depProb *= depProbCache;
-                        continue;
-                      }
-
-                      // Compute the keyNum containing the weight for
-                      // depLong in dependencyTensor.
-                      int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
-                      int headSyntaxNum = (int) ((depLong >> SYNTACTIC_CATEGORY_OFFSET) & SYNTACTIC_CATEGORY_MASK);
-                      int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
-                      int argNumNum = (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
-                      int subjectWordIndex = (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
-                      int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
-
-                      int headPosNum = currentPosTags[subjectWordIndex];
-                      int objectPosNum = currentPosTags[objectWordIndex];
-
-                      long depNum = (headNum * dependencyHeadOffset) + (headSyntaxNum * dependencySyntaxOffset) 
-                          + (argNumNum * dependencyArgNumOffset) + (objectNum * dependencyObjectOffset)
-                          + (headPosNum * dependencyHeadPosOffset) + (objectPosNum * dependencyObjectPosOffset);
-
-                      // Get the probability of this
-                      // predicate-argument combination.
-                      // log.startTimer("chart_entry/dependency_prob");
-                      curDepProb = currentDependencyTensor.get(depNum);
-                      // log.stopTimer("chart_entry/dependency_prob");
-
-                      // Compute distance features.
-                      // log.startTimer("chart_entry/compute_distance");
-                      int distanceIndex = (subjectWordIndex * numTerminals) + objectWordIndex;
-                      int wordDistance = wordDistances[distanceIndex];
-                      int puncDistance = puncDistances[distanceIndex];
-                      int verbDistance = verbDistances[distanceIndex];
-                      // log.stopTimer("chart_entry/compute_distance");
-
-                      // log.startTimer("chart_entry/lookup_distance");
-                      long distanceKeyNumBase = (headNum * distanceHeadOffset) 
-                          + (headSyntaxNum * distanceSyntaxOffset) + (argNumNum * distanceArgNumOffset)
-                          + (headPosNum * distanceHeadPosOffset);
-                      long wordDistanceKeyNum = distanceKeyNumBase + (wordDistance * distanceDistanceOffset);
-                      curDepProb *= currentWordTensor.get(wordDistanceKeyNum);
-                      long puncDistanceKeyNum = distanceKeyNumBase + (puncDistance * distanceDistanceOffset);
-                      curDepProb *= currentPuncTensor.get(puncDistanceKeyNum);
-                      long verbDistanceKeyNum = distanceKeyNumBase + (verbDistance * distanceDistanceOffset);
-                      curDepProb *= currentVerbTensor.get(verbDistanceKeyNum);
-                      // log.stopTimer("chart_entry/lookup_distance");
-                      // System.out.println(longToUnfilledDependency(depLong)
-                      // + " " + depProb);
-
-                      depProb *= curDepProb;
-
-                      depCache = depLong;
-                      depProbCache = curDepProb;
-                    }
-                    // log.stopTimer("ccg_parse/beam_loop/dependencies");
-
-                    // log.startTimer("chart_entry/add_chart_entry");
-                    double totalProb = ruleProb * headedRuleProb * leftProb * rightProb * depProb;
-                    chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
-                    // log.stopTimer("chart_entry/add_chart_entry");
+                        combinatorVarIndex, combinatorDeps, searchMove.getRightInverseRelabeling(),
+                        filledDepAccumulator, numFilledDeps);
                   }
+                  // log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
+
+                  if (numFilledDeps == -1) { 
+                    continue deploop; 
+                  }
+
+                  // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
+                  // Determine the variable assignments for the result syntactic
+                  // category.
+                  int[] leftInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
+                  int[] rightInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
+                  int numResultVars = leftInverseRelabeling.length;
+
+                  int[] leftAssignmentVarIndex = leftRoot.getAssignmentVarIndex();
+                  long[] leftAssignment = leftRoot.getAssignments();
+                  int[] rightAssignmentVarIndex = rightRoot.getAssignmentVarIndex();
+                  long[] rightAssignment = rightRoot.getAssignments();
+
+                  int numAssignments = 0;
+                  for (int k = 0; k < numResultVars; k++) {
+                    assignmentVarIndexAccumulator[k] = numAssignments;
+                    int leftVarNum = leftInverseRelabeling[k];
+                    if (leftVarNum != -1) {
+                      int startIndex = leftAssignmentVarIndex[leftVarNum];
+                      int endIndex = leftAssignmentVarIndex[leftVarNum + 1];
+                      for (int l = startIndex; l < endIndex; l++) {
+                        if (numAssignments >= assignmentAccumulator.length) {
+                          continue deploop;
+                        }
+                        assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(leftAssignment[l],
+                            leftVarNum, k);
+                        numAssignments++;
+                      }
+                    }
+
+                    int rightVarNum = rightInverseRelabeling[k];
+                    if (rightVarNum != -1) {
+                      int startIndex = rightAssignmentVarIndex[rightVarNum];
+                      int endIndex = rightAssignmentVarIndex[rightVarNum + 1];
+                      for (int l = startIndex; l < endIndex; l++) {
+                        if (numAssignments >= assignmentAccumulator.length) {
+                          continue deploop;
+                        }
+                        assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(rightAssignment[l],
+                            rightVarNum, k);
+                        numAssignments++;
+                      }
+                    }
+                  }
+                  assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
+                  // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
+
+                  // Determine which unfilled dependencies should be propagated to
+                  // the result.
+                  // log.startTimer("ccg_parse/beam_loop/propagate_dependencies");
+                  int[] leftUnfilledDepsVarIndex = leftRoot.getUnfilledDependencyVarIndex();
+                  long[] leftUnfilledDeps = leftRoot.getUnfilledDependencies();
+                  int[] rightUnfilledDepsVarIndex = rightRoot.getUnfilledDependencyVarIndex();
+                  long[] rightUnfilledDeps = rightRoot.getUnfilledDependencies();
+                  int[] leftToReturnInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
+                  int[] rightToReturnInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
+                  int numVars = searchMove.getLeftToReturnInverseRelabeling().length;
+                  int numUnfilledDeps = 0;
+                  int startIndex, endIndex, originalVarNum;
+                  long unfilledDependency;
+                  for (int k = 0; k < numVars; k++) {
+                    unfilledDepVarIndexAccumulator[k] = numUnfilledDeps;
+                    if (assignmentVarIndexAccumulator[k] != assignmentVarIndexAccumulator[k + 1]) {
+                      // This variable has an assignment in the result, meaning any
+                      // dependencies on this variable have already been filled.
+                      continue;
+                    }
+
+                    originalVarNum = leftToReturnInverseRelabeling[k];
+                    if (originalVarNum != -1) {
+                      startIndex = leftUnfilledDepsVarIndex[originalVarNum];
+                      endIndex = leftUnfilledDepsVarIndex[originalVarNum + 1];
+
+                      if (startIndex != endIndex) {
+                        for (int m = startIndex; m < endIndex; m++) {
+                          if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                            // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
+                            continue deploop;
+                          }
+
+                          unfilledDependency = leftUnfilledDeps[m];
+                          unfilledDependency = unfilledDependency - (originalVarNum << OBJECT_OFFSET);
+                          unfilledDependency |= (k << OBJECT_OFFSET);
+
+                          unfilledDepAccumulator[numUnfilledDeps] = unfilledDependency;
+                          numUnfilledDeps++;
+                        }
+                      }
+                    }
+
+                    originalVarNum = rightToReturnInverseRelabeling[k];
+                    if (originalVarNum != -1) {
+                      startIndex = rightUnfilledDepsVarIndex[originalVarNum];
+                      endIndex = rightUnfilledDepsVarIndex[originalVarNum + 1];
+
+                      if (startIndex != endIndex) {
+                        for (int m = startIndex; m < endIndex; m++) {
+                          if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                            // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
+                            continue deploop;
+                          }
+
+                          unfilledDependency = rightUnfilledDeps[m];
+                          unfilledDependency = unfilledDependency - (originalVarNum << OBJECT_OFFSET);
+                          unfilledDependency |= (k << OBJECT_OFFSET);
+
+                          unfilledDepAccumulator[numUnfilledDeps] = unfilledDependency;
+                          numUnfilledDeps++;
+                        }
+                      }
+                    }
+                  }
+                  unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
+                  // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
+
+                  // log.startTimer("ccg_parse/beam_loop/copy_stuff");
+                  long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
+                  int[] unfilledDepVarIndex = Arrays.copyOf(unfilledDepVarIndexAccumulator, numVars + 1);
+                  long[] unfilledDepArray = Arrays.copyOf(unfilledDepAccumulator, numUnfilledDeps);
+
+                  int[] newAssignmentVarIndex = Arrays.copyOfRange(assignmentVarIndexAccumulator, 0,
+                      searchMove.getLeftToReturnInverseRelabeling().length + 1);
+                  long[] newAssignments = Arrays.copyOfRange(assignmentAccumulator, 0, numAssignments);
+
+                  ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars, resultSyntaxHead,
+                      null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVarIndex, newAssignments,
+                      unfilledDepVarIndex, unfilledDepArray, filledDepArray, spanStart, spanStart + i,
+                      leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
+                  // log.stopTimer("ccg_parse/beam_loop/copy_stuff");
+
+                  // Get the weights of applying this syntactic combination rule 
+                  // given the word and POS tag of the result's head.
+                  // log.startTimer("ccg_parse/beam_loop/headed_rule_weights");
+                  double headedRuleProb = 1.0;
+                  long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
+                      * headedBinaryRuleCombinatorOffset;
+                  for (int assignmentIndex = 0; assignmentIndex < newAssignments.length; assignmentIndex++) {
+                    long assignment = newAssignments[assignmentIndex];
+                    int varNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK); 
+                    if (varNum == resultSyntaxHead) {
+                      long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
+                      int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
+                      int posTag = currentPosTags[wordIndex];
+
+                      long combinatorWordPosKeyNum = binaryCombinatorKeyNumWithOffset 
+                          + (predicate * headedBinaryRulePredicateOffset)
+                          + (posTag * headedBinaryRulePosOffset);
+                      headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
+                    }
+                  }
+                  // log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
+
+                  // log.startTimer("ccg_parse/beam_loop/dependencies");
+                  // Get the weights of the generated dependencies.
+                  double depProb = 1.0;
+                  double curDepProb = 1.0;
+                  int filledDepArrayLength = filledDepArray.length;
+                  for (int depIndex = 0; depIndex < filledDepArrayLength; depIndex++) {
+                    // The contents of this loop takes ~1/3 of all parsing time.
+                    long depLong = filledDepArray[depIndex];
+                    if (depLong == depCache) {
+                      depProb *= depProbCache;
+                      continue;
+                    }
+
+                    // Compute the keyNum containing the weight for
+                    // depLong in dependencyTensor.
+                    int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+                    int headSyntaxNum = (int) ((depLong >> SYNTACTIC_CATEGORY_OFFSET) & SYNTACTIC_CATEGORY_MASK);
+                    int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+                    int argNumNum = (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
+                    int subjectWordIndex = (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+                    int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+
+                    int headPosNum = currentPosTags[subjectWordIndex];
+                    int objectPosNum = currentPosTags[objectWordIndex];
+
+                    long depNum = (headNum * dependencyHeadOffset) + (headSyntaxNum * dependencySyntaxOffset) 
+                        + (argNumNum * dependencyArgNumOffset) + (objectNum * dependencyObjectOffset)
+                        + (headPosNum * dependencyHeadPosOffset) + (objectPosNum * dependencyObjectPosOffset);
+
+                    // Get the probability of this
+                    // predicate-argument combination.
+                    // log.startTimer("chart_entry/dependency_prob");
+                    curDepProb = currentDependencyTensor.get(depNum);
+                    // log.stopTimer("chart_entry/dependency_prob");
+
+                    // Compute distance features.
+                    // log.startTimer("chart_entry/compute_distance");
+                    int distanceIndex = (subjectWordIndex * numTerminals) + objectWordIndex;
+                    int wordDistance = wordDistances[distanceIndex];
+                    int puncDistance = puncDistances[distanceIndex];
+                    int verbDistance = verbDistances[distanceIndex];
+                    // log.stopTimer("chart_entry/compute_distance");
+
+                    // log.startTimer("chart_entry/lookup_distance");
+                    long distanceKeyNumBase = (headNum * distanceHeadOffset) 
+                        + (headSyntaxNum * distanceSyntaxOffset) + (argNumNum * distanceArgNumOffset)
+                        + (headPosNum * distanceHeadPosOffset);
+                    long wordDistanceKeyNum = distanceKeyNumBase + (wordDistance * distanceDistanceOffset);
+                    curDepProb *= currentWordTensor.get(wordDistanceKeyNum);
+                    long puncDistanceKeyNum = distanceKeyNumBase + (puncDistance * distanceDistanceOffset);
+                    curDepProb *= currentPuncTensor.get(puncDistanceKeyNum);
+                    long verbDistanceKeyNum = distanceKeyNumBase + (verbDistance * distanceDistanceOffset);
+                    curDepProb *= currentVerbTensor.get(verbDistanceKeyNum);
+                    // log.stopTimer("chart_entry/lookup_distance");
+                    // System.out.println(longToUnfilledDependency(depLong)
+                    // + " " + depProb);
+
+                    depProb *= curDepProb;
+
+                    depCache = depLong;
+                    depProbCache = curDepProb;
+                  }
+                  // log.stopTimer("ccg_parse/beam_loop/dependencies");
+
+                  // log.startTimer("chart_entry/add_chart_entry");
+                  double totalProb = ruleProb * headedRuleProb * leftProb * rightProb * depProb;
+                  chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
+                  // log.stopTimer("chart_entry/add_chart_entry");
                 }
               }
             }
@@ -1940,7 +1940,7 @@ public class CcgParser implements Serializable {
             // Advance the iterator over rules.
             index++;
             if (index < tensorSize) {
-              curKeyNum = syntaxDistributionTensor.indexToKeyNum(index);
+              curKeyNum = syntaxKeyNums[index];
             }
           }
         }

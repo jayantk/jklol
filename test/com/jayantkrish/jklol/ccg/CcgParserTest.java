@@ -1159,8 +1159,7 @@ public class CcgParserTest extends TestCase {
     @Override
     public void applyToTerminals(CcgChart chart) {
       DiscreteFactor syntaxDistribution = chart.getSyntaxDistribution();
-      VariableNumMap vars = syntaxDistribution.getVars();
-      TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+      TableFactorBuilder builder = TableFactorBuilder.fromFactor(syntaxDistribution);
 
       Iterator<Outcome> syntaxIter = syntaxDistribution.outcomeIterator();
       while (syntaxIter.hasNext()) {
@@ -1172,15 +1171,13 @@ public class CcgParserTest extends TestCase {
           String[] subjects = rule.getSubjects();
           for (int i = 0; i < subjects.length; i++) {
             if (subjects[i].equals("special:compound")) {
-              builder.setWeight(outcome.getAssignment(), -1.0);
+              builder.setWeight(outcome.getAssignment(), 0.0);
             }
           }
         }
       }
-      DiscreteFactor syntaxDelta = builder.build();
-      System.out.println(syntaxDelta.getParameterDescription());
 
-      DiscreteFactor updatedSyntaxDistribution = syntaxDistribution.add(syntaxDelta);
+      DiscreteFactor updatedSyntaxDistribution = builder.build();
       chart.setSyntaxDistribution(updatedSyntaxDistribution);
     }
   }

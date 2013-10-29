@@ -314,14 +314,16 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     double[] tableValues = new double[outcomes.size()];
     int index = 0;
     for (Map.Entry<Long, Double> entry : outcomes.entrySet()) {
-      tableKeyNums[index] = entry.getKey();
-      tableValues[index] = entry.getValue();
-      index++;
+      if (entry.getValue() != 0.0) {
+        tableKeyNums[index] = entry.getKey();
+        tableValues[index] = entry.getValue();
+        index++;
+      }
     } 
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(),
         tableKeyNums, tableValues);
   }
-  
+
   @Override
   public SparseTensor buildNoCopy() {
     return build();

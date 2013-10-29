@@ -93,6 +93,10 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     return index;
   }
 
+  public long[] getKeyNums() {
+    return keyNums;
+  }
+
   @Override
   public double[] getValues() {
     return values;

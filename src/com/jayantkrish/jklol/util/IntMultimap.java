@@ -244,14 +244,17 @@ public class IntMultimap implements Multimap<Integer, Integer> {
 
   @Override
   public boolean containsKey(Object keyObj) {
+    reindexItems();
+
     if (keyObj instanceof Integer) {
-      return getKeyIndex((Integer) keyObj) >= 0;
+      return containsKey((int) ((Integer) keyObj));
     }
     return false;
   }
 
   public final boolean containsKey(int intKey) {
-    return getKeyIndex(intKey) >= 0;
+    int index = Arrays.binarySearch(keySet, intKey);
+    return index >= 0;
   }
 
   /**

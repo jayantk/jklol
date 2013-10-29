@@ -80,9 +80,9 @@ public class CcgParser implements Serializable {
 
   private static final int VAR_NUM_BITS = 6;
   private static final long VAR_NUM_MASK = ~(-1L << VAR_NUM_BITS);
-  
+
   // Parameters for controlling the maximum sizes of the CCG chart
-  private static final int MAX_CCG_CHART_ENTRIES = 1000000;
+  private static final int MAX_CCG_CHART_ENTRIES = 250000;
   private static final int MAX_CHART_ASSIGNMENTS = 100;
   private static final int MAX_CHART_DEPS = 100;
   private static final int MAX_CHART_VAR_INDEX = 100;
@@ -1614,11 +1614,9 @@ public class CcgParser implements Serializable {
         double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
         IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + j, spanEnd);
 
-        int[] key = new int[1];
         // log.startTimer("ccg_parse/beam_loop");
         for (int leftType : leftTypes.keySetArray()) {
-          key[0] = leftType;
-          long keyNumPrefix = syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
+          long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
           int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
           if (index == -1 || index >= tensorSize) {
             continue;

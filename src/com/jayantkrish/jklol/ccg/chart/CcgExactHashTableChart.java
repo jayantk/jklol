@@ -98,7 +98,7 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd) {
     return chartEntriesBySyntacticCategory[spanStart][spanEnd];
   }
-  
+
   @Override
   public int getTotalNumChartEntries() {
     return totalChartSize;
@@ -146,7 +146,7 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
       spanEntries[i] = hashTableEntries[indexes[i]];
       spanProbabilities[i] = hashTableProbabilities[indexes[i]];
     }
-    
+
     chartList[spanStart][spanEnd] = spanEntries;
     probabilitiesList[spanStart][spanEnd] = spanProbabilities;
     chartSizes[spanStart][spanEnd] = numPopulated;

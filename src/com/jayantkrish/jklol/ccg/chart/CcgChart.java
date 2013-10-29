@@ -153,7 +153,7 @@ public interface CcgChart {
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd);
   
   public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd);
-  
+
   /**
    * Gets the total number of entries in this parse chart, which is the
    * sum of the number of entries for all spans.

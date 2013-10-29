@@ -27,6 +27,8 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   private final double[][][] probabilities;
   private final int[] chartSizes;
   
+  private final IntMultimap[][] chartEntriesBySyntacticCategory;
+
   private int totalChartSize;
 
   /**
@@ -46,7 +48,9 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
     this.probabilities = new double[numTerminals][numTerminals][beamSize + 1];
     this.chartSizes = new int[numTerminals * numTerminals];
     Arrays.fill(chartSizes, 0);
-    
+
+    this.chartEntriesBySyntacticCategory = new IntMultimap[numTerminals][numTerminals];
+
     this.totalChartSize = 0;
   }
 
@@ -115,7 +119,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
 
   @Override
   public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd) {
-    return aggregateBySyntacticType(chart[spanStart][spanEnd], getNumChartEntriesForSpan(spanStart, spanEnd));
+    return chartEntriesBySyntacticCategory[spanStart][spanEnd];
   }
 
   @Override
@@ -140,13 +144,16 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   public void clearChartEntriesForSpan(int spanStart, int spanEnd) {
     totalChartSize -= chartSizes[spanEnd + (numTerminals * spanStart)];
     chartSizes[spanEnd + (numTerminals * spanStart)] = 0;
-    // This second part is unnecessary, but makes debugging easier.
+    chartEntriesBySyntacticCategory[spanStart][spanEnd] = null;
+
+    // This part is unnecessary, but makes debugging easier.
     Arrays.fill(chart[spanStart][spanEnd], null);
   }
-  
+
   @Override
   public void doneAddingChartEntriesForSpan(int spanStart, int spanEnd) {
-    // No work needs to be done.
+    chartEntriesBySyntacticCategory[spanStart][spanEnd] = aggregateBySyntacticType(chart[spanStart][spanEnd],
+        getNumChartEntriesForSpan(spanStart, spanEnd));
   }
 
   /**

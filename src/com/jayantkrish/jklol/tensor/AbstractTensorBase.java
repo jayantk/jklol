@@ -123,7 +123,7 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
 
     return new DimensionSpec(resultDims, resultSizes);
   }
-  
+
   /**
    * Gets a mapping from dimensions in {@code firstDimensionNums} to their
    * index in {@code secondDimensionNums}. Entries in the alignment are

@@ -292,10 +292,12 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
   
   protected  IntMultimap aggregateBySyntacticType(ChartEntry[] entries, int numEntries) {
-    IntMultimap map = IntMultimap.create();
+    int[] keys = new int[numEntries];
+    int[] values = new int[numEntries];
     for (int i = 0; i < numEntries; i++) {
-      map.put(entries[i].getHeadedSyntax(), i);
+      keys[i] = entries[i].getHeadedSyntax();
+      values[i] = i;
     }
-    return map;
+    return IntMultimap.createFromUnsortedArrays(keys, values, 0);
   }
 }

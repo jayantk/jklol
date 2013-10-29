@@ -33,6 +33,8 @@ public class IntMultimap implements Multimap<Integer, Integer> {
   private int[] sortedKeys;
   private int[] sortedValues;
 
+  private int[] keySet;
+  
   private int numUnsortedItems;
   private int[] unsortedKeys;
   private int[] unsortedValues;
@@ -48,11 +50,29 @@ public class IntMultimap implements Multimap<Integer, Integer> {
   private IntMultimap(int[] keys, int[] values) {
     this.sortedKeys = Preconditions.checkNotNull(keys);
     this.sortedValues = Preconditions.checkNotNull(values);
+    
+    this.keySet = null;
 
     this.numUnsortedItems = 0;
     this.unsortedKeys = new int[INITIAL_UNSORTED_BUFFER_SIZE];
     this.unsortedValues = new int[INITIAL_UNSORTED_BUFFER_SIZE];
+    
+    rebuildKeySet();
   }
+  
+  private IntMultimap(int[] keys, int[] values, int unsortedCapacity) {
+    this.sortedKeys = Preconditions.checkNotNull(keys);
+    this.sortedValues = Preconditions.checkNotNull(values);
+    
+    this.keySet = null;
+
+    this.numUnsortedItems = 0;
+    this.unsortedKeys = new int[unsortedCapacity];
+    this.unsortedValues = new int[unsortedCapacity];
+    
+    rebuildKeySet();
+  }
+
 
   /**
    * Creates and returns an empty multimap.
@@ -61,6 +81,20 @@ public class IntMultimap implements Multimap<Integer, Integer> {
    */
   public static IntMultimap create() {
     return new IntMultimap(new int[0], new int[0]);
+  }
+  
+  /**
+   * This method does not copy {@code keys} or {@code values}.
+   *  
+   * @param keys
+   * @param values
+   * @param unsortedCapacity
+   * @return
+   */
+  public static IntMultimap createFromUnsortedArrays(int[] keys, int[] values, int unsortedCapacity) {
+    Preconditions.checkArgument(keys.length == values.length);
+    ArrayUtils.sortKeyValuePairs(keys, values, 0, keys.length);
+    return new IntMultimap(keys, values, unsortedCapacity);
   }
 
   /**
@@ -121,6 +155,8 @@ public class IntMultimap implements Multimap<Integer, Integer> {
       sortedKeys = newSortedKeys;
       sortedValues = newSortedValues;
       numUnsortedItems = 0;
+      
+      rebuildKeySet();
     }
   }
 
@@ -135,6 +171,30 @@ public class IntMultimap implements Multimap<Integer, Integer> {
 
     unsortedKeys = newUnsortedKeys;
     unsortedValues = newUnsortedValues;
+  }
+
+  private void rebuildKeySet() {
+    int curKey = -1;
+    int numUniqueKeys = 0;
+    for (int i = 0; i < sortedKeys.length; i++) {
+      if (i == 0 || sortedKeys[i] != curKey) {
+        numUniqueKeys++;
+        curKey = sortedKeys[i];
+      }
+    }
+
+    int[] keySetArray = new int[numUniqueKeys];
+    int curKeyIndex = 0;
+    for (int i = 0; i < sortedKeys.length; i++) {
+      if (i == 0 || sortedKeys[i] != curKey) {
+        keySetArray[curKeyIndex] = sortedKeys[i];
+        curKeyIndex++;
+        curKey = sortedKeys[i];
+      }
+    }
+
+    Preconditions.checkState(curKeyIndex == numUniqueKeys);
+    keySet = keySetArray;
   }
 
   /**
@@ -190,6 +250,10 @@ public class IntMultimap implements Multimap<Integer, Integer> {
     return false;
   }
 
+  public final boolean containsKey(int intKey) {
+    return getKeyIndex(intKey) >= 0;
+  }
+
   /**
    * This method is inefficient -- it takes linear time in the size of
    * the map.
@@ -236,14 +300,17 @@ public class IntMultimap implements Multimap<Integer, Integer> {
     return values;
   }
 
-  public int[] getArray(int key) {
+  public final int[] getArray(int key) {
     int firstIndex = getKeyIndex(key);
+    if (firstIndex < 0) {
+      return new int[0];
+    }
     
     int lastIndex = firstIndex;
-    while (firstIndex < sortedKeys.length && sortedKeys[firstIndex] == key) {
+    while (lastIndex < sortedKeys.length && sortedKeys[lastIndex] == key) {
       lastIndex++;
     }
-    return Arrays.copyOfRange(sortedKeys, firstIndex, lastIndex);
+    return Arrays.copyOfRange(sortedValues, firstIndex, lastIndex);
   }
 
   @Override
@@ -255,6 +322,11 @@ public class IntMultimap implements Multimap<Integer, Integer> {
   public Set<Integer> keySet() {
     reindexItems();
     return Sets.newHashSet(Ints.asList(sortedKeys));
+  }
+  
+  public final int[] keySetArray() {
+    reindexItems();
+    return keySet;
   }
 
   @Override

@@ -38,6 +38,7 @@ import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * A chart parser for Combinatory Categorial Grammar (CCG).
@@ -81,7 +82,7 @@ public class CcgParser implements Serializable {
   private static final long VAR_NUM_MASK = ~(-1L << VAR_NUM_BITS);
   
   // Parameters for controlling the maximum sizes of the CCG chart
-  private static final int MAX_CCG_CHART_ENTRIES = 100000;
+  private static final int MAX_CCG_CHART_ENTRIES = 1000000;
   private static final int MAX_CHART_ASSIGNMENTS = 100;
   private static final int MAX_CHART_DEPS = 100;
   private static final int MAX_CHART_VAR_INDEX = 100;
@@ -1594,6 +1595,10 @@ public class CcgParser implements Serializable {
     int[] verbDistances = chart.getVerbDistances();
     int numTerminals = chart.size();
 
+    double[] syntaxValues = syntaxDistributionTensor.getValues();
+    long[] dimensionOffsets = syntaxDistributionTensor.getDimensionOffsets();
+    int tensorSize = syntaxDistributionTensor.size();
+
     long depCache = -1;
     double depProbCache = 0.0;
 
@@ -1603,21 +1608,18 @@ public class CcgParser implements Serializable {
       for (int j = i + 1; j < maxInd; j++) {
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
-        Multimap<Integer, Integer> leftTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart, spanStart + i);
+        IntMultimap leftTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart, spanStart + i);
 
         ChartEntry[] rightTrees = chart.getChartEntriesForSpan(spanStart + j, spanEnd);
         double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
-        Multimap<Integer, Integer> rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + j, spanEnd);
+        IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + j, spanEnd);
 
         int[] key = new int[1];
         // log.startTimer("ccg_parse/beam_loop");
-        for (int leftType : leftTypes.keySet()) {
+        for (int leftType : leftTypes.keySetArray()) {
           key[0] = leftType;
           long keyNumPrefix = syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
           int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
-          double[] syntaxValues = syntaxDistributionTensor.getValues();
-          long[] dimensionOffsets = syntaxDistributionTensor.getDimensionOffsets();
-          int tensorSize = syntaxDistributionTensor.size();
           if (index == -1 || index >= tensorSize) {
             continue;
           }
@@ -1639,7 +1641,7 @@ public class CcgParser implements Serializable {
                 int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
                 int resultSyntaxHead = resultCombinator.getSyntaxHeadVar();
 
-                for (int leftIndex : leftTypes.get(leftType)) {
+                for (int leftIndex : leftTypes.getArray(leftType)) {
                   ChartEntry leftRoot = leftTrees[leftIndex];
                   double leftProb = leftProbs[leftIndex];
 
@@ -1648,7 +1650,7 @@ public class CcgParser implements Serializable {
                     leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
                   }
 
-                  deploop: for (int rightIndex : rightTypes.get(rightType)) {
+                  deploop: for (int rightIndex : rightTypes.getArray(rightType)) {
                     ChartEntry rightRoot = rightTrees[rightIndex];
                     double rightProb = rightProbs[rightIndex];
 

@@ -74,7 +74,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   @Override
-  public long indexToKeyNum(int index) {
+  public final long indexToKeyNum(int index) {
     return keyNums[index];
   }
 
@@ -85,7 +85,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   @Override
-  public int getNearestIndex(long keyNum) {
+  public final int getNearestIndex(long keyNum) {
     int index = Arrays.binarySearch(keyNums, keyNum);
     if (index < 0) {
       index = (-1 * index) - 1;

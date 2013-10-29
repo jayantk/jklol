@@ -1581,7 +1581,7 @@ public class CcgParser implements Serializable {
     int[] unfilledDepVarIndexAccumulator = chart.getUnfilledDepVarIndexAccumulator();
     long[] unfilledDepAccumulator = chart.getUnfilledDepAccumulator();
 
-    Tensor syntaxDistributionTensor = chart.getSyntaxDistribution().getWeights();
+    SparseTensor syntaxDistributionTensor = (SparseTensor) chart.getSyntaxDistribution().getWeights();
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
 
     Tensor currentDependencyTensor = chart.getDependencyTensor();

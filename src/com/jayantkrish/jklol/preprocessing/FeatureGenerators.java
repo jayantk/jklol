@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.preprocessing;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mapper;
+import com.jayantkrish.jklol.parallel.Reducer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 
 /**
@@ -78,14 +83,20 @@ public class FeatureGenerators {
     return new ConvertingFeatureGenerator<A, B, C>(generator, converter);
   }
 
+  /**
+   * Applies {@code featureGenerator} to each data point and
+   * returns the sum of the resulting feature vectors. 
+   *
+   * @param featureGenerator
+   * @param data
+   * @return
+   */
   public static <A, B> CountAccumulator<B> getFeatureCounts(FeatureGenerator<A, B> featureGenerator,
-      Iterable<? extends A> data) {
-    CountAccumulator<B> featureCounts = CountAccumulator.create();
-    for (A datum : data) {
-      Map<B, Double> datumFeatures = featureGenerator.generateFeatures(datum);
-      featureCounts.increment(datumFeatures);
-    }
-    return featureCounts; 
+      Collection<? extends A> data) {
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+    Mapper<A, Map<B, Double>> mapper = new FeatureCountMapper<A, B>(featureGenerator);
+    Reducer<Map<B, Double>, CountAccumulator<B>> reducer = new FeatureCountReducer<B>();
+    return executor.mapReduce(data, mapper, reducer);
   }
 
   /**
@@ -170,6 +181,42 @@ public class FeatureGenerators {
     @Override
     public Map<C, Double> generateFeatures(A item) {
       return generator.generateFeatures(converter.apply(item));
+    }
+  }
+  
+  private static class FeatureCountMapper<A, B> extends Mapper<A, Map<B, Double>> {
+    private final FeatureGenerator<A, B> featureGenerator;
+    
+    public FeatureCountMapper(FeatureGenerator<A, B> featureGenerator) {
+      super();
+      this.featureGenerator = featureGenerator;
+    }
+
+    @Override
+    public Map<B, Double> map(A item) {
+      return featureGenerator.generateFeatures(item);
+    }
+  }
+  
+  private static class FeatureCountReducer<B> implements Reducer<Map<B, Double>, CountAccumulator<B>> {
+
+    @Override
+    public CountAccumulator<B> getInitialValue() {
+      return CountAccumulator.create();
+    }
+
+    @Override
+    public CountAccumulator<B> reduce(Map<B, Double> item,
+        CountAccumulator<B> accumulated) {
+      accumulated.increment(item);
+      return accumulated;
+    }
+
+    @Override
+    public CountAccumulator<B> combine(CountAccumulator<B> other,
+        CountAccumulator<B> accumulated) {
+      accumulated.increment(other);
+      return accumulated;
     }
   }
 }

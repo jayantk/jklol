@@ -98,7 +98,8 @@ public class TrainSupertagger extends AbstractCli {
 
     System.out.println("Generating features...");
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
-        buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData), options.valueOf(commonWordCountThreshold), options.valueOf(commonWordCountThreshold),
+        buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData),
+            options.valueOf(commonWordCountThreshold), options.valueOf(commonWordCountThreshold),
             options.valueOf(prefixSuffixFeatureCountThreshold));
     System.out.println(featureGen.getNumberOfFeatures() + " word/CCG category features");
 

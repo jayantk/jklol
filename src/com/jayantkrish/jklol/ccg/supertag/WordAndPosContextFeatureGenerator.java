@@ -47,10 +47,39 @@ public class WordAndPosContextFeatureGenerator implements FeatureGenerator<Local
       WordAndPos word = item.getItem(offsets[i], endFunction);
       if (commonWords.contains(word.getWord())) {
         weights.put(formatFeature(word.getWord(), offsets[i]), 1.0);
+
+        String wordAndPosFeature = ("WORD+POS_" + offsets[i] + "=" + word.getWord() + "+" + word.getPos()).intern();
+        weights.put(wordAndPosFeature, 1.0);
+
+        String curWord = item.getItem(0, endFunction).getWord();
+        wordAndPosFeature = ("WORD_0+POS_" + offsets[i] + "=" + curWord + "+" + word.getPos()).intern();
+        weights.put(wordAndPosFeature, 1.0);
       }
       weights.put(formatPosFeature(word.getPos(), offsets[i]), 1.0);
+
+      
     }
     
+    generateContextFeatures(item, weights);
+
+    /*
+    if (item.getItem(0, endFunction).getPos().equals("IN")) {
+      for (int i = 0; i < 2; i++) {
+        WordAndPos prevWord = item.getItem(i - 1, endFunction);
+        WordAndPos curWord = item.getItem(i, endFunction);
+
+        String word = item.getItem(0, endFunction).getWord();
+        
+        String featureName = ("WORD_0+POS_" + (i - 1) + "_" + i + "=" + word + "_" + prevWord.getPos() +"_" + curWord.getPos()).intern();
+        weights.put(featureName, 1.0);
+      }
+    }
+    */
+
+    return weights;
+  }
+
+  private void generateContextFeatures(LocalContext<WordAndPos> item, Map<String, Double> weights) {
     for (int i = 0; i < 2; i++) {
       WordAndPos prevWord = item.getItem(i - 1, endFunction);
       WordAndPos curWord = item.getItem(i, endFunction);
@@ -72,8 +101,6 @@ public class WordAndPosContextFeatureGenerator implements FeatureGenerator<Local
           + "_*_" + curWord.getPos()).intern();
       weights.put(skipFeatureName, 1.0);
     }
-
-    return weights;
   }
 
   private static String formatFeature(String word, int offset) {

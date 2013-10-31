@@ -19,10 +19,12 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cli.TrainCcg;
+import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.pos.WordPrefixSuffixFeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
@@ -57,6 +59,7 @@ public class TrainSupertagger extends AbstractCli {
 
   // Model construction options.
   private OptionSpec<Void> noTransitions;
+  private OptionSpec<Void> locallyNormalized;
   private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
   private OptionSpec<Integer> labelRestrictionCountThreshold;
@@ -76,6 +79,8 @@ public class TrainSupertagger extends AbstractCli {
 
     syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
     noTransitions = parser.accepts("noTransitions");
+    locallyNormalized = parser.accepts("locallyNormalized");
+    
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(5);
@@ -112,9 +117,20 @@ public class TrainSupertagger extends AbstractCli {
       inputVariable, labelVariable, featureGen.getFeatureDictionary(), labelRestrictions.getWeights(),
         options.has(noTransitions));
     GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
-    Function<LocalContext<WordAndPos>, String> inputGen = new WordAndPosToInput(inputVariable); 
+    Function<LocalContext<WordAndPos>, String> inputGen = new WordAndPosToInput(inputVariable);
+
+    // Reformat the training examples to be suitable for training
+    // a factor graph.
+    List<Example<DynamicAssignment, DynamicAssignment>> examples = null;
+    if (options.has(locallyNormalized)) {
+      examples = TaggerUtils.reformatTrainingDataPerItem(trainingData, featureGen, inputGen,
+          sequenceModelFamily.getVariables());
+    } else {
+      examples = TaggerUtils.reformatTrainingData(trainingData, featureGen, inputGen,
+          sequenceModelFamily.getVariables());
+    }
     FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> tagger = TaggerUtils.trainSequenceModel(
-        sequenceModelFamily, trainingData, HeadedSyntacticCategory.class, featureGen, inputGen, trainer,
+        sequenceModelFamily, examples, HeadedSyntacticCategory.class, featureGen, inputGen, trainer,
         options.has(maxMargin));
 
     // Save model to disk.

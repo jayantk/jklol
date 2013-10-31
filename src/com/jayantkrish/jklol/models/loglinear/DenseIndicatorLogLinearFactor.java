@@ -79,16 +79,20 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    Tensor expectedFeatureCounts = marginal.coerceToDiscrete().getWeights();
-    
-    if (conditionalAssignment.size() > 0) {
-      VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNums());
-      SparseTensor pointDistribution = SparseTensor.singleElement(vars.getVariableNumsArray(),
-          vars.getVariableSizes(), vars.assignmentToIntArray(conditionalAssignment), 1.0);
-      ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,
-          expectedFeatureCounts, count / partitionFunction);
+    if (marginal.getVars().size() == 0) {
+      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, count / partitionFunction);
     } else {
-      ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts, count / partitionFunction);
+      Tensor expectedFeatureCounts = marginal.coerceToDiscrete().getWeights();
+
+      if (conditionalAssignment.size() > 0) {
+        VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNums());
+        SparseTensor pointDistribution = SparseTensor.singleElement(vars.getVariableNumsArray(),
+            vars.getVariableSizes(), vars.assignmentToIntArray(conditionalAssignment), 1.0);
+        ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,
+            expectedFeatureCounts, count / partitionFunction);
+      } else {
+        ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts, count / partitionFunction);
+      }
     }
   }
 

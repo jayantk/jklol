@@ -79,13 +79,13 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar) {
 
     ParametricFactor wordWordFactor = new DenseIndicatorLogLinearFactor(
-        VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, dependencyArgVar));
+        VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, dependencyArgVar), true);
     ParametricFactor wordPosFactor = new DenseIndicatorLogLinearFactor(
-        VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, dependencyArgPosVar));
+        VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, dependencyArgPosVar), true);
     ParametricFactor posWordFactor = new DenseIndicatorLogLinearFactor(
-        VariableNumMap.unionAll(headSyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar));
+        VariableNumMap.unionAll(headSyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar), true);
     ParametricFactor posPosFactor = new DenseIndicatorLogLinearFactor(
-        VariableNumMap.unionAll(headSyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, dependencyArgPosVar));
+        VariableNumMap.unionAll(headSyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, dependencyArgPosVar), true);
 
     VariableNumMap allVars = VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar,
         dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar);
@@ -98,9 +98,9 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       VariableNumMap dependencyHeadPosVar, VariableNumMap distanceVar) {
 
     ParametricFactor wordDistanceFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, distanceVar));
+        dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, distanceVar), true);
     ParametricFactor posDistanceFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        headSyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, distanceVar));
+        headSyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, distanceVar), true);
 
     VariableNumMap allVars = VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar,
         dependencyArgNumVar, dependencyHeadPosVar, distanceVar);
@@ -152,7 +152,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       // Backoff distribution over parts-of-speech and syntactic 
       // categories.
       VariableNumMap terminalPosVars = VariableNumMap.unionAll(terminalPosVar, terminalSyntaxVar);
-      ParametricFactor terminalPosParametricFactor = new DenseIndicatorLogLinearFactor(terminalPosVars);
+      ParametricFactor terminalPosParametricFactor = new DenseIndicatorLogLinearFactor(terminalPosVars, true);
      
       return new ParametricTableLexicon(terminalWordVar, ccgCategoryVar, terminalParametricFactor,
           terminalPosVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor);
@@ -175,9 +175,9 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar,
       VariableNumMap headedBinaryRulePredicateVar, VariableNumMap headedBinaryRulePosVar) {
     ParametricFactor wordFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePredicateVar));
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePredicateVar), true);
     ParametricFactor posFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePosVar));
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, headedBinaryRulePosVar), true);
 
     VariableNumMap allVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
         headedBinaryRulePredicateVar, headedBinaryRulePosVar);
@@ -190,9 +190,9 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   public ParametricFactor getHeadedRootFeatures(VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar,
       VariableNumMap rootPosVar) {
     ParametricFactor wordFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        rootSyntaxVar, rootPredicateVar));
+        rootSyntaxVar, rootPredicateVar), true);
     ParametricFactor posFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
-        rootSyntaxVar, rootPosVar));
+        rootSyntaxVar, rootPosVar), true);
 
     VariableNumMap allVars = VariableNumMap.unionAll(rootSyntaxVar, rootPredicateVar, rootPosVar);
 

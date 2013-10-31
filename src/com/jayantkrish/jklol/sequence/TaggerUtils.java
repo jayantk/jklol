@@ -256,7 +256,7 @@ public class TaggerUtils {
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
           Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(labelType, labelType));
-      builder.addFactor(TaggerUtils.TRANSITION_FACTOR, new DenseIndicatorLogLinearFactor(adjacentVars),
+      builder.addFactor(TaggerUtils.TRANSITION_FACTOR, new DenseIndicatorLogLinearFactor(adjacentVars, false),
           VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
     }
 

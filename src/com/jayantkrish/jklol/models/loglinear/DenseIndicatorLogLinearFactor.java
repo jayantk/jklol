@@ -9,6 +9,8 @@ import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseLogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -26,14 +28,20 @@ import com.jayantkrish.jklol.util.Assignment;
 public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
 
   private static final long serialVersionUID = 1L;
+  private final boolean isSparse;
 
-  public DenseIndicatorLogLinearFactor(VariableNumMap variables) {
+  public DenseIndicatorLogLinearFactor(VariableNumMap variables, boolean isSparse) {
     super(variables);
+    this.isSparse = isSparse;
   }
 
   @Override
   public Factor getModelFromParameters(SufficientStatistics parameters) {
-    return new TableFactor(getVars(), new SparseLogSpaceTensorAdapter(getFeatureWeights(parameters)));
+    if (isSparse) {
+      return new TableFactor(getVars(), new SparseLogSpaceTensorAdapter(getFeatureWeights(parameters)));
+    } else {
+      return new TableFactor(getVars(), new LogSpaceTensorAdapter(getFeatureWeights(parameters)));
+    }
   }
 
   @Override
@@ -53,8 +61,13 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    return TensorSufficientStatistics.createSparse(getVars(), 
-        SparseTensor.empty(getVars().getVariableNumsArray(), getVars().getVariableSizes()));
+    if (isSparse) {
+      return TensorSufficientStatistics.createSparse(getVars(), 
+          SparseTensor.empty(getVars().getVariableNumsArray(), getVars().getVariableSizes()));
+    } else {
+      return TensorSufficientStatistics.createDense(getVars(), 
+          new DenseTensorBuilder(getVars().getVariableNumsArray(), getVars().getVariableSizes()));
+    }
   }
 
   @Override

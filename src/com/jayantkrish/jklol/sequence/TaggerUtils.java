@@ -238,6 +238,7 @@ public class TaggerUtils {
       Function<? super LocalContext<I>, ? extends Object> inputGen, GradientOptimizer optimizer, boolean useMaxMargin) {
 
     // Generate the training data and estimate parameters.
+    System.out.println("Applying feature generator to examples ... ");
     List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
         .reformatTrainingData(trainingData, featureGen, inputGen, sequenceModelFamily.getVariables());
     SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples,

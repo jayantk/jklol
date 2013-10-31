@@ -66,15 +66,24 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    throw new UnsupportedOperationException("Not implemented");
+    Tensor expectedFeatureCounts = marginal.coerceToDiscrete().getWeights();
+    
+    if (conditionalAssignment.size() > 0) {
+      VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNums());
+      SparseTensor pointDistribution = SparseTensor.singleElement(vars.getVariableNumsArray(),
+          vars.getVariableSizes(), vars.assignmentToIntArray(conditionalAssignment), 1.0);
+      ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,
+          expectedFeatureCounts, count / partitionFunction);
+    } else {
+      ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts, count / partitionFunction);
+    }
   }
 
-  
   private Tensor getFeatureWeights(SufficientStatistics parameters) {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     return featureParameters.get();
   }
-  
+
   private TableFactor getFeatureWeightFactor(SufficientStatistics parameters) {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     return new TableFactor(getVars(), featureParameters.get());

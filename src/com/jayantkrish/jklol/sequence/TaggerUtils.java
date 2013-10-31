@@ -25,7 +25,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -256,7 +256,7 @@ public class TaggerUtils {
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
           Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(labelType, labelType));
-      builder.addFactor(TaggerUtils.TRANSITION_FACTOR, IndicatorLogLinearFactor.createDenseFactor(adjacentVars),
+      builder.addFactor(TaggerUtils.TRANSITION_FACTOR, new DenseIndicatorLogLinearFactor(adjacentVars),
           VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
     }
 

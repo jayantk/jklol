@@ -56,7 +56,7 @@ public class TestSupertagger extends AbstractCli {
   public void run(OptionSet options) {
     // Read in the serialized model and print its parameters
     Supertagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model), Supertagger.class);
-    
+
     if (options.has(pruneLowProbabilityTransitions)) {
       trainedModel = pruneLowProbabilityTransitions(trainedModel,
           options.valueOf(pruneLowProbabilityTransitions));
@@ -99,6 +99,9 @@ public class TestSupertagger extends AbstractCli {
       DiscreteFactor transitionProbabilities = factor.product(partitionFunction.inverse());
       DiscreteFactor maxTransitionProbability = transitionProbabilities
           .maxMarginalize(nextLabel.getVariableNums());
+
+      System.out.println(partitionFunction.describeAssignments(partitionFunction.getMostLikelyAssignments(-1)));
+      System.out.println(transitionProbabilities.describeAssignments(transitionProbabilities.getMostLikelyAssignments(100)));
 
       DiscreteFactor transitionThreshold = maxTransitionProbability.product(
           transitionPruningThreshold);

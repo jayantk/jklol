@@ -34,6 +34,7 @@ import com.jayantkrish.jklol.parallel.MapReduceExecutor;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -498,12 +499,22 @@ public class TaggerUtils {
       List<LocalContext<I>> contexts = sequence.getLocalContexts();
       Preconditions.checkArgument(sequence.getLabels() != null);
       List<O> labels = sequence.getLabels();
-
-      Assignment prevFeatureVector = null, prevInputElement = null, prevLabel = null;
+      
+      // Each training example consists of a pair of adjacent input and label variables.
+      // All inputs and the first label are always conditioned on, while the second
+      // label is to be predicted. The first input vector is set to 0, since the 
+      // gradient for that input will be 0 no matter what the input vector is.
+      Tensor zeroVector = SparseTensor.empty(new int[] {0}, new int[] {featureGen.getNumberOfFeatures()});
+      
+      Assignment prevFeatureVector = x.outcomeArrayToAssignment(zeroVector);
+      Assignment prevInputElement = null, prevLabel = null;
       for (int i = 0; i < contexts.size(); i++) {
         List<Assignment> inputList = Lists.newArrayList();
         List<Assignment> outputList = Lists.newArrayList();
         if (i > 0) {
+          // The exception to the pair of labels rule is the first element
+          // of a sequence. In this case, the training example only contains
+          // a single label and input.
           inputList.add(Assignment.unionAll(prevFeatureVector, prevInputElement, prevLabel));
           outputList.add(Assignment.EMPTY);
         }
@@ -518,7 +529,6 @@ public class TaggerUtils {
         examples.add(Example.create(DynamicAssignment.createPlateAssignment(PLATE_NAME, inputList),
             DynamicAssignment.createPlateAssignment(PLATE_NAME, outputList)));
 
-        prevFeatureVector = inputFeatureVector;
         prevInputElement = inputElement;
         prevLabel = output;
       }

@@ -163,7 +163,7 @@ public class TaggerUtils {
       Preconditions.checkArgument(sequence.getLabels() != null);
       List<O> labels = sequence.getLabels();
 
-      Assignment prevFeatureVector, prevInputElement, prevLabel;
+      Assignment prevFeatureVector = null, prevInputElement = null, prevLabel = null;
       for (int i = 0; i < contexts.size(); i++) {
         List<Assignment> inputList = Lists.newArrayList();
         List<Assignment> outputList = Lists.newArrayList();
@@ -171,7 +171,7 @@ public class TaggerUtils {
           inputList.add(Assignment.unionAll(prevFeatureVector, prevInputElement, prevLabel));
           outputList.add(Assignment.EMPTY);
         }
-        
+
         Assignment inputFeatureVector = x.outcomeArrayToAssignment(featureGen.apply(contexts.get(i)));
         Assignment inputElement = xInput.outcomeArrayToAssignment(inputGen.apply(contexts.get(i)));
         inputList.add(inputElement.union(inputFeatureVector));

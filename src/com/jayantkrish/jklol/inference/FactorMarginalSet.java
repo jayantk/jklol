@@ -9,6 +9,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -74,6 +75,11 @@ public class FactorMarginalSet extends AbstractMarginalSet {
 
   @Override
   public Factor getMarginal(Collection<Integer> varNums) {
+    Factor finalMarginal = getUnnormalizedMarginal(varNums);
+    return finalMarginal.product(1.0 / finalMarginal.getTotalUnnormalizedProbability());
+  }
+
+  public Factor getUnnormalizedMarginal(Collection<Integer> varNums) {
     if (varNums.size() == 0 && allFactors.size() == 0) {
       // Special case if the inputVar factor graph has no unassigned variables. 
       return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(1.0);
@@ -98,7 +104,11 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());
     allVarNums.removeAll(varNums);
     Factor finalMarginal = marginal.marginalize(allVarNums);
-    return finalMarginal.product(1.0 / finalMarginal.getTotalUnnormalizedProbability());
+    return finalMarginal;
+  }
+
+  public Factor getUnnormalizedMarginal(int... varNums) {
+    return getUnnormalizedMarginal(Ints.asList(varNums));
   }
 
   private Factor computeMarginalFromMultipleFactors(Collection<Integer> varNums) {

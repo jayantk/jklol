@@ -7,7 +7,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cli.TrainedModelSet;
 import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.inference.MarginalSet;
+import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -94,7 +94,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     FactorGraph fg = dfg.conditional(input);
 
     JunctionTree jt = new JunctionTree();
-    MarginalSet marginals = jt.computeMarginals(fg);
+    FactorMarginalSet marginals = jt.computeMarginals(fg);
 
     List<VariableMatch> matches = dynamicVariables.getPlateInstantiations(
         marginals.getVariables(), TaggerUtils.PLATE_NAME);
@@ -107,7 +107,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     List<List<Double>> labelProbs = Lists.newArrayList();
     for (VariableMatch match : matches) {
       int varNum = match.getMatchedVariablesFromTemplateVariables(templateLabelVar).getOnlyVariableNum();
-      DiscreteFactor marginal = marginals.getMarginal(varNum).coerceToDiscrete();
+      DiscreteFactor marginal = marginals.getUnnormalizedMarginal(varNum).coerceToDiscrete();
       List<Assignment> bestAssignments = marginal.getMostLikelyAssignments(-1);
 
       List<O> curLabels = Lists.newArrayList();
@@ -115,9 +115,10 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
       double bestProb = -1;
       for (Assignment assignment : bestAssignments) {
         double curProb = marginal.getUnnormalizedProbability(assignment);
+        System.out.println(assignment + " " + curProb);
         if (bestProb == -1) {
           bestProb = curProb;
-	  curLabels.add(outputClass.cast(assignment.getValue(varNum)));
+          curLabels.add(outputClass.cast(assignment.getValue(varNum)));
           curProbs.add(curProb);
         } else if (curProb > tagThreshold * bestProb) {
           curLabels.add(outputClass.cast(assignment.getValue(varNum)));

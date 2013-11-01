@@ -42,7 +42,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class JunctionTree implements MarginalCalculator {
 
   @Override
-  public MarginalSet computeMarginals(FactorGraph factorGraph) {
+  public FactorMarginalSet computeMarginals(FactorGraph factorGraph) {
     // Efficiency overrides.
     if (factorGraph.getVariables().size() == 0) {
       // All variables in the factor graph have assigned values.
@@ -69,7 +69,7 @@ public class JunctionTree implements MarginalCalculator {
     // System.out.println("Running message passing: " + delta);
 
     // time = System.nanoTime();
-    MarginalSet marginals = cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
+    FactorMarginalSet marginals = cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
     // delta = (System.nanoTime() - time) / 1000;
     // System.out.println("marginals: " + delta);
 
@@ -231,7 +231,7 @@ public class JunctionTree implements MarginalCalculator {
     return newMarginal;
   }
 
-  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree,
+  private static FactorMarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree,
       Set<Integer> rootFactorNums, FactorGraph originalFactorGraph) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {

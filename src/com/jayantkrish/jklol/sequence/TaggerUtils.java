@@ -59,6 +59,13 @@ public class TaggerUtils {
   public static final String TRANSITION_FACTOR = "transition";
   
   public static final String DEFAULT_INPUT_VALUE="*DEFAULT*";
+  
+  // Names of the variables in factors of generated sequence
+  // models.
+  public static final String INPUT_FEATURES_PATTERN = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_FEATURES_NAME;
+  public static final String INPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_NAME;
+  public static final String OUTPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
+  public static final String NEXT_OUTPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.OUTPUT_NAME;
 
   public static <I, O> List<LocalContext<I>> extractContextsFromData(
       List<? extends TaggedSequence<I, O>> sequences) {
@@ -209,16 +216,13 @@ public class TaggerUtils {
     builder.addPlate(TaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2, 3),
         Arrays.asList(TaggerUtils.INPUT_FEATURES_NAME, TaggerUtils.INPUT_NAME, TaggerUtils.OUTPUT_NAME),
         Arrays.<Variable> asList(inputVectorType, inputType, labelType)), 10000);
-    String inputFeaturesPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_FEATURES_NAME;
-    String inputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_NAME;
-    String outputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
-    String nextOutputPattern = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.OUTPUT_NAME;
+    
 
     // Add a classifier from local word contexts to pos tags.
     VariableNumMap plateVars = new VariableNumMap(Ints.asList(1, 3),
-        Arrays.asList(inputFeaturesPattern, outputPattern), Arrays.<Variable> asList(inputVectorType, labelType));
-    VariableNumMap wordVectorVar = plateVars.getVariablesByName(inputFeaturesPattern);
-    VariableNumMap posVar = plateVars.getVariablesByName(outputPattern);
+        Arrays.asList(INPUT_FEATURES_PATTERN, OUTPUT_PATTERN), Arrays.<Variable> asList(inputVectorType, labelType));
+    VariableNumMap wordVectorVar = plateVars.getVariablesByName(INPUT_FEATURES_PATTERN);
+    VariableNumMap posVar = plateVars.getVariablesByName(OUTPUT_PATTERN);
     ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
         VariableNumMap.emptyMap(), featureDictionary);
     builder.addFactor(TaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
@@ -226,9 +230,9 @@ public class TaggerUtils {
 
     // Add a constant factor for encoding label restrictions.
     plateVars = new VariableNumMap(Ints.asList(2, 3),
-        Arrays.asList(inputPattern, outputPattern), Arrays.<Variable> asList(inputType, labelType));
-    VariableNumMap wordVar = plateVars.getVariablesByName(inputPattern);
-    VariableNumMap labelVar = plateVars.getVariablesByName(outputPattern);
+        Arrays.asList(INPUT_PATTERN, OUTPUT_PATTERN), Arrays.<Variable> asList(inputType, labelType));
+    VariableNumMap wordVar = plateVars.getVariablesByName(INPUT_PATTERN);
+    VariableNumMap labelVar = plateVars.getVariablesByName(OUTPUT_PATTERN);
     DiscreteFactor restrictions = new TableFactor(wordVar.union(labelVar), labelRestrictions.relabelDimensions(new int[] {2, 3}));
     builder.addConstantFactor(TaggerUtils.LABEL_RESTRICTION_FACTOR, new ReplicatedFactor(restrictions,
         VariableNumPattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet())));
@@ -236,7 +240,7 @@ public class TaggerUtils {
     // Add a factor connecting adjacent labels.
     if (!noTransitions) {
       VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
-          Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(labelType, labelType));
+          Arrays.asList(OUTPUT_PATTERN, NEXT_OUTPUT_PATTERN), Arrays.asList(labelType, labelType));
       builder.addFactor(TaggerUtils.TRANSITION_FACTOR, new DenseIndicatorLogLinearFactor(adjacentVars, false),
           VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
     }

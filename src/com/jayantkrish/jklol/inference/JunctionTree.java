@@ -40,6 +40,27 @@ import com.jayantkrish.jklol.util.Assignment;
  * simplified, the marginal computation will throw an exception.
  */
 public class JunctionTree implements MarginalCalculator {
+  
+  private final boolean renormalize;
+
+  /**
+   * Creates a new junction tree without renormalization.
+   */
+  public JunctionTree() {
+    this.renormalize = false;
+  }
+
+  /**
+   * Creates a new junction tree.
+   * 
+   * @param renormalize If {@code true}, renormalize marginals to probability
+   * distributions throughout the message passing process. Renormalization will
+   * prevent numerical issues (overflow) and preserve the original probability
+   * distribution, but will not preserve the unnormalized weights of assignments.
+   */
+  public JunctionTree(boolean renormalize) {
+    this.renormalize = true;
+  }
 
   @Override
   public FactorMarginalSet computeMarginals(FactorGraph factorGraph) {
@@ -179,6 +200,15 @@ public class JunctionTree implements MarginalCalculator {
 
     // Update the marginal distribution of startFactor in the clique tree.
     Factor updatedMarginal = cliqueTree.getMarginal(startFactor).product(factorsToCombine);
+    if (renormalize && cliqueTree.getOutboundFactors(startFactor).size() == 0) {
+      // If this factor has yet to send any outbound messages, we can 
+      // use it to renormalize the probability distribution to avoid
+      // possible numerical overflow issues. Updating the marginal
+      // at this point is equivalent to multiplying the original factor
+      // by some constant value, which doesn't affect the probability
+      // distribution.
+      updatedMarginal = updatedMarginal.product(updatedMarginal.getTotalUnnormalizedProbability());
+    }
     cliqueTree.setMarginal(startFactor, updatedMarginal);
     cliqueTree.addFactorsToMarginal(startFactor, factorIndicesToCombine);
 
@@ -196,6 +226,7 @@ public class JunctionTree implements MarginalCalculator {
     if (cliqueTree.getFactorsInMarginal(startFactor).contains(destFactor)) {
       messageFactor = messageFactor.product(cliqueTree.getMessage(destFactor, startFactor).inverse());
     }
+
     cliqueTree.addMessage(startFactor, destFactor, messageFactor);
   }
 
@@ -405,10 +436,10 @@ public class JunctionTree implements MarginalCalculator {
         }
         mergeableFactors.addAll(varFactorMap.get(variableNum));
       }
-      
+
       Set<Integer> variablesToRetain = Sets.newHashSet(factorVariables);
       variablesToRetain.removeAll(variablesToEliminate);
-      
+
       // Merge f with a factor containing all of the variables
       // which are not being eliminated.
       mergeableFactors.remove(f);
@@ -448,13 +479,13 @@ public class JunctionTree implements MarginalCalculator {
 
         varFactorMap.remove(variableNum, f);
       }
-      
+
       // Add an undirected edge in the clique tree from f to superset.
       if (superset != null) {
-	  int curFactorIndex = factorIndexMap.get(f);
-	  int destFactorIndex = factorIndexMap.get(superset);
-	  factorEdges.put(curFactorIndex, destFactorIndex);
-	  factorEdges.put(destFactorIndex, curFactorIndex);
+        int curFactorIndex = factorIndexMap.get(f);
+        int destFactorIndex = factorIndexMap.get(superset);
+        factorEdges.put(curFactorIndex, destFactorIndex);
+        factorEdges.put(destFactorIndex, curFactorIndex);
       }
 
       return f;

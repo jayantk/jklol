@@ -36,8 +36,8 @@ public class ModelUtils {
    * @param featureDelimiter
    * @return
    */
-    public static ParametricFactorGraph buildSequenceModel(Iterable<String> emissionFeatureLines,
-							   String featureDelimiter) {
+  public static ParametricFactorGraph buildSequenceModel(Iterable<String> emissionFeatureLines,
+      String featureDelimiter) {
     // Read in the possible values of each variable.
     List<String> words = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 0, featureDelimiter);
     List<String> labels = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 1, featureDelimiter);
@@ -107,7 +107,7 @@ public class ModelUtils {
         .toDynamicAssignment(bestAssignment, fg.getAllVariables());
     List<String> labels = Lists.newArrayList();
     for (Assignment plateAssignment : prediction
-             .getPlateFixedAssignments(PLATE_NAME)) {
+        .getPlateFixedAssignments(PLATE_NAME)) {
       List<Object> values = plateAssignment.getValues();
       labels.add((String) values.get(1));
     }

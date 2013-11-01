@@ -52,4 +52,8 @@ public class ReplicatedFactor implements PlateFactor {
   public Factor getFactor() {
     return factorToReplicate;
   }
+  
+  public VariablePattern getPattern() {
+    return variablePattern;
+  }
 }

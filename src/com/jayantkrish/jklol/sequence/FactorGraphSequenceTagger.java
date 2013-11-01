@@ -67,7 +67,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     DynamicFactorGraph dfg = getInstantiatedModel();
     FactorGraph fg = dfg.conditional(input);
 
-    JunctionTree jt = new JunctionTree();
+    JunctionTree jt = new JunctionTree(true);
     Assignment output = jt.computeMaxMarginals(fg).getNthBestAssignment(0);
 
     DynamicAssignment prediction = dfg.getVariables()

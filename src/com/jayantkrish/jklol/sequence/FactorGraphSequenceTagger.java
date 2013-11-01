@@ -93,7 +93,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     DynamicVariableSet dynamicVariables = dfg.getVariables();
     FactorGraph fg = dfg.conditional(input);
 
-    JunctionTree jt = new JunctionTree();
+    JunctionTree jt = new JunctionTree(true);
     FactorMarginalSet marginals = jt.computeMarginals(fg);
 
     List<VariableMatch> matches = dynamicVariables.getPlateInstantiations(

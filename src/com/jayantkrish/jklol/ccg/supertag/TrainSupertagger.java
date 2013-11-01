@@ -87,7 +87,7 @@ public class TrainSupertagger extends AbstractCli {
     labelRestrictionCountThreshold = parser.accepts("labelRestrictionThreshold").withRequiredArg()
         .ofType(Integer.class).defaultsTo(20);
     prefixSuffixFeatureCountThreshold = parser.accepts("prefixSuffixThreshold").withRequiredArg()
-        .ofType(Integer.class).defaultsTo(35);
+      .ofType(Integer.class).defaultsTo(10); // 35
   }
 
   @Override
@@ -104,7 +104,7 @@ public class TrainSupertagger extends AbstractCli {
     System.out.println("Generating features...");
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData),
-            options.valueOf(commonWordCountThreshold), options.valueOf(commonWordCountThreshold),
+            options.valueOf(commonWordCountThreshold), 30,
             options.valueOf(prefixSuffixFeatureCountThreshold));
     System.out.println(featureGen.getNumberOfFeatures() + " word/CCG category features");
 

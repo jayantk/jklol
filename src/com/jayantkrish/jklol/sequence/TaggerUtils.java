@@ -162,14 +162,12 @@ public class TaggerUtils {
       List<LocalContext<I>> contexts = sequence.getLocalContexts();
       Preconditions.checkArgument(sequence.getLabels() != null);
       List<O> labels = sequence.getLabels();
-      
+
+      Assignment prevFeatureVector, prevInputElement, prevLabel;
       for (int i = 0; i < contexts.size(); i++) {
         List<Assignment> inputList = Lists.newArrayList();
         List<Assignment> outputList = Lists.newArrayList();
         if (i > 0) {
-          Assignment prevFeatureVector = x.outcomeArrayToAssignment(featureGen.apply(contexts.get(i - 1)));
-          Assignment prevInputElement = xInput.outcomeArrayToAssignment(inputGen.apply(contexts.get(i - 1)));
-          Assignment prevLabel = y.outcomeArrayToAssignment(labels.get(i - 1));
           inputList.add(Assignment.unionAll(prevFeatureVector, prevInputElement, prevLabel));
           outputList.add(Assignment.EMPTY);
         }
@@ -183,6 +181,10 @@ public class TaggerUtils {
 
         examples.add(Example.create(DynamicAssignment.createPlateAssignment(PLATE_NAME, inputList),
             DynamicAssignment.createPlateAssignment(PLATE_NAME, outputList)));
+
+        prevFeatureVector = inputFeatureVector;
+        prevInputElement = inputElement;
+        prevLabel = output;
       }
     }
     return examples;

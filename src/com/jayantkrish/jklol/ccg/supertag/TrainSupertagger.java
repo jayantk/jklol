@@ -121,6 +121,7 @@ public class TrainSupertagger extends AbstractCli {
 
     // Reformat the training examples to be suitable for training
     // a factor graph.
+    System.out.println("Reformatting training data...");
     List<Example<DynamicAssignment, DynamicAssignment>> examples = null;
     if (options.has(locallyNormalized)) {
       examples = TaggerUtils.reformatTrainingDataPerItem(trainingData, featureGen, inputGen,

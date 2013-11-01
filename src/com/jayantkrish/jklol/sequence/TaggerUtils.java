@@ -157,35 +157,13 @@ public class TaggerUtils {
     VariableNumMap xInput = plate.getFixedVariables().getVariablesByName(INPUT_NAME);
     VariableNumMap y = plate.getFixedVariables().getVariablesByName(OUTPUT_NAME);
 
+    ReformatPerItemMapper<I, O> mapper = new ReformatPerItemMapper<I, O>(featureGen, inputGen, x, xInput, y);
+    List<List<Example<DynamicAssignment, DynamicAssignment>>> exampleLists = MapReduceConfiguration
+        .getMapReduceExecutor().map(sequences, mapper);
+
     List<Example<DynamicAssignment, DynamicAssignment>> examples = Lists.newArrayList();
-    for (TaggedSequence<I, O> sequence : sequences) {
-      List<LocalContext<I>> contexts = sequence.getLocalContexts();
-      Preconditions.checkArgument(sequence.getLabels() != null);
-      List<O> labels = sequence.getLabels();
-
-      Assignment prevFeatureVector = null, prevInputElement = null, prevLabel = null;
-      for (int i = 0; i < contexts.size(); i++) {
-        List<Assignment> inputList = Lists.newArrayList();
-        List<Assignment> outputList = Lists.newArrayList();
-        if (i > 0) {
-          inputList.add(Assignment.unionAll(prevFeatureVector, prevInputElement, prevLabel));
-          outputList.add(Assignment.EMPTY);
-        }
-
-        Assignment inputFeatureVector = x.outcomeArrayToAssignment(featureGen.apply(contexts.get(i)));
-        Assignment inputElement = xInput.outcomeArrayToAssignment(inputGen.apply(contexts.get(i)));
-        inputList.add(inputElement.union(inputFeatureVector));
-
-        Assignment output = y.outcomeArrayToAssignment(labels.get(i));
-        outputList.add(output);
-
-        examples.add(Example.create(DynamicAssignment.createPlateAssignment(PLATE_NAME, inputList),
-            DynamicAssignment.createPlateAssignment(PLATE_NAME, outputList)));
-
-        prevFeatureVector = inputFeatureVector;
-        prevInputElement = inputElement;
-        prevLabel = output;
-      }
+    for (List<Example<DynamicAssignment, DynamicAssignment>> exampleList : exampleLists) {
+      examples.addAll(exampleList);
     }
     return examples;
   }
@@ -491,6 +469,61 @@ public class TaggerUtils {
     public SequenceTaggerError reduce(SequenceTaggerError item, SequenceTaggerError accumulated) {
       accumulated.increment(item);
       return accumulated;
+    }
+  }
+  
+  private static class ReformatPerItemMapper<I, O> extends Mapper<TaggedSequence<I, O>, List<Example<DynamicAssignment, DynamicAssignment>>> {
+    private final FeatureVectorGenerator<LocalContext<I>> featureGen;
+    private final Function<? super LocalContext<I>, ? extends Object> inputGen;
+    
+    private final VariableNumMap x;
+    private final VariableNumMap xInput;
+    private final VariableNumMap y;
+    
+    public ReformatPerItemMapper(FeatureVectorGenerator<LocalContext<I>> featureGen,
+        Function<? super LocalContext<I>, ? extends Object> inputGen, VariableNumMap x,
+        VariableNumMap xInput, VariableNumMap y) {
+      super();
+      this.featureGen = Preconditions.checkNotNull(featureGen);
+      this.inputGen = Preconditions.checkNotNull(inputGen);
+      this.x = Preconditions.checkNotNull(x);
+      this.xInput = Preconditions.checkNotNull(xInput);
+      this.y = Preconditions.checkNotNull(y);
+    }
+
+    @Override
+    public List<Example<DynamicAssignment, DynamicAssignment>> map(TaggedSequence<I, O> sequence) {
+      List<Example<DynamicAssignment, DynamicAssignment>> examples = Lists.newArrayList();
+
+      List<LocalContext<I>> contexts = sequence.getLocalContexts();
+      Preconditions.checkArgument(sequence.getLabels() != null);
+      List<O> labels = sequence.getLabels();
+
+      Assignment prevFeatureVector = null, prevInputElement = null, prevLabel = null;
+      for (int i = 0; i < contexts.size(); i++) {
+        List<Assignment> inputList = Lists.newArrayList();
+        List<Assignment> outputList = Lists.newArrayList();
+        if (i > 0) {
+          inputList.add(Assignment.unionAll(prevFeatureVector, prevInputElement, prevLabel));
+          outputList.add(Assignment.EMPTY);
+        }
+
+        Assignment inputFeatureVector = x.outcomeArrayToAssignment(featureGen.apply(contexts.get(i)));
+        Assignment inputElement = xInput.outcomeArrayToAssignment(inputGen.apply(contexts.get(i)));
+        inputList.add(inputElement.union(inputFeatureVector));
+
+        Assignment output = y.outcomeArrayToAssignment(labels.get(i));
+        outputList.add(output);
+
+        examples.add(Example.create(DynamicAssignment.createPlateAssignment(PLATE_NAME, inputList),
+            DynamicAssignment.createPlateAssignment(PLATE_NAME, outputList)));
+
+        prevFeatureVector = inputFeatureVector;
+        prevInputElement = inputElement;
+        prevLabel = output;
+      }
+
+      return examples;
     }
   }
 }

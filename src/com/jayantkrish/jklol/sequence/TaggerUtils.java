@@ -260,7 +260,7 @@ public class TaggerUtils {
         Arrays.asList(INPUT_PATTERN, OUTPUT_PATTERN), Arrays.<Variable> asList(inputType, labelType));
     VariableNumMap wordVar = restrictionVars.getVariablesByName(INPUT_PATTERN);
     VariableNumMap labelVar = restrictionVars.getVariablesByName(OUTPUT_PATTERN);
-    DiscreteFactor restrictions = new TableFactor(wordVar.union(labelVar), labelRestrictions.relabelDimensions(new int[] {2, 3}));
+    DiscreteFactor restrictions = new TableFactor(wordVar.union(labelVar), labelRestrictions.relabelDimensions(new int[] {2, 4}));
 
     // Create a factor connecting adjacent labels.
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(3, 4),
@@ -584,8 +584,7 @@ public class TaggerUtils {
       
       Assignment prevFeatureVector = x.outcomeArrayToAssignment(zeroVector);
       Assignment prevInputElement = null, prevLabel = null;
-      int startIndex = (startInput == null) ? 0 : 1;
-      for (int i = startIndex; i < contexts.size(); i++) {
+      for (int i = 0; i < contexts.size(); i++) {
         List<Assignment> inputList = Lists.newArrayList();
         List<Assignment> outputList = Lists.newArrayList();
         if (i > 0) {
@@ -603,8 +602,12 @@ public class TaggerUtils {
         Assignment output = y.outcomeArrayToAssignment(labels.get(i));
         outputList.add(output);
 
-        examples.add(Example.create(DynamicAssignment.createPlateAssignment(PLATE_NAME, inputList),
-            DynamicAssignment.createPlateAssignment(PLATE_NAME, outputList)));
+        if (i != 0 || startInput == null ) {
+          // if startInput is non-null, then the first item is the special
+          // start label.
+          examples.add(Example.create(DynamicAssignment.createPlateAssignment(PLATE_NAME, inputList),
+                                      DynamicAssignment.createPlateAssignment(PLATE_NAME, outputList)));
+        }
 
         prevInputElement = inputElement;
         prevLabel = output;

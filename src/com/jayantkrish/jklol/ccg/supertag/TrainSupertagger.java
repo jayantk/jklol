@@ -109,7 +109,14 @@ public class TrainSupertagger extends AbstractCli {
     System.out.println(featureGen.getNumberOfFeatures() + " word/CCG category features");
 
     System.out.println("Generating label restrictions...");
-    TableFactor labelRestrictions = getLabelRestrictions(trainingData, options.valueOf(labelRestrictionCountThreshold));
+    WordAndPos startInput = null;
+    HeadedSyntacticCategory startLabel = null;
+    if (options.has(locallyNormalized)) {
+      startInput = new WordAndPos("<START>", "<START>");
+      startLabel = HeadedSyntacticCategory.parseFrom("START{0}");
+    }
+    TableFactor labelRestrictions = getLabelRestrictions(trainingData, options.valueOf(labelRestrictionCountThreshold),
+                                                         startInput, startLabel);
     
     DiscreteVariable inputVariable = (DiscreteVariable) labelRestrictions.getVars().getVariable(0);
     DiscreteVariable labelVariable = (DiscreteVariable) labelRestrictions.getVars().getVariable(1);
@@ -122,12 +129,6 @@ public class TrainSupertagger extends AbstractCli {
     // Reformat the training examples to be suitable for training
     // a factor graph.
     System.out.println("Reformatting training data...");
-    WordAndPos startInput = null;
-    HeadedSyntacticCategory startLabel = null;
-    if (options.has(locallyNormalized)) {
-      startInput = new WordAndPos("<START>", "<START>");
-      startLabel = HeadedSyntacticCategory.parseFrom("START{0}");
-    }
 
     List<Example<DynamicAssignment, DynamicAssignment>> examples = null;
     if (options.has(locallyNormalized)) {
@@ -222,7 +223,7 @@ public class TrainSupertagger extends AbstractCli {
   }
   
   private static TableFactor getLabelRestrictions(List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData,
-      int minWordCount) {
+                                                  int minWordCount, WordAndPos startInput, HeadedSyntacticCategory startLabel) {
     PairCountAccumulator<String, HeadedSyntacticCategory> wordCategoryCounts = PairCountAccumulator.create();
     PairCountAccumulator<String, HeadedSyntacticCategory> posCategoryCounts = PairCountAccumulator.create();
     Set<HeadedSyntacticCategory> validCategories = Sets.newHashSet();
@@ -238,6 +239,9 @@ public class TrainSupertagger extends AbstractCli {
       
       validCategories.addAll(labels);
     }
+    if (startLabel != null) {
+      validCategories.add(startLabel);
+    }
     System.out.println(validCategories.size() + " CCG categories");
     
     Set<String> inputSet = Sets.newHashSet();
@@ -246,11 +250,14 @@ public class TrainSupertagger extends AbstractCli {
         inputSet.add(word);
       }
     }
+    if (startInput != null) {
+      inputSet.add(startInput.getWord());
+    }
     System.out.println(inputSet.size() + " words with count >= " + minWordCount);
     for (String pos : posCategoryCounts.keySet()) {
       inputSet.add(UNK_PREFIX + pos);
     }
-    
+
     DiscreteVariable inputVariable = new DiscreteVariable("input", inputSet);
     DiscreteVariable labelVariable = new DiscreteVariable("labels", validCategories);
     VariableNumMap inputLabelVars = new VariableNumMap(Ints.asList(0, 1),
@@ -269,6 +276,11 @@ public class TrainSupertagger extends AbstractCli {
         builder.setWeight(1.0, UNK_PREFIX + pos, cat);
       }
     }
+
+    if (startInput != null) {
+      builder.setWeight(1.0, startInput.getWord(), startLabel);
+    }
+
     return builder.build();
   }
 

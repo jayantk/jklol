@@ -67,7 +67,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     DynamicFactorGraph dfg = getInstantiatedModel();
     FactorGraph fg = dfg.conditional(input);
 
-    JunctionTree jt = new JunctionTree(true);
+    JunctionTree jt = new JunctionTree();
     Assignment output = jt.computeMaxMarginals(fg).getNthBestAssignment(0);
 
     DynamicAssignment prediction = dfg.getVariables()
@@ -115,7 +115,6 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
       double bestProb = -1;
       for (Assignment assignment : bestAssignments) {
         double curProb = marginal.getUnnormalizedProbability(assignment);
-        System.out.println(assignment + " " + curProb);
         if (bestProb == -1) {
           bestProb = curProb;
           curLabels.add(outputClass.cast(assignment.getValue(varNum)));

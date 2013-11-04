@@ -207,7 +207,7 @@ public class JunctionTree implements MarginalCalculator {
       // at this point is equivalent to multiplying the original factor
       // by some constant value, which doesn't affect the probability
       // distribution.
-      updatedMarginal = updatedMarginal.product(updatedMarginal.getTotalUnnormalizedProbability());
+      updatedMarginal = updatedMarginal.product(1.0 / updatedMarginal.getTotalUnnormalizedProbability());
     }
     cliqueTree.setMarginal(startFactor, updatedMarginal);
     cliqueTree.addFactorsToMarginal(startFactor, factorIndicesToCombine);

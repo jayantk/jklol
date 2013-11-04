@@ -26,7 +26,7 @@ public class JunctionTreeTest extends TestCase {
 	public void testConditionals() {
 		InferenceTestCases.testBasicConditional().runTest(new JunctionTree(), 0.0);
 	}
-			
+
 	public void testConditionalsAllVars() {
 	  FactorGraph fg = InferenceTestCases.basicFactorGraph();
 	  FactorGraph conditional = fg.conditional(fg.outcomeToAssignment(

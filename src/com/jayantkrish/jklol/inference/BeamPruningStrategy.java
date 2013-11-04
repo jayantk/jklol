@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.inference;
 
 import java.util.Arrays;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
@@ -21,6 +22,7 @@ public class BeamPruningStrategy implements PruningStrategy {
 
   public BeamPruningStrategy(double minProbabilityRatio) {
     this.minProbabilityRatio = minProbabilityRatio;
+    Preconditions.checkArgument(minProbabilityRatio >= 0.0 && minProbabilityRatio <= 1.0);
   }
 
   @Override

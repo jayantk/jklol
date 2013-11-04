@@ -10,6 +10,8 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cli.TrainCcg;
+import com.jayantkrish.jklol.inference.BeamPruningStrategy;
+import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.sequence.TaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.sequence.TaggerUtils.SequenceTaggerError;
@@ -22,6 +24,7 @@ public class TestSupertagger extends AbstractCli {
   
   private OptionSpec<String> syntaxMap;
   private OptionSpec<Double> multitagThreshold;
+  private OptionSpec<Double> beamPruningThreshold;
   
   public TestSupertagger() {
     super(CommonOptions.MAP_REDUCE);
@@ -34,12 +37,22 @@ public class TestSupertagger extends AbstractCli {
     
     syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
+    beamPruningThreshold = parser.accepts("beamPruningThreshold").withRequiredArg().ofType(Double.class);
   }
 
   @Override
   public void run(OptionSet options) {
     // Read in the serialized model and print its parameters
     Supertagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model), Supertagger.class);
+    
+    if (options.has(beamPruningThreshold)) {
+      FactorGraphSupertagger fgTagger = (FactorGraphSupertagger) trainedModel;
+      trainedModel = new FactorGraphSupertagger(fgTagger.getModelFamily(),
+          fgTagger.getParameters(), fgTagger.getInstantiatedModel(), fgTagger.getFeatureGenerator(),
+          fgTagger.getInputGenerator(), fgTagger.getMaxMarginalCalculator(),
+          new JunctionTree(true, new BeamPruningStrategy(options.valueOf(beamPruningThreshold))),
+          fgTagger.getStartInput(), fgTagger.getStartLabel());
+    }
 
     if (options.has(testFilename)) {
       List<CcgExample> ccgExamples = TrainCcg.readTrainingData(options.valueOf(testFilename), true,

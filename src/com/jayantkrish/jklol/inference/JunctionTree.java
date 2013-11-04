@@ -42,12 +42,14 @@ import com.jayantkrish.jklol.util.Assignment;
 public class JunctionTree implements MarginalCalculator {
   
   private final boolean renormalize;
+  private final PruningStrategy pruningStrategy;
 
   /**
    * Creates a new junction tree without renormalization.
    */
   public JunctionTree() {
     this.renormalize = false;
+    this.pruningStrategy = null;
   }
 
   /**
@@ -59,7 +61,13 @@ public class JunctionTree implements MarginalCalculator {
    * distribution, but will not preserve the unnormalized weights of assignments.
    */
   public JunctionTree(boolean renormalize) {
-    this.renormalize = true;
+    this.renormalize = renormalize;
+    this.pruningStrategy = null;
+  }
+
+  public JunctionTree(boolean renormalize, PruningStrategy pruningStrategy) {
+    this.renormalize = renormalize;
+    this.pruningStrategy = pruningStrategy;
   }
 
   @Override
@@ -200,14 +208,21 @@ public class JunctionTree implements MarginalCalculator {
 
     // Update the marginal distribution of startFactor in the clique tree.
     Factor updatedMarginal = cliqueTree.getMarginal(startFactor).product(factorsToCombine);
-    if (renormalize && cliqueTree.getOutboundFactors(startFactor).size() == 0) {
+    if (cliqueTree.getOutboundFactors(startFactor).size() == 0) {
       // If this factor has yet to send any outbound messages, we can 
       // use it to renormalize the probability distribution to avoid
       // possible numerical overflow issues. Updating the marginal
       // at this point is equivalent to multiplying the original factor
       // by some constant value, which doesn't affect the probability
       // distribution.
-      updatedMarginal = updatedMarginal.product(1.0 / updatedMarginal.getTotalUnnormalizedProbability());
+      if (renormalize) {
+        updatedMarginal = updatedMarginal.product(1.0 / updatedMarginal.getTotalUnnormalizedProbability());
+      }
+      
+      // Can also prune this marginal if a pruning strategy was provided.
+      if (pruningStrategy != null) {
+        updatedMarginal = pruningStrategy.apply(updatedMarginal);
+      }
     }
     cliqueTree.setMarginal(startFactor, updatedMarginal);
     cliqueTree.addFactorsToMarginal(startFactor, factorIndicesToCombine);

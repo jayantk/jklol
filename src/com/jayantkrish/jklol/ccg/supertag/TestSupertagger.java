@@ -92,7 +92,7 @@ public class TestSupertagger extends AbstractCli {
     PlateFactor transitionFactor = fg.getFactorByName(TaggerUtils.TRANSITION_FACTOR);
     if (transitionFactor != null) {
       DiscreteFactor factor = transitionFactor.getFactor().coerceToDiscrete();
-      VariableNumMap nextLabel = factor.getVars().getVariablesByName(TaggerUtils.NEXT_OUTPUT_PATTERN);
+      VariableNumMap nextLabel = factor.getVars().getVariablesByName(TaggerUtils.OUTPUT_PATTERN);
       DiscreteFactor partitionFunction = factor.marginalize(nextLabel);
 
       // Get the probability of each transition.
@@ -132,7 +132,8 @@ public class TestSupertagger extends AbstractCli {
 
       DynamicFactorGraph newFactorGraph = new DynamicFactorGraph(fg.getVariables(), newFactorList, fg.getFactorNames());
       FactorGraphSupertagger newTagger = new FactorGraphSupertagger(fgTagger.getModelFamily(),
-          fgTagger.getParameters(), newFactorGraph, fgTagger.getFeatureGenerator(), fgTagger.getInputGenerator());
+          fgTagger.getParameters(), newFactorGraph, fgTagger.getFeatureGenerator(), fgTagger.getInputGenerator(),
+          fgTagger.getStartInput(), fgTagger.getStartLabel());
       return newTagger;
     } else {
       // No transitions to prune

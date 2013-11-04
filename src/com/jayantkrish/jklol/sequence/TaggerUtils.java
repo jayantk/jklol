@@ -26,8 +26,11 @@ import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
+import com.jayantkrish.jklol.models.parametric.ParametricNormalizingFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
@@ -62,10 +65,10 @@ public class TaggerUtils {
   
   // Names of the variables in factors of generated sequence
   // models.
-  public static final String INPUT_FEATURES_PATTERN = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_FEATURES_NAME;
-  public static final String INPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_NAME;
-  public static final String OUTPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
-  public static final String NEXT_OUTPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.OUTPUT_NAME;
+  public static final String INPUT_FEATURES_PATTERN = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.INPUT_FEATURES_NAME;
+  public static final String INPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.INPUT_NAME;
+  public static final String PREV_OUTPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
+  public static final String OUTPUT_PATTERN = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.OUTPUT_NAME;
 
   public static <I, O> List<LocalContext<I>> extractContextsFromData(
       List<? extends TaggedSequence<I, O>> sequences) {
@@ -82,24 +85,27 @@ public class TaggerUtils {
 
   public static <I, O> Example<DynamicAssignment, DynamicAssignment> reformatTrainingData(
       TaggedSequence<I, O> sequence, FeatureVectorGenerator<LocalContext<I>> featureGen,
-      DynamicVariableSet modelVariables) {
-    return reformatTrainingData(sequence, featureGen, getDefaultInputGenerator(), modelVariables);
+      DynamicVariableSet modelVariables, I startInput, O startLabel) {
+    return reformatTrainingData(sequence, featureGen, getDefaultInputGenerator(), modelVariables,
+        startInput, startLabel);
   }
 
   public static <I, O> Example<DynamicAssignment, DynamicAssignment> reformatTrainingData(
       TaggedSequence<I, O> sequence, FeatureVectorGenerator<LocalContext<I>> featureGen,
-      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables) {
+      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables,
+      I startInput, O startLabel) {
     List<TaggedSequence<I, O>> sequences = Lists.newArrayList();
     sequences.add(sequence);
     List<Example<DynamicAssignment, DynamicAssignment>> examples = reformatTrainingData(
-        sequences, featureGen, inputGen, modelVariables);
+        sequences, featureGen, inputGen, modelVariables, startInput, startLabel);
     return examples.get(0);
   }
   
   public static <I, O> List<Example<DynamicAssignment, DynamicAssignment>> reformatTrainingData(
       List<? extends TaggedSequence<I, O>> sequences, FeatureVectorGenerator<LocalContext<I>> featureGen,
-      DynamicVariableSet modelVariables) {
-    return reformatTrainingData(sequences, featureGen, getDefaultInputGenerator(), modelVariables);
+      DynamicVariableSet modelVariables, I startInput, O startLabel) {
+    return reformatTrainingData(sequences, featureGen, getDefaultInputGenerator(), modelVariables,
+        startInput, startLabel);
   }
 
   /**
@@ -113,7 +119,10 @@ public class TaggerUtils {
    */
   public static <I, O> List<Example<DynamicAssignment, DynamicAssignment>> reformatTrainingData(
       List<? extends TaggedSequence<I, O>> sequences, FeatureVectorGenerator<LocalContext<I>> featureGen,
-      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables) {
+      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables,
+      I startInput, O startLabel) {
+    Preconditions.checkArgument(!(startInput == null ^ startLabel == null));
+
     DynamicVariableSet plate = modelVariables.getPlate(PLATE_NAME);
     VariableNumMap x = plate.getFixedVariables().getVariablesByName(INPUT_FEATURES_NAME);
     VariableNumMap xInput = plate.getFixedVariables().getVariablesByName(INPUT_NAME);
@@ -122,6 +131,19 @@ public class TaggerUtils {
     List<Example<DynamicAssignment, DynamicAssignment>> examples = Lists.newArrayList();
     for (TaggedSequence<I, O> sequence : sequences) {
       List<Assignment> inputs = Lists.newArrayList();
+      
+      if (startInput != null) {
+        List<I> newItems = Lists.newArrayList();
+        newItems.add(startInput);
+        newItems.addAll(sequence.getItems());
+        LocalContext<I> startContext = new ListLocalContext<I>(newItems, 0);
+        
+        Assignment inputFeatureVector = x.outcomeArrayToAssignment(featureGen.apply(startContext));
+        Assignment inputElement = xInput.outcomeArrayToAssignment(inputGen.apply(startContext));
+        Assignment firstLabel = y.outcomeArrayToAssignment(startLabel);
+        inputs.add(Assignment.unionAll(inputFeatureVector, inputElement, firstLabel));
+      }
+      
       List<LocalContext<I>> contexts = sequence.getLocalContexts();
       for (int i = 0; i < contexts.size(); i++) {
         Assignment inputFeatureVector = x.outcomeArrayToAssignment(featureGen.apply(contexts.get(i)));
@@ -133,6 +155,12 @@ public class TaggerUtils {
       DynamicAssignment output = DynamicAssignment.EMPTY;
       if (sequence.getLabels() != null) {
         List<Assignment> outputs = Lists.newArrayList();
+        
+        if (startInput != null) {
+          // First label is given (and equal to the special start label).
+          outputs.add(Assignment.EMPTY);
+        }
+
         List<O> labels = sequence.getLabels();
         for (int i = 0; i < contexts.size(); i++) {
           outputs.add(y.outcomeArrayToAssignment(labels.get(i)));
@@ -159,13 +187,15 @@ public class TaggerUtils {
    */
   public static <I, O> List<Example<DynamicAssignment, DynamicAssignment>> reformatTrainingDataPerItem(
       List<? extends TaggedSequence<I, O>> sequences, FeatureVectorGenerator<LocalContext<I>> featureGen,
-      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables) {
+      Function<? super LocalContext<I>, ? extends Object> inputGen, DynamicVariableSet modelVariables,
+      I startInput, O startLabel) {
     DynamicVariableSet plate = modelVariables.getPlate(PLATE_NAME);
     VariableNumMap x = plate.getFixedVariables().getVariablesByName(INPUT_FEATURES_NAME);
     VariableNumMap xInput = plate.getFixedVariables().getVariablesByName(INPUT_NAME);
     VariableNumMap y = plate.getFixedVariables().getVariablesByName(OUTPUT_NAME);
 
-    ReformatPerItemMapper<I, O> mapper = new ReformatPerItemMapper<I, O>(featureGen, inputGen, x, xInput, y);
+    ReformatPerItemMapper<I, O> mapper = new ReformatPerItemMapper<I, O>(featureGen, inputGen, x, xInput, y,
+        startInput, startLabel);
     List<List<Example<DynamicAssignment, DynamicAssignment>>> exampleLists = MapReduceConfiguration
         .getMapReduceExecutor().map(sequences, mapper);
 
@@ -177,7 +207,7 @@ public class TaggerUtils {
   }
   
   public static <O> ParametricFactorGraph buildFeaturizedSequenceModel(Set<O> labels, 
-      DiscreteVariable featureDictionary, boolean noTransitions) {
+      DiscreteVariable featureDictionary, boolean noTransitions, boolean locallyNormalized) {
     DiscreteVariable inputType = new DiscreteVariable("inputs", Lists.newArrayList(DEFAULT_INPUT_VALUE));
     DiscreteVariable labelType = new DiscreteVariable("labels", labels);
 
@@ -186,7 +216,7 @@ public class TaggerUtils {
     TableFactor labelRestrictions = TableFactor.unity(vars);
     
     return buildFeaturizedSequenceModel(inputType, labelType, featureDictionary,
-        labelRestrictions.getWeights(), noTransitions);
+        labelRestrictions.getWeights(), noTransitions, locallyNormalized);
   }
 
   /**
@@ -207,57 +237,76 @@ public class TaggerUtils {
    */
   public static <O> ParametricFactorGraph buildFeaturizedSequenceModel(DiscreteVariable inputType, 
       DiscreteVariable labelType, DiscreteVariable featureDictionary, Tensor labelRestrictions,
-      boolean noTransitions) {
+      boolean noTransitions, boolean locallyNormalized) {
     ObjectVariable inputVectorType = new ObjectVariable(Tensor.class);
 
     // Create a dynamic factor graph with a single plate replicating
     // the input/output variables.
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
-    builder.addPlate(TaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2, 3),
+    builder.addPlate(TaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2, 4),
         Arrays.asList(TaggerUtils.INPUT_FEATURES_NAME, TaggerUtils.INPUT_NAME, TaggerUtils.OUTPUT_NAME),
         Arrays.<Variable> asList(inputVectorType, inputType, labelType)), 10000);
-    
 
-    // Add a classifier from local word contexts to pos tags.
-    VariableNumMap plateVars = new VariableNumMap(Ints.asList(1, 3),
+    // Create a classifier from local word contexts to pos tags.
+    VariableNumMap classifierVars = new VariableNumMap(Ints.asList(1, 4),
         Arrays.asList(INPUT_FEATURES_PATTERN, OUTPUT_PATTERN), Arrays.<Variable> asList(inputVectorType, labelType));
-    VariableNumMap wordVectorVar = plateVars.getVariablesByName(INPUT_FEATURES_PATTERN);
-    VariableNumMap posVar = plateVars.getVariablesByName(OUTPUT_PATTERN);
+    VariableNumMap wordVectorVar = classifierVars.getVariablesByName(INPUT_FEATURES_PATTERN);
+    VariableNumMap posVar = classifierVars.getVariablesByName(OUTPUT_PATTERN);
     ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
         VariableNumMap.emptyMap(), featureDictionary);
-    builder.addFactor(TaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
-        VariableNumPattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
-
-    // Add a constant factor for encoding label restrictions.
-    plateVars = new VariableNumMap(Ints.asList(2, 3),
+    
+    // Create a constant factor for encoding label restrictions.
+    VariableNumMap restrictionVars = new VariableNumMap(Ints.asList(2, 4),
         Arrays.asList(INPUT_PATTERN, OUTPUT_PATTERN), Arrays.<Variable> asList(inputType, labelType));
-    VariableNumMap wordVar = plateVars.getVariablesByName(INPUT_PATTERN);
-    VariableNumMap labelVar = plateVars.getVariablesByName(OUTPUT_PATTERN);
+    VariableNumMap wordVar = restrictionVars.getVariablesByName(INPUT_PATTERN);
+    VariableNumMap labelVar = restrictionVars.getVariablesByName(OUTPUT_PATTERN);
     DiscreteFactor restrictions = new TableFactor(wordVar.union(labelVar), labelRestrictions.relabelDimensions(new int[] {2, 3}));
-    builder.addConstantFactor(TaggerUtils.LABEL_RESTRICTION_FACTOR, new ReplicatedFactor(restrictions,
-        VariableNumPattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet())));
 
-    // Add a factor connecting adjacent labels.
+    // Create a factor connecting adjacent labels.
+    VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(3, 4),
+        Arrays.asList(PREV_OUTPUT_PATTERN, OUTPUT_PATTERN), Arrays.asList(labelType, labelType));
+    ParametricFactor adjacentFactor = null;
     if (!noTransitions) {
-      VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
-          Arrays.asList(OUTPUT_PATTERN, NEXT_OUTPUT_PATTERN), Arrays.asList(labelType, labelType));
-      builder.addFactor(TaggerUtils.TRANSITION_FACTOR, new DenseIndicatorLogLinearFactor(adjacentVars, false),
-          VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+      adjacentFactor = new DenseIndicatorLogLinearFactor(adjacentVars, false);
     }
 
+    if (locallyNormalized) {
+      // Add a factor that normalizes the distribution.
+      List<ParametricFactor> factors = Lists.<ParametricFactor>newArrayList(wordClassifier,
+          new ConstantParametricFactor(restrictions.getVars(), restrictions));
+      if (adjacentFactor != null) {
+        factors.add(adjacentFactor);
+      }
+      VariableNumMap factorVars = VariableNumMap.unionAll(classifierVars, restrictionVars, adjacentVars);
+      ParametricNormalizingFactor normalizingFactor = new ParametricNormalizingFactor(
+          wordVectorVar.union(wordVar), adjacentVars.getVariablesByName(PREV_OUTPUT_PATTERN),
+          adjacentVars.getVariablesByName(OUTPUT_PATTERN), factors);
+      builder.addFactor("normalizedFactors", normalizingFactor,
+          VariableNumPattern.fromTemplateVariables(factorVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+    } else {
+      // Just add each factor to the factor graph 
+      builder.addFactor(TaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
+          VariableNumPattern.fromTemplateVariables(classifierVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+      builder.addConstantFactor(TaggerUtils.LABEL_RESTRICTION_FACTOR, new ReplicatedFactor(restrictions,
+          VariableNumPattern.fromTemplateVariables(restrictionVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet())));
+      if (adjacentFactor != null) {
+        builder.addFactor(TaggerUtils.TRANSITION_FACTOR, adjacentFactor,
+            VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+      }
+    }
     return builder.build();
   }
 
   public static <I, O> FactorGraphSequenceTagger<I, O> trainSequenceModel(
       ParametricFactorGraph sequenceModelFamily, List<? extends TaggedSequence<I, O>> trainingData,
           Class<O> outputClass, FeatureVectorGenerator<LocalContext<I>> featureGen, 
-          GradientOptimizer optimizer, boolean useMaxMargin) {
+          I startInput, O startLabel, GradientOptimizer optimizer, boolean useMaxMargin) {
     
     List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
         .reformatTrainingData(trainingData, featureGen, getDefaultInputGenerator(),
-            sequenceModelFamily.getVariables());
+            sequenceModelFamily.getVariables(), startInput, startLabel);
     return trainSequenceModel(sequenceModelFamily, examples, outputClass, featureGen,
-       getDefaultInputGenerator(), optimizer, useMaxMargin);
+       getDefaultInputGenerator(), startInput, startLabel, optimizer, useMaxMargin);
   }
 
   /**
@@ -275,7 +324,8 @@ public class TaggerUtils {
   public static <I, O> FactorGraphSequenceTagger<I, O> trainSequenceModel(
       ParametricFactorGraph sequenceModelFamily, List<Example<DynamicAssignment, DynamicAssignment>> examples,
       Class<O> outputClass, FeatureVectorGenerator<LocalContext<I>> featureGen, 
-      Function<? super LocalContext<I>, ? extends Object> inputGen, GradientOptimizer optimizer, boolean useMaxMargin) {
+      Function<? super LocalContext<I>, ? extends Object> inputGen, I startInput, O startLabel,
+      GradientOptimizer optimizer, boolean useMaxMargin) {
 
     // Generate the training data and estimate parameters.
     SufficientStatistics parameters = estimateParameters(sequenceModelFamily, examples,
@@ -283,7 +333,7 @@ public class TaggerUtils {
 
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
     return new FactorGraphSequenceTagger<I, O>(sequenceModelFamily, parameters,
-        factorGraph, featureGen, inputGen, outputClass);
+        factorGraph, featureGen, inputGen, outputClass, startInput, startLabel);
   }
 
   private static SufficientStatistics estimateParameters(ParametricFactorGraph sequenceModel,
@@ -476,7 +526,7 @@ public class TaggerUtils {
       return accumulated;
     }
   }
-  
+
   private static class ReformatPerItemMapper<I, O> extends Mapper<TaggedSequence<I, O>, List<Example<DynamicAssignment, DynamicAssignment>>> {
     private final FeatureVectorGenerator<LocalContext<I>> featureGen;
     private final Function<? super LocalContext<I>, ? extends Object> inputGen;
@@ -485,15 +535,24 @@ public class TaggerUtils {
     private final VariableNumMap xInput;
     private final VariableNumMap y;
     
+    private final I startInput;
+    private final O startLabel;
+    
     public ReformatPerItemMapper(FeatureVectorGenerator<LocalContext<I>> featureGen,
         Function<? super LocalContext<I>, ? extends Object> inputGen, VariableNumMap x,
-        VariableNumMap xInput, VariableNumMap y) {
+        VariableNumMap xInput, VariableNumMap y, I startInput, O startLabel) {
       super();
       this.featureGen = Preconditions.checkNotNull(featureGen);
       this.inputGen = Preconditions.checkNotNull(inputGen);
       this.x = Preconditions.checkNotNull(x);
       this.xInput = Preconditions.checkNotNull(xInput);
       this.y = Preconditions.checkNotNull(y);
+      
+      this.startInput = startInput;
+      this.startLabel = startLabel;
+      
+      // Either both or neither are null. 
+      Preconditions.checkArgument(!(startInput == null ^ startLabel == null));
     }
 
     @Override
@@ -501,9 +560,22 @@ public class TaggerUtils {
       List<Example<DynamicAssignment, DynamicAssignment>> examples = Lists.newArrayList();
 
       List<LocalContext<I>> contexts = sequence.getLocalContexts();
+      if (startInput != null) {
+        List<I> itemsWithStart = Lists.newArrayList();
+        itemsWithStart.add(startInput);
+        itemsWithStart.addAll(sequence.getItems());
+        contexts = (new ListTaggedSequence<I, O>(itemsWithStart, null)).getLocalContexts();
+      }
+
       Preconditions.checkArgument(sequence.getLabels() != null);
       List<O> labels = sequence.getLabels();
-      
+      if (startLabel != null) {
+        List<O> newLabels = Lists.newArrayList();
+        newLabels.add(startLabel);
+        newLabels.addAll(labels);
+        labels = newLabels;
+      }
+
       // Each training example consists of a pair of adjacent input and label variables.
       // All inputs and the first label are always conditioned on, while the second
       // label is to be predicted. The first input vector is set to 0, since the 
@@ -512,13 +584,14 @@ public class TaggerUtils {
       
       Assignment prevFeatureVector = x.outcomeArrayToAssignment(zeroVector);
       Assignment prevInputElement = null, prevLabel = null;
-      for (int i = 0; i < contexts.size(); i++) {
+      int startIndex = (startInput == null) ? 0 : 1;
+      for (int i = startIndex; i < contexts.size(); i++) {
         List<Assignment> inputList = Lists.newArrayList();
         List<Assignment> outputList = Lists.newArrayList();
         if (i > 0) {
-          // The exception to the pair of labels rule is the first element
-          // of a sequence. In this case, the training example only contains
-          // a single label and input.
+          // The first assignment requires special handling. Either we should
+          // append the start symbol, or simply create an assignment without
+          // a previous label.
           inputList.add(Assignment.unionAll(prevFeatureVector, prevInputElement, prevLabel));
           outputList.add(Assignment.EMPTY);
         }

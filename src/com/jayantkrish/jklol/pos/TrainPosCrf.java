@@ -79,10 +79,10 @@ public class TrainPosCrf extends AbstractCli {
     
     // Build the factor graph.
     ParametricFactorGraph sequenceModelFamily = TaggerUtils.buildFeaturizedSequenceModel(posTags,
-        featureGen.getFeatureDictionary(), options.has(noTransitions));
+        featureGen.getFeatureDictionary(), options.has(noTransitions), false);
     GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
     FactorGraphSequenceTagger<String, String> tagger = TaggerUtils.trainSequenceModel(
-        sequenceModelFamily, trainingData, String.class, featureGen, trainer,
+        sequenceModelFamily, trainingData, String.class, featureGen, null, null, trainer,
         options.has(maxMargin));
 
     // Save model to disk.

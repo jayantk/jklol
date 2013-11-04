@@ -6,6 +6,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cli.TrainedModelSet;
+import com.jayantkrish.jklol.inference.BeamPruningStrategy;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -116,7 +117,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     DynamicVariableSet dynamicVariables = dfg.getVariables();
     FactorGraph fg = dfg.conditional(input);
 
-    JunctionTree jt = new JunctionTree(true);
+    JunctionTree jt = new JunctionTree(true, new BeamPruningStrategy(0.005));
     FactorMarginalSet marginals = jt.computeMarginals(fg);
 
     List<VariableMatch> matches = dynamicVariables.getPlateInstantiations(

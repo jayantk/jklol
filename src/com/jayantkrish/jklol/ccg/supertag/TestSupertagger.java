@@ -44,7 +44,7 @@ public class TestSupertagger extends AbstractCli {
   public void run(OptionSet options) {
     // Read in the serialized model and print its parameters
     Supertagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model), Supertagger.class);
-    
+
     if (options.has(beamPruningThreshold)) {
       FactorGraphSupertagger fgTagger = (FactorGraphSupertagger) trainedModel;
       trainedModel = new FactorGraphSupertagger(fgTagger.getModelFamily(),

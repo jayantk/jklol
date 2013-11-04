@@ -14,12 +14,14 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayantk
  */
 public class NormalizingFactor extends AbstractConditionalFactor {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
   
   private final VariableNumMap inputVars;
   private final VariableNumMap conditionalVars;
   private final VariableNumMap outputVars;
   private final List<Factor> factors;
+  
+  private final VariableNumMap conditionalAndInputVars;
 
   /**
    * 
@@ -39,6 +41,8 @@ public class NormalizingFactor extends AbstractConditionalFactor {
     this.conditionalVars = Preconditions.checkNotNull(conditionalVars);
     this.outputVars = Preconditions.checkNotNull(outputVars);
     this.factors = Preconditions.checkNotNull(factors);
+    
+    this.conditionalAndInputVars = conditionalVars.union(inputVars);
   }
 
   @Override
@@ -72,7 +76,7 @@ public class NormalizingFactor extends AbstractConditionalFactor {
     }
 
     Preconditions.checkArgument(assignment.containsAll(inputVars.getVariableNums()));
-    Assignment inputAssignment = assignment.intersection(inputVars.getVariableNums());
+    Assignment inputAssignment = assignment.intersection(conditionalAndInputVars);
 
     List<Factor> conditionalFactors = Lists.newArrayList();
     for (Factor factor : factors) {

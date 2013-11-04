@@ -146,7 +146,8 @@ public class TrainSupertagger extends AbstractCli {
     System.out.println("Serializing trained model...");
     FactorGraphSupertagger supertagger = new FactorGraphSupertagger(tagger.getModelFamily(),
         tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator(),
-        tagger.getInputGenerator(), tagger.getStartInput(), tagger.getStartLabel());
+        tagger.getInputGenerator(), tagger.getMaxMarginalCalculator(), tagger.getMarginalCalculator(),
+        tagger.getStartInput(), tagger.getStartLabel());
     IoUtils.serializeObjectToFile(supertagger, options.valueOf(modelOutput));
   }
 

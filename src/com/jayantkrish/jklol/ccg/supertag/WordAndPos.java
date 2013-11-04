@@ -12,7 +12,8 @@ import com.google.common.collect.Lists;
  * @author jayantk
  */
 public class WordAndPos implements Serializable {
-  
+  private static final long serialVersionUID = 1L;
+
   private final String word;
   private final String pos;
   

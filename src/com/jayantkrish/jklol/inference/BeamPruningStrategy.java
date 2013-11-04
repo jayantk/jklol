@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.tensor.Tensor;
  * @author jayantk
  */
 public class BeamPruningStrategy implements PruningStrategy {
+  private static final long serialVersionUID = 1L;
 
   private final double minProbabilityRatio;
 

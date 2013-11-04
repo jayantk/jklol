@@ -6,9 +6,9 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cli.TrainedModelSet;
-import com.jayantkrish.jklol.inference.BeamPruningStrategy;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -32,11 +32,14 @@ import com.jayantkrish.jklol.util.Assignment;
  * @param <O>
  */
 public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements SequenceTagger<I, O> {
-  private static final long serialVersionUID = 2L;
+  private static final long serialVersionUID = 3L;
 
   private final FeatureVectorGenerator<LocalContext<I>> featureGenerator;
   private final Function<? super LocalContext<I>, ? extends Object> inputGen;
   private final Class<O> outputClass;
+  
+  private final MarginalCalculator maxMarginalCalculator;
+  private final JunctionTree marginalCalculator;
   
   // If provided, the tagger automatically adds special start
   // symbols to each sequence.
@@ -47,12 +50,16 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
       FeatureVectorGenerator<LocalContext<I>> featureGenerator, 
       Function<? super LocalContext<I>, ? extends Object> inputGen, Class<O> outputClass,
+      MarginalCalculator maxMarginalCalculator, JunctionTree marginalCalculator,
       I startInput, O startLabel) {
     super(modelFamily, parameters, instantiatedModel);
     this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
     this.inputGen = Preconditions.checkNotNull(inputGen);
     this.outputClass = outputClass;
-    
+
+    this.maxMarginalCalculator = maxMarginalCalculator;
+    this.marginalCalculator = marginalCalculator;
+
     this.startInput = startInput;
     this.startLabel = startLabel;
 
@@ -68,6 +75,14 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
   @Override
   public Function<? super LocalContext<I>, ? extends Object> getInputGenerator() {
     return inputGen;
+  }
+  
+  public MarginalCalculator getMaxMarginalCalculator() {
+    return maxMarginalCalculator;
+  }
+  
+  public JunctionTree getMarginalCalculator() {
+    return marginalCalculator;
   }
   
   public I getStartInput() {
@@ -88,8 +103,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     DynamicFactorGraph dfg = getInstantiatedModel();
     FactorGraph fg = dfg.conditional(input);
 
-    JunctionTree jt = new JunctionTree();
-    Assignment output = jt.computeMaxMarginals(fg).getNthBestAssignment(0);
+    Assignment output = maxMarginalCalculator.computeMaxMarginals(fg).getNthBestAssignment(0);
 
     DynamicAssignment prediction = dfg.getVariables()
         .toDynamicAssignment(output, fg.getAllVariables());
@@ -117,8 +131,7 @@ public class FactorGraphSequenceTagger<I, O> extends TrainedModelSet implements 
     DynamicVariableSet dynamicVariables = dfg.getVariables();
     FactorGraph fg = dfg.conditional(input);
 
-    JunctionTree jt = new JunctionTree(true, new BeamPruningStrategy(0.005));
-    FactorMarginalSet marginals = jt.computeMarginals(fg);
+    FactorMarginalSet marginals = marginalCalculator.computeMarginals(fg);
 
     List<VariableMatch> matches = dynamicVariables.getPlateInstantiations(
         marginals.getVariables(), TaggerUtils.PLATE_NAME);

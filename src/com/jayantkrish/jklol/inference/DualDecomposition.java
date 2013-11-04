@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * @author jayantk
  */
 public class DualDecomposition implements MarginalCalculator {
+  private static final long serialVersionUID = 1L;
 
   private final int maxIterations;
 

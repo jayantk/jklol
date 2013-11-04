@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.inference;
 
+import java.io.Serializable;
+
 import com.jayantkrish.jklol.models.FactorGraph;
 
 /**
@@ -7,7 +9,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
  *
  * @author jayantk
  */
-public interface MarginalCalculator {
+public interface MarginalCalculator extends Serializable {
 
   /**
    * Compute unconditional marginal distributions over the factors in the

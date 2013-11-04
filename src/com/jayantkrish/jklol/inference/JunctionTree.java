@@ -40,7 +40,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * simplified, the marginal computation will throw an exception.
  */
 public class JunctionTree implements MarginalCalculator {
-  
+  private static final long serialVersionUID = 1L;
+
   private final boolean renormalize;
   private final PruningStrategy pruningStrategy;
 

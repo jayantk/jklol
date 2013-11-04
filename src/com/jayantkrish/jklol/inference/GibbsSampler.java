@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * Does not work on FactorGraphs with 0 probability outcomes! 
  */
 public class GibbsSampler implements MarginalCalculator {
+  private static final long serialVersionUID = 1L;
 
 	private int burnInSamples;
 	private int numDrawsInMarginal;

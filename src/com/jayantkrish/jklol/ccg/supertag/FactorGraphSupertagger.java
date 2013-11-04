@@ -4,6 +4,8 @@ import java.util.List;
 
 import com.google.common.base.Function;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -27,9 +29,11 @@ FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> implements Supert
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
       FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator,
       Function<? super LocalContext<WordAndPos>, ? extends Object> inputGen,
+      MarginalCalculator maxMarginalCalculator, JunctionTree marginalCalculator,
       WordAndPos startWordAndPos, HeadedSyntacticCategory startCategory) {
     super(modelFamily, parameters, instantiatedModel, featureGenerator, inputGen,
-        HeadedSyntacticCategory.class, startWordAndPos, startCategory);
+        HeadedSyntacticCategory.class, maxMarginalCalculator, marginalCalculator, startWordAndPos,
+        startCategory);
   }
 
   @Override

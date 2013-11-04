@@ -333,7 +333,8 @@ public class TaggerUtils {
 
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
     return new FactorGraphSequenceTagger<I, O>(sequenceModelFamily, parameters,
-        factorGraph, featureGen, inputGen, outputClass, startInput, startLabel);
+        factorGraph, featureGen, inputGen, outputClass, new JunctionTree(), new JunctionTree(true), 
+        startInput, startLabel);
   }
 
   private static SufficientStatistics estimateParameters(ParametricFactorGraph sequenceModel,

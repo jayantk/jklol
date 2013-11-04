@@ -18,7 +18,8 @@ public class TrainedPosTagger extends FactorGraphSequenceTagger<String, String> 
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
       FeatureVectorGenerator<LocalContext<String>> featureGenerator,
       Function<? super LocalContext<String>, ? extends Object> inputGenerator) {
-    super(modelFamily, parameters, instantiatedModel, featureGenerator, inputGenerator, String.class);
+    super(modelFamily, parameters, instantiatedModel, featureGenerator, inputGenerator,
+        String.class, null, null);
   }
 
   @Override

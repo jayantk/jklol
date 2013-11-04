@@ -115,29 +115,37 @@ public class TrainSupertagger extends AbstractCli {
     DiscreteVariable labelVariable = (DiscreteVariable) labelRestrictions.getVars().getVariable(1);
     ParametricFactorGraph sequenceModelFamily = TaggerUtils.buildFeaturizedSequenceModel(
       inputVariable, labelVariable, featureGen.getFeatureDictionary(), labelRestrictions.getWeights(),
-        options.has(noTransitions));
+      options.has(noTransitions), options.has(locallyNormalized));
     GradientOptimizer trainer = createGradientOptimizer(trainingData.size());
     Function<LocalContext<WordAndPos>, String> inputGen = new WordAndPosToInput(inputVariable);
 
     // Reformat the training examples to be suitable for training
     // a factor graph.
     System.out.println("Reformatting training data...");
+    WordAndPos startInput = null;
+    HeadedSyntacticCategory startLabel = null;
+    if (options.has(locallyNormalized)) {
+      startInput = new WordAndPos("<START>", "<START>");
+      startLabel = HeadedSyntacticCategory.parseFrom("START{0}");
+    }
+
     List<Example<DynamicAssignment, DynamicAssignment>> examples = null;
     if (options.has(locallyNormalized)) {
       examples = TaggerUtils.reformatTrainingDataPerItem(trainingData, featureGen, inputGen,
-          sequenceModelFamily.getVariables());
+          sequenceModelFamily.getVariables(), startInput, startLabel);
     } else {
       examples = TaggerUtils.reformatTrainingData(trainingData, featureGen, inputGen,
-          sequenceModelFamily.getVariables());
+          sequenceModelFamily.getVariables(), startInput, startLabel);
     }
     FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> tagger = TaggerUtils.trainSequenceModel(
-        sequenceModelFamily, examples, HeadedSyntacticCategory.class, featureGen, inputGen, trainer,
-        options.has(maxMargin));
+        sequenceModelFamily, examples, HeadedSyntacticCategory.class, featureGen, inputGen, startInput,
+        startLabel, trainer, options.has(maxMargin));
 
     // Save model to disk.
     System.out.println("Serializing trained model...");
     FactorGraphSupertagger supertagger = new FactorGraphSupertagger(tagger.getModelFamily(),
-        tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator(), tagger.getInputGenerator());
+        tagger.getParameters(), tagger.getInstantiatedModel(), tagger.getFeatureGenerator(),
+        tagger.getInputGenerator(), tagger.getStartInput(), tagger.getStartLabel());
     IoUtils.serializeObjectToFile(supertagger, options.valueOf(modelOutput));
   }
 
@@ -146,6 +154,8 @@ public class TrainSupertagger extends AbstractCli {
    * syntactic categories.
    * 
    * @param ccgExamples
+   * @param ignoreInvalid
+   * @param addStartSymbol
    * @return
    */
   public static List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> reformatTrainingExamples(

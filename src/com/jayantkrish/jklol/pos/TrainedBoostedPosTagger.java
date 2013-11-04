@@ -62,7 +62,7 @@ public class TrainedBoostedPosTagger implements PosTagger, Serializable {
     PosTaggedSentence sent = new PosTaggedSentence(words, posTags);
 
     DynamicAssignment input = TaggerUtils.reformatTrainingData(sent, 
-        getFeatureGenerator(), parametricFamily.getVariables()).getInput();
+        getFeatureGenerator(), parametricFamily.getVariables(), null, null).getInput();
 
     FactorGraph fg = factorGraph.conditional(input);
     JunctionTree jt = new JunctionTree();

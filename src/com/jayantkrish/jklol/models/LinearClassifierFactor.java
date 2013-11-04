@@ -43,7 +43,7 @@ public class LinearClassifierFactor extends ClassifierFactor {
     this.conditionalVars = VariableNumMap.emptyMap();
     this.logWeights = logWeights;
   }
-  
+
   public LinearClassifierFactor(VariableNumMap inputVar, VariableNumMap outputVars, 
       VariableNumMap conditionalVars, DiscreteVariable featureDictionary, Tensor logWeights) {
     super(inputVar, outputVars, featureDictionary);

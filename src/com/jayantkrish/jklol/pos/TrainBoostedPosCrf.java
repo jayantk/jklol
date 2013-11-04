@@ -104,7 +104,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
 
     // Estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
-        .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
+        .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables(), null, null);
     SufficientStatisticsEnsemble parameters = estimateParameters(sequenceModelFamily, examples);
 
     // Save model to disk.

@@ -76,8 +76,8 @@ public class TrainSupertagger extends AbstractCli {
     trainingFilename = parser.accepts("training").withRequiredArg()
         .ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
-
-    syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
+    syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class).required();
+    
     noTransitions = parser.accepts("noTransitions");
     locallyNormalized = parser.accepts("locallyNormalized");
     

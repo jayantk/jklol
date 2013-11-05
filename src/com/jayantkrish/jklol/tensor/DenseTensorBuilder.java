@@ -51,12 +51,12 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
-  public void put(int[] key, double value) {
+  public final void put(int[] key, double value) {
     values[dimKeyToIndex(key)] = value;
   }
 
   @Override
-  public void putByKeyNum(long keyNum, double value) {
+  public final void putByKeyNum(long keyNum, double value) {
     values[(int) keyNum] = value;
   }
 
@@ -73,12 +73,12 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
-  public void incrementEntry(double amount, int... key) {
+  public final void incrementEntry(double amount, int... key) {
     values[dimKeyToIndex(key)] += amount;
   }
   
   @Override
-  public void incrementEntryByKeyNum(double amount, long keyNum) {
+  public final void incrementEntryByKeyNum(double amount, long keyNum) {
     values[keyNumToIndex(keyNum)] += amount;
   }
 
@@ -227,7 +227,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
   
   @Override
-  public void multiplyEntryByKeyNum(double amount, long keyNum) {
+  public final void multiplyEntryByKeyNum(double amount, long keyNum) {
     values[keyNumToIndex(keyNum)] *= amount;
   }
 

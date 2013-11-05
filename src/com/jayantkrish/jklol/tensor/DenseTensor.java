@@ -241,13 +241,12 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       for (int otherIndex = 0; otherIndex < otherSize; otherIndex++) {
         long otherKeyNum = other.indexToKeyNum(otherIndex);
         double otherValue = other.getByIndex(otherIndex);
-        
         innerProd += get(myKeyNum + (otherKeyNum * otherKeyNumMultiplier)) * otherValue;
       }
       resultBuilder.putByKeyNum(myKeyNum / keyNumIncrement, innerProd);
     }
     
-    return resultBuilder.build();
+    return resultBuilder.buildNoCopy();
   }
 
   @Override

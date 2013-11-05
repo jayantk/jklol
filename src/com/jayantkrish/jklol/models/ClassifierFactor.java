@@ -79,8 +79,9 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
     // vector.
     Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVarNum);
     Tensor logProbs = getOutputLogProbTensor(inputFeatureVector);
-    TableFactor outputFactor = new TableFactor(outputVars, logProbs.elementwiseExp());
-
+    TableFactor outputFactor = new TableFactor(outputVars,
+        new LogSpaceTensorAdapter(DenseTensor.copyOf(logProbs)));
+    
     // Note that the assignment may contain more than just the input variable, hence
     // the additional call to condition.
     return outputFactor.conditional(assignment);

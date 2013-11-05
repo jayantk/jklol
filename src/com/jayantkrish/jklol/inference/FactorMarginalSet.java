@@ -1,19 +1,18 @@
 package com.jayantkrish.jklol.inference;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * Stores a set of marginal distributions as {@link Factor}s. Additionally, some
@@ -24,7 +23,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class FactorMarginalSet extends AbstractMarginalSet {
 
   private final ImmutableList<Factor> allFactors;
-  private final Multimap<Integer, Factor> variableFactorMap;
+  private final IntMultimap variableFactorMap;
   private final double logPartitionFunction;
 
   /**
@@ -39,17 +38,19 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   public FactorMarginalSet(Collection<Factor> factors, double logPartitionFunction,
       VariableNumMap conditionedVariables, Assignment conditionedValues) {
     super(getVariablesFromFactors(factors), conditionedVariables, conditionedValues);
-    this.logPartitionFunction = logPartitionFunction;
-    this.variableFactorMap = HashMultimap.create();
-    for (Factor factor : factors) {
-      for (Integer variableNum : factor.getVars().getVariableNums()) {
-        variableFactorMap.put(variableNum, factor);
+    this.allFactors = ImmutableList.copyOf(factors);
+
+    this.variableFactorMap = IntMultimap.create();
+    for (int i = 0; i < allFactors.size(); i++) {
+      for (int variableNum : allFactors.get(i).getVars().getVariableNums()) {
+        this.variableFactorMap.put(variableNum, i);
       }
     }
+    this.variableFactorMap.reindexItems();
 
-    this.allFactors = ImmutableList.copyOf(factors);
+    this.logPartitionFunction = logPartitionFunction;
   }
-  
+
   /**
    * Constructs a marginal distribution over {@code conditionedVariables} that
    * assigns all of its weight to {@code conditionedValues}. {@code
@@ -82,23 +83,35 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   public Factor getUnnormalizedMarginal(Collection<Integer> varNums) {
     if (varNums.size() == 0 && allFactors.size() == 0) {
       // Special case if the inputVar factor graph has no unassigned variables. 
-      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(1.0);
+      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY);
     }
 
     // Find a factor among the given factors that includes all of the given
     // variables.
-    Set<Factor> relevantFactors = Sets.newHashSet(allFactors);
+    int[] relevantFactors = new int[allFactors.size()];
+    Arrays.fill(relevantFactors, 0);
     for (Integer varNum : varNums) {
-      relevantFactors.retainAll(variableFactorMap.get(varNum));
+      for (int factorNum : variableFactorMap.getArray(varNum)) {
+        relevantFactors[factorNum]++;
+      }
     }
 
-    if (relevantFactors.size() == 0) {
+    int factorNum = -1;
+    int numVars = varNums.size();
+    for (int i = 0; i < relevantFactors.length; i++) {
+      if (relevantFactors[i] == numVars) {
+        factorNum = i;
+        break;
+      }
+    }
+
+    if (factorNum == -1) {
       // This case requires a more advanced algorithm.
       return computeMarginalFromMultipleFactors(varNums);
     }
 
     // Pick an arbitrary factor to use for the marginal
-    Factor marginal = relevantFactors.iterator().next();
+    Factor marginal = allFactors.get(factorNum);
 
     // Marginalize out any remaining variables
     Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());

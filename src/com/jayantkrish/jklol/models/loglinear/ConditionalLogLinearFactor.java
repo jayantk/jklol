@@ -28,11 +28,15 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
-  private static final long serialVersionUID = 4826599917564978754L;
+  private static final long serialVersionUID = 2L;
   
   private final VariableNumMap inputVar;
   private final VariableNumMap outputVars;
   private final VariableNumMap conditionalVars;
+  
+  private final int[] inputVarNums;
+  private final int[] outputVarNums;
+  private final int[] varNums;
   
   // Names of the features. Also defines the expected dimensionality 
   // of the input feature vector.
@@ -61,6 +65,11 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     this.inputVar = inputVar;
     this.outputVars = outputVars;
     this.conditionalVars = conditionalVars;
+    
+    this.inputVarNums = inputVar.getVariableNumsArray();
+    this.outputVarNums = outputVars.getVariableNumsArray();
+    this.varNums = getVars().getVariableNumsArray();
+
     this.featureDictionary = featureDictionary;
     
     this.dimensionNums = Ints.toArray(inputVar.union(outputVars).getVariableNums());
@@ -132,9 +141,9 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, Factor marginal, 
       Assignment conditionalAssignment, double count, double partitionFunction) {
-    Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNums()));
+    Preconditions.checkArgument(conditionalAssignment.containsAll(inputVarNums));
 
-    if (conditionalAssignment.containsAll(getVars().getVariableNums())) {
+    if (conditionalAssignment.containsAll(varNums)) {
       Preconditions.checkState(marginal.getVars().size() == 0);
       // Easy case where all variables' values are known.
       double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
@@ -142,16 +151,16 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     } else {
       // Construct a factor representing the unnormalized probability distribution over all
       // of the output variables.
-      VariableNumMap conditionedVars = outputVars.intersection(conditionalAssignment.getVariableNums());
       DiscreteFactor outputMarginal = marginal.coerceToDiscrete();
-      if (conditionedVars.size() > 0) {
-        Assignment conditionedAssignment = conditionalAssignment.intersection(conditionedVars);
-        DiscreteFactor conditionedFactor = TableFactor.pointDistribution(conditionedVars, conditionedAssignment);
+      if (conditionalAssignment.containsAny(outputVarNums)) {
+        Assignment conditionedAssignment = conditionalAssignment.intersection(outputVarNums);
+        DiscreteFactor conditionedFactor = TableFactor.pointDistribution(
+            outputVars.intersection(conditionedAssignment.getVariableNums()), conditionedAssignment);
         outputMarginal = conditionedFactor.outerProduct(marginal);
       }
 
-      Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVar.getOnlyVariableNum()))
-          .relabelDimensions(inputVar.getVariableNumsArray());
+      Tensor inputTensor = ((Tensor) conditionalAssignment.getValue(inputVarNums[0]))
+          .relabelDimensions(inputVarNums);
 
       // The expected feature counts are equal to the outer product of
       // inputTensor and outputMarginal.

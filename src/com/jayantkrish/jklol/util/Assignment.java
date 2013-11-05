@@ -11,6 +11,7 @@ import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -143,6 +144,15 @@ public class Assignment implements Serializable{
     return true;
   }
 
+  public boolean containsAll(int... varNums) {
+    for (int varNum : varNums) {
+      if (!varValueMap.containsKey(varNum)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * Returns {@code true} if {@code this} contains all of the mappings in
    * {@code assignment}. Note that this checks both variable numbers and their
@@ -152,7 +162,7 @@ public class Assignment implements Serializable{
    * @return
    */
   public boolean containsAll(Assignment assignment) {
-    for (Integer variableNum : assignment.getVariableNums()) {
+    for (int variableNum : assignment.getVariableNums()) {
       if (!varValueMap.containsKey(variableNum) ||
           getValue(variableNum) != assignment.getValue(variableNum)) {
         return false;
@@ -176,6 +186,16 @@ public class Assignment implements Serializable{
     }
     return false;
   }
+
+  public boolean containsAny(int... varNums) {
+    for (int varNum : varNums) {
+      if (varValueMap.containsKey(varNum)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
   /**
    * If varNums is a subset of the variables in this assignment, this method
@@ -213,6 +233,10 @@ public class Assignment implements Serializable{
       }
     }
     return new Assignment(varNumList, retVal);
+  }
+  
+  public Assignment intersection(int ... varNums) {
+    return intersection(Ints.asList(varNums));
   }
 
   /**

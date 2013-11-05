@@ -254,7 +254,7 @@ public class TaggerUtils {
     VariableNumMap posVar = classifierVars.getVariablesByName(OUTPUT_PATTERN);
     ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
         VariableNumMap.emptyMap(), featureDictionary);
-    
+
     // Create a constant factor for encoding label restrictions.
     VariableNumMap restrictionVars = new VariableNumMap(Ints.asList(2, 4),
         Arrays.asList(INPUT_PATTERN, OUTPUT_PATTERN), Arrays.<Variable> asList(inputType, labelType));

@@ -153,16 +153,18 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     // elements of this.
     if (ArrayUtils.subarrayEquals(getDimensionNumbers(), dimensionNumbers, 0)) {
       long minKeyInt = 0;
-      for (int i = 0; i < dimensionNumbers.length; i++) {
+      int numDimensions = dimensionNumbers.length;
+      for (int i = 0; i < numDimensions; i++) {
         minKeyInt += indexOffsets[i] * key[i];
       }
-      long maxKeyInt = minKeyInt + indexOffsets[dimensionNumbers.length - 1];
+      long maxKeyInt = minKeyInt + indexOffsets[numDimensions - 1];
 
       int startIndex = getNearestIndex(minKeyInt);
       int endIndex = getNearestIndex(maxKeyInt);
 
       long[] newKeyInts = ArrayUtils.copyOfRange(keyNums, startIndex, endIndex);
-      for (int i = 0; i < newKeyInts.length; i++) {
+      int numKeyInts = newKeyInts.length;
+      for (int i = 0; i < numKeyInts; i++) {
         newKeyInts[i] -= minKeyInt;
       }
 

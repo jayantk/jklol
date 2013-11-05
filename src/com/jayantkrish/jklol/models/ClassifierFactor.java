@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.models;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
@@ -67,7 +65,7 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
   @Override
   public Factor conditional(Assignment assignment) {
     int inputVarNum = inputVar.getOnlyVariableNum();
-    List<Integer> outputVarNums = outputVars.getVariableNums();
+    int[] outputVarNums = outputVars.getVariableNumsArray();
     // We can only condition on outputVars if we also condition on
     // inputVar.
     Preconditions.checkArgument(!assignment.containsAny(outputVarNums)
@@ -79,11 +77,10 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
 
     // Build a TableFactor over the outputVars based on the inputVar feature
     // vector.
-    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
+    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVarNum);
     Tensor logProbs = getOutputLogProbTensor(inputFeatureVector);
-    TableFactor outputFactor = new TableFactor(outputVars,
-        new LogSpaceTensorAdapter(DenseTensor.copyOf(logProbs)));
-    
+    TableFactor outputFactor = new TableFactor(outputVars, logProbs.elementwiseExp());
+
     // Note that the assignment may contain more than just the input variable, hence
     // the additional call to condition.
     return outputFactor.conditional(assignment);

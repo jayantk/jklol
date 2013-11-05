@@ -80,7 +80,8 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
     if (marginal.getVars().size() == 0) {
-      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, count / partitionFunction);
+      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment,
+          marginal.getTotalUnnormalizedProbability() * count / partitionFunction);
     } else {
       Tensor expectedFeatureCounts = marginal.coerceToDiscrete().getWeights();
 

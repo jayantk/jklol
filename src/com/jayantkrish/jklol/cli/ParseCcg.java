@@ -30,10 +30,12 @@ import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -312,12 +314,12 @@ public class ParseCcg extends AbstractCli {
         correctSyntacticCategories, actualSyntacticCategories.size(), supertaggerErrors,
         lexiconErrors, parserErrors, 1, 1);
   }
-  
-  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart) {
+
+  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart, DiscreteVariable syntaxVarType) {
     boolean foundFailurePoint = false;
     if (!tree.isTerminal()) {
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart);
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart);
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart, syntaxVarType);
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart, syntaxVarType);
     }
     
     if (foundFailurePoint) {
@@ -334,6 +336,20 @@ public class ParseCcg extends AbstractCli {
         } else {
           System.out.println("Parse failure nonterminal: " + tree.getLeft().getRootSyntax() + " "
               + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());
+          StringBuilder sb = new StringBuilder();
+          sb.append("left entries: ");
+          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd())) {
+            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
+            sb.append(" ");
+          }
+          System.out.println(sb.toString());
+          sb = new StringBuilder();
+          sb.append("right entries: ");
+          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd())) {
+            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
+            sb.append(" ");
+          }
+          System.out.println(sb.toString());
         }
 
         return true;
@@ -605,7 +621,7 @@ public class ParseCcg extends AbstractCli {
           CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
           parser.getParser().parseCommon(chart, example.getWords(), example.getPosTags(), filter,
               null, -1);
-          analyzeParseFailure(example.getSyntacticParse(), chart);
+          analyzeParseFailure(example.getSyntacticParse(), chart, parser.getParser().getSyntaxVarType());
         }
 
         return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);

@@ -1289,6 +1289,10 @@ public class CcgParser implements Serializable {
 
   public void parseCommon(CcgChart chart, List<String> terminals, List<String> posTags,
       ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
+    if (log == null) {
+      log = new NullLogFunction();
+    }
+    
     log.startTimer("initialize_chart");
     initializeChart(chart, terminals, posTags, beamFilter);
     lexicon.initializeChartTerminals(terminals, posTags, chart, this);

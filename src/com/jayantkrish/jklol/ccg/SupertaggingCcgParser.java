@@ -42,7 +42,7 @@ public class SupertaggingCcgParser {
         
         ChartFilter filter = ConjunctionChartFilter.create(inputFilter,
             new SupertagChartFilter(supertaggedSentence.getLabels()));
-        
+
         CcgParse parse = inference.getBestParse(parser, supertaggedSentence, filter, new NullLogFunction());
         if (parse != null) {
           return new CcgParseResult(parse, supertaggedSentence, multitagThresholds[i]);

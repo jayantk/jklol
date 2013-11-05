@@ -16,7 +16,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -121,9 +120,8 @@ public abstract class DiscreteFactor extends AbstractFactor {
       return this;
     }
 
-    Assignment subAssignment = a.intersection(varsToEliminate);
-    int[] key = varsToEliminate.assignmentToIntArray(subAssignment);
-    int[] eliminatedDimensions = Ints.toArray(varsToEliminate.getVariableNums());
+    int[] key = varsToEliminate.assignmentToIntArray(a);
+    int[] eliminatedDimensions = varsToEliminate.getVariableNumsArray();
     return new TableFactor(getVars().removeAll(varsToEliminate),
         getWeights().slice(eliminatedDimensions, key));
   }

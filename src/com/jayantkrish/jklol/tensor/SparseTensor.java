@@ -79,7 +79,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   @Override
-  public int keyNumToIndex(long keyNum) {
+  public final int keyNumToIndex(long keyNum) {
     int possibleIndex = Arrays.binarySearch(keyNums, keyNum);
     return possibleIndex >= 0 ? possibleIndex : -1;
   }

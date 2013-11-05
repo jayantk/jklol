@@ -127,11 +127,10 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
       Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
 
-    Tensor inputValueFeatures = ((Tensor) assignment.getValue(inputVar.getOnlyVariableNum()))
-        .relabelDimensions(inputVar.getVariableNumsArray());
-    Tensor outputDistribution = SparseTensor.singleElement(outputVars.getVariableNumsArray(), 
-        outputVars.getVariableSizes(), outputVars.assignmentToIntArray(assignment.intersection(outputVars)),
-        1.0);
+    Tensor inputValueFeatures = ((Tensor) assignment.getValue(inputVarNums[0]))
+        .relabelDimensions(inputVarNums);
+    Tensor outputDistribution = SparseTensor.singleElement(outputVarNums, 
+        outputVars.getVariableSizes(), outputVars.assignmentToIntArray(assignment), 1.0);
     
     // The expected feature counts are equal to the outer product of
     // inputTensor and outputMarginal.

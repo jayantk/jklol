@@ -66,12 +66,11 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
   public Factor conditional(Assignment assignment) {
     int inputVarNum = inputVar.getOnlyVariableNum();
     int[] outputVarNums = outputVars.getVariableNumsArray();
-    // We can only condition on outputVars if we also condition on
-    // inputVar.
-    Preconditions.checkArgument(!assignment.containsAny(outputVarNums)
-        || assignment.contains(inputVarNum));
 
     if (!assignment.contains(inputVarNum)) {
+      // We can only condition on outputVars if we also condition on
+      // inputVar.
+      Preconditions.checkArgument(!assignment.containsAny(outputVarNums));
       return this;
     }
 

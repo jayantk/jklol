@@ -47,7 +47,7 @@ public class AssignmentTest extends TestCase {
 				s.getValues());
 	}
 
-	public void testJointAssignment() {
+	public void testUnion() {
 		Assignment j = a.union(c);
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 2, 3, 4, 5, 6}),
 				j.getVariableNums());
@@ -56,7 +56,7 @@ public class AssignmentTest extends TestCase {
 				j.getValues());
 	}
 
-	public void testJointAssignmentError() {
+	public void testUnionError() {
 		try {
 			a.union(b);
 		} catch (RuntimeException e) {
@@ -65,7 +65,7 @@ public class AssignmentTest extends TestCase {
 		fail("Expected RuntimeException.");
 	}
 
-	public void testJointAssignmentEmpty() {
+	public void testUnionEmpty() {
 		Assignment j = a.union(Assignment.EMPTY);
 
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 3, 5}),

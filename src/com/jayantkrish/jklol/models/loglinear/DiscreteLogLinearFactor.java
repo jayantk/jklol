@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -107,7 +106,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   public DiscreteFactor getModelFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters);
     Tensor logProbs = featureValues.getWeights().elementwiseProduct(featureWeights)
-        .sumOutDimensions(featureVariables.getVariableNums());
+        .sumOutDimensions(featureVariables.getVariableNumsArray());
 
     return exponentiateLogProbs(logProbs); 
   }
@@ -171,7 +170,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {
     return new TensorSufficientStatistics(featureVariables, 
-        new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
+        new DenseTensorBuilder(featureVariables.getVariableNumsArray(),
             featureVariables.getVariableSizes()));
   }
 
@@ -251,10 +250,10 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
       TableFactorBuilder initialWeights) {
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
 
-    int featureVarNum = Collections.max(vars.getVariableNums()) + 1;
+    int featureVarNum = Ints.max(vars.getVariableNumsArray()) + 1;
 
     DiscreteFactor featureValues = createIndicatorFeatureTensor(vars, featureVarNum, initialWeights);
-    VariableNumMap featureVarMap = featureValues.getVars().intersection(Arrays.asList(featureVarNum));
+    VariableNumMap featureVarMap = featureValues.getVars().intersection(featureVarNum);
 
     TableFactor initialWeightFactor = (initialWeights != null) ? initialWeights.build() : null;
     return new DiscreteLogLinearFactor(vars, featureVarMap, featureValues, initialWeightFactor);

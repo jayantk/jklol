@@ -70,7 +70,7 @@ public interface VariablePattern extends Serializable {
 
       variableIndexMap = HashBiMap.create();
       variableNameMap = HashBiMap.create();
-      for (int varNum : fixedVariables.getVariableNums()) {
+      for (int varNum : fixedVariables.getVariableNumsArray()) {
         variableIndexMap.put(varNum, varNum);
         variableNameMap.put(fixedVariables.getVariableNameFromIndex(varNum),
             fixedVariables.getVariableNameFromIndex(varNum));
@@ -112,10 +112,10 @@ public interface VariablePattern extends Serializable {
     public void addMatch(VariableNumMap templateVariable, VariableNumMap matchedVariable) {
       Preconditions.checkArgument(templateVariable.size() == 1);
       Preconditions.checkArgument(matchedVariable.size() == 1);
-      variableIndexMap.put(matchedVariable.getVariableNums().get(0),
-          templateVariable.getVariableNums().get(0));
-      variableNameMap.put(matchedVariable.getVariableNames().get(0),
-          templateVariable.getVariableNames().get(0));
+      variableIndexMap.put(matchedVariable.getOnlyVariableNum(),
+          templateVariable.getOnlyVariableNum());
+      variableNameMap.put(matchedVariable.getOnlyVariableName(),
+          templateVariable.getOnlyVariableName());
       allVariables = allVariables.union(matchedVariable);
     }
 

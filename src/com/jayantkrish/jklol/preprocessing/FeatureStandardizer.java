@@ -146,7 +146,7 @@ public class FeatureStandardizer implements Serializable {
     int numEntries = 0;
     for (DiscreteFactor featureFactor : featureFactors) {
       // Calculate the number of feature vectors contained in this factor.
-      VariableNumMap nonFeatureVars = featureFactor.getVars().remove(featureVariableNum);
+      VariableNumMap nonFeatureVars = featureFactor.getVars().removeAll(featureVariableNum);
       numEntries += nonFeatureVars.getNumberOfPossibleAssignments();
       
       DiscreteFactor featureSums = featureFactor.marginalize(nonFeatureVars);
@@ -187,7 +187,7 @@ public class FeatureStandardizer implements Serializable {
     DiscreteFactor sumSquares = null;
     int numEntries = 0;
     for (DiscreteFactor featureFactor : featureFactors) {
-      VariableNumMap nonFeatureVars = featureFactor.getVars().remove(featureVariableNum);
+      VariableNumMap nonFeatureVars = featureFactor.getVars().removeAll(featureVariableNum);
       numEntries += nonFeatureVars.getNumberOfPossibleAssignments();
 
       DiscreteFactor factorSumSquares = featureFactor.product(featureFactor)

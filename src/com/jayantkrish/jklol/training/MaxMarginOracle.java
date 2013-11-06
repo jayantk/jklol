@@ -58,7 +58,7 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
 
     log.startTimer("update_subgradient/cost_augment");
     FactorGraph costAugmentedModel = costFunction.augmentWithCosts(currentModel,
-        currentModel.getVariables().intersection(outputAssignment.getVariableNums()),
+        currentModel.getVariables().intersection(outputAssignment.getVariableNumsArray()),
         outputAssignment);
     log.stopTimer("update_subgradient/cost_augment");
 
@@ -155,7 +155,7 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
   public static class HammingCost implements CostFunction {
     public FactorGraph augmentWithCosts(FactorGraph factorGraph, VariableNumMap outputVariables, Assignment trueLabel) {
       FactorGraph augmentedGraph = factorGraph;
-      for (Integer varNum : outputVariables.getVariableNums()) {
+      for (int varNum : outputVariables.getVariableNumsArray()) {
         VariableNumMap curOutputVar = outputVariables.intersection(varNum);
         Assignment curTrueAssignment = trueLabel.intersection(varNum);
         DenseTensorBuilder costWeightsBuilder = new DenseTensorBuilder(curOutputVar.getVariableNumsArray(), curOutputVar.getVariableSizes(), Math.E);

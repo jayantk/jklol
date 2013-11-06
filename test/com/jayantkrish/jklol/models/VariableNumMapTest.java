@@ -61,17 +61,6 @@ public class VariableNumMapTest extends TestCase {
 	  assertFalse(c.equals(b));
 	  assertFalse(d.equals(b));
 	}
-	
-	public void testUniqueNames() {
-		try {
-		  new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}), 
-		    Arrays.asList("v0", "v1", "v0"),
-				Arrays.asList(new DiscreteVariable[] {v1, v2, v1}));
-		} catch (IllegalArgumentException e) {
-			return;
-		}
-		fail("Expected IllegalArgumentException");
-	}
 
 	public void testGetVariableNums() {
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 3}),

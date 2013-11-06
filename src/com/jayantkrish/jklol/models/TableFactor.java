@@ -10,7 +10,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
@@ -86,7 +85,7 @@ public class TableFactor extends DiscreteFactor {
    * @return
    */
   public static TableFactor logPointDistribution(VariableNumMap vars, Assignment assignment) {
-    DenseTensorBuilder builder = new DenseTensorBuilder(Ints.toArray(vars.getVariableNums()),
+    DenseTensorBuilder builder = new DenseTensorBuilder(vars.getVariableNumsArray(),
         vars.getVariableSizes(), Double.NEGATIVE_INFINITY);
     builder.put(vars.assignmentToIntArray(assignment), 0.0);
     return new TableFactor(vars, new LogSpaceTensorAdapter(builder.build()));
@@ -197,7 +196,7 @@ public class TableFactor extends DiscreteFactor {
       List<? extends Function<String, ?>> inputConverters, Iterable<String> lines,
       String delimiter, boolean ignoreInvalidAssignments) {
     List<VariableNumMap> varList = Lists.newArrayList();
-    for (Integer varNum : vars.getVariableNums()) {
+    for (int varNum : vars.getVariableNumsArray()) {
       varList.add(vars.intersection(varNum));
     }
     return fromDelimitedFile(varList, inputConverters, lines, delimiter, ignoreInvalidAssignments);    
@@ -206,7 +205,7 @@ public class TableFactor extends DiscreteFactor {
   public static TableFactor fromDelimitedFile(VariableNumMap vars, Iterable<String> lines,
       String delimiter, boolean ignoreInvalidAssignments) {
     List<VariableNumMap> varList = Lists.newArrayList();
-    for (Integer varNum : vars.getVariableNums()) {
+    for (int varNum : vars.getVariableNumsArray()) {
       varList.add(vars.intersection(varNum));
     }
     return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments);

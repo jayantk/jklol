@@ -263,14 +263,15 @@ public class ArrayUtils {
    * Sorts a portion of the given key/value pairs by key. This method
    * sorts the section of {@code keys} from {@code startInd}
    * (inclusive) to {@code endInd} (not inclusive), simultaneously
-   * swapping the corresponding entries of {@code values}.
+   * swapping the corresponding entries of {@code values}. Every element in 
+   * each array in {@code values} is swapped.
    * 
    * @param keys
    * @param values
    * @param startInd
    * @param endInd
    */
-  public static final <T> void sortKeyValuePairs(int[] keys, T[] values,
+  public static final void sortKeyValuePairs(int[] keys, Object[][] values,
       int startInd, int endInd) {
     // Base case.
     if (startInd == endInd) {
@@ -307,14 +308,17 @@ public class ArrayUtils {
    * @param i
    * @param j
    */
-  private static final <T> void swap(int[] keys, T[] values, int i, int j) {
+  private static final void swap(int[] keys, Object[][] values, int i, int j) {
     int keySwap = keys[i];
     keys[i] = keys[j];
     keys[j] = keySwap;
 
-    T swapValue = values[i];
-    values[i] = values[j];
-    values[j] = swapValue;
+    Object swapValue;
+    for (int k = 0; k < values.length; k++) {
+      swapValue = values[k][i];
+      values[k][i] = values[k][j];
+      values[k][j] = swapValue;
+    }
   }
 
   /**

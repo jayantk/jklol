@@ -35,7 +35,7 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
       List<? extends ParametricFactor> parametricFactors, boolean returnFactoredTensor) { 
     super(variables);
     Preconditions.checkArgument(parametricFactors.size() == factorNames.size());
-    VariableNumMap factorVars = VariableNumMap.emptyMap();
+    VariableNumMap factorVars = VariableNumMap.EMPTY;
     for (ParametricFactor factor : parametricFactors) {
       Preconditions.checkArgument(variables.containsAll(factor.getVars()));
       factorVars = factorVars.union(factor.getVars());
@@ -60,7 +60,7 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
     if (!returnFactoredTensor) {
       return Factors.product(factors);
     } else {
-      VariableNumMap allVars = VariableNumMap.emptyMap();
+      VariableNumMap allVars = VariableNumMap.EMPTY;
       List<Tensor> tensors = Lists.newArrayList();
       for (Factor factor : factors) {
         allVars = allVars.union(factor.getVars());

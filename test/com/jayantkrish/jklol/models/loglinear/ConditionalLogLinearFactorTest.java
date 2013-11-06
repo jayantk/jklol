@@ -40,7 +40,7 @@ public class ConditionalLogLinearFactorTest extends TestCase {
         Arrays.<Variable>asList(discreteVar));
     both = input.union(output);
     
-    factor = new ConditionalLogLinearFactor(input, output, VariableNumMap.emptyMap(), 
+    factor = new ConditionalLogLinearFactor(input, output, VariableNumMap.EMPTY, 
         DiscreteVariable.sequence("foo", 5));
     
     featureVectors = Lists.newArrayList();

@@ -175,7 +175,7 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
     
-    List<Integer> conditionedVariableNums = marginals.getConditionedValues().getVariableNums();
+    int[] conditionedVariableNums = marginals.getConditionedValues().getVariableNumsArray();
     for (int i = 0; i < statisticsList.size(); i++) {
       // log.startTimer("parametric_factor_graph_match");
       VariablePattern pattern = factorPatterns.get(i);
@@ -190,7 +190,7 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
 
         // to here: 6 microsecs
         // log.startTimer("parametric_factor_graph_marginal");
-        Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
+        Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNumsArray());
         Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
         // log.stopTimer("parametric_factor_graph_marginal");
 

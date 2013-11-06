@@ -43,8 +43,8 @@ public class VariableNamePatternTest extends TestCase {
     noMatchPattern = VariableNamePattern.fromTemplateVariables(templateVars, 
         templateVars.getVariablesByName("x-?(0)"));
     offsetPattern = VariableNamePattern.fromTemplateVariables(offsetVars, 
-        VariableNumMap.emptyMap());
-    emptyPattern = VariableNamePattern.fromTemplateVariables(VariableNumMap.emptyMap(), 
+        VariableNumMap.EMPTY);
+    emptyPattern = VariableNamePattern.fromTemplateVariables(VariableNumMap.EMPTY, 
         defaultVars.getVariablesByName("x-0", "y-0", "z"));
   }
   

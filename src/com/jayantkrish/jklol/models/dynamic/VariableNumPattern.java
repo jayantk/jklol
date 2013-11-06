@@ -70,9 +70,9 @@ public class VariableNumPattern extends AbstractVariablePattern {
     int[] plateMatchIndexOffsets = new int[templateVariables.size()];
 
     int[] templateVariableNums = templateVariables.getVariableNumsArray();
-    List<String> templateVariableNames = templateVariables.getVariableNames();
+    String[] templateVariableNames = templateVariables.getVariableNamesArray();
     for (int i = 0; i < templateVariableNums.length; i++) {
-      String variableName = templateVariableNames.get(i);
+      String variableName = templateVariableNames[i];
       String[] parts = variableSet.partitionVariableName(variableName);
       
       Preconditions.checkArgument(parts.length == 3);

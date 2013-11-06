@@ -20,9 +20,9 @@ public class TableAssignment {
   private final Tensor indicators;
   
   public static final TableAssignment SATISFIABLE = new TableAssignment(
-      VariableNumMap.emptyMap(), SparseTensor.getScalarConstant(1.0));
+      VariableNumMap.EMPTY, SparseTensor.getScalarConstant(1.0));
   public static final TableAssignment UNSATISFIABLE = new TableAssignment(
-      VariableNumMap.emptyMap(), SparseTensor.getScalarConstant(0.0));
+      VariableNumMap.EMPTY, SparseTensor.getScalarConstant(0.0));
   
   public TableAssignment(VariableNumMap vars, Tensor indicators) {
     this.vars = Preconditions.checkNotNull(vars);

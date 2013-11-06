@@ -78,6 +78,6 @@ public final class Factors {
    * @return
    */
   public static Factor multiplicativeIdentity() {
-    return TableFactor.unity(VariableNumMap.emptyMap());
+    return TableFactor.unity(VariableNumMap.EMPTY);
   }
 }

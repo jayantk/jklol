@@ -130,7 +130,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
       incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);
     } else {
       VariableNumMap conditionedVars = initialWeights.getVars().intersection(
-          conditionalAssignment.getVariableNums());
+          conditionalAssignment.getVariableNumsArray());
 
       TableFactor productFactor = (TableFactor) initialWeights.product(
           TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))

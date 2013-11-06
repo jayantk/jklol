@@ -65,11 +65,11 @@ public class GibbsSampler implements MarginalCalculator {
 		// Select the initial assignment. 
 	  // TODO: Perform a search to find an outcome with nonzero probability.
 	  
-		List<Variable> variables = factorGraph.getVariables().getVariables();
+		Variable[] variables = factorGraph.getVariables().getVariablesArray();
 		int[] varNums = factorGraph.getVariables().getVariableNumsArray();
-		Object[] values = new Object[variables.size()];
-		for (int i = 0; i < variables.size(); i++) {
-			values[i] = variables.get(i).getArbitraryValue();
+		Object[] values = new Object[variables.length];
+		for (int i = 0; i < variables.length; i++) {
+			values[i] = variables[i].getArbitraryValue();
 		}
 		return Assignment.fromSortedArrays(varNums, values);
 	}

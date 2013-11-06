@@ -86,7 +86,7 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
       Tensor expectedFeatureCounts = marginal.coerceToDiscrete().getWeights();
 
       if (conditionalAssignment.size() > 0) {
-        VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNums());
+        VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNumsArray());
         SparseTensor pointDistribution = SparseTensor.singleElement(vars.getVariableNumsArray(),
             vars.getVariableSizes(), vars.assignmentToIntArray(conditionalAssignment), 1.0);
         ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,

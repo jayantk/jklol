@@ -315,7 +315,7 @@ public class TableFactorTest extends TestCase {
 	}
 	
 	public void testIterationEmpty() {
-	  TableFactor emptyFactor = TableFactorBuilder.ones(VariableNumMap.emptyMap()).build();
+	  TableFactor emptyFactor = TableFactorBuilder.ones(VariableNumMap.EMPTY).build();
 	  Iterator<Outcome> iter = emptyFactor.outcomeIterator();
 	  assertTrue(iter.hasNext());
 	  assertEquals(Assignment.EMPTY, iter.next().getAssignment());

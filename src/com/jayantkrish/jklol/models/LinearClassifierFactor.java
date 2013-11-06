@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.models;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -36,11 +35,11 @@ public class LinearClassifierFactor extends ClassifierFactor {
       DiscreteVariable featureDictionary, Tensor logWeights) {
     super(inputVar, outputVars, featureDictionary);
     Preconditions.checkArgument(inputVar.union(outputVars).containsAll(
-        Ints.asList(logWeights.getDimensionNumbers())));
+        logWeights.getDimensionNumbers()));
     Preconditions.checkArgument(outputVars.getDiscreteVariables().size() == outputVars.size());
 
     this.inputVarNums = new int[] { inputVar.getOnlyVariableNum() };
-    this.conditionalVars = VariableNumMap.emptyMap();
+    this.conditionalVars = VariableNumMap.EMPTY;
     this.logWeights = logWeights;
   }
 
@@ -48,7 +47,7 @@ public class LinearClassifierFactor extends ClassifierFactor {
       VariableNumMap conditionalVars, DiscreteVariable featureDictionary, Tensor logWeights) {
     super(inputVar, outputVars, featureDictionary);
     Preconditions.checkArgument(inputVar.union(outputVars).containsAll(
-        Ints.asList(logWeights.getDimensionNumbers())));
+        logWeights.getDimensionNumbers()));
     Preconditions.checkArgument(outputVars.containsAll(conditionalVars));
 
     this.inputVarNums = new int[] { inputVar.getOnlyVariableNum() };
@@ -78,7 +77,7 @@ public class LinearClassifierFactor extends ClassifierFactor {
    */
   public Tensor getFeatureWeightsForClass(Assignment outputClass) {
     int[] classIndexes = getOutputVariables().assignmentToIntArray(outputClass);
-    int[] dimensionNums = Ints.toArray(getOutputVariables().getVariableNums());
+    int[] dimensionNums = getOutputVariables().getVariableNumsArray();
 
     return logWeights.slice(dimensionNums, classIndexes);
   }
@@ -89,7 +88,7 @@ public class LinearClassifierFactor extends ClassifierFactor {
 
     if (conditionalVars.size() > 0) {
       Tensor probs = logProbs.elementwiseExp();
-      Tensor normalizingConstants = probs.sumOutDimensions(conditionalVars.getVariableNums());
+      Tensor normalizingConstants = probs.sumOutDimensions(conditionalVars.getVariableNumsArray());
       logProbs = probs.elementwiseProduct(normalizingConstants.elementwiseInverse())
           .elementwiseLog();
     }

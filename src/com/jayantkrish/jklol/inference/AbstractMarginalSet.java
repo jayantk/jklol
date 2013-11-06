@@ -22,7 +22,7 @@ public abstract class AbstractMarginalSet implements MarginalSet {
   public AbstractMarginalSet(VariableNumMap marginalVariables, 
       VariableNumMap conditionedVariables, Assignment conditionedValues) {
     Preconditions.checkArgument(marginalVariables.union(conditionedVariables)
-        .containsAll(conditionedValues.getVariableNums()));
+        .containsAll(conditionedValues.getVariableNumsArray()));
     this.marginalVariables = marginalVariables;
     this.conditionedVariables = conditionedVariables;
     this.conditionedValues = conditionedValues;

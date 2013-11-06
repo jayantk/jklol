@@ -46,7 +46,7 @@ public class VariableNumPatternTest extends TestCase {
         Collections.nCopies(5, Assignment.EMPTY));
     instantiatedVars = vars.instantiateVariables(plate1Assignment.union(plate2Assignment));
     
-    fixedPattern = VariableNumPattern.fromTemplateVariables(VariableNumMap.emptyMap(), 
+    fixedPattern = VariableNumPattern.fromTemplateVariables(VariableNumMap.EMPTY, 
         fixedVars.intersection(2), vars);
     oneVarPattern = VariableNumPattern.fromTemplateVariables(VariableNumMap.singleton(0, "plate2/?(0)/p2_1", varType), 
         fixedVars.intersection(2), vars);
@@ -56,7 +56,7 @@ public class VariableNumPatternTest extends TestCase {
     offsetPatternVars = new VariableNumMap(Ints.asList(2, 3), 
         Arrays.asList("plate1/?(0)/p1_2", "plate1/?(-1)/p1_1"), Arrays.asList(varType, varType));
     offsetPattern = VariableNumPattern.fromTemplateVariables(offsetPatternVars,
-        VariableNumMap.emptyMap(), vars);
+        VariableNumMap.EMPTY, vars);
   }
   
   public void testMatchVariablesFixedOnly() {
@@ -73,7 +73,7 @@ public class VariableNumPatternTest extends TestCase {
       VariableNumMap matchedVars = match.getMatchedVariables();
       assertEquals(2, matchedVars.size());
       
-      int otherVar = matchedVars.remove(2).getOnlyVariableNum();
+      int otherVar = matchedVars.removeAll(2).getOnlyVariableNum();
       assertEquals(0, (int) match.getMappingToTemplate().getReplacementIndex(otherVar));
       assertEquals(oneVarPatternVars, match.getMappingToTemplate().apply(matchedVars));
     }
@@ -91,12 +91,12 @@ public class VariableNumPatternTest extends TestCase {
   }
   
   public void testMatchVariables3() {
-    assertEquals(1, offsetPattern.matchVariables(instantiatedVars.remove(
+    assertEquals(1, offsetPattern.matchVariables(instantiatedVars.removeAll(
         instantiatedVars.getVariableByName("plate1/1/p1_1"))).size());
   }
   
   public void testMatchEmpty() {
-    assertEquals(0, fixedPattern.matchVariables(instantiatedVars.remove(2)).size());
-    assertEquals(0, oneVarPattern.matchVariables(instantiatedVars.remove(2)).size());
+    assertEquals(0, fixedPattern.matchVariables(instantiatedVars.removeAll(2)).size());
+    assertEquals(0, oneVarPattern.matchVariables(instantiatedVars.removeAll(2)).size());
   }
 }

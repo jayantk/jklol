@@ -42,7 +42,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
 
     this.variableFactorMap = IntMultimap.create();
     for (int i = 0; i < allFactors.size(); i++) {
-      for (int variableNum : allFactors.get(i).getVars().getVariableNums()) {
+      for (int variableNum : allFactors.get(i).getVars().getVariableNumsArray()) {
         this.variableFactorMap.put(variableNum, i);
       }
     }
@@ -67,7 +67,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   }
   
   private static VariableNumMap getVariablesFromFactors(Collection<Factor> factors) { 
-    VariableNumMap output = VariableNumMap.emptyMap();
+    VariableNumMap output = VariableNumMap.EMPTY;
     for (Factor factor : factors) {
       output = output.union(factor.getVars());
     }
@@ -83,7 +83,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
   public Factor getUnnormalizedMarginal(Collection<Integer> varNums) {
     if (varNums.size() == 0 && allFactors.size() == 0) {
       // Special case if the inputVar factor graph has no unassigned variables. 
-      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY);
+      return TableFactor.pointDistribution(VariableNumMap.EMPTY, Assignment.EMPTY);
     }
 
     // Find a factor among the given factors that includes all of the given

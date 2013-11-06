@@ -82,7 +82,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor implements Se
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
 
     List<Object> terminals = terminalValueToTerminals.apply(assignment.getValue(terminalVariable.getOnlyVariableNum()));
-    ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));
+    ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNumsArray()[0]);
     return parser.getProbability(terminals, tree);
   }
 
@@ -99,18 +99,18 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor implements Se
 
   @Override
   public Factor conditional(Assignment assignment) {
-    VariableNumMap conditionedVars = getVars().intersection(assignment.getVariableNums());
+    VariableNumMap conditionedVars = getVars().intersection(assignment.getVariableNumsArray());
     if (conditionedVars.size() == 0) {
       return this;
     }
     Preconditions.checkArgument(conditionedVars.containsAll(terminalVariable));
-    List<Object> terminals = terminalValueToTerminals.apply(assignment.getValue(terminalVariable.getVariableNums().get(0)));
+    List<Object> terminals = terminalValueToTerminals.apply(assignment.getValue(terminalVariable.getVariableNumsArray()[0]));
 
     if (conditionedVars.containsAll(treeVariable)) {
       // If we also observe the tree, generate a factor over no variables with
       // the appropriate probability.
-      ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));
-      return TableFactor.pointDistribution(VariableNumMap.emptyMap(), Assignment.EMPTY).product(
+      ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNumsArray()[0]);
+      return TableFactor.pointDistribution(VariableNumMap.EMPTY, Assignment.EMPTY).product(
           parser.getProbability(terminals, tree));
     } else {
       // Find the "best" parse trees for the given terminals.

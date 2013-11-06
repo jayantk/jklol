@@ -143,7 +143,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
       Preconditions.checkState(wordClassifier.getVariables().equals(baseClassifier.getVars()));
     }
     builder.addFactor(TaggerUtils.WORD_LABEL_FACTOR, wordClassifier, baseClassifier,
-        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.EMPTY));
     
     // Add a factor connecting adjacent labels.
     if (!noTransitions) {
@@ -156,7 +156,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
         Preconditions.checkState(transitionFamily.getVariables().equals(baseTransitionFactor.getVars()));
       }
       builder.addFactor(TaggerUtils.TRANSITION_FACTOR, transitionFamily, baseTransitionFactor,
-          VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+          VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY));
     }
 
     return builder.build();

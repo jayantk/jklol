@@ -72,14 +72,14 @@ public class OpLrtFamily implements LrtFamily {
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> opStats = Lists.newArrayList();
     List<String> names = Lists.newArrayList();
-    List<Integer> varNums = vars.getVariableNums();
+    int[] varNums = vars.getVariableNumsArray();
     List<DiscreteVariable> varTypes = vars.getDiscreteVariables();
     for (int i = 0; i < rank; i++) {
       List<SufficientStatistics> curStats = Lists.newArrayList();
-      for (int j = 0; j < varNums.size(); j++) {
-        DenseTensorBuilder builder = new DenseTensorBuilder(new int[] {varNums.get(j)}, 
+      for (int j = 0; j < varNums.length; j++) {
+        DenseTensorBuilder builder = new DenseTensorBuilder(new int[] {varNums[j]}, 
             new int[] {varTypes.get(j).numValues()});
-        curStats.add(new TensorSufficientStatistics(vars.intersection(varNums.get(j)), builder));
+        curStats.add(new TensorSufficientStatistics(vars.intersection(varNums[j]), builder));
       }
       opStats.add(new ListSufficientStatistics(vars.getVariableNames(), curStats));
       names.add(Integer.toString(i));

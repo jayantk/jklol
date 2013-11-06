@@ -69,7 +69,7 @@ public class TableFactorBuilder {
     Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size(),
         "Not all variables are discrete: "+ variables);
     this.vars = variables;
-    this.weightBuilder = tensorFactory.getBuilder(Ints.toArray(vars.getVariableNums()),
+    this.weightBuilder = tensorFactory.getBuilder(vars.getVariableNumsArray(),
         vars.getVariableSizes());
   }
 

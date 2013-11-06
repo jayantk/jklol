@@ -9,6 +9,7 @@ import java.util.Map;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
@@ -38,7 +39,7 @@ public class DynamicVariableSet implements Serializable {
 
   private static final String NAMESPACE_SEPARATOR = "/";
 
-  public static final DynamicVariableSet EMPTY = new DynamicVariableSet(VariableNumMap.emptyMap(),
+  public static final DynamicVariableSet EMPTY = new DynamicVariableSet(VariableNumMap.EMPTY,
       Collections.<String> emptyList(), Collections.<DynamicVariableSet> emptyList(), new int[0]);
 
   public DynamicVariableSet(VariableNumMap fixedVariables,
@@ -46,7 +47,7 @@ public class DynamicVariableSet implements Serializable {
     Preconditions.checkArgument(plateNames.size() == plates.size());
     Preconditions.checkArgument(plateNames.size() == maximumReplications.length);
     this.fixedVariables = fixedVariables;
-    this.fixedVariableMaxInd = (fixedVariables.size() > 0) ? Collections.max(fixedVariables.getVariableNums()) : -1;
+    this.fixedVariableMaxInd = (fixedVariables.size() > 0) ? Ints.max(fixedVariables.getVariableNumsArray()) : -1;
     this.plateNames = plateNames;
     this.plates = plates;
     this.maximumReplications = maximumReplications;
@@ -189,7 +190,7 @@ public class DynamicVariableSet implements Serializable {
       List<String> variableNames, List<Variable> variables,
       List<Integer> variableInds, String namespace, int indexOffset) {
     // Add each fixedVariable to the output VariableNumMap.
-    for (String varName : fixedVariables.getVariableNames()) {
+    for (String varName : fixedVariables.getVariableNamesArray()) {
       variableNames.add(namespace + varName);
       variables.add(fixedVariables.getVariable(fixedVariables.getVariableByName(varName)));
       variableInds.add(fixedVariables.getVariableByName(varName) + indexOffset);
@@ -256,10 +257,10 @@ public class DynamicVariableSet implements Serializable {
   private void toAssignmentHelper(DynamicAssignment assignment, int indexOffset,
       Map<Integer, Object> values) {
     Assignment fixedAssignment = assignment.getFixedAssignment();
-    Preconditions.checkArgument(fixedVariables.containsAll(fixedAssignment.getVariableNums()),
+    Preconditions.checkArgument(fixedVariables.containsAll(fixedAssignment.getVariableNumsArray()),
         "Cannot assign %s to %s", assignment, this);
 
-    for (int curVarNum : fixedVariables.getVariableNums()) {
+    for (int curVarNum : fixedVariables.getVariableNumsArray()) {
       if (fixedAssignment.contains(curVarNum)) {
         values.put(indexOffset + curVarNum, fixedAssignment.getValue(curVarNum));
       }
@@ -286,11 +287,11 @@ public class DynamicVariableSet implements Serializable {
     Map<Integer, Object> fixedAssignmentValues = Maps.newHashMap();
     for (int i = 0; i < fixedVariables.size(); i++) {
       // Get the variable's index in assignment.
-      String curVarName = namespace + fixedVariables.getVariableNames().get(i);
+      String curVarName = namespace + fixedVariables.getVariableNamesArray()[i];
       int curVarIndex = variables.getVariableByName(curVarName);
 
       if (assignment.contains(curVarIndex)) {
-        int myVarNum = fixedVariables.getVariableNums().get(i);
+        int myVarNum = fixedVariables.getVariableNumsArray()[i];
         fixedAssignmentValues.put(myVarNum, assignment.getValue(curVarIndex));
       }
     }
@@ -323,7 +324,7 @@ public class DynamicVariableSet implements Serializable {
   public List<VariableMatch> getPlateInstantiations(VariableNumMap instantiatedVariables, 
       String plateName) {
     VariablePattern pattern = VariableNamePattern.fromPlate(plateName,
-        getPlate(plateName).getFixedVariables(), VariableNumMap.emptyMap());
+        getPlate(plateName).getFixedVariables(), VariableNumMap.EMPTY);
     return pattern.matchVariables(instantiatedVariables);
   }
 
@@ -359,7 +360,7 @@ public class DynamicVariableSet implements Serializable {
    * @return
    */
   public DynamicVariableSet addFixedVariables(VariableNumMap variables) {
-    Preconditions.checkArgument(!fixedVariables.containsAny(variables.getVariableNums()));
+    Preconditions.checkArgument(!fixedVariables.containsAny(variables));
 
     return new DynamicVariableSet(fixedVariables.union(variables), plateNames, plates,
         maximumReplications);

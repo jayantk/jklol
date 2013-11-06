@@ -53,7 +53,7 @@ public class Assignment implements Serializable {
    * @return
    */
   public static final Assignment fromUnsortedArrays(int[] vars, Object[] values) {
-    ArrayUtils.sortKeyValuePairs(vars, values, 0, vars.length);
+    ArrayUtils.sortKeyValuePairs(vars, new Object[][] {values}, 0, vars.length);
     return fromSortedArrays(vars, values);
   }
 

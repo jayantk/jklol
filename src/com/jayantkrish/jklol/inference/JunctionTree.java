@@ -355,7 +355,7 @@ public class JunctionTree implements MarginalCalculator {
       Map<Factor, Integer> factorIndexMap = Maps.newHashMap();
       int index = 0;
       for (Factor f : cliqueFactors) {
-        for (Integer varNum : f.getVars().getVariableNums()) {
+        for (int varNum : f.getVars().getVariableNumsArray()) {
           varFactorMap.put(varNum, f);
         }
         factorIndexMap.put(f, index);
@@ -485,7 +485,7 @@ public class JunctionTree implements MarginalCalculator {
       }
 
       // Remove the factor from the map containing variable counts.
-      for (Integer variableNum : f.getVars().getVariableNums()) {
+      for (int variableNum : f.getVars().getVariableNumsArray()) {
         // First decrement the occurrence count of this variable.
         int count = varFactorMap.get(variableNum).size();
         countsOfVars.remove(count, variableNum);

@@ -113,7 +113,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor conditional(Assignment a) {
-    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNums());
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNumsArray());
 
     // Efficiency improvement: only create a new factor if necessary.
     if (varsToEliminate.size() == 0) {

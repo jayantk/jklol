@@ -17,6 +17,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -62,12 +63,12 @@ public class FactorGraph implements Serializable {
    * {@link #addVariable(String, Variable)}.
    */
   public FactorGraph() {
-    variables = VariableNumMap.emptyMap();
+    variables = VariableNumMap.EMPTY;
     variableFactorMap = HashMultimap.create();
     factorVariableMap = HashMultimap.create();
     factors = Lists.newArrayList();
     factorNames = IndexedList.create();
-    conditionedVariables = VariableNumMap.emptyMap();
+    conditionedVariables = VariableNumMap.EMPTY;
     conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
@@ -85,7 +86,7 @@ public class FactorGraph implements Serializable {
     factorVariableMap = HashMultimap.create();
     for (int i = 0; i < factors.size(); i++) {
       VariableNumMap factorVars = factors.get(i).getVars();
-      for (Integer j : factorVars.getVariableNums()) {
+      for (int j : factorVars.getVariableNumsArray()) {
         variableFactorMap.put(j, i);
         factorVariableMap.put(i, j);
       }
@@ -121,7 +122,7 @@ public class FactorGraph implements Serializable {
    * @param factors
    */
   public static FactorGraph createFromFactors(List<Factor> factors) {
-    VariableNumMap allVars = VariableNumMap.emptyMap();
+    VariableNumMap allVars = VariableNumMap.EMPTY;
     for (int i = 0; i < factors.size(); i++) {
       VariableNumMap factorVars = factors.get(i).getVars();
       allVars = allVars.union(factorVars);
@@ -131,7 +132,7 @@ public class FactorGraph implements Serializable {
     for (int i = 0; i < factors.size(); i++) {
       factorNames.add("factor-" + i);
     }
-    return new FactorGraph(allVars, factors, factorNames, VariableNumMap.emptyMap(),
+    return new FactorGraph(allVars, factors, factorNames, VariableNumMap.EMPTY,
         Assignment.EMPTY);
   }
 
@@ -209,7 +210,7 @@ public class FactorGraph implements Serializable {
     Multimap<Integer, Integer> varFactorIndex = HashMultimap.create();
     for (Factor f : sortedFactors) {
       Set<Integer> mergeableFactors = Sets.newHashSet(factorNums);
-      for (Integer varNum : f.getVars().getVariableNums()) {
+      for (int varNum : f.getVars().getVariableNumsArray()) {
         mergeableFactors.retainAll(varFactorIndex.get(varNum));
       }
 
@@ -217,7 +218,7 @@ public class FactorGraph implements Serializable {
         int factorIndex = Iterables.getFirst(mergeableFactors, -1);
         factorsToMerge.get(factorIndex).add(f);
       } else {
-        for (Integer varNum : f.getVars().getVariableNums()) {
+        for (int varNum : f.getVars().getVariableNumsArray()) {
           varFactorIndex.put(varNum, factorsToMerge.size());
         }
         factorNums.add(factorsToMerge.size());
@@ -320,7 +321,7 @@ public class FactorGraph implements Serializable {
 
   public Map<String, Object> assignmentToObject(Assignment a) {
     Map<String, Object> objectVals = new HashMap<String, Object>();
-    for (String varName : getVariables().getVariableNames()) {
+    for (String varName : getVariables().getVariableNamesArray()) {
       int varNum = getVariables().getVariableByName(varName);
       if (a.contains(varNum)) {
         objectVals.put(varName, a.getValue(varNum));
@@ -419,7 +420,7 @@ public class FactorGraph implements Serializable {
    */
   public FactorGraph addVariable(String variableName, Variable variable) {
     Preconditions.checkArgument(!getVariables().contains(variableName));
-    int varNum = getAllVariables().size() > 0 ? Collections.max(getAllVariables().getVariableNums()) + 1 : 0;
+    int varNum = getAllVariables().size() > 0 ? Ints.max(getAllVariables().getVariableNumsArray()) + 1 : 0;
     return addVariableWithIndex(variableName, variable, varNum);
   }
 
@@ -442,7 +443,7 @@ public class FactorGraph implements Serializable {
     factorGraph.factors.add(factor);
     factorGraph.factorNames.add(factorName);
 
-    for (Integer i : factor.getVars().getVariableNums()) {
+    for (int i : factor.getVars().getVariableNumsArray()) {
       factorGraph.variableFactorMap.put(i, factorNum);
       factorGraph.factorVariableMap.put(factorNum, i);
     }
@@ -472,7 +473,7 @@ public class FactorGraph implements Serializable {
       FactorGraph nextFactorGraph = new FactorGraph();
 
       // Copy the variables in currentFactorGraph to nextFactorGraph
-      for (String variableName : currentFactorGraph.getVariables().getVariableNames()) {
+      for (String variableName : currentFactorGraph.getVariables().getVariableNamesArray()) {
         int varIndex = currentFactorGraph.getVariables().getVariableByName(variableName);
         if (varIndex != eliminatedVariableIndex) {
           nextFactorGraph = nextFactorGraph.addVariableWithIndex(variableName,
@@ -523,7 +524,7 @@ public class FactorGraph implements Serializable {
    * @return
    */
   public FactorGraph conditional(Assignment assignment) {
-    Preconditions.checkArgument(variables.containsAll(assignment.getVariableNums()));
+    Preconditions.checkArgument(variables.containsAll(assignment.getVariableNumsArray()));
 
     // Short-circuit when nothing is conditioned on. Also the base case when
     // instantiating assignments from plates.
@@ -533,9 +534,9 @@ public class FactorGraph implements Serializable {
 
     Assignment newConditionedValues = this.conditionedValues.union(assignment);
     VariableNumMap newConditionedVariables = this.conditionedVariables.union(
-        this.getVariables().intersection(assignment.getVariableNums()));
+        this.getVariables().intersection(assignment.getVariableNumsArray()));
 
-    VariableNumMap newVariables = getVariables().removeAll(assignment.getVariableNums());
+    VariableNumMap newVariables = getVariables().removeAll(assignment.getVariableNumsArray());
 
     // Condition each factor on assignment.
     List<Factor> newFactors = Lists.newArrayListWithCapacity(getFactors().size());

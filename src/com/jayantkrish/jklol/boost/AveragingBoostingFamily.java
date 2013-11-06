@@ -22,9 +22,9 @@ public class AveragingBoostingFamily extends AbstractBoostingFactorFamily {
   private static final long serialVersionUID = 1L;
   
   public AveragingBoostingFamily(VariableNumMap unconditionalVars) {
-    super(VariableNumMap.emptyMap(), unconditionalVars);
+    super(VariableNumMap.EMPTY, unconditionalVars);
     Preconditions.checkArgument(unconditionalVars.getDiscreteVariables().size() 
-        == unconditionalVars.getVariables().size());
+        == unconditionalVars.size());
   }
   
   @Override

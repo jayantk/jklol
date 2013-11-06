@@ -126,7 +126,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
   @Override
   public Factor conditional(Assignment assignment) {
     Assignment subAssignment = assignment.intersection(getVars());
-    VariableNumMap conditionedVars = getVars().intersection(assignment.getVariableNums());
+    VariableNumMap conditionedVars = getVars().intersection(assignment.getVariableNumsArray());
 
     if (subAssignment.size() == 0) {
       return this;

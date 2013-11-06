@@ -150,14 +150,14 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
 
     if (conditionalAssignment.containsAll(treeVar.getVariableNumsArray())) {
-      ParseTree tree = (ParseTree) conditionalAssignment.getValue(treeVar.getVariableNums().get(0));
+      ParseTree tree = (ParseTree) conditionalAssignment.getValue(treeVar.getOnlyVariableNum());
       
       accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, count);
     } else {
       DiscreteObjectFactor objectMarginal = (DiscreteObjectFactor) marginal;
       
       for (Assignment assignment : objectMarginal.assignments()) {
-        ParseTree tree = (ParseTree) assignment.getValue(treeVar.getVariableNums().get(0));
+        ParseTree tree = (ParseTree) assignment.getValue(treeVar.getOnlyVariableNum());
         
         accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, 
             count * objectMarginal.getUnnormalizedProbability(assignment) / partitionFunction);

@@ -197,7 +197,7 @@ public class TrainCvsm extends AbstractCli {
       TensorSpec spec = vectors.get(vectorName);
 
       int[] sizes = spec.getSizes();
-      VariableNumMap vars = VariableNumMap.emptyMap();
+      VariableNumMap vars = VariableNumMap.EMPTY;
       for (int i = 0; i < sizes.length; i++) {
         if (!varMap.containsKey(sizes[i])) {
           varMap.put(sizes[i],

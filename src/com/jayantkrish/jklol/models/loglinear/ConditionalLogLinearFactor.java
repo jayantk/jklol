@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.models.loglinear;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -72,7 +71,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
     this.featureDictionary = featureDictionary;
     
-    this.dimensionNums = Ints.toArray(inputVar.union(outputVars).getVariableNums());
+    this.dimensionNums = inputVar.union(outputVars).getVariableNumsArray();
     Preconditions.checkArgument(dimensionNums[0] == inputVar.getOnlyVariableNum());
         
     this.dimensionSizes = new int[outputVars.size() + 1];
@@ -154,7 +153,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
       if (conditionalAssignment.containsAny(outputVarNums)) {
         Assignment conditionedAssignment = conditionalAssignment.intersection(outputVarNums);
         DiscreteFactor conditionedFactor = TableFactor.pointDistribution(
-            outputVars.intersection(conditionedAssignment.getVariableNums()), conditionedAssignment);
+            outputVars.intersection(conditionedAssignment.getVariableNumsArray()), conditionedAssignment);
         outputMarginal = conditionedFactor.outerProduct(marginal);
       }
 

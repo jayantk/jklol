@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.inference;
 
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -35,7 +34,7 @@ public class MeanFieldPerformanceTest extends PerformanceTestCase {
     
     for (int i = 0; i < numNodes - 1; i++) {
       VariableNumMap curVars = f.getVariables().getVariablesByName("var" + i, "var" + (i + 1));
-      Tensor weights = new LogSpaceTensorAdapter(DenseTensor.random(Ints.toArray(curVars.getVariableNums()), curVars.getVariableSizes(), 0, 1));
+      Tensor weights = new LogSpaceTensorAdapter(DenseTensor.random(curVars.getVariableNumsArray(), curVars.getVariableSizes(), 0, 1));
       f = f.addFactor("factor" + i + "," + (i+1), new TableFactor(curVars, weights));
     }
     

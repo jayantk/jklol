@@ -12,8 +12,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.regexp.shared.MatchResult;
+import com.google.gwt.regexp.shared.RegExp;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -67,7 +67,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
   public static VariableNamePattern fromTemplateVariables(VariableNumMap templateVariables,
       VariableNumMap fixedVariables) {
     List<VariableNameMatcher> matchers = Lists.newArrayList();
-    for (String variableName : templateVariables.getVariableNames()) {
+    for (String variableName : templateVariables.getVariableNamesArray()) {
       int varIndex = variableName.indexOf("?(");
       String variableNamePrefix = variableName.substring(0, varIndex);
       String variableNameSuffix = variableName.substring(varIndex + 1);
@@ -93,7 +93,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
   public static VariablePattern fromPlate(String plateName, VariableNumMap plateVariables,
       VariableNumMap fixedVariables) {
     List<VariableNameMatcher> matchers = Lists.newArrayList();
-    for (String variableName : plateVariables.getVariableNames()) {
+    for (String variableName : plateVariables.getVariableNamesArray()) {
       matchers.add(new VariableNameMatcher(plateName + "/", "/" + variableName, 0));
     }
     return new VariableNamePattern(matchers, plateVariables, fixedVariables);
@@ -134,15 +134,15 @@ public class VariableNamePattern extends AbstractVariablePattern {
     // replication index.
     SortedMap<Integer, VariableMatch> variableMatches = Maps.newTreeMap();
     for (int i = 0; i < templateVariableMatchers.size(); i++) {
-      int templateVariableIndex = templateVariables.getVariableNums().get(i);
+      int templateVariableIndex = templateVariables.getVariableNumsArray()[i];
 
-      for (String variableName : inputVariables.getVariableNames()) {
+      for (String variableName : inputVariables.getVariableNamesArray()) {
         for (Integer replicationIndex : templateVariableMatchers.get(i).getMatchedIndices(variableName)) {
           if (!variableMatches.containsKey(replicationIndex)) {
             variableMatches.put(replicationIndex, new VariableMatch(fixedVariables));
           }
           variableMatches.get(replicationIndex).addMatch(
-              templateVariables.intersection(Ints.asList(templateVariableIndex)),
+              templateVariables.intersection(templateVariableIndex),
               inputVariables.getVariablesByName(variableName));
         }
       }

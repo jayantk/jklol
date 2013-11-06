@@ -72,13 +72,13 @@ public class ModelUtils {
     DiscreteLogLinearFactor emissionFactor = new DiscreteLogLinearFactor(x.union(y), emissionFeatureVar,
         emissionFeatureFactor);
     builder.addFactor(WORD_LABEL_FACTOR, emissionFactor,
-        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.EMPTY));
 
     // Create a factor connecting adjacent labels
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
         Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(labelType, labelType));
     builder.addFactor(TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY));
 
     return builder.build();
   }

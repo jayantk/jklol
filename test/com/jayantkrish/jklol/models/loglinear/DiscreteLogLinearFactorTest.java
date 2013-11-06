@@ -43,7 +43,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     // f = new IndicatorLogLinearFactor(vars, initialWeights.build());
     
     ParametricFactor normalizedFactor = DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights);
-    normed = new ParametricNormalizingFactor(VariableNumMap.emptyMap(), vars.getVariablesByName("v2"),
+    normed = new ParametricNormalizingFactor(VariableNumMap.EMPTY, vars.getVariablesByName("v2"),
         vars.getVariablesByName("v3"), Arrays.asList(normalizedFactor));
 
     parameters = f.getNewSufficientStatistics();

@@ -254,7 +254,7 @@ public class TaggerUtils {
     VariableNumMap wordVectorVar = classifierVars.getVariablesByName(INPUT_FEATURES_PATTERN);
     VariableNumMap posVar = classifierVars.getVariablesByName(OUTPUT_PATTERN);
     ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
-        VariableNumMap.emptyMap(), featureDictionary);
+        VariableNumMap.EMPTY, featureDictionary);
 
     // Create a constant factor for encoding label restrictions.
     VariableNumMap restrictionVars = new VariableNumMap(Ints.asList(2, 4),
@@ -276,7 +276,7 @@ public class TaggerUtils {
       List<ParametricFactor> factors = Lists.<ParametricFactor>newArrayList(wordClassifier,
           new ConstantParametricFactor(restrictions.getVars(), restrictions));
       VariableNumMap inputVars = wordVectorVar.union(wordVar);
-      VariableNumMap conditionalVars = VariableNumMap.emptyMap();
+      VariableNumMap conditionalVars = VariableNumMap.EMPTY;
       VariableNumMap outputVar = adjacentVars.getVariablesByName(OUTPUT_PATTERN);
       if (adjacentFactor != null) {
         factors.add(adjacentFactor);
@@ -286,16 +286,16 @@ public class TaggerUtils {
       ParametricNormalizingFactor normalizingFactor = new ParametricNormalizingFactor(
           inputVars, conditionalVars, outputVar, factors);
       builder.addFactor(NORMALIZED_FACTOR, normalizingFactor,
-          VariableNumPattern.fromTemplateVariables(factorVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+          VariableNumPattern.fromTemplateVariables(factorVars, VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
     } else {
       // Just add each factor to the factor graph 
       builder.addFactor(TaggerUtils.WORD_LABEL_FACTOR, wordClassifier,
-          VariableNumPattern.fromTemplateVariables(classifierVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+          VariableNumPattern.fromTemplateVariables(classifierVars, VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
       builder.addConstantFactor(TaggerUtils.LABEL_RESTRICTION_FACTOR, new ReplicatedFactor(restrictions,
-          VariableNumPattern.fromTemplateVariables(restrictionVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet())));
+          VariableNumPattern.fromTemplateVariables(restrictionVars, VariableNumMap.EMPTY, builder.getDynamicVariableSet())));
       if (adjacentFactor != null) {
         builder.addFactor(TaggerUtils.TRANSITION_FACTOR, adjacentFactor,
-            VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+            VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
       }
     }
     return builder.build();

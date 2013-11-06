@@ -112,7 +112,7 @@ public class InferenceTestCases {
     MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, Assignment.EMPTY, 
         Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 4}, 
             new Object[] {"T", "foo", "T", "T", "F"}),
-            f.getVariables().intersection(Arrays.asList(0, 2)));
+            f.getVariables().intersection(0, 2));
     testCase.addTest(new String[] {"T", "T"}, 9.0);
     testCase.addTest(new String[] {"T", "F"}, 4.0);
     testCase.addTest(new String[] {"U", "F"}, 8.0);
@@ -132,7 +132,7 @@ public class InferenceTestCases {
         Assignment.fromSortedArrays(new int[] {2}, new Object[] {"F"}), 
         Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 4}, 
             new Object[] {"U", "foo", "F", "F", "U"}),
-            f.getVariables().intersection(Arrays.asList(3, 4)));
+            f.getVariables().intersection(3, 4));
     
     // The graph becomes disjoint, so the max marginal here is somewhat unclear.
     // testCase.addTest(new String[] {"F", "U"}, 8.0);

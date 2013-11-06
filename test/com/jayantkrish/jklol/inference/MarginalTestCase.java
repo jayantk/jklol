@@ -53,7 +53,7 @@ public class MarginalTestCase {
 	  Assert.assertEquals(condition, marginals.getConditionedValues().intersection(
 	      condition.getVariableNumsArray()));
 	  Assert.assertTrue(marginals.getVariables().containsAll(
-	      marginals.getConditionedValues().getVariableNums()));
+	      marginals.getConditionedValues().getVariableNumsArray()));
 
 	  for (Map.Entry<String[], MarginalTest> testCase : variableMarginalTests.entrySet()) {
 	    VariableNumMap variables = marginals.getVariables().getVariablesByName(testCase.getKey());
@@ -66,7 +66,7 @@ public class MarginalTestCase {
 	  FactorGraph conditionedFactorGraph = factorGraph.conditional(condition);
 	  MarginalSet marginals = inference.computeMarginals(conditionedFactorGraph);
 	  
-	  for (int varNum : marginals.getVariables().getVariableNums()) {
+	  for (int varNum : marginals.getVariables().getVariableNumsArray()) {
 	    DiscreteFactor marginal = marginals.getMarginal(Arrays.asList(varNum)).coerceToDiscrete();
 	    
 	    Iterator<Outcome> outcomes = marginal.outcomeIterator();

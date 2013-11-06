@@ -55,7 +55,7 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
     List<Factor> factorGraphFactors = factorGraph.getFactors();
     for (int i = 0; i < factorGraphFactors.size(); i++) {
       Factor factor = factorGraphFactors.get(i);
-      if (factor.getVars().containsAll(factorPortion.getVariableNums())) {
+      if (factor.getVars().containsAll(factorPortion.getVariableNumsArray())) {
         return getBestAssignment(portion, factorGraph, i);
       }
     }

@@ -85,7 +85,7 @@ public class FilterFactor extends AbstractFactor {
   @Override
   public Factor conditional(Assignment assignment) {
     // Not actually supported.
-    Preconditions.checkArgument(!getVars().containsAny(assignment.getVariableNums()));
+    Preconditions.checkArgument(!getVars().containsAny(assignment.getVariableNumsArray()));
     return this;
   }
 

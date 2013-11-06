@@ -4,20 +4,15 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
 
@@ -31,10 +26,17 @@ import com.jayantkrish.jklol.util.Converter;
  */
 public class VariableNumMap implements Serializable {
 
-  private static final long serialVersionUID = 4365097309859003264L;
+  private static final long serialVersionUID = 2L;
 
-  private final SortedMap<Integer, Variable> varMap;
-  private final BiMap<Integer, String> names;
+  private final int[] nums;
+  private final String[] names;
+  private final Variable[] vars;
+
+  /**
+   * A {@code VariableNumMap} containing no variables.
+   */
+  public static final VariableNumMap EMPTY = new VariableNumMap(
+      new int[0], new String[0], new Variable[0]);
 
   /**
    * Instantiate a VariableNumMap with the specified variables. Each
@@ -49,12 +51,11 @@ public class VariableNumMap implements Serializable {
   public VariableNumMap(List<Integer> varNums, List<String> varNames, List<? extends Variable> vars) {
     Preconditions.checkArgument(varNums.size() == vars.size());
     Preconditions.checkArgument(varNums.size() == varNames.size());
-    varMap = new TreeMap<Integer, Variable>();
-    names = HashBiMap.create();
-    for (int i = 0; i < varNums.size(); i++) {
-      varMap.put(varNums.get(i), vars.get(i));
-      names.put(varNums.get(i), varNames.get(i));
-    }
+    
+    this.nums = Ints.toArray(varNums);
+    this.names = varNames.toArray(new String[varNames.size()]);
+    this.vars = vars.toArray(new Variable[vars.size()]);
+    ArrayUtils.sortKeyValuePairs(nums, new Object[][]{names, this.vars}, 0, nums.length);
   }
 
   /**
@@ -62,13 +63,16 @@ public class VariableNumMap implements Serializable {
    * operations that return new {@code VariableNumMap}s, such as
    * {@link #union(VariableNumMap)}.
    * 
-   * @param varNumMap
-   * @param varNames
+   * @param nums
+   * @param vars
+   * @param names
    */
-  private VariableNumMap(SortedMap<Integer, Variable> varNumMap,
-      BiMap<Integer, String> varNames) {
-    varMap = varNumMap;
-    names = varNames;
+  private VariableNumMap(int[] nums, String[] names, Variable[] vars) {
+    Preconditions.checkArgument(nums.length == names.length);
+    Preconditions.checkArgument(nums.length == vars.length);
+    this.nums = nums;
+    this.names = names;
+    this.vars = vars;
   }
 
   public static VariableNumMap fromVariableNames(List<String> variableNames,
@@ -90,7 +94,32 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public static VariableNumMap singleton(int varNum, String varName, Variable variable) {
-    return new VariableNumMap(Ints.asList(varNum), Arrays.asList(varName), Arrays.asList(variable));
+    return new VariableNumMap(new int[] {varNum}, new String[] {varName}, new Variable[] {variable});
+  }
+  
+  public static VariableNumMap fromUnsortedArrays(int[] nums, String[] names, Variable[] vars) {
+    ArrayUtils.sortKeyValuePairs(nums, new Object[][] {names, vars}, 0, nums.length);
+    return new VariableNumMap(nums, names, vars);
+  }
+  
+  public static VariableNumMap fromUnsortedArrays(int[] nums, String[] names, Variable[] vars, int num) {
+    if (num < nums.length) {
+      return fromUnsortedArrays(Arrays.copyOf(nums, num), Arrays.copyOf(names, num), Arrays.copyOf(vars, num));
+    } else {
+      return fromUnsortedArrays(nums, names, vars);
+    }
+  }
+
+  public static VariableNumMap fromSortedArrays(int[] nums, String[] names, Variable[] vars) {
+    return new VariableNumMap(nums, names, vars);
+  }
+
+  public static VariableNumMap fromSortedArrays(int[] nums, String[] names, Variable[] vars, int num) {
+    if (num < nums.length) {
+      return fromSortedArrays(Arrays.copyOf(nums, num), Arrays.copyOf(names, num), Arrays.copyOf(vars, num));
+    } else {
+      return fromSortedArrays(nums, names, vars);
+    }
   }
 
   /**
@@ -122,8 +151,8 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public int size() {
-    return varMap.size();
+  public final int size() {
+    return nums.length;
   }
 
   /**
@@ -132,8 +161,8 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public List<Integer> getVariableNums() {
-    return new ArrayList<Integer>(varMap.keySet());
+  public final List<Integer> getVariableNums() {
+    return Ints.asList(nums);
   }
 
   /**
@@ -142,44 +171,21 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public int[] getVariableNumsArray() {
-    return Ints.toArray(varMap.keySet());
+  public final int[] getVariableNumsArray() {
+    return nums;
   }
-
-  /**
-   * Gets the number of the sole variable contained in {@code this}.
-   * Requires {@code this.size() == 1}.
-   * 
-   * @return
-   */
-  public int getOnlyVariableNum() {
-    Preconditions.checkState(varMap.size() == 1);
-    return varMap.keySet().iterator().next();
-  }
-
-  public String getOnlyVariableName() {
-    Preconditions.checkState(names.size() == 1);
-    return names.values().iterator().next();
-  }
-
+  
   /**
    * Get the variable types in this map, ordered by variable index.
    * 
    * @return
    */
-  public List<Variable> getVariables() {
-    return new ArrayList<Variable>(varMap.values());
+  public final List<Variable> getVariables() {
+    return Arrays.asList(vars);
   }
-
-  /**
-   * Gets the {@code Variable} of the sole variable contained in
-   * {@code this}. Requires {@code this.size() == 1}.
-   * 
-   * @return
-   */
-  public Variable getOnlyVariable() {
-    Preconditions.checkState(varMap.size() == 1);
-    return varMap.values().iterator().next();
+  
+  public final Variable[] getVariablesArray() {
+    return vars;
   }
 
   /**
@@ -189,33 +195,65 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public List<String> getVariableNames() {
-    List<String> orderedNames = Lists.newArrayList();
-    for (Integer variableNum : varMap.keySet()) {
-      orderedNames.add(names.get(variableNum));
-    }
-    return orderedNames;
+    return Arrays.asList(names);
+  }
+
+  public final String[] getVariableNamesArray() {
+    return names;
+  }
+
+  /**
+   * Gets the number of the sole variable contained in {@code this}.
+   * Requires {@code this.size() == 1}.
+   * 
+   * @return
+   */
+  public final int getOnlyVariableNum() {
+    Preconditions.checkState(nums.length == 1);
+    return nums[0];
+  }
+
+  public final String getOnlyVariableName() {
+    Preconditions.checkState(names.length == 1);
+    return names[0];
+  }
+  
+  /**
+   * Gets the {@code Variable} of the sole variable contained in
+   * {@code this}. Requires {@code this.size() == 1}.
+   * 
+   * @return
+   */
+  public final Variable getOnlyVariable() {
+    Preconditions.checkState(vars.length == 1);
+    return vars[0];
   }
 
   /**
    * Gets the name of the variable whose numerical index is
-   * {@code index}. Throws a {@code KeyError} if no such variable
+   * {@code index}. Returns {@code null} if no such variable
    * exists.
    * 
    * @return
    */
-  public String getVariableNameFromIndex(int index) {
-    return names.get(index);
+  public final String getVariableNameFromIndex(int num) {
+    int index = getVariableIndex(num);
+    if (index >= 0) {
+      return names[index];
+    } else {
+      return null;
+    }
   }
 
   /**
    * Get the discrete variables in this map, ordered by variable
    * index.
    */
-  public List<DiscreteVariable> getDiscreteVariables() {
+  public final List<DiscreteVariable> getDiscreteVariables() {
     List<DiscreteVariable> discreteVars = new ArrayList<DiscreteVariable>();
-    for (Integer varNum : getVariableNums()) {
-      if (getVariable(varNum) instanceof DiscreteVariable) {
-        discreteVars.add((DiscreteVariable) getVariable(varNum));
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] instanceof DiscreteVariable) {
+        discreteVars.add((DiscreteVariable) vars[i]);
       }
     }
     return discreteVars;
@@ -229,11 +267,10 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public int[] getVariableSizes() {
+  public final int[] getVariableSizes() {
     int[] sizes = new int[size()];
-    List<DiscreteVariable> varTypes = getDiscreteVariables();
-    for (int i = 0; i < varTypes.size(); i++) {
-      sizes[i] = varTypes.get(i).numValues();
+    for (int i = 0; i < vars.length; i++) {
+      sizes[i] = ((DiscreteVariable) vars[i]).numValues();
     }
     return sizes;
   }
@@ -245,7 +282,7 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public int getNumberOfPossibleAssignments() {
+  public final int getNumberOfPossibleAssignments() {
     int[] sizes = getVariableSizes();
     int numAssignments = 1;
     for (int i = 0; i < sizes.length; i++) {
@@ -255,32 +292,19 @@ public class VariableNumMap implements Serializable {
   }
 
   /**
-   * Get the real variables in this map, ordered by variable index.
-   */
-  public List<RealVariable> getRealVariables() {
-    List<RealVariable> realVars = new ArrayList<RealVariable>();
-    for (Integer varNum : getVariableNums()) {
-      if (getVariable(varNum) instanceof RealVariable) {
-        realVars.add((RealVariable) getVariable(varNum));
-      }
-    }
-    return realVars;
-  }
-
-  /**
    * Gets any variables in {@code this} whose values are objects of
    * type {@code T}.
    * 
    * @return
    */
   public List<ObjectVariable> getObjectVariables() {
-    List<ObjectVariable> integerVars = new ArrayList<ObjectVariable>();
-    for (Integer varNum : getVariableNums()) {
-      if (getVariable(varNum) instanceof ObjectVariable) {
-        integerVars.add((ObjectVariable) getVariable(varNum));
+    List<ObjectVariable> objectVars = new ArrayList<ObjectVariable>();
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] instanceof ObjectVariable) {
+        objectVars.add((ObjectVariable) vars[i]);
       }
     }
-    return integerVars;
+    return objectVars;
   }
 
   /**
@@ -290,35 +314,57 @@ public class VariableNumMap implements Serializable {
    */
   public List<BooleanVariable> getBooleanVariables() {
     List<BooleanVariable> booleanVars = new ArrayList<BooleanVariable>();
-    for (int varNum : getVariableNums()) {
-      if (getVariable(varNum) instanceof BooleanVariable) {
-        booleanVars.add((BooleanVariable) getVariable(varNum));
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] instanceof BooleanVariable) {
+        booleanVars.add((BooleanVariable) vars[i]);
       }
     }
     return booleanVars;
   }
+  
+  private final int getVariableIndex(int varNum) {
+    return Arrays.binarySearch(nums, varNum);
+  }
+  
+  private final int getVariableIndex(String name) {
+    for (int i = 0; i < names.length; i++) {
+      if (names[i].equals(name)) {
+        return i;
+      }
+    }
+    return -1;
+  }
 
   /**
    * Get the variable referenced by a particular variable number.
-   * Throws a KeyError if the variable number is not contained in this
-   * map.
+   * Returns {@code null} if no variable exists with that number.
    * 
    * @param variableNum
    * @return
    */
-  public Variable getVariable(int variableNum) {
-    return varMap.get(variableNum);
+  public final Variable getVariable(int variableNum) {
+    int index = getVariableIndex(variableNum);
+    if (index >= 0) {
+      return vars[index];
+    } else {
+      return null;
+    }
   }
 
   /**
-   * Gets the index of the variable named {@code variableName}. Throws
-   * a {@code KeyError} if no such variable exists.
+   * Gets the index of the variable named {@code variableName}. Returns
+   * {@code -1} if no such variable exists.
    * 
    * @param variableName
    * @return
    */
-  public int getVariableByName(String variableName) {
-    return names.inverse().get(variableName);
+  public final int getVariableByName(String variableName) {
+    int index = getVariableIndex(variableName);
+    if (index == -1) {
+      return index;
+    } else {
+      return nums[index];
+    }
   }
 
   /**
@@ -330,17 +376,20 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public VariableNumMap getVariablesByName(Collection<String> variableNames) {
-    BiMap<String, Integer> nameIndex = names.inverse();
-    BiMap<Integer, String> newNames = HashBiMap.create();
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
-    for (String name : variableNames) {
-      if (nameIndex.containsKey(name)) {
-        int currentNameIndex = nameIndex.get(name);
-        newNames.put(currentNameIndex, name);
-        newVarMap.put(currentNameIndex, varMap.get(currentNameIndex));
+    int[] newNums = new int[nums.length];
+    String[] newNames = new String[nums.length];
+    Variable[] newVars = new Variable[nums.length];
+
+    int numFilled = 0;
+    for (int i = 0; i < nums.length; i++) {
+      if (variableNames.contains(names[i])) {
+        newNums[numFilled] = nums[i];
+        newNames[numFilled] = names[i];
+        newVars[numFilled] = vars[i];
+        numFilled++;
       }
     }
-    return new VariableNumMap(newVarMap, newNames);
+    return VariableNumMap.fromSortedArrays(newNums, newNames, newVars, numFilled);
   }
 
   /**
@@ -361,16 +410,20 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public VariableNumMap getVariablesByNamePrefix(String namePrefix) {
-    BiMap<Integer, String> newNames = HashBiMap.create();
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
+    int[] newNums = new int[nums.length];
+    String[] newNames = new String[nums.length];
+    Variable[] newVars = new Variable[nums.length];
 
-    for (Map.Entry<Integer, String> varName : names.entrySet()) {
-      if (varName.getValue().startsWith(namePrefix)) {
-        newNames.put(varName.getKey(), varName.getValue());
-        newVarMap.put(varName.getKey(), varMap.get(varName.getKey()));
+    int numFilled = 0;
+    for (int i = 0; i < nums.length; i++) {
+      if (names[i].startsWith(namePrefix)) {
+        newNums[numFilled] = nums[i];
+        newNames[numFilled] = names[i];
+        newVars[numFilled] = vars[i];
+        numFilled++;
       }
     }
-    return new VariableNumMap(newVarMap, newNames);
+    return VariableNumMap.fromSortedArrays(newNums, newNames, newVars, numFilled);
   }
 
   /**
@@ -380,7 +433,7 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public boolean contains(int variableNum) {
-    return varMap.containsKey(variableNum);
+    return getVariableIndex(variableNum) >= 0;
   }
 
   /**
@@ -390,8 +443,17 @@ public class VariableNumMap implements Serializable {
    * @param variableName
    * @return
    */
-  public boolean contains(String variableName) {
-    return names.inverse().containsKey(variableName);
+  public final boolean contains(String variableName) {
+    return getVariableIndex(variableName) >= 0;
+  }
+  
+  public final boolean containsAll(int... varNums) {
+    for (int i : varNums) {
+      if (!contains(i)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -402,13 +464,8 @@ public class VariableNumMap implements Serializable {
    * @param variableNums
    * @return
    */
-  public boolean containsAll(Collection<Integer> variableNums) {
-    for (Integer i : variableNums) {
-      if (!contains(i)) {
-        return false;
-      }
-    }
-    return true;
+  public final boolean containsAll(Collection<Integer> variableNums) {
+    return containsAll(Ints.toArray(variableNums));
   }
 
   /**
@@ -418,8 +475,17 @@ public class VariableNumMap implements Serializable {
    * @param other
    * @return
    */
-  public boolean containsAll(VariableNumMap other) {
-    return containsAll(other.getVariableNums());
+  public final boolean containsAll(VariableNumMap other) {
+    return containsAll(other.getVariableNumsArray());
+  }
+  
+  public final boolean containsAny(int... varNums) {
+    for (int i : varNums) {
+      if (contains(i)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -431,12 +497,7 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public boolean containsAny(Collection<Integer> variableNums) {
-    for (Integer i : variableNums) {
-      if (contains(i)) {
-        return true;
-      }
-    }
-    return false;
+    return containsAny(Ints.toArray(variableNums));
   }
 
   /**
@@ -447,23 +508,55 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public boolean containsAny(VariableNumMap other) {
-    return containsAny(other.getVariableNums());
+    return containsAny(other.getVariableNumsArray());
   }
 
-  /*
+  /**
    * Ensures that all variable numbers which are shared between other
    * and this are mapped to the same variables.
    */
-  private void checkCompatibility(VariableNumMap other) {
-    for (Integer key : other.getVariableNums()) {
-      if (varMap.containsKey(key)
-          && (!names.get(key).equals(other.names.get(key)) ||
-              !varMap.get(key).getName().equals(other.varMap.get(key).getName()))) {
-        throw new IllegalArgumentException(
-            "Conflicting number -> (name, variable) mapping! This object: "
-                + this + " other object: " + other);
+  private final void checkCompatibility(VariableNumMap other) {
+    int i = 0, j = 0;
+    int[] otherNums = other.nums;
+    String[] otherNames = other.names;
+    Variable[] otherVars = other.vars;
+    while (i < nums.length && j < otherNums.length) {
+      if (nums[i] < otherNums[j]) {
+        i++;
+      } else if (nums[i] > otherNums[j]) {
+        j++;
+      } else {
+        // Equal
+        Preconditions.checkArgument(names[i].equals(otherNames[j]));
+        Preconditions.checkArgument(vars[i].getName().equals(otherVars[j].getName()));
+        i++; j++;
       }
     }
+  }
+
+  /**
+   * Returns a {@code VariableNumMap} containing only the variables
+   * with numbers in {@code varNumToKeep}.
+   * 
+   * @param varNumsToKeep
+   * @return
+   */
+  public VariableNumMap intersection(int... varNumsToKeep) {
+    int[] newNums = new int[varNumsToKeep.length];
+    String[] newNames = new String[varNumsToKeep.length];
+    Variable[] newVars = new Variable[varNumsToKeep.length];
+    
+    int numFilled = 0;
+    for (int varNum : varNumsToKeep) {
+      int index = getVariableIndex(varNum);
+      if (index >= 0) {
+        newNums[numFilled] = nums[index];
+        newNames[numFilled] = names[index];
+        newVars[numFilled] = vars[index];
+        numFilled++;
+      }
+    }
+    return VariableNumMap.fromUnsortedArrays(newNums, newNames, newVars, numFilled);
   }
 
   /**
@@ -475,7 +568,7 @@ public class VariableNumMap implements Serializable {
    */
   public VariableNumMap intersection(VariableNumMap other) {
     checkCompatibility(other);
-    return intersection(new HashSet<Integer>(other.getVariableNums()));
+    return intersection(other.getVariableNumsArray());
   }
 
   /**
@@ -486,37 +579,30 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public VariableNumMap intersection(Collection<Integer> varNumsToKeep) {
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
-    BiMap<Integer, String> newNames = HashBiMap.create();
-    for (Integer key : varNumsToKeep) {
-      if (contains(key)) {
-        newVarMap.put(key, varMap.get(key));
-        newNames.put(key, names.get(key));
+    return intersection(Ints.toArray(varNumsToKeep));
+  }
+
+  /**
+   * Returns a copy of this map with every variable in 
+   * {@code variableNums} removed.
+   * 
+   * @param variableNums
+   * @return
+   */
+  public VariableNumMap removeAll(int ... variableNums) {
+    int[] newNums = new int[nums.length];
+    String[] newNames = new String[nums.length];
+    Variable[] newVars = new Variable[nums.length];
+    int numFilled = 0;
+    for (int i = 0; i < newNums.length; i++) {
+      if (!Ints.contains(variableNums, nums[i])) {
+        newNums[numFilled] = nums[i];
+        newNames[numFilled] = names[i];
+        newVars[numFilled] = vars[i];
+        numFilled++;
       }
     }
-    return new VariableNumMap(newVarMap, newNames);
-  }
-
-  /**
-   * Returns a {@code VariableNumMap} containing only the variable
-   * with number {@code varNumToKeep}. If this map does not contain
-   * such a variable, returns an empty map.
-   * 
-   * @param varNumsToKeep
-   * @return
-   */
-  public VariableNumMap intersection(int... varNumsToKeep) {
-    return intersection(Ints.asList(varNumsToKeep));
-  }
-
-  /**
-   * Removes {@code variableNum} from {@code this}.
-   * 
-   * @param variableNum
-   * @return
-   */
-  public VariableNumMap remove(int variableNum) {
-    return removeAll(Ints.asList(variableNum));
+    return VariableNumMap.fromSortedArrays(newNums, newNames, newVars, numFilled);
   }
 
   /**
@@ -527,7 +613,7 @@ public class VariableNumMap implements Serializable {
    */
   public VariableNumMap removeAll(VariableNumMap other) {
     checkCompatibility(other);
-    return removeAll(new HashSet<Integer>(other.getVariableNums()));
+    return removeAll(other.getVariableNumsArray());
   }
 
   /**
@@ -538,21 +624,11 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public VariableNumMap removeAll(Collection<Integer> varNumsToRemove) {
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(
-        varMap);
-    BiMap<Integer, String> newNames = HashBiMap.create(names);
-    Set<Integer> varNumsToRemoveSet = Sets.newHashSet(varNumsToRemove);
-    for (Integer key : getVariableNums()) {
-      if (varNumsToRemoveSet.contains(key)) {
-        newVarMap.remove(key);
-        newNames.remove(key);
-      }
-    }
-    return new VariableNumMap(newVarMap, newNames);
+    return removeAll(Ints.toArray(varNumsToRemove));
   }
 
   /**
-   * Returns a VariableNumMap containing the union of the
+   * Returns a {@code VariableNumMap} containing the union of the
    * number->variable mappings from this map and other. The maps may
    * not contain conflicting mappings for any number.
    * 
@@ -560,44 +636,77 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public VariableNumMap union(VariableNumMap other) {
-    checkCompatibility(other);
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(
-        varMap);
-    BiMap<Integer, String> newNames = HashBiMap.create(names);
-    for (Integer key : other.getVariableNums()) {
-      newVarMap.put(key, other.varMap.get(key));
-      newNames.put(key, other.names.get(key));
+    int[] otherNums = other.nums;
+    String[] otherNames = other.names;
+    Variable[] otherVars = other.vars;
+    int[] newNums = new int[nums.length + otherNums.length];
+    String[] newNames = new String[nums.length + otherNums.length];
+    Variable[] newVars = new Variable[nums.length + otherNums.length];
+    int i = 0, j = 0, numFilled = 0;
+    while (i < nums.length && j < otherNums.length) {
+      if (nums[i] < otherNums[j]) {
+        newNums[numFilled] = nums[i];
+        newNames[numFilled] = names[i];
+        newVars[numFilled] = vars[i];
+        i++; numFilled++;
+      } else if (nums[i] > otherNums[j]) {
+        newNums[numFilled] = otherNums[j];
+        newNames[numFilled] = otherNames[j];
+        newVars[numFilled] = otherVars[j];
+        j++; numFilled++;
+      } else {
+        // Equal. Both maps must have the same values for this variable
+        Preconditions.checkArgument(names[i].equals(otherNames[j]));
+        Preconditions.checkArgument(vars[i].getName().equals(otherVars[j].getName()));            checkCompatibility(other);
+
+        newNums[numFilled] = nums[i];
+        newNames[numFilled] = names[i];
+        newVars[numFilled] = vars[i];
+        i++; j++; numFilled++;
+      }
     }
-    return new VariableNumMap(newVarMap, newNames);
+
+    // Finish off any remaining entries.
+    while (i < nums.length) {
+      newNums[numFilled] = nums[i];
+      newNames[numFilled] = names[i];
+      newVars[numFilled] = vars[i];
+      i++; numFilled++;
+    }
+
+    while (j < otherNums.length) {
+      newNums[numFilled] = otherNums[j];
+      newNames[numFilled] = otherNames[j];
+      newVars[numFilled] = otherVars[j];
+      j++; numFilled++;
+    }
+
+    return VariableNumMap.fromSortedArrays(newNums, newNames, newVars, numFilled);
   }
 
   /**
-   * Adds or replaces a single number/variable mapping in this map.
+   * Adds a single number/variable mapping to this map.
    * 
    * @param num
    * @param var
    * @return
    */
   public VariableNumMap addMapping(int num, String name, Variable var) {
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>(
-        varMap);
-    newVarMap.put(num, var);
-    BiMap<Integer, String> newNames = HashBiMap.create(names);
-    newNames.put(num, name);
-    return new VariableNumMap(newVarMap, newNames);
+    return union(VariableNumMap.singleton(num, name, var));
   }
-  
-  public VariableNumMap relabelVariableNums(int[] relabeling) {
-    int[] variableNums = getVariableNumsArray();
-    Preconditions.checkArgument(variableNums.length == relabeling.length);
 
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
-    BiMap<Integer, String> newNames = HashBiMap.create();
-    for (int i = 0; i < variableNums.length; i++) {
-      newVarMap.put(relabeling[i], varMap.get(variableNums[i]));
-      newNames.put(relabeling[i], names.get(variableNums[i]));
+  public VariableNumMap relabelVariableNums(int[] relabeling) {
+    Preconditions.checkArgument(nums.length == relabeling.length);
+
+    int[] newNums = new int[nums.length];
+    String[] newNames = new String[nums.length];
+    Variable[] newVars = new Variable[nums.length];    
+    for (int i = 0; i < nums.length; i++) {
+      newNums[i] = relabeling[i];
+      newNames[i] = names[i];
+      newVars[i] = vars[i];
     }
-    return new VariableNumMap(newVarMap, newNames);
+    return VariableNumMap.fromUnsortedArrays(newNums, newNames, newVars);
   }
 
   /**
@@ -608,18 +717,11 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public VariableNumMap getFirstVariables(int numVariables) {
-    SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
-    BiMap<Integer, String> newNames = HashBiMap.create();
-
-    for (Integer key : varMap.keySet()) {
-      if (newVarMap.size() >= numVariables) {
-        break;
-      }
-
-      newVarMap.put(key, varMap.get(key));
-      newNames.put(key, names.get(key));
-    }
-    return new VariableNumMap(newVarMap, newNames);
+    int numToCopy = Math.min(numVariables, nums.length);
+    int[] newNums = Arrays.copyOf(nums, numToCopy);
+    String[] newNames = Arrays.copyOf(names, numToCopy);
+    Variable[] newVars = Arrays.copyOf(vars, numToCopy);
+    return VariableNumMap.fromSortedArrays(newNums, newNames, newVars);
   }
 
   /**
@@ -633,7 +735,7 @@ public class VariableNumMap implements Serializable {
    */
   public List<Object> assignmentToOutcome(Assignment assignment) {
     List<Object> returnValue = Lists.newArrayList();
-    for (Integer varNum : varMap.keySet()) {
+    for (int varNum : nums) {
       returnValue.add(assignment.getValue(varNum));
     }
     return returnValue;
@@ -647,19 +749,7 @@ public class VariableNumMap implements Serializable {
    * getVariableNums())
    */
   public Assignment outcomeToAssignment(List<? extends Object> outcome) {
-    Preconditions.checkArgument(outcome.size() == varMap.size(),
-        "outcome %s cannot be assigned to %s (wrong number of values)", outcome, this);
-
-    int[] varNums = new int[varMap.size()];
-    Object[] values = new Object[varMap.size()];
-    int i = 0;
-    for (Map.Entry<Integer, Variable> varIndex : varMap.entrySet()) {
-      varNums[i] = varIndex.getKey();
-      values[i] = outcome.get(i);
-      i++;
-    }
-
-    return Assignment.fromSortedArrays(varNums, values);
+    return outcomeToAssignment(outcome.toArray());
   }
 
   /**
@@ -667,7 +757,9 @@ public class VariableNumMap implements Serializable {
    * variables in this factor.
    */
   public Assignment outcomeToAssignment(Object[] outcome) {
-    return outcomeToAssignment(Arrays.asList(outcome));
+    Preconditions.checkArgument(outcome.length == nums.length,
+        "outcome %s cannot be assigned to %s (wrong number of values)", outcome, this);
+    return Assignment.fromSortedArrays(nums, outcome);
   }
 
   /**
@@ -710,16 +802,12 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public int[] assignmentToIntArray(Assignment assignment) {
-    int[] value = new int[size()];
-    int index = 0;
-    for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
-      if (entry.getValue() instanceof DiscreteVariable) {
-        Preconditions.checkArgument(assignment.contains(entry.getKey()),
-            "Partial assignment provided to assignmentToIntArray. Assignment: %s, variables: %s", assignment, this);
-        value[index] = ((DiscreteVariable) entry.getValue()).getValueIndex(assignment
-            .getValue(entry.getKey()));
-      }
-      index++;
+    int[] value = new int[nums.length];
+    for (int i = 0; i < nums.length; i++) {
+      Preconditions.checkState(vars[i] instanceof DiscreteVariable);
+      Preconditions.checkArgument(assignment.contains(nums[i]),
+          "Partial assignment provided to assignmentToIntArray. Assignment: %s, variables: %s", assignment, this);
+      value[i] = ((DiscreteVariable) vars[i]).getValueIndex(assignment.getValue(nums[i]));
     }
     return value;
   }
@@ -735,15 +823,11 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public Assignment intArrayToAssignment(int[] values) {
-    Object[] objectValues = new Object[values.length];
-    int i = 0;
-    for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
-      if (entry.getValue() instanceof DiscreteVariable) {
-        objectValues[i] = ((DiscreteVariable) entry.getValue()).getValue(values[i]);
-      }
-      i++;
+    Object[] objectValues = new Object[nums.length];
+    for (int i = 0; i < nums.length; i++) {
+      objectValues[i] = ((DiscreteVariable) vars[i]).getValue(values[i]);
     }
-    return Assignment.fromSortedArrays(getVariableNumsArray(), objectValues);
+    return Assignment.fromSortedArrays(nums, objectValues);
   }
 
   /**
@@ -756,9 +840,10 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public boolean isValidAssignment(Assignment assignment) {
-    Preconditions.checkArgument(containsAll(assignment.getVariableNums()));
-    for (Integer varNum : assignment.getVariableNums()) {
-      if (!varMap.get(varNum).canTakeValue(assignment.getValue(varNum))) {
+    Preconditions.checkArgument(containsAll(assignment.getVariableNumsArray()));
+    for (int varNum : assignment.getVariableNumsArray()) {
+      int index = getVariableIndex(varNum);
+      if (!vars[index].canTakeValue(assignment.getValue(varNum))) {
         return false;
       }
     }
@@ -780,10 +865,12 @@ public class VariableNumMap implements Serializable {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[");
-    for (Integer varNum : varMap.keySet()) {
-      sb.append(names.get(varNum));
+    for (int i = 0; i < nums.length; i++) {
+      sb.append(i);
+      sb.append(":");
+      sb.append(names[i]);
       sb.append("=");
-      sb.append(varMap.get(varNum));
+      sb.append(vars[i]);
       sb.append(",");
     }
     sb.append("]");
@@ -792,29 +879,22 @@ public class VariableNumMap implements Serializable {
 
   @Override
   public int hashCode() {
-    return varMap.hashCode();
+    return Arrays.hashCode(nums) * 123 + Arrays.hashCode(names) * 31 
+        + Arrays.hashCode(vars);
   }
 
   /**
-   * VariableNumMaps are equal if they contain exactly the same
-   * variable number -> variable mappings.
+   * {@code VariableNumMap}s are equal if they contain exactly the
+   * same variable number -> variable mappings.
    */
   @Override
   public boolean equals(Object o) {
     if (o instanceof VariableNumMap) {
       VariableNumMap other = (VariableNumMap) o;
-      return varMap.equals(other.varMap) && names.equals(other.names);
+      return Arrays.equals(nums, other.nums) && Arrays.deepEquals(names, other.names) 
+          && Arrays.deepEquals(vars, other.vars);
     }
     return false;
-  }
-
-  /**
-   * Get a VariableNumMap with no num -> variable mappings.
-   */
-  public static VariableNumMap emptyMap() {
-    List<Variable> empty = Collections.emptyList();
-    return new VariableNumMap(Arrays.<Integer> asList(),
-        Arrays.<String> asList(), empty);
   }
 
   /**
@@ -825,7 +905,7 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public static VariableNumMap unionAll(Collection<VariableNumMap> varNumMaps) {
-    VariableNumMap curMap = emptyMap();
+    VariableNumMap curMap = EMPTY;
     for (VariableNumMap varNumMap : varNumMaps) {
       curMap = curMap.union(varNumMap);
     }
@@ -1003,14 +1083,17 @@ public class VariableNumMap implements Serializable {
      */
     private static VariableNumMap mapIndicesAndNames(VariableNumMap input,
         Map<Integer, Integer> indexReplacements, Map<String, String> nameReplacements) {
-      SortedMap<Integer, Variable> newVarMap = new TreeMap<Integer, Variable>();
-      BiMap<Integer, String> newNames = HashBiMap.create();
-      for (Map.Entry<Integer, Variable> entry : input.varMap.entrySet()) {
-        newVarMap.put(indexReplacements.get(entry.getKey()), entry.getValue());
-        String oldVariableName = input.getVariableNameFromIndex(entry.getKey());
-        newNames.put(indexReplacements.get(entry.getKey()), nameReplacements.get(oldVariableName));
+      int[] newNums = new int[input.size()];
+      String[] newNames = new String[input.size()];
+      Variable[] newVars = new Variable[input.size()];
+
+      for (int i = 0; i < input.size(); i++) {
+        newNums[i] = indexReplacements.get(input.nums[i]);
+        newNames[i] = nameReplacements.get(input.names[i]);
+        newVars[i] = input.vars[i];
       }
-      return new VariableNumMap(newVarMap, newNames);
+
+      return VariableNumMap.fromUnsortedArrays(newNums, newNames, newVars);
     }
   }
 }

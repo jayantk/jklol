@@ -34,6 +34,12 @@ public class ParametricNormalizingFactor extends AbstractParametricFactor {
     this.conditionalVars = Preconditions.checkNotNull(conditionalVars);
     this.outputVars = Preconditions.checkNotNull(outputVars);
     this.wrappedFactors = Preconditions.checkNotNull(wrappedFactors);
+    
+    VariableNumMap wrappedVars = VariableNumMap.emptyMap();
+    for (ParametricFactor factor : wrappedFactors) {
+      wrappedVars = wrappedVars.union(factor.getVars());
+    }
+    Preconditions.checkArgument(wrappedVars.equals(getVars()));
   }
 
   @Override

@@ -42,12 +42,9 @@ public class VariableNumMap implements Serializable {
    * unique) String name. All three passed in lists must be of the
    * same size.
    * 
-   * @param varNums
-   *          - The unique integer id of each variable
-   * @param varNames
-   *          - The String name of each variable
-   * @param vars
-   *          - The Variable type of each variable
+   * @param varNums The unique integer id of each variable
+   * @param varNames The String name of each variable
+   * @param vars The Variable type of each variable
    */
   public VariableNumMap(List<Integer> varNums, List<String> varNames, List<? extends Variable> vars) {
     Preconditions.checkArgument(varNums.size() == vars.size());

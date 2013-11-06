@@ -117,8 +117,16 @@ public class Lbfgs implements GradientOptimizer {
         gradientDeltas.add(gradientDelta);
 
         scalings.add(1.0 / (pointDelta.innerProduct(gradientDelta)));
+        
+        int firstUnusedIndex = i - (numVectorsInApproximation + 1);
+        if (firstUnusedIndex >= 0) {
+          // Free up memory used by portions of the inverse Hessian
+          // approximation which are no longer used.
+          pointDeltas.set(firstUnusedIndex, null);
+          gradientDeltas.set(firstUnusedIndex, null);
+        }
       }
-      
+
       previousParameters = currentParameters.duplicate();
       previousGradient = gradient.duplicate();
 

@@ -110,8 +110,8 @@ public class InferenceTestCases {
   public static MaxMarginalTestCase testBasicMaxMarginals() {
     FactorGraph f = basicFactorGraph();
     MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, Assignment.EMPTY, 
-        new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 4}), 
-            Arrays.asList(new Object[] {"T", "foo", "T", "T", "F"})),
+        Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 4}, 
+            new Object[] {"T", "foo", "T", "T", "F"}),
             f.getVariables().intersection(Arrays.asList(0, 2)));
     testCase.addTest(new String[] {"T", "T"}, 9.0);
     testCase.addTest(new String[] {"T", "F"}, 4.0);
@@ -129,10 +129,9 @@ public class InferenceTestCases {
   public static MaxMarginalTestCase testConditionalMaxMarginals() {
     FactorGraph f = basicFactorGraph();
     MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, 
-        new Assignment(Arrays.asList(new Integer[] {2}), 
-            Arrays.asList(new Object[] {"F"})), 
-        new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 4}), 
-            Arrays.asList(new Object[] {"U", "foo", "F", "F", "U"})),
+        Assignment.fromSortedArrays(new int[] {2}, new Object[] {"F"}), 
+        Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 4}, 
+            new Object[] {"U", "foo", "F", "F", "U"}),
             f.getVariables().intersection(Arrays.asList(3, 4)));
     
     // The graph becomes disjoint, so the max marginal here is somewhat unclear.

@@ -54,7 +54,8 @@ public class BNCountTrainer {
    * @author jayant
    */
   private static class AssignmentMarginalCalculator implements MarginalCalculator {
-    
+    private static final long serialVersionUID = 1L;
+
     @Override
     public MarginalSet computeMarginals(FactorGraph factorGraph) {
       Preconditions.checkArgument(factorGraph.getVariables().size() == 0);

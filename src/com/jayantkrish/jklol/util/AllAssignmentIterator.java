@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -15,7 +14,6 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 
 	private VariableNumMap vars;
 	private Iterator<int[]> valueIterator;
-	private List<Object> currentValues;
 
 	/**
 	 * Create an iterator over the assignments of the variables in varNumMap. varNumMap must contain
@@ -25,10 +23,6 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 	public AllAssignmentIterator(VariableNumMap varNumMap) {
 		Preconditions.checkArgument(varNumMap.getDiscreteVariables().size() == varNumMap.size());
 		this.vars = varNumMap;
-		currentValues = Lists.newArrayList();
-		for (int i = 0; i < vars.size(); i++) {
-		  currentValues.add(null);
-		}
 		valueIterator = initializeValueIterator(varNumMap);
 	}
 
@@ -51,18 +45,7 @@ public class AllAssignmentIterator implements Iterator<Assignment> {
 
 	public Assignment next() {
 	  int[] currentValue = valueIterator.next();
-		return valueToAssignment(currentValue);
-	}
-
-	/*
-	 * Translates currentValueInds into an assignment.
-	 */
-	private Assignment valueToAssignment(int[] value) {
-		List<DiscreteVariable> discreteVars = vars.getDiscreteVariables();
-		for (int i = 0; i < value.length; i++) {
-			currentValues.set(i, discreteVars.get(i).getValue(value[i]));
-		}
-		return new Assignment(vars.getVariableNums(), currentValues);
+		return vars.intArrayToAssignment(currentValue);
 	}
 
 	public void remove() {

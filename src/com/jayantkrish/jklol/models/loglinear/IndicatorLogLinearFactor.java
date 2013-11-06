@@ -111,8 +111,8 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
       Assignment assignment, double count) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
-    Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
+    Assignment subAssignment = assignment.intersection(getVars().getVariableNumsArray());
 
     long keyNum = initialWeights.getWeights().dimKeyToKeyNum(
         initialWeights.getVars().assignmentToIntArray(subAssignment));
@@ -124,7 +124,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    if (conditionalAssignment.containsAll(getVars().getVariableNums())) {
+    if (conditionalAssignment.containsAll(getVars().getVariableNumsArray())) {
       // Short-circuit the slow computation below if possible.
       double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
       incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);

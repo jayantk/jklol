@@ -5,11 +5,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -23,33 +20,14 @@ public class Assignment implements Serializable {
   /**
    * The empty assignment, assigning no values to no variables.
    */
-  public static final Assignment EMPTY = new Assignment(Arrays.asList(new Integer[] {}),
-      Arrays.asList(new Object[] {}));
+  public static final Assignment EMPTY = new Assignment(new int[0], new Object[0]); 
 
   private final int[] vars;
   private final Object[] values;
-
-  /**
-   * Creates an {@code Assignment} with the given variable values, and no
-   * plates.
-   * 
-   * @param varNums
-   * @param values
-   */
-  @Deprecated
-  public Assignment(List<Integer> varNums, List<? extends Object> values) {
-    Preconditions.checkNotNull(varNums);
-    Preconditions.checkNotNull(values);
-    Preconditions.checkArgument(varNums.size() == values.size());
-    this.vars = new int[varNums.size()];
-    this.values = new Object[varNums.size()];
-    
-    for (int i = 0; i < varNums.size(); i++) {
-      this.vars[i] = varNums.get(i);
-      this.values[i] = values.get(i);
-    }
-
-    ArrayUtils.sortKeyValuePairs(this.vars, this.values, 0, this.values.length);
+  
+  private Assignment(int[] vars, Object[] values) {
+    this.vars = Preconditions.checkNotNull(vars);
+    this.values = Preconditions.checkNotNull(values);
   }
 
   /**
@@ -63,15 +41,52 @@ public class Assignment implements Serializable {
     values = new Object[] {value};
   }
 
-  public Assignment(Map<Integer, Object> varValues) {
-    varValueMap = new TreeMap<Integer, Object>(varValues);
+  /**
+   * Creates an {@code Assignment} mapping each variable in {@code vars} to the value
+   * at the corresponding index of {@code values}. {@code vars} does not need 
+   * to be sorted in any order. This method does not copy {@code vars} or
+   * {@code values} and may modify either array; the caller should not read
+   * or modify either of these arrays after invoking this method.
+   *  
+   * @param vars
+   * @param values
+   * @return
+   */
+  public static final Assignment fromUnsortedArrays(int[] vars, Object[] values) {
+    ArrayUtils.sortKeyValuePairs(vars, values, 0, vars.length);
+    return fromSortedArrays(vars, values);
   }
 
   /**
-   * Copy constructor
+   * Creates an {@code Assignment} mapping each variable in {@code vars} to
+   * the value at the corresponding index of {@code values}. {@code vars} 
+   * must be sorted in ascending order. This method does not copy either
+   * {@code vars} or {@code values}; the caller should not read or modify
+   * either of these arrays after invoking this method.
+   *  
+   * @param vars
+   * @param values
+   * @return
    */
-  public Assignment(Assignment a) {
-    varValueMap = new TreeMap<Integer, Object>(a.varValueMap);
+  public static final Assignment fromSortedArrays(int[] vars, Object[] values) {
+    // Verify that the assignment is sorted and contains no duplicate values.
+    for (int i = 1; i < vars.length; i++) {
+      Preconditions.checkArgument(vars[i - 1] < vars[i], "Illegal assignment variable nums: %s %s",
+          vars[i - 1], vars[i]);
+    }
+    return new Assignment(vars, values);
+  }
+  
+  public static final Assignment fromMap(Map<Integer, Object> varValueMap) {
+    int[] varNums = new int[varValueMap.size()];
+    Object[] values = new Object[varValueMap.size()];
+    int i = 0;
+    for (Map.Entry<Integer, Object> entry : varValueMap.entrySet()) {
+      varNums[i] = entry.getKey();
+      values[i] = entry.getValue();
+      i++;
+    }
+    return Assignment.fromUnsortedArrays(varNums, values);
   }
 
   /**
@@ -87,7 +102,6 @@ public class Assignment implements Serializable {
    * 
    * @return
    */
-  @Deprecated
   public List<Integer> getVariableNums() {
     return Ints.asList(vars);
   }
@@ -103,7 +117,6 @@ public class Assignment implements Serializable {
    * 
    * @return
    */
-  @Deprecated
   public List<Object> getValues() {
     return Arrays.asList(values);
   }
@@ -219,7 +232,12 @@ public class Assignment implements Serializable {
         numFilled++;
       }
     }
-    return Assignment.createFromUnsortedArrays(newVarNums, newValues, numFilled);
+    
+    if (numFilled < newVarNums.length) {
+      newVarNums = Arrays.copyOf(newVarNums, numFilled);
+      newValues = Arrays.copyOf(newValues, numFilled);
+    }
+    return Assignment.fromUnsortedArrays(newVarNums, newValues);
   }
 
   /**
@@ -278,8 +296,8 @@ public class Assignment implements Serializable {
       j++;
       numFilled++;
     }
-
-    return Assignment.createFromSortedArrays(mergedNums, mergedVals, numFilled);
+    Preconditions.checkState(numFilled == mergedNums.length);
+    return Assignment.fromSortedArrays(mergedNums, mergedVals);
   }
 
   /**
@@ -289,14 +307,9 @@ public class Assignment implements Serializable {
    * @param varNumsToRemove
    * @return
    */
+  @Deprecated
   public Assignment removeAll(Collection<Integer> varNumsToRemove) {
-    SortedMap<Integer, Object> newVarValueMap = new TreeMap<Integer, Object>(varValueMap);
-    for (Integer varNum : varNumsToRemove) {
-      if (newVarValueMap.containsKey(varNum)) {
-        newVarValueMap.remove(varNum);
-      }
-    }
-    return new Assignment(newVarValueMap);
+    return removeAll(Ints.toArray(varNumsToRemove));
   }
   
   public Assignment removeAll(int ... varNumsToRemove) {
@@ -322,7 +335,7 @@ public class Assignment implements Serializable {
       } 
     }
     Preconditions.checkState(numFilled == finalVarNums.length);
-    return Assignment.createFromSortedArrays(finalVarNums, finalValues, numFilled);
+    return Assignment.fromSortedArrays(finalVarNums, finalValues);
   }
 
   /**
@@ -341,7 +354,12 @@ public class Assignment implements Serializable {
         numFilled++;
       }
     }
-    return Assignment.createFromUnsortedArrays(newVarNums, newValues, numFilled);
+    
+    if (numFilled < newVarNums.length) {
+      newVarNums = Arrays.copyOf(newVarNums, numFilled);
+      newValues = Arrays.copyOf(newValues, numFilled);
+    }
+    return Assignment.fromUnsortedArrays(newVarNums, newValues);
   }
 
   @Override
@@ -379,14 +397,26 @@ public class Assignment implements Serializable {
    * @return
    */
   public static Assignment unionAll(Collection<Assignment> assignments) {
-    SortedMap<Integer, Object> newValues = Maps.newTreeMap();
+    int numVars = 0;
     for (Assignment assignment : assignments) {
-      for (Map.Entry<Integer, Object> varValue : assignment.varValueMap.entrySet()) {
-        Preconditions.checkArgument(!newValues.containsKey(varValue.getKey()));
-        newValues.put(varValue.getKey(), varValue.getValue());
+      numVars += assignment.size();
+    }
+
+    int[] vars = new int[numVars];
+    Object[] values = new Object[numVars];
+    int numFilled = 0;
+    for (Assignment assignment : assignments) {
+      int[] assignmentVars = assignment.vars;
+      Object[] assignmentValues = assignment.values;
+      int numAssignmentVars = assignment.vars.length;
+      for (int i = 0; i < numAssignmentVars; i++) {
+        vars[numFilled] = assignmentVars[i];
+        values[numFilled] = assignmentValues[i];
+        numFilled++;
       }
     }
-    return new Assignment(newValues);
+    Preconditions.checkState(numFilled == numVars);
+    return Assignment.fromUnsortedArrays(vars, values);
   }
 
   /**

@@ -13,7 +13,6 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.TimeUtils;
 
 /**
  * A simple default logging function.
@@ -63,7 +62,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	  if (showExamples) {
 	    if (iteration % logInterval == 0) {
 	      String prob = "";
-	      if (example.containsAll(graph.getVariables().getVariableNums())) {
+	      if (example.containsAll(graph.getVariables().getVariableNumsArray())) {
 	        prob = Double.toString(graph.getUnnormalizedLogProbability(example));
 	      } 
 	      print(iteration + "." + exampleNum + " " + prob + ": example: " + graph.assignmentToObject(example));

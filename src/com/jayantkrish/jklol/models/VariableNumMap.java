@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -654,14 +653,16 @@ public class VariableNumMap implements Serializable {
     Preconditions.checkArgument(outcome.size() == varMap.size(),
         "outcome %s cannot be assigned to %s (wrong number of values)", outcome, this);
 
-    Map<Integer, Object> varValueMap = new HashMap<Integer, Object>();
+    int[] varNums = new int[varMap.size()];
+    Object[] values = new Object[varMap.size()];
     int i = 0;
     for (Map.Entry<Integer, Variable> varIndex : varMap.entrySet()) {
-      varValueMap.put(varIndex.getKey(), outcome.get(i));
+      varNums[i] = varIndex.getKey();
+      values[i] = outcome.get(i);
       i++;
     }
 
-    return new Assignment(varValueMap);
+    return Assignment.fromSortedArrays(varNums, values);
   }
 
   /**
@@ -737,15 +738,15 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public Assignment intArrayToAssignment(int[] values) {
-    List<Object> objectValues = Lists.newArrayList();
+    Object[] objectValues = new Object[values.length];
     int i = 0;
     for (Map.Entry<Integer, Variable> entry : varMap.entrySet()) {
       if (entry.getValue() instanceof DiscreteVariable) {
-        objectValues.add(((DiscreteVariable) entry.getValue()).getValue(values[i]));
+        objectValues[i] = ((DiscreteVariable) entry.getValue()).getValue(values[i]);
       }
       i++;
     }
-    return new Assignment(getVariableNums(), objectValues);
+    return Assignment.fromSortedArrays(getVariableNumsArray(), objectValues);
   }
 
   /**

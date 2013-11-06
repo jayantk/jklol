@@ -98,7 +98,7 @@ public class LinearClassifierFactor extends ClassifierFactor {
 
   @Override
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
     Tensor inputFeatureVector = (Tensor) assignment.getValue(getInputVariable()
         .getOnlyVariableNum());
 

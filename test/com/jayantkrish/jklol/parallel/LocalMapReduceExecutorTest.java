@@ -12,7 +12,6 @@ public class LocalMapReduceExecutorTest extends TestCase {
   private LocalMapReduceExecutor executor;
   private List<Double> shortItems;
   private List<Double> longItems;
-  private List<Double> mapItems;
 
   @Override
   public void setUp() {
@@ -21,8 +20,6 @@ public class LocalMapReduceExecutorTest extends TestCase {
     shortItems = Doubles.asList(new double[] { 0.6, 2.2, 3.3, 3.9 });
     // Has more than the number of batches;
     longItems = Doubles.asList(new double[] { 0.6, 2.2, 3.3, 3.9, 5.1, 6.1, 7.2, 8.3, 9.4 });
-    
-    mapItems = Doubles.asList(new double[] { 0.6, 0.0, 3.3 });
   }
 
   public void testMapReduce() {

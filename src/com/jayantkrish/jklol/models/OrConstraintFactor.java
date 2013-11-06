@@ -93,7 +93,7 @@ public class OrConstraintFactor extends AbstractFactor {
   
   @Override
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
 
     Set<Object> requiredValues = Sets.newHashSet();
     Set<Object> impossibleValues = Sets.newHashSet();
@@ -109,13 +109,13 @@ public class OrConstraintFactor extends AbstractFactor {
     if (!getVars().containsAny(assignment.getVariableNums())) {
       return this;
     }
-    Preconditions.checkArgument(assignment.containsAll(orVars.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(orVars.getVariableNumsArray()));
     
     Set<Object> requiredValues = Sets.newHashSet();
     Set<Object> impossibleValues = Sets.newHashSet();
     getRequiredAndImpossibleValues(assignment, requiredValues, impossibleValues);
   
-    Assignment inputAssignment = assignment.intersection(inputVars.getVariableNums());
+    Assignment inputAssignment = assignment.intersection(inputVars.getVariableNumsArray());
     return new SetCoverFactor(inputVars, requiredValues, 
         Predicates.not(Predicates.in(impossibleValues)), inputVarFactors).conditional(inputAssignment);
   }
@@ -131,7 +131,7 @@ public class OrConstraintFactor extends AbstractFactor {
    */
   private void getRequiredAndImpossibleValues(Assignment assignment,
       Set<Object> requiredValues, Set<Object> impossibleValues) {
-    Assignment truthValues = assignment.intersection(orVars.getVariableNums());
+    Assignment truthValues = assignment.intersection(orVars.getVariableNumsArray());
     for (String variableName : orVars.getVariableNames()) {
       int variableNum = orVars.getVariableByName(variableName);
 

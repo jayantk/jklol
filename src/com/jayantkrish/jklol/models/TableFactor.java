@@ -260,13 +260,13 @@ public class TableFactor extends DiscreteFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
     return weights.getByDimKey(getVars().assignmentToIntArray(a));
   }
 
   @Override
   public double getUnnormalizedLogProbability(Assignment a) {
-    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
     return weights.getLogByDimKey(getVars().assignmentToIntArray(a));
   }
 

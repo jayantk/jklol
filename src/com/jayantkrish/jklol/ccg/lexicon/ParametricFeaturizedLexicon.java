@@ -99,7 +99,6 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
     SufficientStatistics featureGradient = gradient.coerceToList().getStatisticByName(TERMINAL_FEATURE_PARAMETERS);
 
     List<String> originalWords = parse.getSpannedWords();
-    List<String> preprocessedWords = parse.getSpannedLexiconTriggerWords();
     List<String> posTags = parse.getSpannedPosTags();
     List<WordAndPos> wordAndPosList = WordAndPos.createExample(originalWords, posTags);
     List<Integer> wordIndexes = parse.getWordIndexesWithLexiconEntries();

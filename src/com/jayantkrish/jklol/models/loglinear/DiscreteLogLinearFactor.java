@@ -178,8 +178,8 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
       Assignment assignment, double count) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
-    Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
+    Assignment subAssignment = assignment.intersection(getVars().getVariableNumsArray());
 
     // Get a factor containing only the feature variable.
     Tensor assignmentFeatures = featureValues.conditional(subAssignment).getWeights();

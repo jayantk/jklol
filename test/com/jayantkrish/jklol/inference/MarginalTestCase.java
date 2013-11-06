@@ -50,7 +50,8 @@ public class MarginalTestCase {
 	  FactorGraph conditionedFactorGraph = factorGraph.conditional(condition);
 	  MarginalSet marginals = inference.computeMarginals(conditionedFactorGraph);
 	  
-	  Assert.assertEquals(condition, marginals.getConditionedValues().intersection(condition.getVariableNums()));
+	  Assert.assertEquals(condition, marginals.getConditionedValues().intersection(
+	      condition.getVariableNumsArray()));
 	  Assert.assertTrue(marginals.getVariables().containsAll(
 	      marginals.getConditionedValues().getVariableNums()));
 

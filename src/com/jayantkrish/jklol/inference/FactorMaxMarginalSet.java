@@ -42,16 +42,16 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
 
   @Override
   public Assignment getNthBestAssignment(int n, Assignment portion) {
-    Assignment conditionalPortion = portion.intersection(conditionedValues.getVariableNums());
+    Assignment conditionalPortion = portion.intersection(conditionedValues.getVariableNumsArray());
     if (!conditionalPortion.equals(
-        conditionedValues.intersection(conditionalPortion.getVariableNums()))) {
+        conditionedValues.intersection(conditionalPortion.getVariableNumsArray()))) {
       // If portion disagrees with values that are conditioned on,
       // then all assignments containing portion have zero probability.
       throw new ZeroProbabilityError();
     }
 
     // Check that computing such an assignment is possible given the factors.
-    Assignment factorPortion = portion.removeAll(conditionedValues.getVariableNums());
+    Assignment factorPortion = portion.removeAll(conditionedValues.getVariableNumsArray());
     List<Factor> factorGraphFactors = factorGraph.getFactors();
     for (int i = 0; i < factorGraphFactors.size(); i++) {
       Factor factor = factorGraphFactors.get(i);
@@ -134,7 +134,7 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
     for (int adjacentFactorNum : factorGraph.getAdjacentFactors(factorNum)) {
       if (!visitedFactors.contains(adjacentFactorNum)) {
         Assignment bestChild = getBestAssignmentGiven(factorGraph, adjacentFactorNum,
-            visitedFactors, best).removeAll(best.getVariableNums());
+            visitedFactors, best).removeAll(best.getVariableNumsArray());
         best = best.union(bestChild);
       }
     }

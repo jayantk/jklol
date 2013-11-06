@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.models;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -298,14 +297,14 @@ public class FactorGraph implements Serializable {
   public Assignment outcomeToAssignment(List<String> factorVariables, List<? extends Object> outcome) {
     assert factorVariables.size() == outcome.size();
 
-    List<Integer> varNums = new ArrayList<Integer>(factorVariables.size());
-    List<Object> outcomeValueInds = new ArrayList<Object>(outcome.size());
+    int[] varNums = new int[factorVariables.size()];
+    Object[] values = new Object[factorVariables.size()];
     for (int i = 0; i < factorVariables.size(); i++) {
       int varInd = getVariables().getVariableByName(factorVariables.get(i));
-      varNums.add(varInd);
-      outcomeValueInds.add(outcome.get(i));
+      varNums[i] = varInd;
+      values[i] = outcome.get(i);
     }
-    return new Assignment(varNums, outcomeValueInds);
+    return Assignment.fromUnsortedArrays(varNums, values);
   }
 
   /**
@@ -364,7 +363,7 @@ public class FactorGraph implements Serializable {
    * @return
    */
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()),
+    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNumsArray()),
         "Invalid assignment %s to factor graph on variables %s", assignment, variables);
     double probability = 1.0;
     for (Factor factor : factors) {
@@ -385,7 +384,7 @@ public class FactorGraph implements Serializable {
    * @return
    */
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNums()),
+    Preconditions.checkArgument(assignment.containsAll(variables.getVariableNumsArray()),
         "Invalid assignment %s to factor graph on variables %s", assignment, variables);
     double logProbability = 0.0;
     for (Factor factor : factors) {

@@ -71,11 +71,11 @@ public class NormalizingFactor extends AbstractConditionalFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
-    if (!assignment.containsAny(getVars().getVariableNums())) {
+    if (!assignment.containsAny(getVars().getVariableNumsArray())) {
       return this;
     }
 
-    Preconditions.checkArgument(assignment.containsAll(inputVars.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(inputVars.getVariableNumsArray()));
     Assignment inputAssignment = assignment.intersection(conditionalAndInputVars);
 
     List<Factor> conditionalFactors = Lists.newArrayList();

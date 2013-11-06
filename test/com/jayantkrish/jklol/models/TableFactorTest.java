@@ -80,8 +80,8 @@ public class TableFactorTest extends TestCase {
 	}
 	
 	public void testGetProbability() {
-		Assignment a = new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 5}),
-				Arrays.asList(new String[] {"T", "F", "T", "F", "T"}));
+		Assignment a = Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 5},
+				new String[] {"T", "F", "T", "F", "T"});
 		assertEquals(3.0, f.getUnnormalizedProbability(a));
 	}
 
@@ -157,8 +157,8 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testConditionalNone() {
-		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {6, 8}),
-				Arrays.asList(new Object[] {"F", "F"})));
+		Factor c = f.conditional(Assignment.fromSortedArrays(new int[] {6, 8},
+				new Object[] {"F", "F"}));
 		// Nothing should change.
 		assertEquals(1.0,
 				c.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "T", "T"})));
@@ -167,15 +167,15 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testConditionalAll() {
-		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2, 3, 5}),
-				Arrays.asList(new String[] {"T", "T", "F", "T"})));
+		Factor c = f.conditional(Assignment.fromSortedArrays(new int[] {0, 2, 3, 5},
+				new String[] {"T", "T", "F", "T"}));
 
 		assertEquals(3.0, c.getUnnormalizedProbability(Assignment.EMPTY));
 	}
 
 	public void testConditionalPartial() {
-		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 3}),
-				Arrays.asList(new String[] {"T", "F"})));
+		Factor c = f.conditional(Assignment.fromSortedArrays(new int[] {0, 3},
+		    new String[] {"T", "F"}));
 
 		assertEquals(3.0,
 				c.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T"})));

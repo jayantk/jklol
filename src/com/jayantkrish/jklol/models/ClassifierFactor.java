@@ -48,13 +48,13 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
   
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
     return Math.exp(getUnnormalizedLogProbability(assignment));
   }
 
   @Override
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
     Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
     int[] outputIndexes = outputVars.assignmentToIntArray(assignment);
     

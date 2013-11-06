@@ -1,16 +1,12 @@
 package com.jayantkrish.jklol.util;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
@@ -19,31 +15,19 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * Assignments are immutable.
  */
 public class Assignment implements Serializable {
-  private static final long serialVersionUID = 1842533988072075012L;
+  private static final long serialVersionUID = 2L;
 
   /**
    * The empty assignment, assigning no values to no variables.
    */
-  public static final Assignment EMPTY = new Assignment(Arrays.asList(new Integer[] {}),
-      Arrays.asList(new Object[] {}));
+  public static final Assignment EMPTY = new Assignment(new int[0], new Object[0]); 
 
-  private SortedMap<Integer, Object> varValueMap;
-
-  /**
-   * Creates an {@code Assignment} with the given variable values, and no
-   * plates.
-   * 
-   * @param varNums
-   * @param values
-   */
-  public Assignment(List<Integer> varNums, List<? extends Object> values) {
-    Preconditions.checkNotNull(varNums);
-    Preconditions.checkNotNull(values);
-    Preconditions.checkArgument(varNums.size() == values.size());
-    varValueMap = new TreeMap<Integer, Object>();
-    for (int i = 0; i < varNums.size(); i++) {
-      varValueMap.put(varNums.get(i), values.get(i));
-    }
+  private final int[] vars;
+  private final Object[] values;
+  
+  private Assignment(int[] vars, Object[] values) {
+    this.vars = Preconditions.checkNotNull(vars);
+    this.values = Preconditions.checkNotNull(values);
   }
 
   /**
@@ -53,26 +37,63 @@ public class Assignment implements Serializable {
    * @param value
    */
   public Assignment(int varNum, Object value) {
-    varValueMap = new TreeMap<Integer, Object>();
-    varValueMap.put(varNum, value);
-  }
-
-  public Assignment(Map<Integer, Object> varValues) {
-    varValueMap = new TreeMap<Integer, Object>(varValues);
+    vars = new int[] {varNum};
+    values = new Object[] {value};
   }
 
   /**
-   * Copy constructor
+   * Creates an {@code Assignment} mapping each variable in {@code vars} to the value
+   * at the corresponding index of {@code values}. {@code vars} does not need 
+   * to be sorted in any order. This method does not copy {@code vars} or
+   * {@code values} and may modify either array; the caller should not read
+   * or modify either of these arrays after invoking this method.
+   *  
+   * @param vars
+   * @param values
+   * @return
    */
-  public Assignment(Assignment a) {
-    varValueMap = new TreeMap<Integer, Object>(a.varValueMap);
+  public static final Assignment fromUnsortedArrays(int[] vars, Object[] values) {
+    ArrayUtils.sortKeyValuePairs(vars, values, 0, vars.length);
+    return fromSortedArrays(vars, values);
+  }
+
+  /**
+   * Creates an {@code Assignment} mapping each variable in {@code vars} to
+   * the value at the corresponding index of {@code values}. {@code vars} 
+   * must be sorted in ascending order. This method does not copy either
+   * {@code vars} or {@code values}; the caller should not read or modify
+   * either of these arrays after invoking this method.
+   *  
+   * @param vars
+   * @param values
+   * @return
+   */
+  public static final Assignment fromSortedArrays(int[] vars, Object[] values) {
+    // Verify that the assignment is sorted and contains no duplicate values.
+    for (int i = 1; i < vars.length; i++) {
+      Preconditions.checkArgument(vars[i - 1] < vars[i], "Illegal assignment variable nums: %s %s",
+          vars[i - 1], vars[i]);
+    }
+    return new Assignment(vars, values);
+  }
+  
+  public static final Assignment fromMap(Map<Integer, Object> varValueMap) {
+    int[] varNums = new int[varValueMap.size()];
+    Object[] values = new Object[varValueMap.size()];
+    int i = 0;
+    for (Map.Entry<Integer, Object> entry : varValueMap.entrySet()) {
+      varNums[i] = entry.getKey();
+      values[i] = entry.getValue();
+      i++;
+    }
+    return Assignment.fromUnsortedArrays(varNums, values);
   }
 
   /**
    * Gets the number of variables with values in the assignment.
    */
   public int size() {
-    return varValueMap.size();
+    return vars.length;
   }
 
   /**
@@ -82,7 +103,11 @@ public class Assignment implements Serializable {
    * @return
    */
   public List<Integer> getVariableNums() {
-    return new ArrayList<Integer>(varValueMap.keySet());
+    return Ints.asList(vars);
+  }
+
+  public int[] getVariableNumsArray() {
+    return vars;
   }
 
   /**
@@ -93,7 +118,11 @@ public class Assignment implements Serializable {
    * @return
    */
   public List<Object> getValues() {
-    return new ArrayList<Object>(varValueMap.values());
+    return Arrays.asList(values);
+  }
+  
+  public Object[] getValuesArray() {
+    return values;
   }
 
   /**
@@ -103,8 +132,12 @@ public class Assignment implements Serializable {
    * @return
    */
   public Object getOnlyValue() {
-    Preconditions.checkState(varValueMap.size() == 1);
-    return varValueMap.values().iterator().next();
+    Preconditions.checkState(values.length == 1);
+    return values[0];
+  }
+  
+  private final int getValueIndex(int varNum) {
+    return Arrays.binarySearch(vars, varNum);
   }
 
   /**
@@ -115,7 +148,12 @@ public class Assignment implements Serializable {
    * @return
    */
   public Object getValue(int varNum) {
-    return varValueMap.get(varNum);
+    int index = getValueIndex(varNum);
+    if (index < 0) {
+      return null;
+    } else {
+      return values[index];
+    }
   }
 
   /**
@@ -125,7 +163,7 @@ public class Assignment implements Serializable {
    * @return
    */
   public boolean contains(int varNum) {
-    return varValueMap.containsKey(varNum);
+    return getValueIndex(varNum) >= 0;
   }
 
   /**
@@ -135,36 +173,14 @@ public class Assignment implements Serializable {
    * @param varNums
    * @return
    */
+  @Deprecated
   public boolean containsAll(Collection<Integer> varNums) {
-    for (Integer varNum : varNums) {
-      if (!varValueMap.containsKey(varNum)) {
-        return false;
-      }
-    }
-    return true;
+    return containsAll(Ints.toArray(varNums));
   }
 
   public boolean containsAll(int... varNums) {
     for (int varNum : varNums) {
-      if (!varValueMap.containsKey(varNum)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Returns {@code true} if {@code this} contains all of the mappings in
-   * {@code assignment}. Note that this checks both variable numbers and their
-   * values.
-   * 
-   * @param assignment
-   * @return
-   */
-  public boolean containsAll(Assignment assignment) {
-    for (int variableNum : assignment.getVariableNums()) {
-      if (!varValueMap.containsKey(variableNum) ||
-          getValue(variableNum) != assignment.getValue(variableNum)) {
+      if (!contains(varNum)) {
         return false;
       }
     }
@@ -178,42 +194,18 @@ public class Assignment implements Serializable {
    * @param varNums
    * @return
    */
+  @Deprecated
   public boolean containsAny(Collection<Integer> varNums) {
-    for (Integer varNum : varNums) {
-      if (varValueMap.containsKey(varNum)) {
-        return true;
-      }
-    }
-    return false;
+    return containsAny(Ints.toArray(varNums));
   }
 
   public boolean containsAny(int... varNums) {
     for (int varNum : varNums) {
-      if (varValueMap.containsKey(varNum)) {
+      if (contains(varNum)) {
         return true;
       }
     }
     return false;
-  }
-
-
-  /**
-   * If varNums is a subset of the variables in this assignment, this method
-   * returns the value assigned to each variable in varNums. Puts the return
-   * value into "returnValue" if it is non-null, otherwise allocates and returns
-   * a new list.
-   */
-  public List<Object> intersection(List<Integer> varNums,
-      List<Object> returnValue) {
-    List<Object> retVal = returnValue;
-    if (retVal == null) {
-      retVal = new ArrayList<Object>();
-    }
-
-    for (Integer varNum : varNums) {
-      retVal.add(varValueMap.get(varNum));
-    }
-    return retVal;
   }
 
   /**
@@ -223,20 +215,29 @@ public class Assignment implements Serializable {
    * ignored; in this case, the returned assignment will contain fewer
    * variable/value mappings than {@code varNums.size()}.
    */
+  @Deprecated
   public Assignment intersection(Collection<Integer> varNums) {
-    List<Integer> varNumList = new ArrayList<Integer>();
-    List<Object> retVal = new ArrayList<Object>();
-    for (Integer varNum : varNums) {
-      if (varValueMap.containsKey(varNum)) {
-        varNumList.add(varNum);
-        retVal.add(varValueMap.get(varNum));
-      }
-    }
-    return new Assignment(varNumList, retVal);
+    return intersection(Ints.toArray(varNums));
   }
   
   public Assignment intersection(int ... varNums) {
-    return intersection(Ints.asList(varNums));
+    int[] newVarNums = new int[varNums.length];
+    Object[] newValues = new Object[varNums.length];
+    int numFilled = 0;
+    for (int varNum : varNums) {
+      int index = getValueIndex(varNum);
+      if (index >= 0) {
+        newVarNums[numFilled] = varNum;
+        newValues[numFilled] = values[index];
+        numFilled++;
+      }
+    }
+    
+    if (numFilled < newVarNums.length) {
+      newVarNums = Arrays.copyOf(newVarNums, numFilled);
+      newValues = Arrays.copyOf(newValues, numFilled);
+    }
+    return Assignment.fromUnsortedArrays(newVarNums, newValues);
   }
 
   /**
@@ -245,7 +246,7 @@ public class Assignment implements Serializable {
    * assignment.
    */
   public Assignment intersection(VariableNumMap vars) {
-    return intersection(vars.getVariableNums());
+    return intersection(vars.getVariableNumsArray());
   }
 
   /**
@@ -256,42 +257,47 @@ public class Assignment implements Serializable {
   public Assignment union(Assignment other) {
     Preconditions.checkNotNull(other);
     // Merge varnums / values
-    List<Integer> otherNums = other.getVariableNums();
-    List<Integer> myNums = getVariableNums();
-    List<Object> otherVals = other.getValues();
-    List<Object> myVals = getValues();
+    int[] otherNums = other.getVariableNumsArray();
+    int[] myNums = getVariableNumsArray();
+    Object[] otherVals = other.getValuesArray();
+    Object[] myVals = getValuesArray();
 
-    List<Integer> mergedNums = new ArrayList<Integer>();
-    List<Object> mergedVals = new ArrayList<Object>();
+    int[] mergedNums = new int[otherNums.length + myNums.length];
+    Object[] mergedVals = new Object[otherNums.length + myNums.length];
 
     int i = 0;
     int j = 0;
-    while (i < otherNums.size() && j < myNums.size()) {
-      if (otherNums.get(i) < myNums.get(j)) {
-        mergedNums.add(otherNums.get(i));
-        mergedVals.add(otherVals.get(i));
+    int numFilled = 0;
+    while (i < otherNums.length && j < myNums.length) {
+      if (otherNums[i] < myNums[j]) {
+        mergedNums[numFilled] = otherNums[i];
+        mergedVals[numFilled] = otherVals[i];
         i++;
-      } else if (otherNums.get(i) > myNums.get(j)) {
-        mergedNums.add(myNums.get(j));
-        mergedVals.add(myVals.get(j));
+        numFilled++;
+      } else if (otherNums[i] > myNums[j]) {
+        mergedNums[numFilled] = myNums[j];
+        mergedVals[numFilled] = myVals[j];
         j++;
+        numFilled++;
       } else {
         Preconditions.checkState(false, "Cannot combine non-disjoint assignments: %s with %s", this, other);
       }
     }
     // One list might still have elements in it.
-    while (i < otherNums.size()) {
-      mergedNums.add(otherNums.get(i));
-      mergedVals.add(otherVals.get(i));
+    while (i < otherNums.length) {
+      mergedNums[numFilled] = otherNums[i];
+      mergedVals[numFilled] = otherVals[i];
       i++;
+      numFilled++;
     }
-    while (j < myNums.size()) {
-      mergedNums.add(myNums.get(j));
-      mergedVals.add(myVals.get(j));
+    while (j < myNums.length) {
+      mergedNums[numFilled] = myNums[j];
+      mergedVals[numFilled] = myVals[j];
       j++;
+      numFilled++;
     }
-
-    return new Assignment(mergedNums, mergedVals);
+    Preconditions.checkState(numFilled == mergedNums.length);
+    return Assignment.fromSortedArrays(mergedNums, mergedVals);
   }
 
   /**
@@ -301,14 +307,35 @@ public class Assignment implements Serializable {
    * @param varNumsToRemove
    * @return
    */
+  @Deprecated
   public Assignment removeAll(Collection<Integer> varNumsToRemove) {
-    SortedMap<Integer, Object> newVarValueMap = new TreeMap<Integer, Object>(varValueMap);
-    for (Integer varNum : varNumsToRemove) {
-      if (newVarValueMap.containsKey(varNum)) {
-        newVarValueMap.remove(varNum);
+    return removeAll(Ints.toArray(varNumsToRemove));
+  }
+  
+  public Assignment removeAll(int ... varNumsToRemove) {
+    int[] newVarNums = Arrays.copyOf(vars, vars.length);
+    
+    int numRemoved = 0;
+    for (int varNumToRemove : varNumsToRemove) {
+      int index = getValueIndex(varNumToRemove);
+      if (index >= 0) {
+        newVarNums[index] = Integer.MIN_VALUE;
+        numRemoved++;
       }
     }
-    return new Assignment(newVarValueMap);
+    
+    int[] finalVarNums = new int[newVarNums.length - numRemoved];
+    Object[] finalValues = new Object[newVarNums.length - numRemoved];
+    int numFilled = 0;
+    for (int i = 0; i < newVarNums.length; i++) {
+      if (newVarNums[i] != Integer.MIN_VALUE) {
+        finalVarNums[numFilled] = newVarNums[i];
+        finalValues[numFilled] = values[i];
+        numFilled++;
+      } 
+    }
+    Preconditions.checkState(numFilled == finalVarNums.length);
+    return Assignment.fromSortedArrays(finalVarNums, finalValues);
   }
 
   /**
@@ -316,44 +343,50 @@ public class Assignment implements Serializable {
    * in varMap.
    */
   public Assignment mapVariables(Map<Integer, Integer> varMap) {
-    List<Integer> newVarNums = new ArrayList<Integer>();
-    List<Object> newVarVals = new ArrayList<Object>();
-    for (Integer k : varValueMap.keySet()) {
-      if (varMap.containsKey(k)) {
-        newVarNums.add(varMap.get(k));
-        newVarVals.add(varValueMap.get(k));
+    int[] newVarNums = new int[vars.length];
+    Object[] newValues = new Object[vars.length];
+
+    int numFilled = 0;
+    for (int i = 0; i < vars.length; i++) {
+      if (varMap.containsKey(vars[i])) {
+        newVarNums[numFilled] = varMap.get(vars[i]);
+        newValues[numFilled] = values[i];
+        numFilled++;
       }
     }
-    return new Assignment(newVarNums, newVarVals);
+    
+    if (numFilled < newVarNums.length) {
+      newVarNums = Arrays.copyOf(newVarNums, numFilled);
+      newValues = Arrays.copyOf(newValues, numFilled);
+    }
+    return Assignment.fromUnsortedArrays(newVarNums, newValues);
   }
 
   @Override
   public int hashCode() {
-    return varValueMap.hashCode();
+    return Arrays.hashCode(vars) * 31 + Arrays.hashCode(values);
   }
 
   @Override
   public boolean equals(Object o) {
     if (o instanceof Assignment) {
       Assignment a = (Assignment) o;
-      return varValueMap.equals(a.varValueMap);
+      return Arrays.equals(vars, a.vars) && Arrays.deepEquals(values, a.values);
     }
     return false;
   }
 
   @Override
   public String toString() {
-    return varValueMap.keySet().toString() + "=" + varValueMap.values().toString();
+    return Arrays.toString(vars) + "=" + Arrays.toString(values);
   }
   
   public String toXML() {
-	  
-	  String s = "";
-	  for(Integer k : varValueMap.keySet()){
-		  s+= "<key>"+k+"</key>\n" + "<value>" + varValueMap.get(k) + "</value>\n";
+	  StringBuilder sb = new StringBuilder();
+	  for (int i = 0; i < vars.length; i++) {
+	    sb.append("<key>" + vars[i] + "</key>\n" + "<value>" + values[i] + "</value>\n");
 	  }
-	  
-	  return s;
+	  return sb.toString();
   }
 
   /**
@@ -364,14 +397,26 @@ public class Assignment implements Serializable {
    * @return
    */
   public static Assignment unionAll(Collection<Assignment> assignments) {
-    SortedMap<Integer, Object> newValues = Maps.newTreeMap();
+    int numVars = 0;
     for (Assignment assignment : assignments) {
-      for (Map.Entry<Integer, Object> varValue : assignment.varValueMap.entrySet()) {
-        Preconditions.checkArgument(!newValues.containsKey(varValue.getKey()));
-        newValues.put(varValue.getKey(), varValue.getValue());
+      numVars += assignment.size();
+    }
+
+    int[] vars = new int[numVars];
+    Object[] values = new Object[numVars];
+    int numFilled = 0;
+    for (Assignment assignment : assignments) {
+      int[] assignmentVars = assignment.vars;
+      Object[] assignmentValues = assignment.values;
+      int numAssignmentVars = assignment.vars.length;
+      for (int i = 0; i < numAssignmentVars; i++) {
+        vars[numFilled] = assignmentVars[i];
+        values[numFilled] = assignmentValues[i];
+        numFilled++;
       }
     }
-    return new Assignment(newValues);
+    Preconditions.checkState(numFilled == numVars);
+    return Assignment.fromUnsortedArrays(vars, values);
   }
 
   /**

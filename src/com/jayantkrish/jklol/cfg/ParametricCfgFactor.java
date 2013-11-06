@@ -141,7 +141,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNums()));
+    Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNumsArray()));
     
     Preconditions.checkArgument(statistics instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) statistics;
@@ -149,7 +149,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
 
-    if (conditionalAssignment.containsAll(treeVar.getVariableNums())) {
+    if (conditionalAssignment.containsAll(treeVar.getVariableNumsArray())) {
       ParseTree tree = (ParseTree) conditionalAssignment.getValue(treeVar.getVariableNums().get(0));
       
       accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, count);

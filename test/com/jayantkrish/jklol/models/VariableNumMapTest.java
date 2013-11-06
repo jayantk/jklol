@@ -184,14 +184,14 @@ public class VariableNumMapTest extends TestCase {
 	}
 	
 	public void testAssignmentToIntArray() {
-	  int[] actual = a.assignmentToIntArray(new Assignment(Arrays.asList(0, 1, 3), 
-	      Arrays.<Object>asList("T", "U", "F")));
+	  int[] actual = a.assignmentToIntArray(Assignment.fromSortedArrays(new int[] {0, 1, 3}, 
+	      new Object[] {"T", "U", "F"}));
 	  assertTrue(Arrays.equals(actual, new int[] {0, 2, 1}));
 	}
 	
 	public void testIntArrayToAssignment() {
-	  Assignment expected = new Assignment(Arrays.asList(0, 1, 3), 
-	      Arrays.<Object>asList("T", "U", "F"));
+	  Assignment expected = Assignment.fromSortedArrays(new int[] {0, 1, 3}, 
+	      new Object[] {"T", "U", "F"});
 	  Assignment actual = a.intArrayToAssignment(new int[] {0, 2, 1});
 	  assertEquals(expected, actual);
 	}

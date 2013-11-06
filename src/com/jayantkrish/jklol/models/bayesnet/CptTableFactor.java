@@ -100,7 +100,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
       Assignment a, double count) {
-    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
     tensorStats.incrementFeature(a, count);
   }

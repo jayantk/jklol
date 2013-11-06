@@ -125,7 +125,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, 
       Assignment assignment, double count) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
 
     Tensor inputValueFeatures = ((Tensor) assignment.getValue(inputVarNums[0]))
         .relabelDimensions(inputVarNums);

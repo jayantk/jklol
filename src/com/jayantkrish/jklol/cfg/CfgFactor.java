@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -187,16 +186,14 @@ public class CfgFactor extends AbstractFactor {
     // variables by a point distribution.
     List<Factor> factorsToMultiply = Lists.newArrayList();
     if (a.contains(parentVarNum)) {
-      List<Integer> parentVarNumList = Arrays.asList(new Integer[] { parentVarNum });
       TableFactor newParentFactor = TableFactor.pointDistribution(
-          getVars().intersection(parentVarNumList), a.intersection(parentVarNumList));
+          getVars().intersection(parentVarNum), a.intersection(parentVarNum));
       factorsToMultiply.add(newParentFactor);
     }
 
     if (a.contains(childVarNum)) {
-      List<Integer> childVarNumList = Arrays.asList(new Integer[] { childVarNum });
       TableFactor newChildFactor = TableFactor.pointDistribution(
-          getVars().intersection(childVarNumList), a.intersection(childVarNumList));
+          getVars().intersection(childVarNum), a.intersection(childVarNum));
       factorsToMultiply.add(newChildFactor);
     }
 

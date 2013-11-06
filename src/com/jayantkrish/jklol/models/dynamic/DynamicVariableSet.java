@@ -250,7 +250,7 @@ public class DynamicVariableSet implements Serializable {
   public Assignment toAssignment(DynamicAssignment assignment) {
     Map<Integer, Object> values = Maps.newHashMap();
     toAssignmentHelper(assignment, 0, values);
-    return new Assignment(values);
+    return Assignment.fromMap(values);
   }
 
   private void toAssignmentHelper(DynamicAssignment assignment, int indexOffset,
@@ -294,7 +294,7 @@ public class DynamicVariableSet implements Serializable {
         fixedAssignmentValues.put(myVarNum, assignment.getValue(curVarIndex));
       }
     }
-    Assignment fixedAssignment = new Assignment(fixedAssignmentValues);
+    Assignment fixedAssignment = Assignment.fromMap(fixedAssignmentValues);
 
     List<List<DynamicAssignment>> allPlateAssignments = Lists.newArrayList();
     for (int i = 0; i < plateNames.size(); i++) {

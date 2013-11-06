@@ -1,10 +1,6 @@
 package com.jayantkrish.jklol.training;
 
-import java.util.Iterator;
-import java.util.List;
-
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
@@ -12,15 +8,12 @@ import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
-import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
@@ -61,7 +54,7 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
     log.stopTimer("dynamic_instantiation");
 
     // Get the cost-augmented best prediction based on the current input.
-    Assignment outputAssignment = observed.removeAll(input.getVariableNums());
+    Assignment outputAssignment = observed.removeAll(input.getVariableNumsArray());
 
     log.startTimer("update_subgradient/cost_augment");
     FactorGraph costAugmentedModel = costFunction.augmentWithCosts(currentModel,
@@ -163,9 +156,8 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
     public FactorGraph augmentWithCosts(FactorGraph factorGraph, VariableNumMap outputVariables, Assignment trueLabel) {
       FactorGraph augmentedGraph = factorGraph;
       for (Integer varNum : outputVariables.getVariableNums()) {
-        List<Integer> varNumList = Ints.asList(varNum);
-        VariableNumMap curOutputVar = outputVariables.intersection(varNumList);
-        Assignment curTrueAssignment = trueLabel.intersection(varNumList);
+        VariableNumMap curOutputVar = outputVariables.intersection(varNum);
+        Assignment curTrueAssignment = trueLabel.intersection(varNum);
         DenseTensorBuilder costWeightsBuilder = new DenseTensorBuilder(curOutputVar.getVariableNumsArray(), curOutputVar.getVariableSizes(), Math.E);
         costWeightsBuilder.put(curOutputVar.assignmentToIntArray(curTrueAssignment), 1.0);
 

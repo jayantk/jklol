@@ -79,7 +79,7 @@ public class BeamSearchCfgFactor extends AbstractConditionalFactor implements Se
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
 
     List<Object> terminals = terminalValueToTerminals.apply(assignment.getValue(terminalVariable.getOnlyVariableNum()));
     ParseTree tree = (ParseTree) assignment.getValue(treeVariable.getVariableNums().get(0));

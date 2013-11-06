@@ -160,7 +160,7 @@ public class TableFactorBuilder {
    * {@code weight} is 0.0, {@code a} is deleted from this builder.
    */
   public void setWeight(Assignment a, double weight) {
-    Preconditions.checkArgument(a.containsAll(vars.getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(vars.getVariableNumsArray()));
     weightBuilder.put(vars.assignmentToIntArray(a), weight);
   }
 

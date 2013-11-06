@@ -253,6 +253,7 @@ public class IntMultimap implements Multimap<Integer, Integer> {
   }
 
   public final boolean containsKey(int intKey) {
+    reindexItems();
     int index = Arrays.binarySearch(keySet, intKey);
     return index >= 0;
   }

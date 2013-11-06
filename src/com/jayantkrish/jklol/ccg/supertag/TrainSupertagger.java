@@ -63,6 +63,7 @@ public class TrainSupertagger extends AbstractCli {
   private OptionSpec<Void> maxMargin;
   private OptionSpec<Integer> commonWordCountThreshold;
   private OptionSpec<Integer> labelRestrictionCountThreshold;
+  private OptionSpec<Integer> posContextFeatureCountThreshold;
   private OptionSpec<Integer> prefixSuffixFeatureCountThreshold; 
 
   private static final String UNK_PREFIX = "UNK-";
@@ -83,11 +84,13 @@ public class TrainSupertagger extends AbstractCli {
     
     maxMargin = parser.accepts("maxMargin");
     commonWordCountThreshold = parser.accepts("commonWordThreshold").withRequiredArg()
-        .ofType(Integer.class).defaultsTo(5);
+        .ofType(Integer.class).defaultsTo(0); // old value: 5 
     labelRestrictionCountThreshold = parser.accepts("labelRestrictionThreshold").withRequiredArg()
-        .ofType(Integer.class).defaultsTo(20);
+        .ofType(Integer.class).defaultsTo(Integer.MAX_VALUE); // old value: 20
+    posContextFeatureCountThreshold = parser.accepts("posContextFeatureCountThreshold").withRequiredArg()
+        .ofType(Integer.class).defaultsTo(0); // old value: 30
     prefixSuffixFeatureCountThreshold = parser.accepts("prefixSuffixThreshold").withRequiredArg()
-      .ofType(Integer.class).defaultsTo(10); // 35
+      .ofType(Integer.class).defaultsTo(0); // old values: 10, 35
   }
 
   @Override
@@ -104,9 +107,9 @@ public class TrainSupertagger extends AbstractCli {
     System.out.println("Generating features...");
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData),
-            options.valueOf(commonWordCountThreshold), 30,
+            options.valueOf(commonWordCountThreshold), options.valueOf(posContextFeatureCountThreshold),
             options.valueOf(prefixSuffixFeatureCountThreshold));
-    System.out.println(featureGen.getNumberOfFeatures() + " word/CCG category features");
+    System.out.println(featureGen.getNumberOfFeatures() + " features per CCG category.");
 
     System.out.println("Generating label restrictions...");
     WordAndPos startInput = null;
@@ -184,7 +187,7 @@ public class TrainSupertagger extends AbstractCli {
   }
 
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
-      List<LocalContext<WordAndPos>> contexts, int commonWordCountThreshold, int wordPosCountThreshold,
+      List<LocalContext<WordAndPos>> contexts, int commonWordCountThreshold, int posContextCountThreshold,
       int prefixSuffixCountThreshold) {
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (LocalContext<WordAndPos> context : contexts) {
@@ -196,8 +199,13 @@ public class TrainSupertagger extends AbstractCli {
     // Build a dictionary of words and POS tags which occur frequently
     // enough in the data set.
     FeatureGenerator<LocalContext<WordAndPos>, String> wordGen = new
-        WordAndPosContextFeatureGenerator(new int[] { -2, -1, 0, 1, 2 }, commonWords);
+        WordAndPosFeatureGenerator(new int[] { -2, -1, 0, 1, 2 }, commonWords);
     CountAccumulator<String> wordPosFeatureCounts = FeatureGenerators.getFeatureCounts(wordGen, contexts);
+    
+    FeatureGenerator<LocalContext<WordAndPos>, String> posContextGen = new 
+        PosContextFeatureGenerator(new int[][] {{-2}, {-1}, {0}, {1}, {2}, {-1, 0}, {0, 1}, 
+            {-2, -1, 0}, {-1, 0, 1}, {0, 1, 2}, {-2, 0}, {-1, 1}, {0, 2}});
+    CountAccumulator<String> posContextFeatureCounts = FeatureGenerators.getFeatureCounts(posContextGen, contexts);
 
     // Generate prefix/suffix features for common prefixes and suffixes.
     FeatureGenerator<LocalContext<WordAndPos>, String> prefixGen = 
@@ -207,12 +215,15 @@ public class TrainSupertagger extends AbstractCli {
     // Count feature occurrences and discard infrequent features.
     CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
     IndexedList<String> featureDictionary = IndexedList.create();
-    Set<String> frequentWordFeatures = wordPosFeatureCounts.getKeysAboveCountThreshold(wordPosCountThreshold);
+    Set<String> frequentWordFeatures = wordPosFeatureCounts.getKeysAboveCountThreshold(commonWordCountThreshold);
+    Set<String> frequentContextFeatures = posContextFeatureCounts.getKeysAboveCountThreshold(posContextCountThreshold);
     Set<String> frequentPrefixFeatures = prefixFeatureCounts.getKeysAboveCountThreshold(prefixSuffixCountThreshold);
     featureDictionary.addAll(frequentWordFeatures);
+    featureDictionary.addAll(frequentContextFeatures);
     featureDictionary.addAll(frequentPrefixFeatures);
 
     System.out.println(frequentWordFeatures.size() + " word and POS features");
+    System.out.println(frequentContextFeatures.size() + " POS context features");
     System.out.println(frequentPrefixFeatures.size() + " prefix/suffix features");
 
     @SuppressWarnings("unchecked")

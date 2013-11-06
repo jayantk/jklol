@@ -44,6 +44,10 @@ public class NormalizingFactor extends AbstractConditionalFactor {
     
     this.conditionalAndInputVars = conditionalVars.union(inputVars);
   }
+  
+  public List<Factor> getFactors() {
+    return factors;
+  }
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {

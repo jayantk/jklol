@@ -60,6 +60,7 @@ public class TaggerUtils {
   public static final String WORD_LABEL_FACTOR = "wordLabelFactor";
   public static final String LABEL_RESTRICTION_FACTOR = "labelRestrictionFactor";
   public static final String TRANSITION_FACTOR = "transition";
+  public static final String NORMALIZED_FACTOR = "normalizedFactors";
   
   public static final String DEFAULT_INPUT_VALUE="*DEFAULT*";
   
@@ -274,14 +275,17 @@ public class TaggerUtils {
       // Add a factor that normalizes the distribution.
       List<ParametricFactor> factors = Lists.<ParametricFactor>newArrayList(wordClassifier,
           new ConstantParametricFactor(restrictions.getVars(), restrictions));
+      VariableNumMap inputVars = wordVectorVar.union(wordVar);
+      VariableNumMap conditionalVars = VariableNumMap.emptyMap();
+      VariableNumMap outputVar = adjacentVars.getVariablesByName(OUTPUT_PATTERN);
       if (adjacentFactor != null) {
         factors.add(adjacentFactor);
+        conditionalVars = adjacentVars.getVariablesByName(PREV_OUTPUT_PATTERN);
       }
-      VariableNumMap factorVars = VariableNumMap.unionAll(classifierVars, restrictionVars, adjacentVars);
+      VariableNumMap factorVars = VariableNumMap.unionAll(inputVars, conditionalVars, outputVar);
       ParametricNormalizingFactor normalizingFactor = new ParametricNormalizingFactor(
-          wordVectorVar.union(wordVar), adjacentVars.getVariablesByName(PREV_OUTPUT_PATTERN),
-          adjacentVars.getVariablesByName(OUTPUT_PATTERN), factors);
-      builder.addFactor("normalizedFactors", normalizingFactor,
+          inputVars, conditionalVars, outputVar, factors);
+      builder.addFactor(NORMALIZED_FACTOR, normalizingFactor,
           VariableNumPattern.fromTemplateVariables(factorVars, VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
     } else {
       // Just add each factor to the factor graph 

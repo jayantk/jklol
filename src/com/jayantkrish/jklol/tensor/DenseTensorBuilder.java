@@ -174,6 +174,14 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       double multiplier) {
     int[] leftDimensionNums = leftTensor.getDimensionNumbers();
     int[] rightDimensionNums = rightTensor.getDimensionNumbers();
+    if (leftDimensionNums.length == 0) {
+      incrementWithMultiplier(rightTensor, multiplier * leftTensor.getByDimKey());
+      return;
+    } else if (rightDimensionNums.length == 0) {
+      incrementWithMultiplier(leftTensor, multiplier * rightTensor.getByDimKey());
+      return;
+    }
+
     Preconditions.checkArgument(leftDimensionNums[leftDimensionNums.length - 1] < rightDimensionNums[0]);
   
     long leftKeyNumMultiplier = rightTensor.getMaxKeyNum();

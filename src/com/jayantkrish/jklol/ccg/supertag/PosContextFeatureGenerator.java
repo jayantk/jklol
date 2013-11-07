@@ -41,7 +41,6 @@ public class PosContextFeatureGenerator implements FeatureGenerator<LocalContext
           featureBuilder.append("_");
         }
       }
-      
       String featureName = featureBuilder.toString().intern();
       weights.put(featureName, 1.0);
     }

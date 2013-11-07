@@ -772,22 +772,25 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         newDimensionSizes[i - numEliminated] = dimensionSizes[i];
       }
     }
-    // If none of the dimensions being eliminated are actually part of
-    // this
-    // tensor, then there's no need to do any more work.
+
     if (numEliminated == 0) {
+      // If none of the dimensions being eliminated are actually part of
+      // this tensor, then there's no need to do any more work.
       if (backpointers != null) {
         backpointers.setBackpointers(keyNums, keyNums, keyNums.length, this);
       }
       return this;
+    } else if (numEliminated == dimensionNums.length && backpointers == null && useSum) {
+      // Faster implementation for summing up all values in the tensor,
+      // a common operation.
+      return sumOutAllDimensions();
     }
 
     SparseTensor relabeled = relabelDimensions(newLabels);
     int resultNumDimensions = dimensionNums.length - numEliminated;
 
     // Get a number which we can divide each key by to map it to a key
-    // in the
-    // reduced dimensional tensor.
+    // in the reduced dimensional tensor.
     long keyNumDenominator = (resultNumDimensions > 0) ? relabeled.indexOffsets[resultNumDimensions - 1] :
         relabeled.indexOffsets[0] * relabeled.getDimensionSizes()[0];
 
@@ -862,6 +865,15 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     return resizeIntoTable(ArrayUtils.copyOf(newDimensions, resultNumDimensions),
         ArrayUtils.copyOf(newDimensionSizes, resultNumDimensions),
         resultKeyInts, resultValues, resultInd);
+  }
+
+  private SparseTensor sumOutAllDimensions() {
+    int numValues = values.length;
+    double result = 0;
+    for (int i = 0; i < numValues; i++) {
+      result += values[i];
+    }
+    return SparseTensor.getScalarConstant(result);
   }
 
   /**

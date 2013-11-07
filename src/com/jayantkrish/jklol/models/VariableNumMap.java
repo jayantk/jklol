@@ -75,7 +75,7 @@ public class VariableNumMap implements Serializable {
     this.vars = vars;
   }
 
-  public static VariableNumMap fromVariableNames(List<String> variableNames,
+  public static final VariableNumMap fromVariableNames(List<String> variableNames,
       List<Variable> variables) {
     Preconditions.checkArgument(variableNames.size() == variables.size());
     List<Integer> varNums = Lists.newArrayList();
@@ -93,16 +93,16 @@ public class VariableNumMap implements Serializable {
    * @param variable
    * @return
    */
-  public static VariableNumMap singleton(int varNum, String varName, Variable variable) {
+  public static final VariableNumMap singleton(int varNum, String varName, Variable variable) {
     return new VariableNumMap(new int[] {varNum}, new String[] {varName}, new Variable[] {variable});
   }
   
-  public static VariableNumMap fromUnsortedArrays(int[] nums, String[] names, Variable[] vars) {
+  public static final VariableNumMap fromUnsortedArrays(int[] nums, String[] names, Variable[] vars) {
     ArrayUtils.sortKeyValuePairs(nums, new Object[][] {names, vars}, 0, nums.length);
     return new VariableNumMap(nums, names, vars);
   }
   
-  public static VariableNumMap fromUnsortedArrays(int[] nums, String[] names, Variable[] vars, int num) {
+  public static final VariableNumMap fromUnsortedArrays(int[] nums, String[] names, Variable[] vars, int num) {
     if (num < nums.length) {
       return fromUnsortedArrays(Arrays.copyOf(nums, num), Arrays.copyOf(names, num), Arrays.copyOf(vars, num));
     } else {
@@ -110,11 +110,11 @@ public class VariableNumMap implements Serializable {
     }
   }
 
-  public static VariableNumMap fromSortedArrays(int[] nums, String[] names, Variable[] vars) {
+  public static final VariableNumMap fromSortedArrays(int[] nums, String[] names, Variable[] vars) {
     return new VariableNumMap(nums, names, vars);
   }
 
-  public static VariableNumMap fromSortedArrays(int[] nums, String[] names, Variable[] vars, int num) {
+  public static final VariableNumMap fromSortedArrays(int[] nums, String[] names, Variable[] vars, int num) {
     if (num < nums.length) {
       return fromSortedArrays(Arrays.copyOf(nums, num), Arrays.copyOf(names, num), Arrays.copyOf(vars, num));
     } else {
@@ -194,7 +194,7 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public List<String> getVariableNames() {
+  public final List<String> getVariableNames() {
     return Arrays.asList(names);
   }
 
@@ -297,7 +297,7 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public List<ObjectVariable> getObjectVariables() {
+  public final List<ObjectVariable> getObjectVariables() {
     List<ObjectVariable> objectVars = new ArrayList<ObjectVariable>();
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] instanceof ObjectVariable) {
@@ -312,7 +312,7 @@ public class VariableNumMap implements Serializable {
    * 
    * @return
    */
-  public List<BooleanVariable> getBooleanVariables() {
+  public final List<BooleanVariable> getBooleanVariables() {
     List<BooleanVariable> booleanVars = new ArrayList<BooleanVariable>();
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] instanceof BooleanVariable) {
@@ -375,7 +375,7 @@ public class VariableNumMap implements Serializable {
    * @param variableNames
    * @return
    */
-  public VariableNumMap getVariablesByName(Collection<String> variableNames) {
+  public final VariableNumMap getVariablesByName(Collection<String> variableNames) {
     int[] newNums = new int[nums.length];
     String[] newNames = new String[nums.length];
     Variable[] newVars = new Variable[nums.length];
@@ -399,7 +399,7 @@ public class VariableNumMap implements Serializable {
    * @param variableNames
    * @return
    */
-  public VariableNumMap getVariablesByName(String... variableNames) {
+  public final VariableNumMap getVariablesByName(String... variableNames) {
     return getVariablesByName(Arrays.asList(variableNames));
   }
 
@@ -409,7 +409,7 @@ public class VariableNumMap implements Serializable {
    * @param namePrefix
    * @return
    */
-  public VariableNumMap getVariablesByNamePrefix(String namePrefix) {
+  public final VariableNumMap getVariablesByNamePrefix(String namePrefix) {
     int[] newNums = new int[nums.length];
     String[] newNames = new String[nums.length];
     Variable[] newVars = new Variable[nums.length];
@@ -432,7 +432,7 @@ public class VariableNumMap implements Serializable {
    * @param variableNum
    * @return
    */
-  public boolean contains(int variableNum) {
+  public final boolean contains(int variableNum) {
     return getVariableIndex(variableNum) >= 0;
   }
 
@@ -496,7 +496,7 @@ public class VariableNumMap implements Serializable {
    * @param variableNums
    * @return
    */
-  public boolean containsAny(Collection<Integer> variableNums) {
+  public final boolean containsAny(Collection<Integer> variableNums) {
     return containsAny(Ints.toArray(variableNums));
   }
 
@@ -507,7 +507,7 @@ public class VariableNumMap implements Serializable {
    * @param other
    * @return
    */
-  public boolean containsAny(VariableNumMap other) {
+  public final boolean containsAny(VariableNumMap other) {
     return containsAny(other.getVariableNumsArray());
   }
 
@@ -541,7 +541,7 @@ public class VariableNumMap implements Serializable {
    * @param varNumsToKeep
    * @return
    */
-  public VariableNumMap intersection(int... varNumsToKeep) {
+  public final VariableNumMap intersection(int... varNumsToKeep) {
     int[] newNums = new int[varNumsToKeep.length];
     String[] newNames = new String[varNumsToKeep.length];
     Variable[] newVars = new Variable[varNumsToKeep.length];
@@ -566,7 +566,7 @@ public class VariableNumMap implements Serializable {
    * @param other
    * @return
    */
-  public VariableNumMap intersection(VariableNumMap other) {
+  public final VariableNumMap intersection(VariableNumMap other) {
     checkCompatibility(other);
     return intersection(other.getVariableNumsArray());
   }
@@ -578,7 +578,7 @@ public class VariableNumMap implements Serializable {
    * @param varNumsToKeep
    * @return
    */
-  public VariableNumMap intersection(Collection<Integer> varNumsToKeep) {
+  public final VariableNumMap intersection(Collection<Integer> varNumsToKeep) {
     return intersection(Ints.toArray(varNumsToKeep));
   }
 
@@ -589,7 +589,7 @@ public class VariableNumMap implements Serializable {
    * @param variableNums
    * @return
    */
-  public VariableNumMap removeAll(int ... variableNums) {
+  public final VariableNumMap removeAll(int ... variableNums) {
     int[] newNums = new int[nums.length];
     String[] newNames = new String[nums.length];
     Variable[] newVars = new Variable[nums.length];
@@ -611,7 +611,7 @@ public class VariableNumMap implements Serializable {
    * @param varNumsToRemove
    * @return
    */
-  public VariableNumMap removeAll(VariableNumMap other) {
+  public final VariableNumMap removeAll(VariableNumMap other) {
     checkCompatibility(other);
     return removeAll(other.getVariableNumsArray());
   }
@@ -623,7 +623,7 @@ public class VariableNumMap implements Serializable {
    * @param varNumsToRemove
    * @return
    */
-  public VariableNumMap removeAll(Collection<Integer> varNumsToRemove) {
+  public final VariableNumMap removeAll(Collection<Integer> varNumsToRemove) {
     return removeAll(Ints.toArray(varNumsToRemove));
   }
 
@@ -635,7 +635,7 @@ public class VariableNumMap implements Serializable {
    * @param other
    * @return
    */
-  public VariableNumMap union(VariableNumMap other) {
+  public final VariableNumMap union(VariableNumMap other) {
     int[] otherNums = other.nums;
     String[] otherNames = other.names;
     Variable[] otherVars = other.vars;
@@ -691,11 +691,11 @@ public class VariableNumMap implements Serializable {
    * @param var
    * @return
    */
-  public VariableNumMap addMapping(int num, String name, Variable var) {
+  public final VariableNumMap addMapping(int num, String name, Variable var) {
     return union(VariableNumMap.singleton(num, name, var));
   }
 
-  public VariableNumMap relabelVariableNums(int[] relabeling) {
+  public final VariableNumMap relabelVariableNums(int[] relabeling) {
     Preconditions.checkArgument(nums.length == relabeling.length);
 
     int[] newNums = new int[nums.length];

@@ -3,8 +3,6 @@ package com.jayantkrish.jklol.inference;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -90,7 +88,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     // variables.
     int[] relevantFactors = new int[allFactors.size()];
     Arrays.fill(relevantFactors, 0);
-    for (Integer varNum : varNums) {
+    for (int varNum : varNums) {
       for (int factorNum : variableFactorMap.getArray(varNum)) {
         relevantFactors[factorNum]++;
       }
@@ -114,9 +112,8 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     Factor marginal = allFactors.get(factorNum);
 
     // Marginalize out any remaining variables
-    Set<Integer> allVarNums = new HashSet<Integer>(marginal.getVars().getVariableNums());
-    allVarNums.removeAll(varNums);
-    Factor finalMarginal = marginal.marginalize(allVarNums);
+    VariableNumMap toEliminate = marginal.getVars().removeAll(varNums);
+    Factor finalMarginal = marginal.marginalize(toEliminate);
     return finalMarginal;
   }
 

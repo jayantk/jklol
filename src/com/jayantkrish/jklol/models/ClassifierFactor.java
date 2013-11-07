@@ -4,6 +4,8 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -64,6 +66,8 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("classifier_conditional");
     int inputVarNum = inputVar.getOnlyVariableNum();
     int[] outputVarNums = outputVars.getVariableNumsArray();
 
@@ -83,6 +87,8 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
     
     // Note that the assignment may contain more than just the input variable, hence
     // the additional call to condition.
-    return outputFactor.conditional(assignment);
+    Factor result = outputFactor.conditional(assignment);
+    log.stopTimer("classifier_conditional");
+    return result;
   }
 }

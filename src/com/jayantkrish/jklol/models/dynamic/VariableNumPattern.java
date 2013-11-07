@@ -12,7 +12,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 
 public class VariableNumPattern extends AbstractVariablePattern {
   private static final long serialVersionUID = 1L;
-  
+
   // Matchers against the indexes of variables, instantiated from a
   // particular dynamic variable set.
   private final int[] plateStarts;

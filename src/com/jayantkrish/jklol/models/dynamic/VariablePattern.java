@@ -34,7 +34,7 @@ public interface VariablePattern extends Serializable {
    * along with the role served by each variable in the match. Matches are
    * returned in order of the matched replication index.
    * 
-   * @param allVariables
+   * @param matchedVariables
    * @return
    */
   List<VariableMatch> matchVariables(VariableNumMap inputVariables);
@@ -58,7 +58,7 @@ public interface VariablePattern extends Serializable {
   public static class VariableMatch {
 
     // Variables which match replications of template variables.
-    private VariableNumMap allVariables;
+    private VariableNumMap matchedVariables;
 
     // Mapping from names/indices of matched variables to the names/indices of
     // the corresponding template variables.
@@ -66,7 +66,7 @@ public interface VariablePattern extends Serializable {
     private BiMap<String, String> variableNameMap;
 
     public VariableMatch(VariableNumMap fixedVariables) {
-      this.allVariables = fixedVariables;
+      this.matchedVariables = fixedVariables;
 
       variableIndexMap = HashBiMap.create();
       variableNameMap = HashBiMap.create();
@@ -85,7 +85,7 @@ public interface VariablePattern extends Serializable {
      * @return
      */
     public VariableNumMap getMatchedVariables() {
-      return allVariables;
+      return matchedVariables;
     }
 
     /**
@@ -100,7 +100,7 @@ public interface VariablePattern extends Serializable {
     
     public VariableNumMap getMatchedVariablesFromTemplateVariables(VariableNumMap templateVariables) {
       VariableRelabeling relabeling = new VariableRelabeling(variableIndexMap.inverse(), variableNameMap.inverse());
-      return relabeling.apply(templateVariables).intersection(allVariables);
+      return relabeling.apply(templateVariables).intersection(matchedVariables);
     }
 
     /**
@@ -116,12 +116,12 @@ public interface VariablePattern extends Serializable {
           templateVariable.getOnlyVariableNum());
       variableNameMap.put(matchedVariable.getOnlyVariableName(),
           templateVariable.getOnlyVariableName());
-      allVariables = allVariables.union(matchedVariable);
+      matchedVariables = matchedVariables.union(matchedVariable);
     }
 
     @Override
     public int hashCode() {
-      return allVariables.hashCode() * variableNameMap.hashCode() * variableIndexMap.hashCode();
+      return matchedVariables.hashCode() * variableNameMap.hashCode() * variableIndexMap.hashCode();
     }
 
     @Override
@@ -129,7 +129,7 @@ public interface VariablePattern extends Serializable {
       if (other instanceof VariableMatch) {
         VariableMatch m = (VariableMatch) other;
 
-        return allVariables.equals(m.allVariables) && variableIndexMap.equals(m.variableIndexMap)
+        return matchedVariables.equals(m.matchedVariables) && variableIndexMap.equals(m.variableIndexMap)
             && variableNameMap.equals(m.variableNameMap);
       }
       return false;
@@ -137,7 +137,7 @@ public interface VariablePattern extends Serializable {
 
     @Override
     public String toString() {
-      return allVariables.toString() + " " + variableIndexMap.toString()
+      return matchedVariables.toString() + " " + variableIndexMap.toString()
           + " " + variableNameMap.toString();
     }
   }

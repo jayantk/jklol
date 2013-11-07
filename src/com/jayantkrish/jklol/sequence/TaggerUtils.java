@@ -273,8 +273,8 @@ public class TaggerUtils {
 
     if (locallyNormalized) {
       // Add a factor that normalizes the distribution.
-      List<ParametricFactor> factors = Lists.<ParametricFactor>newArrayList(wordClassifier,
-          new ConstantParametricFactor(restrictions.getVars(), restrictions));
+      List<ParametricFactor> factors = Lists.<ParametricFactor>newArrayList(
+          new ConstantParametricFactor(restrictions.getVars(), restrictions), wordClassifier);
       VariableNumMap inputVars = wordVectorVar.union(wordVar);
       VariableNumMap conditionalVars = VariableNumMap.EMPTY;
       VariableNumMap outputVar = adjacentVars.getVariablesByName(OUTPUT_PATTERN);

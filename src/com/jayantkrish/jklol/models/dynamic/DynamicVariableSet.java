@@ -190,10 +190,14 @@ public class DynamicVariableSet implements Serializable {
       List<String> variableNames, List<Variable> variables,
       List<Integer> variableInds, String namespace, int indexOffset) {
     // Add each fixedVariable to the output VariableNumMap.
-    for (String varName : fixedVariables.getVariableNamesArray()) {
-      variableNames.add(namespace + varName);
-      variables.add(fixedVariables.getVariable(fixedVariables.getVariableByName(varName)));
-      variableInds.add(fixedVariables.getVariableByName(varName) + indexOffset);
+    int[] fixedVariableInds = fixedVariables.getVariableNumsArray();
+    String[] fixedVariableNames = fixedVariables.getVariableNamesArray();
+    Variable[] fixedVariableVariables = fixedVariables.getVariablesArray();
+    int numVars = fixedVariableInds.length;
+    for (int i = 0; i < numVars; i++) {
+      variableNames.add(namespace + fixedVariableNames[i]);
+      variables.add(fixedVariableVariables[i]);
+      variableInds.add(fixedVariableInds[i] + indexOffset);
     }
 
     for (int i = 0; i < plateNames.size(); i++) {

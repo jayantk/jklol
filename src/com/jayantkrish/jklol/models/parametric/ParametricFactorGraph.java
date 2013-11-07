@@ -172,8 +172,8 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
    */
   public void incrementSufficientStatistics(SufficientStatistics statistics,
       MarginalSet marginals, double count) {
-    LogFunction log = LogFunctions.getLogFunction();
-    log.startTimer("parametric_factor_graph_increment");
+    // LogFunction log = LogFunctions.getLogFunction();
+    // log.startTimer("parametric_factor_graph_increment");
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
     
@@ -191,10 +191,10 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
         VariableNumMap marginalVars = matchVars.removeAll(conditionedVariableNums);
 
         // to here: 6 microsecs
-        log.startTimer("parametric_factor_graph_marginal");
+        // log.startTimer("parametric_factor_graph_marginal");
         Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNumsArray());
         Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
-        log.stopTimer("parametric_factor_graph_marginal");
+        // log.stopTimer("parametric_factor_graph_marginal");
 
         // to here: 13 microsecs
         Factor relabeledMarginal = factorMarginal.relabelVariables(match.getMappingToTemplate());
@@ -203,14 +203,14 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
         // log.stopTimer("parametric_factor_graph_factor_stuff");
         // to here: 18 microsecs
         
-        log.startTimer("parametric_factor_graph_increment/increment");
+        // log.startTimer("parametric_factor_graph_increment/increment");
         parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i),
             relabeledMarginal, relabeledAssignment, count, 1.0);
         // to here: 27 microsecs
-        log.stopTimer("parametric_factor_graph_increment/increment");
+        // log.stopTimer("parametric_factor_graph_increment/increment");
       }
     }
-    log.stopTimer("parametric_factor_graph_increment");
+    // log.stopTimer("parametric_factor_graph_increment");
   }
 
   /**

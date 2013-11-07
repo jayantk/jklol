@@ -92,7 +92,7 @@ public class Assignment implements Serializable {
   /**
    * Gets the number of variables with values in the assignment.
    */
-  public int size() {
+  public final int size() {
     return vars.length;
   }
 
@@ -102,11 +102,11 @@ public class Assignment implements Serializable {
    * 
    * @return
    */
-  public List<Integer> getVariableNums() {
+  public final List<Integer> getVariableNums() {
     return Ints.asList(vars);
   }
 
-  public int[] getVariableNumsArray() {
+  public final int[] getVariableNumsArray() {
     return vars;
   }
 
@@ -117,11 +117,11 @@ public class Assignment implements Serializable {
    * 
    * @return
    */
-  public List<Object> getValues() {
+  public final List<Object> getValues() {
     return Arrays.asList(values);
   }
   
-  public Object[] getValuesArray() {
+  public final Object[] getValuesArray() {
     return values;
   }
 
@@ -131,7 +131,7 @@ public class Assignment implements Serializable {
    * 
    * @return
    */
-  public Object getOnlyValue() {
+  public final Object getOnlyValue() {
     Preconditions.checkState(values.length == 1);
     return values[0];
   }
@@ -147,7 +147,7 @@ public class Assignment implements Serializable {
    * @param varNum
    * @return
    */
-  public Object getValue(int varNum) {
+  public final Object getValue(int varNum) {
     int index = getValueIndex(varNum);
     if (index < 0) {
       return null;
@@ -162,7 +162,7 @@ public class Assignment implements Serializable {
    * @param varNum
    * @return
    */
-  public boolean contains(int varNum) {
+  public final boolean contains(int varNum) {
     return getValueIndex(varNum) >= 0;
   }
 
@@ -174,11 +174,11 @@ public class Assignment implements Serializable {
    * @return
    */
   @Deprecated
-  public boolean containsAll(Collection<Integer> varNums) {
+  public final boolean containsAll(Collection<Integer> varNums) {
     return containsAll(Ints.toArray(varNums));
   }
 
-  public boolean containsAll(int... varNums) {
+  public final boolean containsAll(int... varNums) {
     for (int varNum : varNums) {
       if (!contains(varNum)) {
         return false;
@@ -195,11 +195,11 @@ public class Assignment implements Serializable {
    * @return
    */
   @Deprecated
-  public boolean containsAny(Collection<Integer> varNums) {
+  public final boolean containsAny(Collection<Integer> varNums) {
     return containsAny(Ints.toArray(varNums));
   }
 
-  public boolean containsAny(int... varNums) {
+  public final boolean containsAny(int... varNums) {
     for (int varNum : varNums) {
       if (contains(varNum)) {
         return true;
@@ -216,11 +216,11 @@ public class Assignment implements Serializable {
    * variable/value mappings than {@code varNums.size()}.
    */
   @Deprecated
-  public Assignment intersection(Collection<Integer> varNums) {
+  public final Assignment intersection(Collection<Integer> varNums) {
     return intersection(Ints.toArray(varNums));
   }
   
-  public Assignment intersection(int ... varNums) {
+  public final Assignment intersection(int ... varNums) {
     int[] newVarNums = new int[varNums.length];
     Object[] newValues = new Object[varNums.length];
     int numFilled = 0;
@@ -245,7 +245,7 @@ public class Assignment implements Serializable {
    * vars. vars may not contain extra variables which are not part of this
    * assignment.
    */
-  public Assignment intersection(VariableNumMap vars) {
+  public final Assignment intersection(VariableNumMap vars) {
     return intersection(vars.getVariableNumsArray());
   }
 
@@ -254,7 +254,7 @@ public class Assignment implements Serializable {
    * variables in each assignment. The two assignments must contain disjoint
    * sets of variables.
    */
-  public Assignment union(Assignment other) {
+  public final Assignment union(Assignment other) {
     Preconditions.checkNotNull(other);
     // Merge varnums / values
     int[] otherNums = other.getVariableNumsArray();
@@ -308,11 +308,11 @@ public class Assignment implements Serializable {
    * @return
    */
   @Deprecated
-  public Assignment removeAll(Collection<Integer> varNumsToRemove) {
+  public final Assignment removeAll(Collection<Integer> varNumsToRemove) {
     return removeAll(Ints.toArray(varNumsToRemove));
   }
   
-  public Assignment removeAll(int ... varNumsToRemove) {
+  public final Assignment removeAll(int ... varNumsToRemove) {
     int[] newVarNums = Arrays.copyOf(vars, vars.length);
     
     int numRemoved = 0;

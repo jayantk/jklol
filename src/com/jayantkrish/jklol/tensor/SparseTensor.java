@@ -243,8 +243,38 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         return elementwiseMultiplyNaive(this, other);
       }
     }
-    // Left aligned.
-    return elementwiseMultiplyLeftAligned(this, other);
+
+    if (otherDimensions.length == dimensionNums.length) {
+      // Both tensors contain the exact same set of dimensions
+      return elementwiseMultiplySparseDense(this, other);
+    } else {
+      // Dimensions of other are aligned with the leftmost dimensions
+      // of this tensor.
+      return elementwiseMultiplyLeftAligned(this, other);
+    }
+  }
+
+  private static final SparseTensor elementwiseMultiplySparseDense(SparseTensor big, Tensor small) {
+    Preconditions.checkArgument(Arrays.equals(big.getDimensionNumbers(), small.getDimensionNumbers()));
+    long[] resultKeyNums = new long[big.size()];
+    double[] resultValues = new double[big.size()];
+    
+    int bigSize = big.size();
+    int numFilled = 0;
+    long[] bigKeyNums = big.keyNums;
+    double[] bigValues = big.values;
+    for (int i = 0; i < bigSize; i++) {
+      long curKeyNum = bigKeyNums[i];
+      double value = bigValues[i] * small.get(curKeyNum);
+      if (value != 0.0) {
+        resultKeyNums[numFilled] = curKeyNum;
+        resultValues[numFilled] = value;
+        numFilled++;
+      }
+    }
+
+    return resizeIntoTable(big.getDimensionNumbers(), big.getDimensionSizes(),
+        resultKeyNums, resultValues, numFilled);
   }
 
   /**
@@ -283,6 +313,8 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     int bigSize = big.size();
     int smallSize = small.size();
     long bigKeyNum, smallKeyNum, bigKeyNumDividedByMultiplier;
+    double[] bigValues = big.values;
+    long[] bigKeyNums = big.keyNums;
     outerloop: for (bigInd = 0; bigInd < bigSize && smallInd < smallSize;) {
 
       // Advance smallInd until other's outcome is >= our outcome.
@@ -299,7 +331,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
       if (bigKeyNumDividedByMultiplier == smallKeyNum) {
         resultKeyInts[resultInd] = bigKeyNum;
-        resultValues[resultInd] = big.values[bigInd] * small.getByIndex(smallInd);
+        resultValues[resultInd] = bigValues[bigInd] * small.getByIndex(smallInd);
         resultInd++;
         bigInd++;
       } else {
@@ -309,11 +341,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         // coordinates. This performs a binary search between the
         // starting value of bigInd and the end of the array.
         startInd = bigInd + 1;
-        endInd = big.keyNums.length;
+        endInd = bigSize;
         targetKeyNum = smallKeyNum * smallIndexMultiplier;
         while (startInd != endInd) {
           cmpInd = (startInd + endInd) / 2;
-          if (targetKeyNum > big.keyNums[cmpInd]) {
+          if (targetKeyNum > bigKeyNums[cmpInd]) {
             startInd = cmpInd + 1;
           } else {
             endInd = cmpInd;

@@ -236,17 +236,21 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     int otherSize = other.size();
     double[] otherValues = other.getValues();
     // Iterate over the keys of this, then (hopefully sparsely) iterate over the 
-    // keys of {@code other},  
-    for (long myKeyNum = 0; myKeyNum < maxKeyNum; myKeyNum += keyNumIncrement) {
-      double innerProd = 0.0;
-      for (int otherIndex = 0; otherIndex < otherSize; otherIndex++) {
+    // keys of {@code other},
+    double innerProd;
+    int otherIndex;
+    int finalIndex = (int) (maxKeyNum / keyNumIncrement);
+    long myKeyNum;
+    for (int i = 0; i < finalIndex; i++) {
+      myKeyNum = i * keyNumIncrement;
+      innerProd = 0.0;
+      for (otherIndex = 0; otherIndex < otherSize; otherIndex++) {
         long otherKeyNum = other.indexToKeyNum(otherIndex);
         double otherValue = otherValues[otherIndex];
         innerProd += values[(int) (myKeyNum + (otherKeyNum * otherKeyNumMultiplier))] * otherValue;
       }
-      resultBuilder.putByKeyNum(myKeyNum / keyNumIncrement, innerProd);
+      resultBuilder.putByKeyNum(i, innerProd);
     }
-
     return resultBuilder.buildNoCopy();
   }
 

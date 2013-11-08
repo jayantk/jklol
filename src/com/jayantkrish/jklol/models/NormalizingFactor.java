@@ -5,6 +5,8 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -78,14 +80,15 @@ public class NormalizingFactor extends AbstractConditionalFactor {
     if (!assignment.containsAny(getVars().getVariableNumsArray())) {
       return this;
     }
-    // LogFunction log = LogFunctions.getLogFunction();
-    // log.startTimer("conditional_normalized");
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("conditional_normalized");
     Preconditions.checkArgument(assignment.containsAll(inputVars.getVariableNumsArray()));
     Assignment inputAssignment = assignment.intersection(conditionalAndInputVars);
 
-    List<Factor> conditionalFactors = Lists.newArrayList();
-    for (Factor factor : factors) {
-      conditionalFactors.add(factor.conditional(inputAssignment));
+    int numFactors = factors.size();
+    Factor[] conditionalFactors = new Factor[numFactors];
+    for (int i = 0; i < numFactors; i++) {
+      conditionalFactors[i] = factors.get(i).conditional(inputAssignment);
     }
     Factor result = Factors.product(conditionalFactors);
 
@@ -93,7 +96,7 @@ public class NormalizingFactor extends AbstractConditionalFactor {
     // the resulting factor (conditioning on any other given values).
     Factor normalization = result.marginalize(outputVars);
     Factor finalResult = result.product(normalization.inverse()).conditional(assignment);
-    // log.stopTimer("conditional_normalized");
+    log.stopTimer("conditional_normalized");
     return finalResult;
   }
 }

@@ -66,8 +66,8 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
-    // LogFunction log = LogFunctions.getLogFunction();
-    // log.startTimer("classifier_conditional");
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("classifier_conditional");
     int inputVarNum = inputVar.getOnlyVariableNum();
     int[] outputVarNums = outputVars.getVariableNumsArray();
 
@@ -75,6 +75,7 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
       // We can only condition on outputVars if we also condition on
       // inputVar.
       Preconditions.checkArgument(!assignment.containsAny(outputVarNums));
+      log.stopTimer("classifier_conditional");
       return this;
     }
 
@@ -88,7 +89,7 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
     // Note that the assignment may contain more than just the input variable, hence
     // the additional call to condition.
     Factor result = outputFactor.conditional(assignment);
-    // log.stopTimer("classifier_conditional");
+    log.stopTimer("classifier_conditional");
     return result;
   }
 }

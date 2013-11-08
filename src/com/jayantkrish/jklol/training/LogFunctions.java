@@ -4,11 +4,11 @@ public class LogFunctions {
 
   private static LogFunction log = null;
 
-  public static void setLogFunction(LogFunction newLog) {
+  public static final void setLogFunction(LogFunction newLog) {
     log = newLog;
   }
 
-  public static LogFunction getLogFunction() {
+  public static final LogFunction getLogFunction() {
     if (log == null) {
       log = new DefaultLogFunction();
     }

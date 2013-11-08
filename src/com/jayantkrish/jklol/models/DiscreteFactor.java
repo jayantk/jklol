@@ -20,6 +20,8 @@ import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
@@ -113,17 +115,22 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor conditional(Assignment a) {
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("discrete_factor_conditional");
     VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNumsArray());
 
     // Efficiency improvement: only create a new factor if necessary.
     if (varsToEliminate.size() == 0) {
+      log.stopTimer("discrete_factor_conditional");
       return this;
     }
 
     int[] key = varsToEliminate.assignmentToIntArray(a);
     int[] eliminatedDimensions = varsToEliminate.getVariableNumsArray();
-    return new TableFactor(getVars().removeAll(varsToEliminate),
+    TableFactor result = new TableFactor(getVars().removeAll(varsToEliminate),
         getWeights().slice(eliminatedDimensions, key));
+    log.stopTimer("discrete_factor_conditional");
+    return result; 
   }
 
   @Override

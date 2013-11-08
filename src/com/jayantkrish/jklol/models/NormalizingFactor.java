@@ -83,15 +83,11 @@ public class NormalizingFactor extends AbstractConditionalFactor {
     Preconditions.checkArgument(assignment.containsAll(inputVars.getVariableNumsArray()));
     Assignment inputAssignment = assignment.intersection(conditionalAndInputVars);
 
-    Factor result = null;
+    List<Factor> conditionalFactors = Lists.newArrayList();
     for (Factor factor : factors) {
-      Factor conditionalFactor = factor.conditional(inputAssignment);
-      if (result == null) {
-        result = conditionalFactor;
-      } else {
-        result = result.product(conditionalFactor);
-      }
+      conditionalFactors.add(factor.conditional(inputAssignment));
     }
+    Factor result = Factors.product(conditionalFactors);
 
     // All inputs are given. Do normalization and return
     // the resulting factor (conditioning on any other given values).

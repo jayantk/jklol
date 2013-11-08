@@ -42,11 +42,11 @@ public final class Factors {
     // The specification of .product requires that the variables in the inputVar factors are
     // a subset of the variables in the outer factor. Hence, we must identify the factor
     // containing the most variables.
-    Factor biggestFactor = multiplicativeIdentity();
-    int biggestFactorIndex = -1;
-    for (int i = 0; i < factors.size(); i++) {
+    Factor biggestFactor = factors.get(0);
+    int biggestFactorIndex = 0;
+    for (int i = 1; i < factors.size(); i++) {
       Factor factor = factors.get(i);
-      if (factor.getVars().size() >= biggestFactor.getVars().size()) {
+      if (factor.getVars().size() > biggestFactor.getVars().size()) {
         biggestFactor = factor;
         biggestFactorIndex = i;
       }

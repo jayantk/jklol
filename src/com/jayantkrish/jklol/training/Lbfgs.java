@@ -141,6 +141,7 @@ public class Lbfgs implements GradientOptimizer {
         direction.increment(gradientDeltas.get(index), -1.0 * weight);
         weights[hessianVectorCount - (j + 1)] = weight;
       }
+
       // The assumption here is that the initial Hessian estimate is
       // the identity. Multiply direction by the Hessian estimate here
       // to pick another value.

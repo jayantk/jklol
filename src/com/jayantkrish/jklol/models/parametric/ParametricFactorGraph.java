@@ -16,8 +16,6 @@ import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern.VariableMatch;
-import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 

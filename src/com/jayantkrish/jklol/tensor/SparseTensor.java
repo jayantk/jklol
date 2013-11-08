@@ -227,16 +227,30 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   @Override
   public SparseTensor elementwiseProduct(Tensor other) {
     int[] dimensionNums = getDimensionNumbers();
-    Set<Integer> myDims = Sets.newHashSet(Ints.asList(dimensionNums));
-    Preconditions.checkArgument(myDims.containsAll(Ints.asList(other.getDimensionNumbers())));
-
-    // There are two possible multiplication operations: an extremely
-    // fast one for the case when the dimensions of other line up
-    // against the leftmost dimensions of this, and another for all
-    // other cases. The left-aligned case can be made more efficient
-    // than the other case. Check which case applies, then use the
-    // faster algorithm.
     int[] otherDimensions = other.getDimensionNumbers();
+    
+    // Check that dimensionNums contains a superset of otherDimensions
+    int myInd = 0, otherInd = 0;
+    int myLength = dimensionNums.length;
+    int otherLength = otherDimensions.length;
+    while (myInd < myLength && otherInd < otherLength) {
+      if (dimensionNums[myInd] < otherDimensions[otherInd]) {
+        myInd++;
+      } else if (dimensionNums[myInd] == otherDimensions[otherInd]) {
+        myInd++;
+        otherInd++;
+      } else {
+        // Not a superset.
+        Preconditions.checkArgument(false, "Dimensions not a superset");
+      }
+    }
+
+    // There are three possible multiplication implementations: an extremely
+    // fast one for the case when both sets of dimensions are exactly equal,
+    // a pretty fast one for when the dimensions of other line up
+    // against the leftmost dimensions of this, and another for all
+    // other cases. Check which case applies, then use the
+    // fastest possible algorithm.
     for (int i = 0; i < otherDimensions.length; i++) {
       if (otherDimensions[i] != dimensionNums[i]) {
         // Not left aligned.

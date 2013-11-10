@@ -526,17 +526,16 @@ public class FactorGraph implements Serializable {
   public FactorGraph conditional(Assignment assignment) {
     Preconditions.checkArgument(variables.containsAll(assignment.getVariableNumsArray()));
 
-    // Short-circuit when nothing is conditioned on. Also the base case when
-    // instantiating assignments from plates.
-    if (assignment.equals(Assignment.EMPTY)) {
+    // Short-circuit when nothing is conditioned on.
+    if (assignment.size() == 0) {
       return this;
     }
 
-    Assignment newConditionedValues = this.conditionedValues.union(assignment);
-    VariableNumMap newConditionedVariables = this.conditionedVariables.union(
-        this.getVariables().intersection(assignment.getVariableNumsArray()));
+    Assignment newConditionedValues = conditionedValues.union(assignment);
+    VariableNumMap newConditionedVariables = conditionedVariables.union(
+        variables.intersection(assignment.getVariableNumsArray()));
 
-    VariableNumMap newVariables = getVariables().removeAll(assignment.getVariableNumsArray());
+    VariableNumMap newVariables = variables.removeAll(assignment.getVariableNumsArray());
 
     // Condition each factor on assignment.
     List<Factor> newFactors = Lists.newArrayListWithCapacity(getFactors().size());

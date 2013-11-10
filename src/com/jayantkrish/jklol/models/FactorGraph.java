@@ -20,7 +20,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.util.Assignment;
-import com.jayantkrish.jklol.util.IndexedList;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * A graphical model represented as a set of factors over a set of variables.
@@ -41,14 +41,14 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class FactorGraph implements Serializable {
 
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
 
   private VariableNumMap variables;
 
-  private HashMultimap<Integer, Integer> variableFactorMap;
-  private HashMultimap<Integer, Integer> factorVariableMap;
-  private List<Factor> factors;
-  private IndexedList<String> factorNames;
+  private IntMultimap variableFactorMap;
+  private IntMultimap factorVariableMap;
+  private Factor[] factors;
+  private String[] factorNames;
 
   // Store any conditioning information that lead to this particular
   // distribution.
@@ -64,54 +64,73 @@ public class FactorGraph implements Serializable {
    */
   public FactorGraph() {
     variables = VariableNumMap.EMPTY;
-    variableFactorMap = HashMultimap.create();
-    factorVariableMap = HashMultimap.create();
-    factors = Lists.newArrayList();
-    factorNames = IndexedList.create();
+    variableFactorMap = IntMultimap.createWithInitialCapacity(0);
+    factorVariableMap = IntMultimap.createWithInitialCapacity(0);
+    factors = new Factor[0];
+    factorNames = new String[0];
     conditionedVariables = VariableNumMap.EMPTY;
     conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
-
+  
+  /*
   public FactorGraph(VariableNumMap variables, List<Factor> factors, List<String> factorNames,
       VariableNumMap conditionedVariables, Assignment conditionedAssignment) {
-    this.variables = variables;
-    this.factors = Lists.newArrayList(factors);
-    this.factorNames = new IndexedList<String>(factorNames);
-    Preconditions.checkArgument(this.factors.size() == this.factorNames.size(),
-        "%s names for %s", this.factorNames, this.factors);
+      */
+
+  public FactorGraph(VariableNumMap variables, Factor[] factors, String[] factorNames,
+      VariableNumMap conditionedVariables, Assignment conditionedAssignment, InferenceHint inferenceHint) {
+    this.variables = Preconditions.checkNotNull(variables);
+    this.factors = Preconditions.checkNotNull(factors);
+    this.factorNames = Preconditions.checkNotNull(factorNames);
+    Preconditions.checkArgument(factors.length == factorNames.length,
+        "factors and factorNames must have the same length.");
+    
+    int numMapEntries = 0;
+    for (int i = 0; i < factors.length; i++) {
+      numMapEntries += factors[i].getVars().size();
+    }
 
     // Initialize variable -> factor mapping
-    variableFactorMap = HashMultimap.create();
-    factorVariableMap = HashMultimap.create();
-    for (int i = 0; i < factors.size(); i++) {
-      VariableNumMap factorVars = factors.get(i).getVars();
+    int[] variableFactorMapKeys = new int[numMapEntries];
+    int[] variableFactorMapValues = new int[numMapEntries];
+    int[] factorVariableMapKeys = new int[numMapEntries];
+    int[] factorVariableMapValues = new int[numMapEntries];
+    int numFilled = 0;
+    for (int i = 0; i < factors.length; i++) {
+      VariableNumMap factorVars = factors[i].getVars();
       for (int j : factorVars.getVariableNumsArray()) {
-        variableFactorMap.put(j, i);
-        factorVariableMap.put(i, j);
+        variableFactorMapKeys[numFilled] = j;
+        variableFactorMapValues[numFilled] = i;
+        factorVariableMapKeys[numFilled] = i;
+        factorVariableMapValues[numFilled] = j;
+        numFilled++;
       }
     }
+
+    variableFactorMap = IntMultimap.createFromUnsortedArrays(variableFactorMapKeys,
+        variableFactorMapValues, 0);
+    factorVariableMap = IntMultimap.createFromUnsortedArrays(factorVariableMapKeys,
+        factorVariableMapValues, 0);
 
     this.conditionedVariables = conditionedVariables;
     this.conditionedValues = conditionedAssignment;
     this.inferenceHint = null;
   }
 
-  /**
-   * Copy constructor. This method is private because {@code FactorGraph}s are
-   * immutable.
-   * 
-   * @param factorGraph
-   */
-  private FactorGraph(FactorGraph factorGraph) {
-    this.variables = factorGraph.variables;
-    this.variableFactorMap = HashMultimap.create(factorGraph.variableFactorMap);
-    this.factorVariableMap = HashMultimap.create(factorGraph.factorVariableMap);
-    this.factors = Lists.newArrayList(factorGraph.factors);
-    this.factorNames = new IndexedList<String>(factorGraph.factorNames);
-    this.conditionedVariables = factorGraph.conditionedVariables;
-    this.conditionedValues = factorGraph.conditionedValues;
-    this.inferenceHint = factorGraph.inferenceHint;
+  private FactorGraph(VariableNumMap variables, Factor[] factors, String[] factorNames,
+      IntMultimap variableFactorMap, IntMultimap factorVariableMap, VariableNumMap conditionedVariables,
+      Assignment conditionedValues, InferenceHint inferenceHint) {
+    this.variables = Preconditions.checkNotNull(variables);
+    this.factors = Preconditions.checkNotNull(factors);
+    this.factorNames = Preconditions.checkNotNull(factorNames);
+
+    this.variableFactorMap = Preconditions.checkNotNull(variableFactorMap);
+    this.factorVariableMap = Preconditions.checkNotNull(factorVariableMap);
+
+    this.conditionedVariables = Preconditions.checkNotNull(conditionedVariables);
+    this.conditionedValues = Preconditions.checkNotNull(conditionedValues);
+    this.inferenceHint = inferenceHint;
   }
 
   /**
@@ -124,30 +143,29 @@ public class FactorGraph implements Serializable {
   public static FactorGraph createFromFactors(List<Factor> factors) {
     VariableNumMap allVars = VariableNumMap.EMPTY;
     for (int i = 0; i < factors.size(); i++) {
-      VariableNumMap factorVars = factors.get(i).getVars();
-      allVars = allVars.union(factorVars);
+      allVars = allVars.union(factors.get(i).getVars());
     }
 
-    List<String> factorNames = Lists.newArrayList();
+    String[] factorNames = new String[factors.size()];
     for (int i = 0; i < factors.size(); i++) {
-      factorNames.add("factor-" + i);
+      factorNames[i] = "factor-" + i;
     }
-    return new FactorGraph(allVars, factors, factorNames, VariableNumMap.EMPTY,
-        Assignment.EMPTY);
+    return new FactorGraph(allVars, factors.toArray(new Factor[factors.size()]), factorNames,
+        VariableNumMap.EMPTY, Assignment.EMPTY, null);
   }
 
   /**
    * Get the number of factors in the graph.
    */
   public int numFactors() {
-    return factors.size();
+    return factors.length;
   }
 
   /**
    * Get a factor using its index number.
    */
   public Factor getFactor(int factorNum) {
-    return factors.get(factorNum);
+    return factors[factorNum];
   }
 
   /**
@@ -169,7 +187,16 @@ public class FactorGraph implements Serializable {
    * Get all factors.
    */
   public List<Factor> getFactors() {
-    return factors;
+    return Arrays.asList(factors);
+  }
+  
+  private final int getFactorIndexByName(String name) {
+    for (int i = 0; i < factorNames.length; i++) {
+      if (factorNames[i].equals(name)) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   /**
@@ -180,11 +207,11 @@ public class FactorGraph implements Serializable {
    * @return
    */
   public Factor getFactorByName(String name) {
-    if (!factorNames.contains(name)) {
+    int index = getFactorIndexByName(name);
+    if (index == -1) {
       return null;
     }
-    int index = factorNames.getIndex(name);
-    return factors.get(index);
+    return factors[index];
   }
 
   /**
@@ -247,7 +274,7 @@ public class FactorGraph implements Serializable {
    * @return
    */
   public List<String> getFactorNames() {
-    return factorNames.items();
+    return Arrays.asList(factorNames);
   }
 
   /**
@@ -334,7 +361,7 @@ public class FactorGraph implements Serializable {
    * Get all of the factors which contain the passed-in varNum
    */
   public Set<Integer> getFactorsWithVariable(int varNum) {
-    return variableFactorMap.get(varNum);
+    return Sets.newHashSet(variableFactorMap.get(varNum));
   }
 
   /**
@@ -404,7 +431,7 @@ public class FactorGraph implements Serializable {
 
   @Override
   public String toString() {
-    return "FactorGraph: (" + factors.size() + " factors) " + factors.toString();
+    return "FactorGraph: (" + factors.length + " factors) " + factors.toString();
   }
 
   // /////////////////////////////////////////////////////////////////
@@ -425,9 +452,9 @@ public class FactorGraph implements Serializable {
   }
 
   private FactorGraph addVariableWithIndex(String variableName, Variable variable, int varNum) {
-    FactorGraph factorGraph = new FactorGraph(this);
-    factorGraph.variables = factorGraph.variables.addMapping(varNum, variableName, variable);
-    return factorGraph;
+    VariableNumMap newVariables = variables.addMapping(varNum, variableName, variable);
+    return new FactorGraph(newVariables, factors, factorNames, variableFactorMap,
+        factorVariableMap, conditionedVariables, conditionedValues, inferenceHint);
   }
 
   /**
@@ -438,16 +465,12 @@ public class FactorGraph implements Serializable {
   public FactorGraph addFactor(String factorName, Factor factor) {
     Preconditions.checkArgument(getVariables().containsAll(factor.getVars()));
 
-    FactorGraph factorGraph = new FactorGraph(this);
-    int factorNum = factorGraph.factors.size();
-    factorGraph.factors.add(factor);
-    factorGraph.factorNames.add(factorName);
-
-    for (int i : factor.getVars().getVariableNumsArray()) {
-      factorGraph.variableFactorMap.put(i, factorNum);
-      factorGraph.factorVariableMap.put(factorNum, i);
-    }
-    return factorGraph;
+    Factor[] newFactors = Arrays.copyOf(factors, factors.length + 1);
+    String[] newFactorNames = Arrays.copyOf(factorNames, factorNames.length + 1);;
+    newFactors[factors.length] = factor;
+    newFactorNames[factors.length] = factorName;
+    return new FactorGraph(variables, newFactors, newFactorNames, conditionedVariables,
+        conditionedValues, inferenceHint);
   }
 
   /**
@@ -538,13 +561,14 @@ public class FactorGraph implements Serializable {
     VariableNumMap newVariables = variables.removeAll(assignment.getVariableNumsArray());
 
     // Condition each factor on assignment.
-    List<Factor> newFactors = Lists.newArrayListWithCapacity(getFactors().size());
-    for (Factor factor : getFactors()) {
-      newFactors.add(factor.conditional(assignment));
+    int numFactors = factors.length;
+    Factor[] newFactors = new Factor[numFactors];
+    for (int i = 0; i < numFactors; i++) {
+      newFactors[i] = factors[i].conditional(assignment);
     }
 
-    return new FactorGraph(newVariables, newFactors, factorNames.items(), newConditionedVariables,
-        newConditionedValues);
+    return new FactorGraph(newVariables, newFactors, factorNames, newConditionedVariables,
+        newConditionedValues, inferenceHint);
   }
 
   /**
@@ -553,9 +577,8 @@ public class FactorGraph implements Serializable {
    * efficient inference with {@code this}. {@code inferenceHint} can be
    * {@code null}, in which case the hint is ignored during inference.
    */
-  public FactorGraph addInferenceHint(InferenceHint inferenceHint) {
-    FactorGraph factorGraph = new FactorGraph(this);
-    factorGraph.inferenceHint = inferenceHint;
-    return factorGraph;
+  public FactorGraph addInferenceHint(InferenceHint newInferenceHint) {
+    return new FactorGraph(variables, factors, factorNames, variableFactorMap, factorVariableMap,
+        conditionedVariables, conditionedValues, newInferenceHint);
   }
 }

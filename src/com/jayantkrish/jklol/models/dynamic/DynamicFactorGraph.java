@@ -83,8 +83,8 @@ public class DynamicFactorGraph implements Serializable {
       }
     }
 
-    return new FactorGraph(factorGraphVariables, factors, instantiatedNames,
-        VariableNumMap.EMPTY, Assignment.EMPTY);
+    return new FactorGraph(factorGraphVariables, factors.toArray(new Factor[0]),
+        instantiatedNames.toArray(new String[0]), VariableNumMap.EMPTY, Assignment.EMPTY, null);
   }
 
   public DynamicFactorGraph addPlateFactors(List<PlateFactor> factors, List<String> newFactorNames) {

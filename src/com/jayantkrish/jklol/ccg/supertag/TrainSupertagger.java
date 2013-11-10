@@ -248,7 +248,7 @@ public class TrainSupertagger extends AbstractCli {
         wordCategoryCounts.incrementOutcome(items.get(i).getWord(), labels.get(i), 1.0);
         posCategoryCounts.incrementOutcome(items.get(i).getPos(), labels.get(i), 1.0);
       }
-      
+
       validCategories.addAll(labels);
     }
     if (startLabel != null) {

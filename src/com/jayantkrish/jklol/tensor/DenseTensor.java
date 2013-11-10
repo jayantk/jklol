@@ -177,7 +177,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
             Ints.asList(otherSizes));
       }
 
-      return fastInnerProduct(other, maxKeyNum, keyNumIncrement, 1, newDims, newSizes);
+      return fastInnerProductRightAligned(other, maxKeyNum, keyNumIncrement, newDims, newSizes);
     } else if (areDimensionsLeftAligned(otherDims)) {
       int minDimIndex = otherDims.length;
       int[] newDims = ArrayUtils.copyOfRange(myDims, minDimIndex, myDims.length);
@@ -190,7 +190,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
             Ints.asList(otherSizes));
       }
 
-      return fastInnerProduct(other, maxKeyNum, 1, maxKeyNum, newDims, newSizes);
+      return fastInnerProductLeftAligned(other, maxKeyNum, newDims, newSizes);
     } else {
       // Slow, default inner product.
       return elementwiseProduct(other).sumOutDimensions(otherDims);
@@ -230,8 +230,8 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
    * @param other
    * @return
    */
-  private DenseTensor fastInnerProduct(Tensor other, long maxKeyNum, long keyNumIncrement, 
-      long otherKeyNumMultiplier, int[] newDims, int[] newSizes) {        
+  private DenseTensor fastInnerProductRightAligned(Tensor other, long maxKeyNum, long keyNumIncrement, 
+      int[] newDims, int[] newSizes) {        
     DenseTensorBuilder resultBuilder = new DenseTensorBuilder(newDims, newSizes);
     int otherSize = other.size();
     double[] otherValues = other.getValues();
@@ -247,9 +247,29 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       for (otherIndex = 0; otherIndex < otherSize; otherIndex++) {
         long otherKeyNum = other.indexToKeyNum(otherIndex);
         double otherValue = otherValues[otherIndex];
-        innerProd += values[(int) (myKeyNum + (otherKeyNum * otherKeyNumMultiplier))] * otherValue;
+        innerProd += values[(int) (myKeyNum + otherKeyNum)] * otherValue;
       }
       resultBuilder.putByKeyNum(i, innerProd);
+    }
+    return resultBuilder.buildNoCopy();
+  }
+
+  private DenseTensor fastInnerProductLeftAligned(Tensor other, long maxKeyNum,
+      int[] newDims, int[] newSizes) {
+    DenseTensorBuilder resultBuilder = new DenseTensorBuilder(newDims, newSizes);
+    int otherSize = other.size();
+    double[] otherValues = other.getValues();
+    // Iterate over the keys of this tensor in the inner loop for
+    // better cache locality.
+    double otherValue;
+    int finalIndex = (int) maxKeyNum;
+    int otherKeyNum;
+    for (int otherIndex = 0; otherIndex < otherSize; otherIndex++) {
+      otherKeyNum = (int) (other.indexToKeyNum(otherIndex) * maxKeyNum);
+      otherValue = otherValues[otherIndex];
+      for (int i = 0; i < finalIndex; i++) {
+        resultBuilder.incrementEntryByKeyNum(values[i + otherKeyNum] * otherValue, i);
+      }
     }
     return resultBuilder.buildNoCopy();
   }

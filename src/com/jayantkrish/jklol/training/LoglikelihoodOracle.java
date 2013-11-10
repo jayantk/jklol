@@ -47,13 +47,13 @@ Example<DynamicAssignment, DynamicAssignment>> {
   public double accumulateGradient(SufficientStatistics gradient, DynamicFactorGraph dynamicFactorGraph,
       Example<DynamicAssignment, DynamicAssignment> dynamicExample, LogFunction log) {
     // Instantiate any replicated factors, etc.
-    log.startTimer("update_gradient/get_factor_graph_from_parameters");
+    log.startTimer("update_gradient/get_factor_graph_from_assignment");
     FactorGraph factorGraph = dynamicFactorGraph.getFactorGraph(dynamicExample.getInput());
     Assignment input = dynamicFactorGraph.getVariables().toAssignment(dynamicExample.getInput());
     Assignment observed = dynamicFactorGraph.getVariables().toAssignment(
         dynamicExample.getOutput().union(dynamicExample.getInput()));
 
-    log.stopTimer("update_gradient/get_factor_graph_from_parameters");
+    log.stopTimer("update_gradient/get_factor_graph_from_assignment");
     log.log(input, factorGraph);
     log.log(observed, factorGraph);
 

@@ -79,7 +79,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   
   @Override
   public final void incrementEntryByKeyNum(double amount, long keyNum) {
-    values[keyNumToIndex(keyNum)] += amount;
+    values[(int) keyNum] += amount;
   }
 
   /**

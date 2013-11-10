@@ -219,8 +219,12 @@ public class Assignment implements Serializable {
   public final Assignment intersection(Collection<Integer> varNums) {
     return intersection(Ints.toArray(varNums));
   }
-  
+
   public final Assignment intersection(int ... varNums) {
+    if (varNums.length == 0) {
+      return Assignment.EMPTY;
+    }
+
     int[] newVarNums = new int[varNums.length];
     Object[] newValues = new Object[varNums.length];
     int numFilled = 0;
@@ -256,6 +260,10 @@ public class Assignment implements Serializable {
    */
   public final Assignment union(Assignment other) {
     Preconditions.checkNotNull(other);
+    if (other.size() == 0) {
+      return this;
+    }
+
     // Merge varnums / values
     int[] otherNums = other.getVariableNumsArray();
     int[] myNums = getVariableNumsArray();
@@ -313,6 +321,10 @@ public class Assignment implements Serializable {
   }
   
   public final Assignment removeAll(int ... varNumsToRemove) {
+    if (varNumsToRemove.length == 0) {
+      return this;
+    }
+
     int[] newVarNums = Arrays.copyOf(vars, vars.length);
     
     int numRemoved = 0;

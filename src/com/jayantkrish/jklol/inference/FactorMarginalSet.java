@@ -73,7 +73,7 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     return new FactorMarginalSet(Collections.<Factor>emptyList(), logPartitionFunction, conditionedVariables, conditionedValues);
   }
   
-  private static VariableNumMap getVariablesFromFactors(Collection<Factor> factors) { 
+  private static final VariableNumMap getVariablesFromFactors(Collection<Factor> factors) { 
     VariableNumMap output = VariableNumMap.EMPTY;
     for (Factor factor : factors) {
       output = output.union(factor.getVars());

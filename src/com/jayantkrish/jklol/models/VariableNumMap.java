@@ -594,6 +594,10 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public final VariableNumMap removeAll(int ... variableNums) {
+    if (variableNums.length == 0) {
+      return this;
+    }
+
     int[] newNums = new int[nums.length];
     String[] newNames = new String[nums.length];
     Variable[] newVars = new Variable[nums.length];

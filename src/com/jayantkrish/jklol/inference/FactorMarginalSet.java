@@ -38,13 +38,22 @@ public class FactorMarginalSet extends AbstractMarginalSet {
     super(getVariablesFromFactors(factors), conditionedVariables, conditionedValues);
     this.allFactors = ImmutableList.copyOf(factors);
 
-    this.variableFactorMap = IntMultimap.create();
+    int numEntries = 0;
+    for (int i = 0; i < allFactors.size(); i++) {
+      numEntries += allFactors.get(i).getVars().size();
+    }
+
+    int[] keys = new int[numEntries];
+    int[] values = new int[numEntries];
+    int numFilled = 0;
     for (int i = 0; i < allFactors.size(); i++) {
       for (int variableNum : allFactors.get(i).getVars().getVariableNumsArray()) {
-        this.variableFactorMap.put(variableNum, i);
+        keys[numFilled] = variableNum;
+        values[numFilled] = i;
+        numFilled++;
       }
     }
-    this.variableFactorMap.reindexItems();
+    this.variableFactorMap = IntMultimap.createFromUnsortedArrays(keys, values, 0);
 
     this.logPartitionFunction = logPartitionFunction;
   }

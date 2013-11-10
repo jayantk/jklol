@@ -83,6 +83,10 @@ public class IntMultimap implements Multimap<Integer, Integer> {
     return new IntMultimap(new int[0], new int[0]);
   }
   
+  public static IntMultimap createWithInitialCapacity(int capacity) {
+    return new IntMultimap(new int[0], new int[0], capacity);
+  }
+
   /**
    * This method does not copy {@code keys} or {@code values}.
    *  

@@ -542,6 +542,10 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public final VariableNumMap intersection(int... varNumsToKeep) {
+    if (varNumsToKeep.length == 0) {
+      return VariableNumMap.EMPTY;
+    }
+
     int[] newNums = new int[varNumsToKeep.length];
     String[] newNames = new String[varNumsToKeep.length];
     Variable[] newVars = new Variable[varNumsToKeep.length];
@@ -636,6 +640,10 @@ public class VariableNumMap implements Serializable {
    * @return
    */
   public final VariableNumMap union(VariableNumMap other) {
+    if (other.size() == 0) {
+      return this;
+    }
+
     int[] otherNums = other.nums;
     String[] otherNames = other.names;
     Variable[] otherVars = other.vars;

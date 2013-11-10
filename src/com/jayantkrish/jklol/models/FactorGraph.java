@@ -72,11 +72,6 @@ public class FactorGraph implements Serializable {
     conditionedValues = Assignment.EMPTY;
     inferenceHint = null;
   }
-  
-  /*
-  public FactorGraph(VariableNumMap variables, List<Factor> factors, List<String> factorNames,
-      VariableNumMap conditionedVariables, Assignment conditionedAssignment) {
-      */
 
   public FactorGraph(VariableNumMap variables, Factor[] factors, String[] factorNames,
       VariableNumMap conditionedVariables, Assignment conditionedAssignment, InferenceHint inferenceHint) {

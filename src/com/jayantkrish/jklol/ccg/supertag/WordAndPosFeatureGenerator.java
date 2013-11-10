@@ -49,11 +49,14 @@ public class WordAndPosFeatureGenerator implements FeatureGenerator<LocalContext
         String wordFeature = ("WORD_" + offsets[i] + "=" + word.getWord()).intern();
         weights.put(wordFeature, 1.0);
 
+        /*
         String wordAndPosFeature = ("WORD+POS_" + offsets[i] + "=" + word.getWord() + "+" + word.getPos()).intern();
         weights.put(wordAndPosFeature, 1.0);
+        */
       }
     }
 
+    /*
     String curWord = item.getItem(0, END_FUNCTION).getWord();
     if (commonWords.contains(curWord)) {
       for (int i = 0; i < offsets.length; i++) {
@@ -62,6 +65,7 @@ public class WordAndPosFeatureGenerator implements FeatureGenerator<LocalContext
         weights.put(wordAndPosFeature, 1.0);
       }
     }
+    */
 
     return weights;
   }

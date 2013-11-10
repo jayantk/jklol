@@ -153,7 +153,7 @@ public class ArrayUtils {
   public static final void sortKeyValuePairs(long[] keys, double[] values,
       int startInd, int endInd) {
     // Base case.
-    if (startInd == endInd) {
+    if (endInd - startInd <= 1) {
       return;
     }
 
@@ -215,7 +215,7 @@ public class ArrayUtils {
   public static final void sortKeyValuePairs(int[] keys, int[] values,
       int startInd, int endInd) {
     // Base case.
-    if (startInd == endInd) {
+    if (endInd - startInd <= 1) {
       return;
     }
 
@@ -274,7 +274,7 @@ public class ArrayUtils {
   public static final void sortKeyValuePairs(int[] keys, Object[][] values,
       int startInd, int endInd) {
     // Base case.
-    if (startInd == endInd) {
+    if (endInd - startInd <= 1) {
       return;
     }
 
@@ -340,7 +340,7 @@ public class ArrayUtils {
   public static final <T> void sortKeyValuePairs(long[] keys, T[] values,
       double[] probs, int startInd, int endInd) {
     // Base case.
-    if (startInd == endInd) {
+    if (endInd - startInd <= 1) {
       return;
     }
 

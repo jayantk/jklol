@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.ccg.supertag;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import joptsimple.OptionParser;
@@ -12,6 +13,7 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgExample;
@@ -37,7 +39,9 @@ import com.jayantkrish.jklol.sequence.ListTaggedSequence;
 import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.sequence.TaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
+import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -64,9 +68,12 @@ public class TrainSupertagger extends AbstractCli {
   private OptionSpec<Integer> commonWordCountThreshold;
   private OptionSpec<Integer> labelRestrictionCountThreshold;
   private OptionSpec<Integer> posContextFeatureCountThreshold;
-  private OptionSpec<Integer> prefixSuffixFeatureCountThreshold; 
+  private OptionSpec<Integer> prefixSuffixFeatureCountThreshold;
+  
+  private OptionSpec<String> wordEmbeddingFeatures;
 
   private static final String UNK_PREFIX = "UNK-";
+  private static final String EMBEDDING_UNKNOWN_WORD = "*UNKNOWN*";
 
   public TrainSupertagger() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.LBFGS, CommonOptions.MAP_REDUCE);
@@ -91,6 +98,8 @@ public class TrainSupertagger extends AbstractCli {
         .ofType(Integer.class).defaultsTo(0); // old value: 30
     prefixSuffixFeatureCountThreshold = parser.accepts("prefixSuffixThreshold").withRequiredArg()
       .ofType(Integer.class).defaultsTo(0); // old values: 10, 35
+
+    wordEmbeddingFeatures = parser.accepts("wordEmbeddingFeatures").withRequiredArg().ofType(String.class);
   }
 
   @Override
@@ -103,10 +112,15 @@ public class TrainSupertagger extends AbstractCli {
     System.out.println("Reformatting training data...");
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData =
         reformatTrainingExamples(ccgExamples, true);
+    
+    Map<String, Tensor> wordEmbeddings = null;
+    if (options.has(wordEmbeddingFeatures)) {
+      wordEmbeddings = readWordVectors(options.valueOf(wordEmbeddingFeatures));
+    }
 
     System.out.println("Generating features...");
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
-        buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData),
+        buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData), wordEmbeddings,
             options.valueOf(commonWordCountThreshold), options.valueOf(posContextFeatureCountThreshold),
             options.valueOf(prefixSuffixFeatureCountThreshold));
     System.out.println(featureGen.getNumberOfFeatures() + " features per CCG category.");
@@ -154,6 +168,28 @@ public class TrainSupertagger extends AbstractCli {
     IoUtils.serializeObjectToFile(supertagger, options.valueOf(modelOutput));
   }
 
+  private static Map<String, Tensor> readWordVectors(String filename) {
+    Map<String, Tensor> tensorMap = Maps.newHashMap();
+    int[] dims = new int[] {0};
+    int[] sizes = null;
+    for (String line : IoUtils.readLines(filename)) {
+      String[] parts = line.split("\\s");
+      String word = parts[0];
+      double[] values = new double[parts.length - 1];
+      if (sizes == null) {
+        sizes = new int[] {parts.length - 1};
+      }
+
+      for (int i = 1; i < parts.length; i++) {
+        values[i - 1] = Double.parseDouble(parts[i]);
+      }
+      
+      Tensor tensor = new DenseTensor(dims, sizes, values);
+      tensorMap.put(word, tensor);
+    }
+    return tensorMap;
+  }
+
   /**
    * Converts {@code ccgExamples} into word sequences tagged with
    * syntactic categories.
@@ -187,8 +223,8 @@ public class TrainSupertagger extends AbstractCli {
   }
 
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
-      List<LocalContext<WordAndPos>> contexts, int commonWordCountThreshold, int posContextCountThreshold,
-      int prefixSuffixCountThreshold) {
+      List<LocalContext<WordAndPos>> contexts, Map<String, Tensor> wordEmbeddings, 
+      int commonWordCountThreshold, int posContextCountThreshold, int prefixSuffixCountThreshold) {
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (LocalContext<WordAndPos> context : contexts) {
       wordCounts.increment(context.getItem().getWord(), 1.0);
@@ -215,6 +251,11 @@ public class TrainSupertagger extends AbstractCli {
     // Count feature occurrences and discard infrequent features.
     CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
     IndexedList<String> featureDictionary = IndexedList.create();
+    List<FeatureGenerator<LocalContext<WordAndPos>, ? extends String>> featureGenerators = Lists.newArrayList();
+    featureGenerators.add(wordGen);
+    featureGenerators.add(posContextGen);
+    featureGenerators.add(prefixGen);
+    
     Set<String> frequentWordFeatures = wordPosFeatureCounts.getKeysAboveCountThreshold(commonWordCountThreshold - 1);
     Set<String> frequentContextFeatures = posContextFeatureCounts.getKeysAboveCountThreshold(posContextCountThreshold - 1);
     Set<String> frequentPrefixFeatures = prefixFeatureCounts.getKeysAboveCountThreshold(prefixSuffixCountThreshold - 1);
@@ -225,10 +266,18 @@ public class TrainSupertagger extends AbstractCli {
     System.out.println(frequentWordFeatures.size() + " word and POS features");
     System.out.println(frequentContextFeatures.size() + " POS context features");
     System.out.println(frequentPrefixFeatures.size() + " prefix/suffix features");
+    
+    if (wordEmbeddings != null) {
+      EmbeddingFeatureGenerator embeddingFeatureGenerator = new EmbeddingFeatureGenerator(
+          wordEmbeddings, EMBEDDING_UNKNOWN_WORD);
+      featureGenerators.add(embeddingFeatureGenerator);
+      List<String> embeddingFeatures = embeddingFeatureGenerator.getFeatureNames();
+      System.out.println(embeddingFeatures.size() + " word embedding features");
+      featureDictionary.addAll(embeddingFeatures);
+    }
 
-    @SuppressWarnings("unchecked")
     FeatureGenerator<LocalContext<WordAndPos>, String> featureGen = FeatureGenerators
-      .combinedFeatureGenerator(wordGen, posContextGen, prefixGen);
+      .<LocalContext<WordAndPos>, String>combinedFeatureGenerator(featureGenerators);
 
     return new DictionaryFeatureVectorGenerator<LocalContext<WordAndPos>, String>(
         featureDictionary, featureGen, true);

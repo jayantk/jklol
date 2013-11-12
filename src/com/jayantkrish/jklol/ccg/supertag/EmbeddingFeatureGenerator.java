@@ -16,12 +16,14 @@ public class EmbeddingFeatureGenerator implements FeatureGenerator<LocalContext<
 
   private final Map<String, Tensor> embeddings;
   private final String unknownWord;
+  private final boolean usePos;
 
   private final List<String> featureNames;
   
-  public EmbeddingFeatureGenerator(Map<String, Tensor> embeddings, String unknownWord) {
+  public EmbeddingFeatureGenerator(Map<String, Tensor> embeddings, String unknownWord, boolean usePos) {
     this.embeddings = Preconditions.checkNotNull(embeddings);
     this.unknownWord = Preconditions.checkNotNull(unknownWord);
+    this.usePos = usePos;
     
     int dimensionality = Iterables.getFirst(embeddings.values(), null).getDimensionSizes()[0];
     this.featureNames = Lists.newArrayList();
@@ -39,6 +41,7 @@ public class EmbeddingFeatureGenerator implements FeatureGenerator<LocalContext<
     Map<String, Double> featureValues = Maps.newHashMap();
     
     String word = item.getItem().getWord();
+    String pos = item.getItem().getPos();
     Tensor tensor = embeddings.get(word);
     if (tensor == null) {
       tensor = embeddings.get(unknownWord);
@@ -46,7 +49,11 @@ public class EmbeddingFeatureGenerator implements FeatureGenerator<LocalContext<
     
     for (int i = 0; i < tensor.size(); i++) {
       int key = (int) tensor.indexToKeyNum(i);
-      featureValues.put(featureNames.get(key), tensor.getByIndex(i));
+      if (usePos) {
+        featureValues.put((featureNames.get(key) + "_" + pos).intern(), tensor.getByIndex(i));
+      } else {
+        featureValues.put(featureNames.get(key), tensor.getByIndex(i));
+      }
     }
     return featureValues;
   }

@@ -49,7 +49,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> getDefaultFeatureGenerator(
       Collection<CcgExample> examples) {
     List<LocalContext<WordAndPos>> contexts = getContextsFromExamples(examples);
-    return TrainSupertagger.buildFeatureVectorGenerator(contexts, null, Integer.MAX_VALUE, 250, 100);
+    return TrainSupertagger.buildFeatureVectorGenerator(contexts, null, Integer.MAX_VALUE, 250, 100, false);
   }
 
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> getPosFeatureGenerator(

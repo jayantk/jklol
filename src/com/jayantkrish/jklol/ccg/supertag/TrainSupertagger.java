@@ -71,6 +71,7 @@ public class TrainSupertagger extends AbstractCli {
   private OptionSpec<Integer> prefixSuffixFeatureCountThreshold;
   
   private OptionSpec<String> wordEmbeddingFeatures;
+  private OptionSpec<Void> usePosWithEmbedding;
 
   private static final String UNK_PREFIX = "UNK-";
   private static final String EMBEDDING_UNKNOWN_WORD = "*UNKNOWN*";
@@ -100,6 +101,7 @@ public class TrainSupertagger extends AbstractCli {
       .ofType(Integer.class).defaultsTo(0); // old values: 10, 35
 
     wordEmbeddingFeatures = parser.accepts("wordEmbeddingFeatures").withRequiredArg().ofType(String.class);
+    usePosWithEmbedding = parser.accepts("usePosWithEmbedding");
   }
 
   @Override
@@ -122,7 +124,7 @@ public class TrainSupertagger extends AbstractCli {
     FeatureVectorGenerator<LocalContext<WordAndPos>> featureGen =
         buildFeatureVectorGenerator(TaggerUtils.extractContextsFromData(trainingData), wordEmbeddings,
             options.valueOf(commonWordCountThreshold), options.valueOf(posContextFeatureCountThreshold),
-            options.valueOf(prefixSuffixFeatureCountThreshold));
+                                    options.valueOf(prefixSuffixFeatureCountThreshold), options.has(usePosWithEmbedding));
     System.out.println(featureGen.getNumberOfFeatures() + " features per CCG category.");
 
     System.out.println("Generating label restrictions...");
@@ -224,7 +226,8 @@ public class TrainSupertagger extends AbstractCli {
 
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> buildFeatureVectorGenerator(
       List<LocalContext<WordAndPos>> contexts, Map<String, Tensor> wordEmbeddings, 
-      int commonWordCountThreshold, int posContextCountThreshold, int prefixSuffixCountThreshold) {
+      int commonWordCountThreshold, int posContextCountThreshold, int prefixSuffixCountThreshold,
+      boolean usePosWithEmbedding) {
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (LocalContext<WordAndPos> context : contexts) {
       wordCounts.increment(context.getItem().getWord(), 1.0);
@@ -269,9 +272,11 @@ public class TrainSupertagger extends AbstractCli {
     
     if (wordEmbeddings != null) {
       EmbeddingFeatureGenerator embeddingFeatureGenerator = new EmbeddingFeatureGenerator(
-          wordEmbeddings, EMBEDDING_UNKNOWN_WORD);
+        wordEmbeddings, EMBEDDING_UNKNOWN_WORD, usePosWithEmbedding);
       featureGenerators.add(embeddingFeatureGenerator);
-      List<String> embeddingFeatures = embeddingFeatureGenerator.getFeatureNames();
+      CountAccumulator<String> embeddingFeatureCounts = FeatureGenerators.getFeatureCounts(embeddingFeatureGenerator, contexts);
+
+      Set<String> embeddingFeatures = embeddingFeatureCounts.keySet();
       System.out.println(embeddingFeatures.size() + " word embedding features");
       featureDictionary.addAll(embeddingFeatures);
     }

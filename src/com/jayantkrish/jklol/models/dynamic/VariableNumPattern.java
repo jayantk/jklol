@@ -96,7 +96,7 @@ public class VariableNumPattern extends AbstractVariablePattern {
         plateMatchIndexOffsets[i] -= maxOffset;
       }
     }
-    
+
     return new VariableNumPattern(plateStarts, plateEnds, plateReplicationSizes, plateVarOffsets,
         plateMatchIndexOffsets, templateVariables, fixedVariables);
   }

@@ -66,7 +66,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // Add the feature counts of best correct parse.
     family.incrementSufficientStatistics(gradient, bestCorrectParse, 1.0);
     log.stopTimer("update_gradient/increment_gradient");
-
+   
     // It's not clear what the correct objective value should be.
     return 0;
   }

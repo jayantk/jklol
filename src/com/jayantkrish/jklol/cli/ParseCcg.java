@@ -212,19 +212,20 @@ public class ParseCcg extends AbstractCli {
     List<LabeledDep> trueDeps = dependenciesToLabeledDeps(example.getDependencies(),
         example.getSyntacticParse());
 
+    List<String> words = example.getWords();
     System.out.println("Predicted: ");
     for (LabeledDep dep : predictedDeps) {
       if (trueDeps.contains(dep)) {
-        System.out.println(dep);
+        System.out.println(dep.toString(words));
       } else {
-        System.out.println(dep + "\tINCORRECT");
+        System.out.println(dep.toString(words) + "\tINCORRECT");
       }
     }
 
     System.out.println("Missing true dependencies:");
     for (LabeledDep dep : trueDeps) {
       if (!predictedDeps.contains(dep)) {
-        System.out.println(dep);
+        System.out.println(dep.toString(words));
       }
     }
 
@@ -272,7 +273,7 @@ public class ParseCcg extends AbstractCli {
     int correctSyntacticCategories = 0, supertaggerErrors = 0, lexiconErrors = 0, parserErrors = 0;
     SupertaggedSentence sentence = parseResult.getSentence();
     List<SyntacticCategory> predictedSyntacticCategories = Lists.newArrayList();
-    List<String> words = example.getSentence().getWords();
+    words = example.getSentence().getWords();
     List<String> posTags = example.getSentence().getPosTags();
     for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {
       predictedSyntacticCategories.add(entry.getCategory().getSyntax().getSyntax().discardFeaturePassingMarkup());
@@ -669,6 +670,12 @@ public class ParseCcg extends AbstractCli {
 
     public int getArgNum() {
       return argNum;
+    }
+    
+    public String toString(List<String> sentenceWords) {
+      String headWord = sentenceWords.get(headWordIndex);
+      String argWord = sentenceWords.get(argWordIndex);
+      return headWord + "," + headWordIndex + "," + syntax + "," + argNum + "," + argWordIndex + "," + argWord;
     }
 
     @Override

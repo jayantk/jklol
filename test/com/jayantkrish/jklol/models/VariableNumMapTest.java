@@ -10,6 +10,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 /**
  * Tests for VariableNumMap.
@@ -150,7 +151,17 @@ public class VariableNumMapTest extends TestCase {
 	  nameReplacements.put("v2", "v3");
 	  nameReplacements.put("v3", "v4");
 	  
-	  VariableRelabeling relabeling = new VariableRelabeling(indexReplacements, nameReplacements);
+	  VariableNumMap inputVars = new VariableNumMap(Ints.asList(0, 1, 2, 3),
+	      Arrays.asList("v0", "v1", "v2", "v3"), Arrays.<Variable>asList(null, null, null, null));
+	  
+	  VariableNumMap outputVars = new VariableNumMap(Ints.asList(1, 2, 3, 4),
+	      Arrays.asList("v1", "v2", "v3", "v4"), Arrays.<Variable>asList(null, null, null, null));
+	  
+	  int[] keys = new int[] {0, 1, 2, 3};
+	  int[] values = new int[] {1, 2, 3, 4};
+	  IntBiMap map = IntBiMap.fromSortedKeyValues(keys, values);
+	  
+	  VariableRelabeling relabeling = new VariableRelabeling(inputVars, outputVars, map);
 	  assertFalse(relabeling.isInDomain(d));
 	  assertTrue(relabeling.isInDomain(a));
 	  assertFalse(relabeling.isInRange(d));

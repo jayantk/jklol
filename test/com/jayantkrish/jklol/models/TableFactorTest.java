@@ -8,12 +8,12 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 /**
  * This also tests many of the methods in Factor and the
@@ -282,16 +282,16 @@ public class TableFactorTest extends TestCase {
 	}
 	
 	public void testRelabelVariables() {
-	  BiMap<Integer, Integer> relabeling = HashBiMap.create();
-	  relabeling.put(0, 2);
-	  relabeling.put(3, 1);
-	  relabeling.put(1, 0);
-	  BiMap<String, String> nameRelabeling = HashBiMap.create();
-	  nameRelabeling.put("v0", "v2");
-	  nameRelabeling.put("v3", "v1");
-	  nameRelabeling.put("v1", "v0");
+	  VariableNumMap inputVars = new VariableNumMap(Ints.asList(0, 1, 3),
+	      Arrays.asList("v0", "v1", "v3"), Arrays.<Variable>asList(null, null, null));
+	  VariableNumMap outputVars = new VariableNumMap(Ints.asList(0, 1, 2),
+	      Arrays.asList("v0", "v1", "v2"), Arrays.<Variable>asList(null, null, null));
+	  int[] keys = new int[] {0, 3, 1};
+	  int[] values = new int[] {2, 1, 0};
+	  IntBiMap map = IntBiMap.fromUnsortedKeyValues(keys, values);
+	  VariableRelabeling relabeling = new VariableRelabeling(inputVars, outputVars, map);
 	  
-	  TableFactor r = g.relabelVariables(new VariableRelabeling(relabeling, nameRelabeling));
+	  TableFactor r = g.relabelVariables(relabeling);
 	  assertEquals(3, r.getVars().size());
 	  assertTrue(r.getVars().containsAll(Arrays.asList(0, 1, 2)));
 	  assertEquals(7.0, r.getUnnormalizedProbability(r.getVars().outcomeArrayToAssignment("U", "F", "T")));

@@ -3,11 +3,10 @@ package com.jayantkrish.jklol.models.dynamic;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.SortedMap;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 public class VariableNumPattern extends AbstractVariablePattern {
@@ -42,8 +41,10 @@ public class VariableNumPattern extends AbstractVariablePattern {
     this.plateVarOffsets = plateVarOffsets;
     this.plateMatchIndexOffsets = plateMatchIndexOffsets;
     this.templateVariables = templateVariables;
-    
+
     this.fixedVariables = Preconditions.checkNotNull(fixedVariables);
+    Preconditions.checkArgument(fixedVariables.intersection(
+        templateVariables.getVariableNumsArray()).size() == 0);
   }
 
   /**
@@ -87,6 +88,15 @@ public class VariableNumPattern extends AbstractVariablePattern {
           .getVariableByName(withinPlateVariableName);
       plateMatchIndexOffsets[i] = varOffset;
     }
+    
+    // Normalize the index offsets so the maximum offset is 0.
+    if (plateMatchIndexOffsets.length > 0) {
+      int maxOffset = Ints.max(plateMatchIndexOffsets);
+      for (int i = 0; i < plateMatchIndexOffsets.length; i++) {
+        plateMatchIndexOffsets[i] -= maxOffset;
+      }
+    }
+    
     return new VariableNumPattern(plateStarts, plateEnds, plateReplicationSizes, plateVarOffsets,
         plateMatchIndexOffsets, templateVariables, fixedVariables);
   }
@@ -100,15 +110,27 @@ public class VariableNumPattern extends AbstractVariablePattern {
     // Special case: if there aren't any templates, then only the fixed
     // variables should be returned.
     if (plateStarts.length == 0) {
-      return Arrays.asList(new VariableMatch(fixedVariables));
-    }    
+      return Arrays.asList(VariableMatch.identity(fixedVariables));
+    }
 
-    // Aggregate pattern matches for each variable.
+    int maxPlateReplication = -1;
     int[] inputVarNums = inputVariables.getVariableNumsArray();
-    int[] templateVarNums = templateVariables.getVariableNumsArray();
     int numVars = inputVarNums.length;
     int numMatchers = plateStarts.length;
-    SortedMap<Integer, VariableMatch> variableMatches = Maps.newTreeMap();
+    for (int i = 0; i < numMatchers; i++) {
+      for (int j = 0; j < numVars; j++) {
+        if (inputVarNums[j] >= plateStarts[i] && inputVarNums[j] < plateEnds[i]) {
+          int withinPlateIndex = inputVarNums[j] - plateStarts[i];
+          int plateReplicationNum = withinPlateIndex / plateReplicationSizes[i];
+          int replicationIndex = plateReplicationNum - plateMatchIndexOffsets[i];
+          maxPlateReplication = Math.max(replicationIndex, maxPlateReplication);
+        }
+      }
+    }
+
+    // Aggregate pattern matches for each variable.
+    int[] templateVarNums = templateVariables.getVariableNumsArray();
+    VariableMatchBuilder[] variableMatches = new VariableMatchBuilder[maxPlateReplication + 1];
     for (int i = 0; i < numMatchers; i++) {      
       for (int j = 0; j < numVars; j++) {
         if (inputVarNums[j] >= plateStarts[i] && inputVarNums[j] < plateEnds[i]) {
@@ -119,12 +141,10 @@ public class VariableNumPattern extends AbstractVariablePattern {
           if (varOffset == plateVarOffsets[i]) {
             // The variable matches the pattern.
             int replicationIndex = plateReplicationNum - plateMatchIndexOffsets[i];
-            if (!variableMatches.containsKey(replicationIndex)) {
-              variableMatches.put(replicationIndex, new VariableMatch(fixedVariables));
+            if (variableMatches[replicationIndex] == null) {
+              variableMatches[replicationIndex] = new VariableMatchBuilder(templateVarNums);
             }
-            variableMatches.get(replicationIndex).addMatch(
-                templateVariables.intersection(templateVarNums[i]),
-                inputVariables.intersection(inputVarNums[j]));
+            variableMatches[replicationIndex].addMatch(templateVarNums[i], inputVarNums[j]);
           }
         }
       }
@@ -133,10 +153,11 @@ public class VariableNumPattern extends AbstractVariablePattern {
     // Eliminate any partial matches which do not contain a match for every
     // variable prefix.
     List<VariableMatch> validMatches = Lists.newArrayList();
-    VariableNumMap allMatchVariables = templateVariables.union(fixedVariables);
-    for (VariableMatch match : variableMatches.values()) {
-      if (match.getMatchedVariables().size() == allMatchVariables.size()) {
-        validMatches.add(match);
+    int numMatches = variableMatches.length;
+    for (int i = 0; i < numMatches; i++) {
+      VariableMatchBuilder matchBuilder = variableMatches[i];
+      if (matchBuilder != null && matchBuilder.isComplete()) {
+        validMatches.add(matchBuilder.build(fixedVariables, templateVariables, inputVariables));
       }
     }
     return validMatches;

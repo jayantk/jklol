@@ -8,6 +8,8 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -68,8 +70,13 @@ public class DynamicFactorGraph implements Serializable {
   }
 
   public FactorGraph getFactorGraph(DynamicAssignment assignment) {
+    LogFunction log = LogFunctions.getLogFunction();
+    
+    log.startTimer("instantiate_variables");
     VariableNumMap factorGraphVariables = variables.instantiateVariables(assignment);
+    log.stopTimer("instantiate_variables");
 
+    log.startTimer("instantiate_factors");
     // Instantiate factors.
     List<Factor> factors = Lists.newArrayList();
     List<String> instantiatedNames = Lists.newArrayList();
@@ -82,9 +89,13 @@ public class DynamicFactorGraph implements Serializable {
         instantiatedNames.add(factorNames.get(i) + "-" + j);
       }
     }
+    log.stopTimer("instantiate_factors");
 
-    return new FactorGraph(factorGraphVariables, factors.toArray(new Factor[0]),
+    log.startTimer("create_factor_graph");
+    FactorGraph factorGraph = new FactorGraph(factorGraphVariables, factors.toArray(new Factor[0]),
         instantiatedNames.toArray(new String[0]), VariableNumMap.EMPTY, Assignment.EMPTY, null);
+    log.stopTimer("create_factor_graph");
+    return factorGraph; 
   }
 
   public DynamicFactorGraph addPlateFactors(List<PlateFactor> factors, List<String> newFactorNames) {

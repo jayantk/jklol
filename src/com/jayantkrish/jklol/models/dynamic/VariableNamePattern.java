@@ -126,24 +126,23 @@ public class VariableNamePattern extends AbstractVariablePattern {
     // Special case: if there aren't any templates, then only the fixed
     // variables should be returned.
     if (templateVariableMatchers.size() == 0) {
-      return Arrays.asList(new VariableMatch(fixedVariables));
+      return Arrays.asList(VariableMatch.identity(fixedVariables));
     }
 
     // Find all variables which begin with a prefix in variableNamePrefixes,
     // identify their replication index, and aggregate the matches by
     // replication index.
-    SortedMap<Integer, VariableMatch> variableMatches = Maps.newTreeMap();
+    SortedMap<Integer, VariableMatchBuilder> variableMatches = Maps.newTreeMap();
     for (int i = 0; i < templateVariableMatchers.size(); i++) {
       int templateVariableIndex = templateVariables.getVariableNumsArray()[i];
 
       for (String variableName : inputVariables.getVariableNamesArray()) {
         for (Integer replicationIndex : templateVariableMatchers.get(i).getMatchedIndices(variableName)) {
           if (!variableMatches.containsKey(replicationIndex)) {
-            variableMatches.put(replicationIndex, new VariableMatch(fixedVariables));
+            variableMatches.put(replicationIndex, new VariableMatchBuilder(templateVariables.getVariableNumsArray()));
           }
-          variableMatches.get(replicationIndex).addMatch(
-              templateVariables.intersection(templateVariableIndex),
-              inputVariables.getVariablesByName(variableName));
+          variableMatches.get(replicationIndex).addMatch(templateVariableIndex,
+              inputVariables.getVariableByName(variableName));
         }
       }
     }
@@ -151,10 +150,9 @@ public class VariableNamePattern extends AbstractVariablePattern {
     // Eliminate any partial matches which do not contain a match for every
     // variable prefix.
     List<VariableMatch> validMatches = Lists.newArrayList();
-    VariableNumMap allMatchVariables = templateVariables.union(fixedVariables);
-    for (VariableMatch match : variableMatches.values()) {
-      if (match.getMatchedVariables().size() == allMatchVariables.size()) {
-        validMatches.add(match);
+    for (VariableMatchBuilder matchBuilder : variableMatches.values()) {
+      if (matchBuilder.isComplete()) {
+        validMatches.add(matchBuilder.build(fixedVariables, templateVariables, inputVariables));
       }
     }
     return validMatches;

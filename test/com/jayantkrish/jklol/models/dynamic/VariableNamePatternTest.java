@@ -47,7 +47,7 @@ public class VariableNamePatternTest extends TestCase {
     emptyPattern = VariableNamePattern.fromTemplateVariables(VariableNumMap.EMPTY, 
         defaultVars.getVariablesByName("x-0", "y-0", "z"));
   }
-  
+
   public void testMatchVariablesEmpty() {
     List<VariableMatch> matches = emptyPattern.matchVariables(defaultVars);
     assertEquals(1, matches.size());

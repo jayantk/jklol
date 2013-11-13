@@ -959,12 +959,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     Preconditions.checkArgument(newDimensions.length == numDimensions());
     if (Ordering.natural().isOrdered(Ints.asList(newDimensions))) {
       // If the new dimension labels are in sorted order, then we
-      // don't have to
-      // re-sort the outcome and value arrays. This is a big
-      // efficiency win if
-      // it happens. Note that keyNums and values are (treated as)
-      // immutable,
-      // and hence we don't need to copy them.
+      // don't have to re-sort the outcome and value arrays. This is a big
+      // efficiency win if it happens. Note that keyNums and values
+      // are (treated as) immutable, and hence we don't need to copy them.
       return new SparseTensor(newDimensions, getDimensionSizes(), keyNums, values);
     }
 

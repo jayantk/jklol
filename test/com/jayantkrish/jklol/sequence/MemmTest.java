@@ -120,7 +120,7 @@ public class MemmTest extends TestCase {
         .getStatisticByName(TaggerUtils.WORD_LABEL_FACTOR);
     SufficientStatistics normalizedParams = normalizedTagger.getParameters()
         .coerceToList().getStatisticByName(TaggerUtils.NORMALIZED_FACTOR)
-        .coerceToList().getStatisticByName("0");
+        .coerceToList().getStatisticByName("1");
 
     SufficientStatistics deltas = localParams.duplicate();
     deltas.increment(normalizedParams, -1.0);

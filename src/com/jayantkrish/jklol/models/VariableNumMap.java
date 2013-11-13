@@ -5,16 +5,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Converter;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 /**
  * A {@code VariableNumMap} represents a set of variables in a
@@ -479,6 +477,27 @@ public class VariableNumMap implements Serializable {
     return containsAll(other.getVariableNumsArray());
   }
   
+  /**
+   * Returns {@code true} if {@code other} contains a subset of the
+   * variable numbers in {@code this}, and those variables have the
+   * same names.
+   * 
+   * @param other
+   * @return
+   */
+  public final boolean containsAllNames(VariableNumMap other) {
+    int[] otherNums = other.nums;
+    String[] otherNames = other.names;
+
+    for (int i = 0; i < otherNums.length; i++) {
+      int index = getVariableIndex(otherNums[i]);
+      if (index < 0 || !otherNames[i].equals(names[index])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public final boolean containsAny(int... varNums) {
     for (int i : varNums) {
       if (contains(i)) {
@@ -965,49 +984,58 @@ public class VariableNumMap implements Serializable {
    */
   public static class VariableRelabeling extends Converter<VariableNumMap, VariableNumMap> implements Serializable {
 
-    private static final long serialVersionUID = -2598135542480496918L;
+    private static final long serialVersionUID = 2L;
 
-    private final BiMap<Integer, Integer> variableIndexMap;
-    private final BiMap<String, String> variableNameMap;
+    private final VariableNumMap inputVars;
+    private final VariableNumMap outputVars;
 
-    public VariableRelabeling(BiMap<Integer, Integer> variableIndexMap,
-        BiMap<String, String> variableNameMap) {
-      this.variableIndexMap = variableIndexMap;
-      this.variableNameMap = variableNameMap;
+    // Mapping between the two sets of variables based on their numbers.
+    private final IntBiMap varNumMap;
+    
+    public static final VariableRelabeling EMPTY = new VariableRelabeling(VariableNumMap.EMPTY, VariableNumMap.EMPTY,
+        IntBiMap.fromSortedKeyValues(new int[0], new int[0]));
+
+    public VariableRelabeling(VariableNumMap inputVars, VariableNumMap outputVars,
+        IntBiMap varNumMap) {
+      this.inputVars = Preconditions.checkNotNull(inputVars);
+      this.outputVars = Preconditions.checkNotNull(outputVars);
+
+      this.varNumMap = Preconditions.checkNotNull(varNumMap);
     }
 
     public String getReplacementName(String name) {
-      return variableNameMap.get(name);
+      int inputVarNum = inputVars.getVariableByName(name);
+      if (inputVarNum != -1) {
+        int outputVarNum = varNumMap.get(inputVarNum, -1);
+        return outputVars.getVariableNameFromIndex(outputVarNum);
+      }
+      return null;
     }
 
-    public Integer getReplacementIndex(Integer index) {
-      return variableIndexMap.get(index);
+    public Integer getReplacementIndex(Integer inputVarNum) {
+      return varNumMap.get(inputVarNum, -1);
     }
 
     public boolean isInDomain(VariableNumMap variableNumMap) {
-      return variableIndexMap.keySet().containsAll(variableNumMap.getVariableNums()) &&
-          variableNameMap.keySet().containsAll(variableNumMap.getVariableNames());
+      return inputVars.containsAllNames(variableNumMap);
     }
 
     public boolean isInRange(VariableNumMap variableNumMap) {
-      return variableIndexMap.values().containsAll(variableNumMap.getVariableNums()) &&
-          variableNameMap.values().containsAll(variableNumMap.getVariableNames());
+      return outputVars.containsAllNames(variableNumMap);
     }
 
-    public BiMap<Integer, Integer> getVariableIndexReplacementMap() {
-      return variableIndexMap;
+    public IntBiMap getVariableIndexReplacementMap() {
+      return varNumMap;
     }
 
     @Override
     public VariableNumMap apply(VariableNumMap input) {
-      Preconditions.checkArgument(isInDomain(input));
-      return mapIndicesAndNames(input, variableIndexMap, variableNameMap);
+      return mapIndicesAndNames(input, inputVars, outputVars, varNumMap);
     }
 
     @Override
     public VariableNumMap invert(VariableNumMap input) {
-      Preconditions.checkArgument(isInRange(input));
-      return mapIndicesAndNames(input, variableIndexMap.inverse(), variableNameMap.inverse());
+      return mapIndicesAndNames(input, outputVars, inputVars, varNumMap.inverse());
     }
 
     /*
@@ -1016,12 +1044,12 @@ public class VariableNumMap implements Serializable {
      */
     @Override
     public VariableRelabeling inverse() {
-      return new VariableRelabeling(variableIndexMap.inverse(), variableNameMap.inverse());
+      return new VariableRelabeling(outputVars, inputVars, varNumMap.inverse());
     }
 
     @Override
     public String toString() {
-      return variableIndexMap.toString();
+      return varNumMap.toString();
     }
 
     /**
@@ -1032,17 +1060,12 @@ public class VariableNumMap implements Serializable {
      * @return
      */
     public VariableRelabeling union(VariableRelabeling other) {
-      BiMap<Integer, Integer> newVariableIndexMap = HashBiMap.create(variableIndexMap);
-      BiMap<String, String> newVariableNameMap = HashBiMap.create(variableNameMap);
+      VariableNumMap newInput = inputVars.union(other.inputVars);
+      VariableNumMap newOutput = outputVars.union(other.outputVars);
 
-      newVariableIndexMap.putAll(other.variableIndexMap);
-      newVariableNameMap.putAll(other.variableNameMap);
+      IntBiMap newRelabeling = varNumMap.union(other.varNumMap);
 
-      return new VariableRelabeling(newVariableIndexMap, newVariableNameMap);
-    }
-    
-    public static VariableRelabeling empty() {
-      return new VariableRelabeling(HashBiMap.<Integer, Integer>create(), HashBiMap.<String, String>create());
+      return new VariableRelabeling(newInput, newOutput, newRelabeling);
     }
 
     /**
@@ -1056,13 +1079,9 @@ public class VariableNumMap implements Serializable {
      */
     public static VariableRelabeling createFromVariables(VariableNumMap domain, VariableNumMap range) {
       Preconditions.checkArgument(domain.size() == range.size());
-      BiMap<Integer, Integer> indexMap = HashBiMap.create();
-      BiMap<String, String> nameMap = HashBiMap.create();
-      for (int i = 0; i < domain.size(); i++) {
-        indexMap.put(domain.getVariableNums().get(i), range.getVariableNums().get(i));
-        nameMap.put(domain.getVariableNames().get(i), range.getVariableNames().get(i));
-      }
-      return new VariableRelabeling(indexMap, nameMap);
+      IntBiMap map = IntBiMap.fromUnsortedKeyValues(domain.getVariableNumsArray(),
+          range.getVariableNumsArray());
+      return new VariableRelabeling(domain, range, map);
     }
 
     /**
@@ -1073,35 +1092,21 @@ public class VariableNumMap implements Serializable {
      * @return
      */
     public static VariableRelabeling identity(VariableNumMap map) {
-      BiMap<Integer, Integer> indexMap = HashBiMap.create();
-      BiMap<String, String> nameMap = HashBiMap.create();
-      for (int i = 0; i < map.size(); i++) {
-        indexMap.put(map.getVariableNums().get(i), map.getVariableNums().get(i));
-        nameMap.put(map.getVariableNames().get(i), map.getVariableNames().get(i));
-      }
-      return new VariableRelabeling(indexMap, nameMap);
+      IntBiMap varNumMap = IntBiMap.fromUnsortedKeyValues(map.getVariableNumsArray(),
+          map.getVariableNumsArray());
+      return new VariableRelabeling(map, map, varNumMap);
     }
 
-    /**
-     * Replaces each index in {@code inputVar} with its corresponding
-     * value in {@code indexReplacements}, and similarly replaces each
-     * name in {@code inputVar} with its value in
-     * {@code nameReplacements}.
-     * 
-     * @param inputVar
-     * @param indexReplacements
-     * @param nameReplacements
-     * @return
-     */
     private static VariableNumMap mapIndicesAndNames(VariableNumMap input,
-        Map<Integer, Integer> indexReplacements, Map<String, String> nameReplacements) {
+        VariableNumMap domainVars, VariableNumMap rangeVars, IntBiMap mapping) {
       int[] newNums = new int[input.size()];
       String[] newNames = new String[input.size()];
       Variable[] newVars = new Variable[input.size()];
 
       for (int i = 0; i < input.size(); i++) {
-        newNums[i] = indexReplacements.get(input.nums[i]);
-        newNames[i] = nameReplacements.get(input.names[i]);
+        newNums[i] = mapping.get(input.nums[i], -1);
+        Preconditions.checkArgument(newNums[i] != -1);
+        newNames[i] = rangeVars.getVariableNameFromIndex(newNums[i]);
         newVars[i] = input.vars[i];
       }
 

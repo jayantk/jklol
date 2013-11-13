@@ -20,9 +20,9 @@ public class WrapperVariablePattern extends AbstractVariablePattern {
   
   public WrapperVariablePattern(VariableNumMap variables) {
     this.variables = variables;
-    this.cachedMatches = Lists.newArrayList(new VariableMatch(variables));
+    this.cachedMatches = Lists.newArrayList(VariableMatch.identity(variables));
   }
-  
+
   @Override
   public List<VariableMatch> matchVariables(VariableNumMap inputVariables) {
     if (inputVariables.containsAll(variables)) {

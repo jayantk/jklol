@@ -48,10 +48,15 @@ Example<DynamicAssignment, DynamicAssignment>> {
       Example<DynamicAssignment, DynamicAssignment> dynamicExample, LogFunction log) {
     // Instantiate any replicated factors, etc.
     log.startTimer("update_gradient/get_factor_graph_from_assignment");
+    log.startTimer("update_gradient/get_factor_graph");
     FactorGraph factorGraph = dynamicFactorGraph.getFactorGraph(dynamicExample.getInput());
+    log.stopTimer("update_gradient/get_factor_graph");
+
+    log.startTimer("update_gradient/get_factor_graph_to_assignment");
     Assignment input = dynamicFactorGraph.getVariables().toAssignment(dynamicExample.getInput());
     Assignment observed = dynamicFactorGraph.getVariables().toAssignment(
         dynamicExample.getOutput().union(dynamicExample.getInput()));
+    log.stopTimer("update_gradient/get_factor_graph_to_assignment");
 
     log.stopTimer("update_gradient/get_factor_graph_from_assignment");
     log.log(input, factorGraph);

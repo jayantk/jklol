@@ -86,6 +86,12 @@ public class ArrayUtils {
     return newArray;
   }
 
+  public static void copy(int[] src, int srcStartIndex, int[] dst, int dstStartIndex, int numToCopy) {
+    for (int i = 0; i < numToCopy; i++) {
+      dst[dstStartIndex + i] = src[srcStartIndex + i];
+    }
+  }
+
   public static boolean subarrayEquals(int[] array, int[] subarray, int startIndex) {
     for (int i = 0; i < subarray.length; i++) {
       if (array[i + startIndex] != subarray[i]) {

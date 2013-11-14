@@ -1075,23 +1075,29 @@ public class CcgParser implements Serializable {
   }
 
   public boolean isPossibleExample(CcgExample example) {
-    // Provide a deeper analysis of why parsing failed.
-    CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
+    // CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
+    CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(), 100);
     SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
     parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
-    CcgParse best = chart.decodeBestParse(this);
-    if (best == null) {
-      analyzeParseFailure(example.getSyntacticParse(), chart, syntaxVarType);
+    List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, this);
+    if (parses.size() == 0) {
+      // Provide a deeper analysis of why parsing failed.
+      analyzeParseFailure(example.getSyntacticParse(), chart, syntaxVarType, "Parse failure", 0);
       return false;
+    } else if (parses.size() > 1) {
+      analyzeParseFailure(example.getSyntacticParse(), chart, syntaxVarType, "Parse duplication", 2);
     }
     return true;
   }
 
-  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart, DiscreteVariable syntaxVarType) {
+  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart,
+      DiscreteVariable syntaxVarType, String errorMessage, int failureNum) {
     boolean foundFailurePoint = false;
     if (!tree.isTerminal()) {
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart, syntaxVarType);
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart, syntaxVarType);
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart,
+          syntaxVarType, errorMessage, failureNum);
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart,
+          syntaxVarType, errorMessage, failureNum);
     }
 
     if (foundFailurePoint) {
@@ -1101,12 +1107,12 @@ public class CcgParser implements Serializable {
       int spanEnd = tree.getSpanEnd();
 
       int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
-      if (numChartEntries == 0) {
+      if (numChartEntries == failureNum) {
         if (tree.isTerminal()) {
-          System.out.println("Parse failure terminal: " + tree.getWords() + " -> " +
+          System.out.println(errorMessage + " terminal: " + tree.getWords() + " -> " +
               tree.getRootSyntax() + " headed: " + tree.getHeadedSyntacticCategory());
         } else {
-          System.out.println("Parse failure nonterminal: " + tree.getLeft().getRootSyntax() + " "
+          System.out.println(errorMessage + " nonterminal: " + tree.getLeft().getRootSyntax() + " "
               + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());
           StringBuilder sb = new StringBuilder();
           sb.append("left entries: ");

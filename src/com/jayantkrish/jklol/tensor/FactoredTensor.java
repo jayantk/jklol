@@ -16,14 +16,14 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
  */
 public class FactoredTensor extends AbstractTensor {
   private static final long serialVersionUID = 2L;
-  
+
   // The elements which are multiplied to get the value of this tensor.
   private final Tensor[] tensors;
   // Stores the subset of dimensions which are used to index each tensor.
   // Offsets are set to zero for dimensions which are not used.
   private final long[] tensorDimensionOffsets;
   private final int numDimensions;
-  
+
   public FactoredTensor(int[] dimensions, int[] sizes, Tensor[] tensors) {
     super(dimensions, sizes);
     this.tensors = tensors;

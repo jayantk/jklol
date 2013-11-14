@@ -177,15 +177,18 @@ public class FactoredTensor extends AbstractTensor {
     }
     return size;
   }
-  
+
   @Override
-  public double getByDimKey(int... key) {
+  public double get(long keyNum) {
+    long[] dimensionOffsets = getDimensionOffsets();
     double prob = 1.0;
     for (int i = 0; i < tensors.size(); i++) {
       Tensor tensor = tensors.get(i);
       long tensorKeyNum = 0;
       for (int j = 0; j < numDimensions; j++) {
-        tensorKeyNum += tensorDimensionOffsets[(i * numDimensions) + j] * key[j]; 
+        long prevModulo = (j == 0) ? getMaxKeyNum() : dimensionOffsets[j - 1];
+        tensorKeyNum += tensorDimensionOffsets[(i * numDimensions) + j]
+            * ((tensorKeyNum % prevModulo) / dimensionOffsets[j]);
       }
       prob *= tensor.get(tensorKeyNum);
     }
@@ -193,27 +196,20 @@ public class FactoredTensor extends AbstractTensor {
   }
 
   @Override
-  public double get(long keyNum) {
-    return getByDimKey(keyNumToDimKey(keyNum));
-  }
-
-  @Override
-  public double getLogByDimKey(int... key) {
+  public double getLog(long keyNum) {
+    long[] dimensionOffsets = getDimensionOffsets();
     double prob = 0.0;
     for (int i = 0; i < tensors.size(); i++) {
       Tensor tensor = tensors.get(i);
       long tensorKeyNum = 0;
       for (int j = 0; j < numDimensions; j++) {
-        tensorKeyNum += tensorDimensionOffsets[(i * numDimensions) + j] * key[j]; 
+        long prevModulo = (j == 0) ? getMaxKeyNum() : dimensionOffsets[j - 1];
+        tensorKeyNum += tensorDimensionOffsets[(i * numDimensions) + j]
+            * ((tensorKeyNum % prevModulo) / dimensionOffsets[j]); 
       }
       prob += tensor.getLog(tensorKeyNum);
     }
     return prob;
-  }
-
-  @Override
-  public double getLog(long keyNum) {
-    return getLogByDimKey(keyNumToDimKey(keyNum));
   }
 
   @Override

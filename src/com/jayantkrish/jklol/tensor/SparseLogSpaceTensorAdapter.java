@@ -142,20 +142,10 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
   public int size() {
     return logWeights.size();
   }
-  
-  @Override
-  public double getByDimKey(int... key) {
-    return Math.exp(logWeights.getByDimKey(key));
-  }
 
   @Override
   public double get(long keyNum) {
     return Math.exp(logWeights.get(keyNum));
-  }
-
-  @Override
-  public double getLogByDimKey(int... key) {
-    return logWeights.getByDimKey(key);
   }
 
   @Override

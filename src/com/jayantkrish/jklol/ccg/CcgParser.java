@@ -25,6 +25,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -1153,6 +1154,62 @@ public class CcgParser implements Serializable {
     }
     return true;
   }
+  
+  public boolean isPossibleExample(CcgExample example) {
+    // Provide a deeper analysis of why parsing failed.
+    CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
+    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
+    parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
+    CcgParse best = chart.decodeBestParse(this);
+    if (best == null) {
+      analyzeParseFailure(example.getSyntacticParse(), chart, syntaxVarType);
+      return false;
+    }
+    return true;
+  }
+
+  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart, DiscreteVariable syntaxVarType) {
+    boolean foundFailurePoint = false;
+    if (!tree.isTerminal()) {
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart, syntaxVarType);
+      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart, syntaxVarType);
+    }
+
+    if (foundFailurePoint) {
+      return true;
+    } else {
+      int spanStart = tree.getSpanStart();
+      int spanEnd = tree.getSpanEnd();
+
+      int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
+      if (numChartEntries == 0) {
+        if (tree.isTerminal()) {
+          System.out.println("Parse failure terminal: " + tree.getWords() + " -> " +
+              tree.getRootSyntax() + " headed: " + tree.getHeadedSyntacticCategory());
+        } else {
+          System.out.println("Parse failure nonterminal: " + tree.getLeft().getRootSyntax() + " "
+              + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());
+          StringBuilder sb = new StringBuilder();
+          sb.append("left entries: ");
+          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd())) {
+            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
+            sb.append(" ");
+          }
+          System.out.println(sb.toString());
+          sb = new StringBuilder();
+          sb.append("right entries: ");
+          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd())) {
+            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
+            sb.append(" ");
+          }
+          System.out.println(sb.toString());
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
 
   public SetMultimap<SyntacticCategory, HeadedSyntacticCategory> getSyntacticCategoryMap() {
     SetMultimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap = HashMultimap.create();
@@ -1179,7 +1236,8 @@ public class CcgParser implements Serializable {
       boolean errorOnInvalidExample, Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
     List<T> filteredExamples = Lists.newArrayList();
     for (T example : examples) {
-      if (isPossibleExample(example, syntacticCategoryMap)) {
+      // isPossibleExample(example, syntacticCategoryMap)
+      if (isPossibleExample(example)) {
         filteredExamples.add(example);
       } else {
         Preconditions.checkState(!errorOnInvalidExample, "Invalid example: %s", example);

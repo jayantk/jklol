@@ -316,50 +316,6 @@ public class ParseCcg extends AbstractCli {
         lexiconErrors, parserErrors, 1, 1);
   }
 
-  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart, DiscreteVariable syntaxVarType) {
-    boolean foundFailurePoint = false;
-    if (!tree.isTerminal()) {
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart, syntaxVarType);
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart, syntaxVarType);
-    }
-    
-    if (foundFailurePoint) {
-      return true;
-    } else {
-      int spanStart = tree.getSpanStart();
-      int spanEnd = tree.getSpanEnd();
-
-      int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
-      if (numChartEntries == 0) {
-        if (tree.isTerminal()) {
-          System.out.println("Parse failure terminal: " + tree.getWords() + " -> " +
-              tree.getRootSyntax() + " headed: " + tree.getHeadedSyntacticCategory());
-        } else {
-          System.out.println("Parse failure nonterminal: " + tree.getLeft().getRootSyntax() + " "
-              + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());
-          StringBuilder sb = new StringBuilder();
-          sb.append("left entries: ");
-          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd())) {
-            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
-            sb.append(" ");
-          }
-          System.out.println(sb.toString());
-          sb = new StringBuilder();
-          sb.append("right entries: ");
-          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd())) {
-            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
-            sb.append(" ");
-          }
-          System.out.println(sb.toString());
-        }
-
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-
   private static List<DependencyStructure> getDependenciesCcgbank(CcgParse parse) {
     SyntacticCategory toCat = SyntacticCategory.parseFrom("((S[to]\\NP)/(S[b]\\NP))");
     
@@ -622,7 +578,7 @@ public class ParseCcg extends AbstractCli {
           CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
           parser.getParser().parseCommon(chart, example.getWords(), example.getPosTags(), filter,
               null, -1);
-          analyzeParseFailure(example.getSyntacticParse(), chart, parser.getParser().getSyntaxVarType());
+          CcgParser.analyzeParseFailure(example.getSyntacticParse(), chart, parser.getParser().getSyntaxVarType());
         }
 
         return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);

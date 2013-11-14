@@ -88,11 +88,15 @@ public class ParametricCcgParserTest extends TestCase {
     CcgParser newParser = family.getModelFromParameters(parameters);
 
     System.out.println(family.getParameterDescription(parameters));
-
+    
     // The NN -> N{0} parameter has a weight of 1, as does the root
     // NN -> N{0} parameter and root N{0} parameter.
     parses = newParser.beamSearch(Arrays.asList("BLOCK"), Arrays.asList("NN"), 10);
     assertEquals(2, parses.size());
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+    }
+
     assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
     assertEquals(nounCat, parses.get(0).getSyntacticCategory());
     // This parse only triggers the lexicon parameter.

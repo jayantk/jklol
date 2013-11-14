@@ -61,12 +61,13 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
       return Factors.product(factors);
     } else {
       VariableNumMap allVars = VariableNumMap.EMPTY;
-      List<Tensor> tensors = Lists.newArrayList();
-      for (Factor factor : factors) {
+      Tensor[] tensors = new Tensor[factors.size()];
+      for (int i = 0; i < factors.size(); i++) {
+        Factor factor = factors.get(i);
         allVars = allVars.union(factor.getVars());
-        tensors.add(factor.coerceToDiscrete().getWeights());
+        tensors[i] = factor.coerceToDiscrete().getWeights();
       }
-      
+
       return new TableFactor(allVars, new FactoredTensor(allVars.getVariableNumsArray(), 
           allVars.getVariableSizes(), tensors));
     }

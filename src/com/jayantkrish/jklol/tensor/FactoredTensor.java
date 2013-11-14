@@ -186,11 +186,10 @@ public class FactoredTensor extends AbstractTensor {
       for (int j = 0; j < numDimensions; j++) {
         long prevModulo = (j == 0) ? getMaxKeyNum() : dimensionOffsets[j - 1];
         tensorKeyNum += tensorDimensionOffsets[(i * numDimensions) + j]
-            * ((tensorKeyNum % prevModulo) / dimensionOffsets[j]);
+            * ((keyNum % prevModulo) / dimensionOffsets[j]);
       }
       prob *= tensor.get(tensorKeyNum);
     }
-    System.out.println(tensors.length + " " + prob);
     return prob;
   }
 
@@ -204,11 +203,10 @@ public class FactoredTensor extends AbstractTensor {
       for (int j = 0; j < numDimensions; j++) {
         long prevModulo = (j == 0) ? getMaxKeyNum() : dimensionOffsets[j - 1];
         tensorKeyNum += tensorDimensionOffsets[(i * numDimensions) + j]
-            * ((tensorKeyNum % prevModulo) / dimensionOffsets[j]); 
+            * ((keyNum % prevModulo) / dimensionOffsets[j]); 
       }
       prob += tensor.getLog(tensorKeyNum);
     }
-    System.out.println(prob);
     return prob;
   }
 

@@ -1038,123 +1038,42 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public boolean isPossibleBinaryRule(SyntacticCategory left, SyntacticCategory right,
-      SyntacticCategory parent, Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
-    // System.out.println("checking: " + left + " " +right + " -> "+
-    // parent);
-    // System.out.println(syntacticCategoryMap.keySet());
-    for (HeadedSyntacticCategory leftHeaded : syntacticCategoryMap.get(left)) {
-      for (HeadedSyntacticCategory rightHeaded : syntacticCategoryMap.get(right)) {
-        // System.out.println(leftHeaded + " " +rightHeaded);
-        Assignment assignment = leftSyntaxVar.outcomeArrayToAssignment(leftHeaded)
-            .union(rightSyntaxVar.outcomeArrayToAssignment(rightHeaded));
-
-        if (leftSyntaxVar.union(rightSyntaxVar).isValidAssignment(assignment)) {
-          Iterator<Outcome> outcomeIter = binaryRuleDistribution.outcomePrefixIterator(assignment);
-          while (outcomeIter.hasNext()) {
-            Outcome outcome = outcomeIter.next();
-            Combinator resultCombinator = (Combinator) outcome.getAssignment().getValue(
-                combinatorVar.getOnlyVariableNum());
-            HeadedSyntacticCategory parentCategory = (HeadedSyntacticCategory)
-                syntaxVarType.getValue(resultCombinator.getSyntax());
-
-            if (syntacticCategoryMap.get(parent).contains(parentCategory)) {
-              return true;
-            }
-          }
-        }
-      }
+  public SetMultimap<SyntacticCategory, HeadedSyntacticCategory> getSyntacticCategoryMap() {
+    SetMultimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap = HashMultimap.create();
+    for (Object syntacticCategory : leftSyntaxVar.getDiscreteVariables().get(0).getValues()) {
+      HeadedSyntacticCategory headedCat = (HeadedSyntacticCategory) syntacticCategory;
+      syntacticCategoryMap.put(headedCat.getSyntax()
+          .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE), headedCat);
     }
-
-    System.out.println("No such binary rule: " + left + " " + right + " -> " + parent);
-    System.out.println("  left: " + syntacticCategoryMap.get(left));
-    System.out.println("  right: " + syntacticCategoryMap.get(right));
-    System.out.println("  parent: " + syntacticCategoryMap.get(parent));
-    return false;
+    return syntacticCategoryMap;
   }
 
-  public boolean isPossibleSyntacticTree(CcgSyntaxTree tree,
-      Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
-    // If a unary rule was applied, confirm that the rule is
-    // one of the rules in this parser.
-    SyntacticCategory preUnarySyntax = tree.getPreUnaryRuleSyntax();
-    SyntacticCategory result = tree.getRootSyntax();
-
-    if (!preUnarySyntax.equals(result)) {
-      boolean valid = false;
-      for (HeadedSyntacticCategory headedInput : syntacticCategoryMap.get(preUnarySyntax)) {
-        Assignment syntaxPrefixAssignment = unaryRuleInputVar.outcomeArrayToAssignment(headedInput);
-        Iterator<Outcome> unaryRuleIter = unaryRuleFactor.outcomePrefixIterator(syntaxPrefixAssignment);
-        while (unaryRuleIter.hasNext()) {
-          Outcome outcome = unaryRuleIter.next();
-          CcgUnaryRule rule = ((UnaryCombinator) outcome.getAssignment().getValue(unaryRuleVarNum)).getUnaryRule();
-
-          if (rule.getResultSyntacticCategory().getSyntax()
-              .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(result)) {
-            valid = true;
-            break;
-          }
-        }
-      }
-
-      if (!valid) {
-        System.out.println("No unary rule for: " + preUnarySyntax + " -> " + result);
-        return false;
+  /**
+   * Checks whether each example in {@code examples} can be produced
+   * by this parser. If {@code errorOnInvalidExample = true}, then
+   * this method throws an error if an invalid example is encountered.
+   * Otherwise, invalid examples are simply filtered out of the
+   * returned examples.
+   * 
+   * @param examples
+   * @param errorOnInvalidExample
+   * @return
+   */
+  public <T extends CcgExample> List<T> filterExampleCollection(Iterable<T> examples,
+      boolean errorOnInvalidExample, Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
+    List<T> filteredExamples = Lists.newArrayList();
+    for (T example : examples) {
+      // isPossibleExample(example, syntacticCategoryMap)
+      if (isPossibleExample(example)) {
+        filteredExamples.add(example);
+      } else {
+        Preconditions.checkState(!errorOnInvalidExample, "Invalid example: %s", example);
+        System.out.println("Discarding example: " + example);
       }
     }
-
-    if (tree.isTerminal()) {
-      HeadedSyntacticCategory annotatedCategory = tree.getHeadedSyntacticCategory();
-      boolean isPossible = false;
-      for (HeadedSyntacticCategory category : syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax())) {
-        if (lexicon.isPossibleLexiconEntry(tree.getWords(), tree.getPosTags(), category)) {
-          if (annotatedCategory == null ||  category.equals(annotatedCategory)) {
-            isPossible = true;
-          }
-        }
-      }
-
-      if (!isPossible) {
-        String annotatedCatString = (annotatedCategory == null) ? "(no head info)" : ("headed: " + annotatedCategory); 
-        System.out.println("No such lexicon entry: " + tree.getWords() + " -> " +
-            syntacticCategoryMap.get(tree.getPreUnaryRuleSyntax()) + " " + annotatedCatString);
-      }
-
-      if (annotatedCategory != null && !annotatedCategory.getSyntax()
-          .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE).equals(tree.getPreUnaryRuleSyntax())) {
-        System.out.println("Incompatible syntactic annotations: " + tree.getWords() + " -> " +
-            annotatedCategory + " "+ tree.getPreUnaryRuleSyntax());
-        isPossible = false;;
-      } 
-
-      return isPossible;
-    } else {
-      return isPossibleBinaryRule(tree.getLeft().getRootSyntax(), tree.getRight().getRootSyntax(),
-          tree.getPreUnaryRuleSyntax(), syntacticCategoryMap)
-          && isPossibleSyntacticTree(tree.getLeft(), syntacticCategoryMap)
-          && isPossibleSyntacticTree(tree.getRight(), syntacticCategoryMap);
-    }
+    return filteredExamples;
   }
 
-  public boolean isPossibleExample(CcgExample example,
-      Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
-    if (example.hasDependencies()) {
-      for (DependencyStructure dependency : example.getDependencies()) {
-        if (!isPossibleDependencyStructure(dependency, example.getPosTags())) {
-          System.out.println("Invalid dependency: " + dependency);
-          return false;
-        }
-      }
-    }
-
-    if (example.hasSyntacticParse()) {
-      if (!isPossibleSyntacticTree(example.getSyntacticParse(), syntacticCategoryMap)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
   public boolean isPossibleExample(CcgExample example) {
     // Provide a deeper analysis of why parsing failed.
     CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
@@ -1209,42 +1128,6 @@ public class CcgParser implements Serializable {
         return false;
       }
     }
-  }
-
-  public SetMultimap<SyntacticCategory, HeadedSyntacticCategory> getSyntacticCategoryMap() {
-    SetMultimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap = HashMultimap.create();
-    for (Object syntacticCategory : leftSyntaxVar.getDiscreteVariables().get(0).getValues()) {
-      HeadedSyntacticCategory headedCat = (HeadedSyntacticCategory) syntacticCategory;
-      syntacticCategoryMap.put(headedCat.getSyntax()
-          .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE), headedCat);
-    }
-    return syntacticCategoryMap;
-  }
-
-  /**
-   * Checks whether each example in {@code examples} can be produced
-   * by this parser. If {@code errorOnInvalidExample = true}, then
-   * this method throws an error if an invalid example is encountered.
-   * Otherwise, invalid examples are simply filtered out of the
-   * returned examples.
-   * 
-   * @param examples
-   * @param errorOnInvalidExample
-   * @return
-   */
-  public <T extends CcgExample> List<T> filterExampleCollection(Iterable<T> examples,
-      boolean errorOnInvalidExample, Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
-    List<T> filteredExamples = Lists.newArrayList();
-    for (T example : examples) {
-      // isPossibleExample(example, syntacticCategoryMap)
-      if (isPossibleExample(example)) {
-        filteredExamples.add(example);
-      } else {
-        Preconditions.checkState(!errorOnInvalidExample, "Invalid example: %s", example);
-        System.out.println("Discarding example: " + example);
-      }
-    }
-    return filteredExamples;
   }
 
   public DiscreteVariable getSyntaxVarType() {

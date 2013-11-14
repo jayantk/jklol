@@ -665,6 +665,8 @@ public class VariableNumMap implements Serializable {
   public final VariableNumMap union(VariableNumMap other) {
     if (other.size() == 0) {
       return this;
+    } if (nums.length == 0) {
+      return other;
     }
 
     int[] otherNums = other.nums;

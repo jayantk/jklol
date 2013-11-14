@@ -262,6 +262,8 @@ public class Assignment implements Serializable {
     Preconditions.checkNotNull(other);
     if (other.size() == 0) {
       return this;
+    } if (vars.length == 0) {
+      return other;
     }
 
     // Merge varnums / values

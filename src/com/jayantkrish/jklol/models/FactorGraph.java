@@ -19,6 +19,8 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntMultimap;
 
@@ -542,19 +544,20 @@ public class FactorGraph implements Serializable {
    * @return
    */
   public FactorGraph conditional(Assignment assignment) {
-    Preconditions.checkArgument(variables.containsAll(assignment.getVariableNumsArray()));
-
     // Short-circuit when nothing is conditioned on.
     if (assignment.size() == 0) {
       return this;
     }
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("conditional_assignment_stuff");
+    Preconditions.checkArgument(variables.containsAll(assignment.getVariableNumsArray()));
 
     Assignment newConditionedValues = conditionedValues.union(assignment);
     VariableNumMap newConditionedVariables = conditionedVariables.union(
         variables.intersection(assignment.getVariableNumsArray()));
 
     VariableNumMap newVariables = variables.removeAll(assignment.getVariableNumsArray());
-
+    log.stopTimer("conditional_assignment_stuff");
     // Condition each factor on assignment.
     int numFactors = factors.length;
     Factor[] newFactors = new Factor[numFactors];

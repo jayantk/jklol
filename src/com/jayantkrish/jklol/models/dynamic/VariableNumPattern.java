@@ -8,6 +8,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 public class VariableNumPattern extends AbstractVariablePattern {
   private static final long serialVersionUID = 1L;
@@ -130,7 +132,7 @@ public class VariableNumPattern extends AbstractVariablePattern {
 
     // Aggregate pattern matches for each variable.
     int[] templateVarNums = templateVariables.getVariableNumsArray();
-    VariableMatchBuilder[] variableMatches = new VariableMatchBuilder[maxPlateReplication + 1];
+    int[][] variableMatches = new int[maxPlateReplication + 1][];
     for (int i = 0; i < numMatchers; i++) {      
       for (int j = 0; j < numVars; j++) {
         if (inputVarNums[j] >= plateStarts[i] && inputVarNums[j] < plateEnds[i]) {
@@ -142,9 +144,10 @@ public class VariableNumPattern extends AbstractVariablePattern {
             // The variable matches the pattern.
             int replicationIndex = plateReplicationNum - plateMatchIndexOffsets[i];
             if (variableMatches[replicationIndex] == null) {
-              variableMatches[replicationIndex] = new VariableMatchBuilder(templateVarNums);
+              variableMatches[replicationIndex] = new int[templateVarNums.length];
+              Arrays.fill(variableMatches[replicationIndex], -1);
             }
-            variableMatches[replicationIndex].addMatch(templateVarNums[i], inputVarNums[j]);
+            variableMatches[replicationIndex][i] = inputVarNums[j];
           }
         }
       }
@@ -155,9 +158,20 @@ public class VariableNumPattern extends AbstractVariablePattern {
     List<VariableMatch> validMatches = Lists.newArrayList();
     int numMatches = variableMatches.length;
     for (int i = 0; i < numMatches; i++) {
-      VariableMatchBuilder matchBuilder = variableMatches[i];
-      if (matchBuilder != null && matchBuilder.isComplete()) {
-        validMatches.add(matchBuilder.build(fixedVariables, templateVariables, inputVariables));
+      int[] matchBuilder = variableMatches[i];
+      if (matchBuilder != null && Ints.indexOf(matchBuilder, -1) == -1) {
+        VariableNumMap matchedVariables = inputVariables.intersection(matchBuilder);
+        VariableRelabeling fixedVariableRelabeling = VariableRelabeling.identity(fixedVariables);
+
+        int[] templateCopy = Arrays.copyOf(templateVarNums, templateVarNums.length);
+
+        IntBiMap mapping = IntBiMap.fromUnsortedKeyValues(matchBuilder, templateCopy);
+        VariableRelabeling matchedRelabeling = new VariableRelabeling(matchedVariables,
+            templateVariables, mapping);
+        VariableMatch match = new VariableMatch(matchedVariables.union(fixedVariables),
+          templateVariables.union(fixedVariables), fixedVariableRelabeling.union(matchedRelabeling));
+
+        validMatches.add(match);
       }
     }
     return validMatches;

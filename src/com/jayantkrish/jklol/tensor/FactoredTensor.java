@@ -179,7 +179,7 @@ public class FactoredTensor extends AbstractTensor {
   }
 
   @Override
-  public double get(long keyNum) {
+  public final double get(long keyNum) {
     long[] dimensionOffsets = getDimensionOffsets();
     double prob = 1.0;
     for (int i = 0; i < tensors.size(); i++) {
@@ -196,7 +196,7 @@ public class FactoredTensor extends AbstractTensor {
   }
 
   @Override
-  public double getLog(long keyNum) {
+  public final double getLog(long keyNum) {
     long[] dimensionOffsets = getDimensionOffsets();
     double prob = 0.0;
     for (int i = 0; i < tensors.size(); i++) {

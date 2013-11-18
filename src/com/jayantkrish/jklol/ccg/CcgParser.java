@@ -1086,6 +1086,7 @@ public class CcgParser implements Serializable {
       return false;
     } else if (parses.size() > 1) {
       analyzeParseFailure(example.getSyntacticParse(), chart, syntaxVarType, "Parse duplication", 2);
+      System.out.println("Duplicate correct parse: " + example.getSyntacticParse());
     }
     return true;
   }
@@ -1116,15 +1117,19 @@ public class CcgParser implements Serializable {
               + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());
           StringBuilder sb = new StringBuilder();
           sb.append("left entries: ");
-          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd())) {
-            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
+          ChartEntry[] leftEntries = chart.getChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd());
+          int numLeftEntries = chart.getNumChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd());
+          for (int i = 0; i < numLeftEntries; i++) {
+            sb.append(syntaxVarType.getValue(leftEntries[i].getHeadedSyntax()));
             sb.append(" ");
           }
           System.out.println(sb.toString());
           sb = new StringBuilder();
           sb.append("right entries: ");
-          for (ChartEntry entry : chart.getChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd())) {
-            sb.append(syntaxVarType.getValue(entry.getHeadedSyntax()));
+          ChartEntry[] rightEntries = chart.getChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd());
+          int numRightEntries = chart.getNumChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd());
+          for (int i = 0; i < numRightEntries; i++) {
+            sb.append(syntaxVarType.getValue(rightEntries[i].getHeadedSyntax()));
             sb.append(" ");
           }
           System.out.println(sb.toString());

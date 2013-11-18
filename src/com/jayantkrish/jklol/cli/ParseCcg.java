@@ -30,12 +30,10 @@ import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
-import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
-import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -578,7 +576,8 @@ public class ParseCcg extends AbstractCli {
           CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
           parser.getParser().parseCommon(chart, example.getWords(), example.getPosTags(), filter,
               null, -1);
-          CcgParser.analyzeParseFailure(example.getSyntacticParse(), chart, parser.getParser().getSyntaxVarType());
+          CcgParser.analyzeParseFailure(example.getSyntacticParse(), chart,
+              parser.getParser().getSyntaxVarType(), "Parse failure", 0);
         }
 
         return new CcgLoss(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);

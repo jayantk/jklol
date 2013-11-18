@@ -140,7 +140,13 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public int size() {
-    return logWeights.size();
+    // The size of the tensor is the number of nonzero values in the tensor.
+    // However, this tensor may potentially have more than Integer.MAX_VALUE
+    // nonzero values due to the log space representation. Returning
+    // Integer.MAX_VALUE shouldn't be a problem, given that the values in 
+    // this tensor cannot be retrieved using indexes.
+    long maxKeyNum = logWeights.getMaxKeyNum();
+    return (maxKeyNum > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) maxKeyNum;
   }
 
   @Override

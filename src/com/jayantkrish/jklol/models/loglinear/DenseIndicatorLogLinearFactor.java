@@ -2,6 +2,8 @@ package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.List;
 
+import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -29,10 +31,19 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
 
   private static final long serialVersionUID = 1L;
   private final boolean isSparse;
+  
+  // If non-null, only features with nonzero values in
+  // featureIndicator are used.
+  private final DiscreteFactor featureIndicator;
+  private final Tensor featureIndicatorTensor;
 
-  public DenseIndicatorLogLinearFactor(VariableNumMap variables, boolean isSparse) {
+  public DenseIndicatorLogLinearFactor(VariableNumMap variables, boolean isSparse,
+      DiscreteFactor featureIndicator) {
     super(variables);
     this.isSparse = isSparse;
+    this.featureIndicator = featureIndicator;
+    Preconditions.checkArgument(featureIndicator == null || featureIndicator.getVars().equals(variables));
+    this.featureIndicatorTensor = featureIndicator == null ? null : featureIndicator.getWeights();
   }
 
   @Override
@@ -73,7 +84,9 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, 
       Assignment assignment, double count) {
-    ((TensorSufficientStatistics) statistics).incrementFeature(assignment, count);
+    if (featureIndicator == null || featureIndicator.getUnnormalizedProbability(assignment) != 0.0) {
+      ((TensorSufficientStatistics) statistics).incrementFeature(assignment, count);
+    }
   }
 
   @Override
@@ -89,10 +102,24 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
         VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNumsArray());
         SparseTensor pointDistribution = SparseTensor.singleElement(vars.getVariableNumsArray(),
             vars.getVariableSizes(), vars.assignmentToIntArray(conditionalAssignment), 1.0);
-        ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,
-            expectedFeatureCounts, count / partitionFunction);
+        if (featureIndicatorTensor == null) {
+          // This implementation is faster than the default increment
+          // operation using the feature restrictions.
+          ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,
+              expectedFeatureCounts, count / partitionFunction);
+        } else {
+          Tensor increment = featureIndicatorTensor.elementwiseProduct(
+              pointDistribution.outerProduct(expectedFeatureCounts));
+          ((TensorSufficientStatistics) statistics).increment(increment, count / partitionFunction);
+        }
       } else {
-        ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts, count / partitionFunction);
+        if (featureIndicatorTensor == null) {
+          ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts,
+              count / partitionFunction);
+        } else {
+          ((TensorSufficientStatistics) statistics).increment(
+              featureIndicatorTensor.elementwiseProduct(expectedFeatureCounts), count / partitionFunction);
+        }
       }
     }
   }

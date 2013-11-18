@@ -283,7 +283,7 @@ public class TableFactorBuilder {
     return new TableFactor(vars, new LogSpaceTensorAdapter(
         DenseTensor.copyOf(weightBuilder.build())));
   }
-  
+
   public TableFactor buildSparseInLogSpace() {
     return new TableFactor(vars, new SparseLogSpaceTensorAdapter(
         SparseTensor.copyOf(weightBuilder.build())));

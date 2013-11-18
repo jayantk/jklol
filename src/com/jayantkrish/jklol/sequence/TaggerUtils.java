@@ -268,7 +268,7 @@ public class TaggerUtils {
         Arrays.asList(PREV_OUTPUT_PATTERN, OUTPUT_PATTERN), Arrays.asList(labelType, labelType));
     ParametricFactor adjacentFactor = null;
     if (!noTransitions) {
-      adjacentFactor = new DenseIndicatorLogLinearFactor(adjacentVars, false);
+      adjacentFactor = new DenseIndicatorLogLinearFactor(adjacentVars, false, null);
     }
 
     if (locallyNormalized) {

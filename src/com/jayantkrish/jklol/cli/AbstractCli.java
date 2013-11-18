@@ -121,6 +121,8 @@ public abstract class AbstractCli {
 
   // Logging options for all optimization algorithms.
   protected OptionSpec<Integer> logInterval;
+  protected OptionSpec<Integer> logParametersInterval;
+  protected OptionSpec<String> logParametersDir;
   protected OptionSpec<Void> logBrief;
 
   // Map reduce options.
@@ -306,8 +308,15 @@ public abstract class AbstractCli {
       logInterval = parser.accepts("logInterval",
           "Number of training iterations between logging outputs.")
           .withRequiredArg().ofType(Integer.class).defaultsTo(1);
+      
+      logParametersInterval = parser.accepts("logParametersInterval",
+          "Number of training iterations between serializing parameters to disk during training. "
+          + "If unspecified, model parameters are not serialized to disk during training.")
+          .withRequiredArg().ofType(Integer.class).defaultsTo(-1);
+      logParametersDir = parser.accepts("logParametersDir", "Directory where serialized model "
+          + "parameters are stored. Must be specified if logParametersInterval is specified.")
+          .withRequiredArg().ofType(String.class);
 
-      // boolean option.
       logBrief = parser.accepts("logBrief", "Hides training output.");
     }
 
@@ -369,8 +378,13 @@ public abstract class AbstractCli {
     }
 
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT) || opts.contains(CommonOptions.LBFGS)) {
-      LogFunction log = (parsedOptions.has(logBrief) ? new NullLogFunction()
-          : new DefaultLogFunction(parsedOptions.valueOf(logInterval), false));
+      LogFunction log = null;
+      if (parsedOptions.has(logBrief)) {
+        log = new NullLogFunction();
+      } else {
+         log = new DefaultLogFunction(parsedOptions.valueOf(logInterval), false,
+             options.valueOf(logParametersInterval), options.valueOf(logParametersDir));
+      }
       LogFunctions.setLogFunction(log);
     }
   }

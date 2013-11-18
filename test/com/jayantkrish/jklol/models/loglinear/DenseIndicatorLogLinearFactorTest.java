@@ -34,7 +34,7 @@ public class DenseIndicatorLogLinearFactorTest extends TestCase {
     builder.setWeight(1.0, "A", "T");
     builder.setWeight(1.0, "B", "F");
     builder.setWeight(1.0, "C", "F");
-    builder.setWeight(1.0, "B", "T");
+    builder.setWeight(2.0, "B", "T");
     featureIndicators = builder.build();
   }
   
@@ -84,22 +84,26 @@ public class DenseIndicatorLogLinearFactorTest extends TestCase {
 
     parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "F"), 2.0);
     parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "F"), -3.0);
+    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "T"), 3.0);
     parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("A", "T"), 1.0);
     parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("C", "T"), 2.0);
 
     Factor factor = parametricFactor.getModelFromParameters(parameters);
     assertEquals(1.0, factor.getUnnormalizedLogProbability("A", "T"), TOLERANCE);
     assertEquals(-1.0, factor.getUnnormalizedLogProbability("B", "F"), TOLERANCE);
+    assertEquals(12.0, factor.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
     assertEquals(0.0, factor.getUnnormalizedLogProbability("C", "T"), TOLERANCE);
 
     TableFactorBuilder incrementBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     incrementBuilder.setWeight(4.0, "A", "F");
     incrementBuilder.setWeight(6.0, "C", "F");
+    incrementBuilder.setWeight(-4.0, "B", "T");
     Factor increment = incrementBuilder.build(); 
     parametricFactor.incrementSufficientStatisticsFromMarginal(parameters, increment, Assignment.EMPTY, 3.0, 2.0);
 
     factor = parametricFactor.getModelFromParameters(parameters);
     assertEquals(-1.0, factor.getUnnormalizedLogProbability("B", "F"), TOLERANCE);
+    assertEquals(-12.0, factor.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
     assertEquals(1.0, factor.getUnnormalizedLogProbability("A", "T"), TOLERANCE);
     assertEquals(0.0, factor.getUnnormalizedLogProbability("C", "T"), TOLERANCE);
     assertEquals(0.0, factor.getUnnormalizedLogProbability("A", "F"), TOLERANCE);

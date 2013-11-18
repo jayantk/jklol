@@ -67,7 +67,12 @@ public class TensorLrtFamily implements LrtFamily {
   public LowRankTensor getModelFromParameters(SufficientStatistics parameters) {
       return new TensorLowRankTensor(getTensorFromParameters(parameters));
   }
-  
+
+  @Override
+  public LrtFamily rescaleFeatures(SufficientStatistics rescaling) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
   @Override
   public void increment(SufficientStatistics gradient, LowRankTensor value, 
       LowRankTensor increment, double multiplier) {

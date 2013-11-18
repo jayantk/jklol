@@ -89,7 +89,16 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
         (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics), beamSize, canSkipTerminals);
     return new BeamSearchCfgFactor(treeVar, inputVar, parser, terminalFunction, validTreeFilter);
   }
-  
+
+  @Override
+  public ParametricCfgFactor rescaleFeatures(SufficientStatistics rescaling) {
+    if (rescaling == null) {
+      return this;
+    }
+
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);

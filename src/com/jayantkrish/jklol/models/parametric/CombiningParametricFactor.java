@@ -72,6 +72,22 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
           allVars.getVariableSizes(), tensors));
     }
   }
+  
+  @Override
+  public CombiningParametricFactor rescaleFeatures(SufficientStatistics relabeling) {
+    if (relabeling == null) {
+      return this;
+    }
+
+    List<SufficientStatistics> relabelingList = getParameterList(relabeling);
+    List<ParametricFactor> newParametricFactors = Lists.newArrayList();
+    for (int i = 0; i < parametricFactors.size(); i++) {
+      newParametricFactors.add(parametricFactors.get(i).rescaleFeatures(relabelingList.get(i)));
+    }
+
+    return new CombiningParametricFactor(getVars(), factorNames, newParametricFactors,
+        returnFactoredTensor);
+  }
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {

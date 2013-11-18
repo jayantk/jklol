@@ -33,7 +33,7 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    * @return
    */
   public VariableNumMap getVars();
-  
+
   /**
    * Gets a human-interpretable XML description {@code parameters}.
    * 
@@ -52,6 +52,9 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    * @return
    */
   public Factor getModelFromParameters(SufficientStatistics parameters);
+
+  @Override
+  public ParametricFactor rescaleFeatures(SufficientStatistics rescaling);
 
   /**
    * Computes sufficient statistics for {@code this} factor based on an assumed

@@ -20,11 +20,11 @@ public class ConstantLrtFamily implements LrtFamily {
   private final VariableNumMap vars;
   private final LowRankTensor tensor;
 
-    public ConstantLrtFamily(VariableNumMap vars, LowRankTensor tensor) {
+  public ConstantLrtFamily(VariableNumMap vars, LowRankTensor tensor) {
     this.vars = Preconditions.checkNotNull(vars);
     this.tensor = Preconditions.checkNotNull(tensor);
   }
-  
+
   @Override
   public int[] getDimensionNumbers() {
     return vars.getVariableNumsArray();
@@ -56,6 +56,11 @@ public class ConstantLrtFamily implements LrtFamily {
   public void increment(SufficientStatistics gradient, LowRankTensor value, 
       LowRankTensor increment, double multiplier) {
       // No need to do anything.
+  }
+
+  @Override
+  public ConstantLrtFamily rescaleFeatures(SufficientStatistics rescaling) {
+    return this;
   }
 
   @Override

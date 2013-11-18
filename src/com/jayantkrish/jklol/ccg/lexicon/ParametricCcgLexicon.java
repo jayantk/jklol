@@ -6,5 +6,8 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public interface ParametricCcgLexicon extends ParametricFamily<CcgLexicon> {
 
+  @Override
+  ParametricCcgLexicon rescaleFeatures(SufficientStatistics rescaling);
+  
   void incrementLexiconSufficientStatistics(SufficientStatistics gradient, CcgParse parse, double count);
 }

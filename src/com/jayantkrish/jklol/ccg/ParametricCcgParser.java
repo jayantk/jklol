@@ -459,6 +459,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * 
    * @return
    */
+  @Override
   public SufficientStatistics getNewSufficientStatistics() {
     SufficientStatistics lexiconParameters = lexiconFamily.getNewSufficientStatistics();
     SufficientStatistics dependencyParameters = dependencyFamily.getNewSufficientStatistics();
@@ -488,6 +489,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @param parameters
    * @return
    */
+  @Override
   public CcgParser getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
     CcgLexicon lexiconDistribution = lexiconFamily.getModelFromParameters(
@@ -525,6 +527,50 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         headedBinaryRulePredicateVar, headedBinaryRulePosVar, headedSyntaxDistribution, searchMoveVar,
         compiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar, rootPosVar, rootSyntaxDistribution,
         headedRootSyntaxDistribution, allowWordSkipping, normalFormOnly);
+  }
+
+  @Override
+  public ParametricCcgParser rescaleFeatures(SufficientStatistics rescaling) {
+    if (rescaling == null) {
+      return this;
+    }
+    
+    ListSufficientStatistics rescalingList = rescaling.coerceToList();
+    ParametricCcgLexicon newLexiconFamily = lexiconFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(LEXICON_PARAMETERS));
+
+    ParametricFactor newDependencyFamily = dependencyFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(DEPENDENCY_PARAMETERS));
+
+    ParametricFactor newWordDistanceFamily = wordDistanceFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(WORD_DISTANCE_PARAMETERS));
+    ParametricFactor newPuncDistanceFamily = puncDistanceFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(PUNC_DISTANCE_PARAMETERS));
+    ParametricFactor newVerbDistanceFamily = verbDistanceFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(VERB_DISTANCE_PARAMETERS));
+
+    ParametricFactor newSyntaxFamily = syntaxFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(SYNTAX_PARAMETERS));
+    ParametricFactor newUnaryRuleFamily = unaryRuleFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(UNARY_RULE_PARAMETERS));
+    ParametricFactor newHeadedSyntaxFamily = headedBinaryRuleFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(HEADED_SYNTAX_PARAMETERS));
+
+    ParametricFactor newRootSyntaxFamily = rootSyntaxFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(ROOT_SYNTAX_PARAMETERS));
+    ParametricFactor newHeadedRootSyntaxFamily = headedRootSyntaxFamily.rescaleFeatures(
+        rescalingList.getStatisticByName(HEADED_ROOT_SYNTAX_PARAMETERS));
+
+    return new ParametricCcgParser(newLexiconFamily, dependencyHeadVar,
+        dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar,
+        dependencyArgPosVar, newDependencyFamily, wordDistanceVar, newWordDistanceFamily,
+        puncDistanceVar, newPuncDistanceFamily, puncTagSet, verbDistanceVar,
+        newVerbDistanceFamily, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
+        newSyntaxFamily, unaryRuleInputVar, unaryRuleVar,
+        newUnaryRuleFamily, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
+        newHeadedSyntaxFamily, searchMoveVar, compiledSyntaxDistribution,
+        leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar, newRootSyntaxFamily,
+        newHeadedRootSyntaxFamily, allowWordSkipping, normalFormOnly);
   }
 
   /**

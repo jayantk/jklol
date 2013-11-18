@@ -31,6 +31,8 @@ public interface ParametricFamily<T> extends Serializable {
    * @return
    */
   public T getModelFromParameters(SufficientStatistics parameters);
+  
+  public ParametricFamily<T> rescaleFeatures(SufficientStatistics rescaling);
 
   /**
    * Gets a human-interpretable string describing {@code parameters}.

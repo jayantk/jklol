@@ -51,7 +51,7 @@ public class OpLrtFamily implements LrtFamily {
 
     this.initialTensor = null;
   }
-  
+
   @Override
   public int[] getDimensionNumbers() {
     return vars.getVariableNumsArray();
@@ -124,7 +124,12 @@ public class OpLrtFamily implements LrtFamily {
     LowRankTensor finalResult = SumLowRankTensor.create(elements);
     return finalResult; 
   }
-  
+
+  @Override
+  public LrtFamily rescaleFeatures(SufficientStatistics rescaling) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
   @Override 
   public void increment(SufficientStatistics gradient, LowRankTensor currentValue,
       LowRankTensor increment, double multiplier) {

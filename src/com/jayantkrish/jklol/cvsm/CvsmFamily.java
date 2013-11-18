@@ -92,6 +92,11 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
     return new Cvsm(valueNames, new ParameterCvsmParameters(families, cvsmStats));
   }
 
+  @Override
+  public CvsmFamily rescaleFeatures(SufficientStatistics rescaling) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
   public void incrementSufficientStatistics(CvsmGradient increment, Cvsm currentValues,
       SufficientStatistics parameters) {
     List<String> tensorNames = increment.getTensorNames();

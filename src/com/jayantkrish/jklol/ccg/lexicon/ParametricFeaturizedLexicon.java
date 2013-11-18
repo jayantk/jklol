@@ -77,6 +77,22 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
   }
 
   @Override
+  public ParametricFeaturizedLexicon rescaleFeatures(SufficientStatistics rescaling) {
+    if (rescaling == null) {
+      return this;
+    }
+
+    ListSufficientStatistics rescalingList = rescaling.coerceToList();
+    ParametricFactor newTerminalFamily = terminalFamily.rescaleFeatures(rescalingList
+        .getStatisticByName(TERMINAL_PARAMETERS));
+    ConditionalLogLinearFactor newFeatureFamily = featureFamily.rescaleFeatures(rescalingList
+        .getStatisticByName(TERMINAL_FEATURE_PARAMETERS));
+
+    return new ParametricFeaturizedLexicon(terminalVar, ccgCategoryVar, newTerminalFamily,
+        featureGenerator, ccgSyntaxVar, featureVar, featureFamily);
+  }
+
+  @Override
   public String getParameterDescription(SufficientStatistics parameters) {
     return getParameterDescription(parameters, -1);
   }

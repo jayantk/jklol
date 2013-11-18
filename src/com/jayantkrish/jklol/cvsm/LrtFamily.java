@@ -7,6 +7,9 @@ import com.jayantkrish.jklol.tensor.Tensor;
 
 public interface LrtFamily extends ParametricFamily<LowRankTensor> {
 
+  @Override
+  public LrtFamily rescaleFeatures(SufficientStatistics rescaling);
+  
   public int[] getDimensionNumbers();
 
   public int[] getDimensionSizes();

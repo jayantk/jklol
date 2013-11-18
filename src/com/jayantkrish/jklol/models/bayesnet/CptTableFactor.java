@@ -95,6 +95,10 @@ public class CptTableFactor extends AbstractParametricFactor {
     }
     return new SparseTensorBuilder(dimensions, sizes);
   }
+  
+  public CptTableFactor rescaleFeatures(SufficientStatistics relabeling) {
+    throw new UnsupportedOperationException("Rescaling features in CptTableFactor is not supported");
+  }
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,

@@ -37,6 +37,11 @@ public class ConstantParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
+  public ConstantParametricFactor rescaleFeatures(SufficientStatistics rescaling) {
+    return this;
+  }
+  
+  @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
       Assignment assignment, double count) {}
 

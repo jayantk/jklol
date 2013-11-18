@@ -69,6 +69,12 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   // ///////////////////////////////////////////////////////////
 
   @Override
+  public TensorSufficientStatistics getNewSufficientStatistics() {
+    return new TensorSufficientStatistics(featureVars, new DenseTensorBuilder(new int[] { 0 },
+        new int[] { initialWeights.getWeights().getValues().length }));
+  }
+
+  @Override
   public TableFactor getModelFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters);
 
@@ -79,6 +85,15 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
     }
 
     return new TableFactor(initialWeights.getVars(), initialWeights.getWeights().replaceValues(probs));
+  }
+
+  @Override
+  public IndicatorLogLinearFactor rescaleFeatures(SufficientStatistics rescaling) {
+    if (rescaling == null) {
+      return this;
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
   @Override
@@ -100,12 +115,6 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
     TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
         initialWeights.getWeights().replaceValues(featureWeights.getValues()));
     return featureValues.getParameterDescriptionXML();
-  }
-
-  @Override
-  public TensorSufficientStatistics getNewSufficientStatistics() {
-    return new TensorSufficientStatistics(featureVars, new DenseTensorBuilder(new int[] { 0 },
-            new int[] { initialWeights.getWeights().getValues().length }));
   }
 
   @Override

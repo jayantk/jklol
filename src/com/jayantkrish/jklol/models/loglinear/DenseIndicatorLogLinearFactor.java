@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseLogSpaceTensorAdapter;
@@ -34,16 +35,16 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   
   // If non-null, only features with nonzero values in
   // featureIndicator are used.
-  private final DiscreteFactor featureIndicator;
-  private final Tensor featureIndicatorTensor;
+  private final DiscreteFactor featureRescaling;
+  private final Tensor featureRescalingTensor;
 
   public DenseIndicatorLogLinearFactor(VariableNumMap variables, boolean isSparse,
-      DiscreteFactor featureIndicator) {
+      DiscreteFactor featureRescaling) {
     super(variables);
     this.isSparse = isSparse;
-    this.featureIndicator = featureIndicator;
-    Preconditions.checkArgument(featureIndicator == null || featureIndicator.getVars().equals(variables));
-    this.featureIndicatorTensor = featureIndicator == null ? null : featureIndicator.getWeights();
+    this.featureRescaling = featureRescaling;
+    Preconditions.checkArgument(featureRescaling == null || featureRescaling.getVars().equals(variables));
+    this.featureRescalingTensor = featureRescaling == null ? null : featureRescaling.getWeights();
   }
 
   @Override
@@ -53,6 +54,22 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
     } else {
       return new TableFactor(getVars(), new LogSpaceTensorAdapter(getFeatureWeights(parameters)));
     }
+  }
+  
+  @Override
+  public DenseIndicatorLogLinearFactor rescaleFeatures(SufficientStatistics rescaling) {
+    if (rescaling == null) {
+      return this;
+    }
+    
+    Tensor newRescalingTensor = getFeatureWeights(rescaling);
+    if (!isSparse) {
+      // The dense version of a tensor sufficient statistic doesn't
+      // copy the array of parameters.
+      newRescalingTensor = DenseTensor.copyOf(newRescalingTensor);
+    }
+    return new DenseIndicatorLogLinearFactor(getVars(), isSparse,
+        new TableFactor(getVars(), newRescalingTensor));
   }
 
   @Override
@@ -84,9 +101,9 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, 
       Assignment assignment, double count) {
-    if (featureIndicator == null || featureIndicator.getUnnormalizedProbability(assignment) != 0.0) {
-      ((TensorSufficientStatistics) statistics).incrementFeature(assignment, count);
-    }
+    double rescaling = (featureRescaling == null) ? 1.0 : 
+      featureRescaling.getUnnormalizedProbability(assignment);
+    ((TensorSufficientStatistics) statistics).incrementFeature(assignment, count * rescaling);
   }
 
   @Override
@@ -102,23 +119,23 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
         VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNumsArray());
         SparseTensor pointDistribution = SparseTensor.singleElement(vars.getVariableNumsArray(),
             vars.getVariableSizes(), vars.assignmentToIntArray(conditionalAssignment), 1.0);
-        if (featureIndicatorTensor == null) {
+        if (featureRescalingTensor == null) {
           // This implementation is faster than the default increment
           // operation using the feature restrictions.
           ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,
               expectedFeatureCounts, count / partitionFunction);
         } else {
-          Tensor increment = featureIndicatorTensor.elementwiseProduct(
+          Tensor increment = featureRescalingTensor.elementwiseProduct(
               pointDistribution.outerProduct(expectedFeatureCounts));
           ((TensorSufficientStatistics) statistics).increment(increment, count / partitionFunction);
         }
       } else {
-        if (featureIndicatorTensor == null) {
+        if (featureRescalingTensor == null) {
           ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts,
               count / partitionFunction);
         } else {
           ((TensorSufficientStatistics) statistics).increment(
-              featureIndicatorTensor.elementwiseProduct(expectedFeatureCounts), count / partitionFunction);
+              featureRescalingTensor.elementwiseProduct(expectedFeatureCounts), count / partitionFunction);
         }
       }
     }
@@ -126,11 +143,16 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
 
   private Tensor getFeatureWeights(SufficientStatistics parameters) {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
-    return featureParameters.get();
+    Tensor featureWeights = featureParameters.get();
+    if (featureRescalingTensor == null) {
+      return featureWeights;
+    } else {
+      return featureRescalingTensor.elementwiseProduct(featureWeights);
+    }
   }
 
+
   private TableFactor getFeatureWeightFactor(SufficientStatistics parameters) {
-    TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
-    return new TableFactor(getVars(), featureParameters.get());
+    return new TableFactor(getVars(), getFeatureWeights(parameters));
   }
 }

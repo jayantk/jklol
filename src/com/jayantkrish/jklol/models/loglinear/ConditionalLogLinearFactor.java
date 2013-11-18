@@ -45,7 +45,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   private final int[] dimensionNums;
   private final int[] dimensionSizes;
   private final VariableNumMap sufficientStatisticVars;
-  
+
   /**
    * Create a factor which represents a conditional distribution over outputVars
    * given inputVar. {@code featureVectorDimensionality} is the dimension of the
@@ -90,6 +90,15 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   public ClassifierFactor getModelFromParameters(SufficientStatistics parameters) {
     return new LinearClassifierFactor(inputVar, outputVars, conditionalVars, featureDictionary, 
         getWeightTensorFromStatistics(parameters));
+  }
+  
+  @Override
+  public ConditionalLogLinearFactor rescaleFeatures(SufficientStatistics rescaling) {
+    if (rescaling == null) {
+      return this;
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
   @Override

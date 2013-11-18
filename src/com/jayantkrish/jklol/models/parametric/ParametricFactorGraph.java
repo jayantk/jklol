@@ -90,6 +90,7 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
    * @param parameters
    * @return
    */
+  @Override
   public DynamicFactorGraph getModelFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
@@ -100,6 +101,20 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
           factorPatterns.get(i)));
     }
     return baseFactorGraph.addPlateFactors(plateFactors, factorNames.items());
+  }
+  
+  @Override
+  public ParametricFactorGraph rescaleFeatures(SufficientStatistics rescaling) {
+    List<SufficientStatistics> rescalingList = rescaling.coerceToList().getStatistics();
+    Preconditions.checkArgument(rescalingList.size() == parametricFactors.size());
+    
+    List<ParametricFactor> newParametricFactors = Lists.newArrayList();
+    for (int i = 0; i < parametricFactors.size(); i++) {
+      newParametricFactors.add(parametricFactors.get(i).rescaleFeatures(rescalingList.get(i)));
+    }
+
+    return new ParametricFactorGraph(baseFactorGraph, newParametricFactors, factorPatterns,
+        factorNames.items());
   }
 
   @Override

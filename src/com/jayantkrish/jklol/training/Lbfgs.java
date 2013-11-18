@@ -89,6 +89,7 @@ public class Lbfgs implements GradientOptimizer {
     GradientEvaluation gradientEvaluation = null;
     for (int i = 0; i < maxIterations || maxIterations < 0; i++) {
       log.notifyIterationStart(i);
+      log.logParameters(i, initialParameters);
 
       if (gradientEvaluation == null) {
         gradientEvaluation = evaluateGradient(currentParameters, dataList,

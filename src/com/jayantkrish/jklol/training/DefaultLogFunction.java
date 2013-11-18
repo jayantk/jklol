@@ -1,18 +1,20 @@
 package com.jayantkrish.jklol.training;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IoUtils;
 
 /**
  * A simple default logging function.
@@ -23,7 +25,10 @@ public class DefaultLogFunction extends AbstractLogFunction {
   private final boolean showExamples;
   
   private final ListMultimap<String, Double> statistics;
-  
+
+  private final int modelSerializationInterval;
+  private final String modelSerializationDir;
+
   // Print asynchronously for speed.
   private final ExecutorService printExecutor;
 
@@ -34,8 +39,11 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.printExecutor = Executors.newSingleThreadExecutor();
     
     this.statistics = ArrayListMultimap.create();
+    
+    this.modelSerializationInterval = -1;
+    this.modelSerializationDir = null;
   }
-  
+
   public DefaultLogFunction(int logInterval, boolean showExamples) { 
     super();
     this.logInterval = logInterval;
@@ -43,13 +51,30 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.printExecutor = Executors.newSingleThreadExecutor();
     
     this.statistics = ArrayListMultimap.create();
+    
+    this.modelSerializationInterval = -1;
+    this.modelSerializationDir = null;
   }
-  
+
+  public DefaultLogFunction(int logInterval, boolean showExamples, int modelSerializationInterval,
+      String modelSerializationDir) {
+    super();
+    this.logInterval = logInterval;
+    this.showExamples = showExamples;
+    this.printExecutor = Executors.newSingleThreadExecutor();
+
+    this.statistics = ArrayListMultimap.create();
+
+    Preconditions.checkArgument(modelSerializationInterval <= 0 || modelSerializationDir != null);
+    this.modelSerializationInterval = modelSerializationInterval;
+    this.modelSerializationDir = modelSerializationDir;
+  }
+
   protected void print(String toPrint) {
     System.out.println(toPrint);
     // printExecutor.submit(new PrintTask(toPrint));
   }
-  
+
 	@Override
 	public void log(Assignment example, FactorGraph graph) {
 	  if (showExamples) {
@@ -76,8 +101,13 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 	
 	@Override
-	public void logParameters(int iteration, SufficientStatistics parameters, 
-	    ParametricFamily<?> family) {}
+	public void logParameters(int iteration, SufficientStatistics parameters) {
+	  if (modelSerializationInterval > 0 && iteration % modelSerializationInterval == 0) {
+	    String parametersFilename = modelSerializationDir + File.pathSeparator + "parameters_"
+	        + iteration + ".ser";
+	    IoUtils.serializeObjectToFile(parameters, parametersFilename);
+	  }
+	}
 
 	@Override
 	public void notifyIterationStart(int iteration) {

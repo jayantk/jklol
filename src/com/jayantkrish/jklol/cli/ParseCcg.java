@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.CcgParserUtils;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
@@ -576,7 +577,7 @@ public class ParseCcg extends AbstractCli {
           CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
           parser.getParser().parseCommon(chart, example.getWords(), example.getPosTags(), filter,
               null, -1);
-          CcgParser.analyzeParseFailure(example.getSyntacticParse(), chart,
+          CcgParserUtils.analyzeParseFailure(example.getSyntacticParse(), chart,
               parser.getParser().getSyntaxVarType(), "Parse failure", 0);
         }
 

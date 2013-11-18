@@ -25,7 +25,6 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -1046,99 +1045,6 @@ public class CcgParser implements Serializable {
           .assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE), headedCat);
     }
     return syntacticCategoryMap;
-  }
-
-  /**
-   * Checks whether each example in {@code examples} can be produced
-   * by this parser. If {@code errorOnInvalidExample = true}, then
-   * this method throws an error if an invalid example is encountered.
-   * Otherwise, invalid examples are simply filtered out of the
-   * returned examples.
-   * 
-   * @param examples
-   * @param errorOnInvalidExample
-   * @return
-   */
-  public <T extends CcgExample> List<T> filterExampleCollection(Iterable<T> examples,
-      boolean errorOnInvalidExample, Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
-    List<T> filteredExamples = Lists.newArrayList();
-    for (T example : examples) {
-      // isPossibleExample(example, syntacticCategoryMap)
-      if (isPossibleExample(example)) {
-        filteredExamples.add(example);
-      } else {
-        Preconditions.checkState(!errorOnInvalidExample, "Invalid example: %s", example);
-        System.out.println("Discarding example: " + example);
-      }
-    }
-    return filteredExamples;
-  }
-
-  public boolean isPossibleExample(CcgExample example) {
-    // CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
-    CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(), 100);
-    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
-    parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
-    List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, this);
-    if (parses.size() == 0) {
-      // Provide a deeper analysis of why parsing failed.
-      analyzeParseFailure(example.getSyntacticParse(), chart, syntaxVarType, "Parse failure", 0);
-      return false;
-    } else if (parses.size() > 1) {
-      analyzeParseFailure(example.getSyntacticParse(), chart, syntaxVarType, "Parse duplication", 2);
-      System.out.println("Duplicate correct parse: " + example.getSyntacticParse());
-    }
-    return true;
-  }
-
-  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart,
-      DiscreteVariable syntaxVarType, String errorMessage, int failureNum) {
-    boolean foundFailurePoint = false;
-    if (!tree.isTerminal()) {
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart,
-          syntaxVarType, errorMessage, failureNum);
-      foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getRight(), chart,
-          syntaxVarType, errorMessage, failureNum);
-    }
-
-    if (foundFailurePoint) {
-      return true;
-    } else {
-      int spanStart = tree.getSpanStart();
-      int spanEnd = tree.getSpanEnd();
-
-      int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
-      if (numChartEntries == failureNum) {
-        if (tree.isTerminal()) {
-          System.out.println(errorMessage + " terminal: " + tree.getWords() + " -> " +
-              tree.getRootSyntax() + " headed: " + tree.getHeadedSyntacticCategory());
-        } else {
-          System.out.println(errorMessage + " nonterminal: " + tree.getLeft().getRootSyntax() + " "
-              + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());
-          StringBuilder sb = new StringBuilder();
-          sb.append("left entries: ");
-          ChartEntry[] leftEntries = chart.getChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd());
-          int numLeftEntries = chart.getNumChartEntriesForSpan(tree.getLeft().getSpanStart(), tree.getLeft().getSpanEnd());
-          for (int i = 0; i < numLeftEntries; i++) {
-            sb.append(syntaxVarType.getValue(leftEntries[i].getHeadedSyntax()));
-            sb.append(" ");
-          }
-          System.out.println(sb.toString());
-          sb = new StringBuilder();
-          sb.append("right entries: ");
-          ChartEntry[] rightEntries = chart.getChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd());
-          int numRightEntries = chart.getNumChartEntriesForSpan(tree.getRight().getSpanStart(), tree.getRight().getSpanEnd());
-          for (int i = 0; i < numRightEntries; i++) {
-            sb.append(syntaxVarType.getValue(rightEntries[i].getHeadedSyntax()));
-            sb.append(" ");
-          }
-          System.out.println(sb.toString());
-        }
-        return true;
-      } else {
-        return false;
-      }
-    }
   }
 
   public DiscreteVariable getSyntaxVarType() {

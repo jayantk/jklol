@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.CcgParserUtils;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.CcgRuleSchema;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
@@ -124,8 +125,8 @@ public class TrainCcg extends AbstractCli {
     System.out.println(parser.getSyntaxDistribution().getParameterDescription());
 
     Multimap<SyntacticCategory, HeadedSyntacticCategory> syntaxMultimap = parser.getSyntacticCategoryMap();
-    List<CcgExample> trainingExamples = parser.filterExampleCollection(unfilteredTrainingExamples,
-        !options.has(discardInvalid), syntaxMultimap);
+    List<CcgExample> trainingExamples = CcgParserUtils.filterExampleCollection(parser, 
+        unfilteredTrainingExamples, !options.has(discardInvalid), syntaxMultimap);
     System.out.println(trainingExamples.size() + " training examples.");
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");

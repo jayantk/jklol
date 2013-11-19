@@ -14,7 +14,7 @@ public class SupertaggedSentence extends ListMultitaggedSequence<WordAndPos, Hea
       List<List<Double>> labelProbabilities) {
     super(items, labels, labelProbabilities);
   }
-  
+
   /**
    * Creates a supertagged sentence where the supertags for each word
    * are unobserved. Using this sentence during CCG parsing allows any
@@ -29,7 +29,7 @@ public class SupertaggedSentence extends ListMultitaggedSequence<WordAndPos, Hea
         Collections.nCopies(words.size(), Collections.<HeadedSyntacticCategory>emptyList()),
         Collections.nCopies(words.size(), Collections.<Double>emptyList()));
   }
-  
+
   /**
    * Returns a copy of {@code this} with the supertags and their probabilities
    * replaced by the given values.

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cli;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -138,7 +139,11 @@ public class TrainCcg extends AbstractCli {
       family = applyFeatureCountThreshold(family, trainingExamples, options.valueOf(featureCountThreshold)); 
     }
 
-    // train the model.
+    if (options.has(logParametersDir)) {
+      IoUtils.serializeObjectToFile(family, options.valueOf(logParametersDir) + File.pathSeparator + "family.ser");
+    }
+
+    // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
     if (options.has(perceptron)) {
       CcgInference inferenceAlgorithm = null;

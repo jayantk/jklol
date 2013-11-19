@@ -126,6 +126,11 @@ public class FactoredTensor extends AbstractTensor {
   public Tensor softThreshold(double threshold) {
     throw new UnsupportedOperationException("Not implemented.");
   }
+  
+  @Override
+  public Tensor getEntriesLargerThan(double threshold) {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
 
   @Override
   public Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {

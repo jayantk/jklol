@@ -186,6 +186,13 @@ public class TrainCcg extends AbstractCli {
     System.out.println("Done supertagging.");
     return newExamples;
   }
+  
+  private static ParametricCcgParser applyFeatureCountThreshold(ParametricCcgParser family,
+      List<CcgExample> examples) {
+    SufficientStatistics featureCounts = CcgParserUtils.getFeatureCounts(family, examples);
+    
+    featureCounts.
+  }
 
   private static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {
     Map<SyntacticCategory, HeadedSyntacticCategory> catMap = Maps.newHashMap();

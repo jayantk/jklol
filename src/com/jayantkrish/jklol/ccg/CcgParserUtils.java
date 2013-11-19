@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 /**
  * Utility functions for CCG parsers.
@@ -117,6 +118,11 @@ public class CcgParserUtils {
         return false;
       }
     }
+  }
+
+  public static <T extends CcgExample> SufficientStatistics getFeatureCounts(
+      ParametricCcgParser family, Iterable<T> examples) {
+
   }
 
   private CcgParserUtils() {

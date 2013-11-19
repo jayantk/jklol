@@ -121,9 +121,16 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
-  public void softThreshold(double regularizer) {
+  public void softThreshold(double threshold) {
     for (int i = 0; i < statistics.size(); i++) {
-      statistics.get(i).softThreshold(regularizer);
+      statistics.get(i).softThreshold(threshold);
+    }
+  }
+  
+  @Override
+  public void findEntriesLargerThan(double threshold) {
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).findEntriesLargerThan(threshold);
     }
   }
   
@@ -149,7 +156,7 @@ public class ListSufficientStatistics implements SufficientStatistics {
     }
     return value;
   }
-  
+
   @Override
   public double getL2Norm() {
     double norm = 0.0;

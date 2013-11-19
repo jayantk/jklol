@@ -227,6 +227,16 @@ public abstract class TensorBuilderTest extends TestCase {
     assertEquals(0.0, builder.getByDimKey(KEY4));
   }
   
+  public void testFindEntriesLargerThan() {
+    builder.put(KEY0, -1.0);
+    builder.findEntriesLargerThan(2.0);
+
+    assertEquals(0.0, builder.getByDimKey(KEY0));
+    assertEquals(0.0, builder.getByDimKey(KEY1));
+    assertEquals(1.0, builder.getByDimKey(KEY2));
+    assertEquals(0.0, builder.getByDimKey(KEY3));
+  }
+
   public void testInnerProduct() {
     for (int i = 0; i < otherBuilders.size(); i++) {
       assertEquals(3.0, builder.innerProduct(otherBuilders.get(i)));

@@ -233,6 +233,16 @@ public interface Tensor extends TensorBase, Serializable {
   Tensor softThreshold(double threshold);
 
   /**
+   * Gets an indicator tensor for keys in this whose value is
+   * {@code >= threshold}. The returned tensor has value 1 for each
+   * such key, and 0 for all other keys.
+   *
+   * @param threshold
+   * @return
+   */
+  Tensor getEntriesLargerThan(double threshold);
+
+  /**
    * Applies {@code op} to the value of each key in {@code this},
    * including keys with zero values.
    * 

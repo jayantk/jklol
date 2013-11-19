@@ -613,6 +613,15 @@ public abstract class TensorTest extends TestCase {
     assertEquals(3.0, actual.getByDimKey(3, 4, 3));
   }
   
+  public void testGetEntriesLargerThan() {
+    Tensor actual = table.getEntriesLargerThan(5.0);
+    assertEquals(0.0, actual.getByDimKey(0, 0, 0));
+    assertEquals(0.0, actual.getByDimKey(0, 0, 3));
+    assertEquals(1.0, actual.getByDimKey(1, 0, 3));
+    assertEquals(0.0, actual.getByDimKey(1, 3, 0));
+    assertEquals(1.0, actual.getByDimKey(3, 4, 3));
+  }
+
   public void testReduceDimensionsNone() {
     runReduceTest(table, Sets.<Integer>newHashSet());
   }

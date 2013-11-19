@@ -144,6 +144,15 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   }
 
   @Override
+  public void findEntriesLargerThan(double threshold) {
+    for (int i = 0; i < statistics.size(); i++) {
+      if (statistics.get(i) != null) {
+        statistics.get(i).findEntriesLargerThan(threshold);
+      }
+    }
+  }
+
+  @Override
   public SufficientStatistics duplicate() {
     List<SufficientStatistics> newStatistics = Lists.newArrayList();
     for (SufficientStatistics statistic : statistics) {

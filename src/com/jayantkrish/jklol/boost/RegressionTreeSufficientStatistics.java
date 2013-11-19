@@ -58,6 +58,11 @@ public class RegressionTreeSufficientStatistics implements SufficientStatistics 
   }
 
   @Override
+  public void findEntriesLargerThan(double threshold) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public SufficientStatistics duplicate() {
     return new RegressionTreeSufficientStatistics(Arrays.copyOf(trees, trees.length));
   }

@@ -748,6 +748,29 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         newKeyNums, newValues, curIndex);
   }
 
+  @Override
+  public SparseTensor getEntriesLargerThan(double threshold) {
+    Preconditions.checkArgument(threshold > 0);
+    double[] newValues = new double[values.length];
+    long[] newKeyNums = new long[values.length];
+
+    int curIndex = 0;
+    int length = values.length;
+    for (int i = 0; i < length; i++) {
+      if (values[i] >= threshold) {
+        newKeyNums[curIndex] = keyNums[i];
+        newValues[curIndex] = 1.0;
+        curIndex++;
+      }
+    }
+
+    int[] dimensionNums = getDimensionNumbers();
+    int[] dimensionSizes = getDimensionSizes();
+    return resizeIntoTable(ArrayUtils.copyOf(dimensionNums, dimensionNums.length),
+        ArrayUtils.copyOf(dimensionSizes, dimensionSizes.length),
+        newKeyNums, newValues, curIndex);
+  }
+
   /**
    * Sparsely computes e to the power of each element in this tensor.
    * For keys which are present in this {@code SparseTensor}, this

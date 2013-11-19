@@ -383,6 +383,13 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
 
   @Override
+  public DenseTensor getEntriesLargerThan(double threshold) {
+    DenseTensorBuilder builder = DenseTensorBuilder.copyOf(this);
+    builder.findEntriesLargerThan(threshold);
+    return builder.build();
+  }
+
+  @Override
   public DenseTensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
     return reduceDimensions(dimensionsToEliminate, true, null);
   }

@@ -252,6 +252,17 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       }
     }
   }
+  
+  @Override
+  public void findEntriesLargerThan(double threshold) {
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] >= threshold) {
+        values[i] = 1.0;
+      } else {
+        values[i] = 0.0;
+      }
+    }
+  }
 
   /**
    * Sets each {@code key} in {@code this} to the elementwise maximum of

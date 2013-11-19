@@ -155,6 +155,11 @@ public class AppendOnlySparseTensorBuilder extends AbstractTensorBase implements
   }
 
   @Override
+  public void findEntriesLargerThan(double threshold) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public double innerProduct(TensorBase other) {
     throw new UnsupportedOperationException();
   }

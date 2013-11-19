@@ -263,6 +263,15 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   }
 
   @Override
+  public void findEntriesLargerThan(double threshold) {
+    if (isDense) {
+      statistics.findEntriesLargerThan(threshold);
+    } else {
+      statisticsTensor = statisticsTensor.getEntriesLargerThan(threshold);
+    }
+  }
+
+  @Override
   public void perturb(double stddev) {
     if (!isDense) {
       // Make the representation dense, since the random perturbation is dense.

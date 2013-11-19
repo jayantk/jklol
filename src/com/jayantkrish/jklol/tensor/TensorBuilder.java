@@ -60,6 +60,15 @@ public interface TensorBuilder extends TensorBase, Serializable {
   void softThreshold(double threshold);
 
   /**
+   * Finds keys in this whose value is {@code >= threshold}. The value of each
+   * such key is set to 1, and the value for all other keys is set to 0.
+   *
+   * @param threshold
+   * @return
+   */
+  void findEntriesLargerThan(double threshold);
+
+  /**
    * Gets the sum of the elementwise product of {@code this} and {@code other}.
    * Requires {@code this} and {@code other} to have identical dimension numbers
    * and sizes.

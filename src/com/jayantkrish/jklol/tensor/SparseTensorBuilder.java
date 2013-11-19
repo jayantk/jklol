@@ -294,7 +294,20 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
       outcomes.put(keyNum, value);
     }
   }
-  
+
+  @Override
+  public void findEntriesLargerThan(double threshold) {
+    for (long keyNum : outcomes.keySet()) {
+      double value = outcomes.get(keyNum);
+      if (value >= threshold) {
+        value = 1.0;
+      } else {
+        value = 0.0;
+      }
+      outcomes.put(keyNum, value);
+    }
+  }
+
   @Override
   public void exp() {
     for (long keyNum = 0; keyNum < getMaxKeyNum(); keyNum++) {

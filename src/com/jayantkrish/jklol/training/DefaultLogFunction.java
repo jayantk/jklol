@@ -103,7 +103,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	@Override
 	public void logParameters(int iteration, SufficientStatistics parameters) {
 	  if (modelSerializationInterval > 0 && iteration % modelSerializationInterval == 0) {
-	    String parametersFilename = modelSerializationDir + File.pathSeparator + "parameters_"
+	    String parametersFilename = modelSerializationDir + File.separator + "parameters_"
 	        + iteration + ".ser";
 	    IoUtils.serializeObjectToFile(parameters, parametersFilename);
 	  }

@@ -138,7 +138,7 @@ public class TrainCcg extends AbstractCli {
     }
 
     if (options.has(logParametersDir)) {
-      IoUtils.serializeObjectToFile(family, options.valueOf(logParametersDir) + File.pathSeparator + "family.ser");
+      IoUtils.serializeObjectToFile(family, options.valueOf(logParametersDir) + File.separator + "family.ser");
     }
 
     // Figure out what inference algorithm to use. Note that not

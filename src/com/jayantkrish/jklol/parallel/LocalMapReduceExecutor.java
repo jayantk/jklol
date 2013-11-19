@@ -10,8 +10,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.parallel.Reducers.FilterReducer;
 
 /**
  * A parallelized, single-machine implementation of map-reduce pipelines. This
@@ -23,7 +25,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
 
   private final int batchesPerThread;
   private final int numThreads;
-  
+
   /**
    * Constructs an executor that processes batches of items using a fixed number
    * of local threads. {@code numThreads} threads are created, and items are
@@ -111,6 +113,11 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
       executor.shutdownNow();
     }
     return results;
+  }
+  
+  @Override
+  public <A> List<A> filter(List<A> items, Predicate<A> predicate) {
+    return mapReduce(items, Mappers.<A>identity(), new FilterReducer<A>(predicate));
   }
 
   private ExecutorService getExecutor() {

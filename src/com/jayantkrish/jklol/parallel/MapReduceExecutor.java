@@ -3,6 +3,8 @@ package com.jayantkrish.jklol.parallel;
 import java.util.Collection;
 import java.util.List;
 
+import com.google.common.base.Predicate;
+
 /**
  * {@code MapReduceExecutor} is a simple parallel computing interface
  * for performing embarrassingly parallel tasks. These tasks are
@@ -25,4 +27,14 @@ public interface MapReduceExecutor {
    * @return
    */
   public <A, B, C extends Mapper<A, B>> List<B> map(Collection<? extends A> items, C mapper);
+
+  /**
+   * Filters {@code items} using predicate. The returned list
+   * contains only items for which {@code predicate} returns true.
+   * 
+   * @param items
+   * @param predicate
+   * @return
+   */
+  public <A> List<A> filter(List<A> items, Predicate<A> predicate);
 }

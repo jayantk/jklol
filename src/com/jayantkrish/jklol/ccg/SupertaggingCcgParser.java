@@ -4,9 +4,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.chart.ChartFilter;
-import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.SumChartCost;
+import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
@@ -30,7 +30,7 @@ public class SupertaggingCcgParser {
     this.multitagThresholds = Arrays.copyOf(multitagThresholds, multitagThresholds.length);
   }
 
-  public CcgParseResult parse(List<String> terminals, List<String> posTags, ChartFilter inputFilter) {
+  public CcgParseResult parse(List<String> terminals, List<String> posTags, ChartCost inputFilter) {
     SupertaggedSentence supertaggedSentence = null;
     if (supertagger != null) {
       for (int i = 0; i < multitagThresholds.length; i++) {
@@ -40,8 +40,8 @@ public class SupertaggingCcgParser {
         List<WordAndPos> supertaggerInput = WordAndPos.createExample(terminals, posTags);
         supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThresholds[i]);
         
-        ChartFilter filter = ConjunctionChartFilter.create(inputFilter,
-            new SupertagChartFilter(supertaggedSentence.getLabels()));
+        ChartCost filter = SumChartCost.create(inputFilter,
+            new SupertagChartCost(supertaggedSentence.getLabels()));
 
         CcgParse parse = inference.getBestParse(parser, supertaggedSentence, filter, new NullLogFunction());
         if (parse != null) {

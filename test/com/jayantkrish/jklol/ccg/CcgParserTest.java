@@ -19,11 +19,11 @@ import com.google.common.io.NullOutputStream;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.chart.ChartFilter;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
+import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -881,7 +881,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testChartFilterApply() {
-    ChartFilter filter = new TestChartFilter();
+    ChartCost filter = new TestChartFilter();
     List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
         Collections.nCopies(6, DEFAULT_POS), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
 
@@ -896,7 +896,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testChartFilterApplyToTerminals() {
-    ChartFilter filter = new TestChartFilter();
+    ChartCost filter = new TestChartFilter();
     List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("berries", "in", "people", "houses"),
         Collections.nCopies(4, DEFAULT_POS), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
 
@@ -914,7 +914,7 @@ public class CcgParserTest extends TestCase {
     supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
     supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
 
-    ChartFilter supertagChartFilter = new SupertagChartFilter(supertags);
+    ChartCost supertagChartFilter = new SupertagChartCost(supertags);
 
     parses = parser.beamSearch(Arrays.asList("blue", "berries"),
         Collections.nCopies(2, DEFAULT_POS), 10,
@@ -1147,15 +1147,15 @@ public class CcgParserTest extends TestCase {
         headedRootPredicateVar, headedRootPosVar, rootDistribution, headedRootDistribution, allowWordSkipping, normalFormOnly);
   }
 
-  private static class TestChartFilter implements ChartFilter {
+  private static class TestChartFilter implements ChartCost {
 
     @Override
-    public boolean apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
+    public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
       if (spanStart == 3 && spanEnd == 5) {
         HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
-        return syntax.getSyntax().equals(SyntacticCategory.parseFrom("N\\N"));
+        return syntax.getSyntax().equals(SyntacticCategory.parseFrom("N\\N")) ? 0.0 : Double.NEGATIVE_INFINITY;
       }
-      return true;
+      return 0.0;
     }
 
     @Override

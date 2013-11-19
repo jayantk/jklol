@@ -31,7 +31,7 @@ import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
@@ -561,9 +561,9 @@ public class ParseCcg extends AbstractCli {
     @Override
     public CcgLoss map(CcgExample example) {
       CcgParseResult parse = null;
-      SyntacticChartFilter filter = null;
+      SyntacticChartCost filter = null;
       if (useCcgbankDerivation) {
-        filter = new SyntacticChartFilter(example.getSyntacticParse());
+        filter = new SyntacticChartCost(example.getSyntacticParse());
       }
       log.startTimer("parse_sentence");
       parse = parser.parse(example.getWords(), example.getPosTags(), filter);

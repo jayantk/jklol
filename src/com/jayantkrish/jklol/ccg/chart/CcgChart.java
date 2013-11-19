@@ -49,7 +49,7 @@ public interface CcgChart {
   
   public void setVerbDistances(int[] verbDistances);
 
-  public void setChartFilter(ChartFilter chartFilter);
+  public void setChartCost(ChartCost chartCost);
 
   /**
    * Gets the POS tag of each word being parsed encoded as an integer.

@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
  * 
  * @author jayantk
  */
-public class SyntacticChartFilter implements ChartFilter {
+public class SyntacticChartCost implements ChartCost {
 
   private final Map<Integer, SyntacticCategory> binaryRuleResult;
   private final Map<Integer, SyntacticCategory> leftUnaryRuleResult;
@@ -30,7 +30,7 @@ public class SyntacticChartFilter implements ChartFilter {
 
   private static final int SPAN_START_OFFSET = 100000;
 
-  public SyntacticChartFilter(CcgSyntaxTree syntacticParse) {
+  public SyntacticChartCost(CcgSyntaxTree syntacticParse) {
     this.binaryRuleResult = Maps.newHashMap();
     this.leftUnaryRuleResult = Maps.newHashMap();
     this.rightUnaryRuleResult = Maps.newHashMap();
@@ -63,40 +63,40 @@ public class SyntacticChartFilter implements ChartFilter {
   }
 
   @Override
-  public boolean apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
+  public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
     int mapIndex = (spanStart * SPAN_START_OFFSET) + spanEnd;
     if (!binaryRuleResult.containsKey(mapIndex)) {
-      return false;
+      return Double.NEGATIVE_INFINITY;
     }
 
     if (entry.getRootUnaryRule() != null) {
       Preconditions.checkState(spanStart == parse.getSpanStart() && spanEnd == parse.getSpanEnd());
       if (!isSyntaxCompatible(expectedPostUnaryRoot, entry.getHeadedSyntax(), syntaxVarType)) {
-        return false;
+        return Double.NEGATIVE_INFINITY;
       }
     } else {
       SyntacticCategory expectedRootSyntax = binaryRuleResult.get(mapIndex);
       if (!isSyntaxCompatible(expectedRootSyntax, entry.getHeadedSyntax(), syntaxVarType)) {
-        return false;
+        return Double.NEGATIVE_INFINITY;
       }
     }
 
     if (leftUnaryRuleResult.containsKey(mapIndex)) {
       SyntacticCategory expectedLeft = leftUnaryRuleResult.get(mapIndex);
       if (entry.getLeftUnaryRule() == null || !isSyntaxCompatible(expectedLeft, entry.getLeftUnaryRule().getSyntax(), syntaxVarType)) {
-        return false;
+        return Double.NEGATIVE_INFINITY;
       }
     } else if (entry.getLeftUnaryRule() != null) {
-      return false;
+      return Double.NEGATIVE_INFINITY;
     }
 
     if (rightUnaryRuleResult.containsKey(mapIndex)) {
       SyntacticCategory expectedRight = rightUnaryRuleResult.get(mapIndex);
       if (entry.getRightUnaryRule() == null || !isSyntaxCompatible(expectedRight, entry.getRightUnaryRule().getSyntax(), syntaxVarType)) {
-        return false;
+        return Double.NEGATIVE_INFINITY;
       }
     } else if (entry.getRightUnaryRule() != null) {
-      return false;
+      return Double.NEGATIVE_INFINITY;
     }
     
     if (spanStart == spanEnd) {
@@ -107,11 +107,11 @@ public class SyntacticChartFilter implements ChartFilter {
         HeadedSyntacticCategory actual =(HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
 
         if (!actual.equals(expectedHeadedSyntax)) {
-          return false;
+          return Double.NEGATIVE_INFINITY;
         }
       }
     }
-    return true;
+    return 0.0;
   }
 
   /**

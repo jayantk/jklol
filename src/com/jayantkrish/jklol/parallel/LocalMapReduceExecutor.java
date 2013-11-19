@@ -114,7 +114,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
     }
     return results;
   }
-  
+
   @Override
   public <A> List<A> filter(List<A> items, Predicate<A> predicate) {
     return mapReduce(items, Mappers.<A>identity(), new FilterReducer<A>(predicate));

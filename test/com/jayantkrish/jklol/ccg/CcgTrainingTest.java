@@ -8,7 +8,7 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.data.DataFormat;
@@ -131,7 +131,7 @@ public class CcgTrainingTest extends TestCase {
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
     CcgExample example = trainingExamplesSyntaxOnly.get(0);
     
-    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
+    SyntacticChartCost filter = new SyntacticChartCost(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10,
         filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
     
@@ -151,7 +151,7 @@ public class CcgTrainingTest extends TestCase {
       System.out.println(parse);
     }
 
-    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
+    SyntacticChartCost filter = new SyntacticChartCost(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(),
         10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
     

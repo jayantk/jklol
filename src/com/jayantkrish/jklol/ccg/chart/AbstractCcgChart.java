@@ -32,7 +32,7 @@ public abstract class AbstractCcgChart implements CcgChart {
   private int[] puncDistances;
   private int[] verbDistances;
 
-  protected ChartFilter entryFilter;
+  protected ChartCost entryFilter;
 
   // The parser weights which might be used in this sentence.
   // This is a subset of all parser weights, which is precomputed
@@ -110,7 +110,7 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
 
   @Override
-  public void setChartFilter(ChartFilter entryFilter) {
+  public void setChartCost(ChartCost entryFilter) {
     this.entryFilter = entryFilter;
   }
 

@@ -107,8 +107,11 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   @Override
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
+    if (entryFilter != null) {
+      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType));
+    }
 
-    if (probability != 0.0 && (entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType))) {
+    if (probability != 0.0) {
       long entryHashCode = entry.getSyntaxHeadHashCode();
 
       int hashTableEntry = ((int) entryHashCode) % NUM_INITIAL_SPAN_ENTRIES;

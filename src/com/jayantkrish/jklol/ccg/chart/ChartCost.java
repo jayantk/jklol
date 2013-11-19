@@ -8,11 +8,12 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
  * 
  * @author jayantk
  */
-public interface ChartFilter {
+public interface ChartCost {
 
   /**
-   * Returns {@code true} if {@code entry} is a valid chart entry
-   * for the indicated span. If this method returns {@code false},
+   * Returns a cost for {@code entry} being added to the chart
+   * at the indicated span. The cost is a log probability or linear cost.
+   * If this method returns {@code Double.NEGATIVE_INFINITY},
    * the given entry will be discarded (i.e., not included in the
    * search).
    * 
@@ -22,7 +23,7 @@ public interface ChartFilter {
    * @param syntaxVarType
    * @return
    */
-  public boolean apply(ChartEntry entry, int spanStart, int spanEnd,
+  public double apply(ChartEntry entry, int spanStart, int spanEnd,
       DiscreteVariable syntaxVarType);
 
   /**

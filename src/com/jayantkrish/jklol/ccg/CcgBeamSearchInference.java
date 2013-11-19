@@ -3,11 +3,11 @@ package com.jayantkrish.jklol.ccg;
 import java.util.List;
 import java.util.Set;
 
-import com.jayantkrish.jklol.ccg.chart.ChartFilter;
-import com.jayantkrish.jklol.ccg.chart.ConjunctionChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.SumChartCost;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
+import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
@@ -15,7 +15,7 @@ public class CcgBeamSearchInference implements CcgInference {
 
   // Optional constraint to use during inference. Null if
   // no constraints are imposed on the search.
-  private final ChartFilter searchFilter;
+  private final ChartCost searchFilter;
 
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
@@ -29,7 +29,7 @@ public class CcgBeamSearchInference implements CcgInference {
   // Whether to print out information about correct parses, etc.
   private final boolean verbose;
   
-  public CcgBeamSearchInference(ChartFilter searchFilter, int beamSize, long maxParseTimeMillis,
+  public CcgBeamSearchInference(ChartCost searchFilter, int beamSize, long maxParseTimeMillis,
       int maxChartSize, boolean verbose) {
     this.searchFilter = searchFilter;
     this.beamSize = beamSize;
@@ -41,9 +41,9 @@ public class CcgBeamSearchInference implements CcgInference {
 
   @Override
   public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
-      ChartFilter chartFilter, LogFunction log) {
-    ChartFilter filter = ConjunctionChartFilter.create(searchFilter, chartFilter,
-        new SupertagChartFilter(sentence.getSupertags()));
+      ChartCost chartFilter, LogFunction log) {
+    ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
+        new SupertagChartCost(sentence.getSupertags()));
 
     List<CcgParse> parses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(),
         beamSize, filter, log, maxParseTimeMillis, maxChartSize);
@@ -56,18 +56,18 @@ public class CcgBeamSearchInference implements CcgInference {
 
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
-      ChartFilter chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
+      ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
       Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
 
     List<CcgParse> possibleParses = null; 
     if (observedSyntacticTree != null) {
-      ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(new SyntacticChartFilter(observedSyntacticTree),
-          new SupertagChartFilter(sentence.getSupertags()), searchFilter);
+      ChartCost conditionalChartFilter = SumChartCost.create(new SyntacticChartCost(observedSyntacticTree),
+          new SupertagChartCost(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
           conditionalChartFilter, log, -1, maxChartSize);
     } else {
-      ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
-          new SupertagChartFilter(sentence.getSupertags()), searchFilter);
+      ChartCost conditionalChartFilter = SumChartCost.create(
+          new SupertagChartCost(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
           conditionalChartFilter, log, -1, maxChartSize);
     }

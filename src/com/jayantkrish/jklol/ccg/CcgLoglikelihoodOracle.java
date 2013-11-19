@@ -6,8 +6,8 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.chart.ChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -61,7 +61,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Condition parses on provided syntactic information, if any is provided.
     List<CcgParse> possibleParses = null;
     if (example.hasSyntacticParse()) {
-      ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
+      ChartCost conditionalChartFilter = new SyntacticChartCost(example.getSyntacticParse());
       possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
         conditionalChartFilter, log, -1, Integer.MAX_VALUE);
     } else {

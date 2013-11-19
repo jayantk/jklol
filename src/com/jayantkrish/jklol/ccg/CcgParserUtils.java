@@ -8,7 +8,7 @@ import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.chart.CcgBeamSearchChart;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
@@ -59,7 +59,7 @@ public class CcgParserUtils {
   public static boolean isPossibleExample(CcgParser parser, CcgExample example) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(),
         Integer.MAX_VALUE, 100);
-    SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
+    SyntacticChartCost filter = new SyntacticChartCost(example.getSyntacticParse());
     parser.parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
     List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, parser);
     if (parses.size() == 0) {

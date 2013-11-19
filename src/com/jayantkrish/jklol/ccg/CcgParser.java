@@ -24,7 +24,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgBeamSearchChart;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.chart.ChartFilter;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -1120,7 +1120,7 @@ public class CcgParser implements Serializable {
    * @return
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
-      ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis, int maxChartSize) {
+      ChartCost beamFilter, LogFunction log, long maxParseTimeMillis, int maxChartSize) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, maxChartSize, beamSize);
     parseCommon(chart, terminals, posTags, beamFilter, log, maxParseTimeMillis);
 
@@ -1133,7 +1133,7 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public CcgParse parse(List<String> terminals, List<String> posTags, ChartFilter beamFilter,
+  public CcgParse parse(List<String> terminals, List<String> posTags, ChartCost beamFilter,
       LogFunction log, long maxParseTimeMillis, int maxChartSize) {
     CcgExactHashTableChart chart = new CcgExactHashTableChart(terminals, posTags,
         maxChartSize);
@@ -1148,7 +1148,7 @@ public class CcgParser implements Serializable {
   }
 
   public void parseCommon(CcgChart chart, List<String> terminals, List<String> posTags,
-      ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
+      ChartCost beamFilter, LogFunction log, long maxParseTimeMillis) {
     if (log == null) {
       log = new NullLogFunction();
     }
@@ -1174,7 +1174,7 @@ public class CcgParser implements Serializable {
   }
 
   private void initializeChart(CcgChart chart, List<String> terminals, List<String> posTags,
-      ChartFilter chartFilter) {
+      ChartCost chartFilter) {
     int numWords = terminals.size();
     int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
     int[] verbCounts = computeDistanceCounts(posTags, verbTagSet);
@@ -1194,7 +1194,7 @@ public class CcgParser implements Serializable {
     chart.setWordDistances(wordDistances);
     chart.setPuncDistances(puncDistances);
     chart.setVerbDistances(verbDistances);
-    chart.setChartFilter(chartFilter);
+    chart.setChartCost(chartFilter);
 
     chart.setAssignmentVarIndexAccumulator(new int[MAX_CHART_VAR_INDEX]);
     chart.setAssignmentAccumulator(new long[MAX_CHART_ASSIGNMENTS]);

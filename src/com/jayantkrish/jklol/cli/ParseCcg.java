@@ -563,7 +563,7 @@ public class ParseCcg extends AbstractCli {
       CcgParseResult parse = null;
       SyntacticChartCost filter = null;
       if (useCcgbankDerivation) {
-        filter = new SyntacticChartCost(example.getSyntacticParse());
+        filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
       }
       log.startTimer("parse_sentence");
       parse = parser.parse(example.getWords(), example.getPosTags(), filter);

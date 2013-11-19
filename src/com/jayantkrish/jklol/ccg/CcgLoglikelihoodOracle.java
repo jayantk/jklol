@@ -61,7 +61,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Condition parses on provided syntactic information, if any is provided.
     List<CcgParse> possibleParses = null;
     if (example.hasSyntacticParse()) {
-      ChartCost conditionalChartFilter = new SyntacticChartCost(example.getSyntacticParse());
+      ChartCost conditionalChartFilter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
       possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
         conditionalChartFilter, log, -1, Integer.MAX_VALUE);
     } else {

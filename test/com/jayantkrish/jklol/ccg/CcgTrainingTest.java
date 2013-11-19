@@ -131,7 +131,7 @@ public class CcgTrainingTest extends TestCase {
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
     CcgExample example = trainingExamplesSyntaxOnly.get(0);
     
-    SyntacticChartCost filter = new SyntacticChartCost(example.getSyntacticParse());
+    SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10,
         filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
     
@@ -151,10 +151,10 @@ public class CcgTrainingTest extends TestCase {
       System.out.println(parse);
     }
 
-    SyntacticChartCost filter = new SyntacticChartCost(example.getSyntacticParse());
+    SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(),
         10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
-    
+
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
     }

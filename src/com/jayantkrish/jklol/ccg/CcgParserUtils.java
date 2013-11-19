@@ -59,7 +59,7 @@ public class CcgParserUtils {
   public static boolean isPossibleExample(CcgParser parser, CcgExample example) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(),
         Integer.MAX_VALUE, 100);
-    SyntacticChartCost filter = new SyntacticChartCost(example.getSyntacticParse());
+    SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     parser.parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
     List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, parser);
     if (parses.size() == 0) {

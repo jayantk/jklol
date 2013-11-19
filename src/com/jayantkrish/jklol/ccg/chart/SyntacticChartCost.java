@@ -11,10 +11,11 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 
 /**
- * Filters chart entries to agree with a given syntactic tree. This
- * filter effectively conditions on the given syntactic structure, and
- * restricts the CCG parsing beam search to those parses which respect
- * the given syntax.
+ * A cost derived from a given syntactic CCG parse tree. Entries in
+ * the parse chart which also occur in the given parse are given one
+ * cost, and entries that disagree are given a different cost. This
+ * cost can be used to force the parser to agree with a given
+ * syntactic tree, or also to encode a max-margin cost.
  * 
  * @author jayantk
  */
@@ -27,10 +28,13 @@ public class SyntacticChartCost implements ChartCost {
 
   private final CcgSyntaxTree parse;
   private final List<HeadedSyntacticCategory> headedTerminals;
+  
+  private final double agreeCost;
+  private final double disagreeCost;
 
   private static final int SPAN_START_OFFSET = 100000;
 
-  public SyntacticChartCost(CcgSyntaxTree syntacticParse) {
+  public SyntacticChartCost(CcgSyntaxTree syntacticParse, double agreeCost, double disagreeCost) {
     this.binaryRuleResult = Maps.newHashMap();
     this.leftUnaryRuleResult = Maps.newHashMap();
     this.rightUnaryRuleResult = Maps.newHashMap();
@@ -38,8 +42,19 @@ public class SyntacticChartCost implements ChartCost {
 
     this.parse = syntacticParse;
     this.headedTerminals = syntacticParse.getAllSpannedHeadedSyntacticCategories();
+    
+    this.agreeCost = agreeCost;
+    this.disagreeCost = disagreeCost;
 
     populateRuleMaps(syntacticParse);
+  }
+
+  public static SyntacticChartCost createAgreementCost(CcgSyntaxTree syntacticParse) {
+    return new SyntacticChartCost(syntacticParse, 0.0, Double.NEGATIVE_INFINITY);
+  }
+
+  public static SyntacticChartCost createMaxMarginCost(CcgSyntaxTree syntacticParse) {
+    return new SyntacticChartCost(syntacticParse, 0.0, 1.0);
   }
 
   private void populateRuleMaps(CcgSyntaxTree parse) {
@@ -66,52 +81,52 @@ public class SyntacticChartCost implements ChartCost {
   public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
     int mapIndex = (spanStart * SPAN_START_OFFSET) + spanEnd;
     if (!binaryRuleResult.containsKey(mapIndex)) {
-      return Double.NEGATIVE_INFINITY;
+      return disagreeCost;
     }
 
     if (entry.getRootUnaryRule() != null) {
       Preconditions.checkState(spanStart == parse.getSpanStart() && spanEnd == parse.getSpanEnd());
       if (!isSyntaxCompatible(expectedPostUnaryRoot, entry.getHeadedSyntax(), syntaxVarType)) {
-        return Double.NEGATIVE_INFINITY;
+        return disagreeCost;
       }
     } else {
       SyntacticCategory expectedRootSyntax = binaryRuleResult.get(mapIndex);
       if (!isSyntaxCompatible(expectedRootSyntax, entry.getHeadedSyntax(), syntaxVarType)) {
-        return Double.NEGATIVE_INFINITY;
+        return disagreeCost;
       }
     }
 
     if (leftUnaryRuleResult.containsKey(mapIndex)) {
       SyntacticCategory expectedLeft = leftUnaryRuleResult.get(mapIndex);
       if (entry.getLeftUnaryRule() == null || !isSyntaxCompatible(expectedLeft, entry.getLeftUnaryRule().getSyntax(), syntaxVarType)) {
-        return Double.NEGATIVE_INFINITY;
+        return disagreeCost;
       }
     } else if (entry.getLeftUnaryRule() != null) {
-      return Double.NEGATIVE_INFINITY;
+      return disagreeCost;
     }
 
     if (rightUnaryRuleResult.containsKey(mapIndex)) {
       SyntacticCategory expectedRight = rightUnaryRuleResult.get(mapIndex);
       if (entry.getRightUnaryRule() == null || !isSyntaxCompatible(expectedRight, entry.getRightUnaryRule().getSyntax(), syntaxVarType)) {
-        return Double.NEGATIVE_INFINITY;
+        return disagreeCost;
       }
     } else if (entry.getRightUnaryRule() != null) {
-      return Double.NEGATIVE_INFINITY;
+      return disagreeCost;
     }
-    
+
     if (spanStart == spanEnd) {
       // Terminals may have a specified headed syntactic
       // category in the parse tree.
       HeadedSyntacticCategory expectedHeadedSyntax = headedTerminals.get(spanStart);
       if (expectedHeadedSyntax != null) {
-        HeadedSyntacticCategory actual =(HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
+        HeadedSyntacticCategory actual = (HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
 
         if (!actual.equals(expectedHeadedSyntax)) {
-          return Double.NEGATIVE_INFINITY;
+          return disagreeCost;
         }
       }
     }
-    return 0.0;
+    return agreeCost;
   }
 
   /**

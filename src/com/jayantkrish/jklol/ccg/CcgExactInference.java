@@ -48,7 +48,7 @@ public class CcgExactInference implements CcgInference {
     CcgParse bestParse = null; 
     if (observedSyntacticTree != null) {
       ChartCost conditionalChartFilter = SumChartCost.create(
-          new SyntacticChartCost(observedSyntacticTree), searchFilter,
+          SyntacticChartCost.createAgreementCost(observedSyntacticTree), searchFilter,
           new SupertagChartCost(sentence.getSupertags()));
       bestParse = parser.parse(sentence.getWords(), sentence.getPosTags(), 
           conditionalChartFilter, log, maxParseTimeMillis, maxChartSize);

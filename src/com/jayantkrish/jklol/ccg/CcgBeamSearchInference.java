@@ -61,7 +61,7 @@ public class CcgBeamSearchInference implements CcgInference {
 
     List<CcgParse> possibleParses = null; 
     if (observedSyntacticTree != null) {
-      ChartCost conditionalChartFilter = SumChartCost.create(new SyntacticChartCost(observedSyntacticTree),
+      ChartCost conditionalChartFilter = SumChartCost.create(SyntacticChartCost.createAgreementCost(observedSyntacticTree),
           new SupertagChartCost(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
           conditionalChartFilter, log, -1, maxChartSize);

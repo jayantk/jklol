@@ -1,16 +1,22 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.Collection;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
+import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.chart.CcgBeamSearchChart;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mappers;
+import com.jayantkrish.jklol.parallel.Reducer;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 
 /**
  * Utility functions for CCG parsers.
@@ -21,27 +27,24 @@ public class CcgParserUtils {
 
   /**
    * Checks whether each example in {@code examples} can be produced
-   * by this parser. If {@code errorOnInvalidExample = true}, then
-   * this method throws an error if an invalid example is encountered.
-   * Otherwise, invalid examples are simply filtered out of the
-   * returned examples.
+   * by this parser. Invalid examples are filtered out of the returned
+   * examples.
    * 
+   * @param parser
    * @param examples
-   * @param errorOnInvalidExample
    * @return
    */
-  public static <T extends CcgExample> List<T> filterExampleCollection(CcgParser parser, Iterable<T> examples,
-      boolean errorOnInvalidExample, Multimap<SyntacticCategory, HeadedSyntacticCategory> syntacticCategoryMap) {
-    List<T> filteredExamples = Lists.newArrayList();
-    for (T example : examples) {
-      // isPossibleExample(example, syntacticCategoryMap)
-      if (isPossibleExample(parser, example)) {
-        filteredExamples.add(example);
-      } else {
-        Preconditions.checkState(!errorOnInvalidExample, "Invalid example: %s", example);
-        System.out.println("Discarding example: " + example);
+  public static <T extends CcgExample> List<T> filterExampleCollection(final CcgParser parser,
+      List<T> examples) {
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+
+    List<T> filteredExamples = executor.filter(examples, new Predicate<T>() {
+      @Override
+      public boolean apply(T example) {
+        return isPossibleExample(parser, example);
       }
-    }
+    });
+
     return filteredExamples;
   }
 
@@ -54,7 +57,6 @@ public class CcgParserUtils {
    * @return
    */
   public static boolean isPossibleExample(CcgParser parser, CcgExample example) {
-    // CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
     CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(),
         100, Integer.MAX_VALUE);
     SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
@@ -63,6 +65,7 @@ public class CcgParserUtils {
     if (parses.size() == 0) {
       // Provide a deeper analysis of why parsing failed.
       analyzeParseFailure(example.getSyntacticParse(), chart, parser.getSyntaxVarType(), "Parse failure", 0);
+      System.out.println("Discarding example: " + example);
       return false;
     } else if (parses.size() > 1) {
       analyzeParseFailure(example.getSyntacticParse(), chart, parser.getSyntaxVarType(), "Parse duplication", 2);
@@ -122,23 +125,60 @@ public class CcgParserUtils {
   }
 
   public static <T extends CcgExample> SufficientStatistics getFeatureCounts(
-      ParametricCcgParser family, Iterable<T> examples) {
-    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
-    SufficientStatistics featureCounts = family.getNewSufficientStatistics();
-    for (CcgExample example : examples) {
-      CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(),
-          100, Integer.MAX_VALUE);
-      SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
-      parser.parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
-      List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, parser);
-      if (parses.size() > 0) {
-        family.incrementSufficientStatistics(featureCounts, parses.get(0), 1.0);
-      }
-    }
-    return featureCounts;
+      ParametricCcgParser family, Collection<T> examples) {
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+
+    CcgInference inference = new CcgExactInference(null, -1, Integer.MAX_VALUE);
+    Reducer<T, SufficientStatistics> reducer = new FeatureCountReducer<T>(family, inference);
+    return executor.mapReduce(examples, Mappers.<T>identity(), reducer);
   }
 
   private CcgParserUtils() {
     // Prevent instantiation.
+  }
+
+  /**
+   * Computes empirical feature counts of a CCG parser on a
+   * collection of training examples.
+   *  
+   * @author jayantk
+   * @param <T>
+   */
+  private static class FeatureCountReducer<T extends CcgExample> implements Reducer<T, SufficientStatistics> {
+    
+    private final ParametricCcgParser ccgFamily;
+    private final CcgParser parser;
+    private final CcgInference inference;
+    private final LogFunction log;
+    
+    public FeatureCountReducer(ParametricCcgParser ccgFamily, CcgInference inference) {
+      this.ccgFamily = Preconditions.checkNotNull(ccgFamily);
+      this.parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
+      this.inference = Preconditions.checkNotNull(inference);
+      this.log = new NullLogFunction();
+    }
+
+    @Override
+    public SufficientStatistics getInitialValue() {
+      return ccgFamily.getNewSufficientStatistics();
+    }
+
+    @Override
+    public SufficientStatistics reduce(CcgExample example, SufficientStatistics featureCounts) {
+      CcgParse bestParse = inference.getBestConditionalParse(parser, example.getSentence(), null,
+          log, example.getSyntacticParse(), example.getDependencies(), example.getLogicalForm());
+
+      if (bestParse != null) {
+        ccgFamily.incrementSufficientStatistics(featureCounts, bestParse, 1.0);
+      }
+      
+      return featureCounts;
+    }
+
+    @Override
+    public SufficientStatistics combine(SufficientStatistics other, SufficientStatistics accumulated) {
+      accumulated.increment(other, 1.0);
+      return accumulated;
+    }
   }
 }

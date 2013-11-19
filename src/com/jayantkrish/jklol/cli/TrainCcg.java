@@ -65,7 +65,6 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Integer> featureCountThreshold;
   private OptionSpec<Void> useCcgBankFormat;
   private OptionSpec<Void> perceptron;
-  private OptionSpec<Void> discardInvalid;
   private OptionSpec<Void> ignoreSemantics;
   private OptionSpec<Void> onlyObservedBinaryRules;
   private OptionSpec<Void> exactInference;
@@ -91,7 +90,6 @@ public class TrainCcg extends AbstractCli {
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
     featureCountThreshold = parser.accepts("featureCountThreshold").withRequiredArg().ofType(Integer.class);
     perceptron = parser.accepts("perceptron");
-    discardInvalid = parser.accepts("discardInvalid");
     ignoreSemantics = parser.accepts("ignoreSemantics");
     onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
     exactInference = parser.accepts("exactInference");
@@ -130,9 +128,8 @@ public class TrainCcg extends AbstractCli {
 
     System.out.println(parser.getSyntaxDistribution().getParameterDescription());
 
-    Multimap<SyntacticCategory, HeadedSyntacticCategory> syntaxMultimap = parser.getSyntacticCategoryMap();
     List<CcgExample> trainingExamples = CcgParserUtils.filterExampleCollection(parser, 
-        unfilteredTrainingExamples, !options.has(discardInvalid), syntaxMultimap);
+        unfilteredTrainingExamples);
     System.out.println(trainingExamples.size() + " training examples.");
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");

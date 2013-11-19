@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -46,29 +45,21 @@ public class CcgExactInference implements CcgInference {
       Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
     Preconditions.checkArgument(observedDependencies == null && observedLogicalForm == null);
 
-    List<CcgParse> possibleParses = null; 
+    CcgParse bestParse = null; 
     if (observedSyntacticTree != null) {
       ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
           new SyntacticChartFilter(observedSyntacticTree), searchFilter,
           new SupertagChartFilter(sentence.getSupertags()));
-      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), 100,
-          conditionalChartFilter, log, -1, maxChartSize);
+      bestParse = parser.parse(sentence.getWords(), sentence.getPosTags(), 
+          conditionalChartFilter, log, maxParseTimeMillis, maxChartSize);
     } else {
       ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
           new SupertagChartFilter(sentence.getSupertags()), searchFilter);
-      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), 100,
-          conditionalChartFilter, log, -1, maxChartSize);
+      bestParse = parser.parse(sentence.getWords(), sentence.getPosTags(), 
+          conditionalChartFilter, log, maxParseTimeMillis, maxChartSize);
     }
-
-    System.out.println("num correct: " + possibleParses.size());
-    for (CcgParse correctParse : possibleParses) {
-      System.out.println("correct: " + correctParse);
-    }
-
-    if (possibleParses.size() > 0) {
-      return possibleParses.get(0);
-    } else {
-      return null;
-    }
+    
+    // Note that bestParse may still be null, if parsing failed.
+    return bestParse;
   }
 }

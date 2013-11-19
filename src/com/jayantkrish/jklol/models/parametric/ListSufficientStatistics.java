@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.models.parametric;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -15,14 +14,14 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class ListSufficientStatistics implements SufficientStatistics {
 
-  private static final long serialVersionUID = -2707053902775908672L;
+  private static final long serialVersionUID = -2L;
 
   // Names for the statistics.
   private final IndexedList<String> names;
 
-  // Note that the statistics in the list are mutable, but elements
-  // cannot be added or removed from the list.
-  private final ImmutableList<SufficientStatistics> statistics;
+  // Note that the statistics in the list are mutable, but
+  // the size of the list cannot change.
+  private final List<SufficientStatistics> statistics;
 
   /**
    * Creates a collection of sufficient statistics containing all of the
@@ -36,7 +35,7 @@ public class ListSufficientStatistics implements SufficientStatistics {
     Preconditions.checkNotNull(statistics);
     Preconditions.checkArgument(names.size() == statistics.size());
     this.names = IndexedList.create(names);
-    this.statistics = ImmutableList.copyOf(statistics);
+    this.statistics = Lists.newArrayList(statistics);
   }
 
   /**

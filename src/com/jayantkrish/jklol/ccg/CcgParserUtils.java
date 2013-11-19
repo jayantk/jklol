@@ -122,7 +122,18 @@ public class CcgParserUtils {
 
   public static <T extends CcgExample> SufficientStatistics getFeatureCounts(
       ParametricCcgParser family, Iterable<T> examples) {
-
+    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    SufficientStatistics featureCounts = family.getNewSufficientStatistics();
+    for (CcgExample example : examples) {
+      CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(), 100);
+      SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
+      parser.parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
+      List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, parser);
+      if (parses.size() > 0) {
+        family.incrementSufficientStatistics(featureCounts, parses.get(0), 1.0);
+      }
+    }
+    return featureCounts;
   }
 
   private CcgParserUtils() {

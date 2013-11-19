@@ -34,6 +34,7 @@ import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.data.DataFormat;
+import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
@@ -59,6 +60,7 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Long> maxParseTimeMillis;
   private OptionSpec<String> supertagger;
   private OptionSpec<Double> multitagThreshold;
+  private OptionSpec<Integer> featureCountThreshold;
   private OptionSpec<Void> useCcgBankFormat;
   private OptionSpec<Void> perceptron;
   private OptionSpec<Void> discardInvalid;
@@ -84,6 +86,7 @@ public class TrainCcg extends AbstractCli {
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
+    featureCountThreshold = parser.accepts("featureCountThreshold").withRequiredArg().ofType(Integer.class);
     perceptron = parser.accepts("perceptron");
     discardInvalid = parser.accepts("discardInvalid");
     ignoreSemantics = parser.accepts("ignoreSemantics");
@@ -131,7 +134,11 @@ public class TrainCcg extends AbstractCli {
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");
 
-    // Train the model.
+    if (options.has(featureCountThreshold)) {
+      family = applyFeatureCountThreshold(family, trainingExamples, options.valueOf(featureCountThreshold)); 
+    }
+
+    // train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
     if (options.has(perceptron)) {
       CcgInference inferenceAlgorithm = null;
@@ -186,12 +193,24 @@ public class TrainCcg extends AbstractCli {
     System.out.println("Done supertagging.");
     return newExamples;
   }
-  
+
   private static ParametricCcgParser applyFeatureCountThreshold(ParametricCcgParser family,
-      List<CcgExample> examples) {
+      List<CcgExample> examples, double featureCountThreshold) {
+    System.out.println("Calculating feature counts...");
+    // Count the number of occurrences of each feature in the gold standard
+    // CCG parses, then find all of features which occur >= a threshold.
     SufficientStatistics featureCounts = CcgParserUtils.getFeatureCounts(family, examples);
-    
-    featureCounts.
+    featureCounts.findEntriesLargerThan(featureCountThreshold);
+
+    double numFeatures = featureCounts.getL2Norm();
+    numFeatures *= numFeatures;
+    System.out.println(numFeatures + " features with count >= " + featureCountThreshold);
+
+    ListSufficientStatistics featureCountsList = featureCounts.coerceToList();
+    int lexiconFeaturesIndex = featureCountsList.getStatisticNames().getIndex(ParametricCcgParser.LEXICON_PARAMETERS);
+    featureCounts.coerceToList().getStatistics().set(lexiconFeaturesIndex, null);
+
+    return family.rescaleFeatures(featureCounts);
   }
 
   private static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {

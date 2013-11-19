@@ -20,10 +20,14 @@ public class CcgExactInference implements CcgInference {
 
   // Maximum number of milliseconds to spend parsing a single sentence.
   private final long maxParseTimeMillis;
+  
+  // Maximum number of chart entries for a single sentence.
+  private final int maxChartSize;
 
-  public CcgExactInference(ChartFilter searchFilter, long maxParseTimeMillis) {
+  public CcgExactInference(ChartFilter searchFilter, long maxParseTimeMillis, int maxChartSize) {
     this.searchFilter = searchFilter;
     this.maxParseTimeMillis = maxParseTimeMillis;
+    this.maxChartSize = maxChartSize;
   }
 
   @Override
@@ -32,7 +36,8 @@ public class CcgExactInference implements CcgInference {
     ChartFilter filter = ConjunctionChartFilter.create(searchFilter, chartFilter,
         new SupertagChartFilter(sentence.getSupertags()));
 
-    return parser.parse(sentence.getWords(), sentence.getPosTags(), filter, log, maxParseTimeMillis);
+    return parser.parse(sentence.getWords(), sentence.getPosTags(), filter, log,
+        maxParseTimeMillis, maxChartSize);
   }
 
   @Override
@@ -47,12 +52,12 @@ public class CcgExactInference implements CcgInference {
           new SyntacticChartFilter(observedSyntacticTree), searchFilter,
           new SupertagChartFilter(sentence.getSupertags()));
       possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), 100,
-          conditionalChartFilter, log, -1);
+          conditionalChartFilter, log, -1, maxChartSize);
     } else {
       ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
           new SupertagChartFilter(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), 100,
-          conditionalChartFilter, log, -1);
+          conditionalChartFilter, log, -1, maxChartSize);
     }
 
     System.out.println("num correct: " + possibleParses.size());

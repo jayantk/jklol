@@ -811,11 +811,11 @@ public class CcgParserTest extends TestCase {
 
   public void testParseTimeout() {
     List<CcgParse> parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), -1);
+        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE);
     assertTrue(parses.size() > 0);
     
     parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), 1);
+        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE);
     assertEquals(0, parses.size());
   }
 
@@ -883,7 +883,7 @@ public class CcgParserTest extends TestCase {
   public void testChartFilterApply() {
     ChartFilter filter = new TestChartFilter();
     List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
-        Collections.nCopies(6, DEFAULT_POS), 10, filter, new NullLogFunction(), -1);
+        Collections.nCopies(6, DEFAULT_POS), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
 
     // The filter disallows the verb modifier syntactic category for
     // "in"
@@ -898,7 +898,7 @@ public class CcgParserTest extends TestCase {
   public void testChartFilterApplyToTerminals() {
     ChartFilter filter = new TestChartFilter();
     List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("berries", "in", "people", "houses"),
-        Collections.nCopies(4, DEFAULT_POS), 10, filter, new NullLogFunction(), -1);
+        Collections.nCopies(4, DEFAULT_POS), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
 
     for (CcgParse parse : parses) {
       assertNoNounCompound(parse);
@@ -918,7 +918,7 @@ public class CcgParserTest extends TestCase {
 
     parses = parser.beamSearch(Arrays.asList("blue", "berries"),
         Collections.nCopies(2, DEFAULT_POS), 10,
-        supertagChartFilter, new NullLogFunction(), -1);
+        supertagChartFilter, new NullLogFunction(), -1, Integer.MAX_VALUE);
     assertEquals(1, parses.size());
   }
 

@@ -63,7 +63,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     if (example.hasSyntacticParse()) {
       ChartFilter conditionalChartFilter = new SyntacticChartFilter(example.getSyntacticParse());
       possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
-        conditionalChartFilter, log, -1);
+        conditionalChartFilter, log, -1, Integer.MAX_VALUE);
     } else {
       possibleParses = Lists.newArrayList(parses);
     }

@@ -132,7 +132,8 @@ public class CcgTrainingTest extends TestCase {
     CcgExample example = trainingExamplesSyntaxOnly.get(0);
     
     SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
-    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction(), -1);
+    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10,
+        filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
     
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
@@ -151,7 +152,8 @@ public class CcgTrainingTest extends TestCase {
     }
 
     SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
-    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10, filter, new DefaultLogFunction(), -1);
+    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(),
+        10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
     
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
@@ -246,9 +248,9 @@ public class CcgTrainingTest extends TestCase {
   private CcgParser trainPerceptronParser(List<CcgExample> examples, boolean exactInference) {
     CcgInference inferenceAlg = null;
     if (exactInference) {
-      inferenceAlg = new CcgExactInference(null, -1);
+      inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE);
     } else {
-      inferenceAlg = new CcgBeamSearchInference(null, 100, -1, true);
+      inferenceAlg = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, true);
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1,

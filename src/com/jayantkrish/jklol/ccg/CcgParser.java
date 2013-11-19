@@ -82,7 +82,6 @@ public class CcgParser implements Serializable {
   private static final long VAR_NUM_MASK = ~(-1L << VAR_NUM_BITS);
 
   // Parameters for controlling the maximum sizes of the CCG chart
-  private static final int MAX_CCG_CHART_ENTRIES = 250000;
   private static final int MAX_CHART_ASSIGNMENTS = 100;
   private static final int MAX_CHART_DEPS = 100;
   private static final int MAX_CHART_VAR_INDEX = 100;
@@ -1088,7 +1087,7 @@ public class CcgParser implements Serializable {
    * @return {@code beamSize} best parses for {@code terminals}.
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize, LogFunction log) {
-    return beamSearch(terminals, posTags, beamSize, null, log, -1);
+    return beamSearch(terminals, posTags, beamSize, null, log, -1, Integer.MAX_VALUE);
   }
 
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize) {
@@ -1102,7 +1101,7 @@ public class CcgParser implements Serializable {
   
   public CcgParse parse(List<String> terminals) {
     List<String> posTags = Collections.nCopies(terminals.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    return parse(terminals, posTags, null, new NullLogFunction(), -1);
+    return parse(terminals, posTags, null, new NullLogFunction(), -1, Integer.MAX_VALUE);
   }
 
   /**
@@ -1116,11 +1115,13 @@ public class CcgParser implements Serializable {
    * @param maxParseTimeMillis (Approximate) maximum amount of time to
    * spend parsing. Returns an empty list of parses if the time limit
    * is exceeded. If negative, there is no time limit.
+   * @param maxChartSize maximum number of chart entries to create during
+   * parsing.
    * @return
    */
   public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
-      ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis) {
-    CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, beamSize);
+      ChartFilter beamFilter, LogFunction log, long maxParseTimeMillis, int maxChartSize) {
+    CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, maxChartSize, beamSize);
     parseCommon(chart, terminals, posTags, beamFilter, log, maxParseTimeMillis);
 
     if (chart.isFinishedParsing()) {
@@ -1133,8 +1134,9 @@ public class CcgParser implements Serializable {
   }
 
   public CcgParse parse(List<String> terminals, List<String> posTags, ChartFilter beamFilter,
-      LogFunction log, long maxParseTimeMillis) {
-    CcgExactHashTableChart chart = new CcgExactHashTableChart(terminals, posTags);
+      LogFunction log, long maxParseTimeMillis, int maxChartSize) {
+    CcgExactHashTableChart chart = new CcgExactHashTableChart(terminals, posTags,
+        maxChartSize);
     parseCommon(chart, terminals, posTags, beamFilter, log, maxParseTimeMillis);
 
     if (chart.isFinishedParsing()) {
@@ -1379,7 +1381,7 @@ public class CcgParser implements Serializable {
           }
         }
 
-        if (chart.getTotalNumChartEntries() > MAX_CCG_CHART_ENTRIES) {
+        if (chart.getTotalNumChartEntries() > chart.getMaxChartEntries()) {
           return false;
         }
         // System.out.println(spanStart + "." + spanEnd + " : " +

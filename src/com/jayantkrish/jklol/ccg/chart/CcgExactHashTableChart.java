@@ -28,8 +28,8 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
 
-  public CcgExactHashTableChart(List<String> terminals, List<String> posTags) {
-    super(terminals, posTags);
+  public CcgExactHashTableChart(List<String> terminals, List<String> posTags, int maxChartSize) {
+    super(terminals, posTags, maxChartSize);
     int numTerminals = terminals.size();
 
     this.chart = new ChartEntry[numTerminals][numTerminals][NUM_INITIAL_SPAN_ENTRIES];

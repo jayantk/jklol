@@ -54,6 +54,7 @@ public class ParseCcg extends AbstractCli {
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Integer> numParses;
   private OptionSpec<Long> maxParseTimeMillis;
+  private OptionSpec<Integer> maxChartSize;
   private OptionSpec<Void> atomic;
   private OptionSpec<Void> pos;
   private OptionSpec<Void> printLf;
@@ -81,6 +82,7 @@ public class ParseCcg extends AbstractCli {
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     numParses = parser.accepts("numParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     maxParseTimeMillis = parser.accepts("maxParseTimeMillis").withRequiredArg().ofType(Long.class).defaultsTo(-1L);
+    maxChartSize = parser.accepts("maxChartSize").withRequiredArg().ofType(Integer.class).defaultsTo(Integer.MAX_VALUE);
     atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
     pos = parser.accepts("pos", "Treat input as POS-tagged text, in the format word/POS.");
     printLf = parser.accepts("printLf", "Print logical forms for the generated parses.");
@@ -107,9 +109,11 @@ public class ParseCcg extends AbstractCli {
     // Configure inference options
     CcgInference inferenceAlgorithm = null;
     if (options.has(exactInference)) {
-      inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis));
+      inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
+          options.valueOf(maxChartSize));
     } else {
-      inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), options.valueOf(maxParseTimeMillis), true);
+      inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
+          options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), true);
     }
     
     if (options.has(testFile)) {
@@ -574,7 +578,8 @@ public class ParseCcg extends AbstractCli {
         
         if (useCcgbankDerivation) {
           // Provide a deeper analysis of why parsing failed.
-          CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
+          CcgChart chart = new CcgExactHashTableChart(example.getWords(),  example.getPosTags(),
+              Integer.MAX_VALUE);
           parser.getParser().parseCommon(chart, example.getWords(), example.getPosTags(), filter,
               null, -1);
           CcgParserUtils.analyzeParseFailure(example.getSyntacticParse(), chart,

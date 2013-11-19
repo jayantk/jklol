@@ -55,7 +55,8 @@ public class CcgParserUtils {
    */
   public static boolean isPossibleExample(CcgParser parser, CcgExample example) {
     // CcgChart chart = new CcgExactHashTableChart(example.getWords(), example.getPosTags());
-    CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(), 100);
+    CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(),
+        100, Integer.MAX_VALUE);
     SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
     parser.parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
     List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, parser);
@@ -125,7 +126,8 @@ public class CcgParserUtils {
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
     SufficientStatistics featureCounts = family.getNewSufficientStatistics();
     for (CcgExample example : examples) {
-      CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(), 100);
+      CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(),
+          100, Integer.MAX_VALUE);
       SyntacticChartFilter filter = new SyntacticChartFilter(example.getSyntacticParse());
       parser.parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
       List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, parser);

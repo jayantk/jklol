@@ -24,6 +24,8 @@ public abstract class AbstractCcgChart implements CcgChart {
   private final List<String> terminals;
   private final List<String> posTags;
   private int[] posTagsInt;
+  
+  private final int maxChartSize;
 
   // Various kinds of distances between words in the sentence.
   private int[] wordDistances;
@@ -52,9 +54,10 @@ public abstract class AbstractCcgChart implements CcgChart {
 
   private boolean finishedParsing;
 
-  public AbstractCcgChart(List<String> terminals, List<String> posTags) {
+  public AbstractCcgChart(List<String> terminals, List<String> posTags, int maxChartSize) {
     this.terminals = ImmutableList.copyOf(terminals);
     this.posTags = ImmutableList.copyOf(posTags);
+    this.maxChartSize = maxChartSize;
 
     // dependencyTensor, the distance arrays / tensors, and syntax distribution are
     // left null, and must be manually set.
@@ -75,6 +78,11 @@ public abstract class AbstractCcgChart implements CcgChart {
   @Override
   public List<String> getPosTags() {
     return posTags;
+  }
+  
+  @Override
+  public int getMaxChartEntries() {
+    return maxChartSize;
   }
 
   @Override

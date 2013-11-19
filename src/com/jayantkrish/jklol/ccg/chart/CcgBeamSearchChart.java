@@ -39,8 +39,8 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
    * @param posTags
    * @param beamSize
    */
-  public CcgBeamSearchChart(List<String> terminals, List<String> posTags, int beamSize) {
-    super(terminals, posTags);
+  public CcgBeamSearchChart(List<String> terminals, List<String> posTags, int maxChartSize, int beamSize) {
+    super(terminals, posTags, maxChartSize);
     this.beamSize = beamSize;
 
     numTerminals = terminals.size();

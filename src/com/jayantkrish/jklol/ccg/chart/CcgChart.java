@@ -19,6 +19,15 @@ public interface CcgChart {
   public int size();
 
   /**
+   * Gets the maximum number of chart entries for this parse. This
+   * number acts as a constraint on chart parsing: the parser stops
+   * after this number of chart entries has been exceeded. 
+   *
+   * @return
+   */
+  public int getMaxChartEntries();
+
+  /**
    * Gets the words being parsed.
    * 
    * @return

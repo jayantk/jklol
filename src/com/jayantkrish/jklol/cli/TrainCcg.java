@@ -59,6 +59,7 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<String> syntaxMap;
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Long> maxParseTimeMillis;
+  private OptionSpec<Integer> maxChartSize;
   private OptionSpec<String> supertagger;
   private OptionSpec<Double> multitagThreshold;
   private OptionSpec<Integer> featureCountThreshold;
@@ -84,6 +85,7 @@ public class TrainCcg extends AbstractCli {
     syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     maxParseTimeMillis = parser.accepts("maxParseTimeMillis").withRequiredArg().ofType(Long.class).defaultsTo(-1L);
+    maxChartSize = parser.accepts("maxChartSize").withRequiredArg().ofType(Integer.class).defaultsTo(Integer.MAX_VALUE);
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
@@ -148,9 +150,11 @@ public class TrainCcg extends AbstractCli {
     if (options.has(perceptron)) {
       CcgInference inferenceAlgorithm = null;
       if (options.has(exactInference)) {
-        inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis));
+        inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
+            options.valueOf(maxChartSize));
       } else {
-        inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize), options.valueOf(maxParseTimeMillis), true);
+        inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
+            options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), true);
       }
       oracle = new CcgPerceptronOracle(family, inferenceAlgorithm);
     } else {

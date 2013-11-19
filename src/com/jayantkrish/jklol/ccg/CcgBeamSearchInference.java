@@ -22,15 +22,19 @@ public class CcgBeamSearchInference implements CcgInference {
   
   // Maximum number of milliseconds to spend parsing a single sentence.
   private final long maxParseTimeMillis;
+  
+  // Maximum number of chart entries for a single sentence.
+  private final int maxChartSize;
 
   // Whether to print out information about correct parses, etc.
   private final boolean verbose;
   
   public CcgBeamSearchInference(ChartFilter searchFilter, int beamSize, long maxParseTimeMillis,
-      boolean verbose) {
+      int maxChartSize, boolean verbose) {
     this.searchFilter = searchFilter;
     this.beamSize = beamSize;
     this.maxParseTimeMillis = maxParseTimeMillis;
+    this.maxChartSize = maxChartSize;
 
     this.verbose = verbose;
   }
@@ -42,7 +46,7 @@ public class CcgBeamSearchInference implements CcgInference {
         new SupertagChartFilter(sentence.getSupertags()));
 
     List<CcgParse> parses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(),
-        beamSize, filter, log, maxParseTimeMillis);
+        beamSize, filter, log, maxParseTimeMillis, maxChartSize);
     if (parses.size() > 0) {
       return parses.get(0);
     } else {
@@ -60,12 +64,12 @@ public class CcgBeamSearchInference implements CcgInference {
       ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(new SyntacticChartFilter(observedSyntacticTree),
           new SupertagChartFilter(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
-          conditionalChartFilter, log, -1);
+          conditionalChartFilter, log, -1, maxChartSize);
     } else {
       ChartFilter conditionalChartFilter = ConjunctionChartFilter.create(
           new SupertagChartFilter(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
-          conditionalChartFilter, log, -1);
+          conditionalChartFilter, log, -1, maxChartSize);
     }
 
     possibleParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(

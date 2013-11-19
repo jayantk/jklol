@@ -38,6 +38,7 @@ public class ParseToLogicalForm extends AbstractCli {
   private OptionSpec<String> inputFile;
 
   private OptionSpec<Long> maxParseTimeMillis;
+  private OptionSpec<Integer> maxChartSize;
   
   public ParseToLogicalForm() {
     super();
@@ -58,8 +59,10 @@ public class ParseToLogicalForm extends AbstractCli {
     // Optional arguments
     maxParseTimeMillis = optionParser.accepts("maxParseTimeMillis").withRequiredArg()
         .ofType(Long.class).defaultsTo(-1L);
+    maxChartSize = optionParser.accepts("maxChartSize").withRequiredArg().ofType(Integer.class)
+        .defaultsTo(Integer.MAX_VALUE);
   }
-  
+
   @Override
   public void run(OptionSet options) {
     // Read in supertagger and CCG parser.
@@ -68,7 +71,8 @@ public class ParseToLogicalForm extends AbstractCli {
     double[] tagThresholds = Doubles.toArray(options.valuesOf(multitagThresholds));
 
     SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
-        new CcgExactInference(null, options.valueOf(maxParseTimeMillis)), tagger, tagThresholds);
+        new CcgExactInference(null, options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize)),
+        tagger, tagThresholds);
 
     // Read the logical form templates.
     CcgParseAugmenter augmenter = CcgParseAugmenter.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)));

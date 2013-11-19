@@ -20,7 +20,6 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
@@ -283,16 +282,17 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     VariableNumMap leftSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
     VariableNumMap parentSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
-    IndicatorLogLinearFactor parametricSyntacticDistribution = new IndicatorLogLinearFactor(
-        binaryRuleDistribution.getVars(), binaryRuleDistribution);
+    ParametricFactor parametricBinaryRuleDistribution = featureFactory.getBinaryRuleFeatures(
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, binaryRuleDistribution);
 
     // Create features over unary rules.
     DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules, syntaxType);
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
-    IndicatorLogLinearFactor parametricUnaryRuleDistribution = new IndicatorLogLinearFactor(
-        unaryRuleInputVar.union(unaryRuleVar), unaryRuleDistribution);
+    ParametricFactor parametricUnaryRuleDistribution = featureFactory.getUnaryRuleFeatures(
+        unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution);
 
+    // Build an indicator distribution over CCG parsing operations.
     DiscreteFactor compiledSyntaxDistribution = CcgParser.compileUnaryAndBinaryRules(unaryRuleDistribution,
         binaryRuleDistribution, syntaxType);
     VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
@@ -391,7 +391,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         dependencyParametricFactor, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
         puncDistanceFactor, puncTagSet, verbDistanceVar,
         verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, parentSyntaxVar,
-        parametricSyntacticDistribution, unaryRuleInputVar, unaryRuleVar,
+        parametricBinaryRuleDistribution, unaryRuleInputVar, unaryRuleVar,
         parametricUnaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
         headedBinaryRuleFamily, searchMoveVar, compiledSyntaxDistribution,
         leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar, parametricRootDistribution,

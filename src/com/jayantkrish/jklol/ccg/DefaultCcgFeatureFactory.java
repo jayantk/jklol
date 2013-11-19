@@ -169,6 +169,20 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
           featureGenerator, terminalSyntaxVar, featureVar, featureFamily);
     }
   }
+  
+  @Override
+  public ParametricFactor getBinaryRuleFeatures(VariableNumMap leftSyntaxVar,
+      VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar, DiscreteFactor binaryRuleDistribution) {
+    VariableNumMap allVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar, parentSyntaxVar);
+    return new DenseIndicatorLogLinearFactor(allVars, true, null);
+  }
+  
+  @Override
+  public ParametricFactor getUnaryRuleFeatures(VariableNumMap unaryRuleSyntaxVar,
+      VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleDistribution) {
+    VariableNumMap allVars = VariableNumMap.unionAll(unaryRuleSyntaxVar, unaryRuleVar);
+    return new IndicatorLogLinearFactor(allVars, unaryRuleDistribution);
+  }
 
   @Override
   public ParametricFactor getHeadedBinaryRuleFeatures(VariableNumMap leftSyntaxVar,

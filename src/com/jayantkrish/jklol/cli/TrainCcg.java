@@ -214,6 +214,8 @@ public class TrainCcg extends AbstractCli {
     ListSufficientStatistics featureCountsList = featureCounts.coerceToList();
     int lexiconFeaturesIndex = featureCountsList.getStatisticNames().getIndex(ParametricCcgParser.LEXICON_PARAMETERS);
     featureCounts.coerceToList().getStatistics().set(lexiconFeaturesIndex, null);
+    int unaryRuleFeaturesIndex = featureCountsList.getStatisticNames().getIndex(ParametricCcgParser.UNARY_RULE_PARAMETERS);
+    featureCounts.coerceToList().getStatistics().set(unaryRuleFeaturesIndex, null);
 
     return family.rescaleFeatures(featureCounts);
   }

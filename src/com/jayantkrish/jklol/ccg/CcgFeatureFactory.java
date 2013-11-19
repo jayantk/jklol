@@ -109,13 +109,38 @@ public interface CcgFeatureFactory {
   ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconIndicatorFactor);
+  
+  /**
+   * Gets features over CCG binary rules. {@code binaryRuleDistribution} is the
+   * set of binary rules included in the parser.
+   * 
+   * @param leftSyntaxVar
+   * @param rightSyntaxVar
+   * @param parentSyntaxVar
+   * @param binaryRuleDistribution
+   * @return
+   */
+  ParametricFactor getBinaryRuleFeatures(VariableNumMap leftSyntaxVar,
+      VariableNumMap rightSyntaxVar, VariableNumMap parentSyntaxVar, DiscreteFactor binaryRuleDistribution);
+
+  /**
+   * Gets features over CCG unary rules. {@code unaryRuleDistribution} is the
+   * set of unary rules included in the parser.
+   * 
+   * @param unaryRuleSyntaxVar
+   * @param unaryRuleVar
+   * @param unaryRuleDistribution
+   * @return
+   */
+  ParametricFactor getUnaryRuleFeatures(VariableNumMap unaryRuleSyntaxVar,
+      VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleDistribution);
 
   /**
    * Gets a parametric factor defining features over binary
    * combinators along with their semantic heads and parts-of-speech.
    * This distribution should not include features which depend only
-   * on the syntactic variables -- such features are included in the
-   * parser by default.
+   * on the syntactic variables -- such features should be created by 
+   * {@link #getBinaryRuleFeatures}.
    * 
    * @param leftSyntaxVar
    * @param rightSyntaxVar

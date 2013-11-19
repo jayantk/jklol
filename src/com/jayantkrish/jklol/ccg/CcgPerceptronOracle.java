@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.ccg;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -10,10 +12,15 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
 
   private final ParametricCcgParser family;
   private final CcgInference inferenceAlgorithm;
+  
+  private final double marginCost;
 
-  public CcgPerceptronOracle(ParametricCcgParser family, CcgInference inferenceAlgorithm) {
+  public CcgPerceptronOracle(ParametricCcgParser family, CcgInference inferenceAlgorithm,
+      double marginCost) {
     this.family = Preconditions.checkNotNull(family);
     this.inferenceAlgorithm = Preconditions.checkNotNull(inferenceAlgorithm);
+
+    this.marginCost = marginCost;
   }
 
   @Override
@@ -35,8 +42,12 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // Calculate the best predicted parse, i.e., the highest weight parse
     // without conditioning on the true parse.
     log.startTimer("update_gradient/unconditional_max_marginal");
+    ChartCost maxMarginCost = null;
+    if (marginCost > 0.0 && example.getSyntacticParse() != null) {
+      maxMarginCost = new SyntacticChartCost(example.getSyntacticParse(), 0.0, marginCost);
+    }
     CcgParse bestPredictedParse = inferenceAlgorithm.getBestParse(instantiatedParser, example.getSentence(),
-        null, log);
+        maxMarginCost, log);
     if (bestPredictedParse == null) {
       System.out.println("Search error (Predicted): " + example.getSentence());
       throw new ZeroProbabilityError();

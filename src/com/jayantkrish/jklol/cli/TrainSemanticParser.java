@@ -58,7 +58,7 @@ public class TrainSemanticParser extends AbstractCli {
 
     CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
         -1, Integer.MAX_VALUE, false);
-    GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family, inferenceAlgorithm);
+    GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family, inferenceAlgorithm, 0.0);
 
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),

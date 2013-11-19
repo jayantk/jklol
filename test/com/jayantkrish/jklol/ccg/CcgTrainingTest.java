@@ -215,23 +215,39 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrainPerceptronLogicalFormOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesLfOnly, false);
+    CcgParser parser = trainPerceptronParser(trainingExamplesLfOnly, false, false);
     assertZeroDependencyError(parser, trainingExamples);
   }
 
   public void testTrainPerceptronWithSyntax() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false);
+    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false, false);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false);
+    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, false);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnlyExactInference() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true);
+    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, false);
+    assertTrainedParserUsesSyntax(parser);
+  }
+
+  public void testTrainMaxMarginWithSyntax() {
+    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false, true);
+    assertZeroDependencyError(parser, trainingExamplesWithSyntax);
+    assertTrainedParserUsesSyntax(parser);
+  }
+
+  public void testTrainMaxMarginSyntaxOnly() {
+    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, true);
+    assertTrainedParserUsesSyntax(parser);
+  }
+
+  public void testTrainMaxMarginSyntaxOnlyExactInference() {
+    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, true);
     assertTrainedParserUsesSyntax(parser);
   }
 
@@ -245,14 +261,14 @@ public class CcgTrainingTest extends TestCase {
     return parser;
   }
 
-  private CcgParser trainPerceptronParser(List<CcgExample> examples, boolean exactInference) {
+  private CcgParser trainPerceptronParser(List<CcgExample> examples, boolean exactInference, boolean maxMargin) {
     CcgInference inferenceAlg = null;
     if (exactInference) {
       inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE);
     } else {
       inferenceAlg = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, true);
     }
-    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg);
+    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg, maxMargin ? 1.0 : 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1,
         false, 0.0, new DefaultLogFunction());
 

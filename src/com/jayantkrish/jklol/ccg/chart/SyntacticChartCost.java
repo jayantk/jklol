@@ -53,10 +53,6 @@ public class SyntacticChartCost implements ChartCost {
     return new SyntacticChartCost(syntacticParse, 0.0, Double.NEGATIVE_INFINITY);
   }
 
-  public static SyntacticChartCost createMaxMarginCost(CcgSyntaxTree syntacticParse) {
-    return new SyntacticChartCost(syntacticParse, 0.0, 1.0);
-  }
-
   private void populateRuleMaps(CcgSyntaxTree parse) {
     int mapIndex = (parse.getSpanStart() * SPAN_START_OFFSET) + parse.getSpanEnd();
 

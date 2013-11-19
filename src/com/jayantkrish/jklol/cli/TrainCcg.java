@@ -12,7 +12,6 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
@@ -64,7 +63,7 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Double> multitagThreshold;
   private OptionSpec<Integer> featureCountThreshold;
   private OptionSpec<Void> useCcgBankFormat;
-  private OptionSpec<Void> perceptron;
+  private OptionSpec<Double> maxMargin;
   private OptionSpec<Void> ignoreSemantics;
   private OptionSpec<Void> onlyObservedBinaryRules;
   private OptionSpec<Void> exactInference;
@@ -89,7 +88,7 @@ public class TrainCcg extends AbstractCli {
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
     featureCountThreshold = parser.accepts("featureCountThreshold").withRequiredArg().ofType(Integer.class);
-    perceptron = parser.accepts("perceptron");
+    maxMargin = parser.accepts("maxMargin").withRequiredArg().ofType(Double.class);
     ignoreSemantics = parser.accepts("ignoreSemantics");
     onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
     exactInference = parser.accepts("exactInference");
@@ -142,18 +141,22 @@ public class TrainCcg extends AbstractCli {
       IoUtils.serializeObjectToFile(family, options.valueOf(logParametersDir) + File.pathSeparator + "family.ser");
     }
 
+    // Figure out what inference algorithm to use. Note that not
+    // all inference algorithms are compatible with all training
+    // methods.
+    CcgInference inferenceAlgorithm = null;
+    if (options.has(exactInference)) {
+      inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
+          options.valueOf(maxChartSize));
+    } else {
+      inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
+          options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), true);
+    }
+
     // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
-    if (options.has(perceptron)) {
-      CcgInference inferenceAlgorithm = null;
-      if (options.has(exactInference)) {
-        inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
-            options.valueOf(maxChartSize));
-      } else {
-        inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
-            options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), true);
-      }
-      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm);
+    if (options.has(maxMargin)) {
+      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm, options.valueOf(maxMargin));
     } else {
       oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
     }

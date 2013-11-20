@@ -53,7 +53,11 @@ public class SupertaggingCcgParser {
     } else {
       supertaggedSentence = SupertaggedSentence.createWithUnobservedSupertags(terminals, posTags);
       CcgParse parse = inference.getBestParse(parser, supertaggedSentence, inputFilter, new NullLogFunction());
-      return new CcgParseResult(parse, supertaggedSentence, 0.0);
+      if (parse != null) {
+        return new CcgParseResult(parse, supertaggedSentence, 0.0);
+      } else {
+        return null;
+      }
     }
   }
 

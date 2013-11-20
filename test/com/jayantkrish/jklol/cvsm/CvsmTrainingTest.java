@@ -293,7 +293,7 @@ public class CvsmTrainingTest extends TestCase {
 
     CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, loss);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        iterations, 1, 1.0, true, 0.0, new NullLogFunction());
+        iterations, 1, 1.0, true, false, 0.0, new NullLogFunction());
 
     SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
     initializeParameters(cvsmFamily, initialParameters);

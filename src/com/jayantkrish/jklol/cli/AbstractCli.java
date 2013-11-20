@@ -107,6 +107,7 @@ public abstract class AbstractCli {
   protected OptionSpec<Integer> sgdBatchSize;
   protected OptionSpec<Double> sgdInitialStep;
   protected OptionSpec<Void> sgdNoDecayStepSize;
+  protected OptionSpec<Void> sgdReturnAveragedParameters;
   protected OptionSpec<Double> sgdL2Regularization;
   protected OptionSpec<Double> sgdRegularizationFrequency;
 
@@ -272,6 +273,8 @@ public abstract class AbstractCli {
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
       sgdNoDecayStepSize = parser.accepts("noDecayStepSize",
           "Don't use a 1/sqrt(t) step size decay during stochastic gradient descent.");
+      sgdReturnAveragedParameters = parser.accepts("returnAveragedParameters", 
+          "Get the average of the parameter iterates of stochastic gradient descent.");
       sgdL2Regularization = parser.accepts("l2Regularization",
           "Regularization parameter for the L2 norm of the parameter vector.")
           .withRequiredArg().ofType(Double.class).defaultsTo(0.1);
@@ -412,7 +415,8 @@ public abstract class AbstractCli {
     LogFunction log = LogFunctions.getLogFunction();
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
         numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
-        l2Regularization, parsedOptions.valueOf(sgdRegularizationFrequency), log);
+        parsedOptions.has(sgdReturnAveragedParameters), l2Regularization,
+        parsedOptions.valueOf(sgdRegularizationFrequency), log);
 
     return trainer;
   }

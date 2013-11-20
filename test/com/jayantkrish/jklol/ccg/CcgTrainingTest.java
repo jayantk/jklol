@@ -254,7 +254,7 @@ public class CcgTrainingTest extends TestCase {
   private CcgParser trainLoglikelihoodParser(List<CcgExample> examples) {
     CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 100);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
-        true, 0.1, new DefaultLogFunction());
+        true, false, 0.1, new DefaultLogFunction());
 
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), examples);
     CcgParser parser = family.getModelFromParameters(parameters);
@@ -270,7 +270,7 @@ public class CcgTrainingTest extends TestCase {
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg, maxMargin ? 1.0 : 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1,
-        false, 0.0, new DefaultLogFunction());
+        false, true, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     initialParameters.perturb(0.01);

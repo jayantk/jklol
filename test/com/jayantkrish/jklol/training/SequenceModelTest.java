@@ -122,7 +122,7 @@ public class SequenceModelTest extends TestCase {
       parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     } else {
       StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-          100, 1, 1.0, true, 0.1, new DefaultLogFunction());
+          100, 1, 1.0, true, false, 0.1, new DefaultLogFunction());
       parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     }
     DynamicFactorGraph trainedModel = sequenceModel.getModelFromParameters(parameters);

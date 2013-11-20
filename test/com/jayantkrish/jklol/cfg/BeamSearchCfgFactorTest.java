@@ -165,7 +165,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
         OracleAdapter.createAssignmentAdapter(oracle);
 
     StochasticGradientTrainer trainer = new StochasticGradientTrainer(5, 
-        TRAINING_DATA.length, 1.0, true, new DefaultLogFunction());
+        TRAINING_DATA.length, 1.0, true, false, new DefaultLogFunction());
 
     SufficientStatistics parameters = trainer.train(adaptedOracle,
         adaptedOracle.initializeGradient(), trainingData);

@@ -29,6 +29,8 @@ public class StochasticGradientTrainer implements GradientOptimizer {
   private final boolean decayStepSize;
   private final Regularizer regularizer;
 
+  private final boolean returnAveragedParameters;
+
   /**
    * Unregularized stochastic gradient descent.
    * 
@@ -39,13 +41,14 @@ public class StochasticGradientTrainer implements GradientOptimizer {
    * @param log
    */
   public StochasticGradientTrainer(int numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, LogFunction log) {
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.log = (log != null) ? log : new NullLogFunction();
 
     this.stepSize = stepSize;
     this.decayStepSize = decayStepSize;
+    this.returnAveragedParameters = returnAveragedParameters;
     this.regularizer = new StochasticL2Regularizer(0.0, 0.0);
   }
 
@@ -60,32 +63,35 @@ public class StochasticGradientTrainer implements GradientOptimizer {
    * @param log
    */
   public StochasticGradientTrainer(int numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, Regularizer regularizer, LogFunction log) {
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, Regularizer regularizer,
+      LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.log = (log != null) ? log : new NullLogFunction();
 
     this.stepSize = stepSize;
     this.decayStepSize = decayStepSize;
+    this.returnAveragedParameters = returnAveragedParameters;
     this.regularizer = regularizer;
   }
 
   public static StochasticGradientTrainer createWithL2Regularization(int numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, double l2Penalty, LogFunction log) {
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
-        new StochasticL2Regularizer(l2Penalty, 1.0), log);
+        returnAveragedParameters, new StochasticL2Regularizer(l2Penalty, 1.0), log);
   }
 
   public static StochasticGradientTrainer createWithStochasticL2Regularization(int numIterations,
-      int batchSize, double stepSize, boolean decayStepSize, double l2Penalty,
+      int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty,
       double regularizationFrequency, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
-        new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
+        returnAveragedParameters, new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
   }
 
   public static StochasticGradientTrainer createWithL1Regularization(int numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, double l1Penalty, LogFunction log) {
-    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, new L1Regularizer(l1Penalty), log);
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l1Penalty, LogFunction log) {
+    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
+        returnAveragedParameters, new L1Regularizer(l1Penalty), log);
   }
 
   @Override
@@ -98,6 +104,13 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     Iterator<T> cycledTrainingData = Iterators.cycle(trainingData);
 
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+
+    SufficientStatistics averagedParameters = null;
+    if (returnAveragedParameters) {
+      // Compute the average of the parameter values from each iteration  
+      // by tracking the sum of the parameters, then dividing.
+      averagedParameters = oracle.initializeGradient();
+    }
 
     double gradientL2 = 0.0;
     // This is an attempt at estimating how much the parameters are still
@@ -145,6 +158,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       exponentiallyWeightedObjectiveValue = objectiveValue + (0.9 * exponentiallyWeightedObjectiveValue);
       log.stopTimer("compute_statistics");
 
+      if (returnAveragedParameters) {
+        averagedParameters.increment(initialParameters, 1.0 / numIterations);
+      }
+
       log.logStatistic(i, "search errors", iterSearchErrors);
       log.logStatistic(i, "gradient l2 norm", gradientL2);
       log.logStatistic(i, "step size", currentStepSize);
@@ -153,7 +170,12 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.logStatistic(i, "exponentially weighted update norm", exponentiallyWeightedUpdateNorm);
       log.notifyIterationEnd(i);
     }
-    return initialParameters;
+
+    if (returnAveragedParameters) {
+      return averagedParameters;
+    } else {
+      return initialParameters;
+    }
   }
 
   private <S> List<S> getBatch(Iterator<S> trainingData, int batchSize) {

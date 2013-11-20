@@ -273,7 +273,6 @@ public class CcgTrainingTest extends TestCase {
         false, true, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
-    initialParameters.perturb(0.01);
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     CcgParser parser = family.getModelFromParameters(parameters);
     return parser;

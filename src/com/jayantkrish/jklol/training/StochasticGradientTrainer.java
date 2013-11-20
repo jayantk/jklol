@@ -159,7 +159,9 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.stopTimer("compute_statistics");
 
       if (returnAveragedParameters) {
+        log.startTimer("average_parameters");
         averagedParameters.increment(initialParameters, 1.0 / numIterations);
+        log.stopTimer("average_parameters");
       }
 
       log.logStatistic(i, "search errors", iterSearchErrors);

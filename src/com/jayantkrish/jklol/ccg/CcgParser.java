@@ -1478,7 +1478,7 @@ public class CcgParser implements Serializable {
         double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
         IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + j, spanEnd);
 
-        log.startTimer("ccg_parse/beam_loop");
+        // log.startTimer("ccg_parse/beam_loop");
         for (int leftType : leftTypes.keySetArray()) {
           long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
           int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
@@ -1543,7 +1543,7 @@ public class CcgParser implements Serializable {
                     rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
                   }
 
-                  log.startTimer("ccg_parse/beam_loop/fill_dependencies");
+                  // log.startTimer("ccg_parse/beam_loop/fill_dependencies");
                   // Fill dependencies based on the current assignment.
                   // (Filling dependencies takes a trivial amount of time.) 
                   int numFilledDeps = 0;
@@ -1572,13 +1572,13 @@ public class CcgParser implements Serializable {
                         combinatorVarIndex, combinatorDeps, searchMove.getRightInverseRelabeling(),
                         filledDepAccumulator, numFilledDeps);
                   }
-                  log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
+                  // log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
 
                   if (numFilledDeps == -1) { 
                     continue deploop; 
                   }
 
-                  log.startTimer("ccg_parse/beam_loop/relabel_assignment");
+                  // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
                   // Determine the variable assignments for the result syntactic
                   // category.
                   int[] leftInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
@@ -1622,11 +1622,11 @@ public class CcgParser implements Serializable {
                     }
                   }
                   assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
-                  log.startTimer("ccg_parse/beam_loop/relabel_assignment");
+                  // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
 
                   // Determine which unfilled dependencies should be propagated to
                   // the result.
-                  log.startTimer("ccg_parse/beam_loop/propagate_dependencies");
+                  // log.startTimer("ccg_parse/beam_loop/propagate_dependencies");
                   int[] leftUnfilledDepsVarIndex = leftRoot.getUnfilledDependencyVarIndex();
                   long[] leftUnfilledDeps = leftRoot.getUnfilledDependencies();
                   int[] rightUnfilledDepsVarIndex = rightRoot.getUnfilledDependencyVarIndex();
@@ -1653,7 +1653,7 @@ public class CcgParser implements Serializable {
                       if (startIndex != endIndex) {
                         for (int m = startIndex; m < endIndex; m++) {
                           if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                            log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
+                            // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
                             continue deploop;
                           }
 
@@ -1675,7 +1675,7 @@ public class CcgParser implements Serializable {
                       if (startIndex != endIndex) {
                         for (int m = startIndex; m < endIndex; m++) {
                           if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                            log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
+                            // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
                             continue deploop;
                           }
 
@@ -1690,9 +1690,9 @@ public class CcgParser implements Serializable {
                     }
                   }
                   unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
-                  log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
+                  // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
 
-                  log.startTimer("ccg_parse/beam_loop/copy_stuff");
+                  // log.startTimer("ccg_parse/beam_loop/copy_stuff");
                   long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
                   int[] unfilledDepVarIndex = Arrays.copyOf(unfilledDepVarIndexAccumulator, numVars + 1);
                   long[] unfilledDepArray = Arrays.copyOf(unfilledDepAccumulator, numUnfilledDeps);
@@ -1705,11 +1705,11 @@ public class CcgParser implements Serializable {
                       null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVarIndex, newAssignments,
                       unfilledDepVarIndex, unfilledDepArray, filledDepArray, spanStart, spanStart + i,
                       leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
-                  log.stopTimer("ccg_parse/beam_loop/copy_stuff");
+                  // log.stopTimer("ccg_parse/beam_loop/copy_stuff");
 
                   // Get the weights of applying this syntactic combination rule 
                   // given the word and POS tag of the result's head.
-                  log.startTimer("ccg_parse/beam_loop/headed_rule_weights");
+                  // log.startTimer("ccg_parse/beam_loop/headed_rule_weights");
                   double headedRuleProb = 1.0;
                   long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
                       * headedBinaryRuleCombinatorOffset;
@@ -1726,9 +1726,9 @@ public class CcgParser implements Serializable {
                         + (posTag * headedBinaryRulePosOffset);
                     headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
                   }
-                  log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
+                  // log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
 
-                  log.startTimer("ccg_parse/beam_loop/dependencies");
+                  // log.startTimer("ccg_parse/beam_loop/dependencies");
                   // Get the weights of the generated dependencies.
                   double depProb = 1.0;
                   double curDepProb = 1.0;
@@ -1790,12 +1790,12 @@ public class CcgParser implements Serializable {
                     depCache = depLong;
                     depProbCache = curDepProb;
                   }
-                  log.stopTimer("ccg_parse/beam_loop/dependencies");
+                  // log.stopTimer("ccg_parse/beam_loop/dependencies");
 
-                  log.startTimer("chart_entry/add_chart_entry");
+                  // log.startTimer("chart_entry/add_chart_entry");
                   double totalProb = ruleProb * headedRuleProb * leftProb * rightProb * depProb;
                   chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
-                  log.stopTimer("chart_entry/add_chart_entry");
+                  // log.stopTimer("chart_entry/add_chart_entry");
                 }
               }
             }
@@ -1807,7 +1807,7 @@ public class CcgParser implements Serializable {
             }
           }
         }
-        log.stopTimer("ccg_parse/beam_loop");
+        // log.stopTimer("ccg_parse/beam_loop");
       }
     }
 

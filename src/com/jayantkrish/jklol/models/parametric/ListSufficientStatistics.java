@@ -38,6 +38,12 @@ public class ListSufficientStatistics implements SufficientStatistics {
     this.statistics = Lists.newArrayList(statistics);
   }
 
+  public ListSufficientStatistics(IndexedList<String> names, List<SufficientStatistics> statistics) {
+    Preconditions.checkArgument(names.size() == statistics.size());
+    this.names = names;
+    this.statistics = Lists.newArrayList(statistics);
+  }
+
   /**
    * Gets the names of the statistics in {@code this}.
    *

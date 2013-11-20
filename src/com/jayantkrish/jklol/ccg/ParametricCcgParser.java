@@ -120,6 +120,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * Default part-of-speech tags that qualify as verbs.
    */
   public static final Set<String> DEFAULT_VERB_TAGS = Sets.newHashSet("VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
+  
+  private static final IndexedList<String> STATISTIC_NAME_LIST = IndexedList.create(Arrays.asList(
+      LEXICON_PARAMETERS,DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS,
+      PUNC_DISTANCE_PARAMETERS, VERB_DISTANCE_PARAMETERS, SYNTAX_PARAMETERS,
+      UNARY_RULE_PARAMETERS, HEADED_SYNTAX_PARAMETERS, ROOT_SYNTAX_PARAMETERS,
+      HEADED_ROOT_SYNTAX_PARAMETERS)); 
 
   public ParametricCcgParser(ParametricCcgLexicon lexiconFamily,
       VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
@@ -472,13 +478,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     SufficientStatistics rootSyntaxParameters = rootSyntaxFamily.getNewSufficientStatistics();
     SufficientStatistics headedRootSyntaxParameters = headedRootSyntaxFamily.getNewSufficientStatistics();
 
-    return new ListSufficientStatistics(
-        Arrays.asList(LEXICON_PARAMETERS, DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS,
-            PUNC_DISTANCE_PARAMETERS, VERB_DISTANCE_PARAMETERS,
-            SYNTAX_PARAMETERS, UNARY_RULE_PARAMETERS, HEADED_SYNTAX_PARAMETERS,
-            ROOT_SYNTAX_PARAMETERS, HEADED_ROOT_SYNTAX_PARAMETERS),
-        Arrays.asList(lexiconParameters, dependencyParameters,
-            wordDistanceParameters, puncDistanceParameters, verbDistanceParameters, syntaxParameters, unaryRuleParameters,
+    return new ListSufficientStatistics(STATISTIC_NAME_LIST,
+        Arrays.asList(lexiconParameters, dependencyParameters, wordDistanceParameters,
+            puncDistanceParameters, verbDistanceParameters, syntaxParameters, unaryRuleParameters,
             headedBinaryRuleParameters, rootSyntaxParameters, headedRootSyntaxParameters));
   }
 

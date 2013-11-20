@@ -119,7 +119,9 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     double exponentiallyWeightedObjectiveValue = 0.0;
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
+      log.startTimer("serialize_parameters");
       log.logParameters(i, initialParameters);
+      log.stopTimer("serialize_parameters");
 
       // Get the examples for this batch. Ideally, this would be a random
       // sample; however, deterministically iterating over the examples is

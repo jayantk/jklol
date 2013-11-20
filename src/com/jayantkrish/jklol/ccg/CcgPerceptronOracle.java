@@ -50,6 +50,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
         maxMarginCost, log);
     if (bestPredictedParse == null) {
       System.out.println("Search error (Predicted): " + example.getSentence());
+      log.stopTimer("update_gradient/unconditional_max_marginal");
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/unconditional_max_marginal");
@@ -65,11 +66,13 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
       System.out.println("Search error (Correct): " + example.getSentence());
       System.out.println("Expected tree: " + example.getSyntacticParse());
       // System.out.println("Search error cause: " + conditionalChartFilter.analyzeParseFailure());
+      log.stopTimer("update_gradient/conditional_max_marginal");
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/conditional_max_marginal");
-    System.out.println("best predicted: " + bestPredictedParse + " " + bestPredictedParse.getSubtreeProbability());
-    System.out.println("best correct:   " + bestCorrectParse + " " + bestCorrectParse.getSubtreeProbability());
+
+    // System.out.println("best predicted: " + bestPredictedParse + " " + bestPredictedParse.getSubtreeProbability());
+    // System.out.println("best correct:   " + bestCorrectParse + " " + bestCorrectParse.getSubtreeProbability());
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the predicted feature counts.
@@ -77,8 +80,8 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // Add the feature counts of best correct parse.
     family.incrementSufficientStatistics(gradient, bestCorrectParse, 1.0);
     log.stopTimer("update_gradient/increment_gradient");
-   
-    // It's not clear what the correct objective value should be.
+
+    // TODO: this isn't the right objective value.
     return 0;
   }
 }

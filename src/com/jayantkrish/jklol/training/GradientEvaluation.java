@@ -22,31 +22,31 @@ public class GradientEvaluation {
     this.searchErrors = searchErrors;
   }
 
-  public SufficientStatistics getGradient() {
+  public final SufficientStatistics getGradient() {
     return gradient;
   }
 
-  public void setObjectiveValue(double newObjectiveValue) {
+  public final void setObjectiveValue(double newObjectiveValue) {
     objectiveValue = newObjectiveValue;
   }
 
-  public void incrementObjectiveValue(double increment) {
+  public final void incrementObjectiveValue(double increment) {
     objectiveValue += increment;
   }
 
-  public double getObjectiveValue() {
+  public final double getObjectiveValue() {
     return objectiveValue;
   }
 
-  public int getSearchErrors() {
+  public final int getSearchErrors() {
     return searchErrors;
   }
 
-  public void incrementSearchErrors(int increment) {
+  public final void incrementSearchErrors(int increment) {
     searchErrors += increment;
   }
 
-  public void increment(GradientEvaluation other){
+  public final void increment(GradientEvaluation other) {
     gradient.increment(other.gradient, 1.0);
     objectiveValue += other.objectiveValue;
     searchErrors += other.searchErrors;

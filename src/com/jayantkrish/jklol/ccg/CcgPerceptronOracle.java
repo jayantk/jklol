@@ -12,7 +12,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
 
   private final ParametricCcgParser family;
   private final CcgInference inferenceAlgorithm;
-  
+
   private final double marginCost;
 
   public CcgPerceptronOracle(ParametricCcgParser family, CcgInference inferenceAlgorithm,
@@ -81,7 +81,9 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     family.incrementSufficientStatistics(gradient, bestCorrectParse, 1.0);
     log.stopTimer("update_gradient/increment_gradient");
 
-    // TODO: this isn't the right objective value.
-    return 0;
+    // Return the amount by which the predicted parse's score exceeds the
+    // true parse. (Negate this value, because this is a maximization problem)
+    return Math.min(0.0, Math.log(bestCorrectParse.getSubtreeProbability())
+        - Math.log(bestPredictedParse.getSubtreeProbability()));
   }
 }

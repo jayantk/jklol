@@ -46,7 +46,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
 		builder.addUnreplicatedFactor("f0", DiscreteLogLinearFactor
 		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)));
-		
+
 		clique2Names = Arrays.asList("Var2", "Var3");
 		builder.addUnreplicatedFactor("f1", DiscreteLogLinearFactor
 		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)));
@@ -71,7 +71,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 	}
 
 	public void testTrainL2() {
-	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 0.01, true, false, 1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 1, true, false, 1, new DefaultLogFunction()));
 	}
 	
 	public void testTrainStochasticL2() {

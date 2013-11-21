@@ -117,6 +117,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     // changing.
     double exponentiallyWeightedUpdateNorm = stepSize;
     double exponentiallyWeightedObjectiveValue = 0.0;
+    double exponentiallyWeightedDenom = 0.0;
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
       log.startTimer("serialize_parameters");
@@ -148,16 +149,17 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.startTimer("parameter_update");
       // Apply regularization and take a gradient step.
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
-      regularizer.apply(gradient, initialParameters, currentStepSize);
+      double regularizerObjectiveValue = regularizer.apply(gradient, initialParameters, currentStepSize);
 
       // System.out.println(initialParameters);
       log.stopTimer("parameter_update");
 
       log.startTimer("compute_statistics");
       gradientL2 = gradient.getL2Norm();
-      double objectiveValue = oracleResult.getObjectiveValue() / batchSize;
-      exponentiallyWeightedUpdateNorm = (0.2) * gradientL2 * currentStepSize + (0.8 * exponentiallyWeightedUpdateNorm);
+      double objectiveValue = regularizerObjectiveValue + (oracleResult.getObjectiveValue() / batchSize);
+      exponentiallyWeightedUpdateNorm = gradientL2 + (0.9 * exponentiallyWeightedUpdateNorm);
       exponentiallyWeightedObjectiveValue = objectiveValue + (0.9 * exponentiallyWeightedObjectiveValue);
+      exponentiallyWeightedDenom = 1 + (0.9 * exponentiallyWeightedDenom);
       log.stopTimer("compute_statistics");
 
       if (returnAveragedParameters) {
@@ -170,8 +172,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.logStatistic(i, "gradient l2 norm", gradientL2);
       log.logStatistic(i, "step size", currentStepSize);
       log.logStatistic(i, "objective value", objectiveValue);
-      log.logStatistic(i, "objective value (moving avg.)", exponentiallyWeightedObjectiveValue / 9.0);
-      log.logStatistic(i, "exponentially weighted update norm", exponentiallyWeightedUpdateNorm);
+      log.logStatistic(i, "objective value (moving avg.)", exponentiallyWeightedObjectiveValue
+          / exponentiallyWeightedDenom);
+      log.logStatistic(i, "gradient l2 norm (moving avg.)", exponentiallyWeightedUpdateNorm
+          / exponentiallyWeightedDenom);
       log.notifyIterationEnd(i);
     }
 
@@ -200,20 +204,21 @@ public class StochasticGradientTrainer implements GradientOptimizer {
      * Updates {@code currentParameters} with the result of taking a gradient
      * step in the direction of {@code gradient} and applying a regularization
      * penalty. May mutate {@code gradient}, and will mutate
-     * {@code currentParameters}.
+     * {@code currentParameters}. Returns the objective value for the regularizer.
      * 
      * @param gradient
      * @param currentParameters
      * @param currentStepSize
+     * @return
      */
-    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+    public double apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize);
   }
 
   /**
    * An L2 regularization penalty that is applied on random iterations. 
    * Regularization can be the most expensive part of training, since it
-   * touches every parameter. Using a randomized regularized reduces the
+   * touches every parameter. Using a randomized regularizer reduces the
    * frequency of regularization, thereby improving speed.
    *    
    * @author jayantk
@@ -229,13 +234,17 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       this.frequency = frequency;
     }
 
-    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+    @Override
+    public double apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize) {
       double rand = Pseudorandom.get().nextDouble();
+      double objectiveValue = 0.0; 
       if (rand < frequency) {
-        currentParameters.multiply(1 - (currentStepSize * l2Penalty * (1.0 / frequency)));
+        objectiveValue -= l2Penalty * currentParameters.getL2Norm() / (2.0 * frequency);
+        gradient.increment(currentParameters, (-1 * l2Penalty) / frequency);
       }
       currentParameters.increment(gradient, currentStepSize);
+      return objectiveValue;
     }
   }
 
@@ -258,10 +267,13 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     }
 
     @Override
-    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+    public double apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize) {
       currentParameters.increment(gradient, currentStepSize);
-      currentParameters.softThreshold(currentStepSize * l1Penalty); 
+      currentParameters.softThreshold(currentStepSize * l1Penalty);
+      
+      // TODO: actually implement the objective value.
+      return 0.0;
     }
   }
 }

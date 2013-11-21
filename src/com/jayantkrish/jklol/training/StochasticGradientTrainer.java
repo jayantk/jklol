@@ -30,6 +30,11 @@ public class StochasticGradientTrainer implements GradientOptimizer {
   private final Regularizer regularizer;
 
   private final boolean returnAveragedParameters;
+  
+  // Factor used to discount earlier observations in the moving average
+  // estimates of the gradient norm and objective value. Smaller values
+  // forget history faster.
+  private static final double MOVING_AVG_DISCOUNT = 0.9;
 
   /**
    * Unregularized stochastic gradient descent.
@@ -157,9 +162,11 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.startTimer("compute_statistics");
       gradientL2 = gradient.getL2Norm();
       double objectiveValue = regularizerObjectiveValue + (oracleResult.getObjectiveValue() / batchSize);
-      exponentiallyWeightedUpdateNorm = gradientL2 + (0.9 * exponentiallyWeightedUpdateNorm);
-      exponentiallyWeightedObjectiveValue = objectiveValue + (0.9 * exponentiallyWeightedObjectiveValue);
-      exponentiallyWeightedDenom = 1 + (0.9 * exponentiallyWeightedDenom);
+      exponentiallyWeightedUpdateNorm = gradientL2 
+          + (MOVING_AVG_DISCOUNT * exponentiallyWeightedUpdateNorm);
+      exponentiallyWeightedObjectiveValue = objectiveValue
+          + (MOVING_AVG_DISCOUNT * exponentiallyWeightedObjectiveValue);
+      exponentiallyWeightedDenom = 1 + (MOVING_AVG_DISCOUNT * exponentiallyWeightedDenom);
       log.stopTimer("compute_statistics");
 
       if (returnAveragedParameters) {

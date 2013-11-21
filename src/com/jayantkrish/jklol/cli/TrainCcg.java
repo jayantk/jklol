@@ -87,7 +87,8 @@ public class TrainCcg extends AbstractCli {
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
-    featureCountThreshold = parser.accepts("featureCountThreshold").withRequiredArg().ofType(Integer.class);
+    featureCountThreshold = parser.accepts("featureCountThreshold").withRequiredArg()
+        .ofType(Integer.class).defaultsTo(0);
     maxMargin = parser.accepts("maxMargin").withRequiredArg().ofType(Double.class);
     ignoreSemantics = parser.accepts("ignoreSemantics");
     onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
@@ -133,7 +134,7 @@ public class TrainCcg extends AbstractCli {
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");
 
-    if (options.has(featureCountThreshold)) {
+    if (options.valueOf(featureCountThreshold) > 0) {
       family = applyFeatureCountThreshold(family, trainingExamples, options.valueOf(featureCountThreshold)); 
     }
 

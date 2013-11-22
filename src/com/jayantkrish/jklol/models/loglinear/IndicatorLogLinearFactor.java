@@ -88,15 +88,6 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public IndicatorLogLinearFactor rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    } else {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     Tensor featureWeights = getFeatureWeights(parameters);
     

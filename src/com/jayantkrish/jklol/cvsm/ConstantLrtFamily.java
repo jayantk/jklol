@@ -59,11 +59,6 @@ public class ConstantLrtFamily implements LrtFamily {
   }
 
   @Override
-  public ConstantLrtFamily rescaleFeatures(SufficientStatistics rescaling) {
-    return this;
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters) {
       return "";
   }

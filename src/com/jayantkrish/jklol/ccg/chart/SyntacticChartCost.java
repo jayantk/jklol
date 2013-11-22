@@ -49,6 +49,13 @@ public class SyntacticChartCost implements ChartCost {
     populateRuleMaps(syntacticParse);
   }
 
+  /**
+   * Creates a cost function which forces the CCG parser to produce
+   * the same tree structure as {@code syntacticParse}.
+   * 
+   * @param syntacticParse
+   * @return
+   */
   public static SyntacticChartCost createAgreementCost(CcgSyntaxTree syntacticParse) {
     return new SyntacticChartCost(syntacticParse, 0.0, Double.NEGATIVE_INFINITY);
   }

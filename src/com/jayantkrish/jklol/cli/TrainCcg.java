@@ -61,7 +61,6 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Integer> maxChartSize;
   private OptionSpec<String> supertagger;
   private OptionSpec<Double> multitagThreshold;
-  private OptionSpec<Integer> featureCountThreshold;
   private OptionSpec<Void> useCcgBankFormat;
   private OptionSpec<Double> maxMargin;
   private OptionSpec<Void> ignoreSemantics;
@@ -87,8 +86,6 @@ public class TrainCcg extends AbstractCli {
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
-    featureCountThreshold = parser.accepts("featureCountThreshold").withRequiredArg()
-        .ofType(Integer.class).defaultsTo(0);
     maxMargin = parser.accepts("maxMargin").withRequiredArg().ofType(Double.class);
     ignoreSemantics = parser.accepts("ignoreSemantics");
     onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
@@ -133,10 +130,6 @@ public class TrainCcg extends AbstractCli {
     System.out.println(trainingExamples.size() + " training examples.");
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");
-
-    if (options.valueOf(featureCountThreshold) > 0) {
-      family = applyFeatureCountThreshold(family, trainingExamples, options.valueOf(featureCountThreshold)); 
-    }
 
     if (options.has(logParametersDir)) {
       IoUtils.serializeObjectToFile(family, options.valueOf(logParametersDir) + File.separator + "family.ser");
@@ -202,27 +195,6 @@ public class TrainCcg extends AbstractCli {
         new SupertaggerMapper(supertagger, multitagThreshold, includeGoldSupertags));
     System.out.println("Done supertagging.");
     return newExamples;
-  }
-
-  private static ParametricCcgParser applyFeatureCountThreshold(ParametricCcgParser family,
-      List<CcgExample> examples, double featureCountThreshold) {
-    System.out.println("Calculating feature counts...");
-    // Count the number of occurrences of each feature in the gold standard
-    // CCG parses, then find all of features which occur >= a threshold.
-    SufficientStatistics featureCounts = CcgParserUtils.getFeatureCounts(family, examples);
-    featureCounts.findEntriesLargerThan(featureCountThreshold);
-
-    double numFeatures = featureCounts.getL2Norm();
-    numFeatures *= numFeatures;
-    System.out.println(numFeatures + " features with count >= " + featureCountThreshold);
-
-    ListSufficientStatistics featureCountsList = featureCounts.coerceToList();
-    int lexiconFeaturesIndex = featureCountsList.getStatisticNames().getIndex(ParametricCcgParser.LEXICON_PARAMETERS);
-    featureCounts.coerceToList().getStatistics().set(lexiconFeaturesIndex, null);
-    int unaryRuleFeaturesIndex = featureCountsList.getStatisticNames().getIndex(ParametricCcgParser.UNARY_RULE_PARAMETERS);
-    featureCounts.coerceToList().getStatistics().set(unaryRuleFeaturesIndex, null);
-
-    return family.rescaleFeatures(featureCounts);
   }
 
   private static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {

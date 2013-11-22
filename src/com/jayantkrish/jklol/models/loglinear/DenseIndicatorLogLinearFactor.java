@@ -11,7 +11,6 @@ import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseLogSpaceTensorAdapter;
@@ -56,22 +55,6 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
     }
   }
   
-  @Override
-  public DenseIndicatorLogLinearFactor rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    }
-    
-    Tensor newRescalingTensor = getFeatureWeights(rescaling);
-    if (!isSparse) {
-      // The dense version of a tensor sufficient statistic doesn't
-      // copy the array of parameters.
-      newRescalingTensor = DenseTensor.copyOf(newRescalingTensor);
-    }
-    return new DenseIndicatorLogLinearFactor(getVars(), isSparse,
-        new TableFactor(getVars(), newRescalingTensor));
-  }
-
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     TableFactor featureValues = getFeatureWeightFactor(parameters);

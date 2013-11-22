@@ -147,19 +147,6 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public DiscreteLogLinearFactor rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    } else {
-      Tensor rescalingWeights = getFeatureWeights(rescaling);
-      Tensor newFeatureTensor = featureValues.getWeights().elementwiseProduct(rescalingWeights);
-      DiscreteFactor newFeatureValues = new TableFactor(featureValues.getVars(), newFeatureTensor);
-
-      return new DiscreteLogLinearFactor(getVars(), featureVariables, newFeatureValues, initialWeights);
-    }
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     Tensor weights = getFeatureWeights(parameters);
     TableFactor weightFactor = new TableFactor(featureVariables, weights);

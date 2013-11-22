@@ -125,11 +125,6 @@ public class OpLrtFamily implements LrtFamily {
     return finalResult; 
   }
 
-  @Override
-  public LrtFamily rescaleFeatures(SufficientStatistics rescaling) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
   @Override 
   public void increment(SufficientStatistics gradient, LowRankTensor currentValue,
       LowRankTensor increment, double multiplier) {

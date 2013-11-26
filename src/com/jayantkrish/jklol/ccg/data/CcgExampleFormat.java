@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.data.LineDataFormat;
@@ -74,11 +75,11 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample<SupertaggedSente
     }
 
     if (!ignoreSemantics) {
-      return new CcgExample<SupertaggedSentence>(SupertaggedSentence.createWithUnobservedSupertags(
-          words, posTags), dependencies, tree, logicalForm);
+      return new CcgExample<SupertaggedSentence>(ListSupertaggedSentence
+          .createWithUnobservedSupertags(words, posTags), dependencies, tree, logicalForm);
     } else {
-      return new CcgExample<SupertaggedSentence>(SupertaggedSentence.createWithUnobservedSupertags(
-          words, posTags), null, tree, logicalForm);
+      return new CcgExample<SupertaggedSentence>(ListSupertaggedSentence
+          .createWithUnobservedSupertags(words, posTags), null, tree, logicalForm);
     }
   }
 }

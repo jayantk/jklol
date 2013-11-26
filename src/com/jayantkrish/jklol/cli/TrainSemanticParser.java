@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOptimizer;
@@ -93,8 +94,8 @@ public class TrainSemanticParser extends AbstractCli {
         
         // Parts-of-speech are assumed to be unknown.
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-        SupertaggedSentence sentence = SupertaggedSentence.createWithUnobservedSupertags(words, posTags);
-        
+        SupertaggedSentence sentence = ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags);
+
         CcgExample<SupertaggedSentence> example = new CcgExample<SupertaggedSentence>(sentence, null, null, lf);
         examples.add(example);
       }

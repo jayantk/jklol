@@ -67,7 +67,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory<SupertaggedSe
       Collection<CcgExample<SupertaggedSentence>> examples) {
     List<LocalContext<WordAndPos>> contexts = Lists.newArrayList();
     for (CcgExample<SupertaggedSentence> example : examples) {
-      List<WordAndPos> wordAndPos = example.getSentence().getItems();
+      List<WordAndPos> wordAndPos = example.getSentence().getWordsAndPosTags();
       for (int i = 0; i < wordAndPos.size(); i++) {
         contexts.add(new ListLocalContext<WordAndPos>(wordAndPos, i));
       }

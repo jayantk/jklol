@@ -33,6 +33,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
@@ -149,7 +150,7 @@ public class ParseCcg extends AbstractCli {
         sentenceToParse = input;
         posTags = Collections.nCopies(sentenceToParse.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       }
-      SupertaggedSentence sentence = SupertaggedSentence.createWithUnobservedSupertags(
+      SupertaggedSentence sentence = ListSupertaggedSentence.createWithUnobservedSupertags(
           sentenceToParse, posTags);
 
       List<CcgParse> parses = ccgParser.beamSearch(sentence, options.valueOf(beamSize));

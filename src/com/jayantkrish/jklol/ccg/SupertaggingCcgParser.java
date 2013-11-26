@@ -37,11 +37,11 @@ public class SupertaggingCcgParser<T extends SupertaggedSentence> {
         // Try parsing at each multitag threshold. If parsing succeeds,
         // immediately return the parse. Otherwise, continue to further
         // thresholds.
-        List<WordAndPos> supertaggerInput = sentence.getItems();
+        List<WordAndPos> supertaggerInput = sentence.getWordsAndPosTags();
         supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThresholds[i]);
         
         ChartCost filter = SumChartCost.create(inputFilter,
-            new SupertagChartCost(supertaggedSentence.getLabels()));
+            new SupertagChartCost(supertaggedSentence.getSupertags()));
 
         CcgParse parse = inference.getBestParse(parser, sentence, filter, new NullLogFunction());
         if (parse != null) {

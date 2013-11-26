@@ -24,6 +24,7 @@ import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -91,7 +92,7 @@ public class ParseToLogicalForm extends AbstractCli {
       CcgParseResult result = null;
       Expression lf = null;
       try { 
-        result = supertaggingParser.parse(SupertaggedSentence.createWithUnobservedSupertags(words, posTags));
+        result = supertaggingParser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags));
         if (result != null && result.getParse().getSyntacticCategory().isAtomic()) {
           CcgParse parse = result.getParse();
           CcgParse augmentedParse = augmenter.addLogicalForms(parse);

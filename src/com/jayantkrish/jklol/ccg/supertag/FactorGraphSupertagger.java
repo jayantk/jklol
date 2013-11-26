@@ -37,8 +37,9 @@ FactorGraphSequenceTagger<WordAndPos, HeadedSyntacticCategory> implements Supert
   }
 
   @Override
-  public SupertaggedSentence multitag(List<WordAndPos> input, double threshold) {
+  public ListSupertaggedSentence multitag(List<WordAndPos> input, double threshold) {
     MultitaggedSequence<WordAndPos, HeadedSyntacticCategory> sequence = super.multitag(input, threshold);
-    return new SupertaggedSentence(sequence.getItems(), sequence.getLabels(), sequence.getLabelProbabilities());
+    return new ListSupertaggedSentence(sequence.getItems(), sequence.getLabels(),
+        sequence.getLabelProbabilities());
   }
 }

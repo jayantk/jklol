@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -50,11 +51,11 @@ public class NoExportHelpers {
 
     List<String> words = Arrays.asList(input.split(" "));
     List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    List<CcgParse> parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         words, posTags), 10);
     return parses.get(0);
   }
-  
+
   public static int[] runDatabaseQuery(Query query, int[] entities, String[] tableNames, JsArrayMixed tables) {
     String[] entityStrings = new String[entities.length];
     for (int i = 0; i < entities.length; i++) {

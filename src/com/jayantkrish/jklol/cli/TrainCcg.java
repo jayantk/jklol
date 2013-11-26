@@ -228,16 +228,17 @@ public class TrainCcg extends AbstractCli {
 
     @Override @SuppressWarnings("unchecked")
     public CcgExample<T> map(CcgExample<T> item) {
-      SupertaggedSentence supertaggerOutput = supertagger.multitag(item.getSentence().getItems(), multitagThreshold);
+      SupertaggedSentence supertaggerOutput = supertagger.multitag(
+          item.getSentence().getWordsAndPosTags(), multitagThreshold);
       T taggedSentence = (T) item.getSentence().replaceSupertags(supertaggerOutput.getSupertags(),
-          supertaggerOutput.getLabelProbabilities());
+          supertaggerOutput.getSupertagScores());
 
       if (includeGoldSupertags) {
         // Make sure the correct headed syntactic category for each
         // word is included in the set of candidate syntactic
         // categories.
-        List<List<HeadedSyntacticCategory>> predictedLabels = taggedSentence.getLabels();
-        List<List<Double>> predictedProbs = taggedSentence.getLabelProbabilities();
+        List<List<HeadedSyntacticCategory>> predictedLabels = taggedSentence.getSupertags();
+        List<List<Double>> predictedProbs = taggedSentence.getSupertagScores();
 
         List<HeadedSyntacticCategory> goldSupertags = item.getSyntacticParse().getAllSpannedHeadedSyntacticCategories();
         List<List<HeadedSyntacticCategory>> newLabels = Lists.newArrayList();

@@ -12,6 +12,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -340,13 +341,13 @@ public class CcgTrainingTest extends TestCase {
 
   private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
       int beamSize) {
-    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG)), beamSize);
   }
 
   private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words, 
+    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
         posTags), beamSize);
   }
 

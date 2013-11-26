@@ -8,6 +8,7 @@ import junit.framework.TestCase;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
@@ -126,7 +127,7 @@ public class ParametricCcgParserTest extends TestCase {
 
   private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words, 
+    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
         posTags), beamSize);
   }
 }

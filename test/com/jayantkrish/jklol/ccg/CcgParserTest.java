@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -809,12 +810,12 @@ public class CcgParserTest extends TestCase {
   */
 
   public void testParseTimeout() {
-    List<CcgParse> parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
         Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE);
     assertTrue(parses.size() > 0);
     
-    parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+    parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
         Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE);
     assertEquals(0, parses.size());
@@ -882,7 +883,7 @@ public class CcgParserTest extends TestCase {
 
   public void testChartFilterApply() {
     ChartCost filter = new TestChartFilter();
-    List<CcgParse> parses = parserWithUnary.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+    List<CcgParse> parses = parserWithUnary.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
         Collections.nCopies(6, DEFAULT_POS)), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
 
@@ -896,19 +897,8 @@ public class CcgParserTest extends TestCase {
     System.out.println(parses.get(0).toHtmlString());
   }
 
-  public void testChartFilterApplyToTerminals() {
-    ChartCost filter = new TestChartFilter();
-    List<CcgParse> parses = parserWithUnary.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
-        Arrays.asList("berries", "in", "people", "houses"), Collections.nCopies(4, DEFAULT_POS)),
-        10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
-
-    for (CcgParse parse : parses) {
-      assertNoNounCompound(parse);
-    }
-  }
-
   public void testSupertagChartFilter() {
-    List<CcgParse> parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)),
         10, new NullLogFunction());
     assertEquals(2, parses.size());
@@ -919,23 +909,10 @@ public class CcgParserTest extends TestCase {
 
     ChartCost supertagChartFilter = new SupertagChartCost(supertags);
 
-    parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+    parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)), 10,
         supertagChartFilter, new NullLogFunction(), -1, Integer.MAX_VALUE);
     assertEquals(1, parses.size());
-  }
-
-  private void assertNoNounCompound(CcgParse parse) {
-    SyntacticCategory noun = SyntacticCategory.parseFrom("N");
-
-    if (!parse.isTerminal()) {
-      assertFalse(parse.getLeft().getHeadedSyntacticCategory().getSyntax().equals(noun) &&
-          parse.getRight().getHeadedSyntacticCategory().getSyntax().equals(noun) &&
-          !parse.getLeft().hasUnaryRule() && !parse.getRight().hasUnaryRule());
-
-      assertNoNounCompound(parse.getLeft());
-      assertNoNounCompound(parse.getRight());
-    }
   }
 
   public void testSerialization() throws IOException {
@@ -943,21 +920,21 @@ public class CcgParserTest extends TestCase {
     oos.writeObject(parserWithUnary);
     oos.close();
   }
-  
+
   private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
       int beamSize) {
-    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), beamSize);
   }
 
   private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words, 
+    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
         posTags), beamSize);
   }
 
   private CcgParse parse(CcgParser<SupertaggedSentence> parser, List<String> words) {
-    return parser.parse(SupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE);
   }
 
@@ -1178,32 +1155,5 @@ public class CcgParserTest extends TestCase {
       }
       return 0.0;
     }
-
-    /*
-    @Override
-    public <T extends SupertaggedSentence> void applyToTerminals(CcgChart<T> chart) {
-      DiscreteFactor syntaxDistribution = chart.getSyntaxDistribution();
-      TableFactorBuilder builder = TableFactorBuilder.fromFactor(syntaxDistribution);
-
-      Iterator<Outcome> syntaxIter = syntaxDistribution.outcomeIterator();
-      while (syntaxIter.hasNext()) {
-        Outcome outcome = syntaxIter.next();
-        CcgSearchMove move = (CcgSearchMove) outcome.getAssignment().getValues().get(2);
-
-        CcgBinaryRule rule = move.getBinaryCombinator().getBinaryRule();
-        if (rule != null) {
-          String[] subjects = rule.getSubjects();
-          for (int i = 0; i < subjects.length; i++) {
-            if (subjects[i].equals("special:compound")) {
-              builder.setWeight(outcome.getAssignment(), 0.0);
-            }
-          }
-        }
-      }
-
-      DiscreteFactor updatedSyntaxDistribution = builder.build();
-      chart.setSyntaxDistribution(updatedSyntaxDistribution);
-    }
-    */
   }
 }

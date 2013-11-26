@@ -52,28 +52,31 @@ public class TrainSemanticParser extends AbstractCli {
   
   @Override
   public void run(OptionSet options) {
-    List<CcgExample> trainingExamples = readCcgExamplesJson(options.valueOf(trainingData));
+    List<CcgExample<SupertaggedSentence>> trainingExamples = readCcgExamplesJson(
+        options.valueOf(trainingData));
     
-    ParametricCcgParser family = createCcgParser(null, null, new DefaultCcgFeatureFactory(null));
+    ParametricCcgParser<SupertaggedSentence> family = createCcgParser(null, null,
+        new DefaultCcgFeatureFactory(null));
 
     CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
         -1, Integer.MAX_VALUE, false);
-    GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family, inferenceAlgorithm, 0.0);
+    GradientOracle<CcgParser<SupertaggedSentence>, CcgExample<SupertaggedSentence>> oracle = 
+        new CcgPerceptronOracle<SupertaggedSentence>(family, inferenceAlgorithm, 0.0);
 
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
-    CcgParser ccgParser = family.getModelFromParameters(parameters);
+    CcgParser<SupertaggedSentence> ccgParser = family.getModelFromParameters(parameters);
 
     System.out.println("Serializing trained model...");
     IoUtils.serializeObjectToFile(ccgParser, options.valueOf(modelOutput));
-    
+
     System.out.println("Trained model parameters:");
     System.out.println(family.getParameterDescription(parameters));
   }
 
-  private static List<CcgExample> readCcgExamplesJson(String jsonFilename) {
-    List<CcgExample> examples = Lists.newArrayList();
+  private static List<CcgExample<SupertaggedSentence>> readCcgExamplesJson(String jsonFilename) {
+    List<CcgExample<SupertaggedSentence>> examples = Lists.newArrayList();
     try {
       ExpressionParser<Expression> lfParser = ExpressionParser.lambdaCalculus();
       ObjectMapper mapper = new ObjectMapper();
@@ -92,7 +95,7 @@ public class TrainSemanticParser extends AbstractCli {
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         SupertaggedSentence sentence = SupertaggedSentence.createWithUnobservedSupertags(words, posTags);
         
-        CcgExample example = new CcgExample(sentence, null, null, lf);
+        CcgExample<SupertaggedSentence> example = new CcgExample<SupertaggedSentence>(sentence, null, null, lf);
         examples.add(example);
       }
     } catch (Exception e) {

@@ -118,7 +118,7 @@ public class TrainCcg extends AbstractCli {
 
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
-    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null);
+    CcgFeatureFactory<SupertaggedSentence> featureFactory = new DefaultCcgFeatureFactory(null);
     ParametricCcgParser<SupertaggedSentence> family = createCcgParser(posTags, observedRules, featureFactory);
     System.out.println("Done creating ParametricCcgParser.");
 
@@ -156,7 +156,8 @@ public class TrainCcg extends AbstractCli {
     // Train the model.
     GradientOracle<CcgParser<SupertaggedSentence>, CcgExample<SupertaggedSentence>> oracle = null;
     if (options.has(maxMargin)) {
-      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm, options.valueOf(maxMargin));
+      oracle = new CcgPerceptronOracle<SupertaggedSentence>(family, inferenceAlgorithm,
+          options.valueOf(maxMargin));
     } else {
       oracle = new CcgLoglikelihoodOracle<SupertaggedSentence>(family, options.valueOf(beamSize));
     }
@@ -198,7 +199,7 @@ public class TrainCcg extends AbstractCli {
     System.out.println("Supertagging examples...");
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
     List<CcgExample<SupertaggedSentence>> newExamples = executor.map(examples,
-        new SupertaggerMapper(supertagger, multitagThreshold, includeGoldSupertags));
+        new SupertaggerMapper<SupertaggedSentence>(supertagger, multitagThreshold, includeGoldSupertags));
     System.out.println("Done supertagging.");
     return newExamples;
   }
@@ -293,7 +294,7 @@ public class TrainCcg extends AbstractCli {
         taggedSentence = taggedSentence.replaceSupertags(newLabels, newProbs);
       }
 
-      return new CcgExample(taggedSentence, item.getDependencies(), item.getSyntacticParse(),
+      return new CcgExample<T>(item, item.getDependencies(), item.getSyntacticParse(),
           item.getLogicalForm());
     }
   }

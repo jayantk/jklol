@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -14,6 +15,7 @@ import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmValueLoss;
@@ -167,8 +169,8 @@ public class CvsmTrainingTest extends TestCase {
 
   private static final int NUM_DIMS = 3;
 
-  private ParametricCcgParser family;
-  private CcgParser parser;
+  private ParametricCcgParser<SupertaggedSentence> family;
+  private CcgParser<SupertaggedSentence> parser;
 
   private CvsmFamily cvsmFamily, lowRankCvsmFamily, diagCvsmFamily;
 
@@ -215,7 +217,8 @@ public class CvsmTrainingTest extends TestCase {
   }
 
   public void testParse() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("red", "block", "on", "table"), 10);
+    List<CcgParse> parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("red", "block", "on", "table"), Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG)), 10);
 
     System.out.println(parses.get(0).getLogicalForm().simplify());
   }

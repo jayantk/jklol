@@ -17,13 +17,13 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.io.NullOutputStream;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -36,8 +36,8 @@ import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
 
-  CcgParser parser, parserWithComposition, parserWithCompositionNormalForm, parserWithUnary,
-      parserWithUnaryAndComposition, parserWordSkip;
+  CcgParser<SupertaggedSentence> parser, parserWithComposition, parserWithCompositionNormalForm,
+  parserWithUnary,parserWithUnaryAndComposition, parserWordSkip;
 
   ExpressionParser<Expression> exp;
 
@@ -145,7 +145,7 @@ public class CcgParserTest extends TestCase {
   
   public void testLexiconPosBackoff() {
     // test that backoff occurs for out-of-lexicon words.
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("NOT_IN_LEXICON"), Arrays.asList("NN"), 10);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("NOT_IN_LEXICON"), Arrays.asList("NN"), 10);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
     assertEquals(6.0, parse.getSubtreeProbability());
@@ -154,7 +154,7 @@ public class CcgParserTest extends TestCase {
     assertEquals(Arrays.asList("unk-nn"), parse.getSpannedLexiconEntries().get(0).getWords());
     
     // No backoff should happen if the word is in the lexicon.
-    parses = parser.beamSearch(Arrays.asList("a"), Arrays.asList("NN"), 10);
+    parses = beamSearch(parser, Arrays.asList("a"), Arrays.asList("NN"), 10);
     assertEquals(1, parses.size());
     parse = parses.get(0);
     assertEquals(1.0, parse.getSubtreeProbability());
@@ -163,7 +163,7 @@ public class CcgParserTest extends TestCase {
     assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getWords());
 
     // Capitalization doesn't affect whether the word is in the lexicon or not.
-    parses = parser.beamSearch(Arrays.asList("A"), Arrays.asList("NN"), 10);
+    parses = beamSearch(parser, Arrays.asList("A"), Arrays.asList("NN"), 10);
     assertEquals(1, parses.size());
     parse = parses.get(0);
     assertEquals(1.0, parse.getSubtreeProbability());
@@ -174,7 +174,7 @@ public class CcgParserTest extends TestCase {
 
   public void testSyntacticCategoryBackoff() {
     // Test that word / syntactic category weights work.
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("blue"), 10);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("blue"), 10);
     assertEquals(2, parses.size());
     CcgParse best = parses.get(0);
     assertEquals(3.0, best.getSubtreeProbability());
@@ -186,10 +186,10 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBeamSearch() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
-    // CcgParse parse = parser.parse(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
+    // CcgParse parse = parse(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
     
     System.out.println(parse.getAllDependencies());
 
@@ -217,7 +217,7 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testExactParse() {
-    CcgParse parse = parser.parse(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
+    CcgParse parse = parse(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
 
     System.out.println(parse.getAllDependencies());
 
@@ -245,7 +245,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBeamSearch2() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 10);
 
     for (CcgParse parse : parses) {
@@ -290,7 +290,7 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testExactParse2() {
-    CcgParse parse = parser.parse(
+    CcgParse parse = parse(parser, 
         Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"));
 
     // The parse where "in" attaches to "people" should have higher
@@ -303,20 +303,19 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBeamSearch3() {
-    List<CcgParse> parses = parser.beamSearch(
-        Arrays.asList("green", "people"), 10);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("green", "people"), 10);
 
     assertEquals(1, parses.size());
     assertEquals(2.0, parses.get(0).getSubtreeProbability());
   }
   
   public void testExactParse3() {
-    CcgParse parse = parser.parse(Arrays.asList("green", "people"));
+    CcgParse parse = parse(parser, Arrays.asList("green", "people"));
     assertEquals(2.0, parse.getSubtreeProbability());
   }
 
   public void testParseLogicalFormApplication() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList(
         "i", "quickly", "eat", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -336,7 +335,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormApplication2() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList(
         "i", "that", "eat", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -351,7 +350,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormComposition() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "the", "colorful", "tasty"), 10);
     assertEquals(2, parses.size());
 
@@ -366,14 +365,14 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormBinaryRule() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         ";", "berries"), 10);
     assertEquals(1, parses.size());
     assertEquals(null, parses.get(0).getLogicalForm());
   }
 
   public void testParseLogicalFormBinaryRule2() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "berries", ";"), 10);
     assertEquals(1, parses.size());
     Expression expectedLf = exp.parseSingleExpression("berries");
@@ -381,7 +380,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormBinaryRule3() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "people", "berries"), 10);
     assertEquals(1, parses.size());
     Expression expectedLf = exp.parseSingleExpression("(lambda j (exists k (and (people k) (berries j) (special:compound k j))))");
@@ -389,7 +388,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormConjunction() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "i", "eat", "people", "or", "berries"), 10);
     assertEquals(1, parses.size());
     System.out.println(parses.get(0));
@@ -398,7 +397,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormUnary() {
-    List<CcgParse> parses = parserWithUnaryAndComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithUnaryAndComposition, Arrays.asList(
         "berries", "that", "i", "eat"), 10);
 
     assertEquals(2, parses.size());
@@ -418,9 +417,9 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition() {
-    assertEquals(0, parser.beamSearch(Arrays.asList("rapidly", "eat"), 10).size());
+    assertEquals(0, beamSearch(parser, Arrays.asList("rapidly", "eat"), 10).size());
 
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("rapidly", "eat"), 10);
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("rapidly", "eat"), 10);
 
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
@@ -437,9 +436,9 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition2() {
-    assertEquals(0, parser.beamSearch(Arrays.asList("eat", "amazingly", "tasty"), 10).size());
+    assertEquals(0, beamSearch(parser, Arrays.asList("eat", "amazingly", "tasty"), 10).size());
 
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("eat", "amazingly", "tasty"), 10);
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("eat", "amazingly", "tasty"), 10);
 
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
@@ -459,9 +458,9 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition3() {
-    assertEquals(1, parser.beamSearch(Arrays.asList("about", "eating", "berries"), 10).size());
+    assertEquals(1, beamSearch(parser, Arrays.asList("about", "eating", "berries"), 10).size());
 
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("about", "eating", "berries"), 10);
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("about", "eating", "berries"), 10);
 
     for (CcgParse parse : parses) {
       System.out.println(parse);
@@ -489,7 +488,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition4() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithComposition, 
         Arrays.asList("i", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
     assertEquals(3, parses.size());
 
@@ -506,7 +505,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition5() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithComposition, 
         Arrays.asList("exactly", "eat"), 10);
     assertEquals(1, parses.size());
 
@@ -515,13 +514,13 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testParseCompositionNormalForm() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("green", "green", "berries"), 10);
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("green", "green", "berries"), 10);
     // The parser with composition permits 2 derivations, one using
     // composition of the greens, and one only using application.
     assertEquals(2, parses.size());
 
     // The normal form parser only permits the application-only derivation
-    parses = parserWithCompositionNormalForm.beamSearch(Arrays.asList("green", "green", "berries"), 10);
+    parses = beamSearch(parserWithCompositionNormalForm, Arrays.asList("green", "green", "berries"), 10);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
 
@@ -530,17 +529,17 @@ public class CcgParserTest extends TestCase {
     assertEquals("N", parse.getRight().getSyntacticCategory().getValue());
 
     // The same property should generalize to much longer sentences.
-    parses = parserWithCompositionNormalForm.beamSearch(Arrays.asList("green", "green", "green", "green",
+    parses = beamSearch(parserWithCompositionNormalForm, Arrays.asList("green", "green", "green", "green",
         "green", "green", "green", "green", "green", "berries"), 1000);
     assertEquals(1, parses.size());
   }
   
   public void testParseHeadedSyntaxWeights() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("tasty", "apple"), 10);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("tasty", "apple"), 10);
     assertEquals(1, parses.size());
     assertEquals(4.0, parses.get(0).getSubtreeProbability(), 0.0001);
     
-    parses = parser.beamSearch(Arrays.asList("tasty", "apple", "or", "berries"), 
+    parses = beamSearch(parser, Arrays.asList("tasty", "apple", "or", "berries"), 
         Arrays.asList(DEFAULT_POS, DEFAULT_POS, DEFAULT_POS, "JJ"), 10);
     assertEquals(2, parses.size());
     
@@ -551,7 +550,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseHeadUnification() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "and", "houses", "eat", "berries", "and", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -577,7 +576,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testPrepositionalModifier() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "almost", "in", "houses"), 10);
 
     assertEquals(1, parses.size());
@@ -587,7 +586,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testSubjectPatterns() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "that", "directed", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -610,11 +609,11 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testLexiconPosParameters() {
-    List<CcgParse> nnParses = parser.beamSearch(
+    List<CcgParse> nnParses = beamSearch(parser, 
         Arrays.asList("tasty", "berries"), 
         Arrays.asList(DEFAULT_POS, "NN"), 10);
     
-    List<CcgParse> basicParses = parser.beamSearch(
+    List<CcgParse> basicParses = beamSearch(parser, 
         Arrays.asList("tasty", "berries"), 
         Arrays.asList(DEFAULT_POS, DEFAULT_POS), 10);
     
@@ -624,11 +623,11 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testDependencyPosParameters() {
-    List<CcgParse> nnParses = parser.beamSearch(
+    List<CcgParse> nnParses = beamSearch(parser, 
         Arrays.asList("tasty", "berries"), 
         Arrays.asList("JJ", "NN"), 10);
     
-    List<CcgParse> basicParses = parser.beamSearch(
+    List<CcgParse> basicParses = beamSearch(parser, 
         Arrays.asList("tasty", "berries"), 
         Arrays.asList(DEFAULT_POS, "NN"), 10);
     
@@ -640,7 +639,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseUnfilledDep() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("about", "eating", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -653,7 +652,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRules1() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("berries", ";"), 10);
 
     assertEquals(1, parses.size());
@@ -666,7 +665,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRules2() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "eat", "berries", ";"), 10);
 
     assertEquals(1, parses.size());
@@ -678,7 +677,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRules3() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", ";", "eat", "berries", ";"), 10);
 
     assertEquals(3, parses.size());
@@ -699,7 +698,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesConj() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "or", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -714,7 +713,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesConj2() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("or", "directed", "houses"), 10);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
@@ -723,7 +722,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesConj3() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
 
     assertEquals(1, parses.size());
@@ -749,7 +748,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesNounCompound() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -767,7 +766,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesNounCompoundHeadIndex() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "berries", "backward"), 10);
     assertEquals(2, parses.size());
 
@@ -781,7 +780,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesNounCompoundHeadIndexConjunction() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "berries", "and", "people"), 10);
 
     assertEquals(2, parses.size());
@@ -798,7 +797,7 @@ public class CcgParserTest extends TestCase {
 
   /*
   public void testLargeConjunction() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "or", "berries", "or", "people", "or", "people", "or", "people",
             "or", "people"), 100);
     // "eat", "berries", "or", "eat", "people"
@@ -810,17 +809,19 @@ public class CcgParserTest extends TestCase {
   */
 
   public void testParseTimeout() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE);
+    List<CcgParse> parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
+        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE);
     assertTrue(parses.size() > 0);
     
-    parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE);
+    parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
+        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE);
     assertEquals(0, parses.size());
   }
 
   public void testParseUnaryRules1() {
-    List<CcgParse> parses = parserWithUnary.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithUnary,
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
 
     for (CcgParse parse : parses) {
@@ -840,7 +841,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseUnaryRules2() {
-    List<CcgParse> parses = parserWithUnary.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithUnary, 
         Arrays.asList("people", "eat", "people", "berries"), 10);
 
     assertEquals(4, parses.size());
@@ -855,8 +856,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseUnaryRules3() {
-    List<CcgParse> parses = parserWithUnary.beamSearch(
-        Arrays.asList("eat"), 10);
+    List<CcgParse> parses = beamSearch(parserWithUnary, Arrays.asList("eat"), 10);
 
     System.out.println(parses);
     assertEquals(2, parses.size());
@@ -871,7 +871,7 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testParseUnaryRulesDropArgument() {
-    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("a", "people", "eating", "berries"), 10);
+    List<CcgParse> parses = beamSearch(parserWithUnary, Arrays.asList("a", "people", "eating", "berries"), 10);
     
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
@@ -882,8 +882,9 @@ public class CcgParserTest extends TestCase {
 
   public void testChartFilterApply() {
     ChartCost filter = new TestChartFilter();
-    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
-        Collections.nCopies(6, DEFAULT_POS), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
+    List<CcgParse> parses = parserWithUnary.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
+        Collections.nCopies(6, DEFAULT_POS)), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
 
     // The filter disallows the verb modifier syntactic category for
     // "in"
@@ -897,8 +898,9 @@ public class CcgParserTest extends TestCase {
 
   public void testChartFilterApplyToTerminals() {
     ChartCost filter = new TestChartFilter();
-    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("berries", "in", "people", "houses"),
-        Collections.nCopies(4, DEFAULT_POS), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
+    List<CcgParse> parses = parserWithUnary.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("berries", "in", "people", "houses"), Collections.nCopies(4, DEFAULT_POS)),
+        10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
 
     for (CcgParse parse : parses) {
       assertNoNounCompound(parse);
@@ -906,8 +908,9 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testSupertagChartFilter() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("blue", "berries"),
-        Collections.nCopies(2, DEFAULT_POS), 10, new NullLogFunction());
+    List<CcgParse> parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)),
+        10, new NullLogFunction());
     assertEquals(2, parses.size());
 
     List<List<HeadedSyntacticCategory>> supertags = Lists.newArrayList();
@@ -916,8 +919,8 @@ public class CcgParserTest extends TestCase {
 
     ChartCost supertagChartFilter = new SupertagChartCost(supertags);
 
-    parses = parser.beamSearch(Arrays.asList("blue", "berries"),
-        Collections.nCopies(2, DEFAULT_POS), 10,
+    parses = parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)), 10,
         supertagChartFilter, new NullLogFunction(), -1, Integer.MAX_VALUE);
     assertEquals(1, parses.size());
   }
@@ -941,13 +944,30 @@ public class CcgParserTest extends TestCase {
     oos.close();
   }
   
+  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+      int beamSize) {
+    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words,
+        Collections.nCopies(words.size(), DEFAULT_POS)), beamSize);
+  }
+
+  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+      List<String> posTags, int beamSize) {
+    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words, 
+        posTags), beamSize);
+  }
+
+  private CcgParse parse(CcgParser<SupertaggedSentence> parser, List<String> words) {
+    return parser.parse(SupertaggedSentence.createWithUnobservedSupertags(words,
+        Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE);
+  }
+
   private DependencyStructure parseDependency(String subject, String syntacticCategory, int subjIndex, 
       String object, int objectIndex, int argNum) {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(syntacticCategory).getCanonicalForm();
     return new DependencyStructure(subject, subjIndex, cat, object, objectIndex, argNum);
   }
 
-  private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray,
+  private CcgParser<SupertaggedSentence> parseLexicon(String[] lexicon, String[] binaryRuleArray,
       String[] unaryRuleArray, double[] weights, boolean allowComposition, boolean allowWordSkipping,
       boolean normalFormOnly) {
     Preconditions.checkArgument(lexicon.length == weights.length);
@@ -1134,11 +1154,12 @@ public class CcgParserTest extends TestCase {
     }
     DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
     
-    TableLexicon tableLexicon = new TableLexicon(terminalVar, ccgCategoryVar, terminalBuilder.build(),
-        posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution);
+    TableLexicon<SupertaggedSentence> tableLexicon = new TableLexicon<SupertaggedSentence>(
+        terminalVar, ccgCategoryVar, terminalBuilder.build(), posTagVar, terminalSyntaxVar,
+        posDistribution, terminalSyntaxDistribution);
 
-    return new CcgParser(tableLexicon, semanticHeadVar, semanticSyntaxVar, semanticArgNumVar,
-        semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
+    return new CcgParser<SupertaggedSentence>(tableLexicon, semanticHeadVar, semanticSyntaxVar,
+        semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
@@ -1158,8 +1179,9 @@ public class CcgParserTest extends TestCase {
       return 0.0;
     }
 
+    /*
     @Override
-    public void applyToTerminals(CcgChart chart) {
+    public <T extends SupertaggedSentence> void applyToTerminals(CcgChart<T> chart) {
       DiscreteFactor syntaxDistribution = chart.getSyntaxDistribution();
       TableFactorBuilder builder = TableFactorBuilder.fromFactor(syntaxDistribution);
 
@@ -1182,5 +1204,6 @@ public class CcgParserTest extends TestCase {
       DiscreteFactor updatedSyntaxDistribution = builder.build();
       chart.setSyntaxDistribution(updatedSyntaxDistribution);
     }
+    */
   }
 }

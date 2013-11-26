@@ -8,6 +8,7 @@ import junit.framework.TestCase;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public class ParametricCcgParserTest extends TestCase {
@@ -42,9 +43,9 @@ public class ParametricCcgParserTest extends TestCase {
 
   private static final Set<String> posTags = Sets.newHashSet("NN", "JJ", "IN", "VB");
   
-  private ParametricCcgParser family;
+  private ParametricCcgParser<SupertaggedSentence> family;
   private SufficientStatistics parameters;
-  private CcgParser parser;
+  private CcgParser<SupertaggedSentence> parser;
   
   private static final double TOLERANCE = 1e-10;
   
@@ -56,7 +57,7 @@ public class ParametricCcgParserTest extends TestCase {
   }
 
   public void testTerminals() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("Green"), Arrays.asList("NN"), 10);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("Green"), Arrays.asList("NN"), 10);
 
     CcgParse nounParse = null;
     CcgParse adjParse = null;
@@ -73,7 +74,7 @@ public class ParametricCcgParserTest extends TestCase {
     Preconditions.checkState(nounParse != null);
     Preconditions.checkState(adjParse != null);
 
-    parses = parser.beamSearch(Arrays.asList("unknown_adjective"), Arrays.asList("JJ"), 10);
+    parses = beamSearch(parser, Arrays.asList("unknown_adjective"), Arrays.asList("JJ"), 10);
     CcgParse unknownAdjParse = null;
     for (CcgParse parse : parses) {
       if (parse.getSyntacticCategory().equals(adjCat)) {
@@ -85,13 +86,13 @@ public class ParametricCcgParserTest extends TestCase {
     family.incrementSufficientStatistics(parameters, nounParse, 1.0);
     family.incrementSufficientStatistics(parameters, adjParse, -0.5);
     family.incrementSufficientStatistics(parameters, unknownAdjParse, 0.75);
-    CcgParser newParser = family.getModelFromParameters(parameters);
+    CcgParser<SupertaggedSentence> newParser = family.getModelFromParameters(parameters);
 
     System.out.println(family.getParameterDescription(parameters));
     
     // The NN -> N{0} parameter has a weight of 1, as does the root
     // NN -> N{0} parameter and root N{0} parameter.
-    parses = newParser.beamSearch(Arrays.asList("BLOCK"), Arrays.asList("NN"), 10);
+    parses = beamSearch(newParser, Arrays.asList("BLOCK"), Arrays.asList("NN"), 10);
     assertEquals(2, parses.size());
     for (CcgParse parse : parses) {
       System.out.println(parse);
@@ -104,7 +105,7 @@ public class ParametricCcgParserTest extends TestCase {
 
     // the green -> N{0} parameter has weight 1, as do the 
     // green -> N{0} root and N{0} root parameters. 
-    parses = newParser.beamSearch(Arrays.asList("green"), Arrays.asList("JJ"), 10);
+    parses = beamSearch(newParser, Arrays.asList("green"), Arrays.asList("JJ"), 10);
     assertEquals(3, parses.size());
     assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
     assertEquals(nounCat, parses.get(0).getSyntacticCategory());
@@ -114,13 +115,19 @@ public class ParametricCcgParserTest extends TestCase {
     assertEquals(adjCat, parses.get(2).getSyntacticCategory());
 
     // Check that other unknown words get correct parameterizations.
-    parses = newParser.beamSearch(Arrays.asList("another_unknown_adjective"),
+    parses = beamSearch(newParser, Arrays.asList("another_unknown_adjective"),
         Arrays.asList("JJ"), 10);
     assertEquals(4, parses.size());
     assertEquals(5 * 0.75 - 0.5, Math.log(parses.get(0).getSubtreeProbability()));
     assertEquals(adjCat, parses.get(0).getSyntacticCategory());
     assertEquals(1.0, Math.log(parses.get(1).getSubtreeProbability()));
     assertEquals(nounCat, parses.get(1).getSyntacticCategory());
+  }
+
+  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+      List<String> posTags, int beamSize) {
+    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words, 
+        posTags), beamSize);
   }
 }
 

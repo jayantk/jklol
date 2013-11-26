@@ -561,29 +561,28 @@ public class ParseCcg extends AbstractCli {
     }
 
     @Override
-    public CcgLoss map(CcgExample example) {
+    public CcgLoss map(CcgExample<T> example) {
       CcgParseResult parse = null;
       SyntacticChartCost filter = null;
       if (useCcgbankDerivation) {
         filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
       }
       log.startTimer("parse_sentence");
-      parse = parser.parse(example.getWords(), example.getPosTags(), filter);
+      parse = parser.parse(example.getSentence(), filter);
       log.stopTimer("parse_sentence");
-      System.out.println("SENT: " + example.getWords());
+      System.out.println("SENT: " + example.getSentence().getWords());
 
       if (parse != null) {
         printCcgParses(Arrays.asList(parse.getParse()), 1, false, false);
         return computeLoss(parse, example, parser.getParser(), filterDependenciesCcgbank);
       } else {
-        System.out.println("NO ANALYSIS: " + example.getWords());
+        System.out.println("NO ANALYSIS: " + example.getSentence().getWords());
         
         if (useCcgbankDerivation) {
           // Provide a deeper analysis of why parsing failed.
-          CcgChart chart = new CcgExactHashTableChart(example.getWords(),  example.getPosTags(),
+          CcgChart<T> chart = new CcgExactHashTableChart<T>(example.getSentence(),
               Integer.MAX_VALUE);
-          parser.getParser().parseCommon(chart, example.getWords(), example.getPosTags(), filter,
-              null, -1);
+          parser.getParser().parseCommon(chart, example.getSentence(), filter, null, -1);
           CcgParserUtils.analyzeParseFailure(example.getSyntacticParse(), chart,
               parser.getParser().getSyntaxVarType(), "Parse failure", 0);
         }

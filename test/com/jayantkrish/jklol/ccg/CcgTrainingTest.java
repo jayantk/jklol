@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -11,6 +12,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
@@ -78,13 +80,13 @@ public class CcgTrainingTest extends TestCase {
 
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
 
-  private DataFormat<CcgExample> exampleReader;
-  private ParametricCcgParser family;
-  private List<CcgExample> trainingExamples;
-  private List<CcgExample> trainingExamplesWithSyntax;
-  private List<CcgExample> trainingExamplesSyntaxOnly;
-  private List<CcgExample> trainingExamplesDepsOnly;
-  private List<CcgExample> trainingExamplesLfOnly;
+  private DataFormat<CcgExample<SupertaggedSentence>> exampleReader;
+  private ParametricCcgParser<SupertaggedSentence> family;
+  private List<CcgExample<SupertaggedSentence>> trainingExamples;
+  private List<CcgExample<SupertaggedSentence>> trainingExamplesWithSyntax;
+  private List<CcgExample<SupertaggedSentence>> trainingExamplesSyntaxOnly;
+  private List<CcgExample<SupertaggedSentence>> trainingExamplesDepsOnly;
+  private List<CcgExample<SupertaggedSentence>> trainingExamplesLfOnly;
   private Set<String> posTags;
 
   private static final double TOLERANCE = 1e-10;
@@ -98,14 +100,14 @@ public class CcgTrainingTest extends TestCase {
     }
     
     trainingExamplesLfOnly = Lists.newArrayList();
-    for (CcgExample example : trainingExamples) {
-      trainingExamplesLfOnly.add(new CcgExample(example.getSentence().removeSupertags(), null,
+    for (CcgExample<SupertaggedSentence> example : trainingExamples) {
+      trainingExamplesLfOnly.add(new CcgExample<SupertaggedSentence>(example.getSentence().removeSupertags(), null,
           null, example.getLogicalForm()));
     }
     
     trainingExamplesDepsOnly = Lists.newArrayList();
-    for (CcgExample example : trainingExamples) {
-      trainingExamplesDepsOnly.add(new CcgExample(example.getSentence().removeSupertags(),
+    for (CcgExample<SupertaggedSentence> example : trainingExamples) {
+      trainingExamplesDepsOnly.add(new CcgExample<SupertaggedSentence>(example.getSentence().removeSupertags(),
           example.getDependencies(), null, null));
     }
 
@@ -117,8 +119,8 @@ public class CcgTrainingTest extends TestCase {
     posTags.add(ParametricCcgParser.DEFAULT_POS_TAG);
 
     trainingExamplesSyntaxOnly = Lists.newArrayList();
-    for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
-      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence().removeSupertags(), 
+    for (CcgExample<SupertaggedSentence> syntaxExample : trainingExamplesWithSyntax) {
+      trainingExamplesSyntaxOnly.add(new CcgExample<SupertaggedSentence>(syntaxExample.getSentence().removeSupertags(), 
           null, syntaxExample.getSyntacticParse(), null));
     }
 
@@ -128,13 +130,13 @@ public class CcgTrainingTest extends TestCase {
   }
   
   public void testSyntacticChartFilter1() {
-    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
-    CcgExample example = trainingExamplesSyntaxOnly.get(0);
-    
+    CcgParser<SupertaggedSentence> parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    CcgExample<SupertaggedSentence> example = trainingExamplesSyntaxOnly.get(0);
+
     SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
-    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(), 10,
+    List<CcgParse> correctParses = parser.beamSearch(example.getSentence(), 10,
         filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
-    
+
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
     }
@@ -143,16 +145,16 @@ public class CcgTrainingTest extends TestCase {
   }
   
   public void testSyntacticChartFilter2() {
-    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
-    CcgExample example = trainingExamplesSyntaxOnly.get(1);
+    CcgParser<SupertaggedSentence> parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    CcgExample<SupertaggedSentence> example = trainingExamplesSyntaxOnly.get(1);
     System.out.println("expected: " + example.getSyntacticParse());
-    List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags(), 10);
+    List<CcgParse> parses = parser.beamSearch(example.getSentence(), 10);
     for (CcgParse parse : parses) {
       System.out.println(parse);
     }
 
     SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
-    List<CcgParse> correctParses = parser.beamSearch(example.getWords(), example.getPosTags(),
+    List<CcgParse> correctParses = parser.beamSearch(example.getSentence(),
         10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
 
     for (CcgParse correct : correctParses) {
@@ -163,50 +165,50 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testParseFromLexicon() {
-    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("block"), 10);
+    CcgParser<SupertaggedSentence> parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("block"), 10);
     assertEquals(2, parses.size());
 
-    parses = parser.beamSearch(Arrays.asList("near"), 10);
+    parses = beamSearch(parser, Arrays.asList("near"), 10);
     assertEquals(4, parses.size());
 
-    parses = parser.beamSearch(Arrays.asList(","), 10);
+    parses = beamSearch(parser, Arrays.asList(","), 10);
     assertEquals(1, parses.size());
 
-    parses = parser.beamSearch(Arrays.asList("#"), 10);
+    parses = beamSearch(parser, Arrays.asList("#"), 10);
     assertEquals(2, parses.size());
 
-    parses = parser.beamSearch(Arrays.asList("#", "2", "block"), 10);
+    parses = beamSearch(parser, Arrays.asList("#", "2", "block"), 10);
     // 3 parses that produce a noun at the root, times 2 because
     // of the N -> (S/(S\N)) type-raising rule.
     assertEquals(6, parses.size());
   }
 
   public void testTrainLoglikelihoodDependenciesOnly() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesDepsOnly);
+    CcgParser<SupertaggedSentence> parser = trainLoglikelihoodParser(trainingExamplesDepsOnly);
     assertZeroDependencyError(parser, trainingExamples);
     // Check that the resulting parameters are sensible.
-    assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
+    assertEquals(1.0, beamSearch(parser, Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
   }
   
   public void testTrainLoglikelihoodLogicalFormOnly() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesLfOnly);
+    CcgParser<SupertaggedSentence> parser = trainLoglikelihoodParser(trainingExamplesLfOnly);
     assertZeroDependencyError(parser, trainingExamples);
     // Check that the resulting parameters are sensible.
-    assertEquals(1.0, parser.beamSearch(Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
+    assertEquals(1.0, beamSearch(parser, Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
   }
 
   public void testTrainLoglikelihoodWithSyntax() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesWithSyntax);
+    CcgParser<SupertaggedSentence> parser = trainLoglikelihoodParser(trainingExamplesWithSyntax);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainLoglikelihoodSyntaxOnly() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesSyntaxOnly);
+    CcgParser<SupertaggedSentence> parser = trainLoglikelihoodParser(trainingExamplesSyntaxOnly);
     assertTrainedParserUsesSyntax(parser);
 
-    List<CcgParse> parses = filterNonAtomicParses(parser.beamSearch(
+    List<CcgParse> parses = filterNonAtomicParses(beamSearch(parser, 
         Arrays.asList("object", "near", "block"), 10));
     // The two parses differ only in the semantics of near, which is
     // unconstrained in the training data.
@@ -215,71 +217,73 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrainPerceptronLogicalFormOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesLfOnly, false, false);
+    CcgParser<SupertaggedSentence> parser = trainPerceptronParser(trainingExamplesLfOnly, false, false);
     assertZeroDependencyError(parser, trainingExamples);
   }
 
   public void testTrainPerceptronWithSyntax() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false, false);
+    CcgParser<SupertaggedSentence> parser = trainPerceptronParser(trainingExamplesWithSyntax, false, false);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, false);
+    CcgParser<SupertaggedSentence> parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, false);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnlyExactInference() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, false);
+    CcgParser<SupertaggedSentence> parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, false);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginWithSyntax() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false, true);
+    CcgParser<SupertaggedSentence> parser = trainPerceptronParser(trainingExamplesWithSyntax, false, true);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, true);
+    CcgParser<SupertaggedSentence> parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, true);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginSyntaxOnlyExactInference() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, true);
+    CcgParser<SupertaggedSentence> parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, true);
     assertTrainedParserUsesSyntax(parser);
   }
 
-  private CcgParser trainLoglikelihoodParser(List<CcgExample> examples) {
-    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 100);
+  private CcgParser<SupertaggedSentence> trainLoglikelihoodParser(List<CcgExample<SupertaggedSentence>> examples) {
+    CcgLoglikelihoodOracle<SupertaggedSentence> oracle = new CcgLoglikelihoodOracle<SupertaggedSentence>(family, 100);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
         true, false, 0.1, new DefaultLogFunction());
 
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), examples);
-    CcgParser parser = family.getModelFromParameters(parameters);
+    CcgParser<SupertaggedSentence> parser = family.getModelFromParameters(parameters);
     return parser;
   }
 
-  private CcgParser trainPerceptronParser(List<CcgExample> examples, boolean exactInference, boolean maxMargin) {
+  private CcgParser<SupertaggedSentence> trainPerceptronParser(
+      List<CcgExample<SupertaggedSentence>> examples, boolean exactInference, boolean maxMargin) {
     CcgInference inferenceAlg = null;
     if (exactInference) {
       inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE);
     } else {
       inferenceAlg = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, true);
     }
-    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg, maxMargin ? 1.0 : 0.0);
+    CcgPerceptronOracle<SupertaggedSentence> oracle = new CcgPerceptronOracle<SupertaggedSentence>(
+        family, inferenceAlg, maxMargin ? 1.0 : 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1,
         false, true, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
-    CcgParser parser = family.getModelFromParameters(parameters);
+    CcgParser<SupertaggedSentence> parser = family.getModelFromParameters(parameters);
     return parser;
   }
 
-  private void assertTrainedParserUsesSyntax(CcgParser parser) {
-    List<CcgParse> parses = filterNonAtomicParses(parser.beamSearch(Arrays.asList("the", "red", "block"), 
+  private void assertTrainedParserUsesSyntax(CcgParser<SupertaggedSentence> parser) {
+    List<CcgParse> parses = filterNonAtomicParses(beamSearch(parser, Arrays.asList("the", "red", "block"), 
         Arrays.asList("DT", "NN", "NN"), 10));
 
     // Check that syntactic information is being used in the learned
@@ -294,7 +298,7 @@ public class CcgTrainingTest extends TestCase {
     assertTrue(bestParse.getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
     
     // Check that weights are being learned for unary rules.
-    parses = parser.beamSearch(Arrays.asList("foo"), Arrays.asList("NN"), 100);
+    parses = beamSearch(parser, Arrays.asList("foo"), Arrays.asList("NN"), 100);
     assertEquals(3, parses.size());
     for (CcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse);
@@ -303,7 +307,7 @@ public class CcgTrainingTest extends TestCase {
     assertEquals("ABCD", parses.get(0).getSyntacticCategory().getValue());
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
 
-    parses = parser.beamSearch(Arrays.asList("block"), Arrays.asList("NN"), 100);
+    parses = beamSearch(parser, Arrays.asList("block"), Arrays.asList("NN"), 100);
     assertEquals(2, parses.size());
     for (CcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse);
@@ -312,7 +316,7 @@ public class CcgTrainingTest extends TestCase {
     assertTrue(parses.get(0).getSubtreeProbability() > parses.get(1).getSubtreeProbability() + 0.000001);
     
     // Check that backoff to POS tags works properly.
-    parses = parser.beamSearch(Arrays.asList("another_new_word", "block"), Arrays.asList("JJ", "NN"), 100);
+    parses = beamSearch(parser, Arrays.asList("another_new_word", "block"), Arrays.asList("JJ", "NN"), 100);
     for (CcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse);
     }
@@ -320,19 +324,32 @@ public class CcgTrainingTest extends TestCase {
     assertTrue(parses.get(0).getSyntacticCategory().equals(SyntacticCategory.parseFrom("N")));
   }
 
-  private void assertZeroDependencyError(CcgParser parser, Iterable<CcgExample> examples) {
+  private void assertZeroDependencyError(CcgParser<SupertaggedSentence> parser,
+      Iterable<CcgExample<SupertaggedSentence>> examples) {
     // Test that zero training error is achieved.
-    for (CcgExample example : examples) {
-      List<CcgParse> parses = parser.beamSearch(example.getWords(), example.getPosTags(), 100);
+    for (CcgExample<SupertaggedSentence> example : examples) {
+      List<CcgParse> parses = beamSearch(parser, example.getSentence().getWords(), example.getSentence().getPosTags(), 100);
       CcgParse bestParse = parses.get(0);
 
-      System.out.println(example.getWords() + " " + bestParse);
+      System.out.println(example.getSentence().getWords() + " " + bestParse);
       System.out.println(example.getDependencies());
       System.out.println(bestParse.getAllDependencies());
       assertEquals(example.getDependencies(), Sets.newHashSet(bestParse.getAllDependencies()));
     }
   }
-  
+
+  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+      int beamSize) {
+    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words,
+        Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG)), beamSize);
+  }
+
+  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+      List<String> posTags, int beamSize) {
+    return parser.beamSearch(SupertaggedSentence.createWithUnobservedSupertags(words, 
+        posTags), beamSize);
+  }
+
   private List<CcgParse> filterNonAtomicParses(List<CcgParse> parses) {
     List<CcgParse> atomicParses = Lists.newArrayList();
     for (CcgParse parse : parses) {

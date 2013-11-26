@@ -63,15 +63,6 @@ public class CptCfgFactor extends AbstractParametricFactor {
   }
   
   @Override
-  public CptCfgFactor rescaleFeatures(SufficientStatistics relabeling) {
-    if (relabeling == null) {
-      return this;
-    }
-
-    throw new UnsupportedOperationException("Feature rescaling is not supported on CptCfgFactor");
-  }
-  
-  @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     throw new UnsupportedOperationException();
   }

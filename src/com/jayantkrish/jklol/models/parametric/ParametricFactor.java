@@ -53,9 +53,6 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    */
   public Factor getModelFromParameters(SufficientStatistics parameters);
 
-  @Override
-  public ParametricFactor rescaleFeatures(SufficientStatistics rescaling);
-
   /**
    * Computes sufficient statistics for {@code this} factor based on an assumed
    * point distribution at {@code assignment}, and increments

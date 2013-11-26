@@ -84,24 +84,6 @@ public class ParametricTableLexicon<T extends SupertaggedSentence> implements Pa
   }
 
   @Override
-  public ParametricTableLexicon<T> rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    }
-
-    ListSufficientStatistics rescalingList = rescaling.coerceToList();
-    ParametricFactor newTerminalFamily = terminalFamily.rescaleFeatures(rescalingList
-        .getStatisticByName(TERMINAL_PARAMETERS));
-    ParametricFactor newTerminalPosFamily = terminalPosFamily.rescaleFeatures(rescalingList
-        .getStatisticByName(TERMINAL_POS_PARAMETERS));
-    ParametricFactor newTerminalSyntaxFamily = terminalSyntaxFamily.rescaleFeatures(rescalingList
-        .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS));
-
-    return new ParametricTableLexicon<T>(terminalVar, ccgCategoryVar, newTerminalFamily,
-        terminalPosVar, terminalSyntaxVar, newTerminalPosFamily, newTerminalSyntaxFamily);
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters) {
     return getParameterDescription(parameters, -1);
   }

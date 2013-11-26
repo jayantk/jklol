@@ -12,15 +12,15 @@ import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
-public class SupertaggingCcgParser {
-  private final CcgParser<SupertaggedSentence> parser;
+public class SupertaggingCcgParser<T extends SupertaggedSentence> {
+  private final CcgParser<T> parser;
   private final CcgInference inference;
 
   // May be null, in which case supertagging is not used.
   private final Supertagger supertagger;
   private final double[] multitagThresholds;
 
-  public SupertaggingCcgParser(CcgParser<SupertaggedSentence> parser, CcgInference inference,
+  public SupertaggingCcgParser(CcgParser<T> parser, CcgInference inference,
       Supertagger supertagger, double[] multitagThresholds) {
     this.parser = Preconditions.checkNotNull(parser);
     this.inference = Preconditions.checkNotNull(inference);
@@ -30,20 +30,20 @@ public class SupertaggingCcgParser {
     this.multitagThresholds = Arrays.copyOf(multitagThresholds, multitagThresholds.length);
   }
 
-  public CcgParseResult parse(List<String> terminals, List<String> posTags, ChartCost inputFilter) {
+  public CcgParseResult parse(T sentence, ChartCost inputFilter) {
     SupertaggedSentence supertaggedSentence = null;
     if (supertagger != null) {
       for (int i = 0; i < multitagThresholds.length; i++) {
         // Try parsing at each multitag threshold. If parsing succeeds,
         // immediately return the parse. Otherwise, continue to further
         // thresholds.
-        List<WordAndPos> supertaggerInput = WordAndPos.createExample(terminals, posTags);
+        List<WordAndPos> supertaggerInput = sentence.getItems();
         supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThresholds[i]);
         
         ChartCost filter = SumChartCost.create(inputFilter,
             new SupertagChartCost(supertaggedSentence.getLabels()));
 
-        CcgParse parse = inference.getBestParse(parser, supertaggedSentence, filter, new NullLogFunction());
+        CcgParse parse = inference.getBestParse(parser, sentence, filter, new NullLogFunction());
         if (parse != null) {
           return new CcgParseResult(parse, supertaggedSentence, multitagThresholds[i]);
         }
@@ -51,8 +51,7 @@ public class SupertaggingCcgParser {
       // Parsing was unsuccessful at all thresholds
       return null;
     } else {
-      supertaggedSentence = SupertaggedSentence.createWithUnobservedSupertags(terminals, posTags);
-      CcgParse parse = inference.getBestParse(parser, supertaggedSentence, inputFilter, new NullLogFunction());
+      CcgParse parse = inference.getBestParse(parser, sentence, inputFilter, new NullLogFunction());
       if (parse != null) {
         return new CcgParseResult(parse, supertaggedSentence, 0.0);
       } else {
@@ -61,11 +60,11 @@ public class SupertaggingCcgParser {
     }
   }
 
-  public CcgParseResult parse(List<String> terminals, List<String> posTags) {
-    return parse(terminals, posTags, null);
+  public CcgParseResult parse(T sentence) {
+    return parse(sentence, null);
   }
 
-  public CcgParser<SupertaggedSentence> getParser() {
+  public CcgParser<T> getParser() {
     return parser;
   }
 

@@ -78,22 +78,6 @@ public class ParametricFeaturizedLexicon<T extends SupertaggedSentence> implemen
   }
 
   @Override
-  public ParametricFeaturizedLexicon<T> rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    }
-
-    ListSufficientStatistics rescalingList = rescaling.coerceToList();
-    ParametricFactor newTerminalFamily = terminalFamily.rescaleFeatures(rescalingList
-        .getStatisticByName(TERMINAL_PARAMETERS));
-    ConditionalLogLinearFactor newFeatureFamily = featureFamily.rescaleFeatures(rescalingList
-        .getStatisticByName(TERMINAL_FEATURE_PARAMETERS));
-
-    return new ParametricFeaturizedLexicon<T>(terminalVar, ccgCategoryVar, newTerminalFamily,
-        featureGenerator, ccgSyntaxVar, featureVar, newFeatureFamily);
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters) {
     return getParameterDescription(parameters, -1);
   }

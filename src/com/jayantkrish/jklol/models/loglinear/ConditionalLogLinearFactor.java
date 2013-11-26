@@ -93,15 +93,6 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   }
   
   @Override
-  public ConditionalLogLinearFactor rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    } else {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     Tensor weightTensor = getWeightTensorFromStatistics(parameters);
     VariableNumMap featureVariable = VariableNumMap.singleton(inputVar.getOnlyVariableNum(), 

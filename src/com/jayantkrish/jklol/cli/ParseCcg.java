@@ -104,6 +104,7 @@ public class ParseCcg extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Read the parser.
+    @SuppressWarnings("unchecked")
     CcgParser<SupertaggedSentence> ccgParser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
 
     // Configure inference options
@@ -131,8 +132,8 @@ public class ParseCcg extends AbstractCli {
       }
 
       LogFunctions.getLogFunction().notifyIterationStart(0);
-      SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
-          inferenceAlgorithm, tagger, tagThresholds);
+      SupertaggingCcgParser<SupertaggedSentence> supertaggingParser = 
+          new SupertaggingCcgParser<SupertaggedSentence>(ccgParser, inferenceAlgorithm, tagger, tagThresholds);
       CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, options.has(useGoldSyntacticTrees),
           options.has(filterDependenciesCcgbank));
       LogFunctions.getLogFunction().notifyIterationEnd(0);
@@ -196,8 +197,8 @@ public class ParseCcg extends AbstractCli {
   }
 
   public static <T extends SupertaggedSentence> CcgLoss runTestSetEvaluation(Collection<CcgExample<T>> testExamples, 
-      SupertaggingCcgParser ccgParser, boolean useCcgbankDerivations, boolean filterDependenciesCcgbank) {
-    CcgLossMapper mapper = new CcgLossMapper(ccgParser, useCcgbankDerivations, filterDependenciesCcgbank);
+      SupertaggingCcgParser<T> ccgParser, boolean useCcgbankDerivations, boolean filterDependenciesCcgbank) {
+    CcgLossMapper<T> mapper = new CcgLossMapper<T>(ccgParser, useCcgbankDerivations, filterDependenciesCcgbank);
     CcgLossReducer reducer = new CcgLossReducer();
     return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
   }
@@ -547,12 +548,12 @@ public class ParseCcg extends AbstractCli {
   }
 
   public static class CcgLossMapper<T extends SupertaggedSentence> extends Mapper<CcgExample<T>, CcgLoss> {
-    private final SupertaggingCcgParser parser;
+    private final SupertaggingCcgParser<T> parser;
     private final boolean useCcgbankDerivation;
     private final boolean filterDependenciesCcgbank;
     private final LogFunction log;
 
-    public CcgLossMapper(SupertaggingCcgParser parser, boolean useCcgbankDerivation,
+    public CcgLossMapper(SupertaggingCcgParser<T> parser, boolean useCcgbankDerivation,
         boolean filterDependenciesCcgbank) {
       this.parser = Preconditions.checkNotNull(parser);
       this.useCcgbankDerivation = useCcgbankDerivation;

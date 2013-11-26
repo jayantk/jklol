@@ -34,7 +34,6 @@ import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.data.DataFormat;
-import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
@@ -61,7 +60,6 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Integer> maxChartSize;
   private OptionSpec<String> supertagger;
   private OptionSpec<Double> multitagThreshold;
-  private OptionSpec<Integer> featureCountThreshold;
   private OptionSpec<Void> useCcgBankFormat;
   private OptionSpec<Double> maxMargin;
   private OptionSpec<Void> ignoreSemantics;
@@ -87,7 +85,6 @@ public class TrainCcg extends AbstractCli {
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
-    featureCountThreshold = parser.accepts("featureCountThreshold").withRequiredArg().ofType(Integer.class);
     maxMargin = parser.accepts("maxMargin").withRequiredArg().ofType(Double.class);
     ignoreSemantics = parser.accepts("ignoreSemantics");
     onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
@@ -132,10 +129,6 @@ public class TrainCcg extends AbstractCli {
     System.out.println(trainingExamples.size() + " training examples.");
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
     System.out.println(numDiscarded + " discarded training examples.");
-
-    if (options.has(featureCountThreshold)) {
-      family = applyFeatureCountThreshold(family, trainingExamples, options.valueOf(featureCountThreshold)); 
-    }
 
     if (options.has(logParametersDir)) {
       IoUtils.serializeObjectToFile(family, options.valueOf(logParametersDir) + File.separator + "family.ser");
@@ -204,28 +197,6 @@ public class TrainCcg extends AbstractCli {
     return newExamples;
   }
 
-  private static ParametricCcgParser<SupertaggedSentence> applyFeatureCountThreshold(
-      ParametricCcgParser<SupertaggedSentence> family, List<CcgExample<SupertaggedSentence>> examples,
-      double featureCountThreshold) {
-    System.out.println("Calculating feature counts...");
-    // Count the number of occurrences of each feature in the gold standard
-    // CCG parses, then find all of features which occur >= a threshold.
-    SufficientStatistics featureCounts = CcgParserUtils.getFeatureCounts(family, examples);
-    featureCounts.findEntriesLargerThan(featureCountThreshold);
-
-    double numFeatures = featureCounts.getL2Norm();
-    numFeatures *= numFeatures;
-    System.out.println(numFeatures + " features with count >= " + featureCountThreshold);
-
-    ListSufficientStatistics featureCountsList = featureCounts.coerceToList();
-    int lexiconFeaturesIndex = featureCountsList.getStatisticNames().getIndex(ParametricCcgParser.LEXICON_PARAMETERS);
-    featureCounts.coerceToList().getStatistics().set(lexiconFeaturesIndex, null);
-    int unaryRuleFeaturesIndex = featureCountsList.getStatisticNames().getIndex(ParametricCcgParser.UNARY_RULE_PARAMETERS);
-    featureCounts.coerceToList().getStatistics().set(unaryRuleFeaturesIndex, null);
-
-    return family.rescaleFeatures(featureCounts);
-  }
-
   private static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {
     Map<SyntacticCategory, HeadedSyntacticCategory> catMap = Maps.newHashMap();
     for (String line : IoUtils.readLines(filename)) {
@@ -255,9 +226,11 @@ public class TrainCcg extends AbstractCli {
       this.includeGoldSupertags = includeGoldSupertags;
     }
 
-    @Override
+    @Override @SuppressWarnings("unchecked")
     public CcgExample<T> map(CcgExample<T> item) {
-      SupertaggedSentence taggedSentence = supertagger.multitag(item.getSentence().getItems(), multitagThreshold);
+      SupertaggedSentence supertaggerOutput = supertagger.multitag(item.getSentence().getItems(), multitagThreshold);
+      T taggedSentence = (T) item.getSentence().replaceSupertags(supertaggerOutput.getSupertags(),
+          supertaggerOutput.getLabelProbabilities());
 
       if (includeGoldSupertags) {
         // Make sure the correct headed syntactic category for each
@@ -291,10 +264,10 @@ public class TrainCcg extends AbstractCli {
           }
         }
         
-        taggedSentence = taggedSentence.replaceSupertags(newLabels, newProbs);
+        taggedSentence = (T) taggedSentence.replaceSupertags(newLabels, newProbs);
       }
 
-      return new CcgExample<T>(item, item.getDependencies(), item.getSyntacticParse(),
+      return new CcgExample<T>(taggedSentence, item.getDependencies(), item.getSyntacticParse(),
           item.getLogicalForm());
     }
   }

@@ -60,21 +60,6 @@ public class ParametricNormalizingFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public ParametricNormalizingFactor rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    }
-
-    List<SufficientStatistics> relabelingList = rescaling.coerceToList().getStatistics();
-    List<ParametricFactor> newParametricFactors = Lists.newArrayList();
-    for (int i = 0; i < wrappedFactors.size(); i++) {
-      newParametricFactors.add(wrappedFactors.get(i).rescaleFeatures(relabelingList.get(i)));
-    }
-    return new ParametricNormalizingFactor(inputVars, conditionalVars, outputVars,
-        newParametricFactors);
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     StringBuilder sb = new StringBuilder();
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();

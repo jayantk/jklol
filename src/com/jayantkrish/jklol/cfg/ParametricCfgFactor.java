@@ -91,15 +91,6 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public ParametricCfgFactor rescaleFeatures(SufficientStatistics rescaling) {
-    if (rescaling == null) {
-      return this;
-    }
-
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;

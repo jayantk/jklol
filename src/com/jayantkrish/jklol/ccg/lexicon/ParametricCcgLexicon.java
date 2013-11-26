@@ -8,8 +8,5 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 public interface ParametricCcgLexicon<T extends SupertaggedSentence> extends
 ParametricFamily<CcgLexicon<T>> {
 
-  @Override
-  ParametricCcgLexicon<T> rescaleFeatures(SufficientStatistics rescaling);
-
   void incrementLexiconSufficientStatistics(SufficientStatistics gradient, CcgParse parse, double count);
 }

@@ -12,7 +12,7 @@ import java.util.List;
  * @param <T> Type of object which can be read using this format.
  */
 public interface DataFormat<T> {
-  
+
   public T parseFrom(String item);
 
   public List<T> parseFromFile(String filename);

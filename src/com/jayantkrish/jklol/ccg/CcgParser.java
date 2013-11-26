@@ -26,6 +26,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -45,7 +46,7 @@ import com.jayantkrish.jklol.util.IntMultimap;
  * 
  * @author jayantk
  */
-public class CcgParser implements Serializable {
+public class CcgParser<T extends SupertaggedSentence> implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
@@ -99,7 +100,7 @@ public class CcgParser implements Serializable {
   // Member variables ////////////////////////////////////
 
   // Weights on lexicon entries
-  private final CcgLexicon lexicon; 
+  private final CcgLexicon<T> lexicon; 
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -206,7 +207,7 @@ public class CcgParser implements Serializable {
   private final boolean allowWordSkipping;
   private final boolean normalFormOnly;
 
-  public CcgParser(CcgLexicon lexicon, VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
+  public CcgParser(CcgLexicon<T> lexicon, VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar,
       DiscreteFactor dependencyDistribution, VariableNumMap wordDistanceVar,
@@ -1001,7 +1002,7 @@ public class CcgParser implements Serializable {
         newRightRelabeling, newRightInverseRelabeling, newRightToReturnInverseRelabeling, newRightDepRelabeling);
   }
 
-  public CcgLexicon getLexicon() {
+  public CcgLexicon<T> getLexicon() {
     return lexicon;
   }
 
@@ -1058,8 +1059,8 @@ public class CcgParser implements Serializable {
     return compiledSyntaxDistribution;
   }
 
-  public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
-    return new CcgParser(lexicon, dependencyHeadVar, dependencySyntaxVar,
+  public CcgParser<T> replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
+    return new CcgParser<T>(lexicon, dependencyHeadVar, dependencySyntaxVar,
         dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
@@ -1075,39 +1076,27 @@ public class CcgParser implements Serializable {
 
   /**
    * Performs a beam search to find the best CCG parses of
-   * {@code terminals}. Note that this is an approximate inference
+   * {@code input}. Note that this is an approximate inference
    * strategy, and the returned parses may not be the best parses if
    * at any point during the search more than {@code beamSize} parse
    * trees exist for a span of the sentence.
    * 
-   * @param terminals
-   * @param posTags
+   * @param input
    * @param beamSize
    * @param log
    * @return {@code beamSize} best parses for {@code terminals}.
    */
-  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize, LogFunction log) {
-    return beamSearch(terminals, posTags, beamSize, null, log, -1, Integer.MAX_VALUE);
+  public List<CcgParse> beamSearch(T input, int beamSize, LogFunction log) {
+    return beamSearch(input, beamSize, null, log, -1, Integer.MAX_VALUE);
   }
 
-  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize) {
-    return beamSearch(terminals, posTags, beamSize, new NullLogFunction());
-  }
-
-  public List<CcgParse> beamSearch(List<String> terminals, int beamSize) {
-    List<String> posTags = Collections.nCopies(terminals.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    return beamSearch(terminals, posTags, beamSize, new NullLogFunction());
-  }
-  
-  public CcgParse parse(List<String> terminals) {
-    List<String> posTags = Collections.nCopies(terminals.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    return parse(terminals, posTags, null, new NullLogFunction(), -1, Integer.MAX_VALUE);
+  public List<CcgParse> beamSearch(T input, int beamSize) {
+    return beamSearch(input, beamSize, new NullLogFunction());
   }
 
   /**
    * 
-   * @param terminals
-   * @param posTags
+   * @param input
    * @param beamSize
    * @param beamFilter May be {@code null}, in which case all beam
    * entries are retained.
@@ -1119,10 +1108,10 @@ public class CcgParser implements Serializable {
    * parsing.
    * @return
    */
-  public List<CcgParse> beamSearch(List<String> terminals, List<String> posTags, int beamSize,
-      ChartCost beamFilter, LogFunction log, long maxParseTimeMillis, int maxChartSize) {
-    CcgBeamSearchChart chart = new CcgBeamSearchChart(terminals, posTags, maxChartSize, beamSize);
-    parseCommon(chart, terminals, posTags, beamFilter, log, maxParseTimeMillis);
+  public List<CcgParse> beamSearch(T input, int beamSize, ChartCost beamFilter, LogFunction log,
+      long maxParseTimeMillis, int maxChartSize) {
+    CcgBeamSearchChart<T> chart = new CcgBeamSearchChart<T>(input, maxChartSize, beamSize);
+    parseCommon(chart, input, beamFilter, log, maxParseTimeMillis);
 
     if (chart.isFinishedParsing()) {
       int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
@@ -1133,11 +1122,10 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public CcgParse parse(List<String> terminals, List<String> posTags, ChartCost beamFilter,
-      LogFunction log, long maxParseTimeMillis, int maxChartSize) {
-    CcgExactHashTableChart chart = new CcgExactHashTableChart(terminals, posTags,
-        maxChartSize);
-    parseCommon(chart, terminals, posTags, beamFilter, log, maxParseTimeMillis);
+  public CcgParse parse(T input, ChartCost beamFilter, LogFunction log, long maxParseTimeMillis,
+      int maxChartSize) {
+    CcgExactHashTableChart<T> chart = new CcgExactHashTableChart<T>(input, maxChartSize);
+    parseCommon(chart, input, beamFilter, log, maxParseTimeMillis);
 
     if (chart.isFinishedParsing()) {
       return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
@@ -1147,18 +1135,16 @@ public class CcgParser implements Serializable {
     }
   }
 
-  public void parseCommon(CcgChart chart, List<String> terminals, List<String> posTags,
-      ChartCost beamFilter, LogFunction log, long maxParseTimeMillis) {
+  public void parseCommon(CcgChart<T> chart, T input, ChartCost beamFilter, LogFunction log,
+      long maxParseTimeMillis) {
     if (log == null) {
       log = new NullLogFunction();
     }
     
     log.startTimer("initialize_chart");
-    initializeChart(chart, terminals, posTags, beamFilter);
-    lexicon.initializeChartTerminals(terminals, posTags, chart, this);
+    initializeChart(chart, input, beamFilter);
+    lexicon.initializeChartTerminals(input, chart, this);
     log.stopTimer("initialize_chart");
-
-    chart.applyChartFilterToTerminals();
 
     log.startTimer("calculate_inside_beam");
     boolean finishedParsing = false;
@@ -1173,11 +1159,10 @@ public class CcgParser implements Serializable {
     chart.setFinishedParsing(finishedParsing);
   }
 
-  private void initializeChart(CcgChart chart, List<String> terminals, List<String> posTags,
-      ChartCost chartFilter) {
-    int numWords = terminals.size();
-    int[] puncCounts = computeDistanceCounts(posTags, puncTagSet);
-    int[] verbCounts = computeDistanceCounts(posTags, verbTagSet);
+  private void initializeChart(CcgChart<T> chart, T input, ChartCost chartFilter) {
+    int numWords = input.size();
+    int[] puncCounts = computeDistanceCounts(input.getPosTags(), puncTagSet);
+    int[] verbCounts = computeDistanceCounts(input.getPosTags(), verbTagSet);
 
     int[] wordDistances = new int[numWords * numWords];
     int[] puncDistances = new int[numWords * numWords];
@@ -1190,7 +1175,7 @@ public class CcgParser implements Serializable {
       }
     }
 
-    chart.setPosTagsInt(getPosTagsInt(posTags));
+    chart.setPosTagsInt(getPosTagsInt(input.getPosTags()));
     chart.setWordDistances(wordDistances);
     chart.setPuncDistances(puncDistances);
     chart.setVerbDistances(verbDistances);
@@ -1205,7 +1190,7 @@ public class CcgParser implements Serializable {
     initializeChartDistributions(chart);
   }
 
-  private void initializeChartDistributions(CcgChart chart) {
+  private void initializeChartDistributions(CcgChart<T> chart) {
     // Default: initialize chart with no dependency distribution
     // pruning.
     chart.setDependencyTensor(dependencyTensor);
@@ -1302,7 +1287,7 @@ public class CcgParser implements Serializable {
    * 
    * @param chart
    */
-  public void reweightRootEntries(CcgChart chart) {
+  public void reweightRootEntries(CcgChart<T> chart) {
     int spanStart = 0;
     int spanEnd = chart.size() - 1;
     int numChartEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
@@ -1365,7 +1350,7 @@ public class CcgParser implements Serializable {
    * @param chart
    * @param log
    */
-  public boolean calculateInsideBeam(CcgChart chart, LogFunction log, long maxParseTimeMillis) {
+  public boolean calculateInsideBeam(CcgChart<T> chart, LogFunction log, long maxParseTimeMillis) {
     int chartSize = chart.size();
     long currentTime = 0;
     long endTime = System.currentTimeMillis() + maxParseTimeMillis;
@@ -1391,7 +1376,7 @@ public class CcgParser implements Serializable {
     return true;
   }
 
-  public void sparsifyDependencyDistribution(CcgChart chart) {
+  public void sparsifyDependencyDistribution(CcgChart<T> chart) {
     // Identify all possible assignments to the dependency head and
     // argument variables, so that we can look up probabilities in a
     // sparser tensor.
@@ -1438,7 +1423,7 @@ public class CcgParser implements Serializable {
     chart.setVerbDistanceTensor(smallVerbDistanceTensor);
   }
 
-  private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
+  private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart<T> chart, LogFunction log) {
     int[] assignmentVarIndexAccumulator = chart.getAssignmentVarIndexAccumulator();
     long[] assignmentAccumulator = chart.getAssignmentAccumulator();
     long[] filledDepAccumulator = chart.getFilledDepAccumulator();
@@ -1814,14 +1799,6 @@ public class CcgParser implements Serializable {
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
   }
 
-  private Multimap<Integer, Integer> aggregateBySyntacticType(ChartEntry[] entries, int numEntries) {
-    Multimap<Integer, Integer> map = HashMultimap.create();
-    for (int i = 0; i < numEntries; i++) {
-      map.put(entries[i].getHeadedSyntax(), i);
-    }
-    return map;
-  }
-
   /**
    * Calculates the probability of any new dependencies in
    * {@code result}, then inserts it into {@code chart}.
@@ -1832,11 +1809,12 @@ public class CcgParser implements Serializable {
    * @param spanStart
    * @param spanEnd
    */
-  public void addChartEntryWithDependencies(ChartEntry result, CcgChart chart, double leftRightProb,
+  public void addChartEntryWithDependencies(ChartEntry result, CcgChart<T> chart, double leftRightProb,
       int spanStart, int spanEnd, LogFunction log, long[] depCache, double[] depProbCache) {
   }
 
-  private void applyUnaryRules(CcgChart chart, ChartEntry result, double resultProb, int spanStart, int spanEnd) {
+  private void applyUnaryRules(CcgChart<T> chart, ChartEntry result, double resultProb,
+      int spanStart, int spanEnd) {
     int headedSyntax = result.getHeadedSyntax();
     long keyNumPrefix = unaryRuleTensor.dimKeyPrefixToKeyNum(new int[] { headedSyntax });
     int index = unaryRuleTensor.getNearestIndex(keyNumPrefix);

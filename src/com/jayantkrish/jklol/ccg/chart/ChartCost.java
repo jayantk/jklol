@@ -25,17 +25,4 @@ public interface ChartCost {
    */
   public double apply(ChartEntry entry, int spanStart, int spanEnd,
       DiscreteVariable syntaxVarType);
-
-  /**
-   * Updates {@code chart} based on the set of possible terminals.
-   * This method can be used to restrict the CCG search space based
-   * on the words which actually appear in a sentence.
-   * <p>
-   * When this method is called, {@code chart} is initialized with
-   * the terminal symbols (i.e., the words) and the possible lexicon
-   * entries for each word.
-   * 
-   * @param chart
-   */
-  public void applyToTerminals(CcgChart chart);
 }

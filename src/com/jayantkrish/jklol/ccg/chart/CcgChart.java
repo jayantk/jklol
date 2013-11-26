@@ -4,12 +4,13 @@ import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IntMultimap;
 
-public interface CcgChart {
+public interface CcgChart<T extends SupertaggedSentence> {
 
   /**
    * Gets the number of terminals in this parse chart.
@@ -17,6 +18,13 @@ public interface CcgChart {
    * @return
    */
   public int size();
+
+  /**
+   * Gets the input to which the parser was applied.
+   * 
+   * @return
+   */
+  public T getInput();
 
   /**
    * Gets the maximum number of chart entries for this parse. This
@@ -123,8 +131,6 @@ public interface CcgChart {
   
   public long[] getUnfilledDepAccumulator();
 
-  public void applyChartFilterToTerminals();
-
   /**
    * Gets the chart entries spanning the words {@code spanStart}-
    * {@code spanEnd} , inclusive. Some entries of the returned array
@@ -212,7 +218,7 @@ public interface CcgChart {
    * @param parser Parser that produced this parse chart.
    * @return
    */
-  public CcgParse decodeBestParse(CcgParser parser);
+  public CcgParse decodeBestParse(CcgParser<T> parser);
   
   public boolean isFinishedParsing();
   

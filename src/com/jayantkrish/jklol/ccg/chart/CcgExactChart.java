@@ -1,10 +1,10 @@
 package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.Arrays;
-import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.IntMultimap;
 
@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.util.IntMultimap;
  * 
  * @author jayantk
  */
-public class CcgExactChart extends AbstractCcgChart {
+public class CcgExactChart<T extends SupertaggedSentence> extends AbstractCcgChart<T> {
 
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
@@ -23,9 +23,9 @@ public class CcgExactChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 100;
 
-  public CcgExactChart(List<String> terminals, List<String> posTags, int maxChartSize) {
-    super(terminals, posTags, maxChartSize);
-    int numTerminals = terminals.size();
+  public CcgExactChart(T input, int maxChartSize) {
+    super(input, maxChartSize);
+    int numTerminals = input.size();
     this.chart = new ChartEntry[numTerminals][numTerminals][];
     this.probabilities = new double[numTerminals][numTerminals][];
     this.chartSizes = new int[numTerminals][numTerminals];
@@ -50,7 +50,7 @@ public class CcgExactChart extends AbstractCcgChart {
    * @param parser
    * @return
    */
-  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser parser) {
+  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser<T> parser) {
     double maxProb = -1;
     int maxEntryIndex = -1;
     double[] probs = getChartEntryProbsForSpan(spanStart, spanEnd);
@@ -68,9 +68,9 @@ public class CcgExactChart extends AbstractCcgChart {
       return decodeParseFromSpan(spanStart, spanEnd, maxEntryIndex, parser);
     }
   }
-  
+
   @Override
-  public CcgParse decodeBestParse(CcgParser parser) {
+  public CcgParse decodeBestParse(CcgParser<T> parser) {
     return decodeBestParseForSpan(0, size() - 1, parser);
   }
 

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -21,7 +22,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
  * 
  * @author jayantk
  */
-public interface CcgFeatureFactory {
+public interface CcgFeatureFactory<T extends SupertaggedSentence> {
 
   /**
    * Gets a parametric factor defining the features of CCG dependency
@@ -106,10 +107,10 @@ public interface CcgFeatureFactory {
    * each outcome with value 1.0 represents a entry in the lexicon.
    * @return
    */
-  ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
+  ParametricCcgLexicon<T> getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconIndicatorFactor);
-  
+
   /**
    * Gets features over CCG binary rules. {@code binaryRuleDistribution} is the
    * set of binary rules included in the parser.

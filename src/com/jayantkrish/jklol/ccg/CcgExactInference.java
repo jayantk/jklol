@@ -30,18 +30,17 @@ public class CcgExactInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
+  public <T extends SupertaggedSentence> CcgParse getBestParse(CcgParser<T> parser, T sentence,
       ChartCost chartFilter, LogFunction log) {
     ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
         new SupertagChartCost(sentence.getSupertags()));
 
-    return parser.parse(sentence.getWords(), sentence.getPosTags(), filter, log,
-        maxParseTimeMillis, maxChartSize);
+    return parser.parse(sentence, filter, log, maxParseTimeMillis, maxChartSize);
   }
 
   @Override
-  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
-      ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
+  public <T extends SupertaggedSentence> CcgParse getBestConditionalParse(CcgParser<T> parser,
+      T sentence, ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
       Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
     Preconditions.checkArgument(observedDependencies == null && observedLogicalForm == null);
 
@@ -50,15 +49,15 @@ public class CcgExactInference implements CcgInference {
       ChartCost conditionalChartFilter = SumChartCost.create(
           SyntacticChartCost.createAgreementCost(observedSyntacticTree), searchFilter,
           new SupertagChartCost(sentence.getSupertags()));
-      bestParse = parser.parse(sentence.getWords(), sentence.getPosTags(), 
-          conditionalChartFilter, log, maxParseTimeMillis, maxChartSize);
+      bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
+          maxChartSize);
     } else {
       ChartCost conditionalChartFilter = SumChartCost.create(
           new SupertagChartCost(sentence.getSupertags()), searchFilter);
-      bestParse = parser.parse(sentence.getWords(), sentence.getPosTags(), 
-          conditionalChartFilter, log, maxParseTimeMillis, maxChartSize);
+      bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
+          maxChartSize);
     }
-    
+
     // Note that bestParse may still be null, if parsing failed.
     return bestParse;
   }

@@ -9,6 +9,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -19,14 +20,15 @@ import com.jayantkrish.jklol.training.LogFunction;
  * 
  * @author jayant
  */
-public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExample> {
+public class CcgLoglikelihoodOracle<T extends SupertaggedSentence> implements 
+GradientOracle<CcgParser<T>, CcgExample<T>> {
 
-  private final ParametricCcgParser family;
+  private final ParametricCcgParser<T> family;
 
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
 
-  public CcgLoglikelihoodOracle(ParametricCcgParser family, int beamSize) {
+  public CcgLoglikelihoodOracle(ParametricCcgParser<T> family, int beamSize) {
     this.family = Preconditions.checkNotNull(family);
     this.beamSize = beamSize;
   }
@@ -37,18 +39,18 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   }
 
   @Override
-  public CcgParser instantiateModel(SufficientStatistics parameters) {
+  public CcgParser<T> instantiateModel(SufficientStatistics parameters) {
     return family.getModelFromParameters(parameters);
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, CcgParser instantiatedParser,
-      CcgExample example, LogFunction log) {
+  public double accumulateGradient(SufficientStatistics gradient, CcgParser<T> instantiatedParser,
+      CcgExample<T> example, LogFunction log) {
     // Gradient is the feature expectations of all correct CCG parses, minus all
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
     // Calculate the unconditional distribution over CCG parses.
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), 
+    List<CcgParse> parses = instantiatedParser.beamSearch(example.getSentence(), 
         beamSize, log);
     if (parses.size() == 0) {
       // Search error: couldn't find any parses.
@@ -62,7 +64,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     List<CcgParse> possibleParses = null;
     if (example.hasSyntacticParse()) {
       ChartCost conditionalChartFilter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
-      possibleParses = instantiatedParser.beamSearch(example.getWords(), example.getPosTags(), beamSize,
+      possibleParses = instantiatedParser.beamSearch(example.getSentence(), beamSize,
         conditionalChartFilter, log, -1, Integer.MAX_VALUE);
     } else {
       possibleParses = Lists.newArrayList(parses);

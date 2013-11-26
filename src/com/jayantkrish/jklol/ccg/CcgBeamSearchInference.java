@@ -28,7 +28,7 @@ public class CcgBeamSearchInference implements CcgInference {
 
   // Whether to print out information about correct parses, etc.
   private final boolean verbose;
-  
+
   public CcgBeamSearchInference(ChartCost searchFilter, int beamSize, long maxParseTimeMillis,
       int maxChartSize, boolean verbose) {
     this.searchFilter = searchFilter;
@@ -40,13 +40,13 @@ public class CcgBeamSearchInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
+  public <T extends SupertaggedSentence> CcgParse getBestParse(CcgParser<T> parser, T sentence,
       ChartCost chartFilter, LogFunction log) {
     ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
         new SupertagChartCost(sentence.getSupertags()));
 
-    List<CcgParse> parses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(),
-        beamSize, filter, log, maxParseTimeMillis, maxChartSize);
+    List<CcgParse> parses = parser.beamSearch(sentence, beamSize, filter, log,
+        maxParseTimeMillis, maxChartSize);
     if (parses.size() > 0) {
       return parses.get(0);
     } else {
@@ -55,21 +55,21 @@ public class CcgBeamSearchInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
-      ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
+  public <T extends SupertaggedSentence> CcgParse getBestConditionalParse(CcgParser<T> parser,
+      T sentence, ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
       Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
 
     List<CcgParse> possibleParses = null; 
     if (observedSyntacticTree != null) {
       ChartCost conditionalChartFilter = SumChartCost.create(SyntacticChartCost.createAgreementCost(observedSyntacticTree),
           new SupertagChartCost(sentence.getSupertags()), searchFilter);
-      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
-          conditionalChartFilter, log, -1, maxChartSize);
+      possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
+          log, -1, maxChartSize);
     } else {
       ChartCost conditionalChartFilter = SumChartCost.create(
           new SupertagChartCost(sentence.getSupertags()), searchFilter);
-      possibleParses = parser.beamSearch(sentence.getWords(), sentence.getPosTags(), beamSize,
-          conditionalChartFilter, log, -1, maxChartSize);
+      possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
+          log, -1, maxChartSize);
     }
 
     possibleParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(

@@ -125,13 +125,6 @@ public class SyntacticChartCost implements ChartCost {
     return agreeCost;
   }
 
-  /**
-   * This method doesn't modify {@code chart}.
-   */
-  @Override
-  public void applyToTerminals(CcgChart chart) {
-  }
-
   private boolean isSyntaxCompatible(SyntacticCategory expected, int actual, DiscreteVariable syntaxType) {
     HeadedSyntacticCategory headedSyntax = (HeadedSyntacticCategory) syntaxType.getValue(actual);
     SyntacticCategory syntax = headedSyntax.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);

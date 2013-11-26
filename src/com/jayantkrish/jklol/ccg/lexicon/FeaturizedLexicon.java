@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -19,7 +20,7 @@ import com.jayantkrish.jklol.util.Assignment;
  *
  * @author jayant
  */
-public class FeaturizedLexicon extends AbstractCcgLexicon {
+public class FeaturizedLexicon<T extends SupertaggedSentence> extends AbstractCcgLexicon<T> {
   private static final long serialVersionUID = 1L;
 
   private final VariableNumMap ccgSyntaxVar;

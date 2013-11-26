@@ -7,6 +7,7 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -21,7 +22,7 @@ import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
+public class ParametricFeaturizedLexicon<T extends SupertaggedSentence> implements ParametricCcgLexicon<T> {
   private static final long serialVersionUID = 1L;
   
   private final VariableNumMap terminalVar;
@@ -65,19 +66,19 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
   }
 
   @Override
-  public CcgLexicon getModelFromParameters(SufficientStatistics parameters) {
+  public CcgLexicon<T> getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
     DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
     ClassifierFactor terminalFeatureDistribution = featureFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_FEATURE_PARAMETERS));
 
-   return new FeaturizedLexicon(terminalVar, ccgCategoryVar, terminalDistribution,
+   return new FeaturizedLexicon<T>(terminalVar, ccgCategoryVar, terminalDistribution,
        featureGenerator, ccgSyntaxVar, featureVar, terminalFeatureDistribution);
   }
 
   @Override
-  public ParametricFeaturizedLexicon rescaleFeatures(SufficientStatistics rescaling) {
+  public ParametricFeaturizedLexicon<T> rescaleFeatures(SufficientStatistics rescaling) {
     if (rescaling == null) {
       return this;
     }
@@ -88,8 +89,8 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
     ConditionalLogLinearFactor newFeatureFamily = featureFamily.rescaleFeatures(rescalingList
         .getStatisticByName(TERMINAL_FEATURE_PARAMETERS));
 
-    return new ParametricFeaturizedLexicon(terminalVar, ccgCategoryVar, newTerminalFamily,
-        featureGenerator, ccgSyntaxVar, featureVar, featureFamily);
+    return new ParametricFeaturizedLexicon<T>(terminalVar, ccgCategoryVar, newTerminalFamily,
+        featureGenerator, ccgSyntaxVar, featureVar, newFeatureFamily);
   }
 
   @Override

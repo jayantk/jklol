@@ -9,6 +9,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgBeamSearchChart;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
@@ -34,13 +35,13 @@ public class CcgParserUtils {
    * @param examples
    * @return
    */
-  public static <T extends CcgExample> List<T> filterExampleCollection(final CcgParser parser,
-      List<T> examples) {
+  public static <T extends SupertaggedSentence> List<CcgExample<T>> filterExampleCollection(
+      final CcgParser<T> parser, List<CcgExample<T>> examples) {
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
-    List<T> filteredExamples = executor.filter(examples, new Predicate<T>() {
+    List<CcgExample<T>> filteredExamples = executor.filter(examples, new Predicate<CcgExample<T>>() {
       @Override
-      public boolean apply(T example) {
+      public boolean apply(CcgExample<T> example) {
         return isPossibleExample(parser, example);
       }
     });
@@ -56,12 +57,12 @@ public class CcgParserUtils {
    * @param example
    * @return
    */
-  public static boolean isPossibleExample(CcgParser parser, CcgExample example) {
-    CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getWords(), example.getPosTags(),
-        Integer.MAX_VALUE, 100);
+  public static <T extends SupertaggedSentence> boolean isPossibleExample(CcgParser<T> parser,
+      CcgExample<T> example) {
+    CcgBeamSearchChart<T> chart = new CcgBeamSearchChart<T>(example.getSentence(), Integer.MAX_VALUE, 100);
     SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
-    parser.parseCommon(chart, example.getWords(), example.getPosTags(), filter, null, -1);
-    List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getWords().size() - 1, 100, parser);
+    parser.parseCommon(chart, example.getSentence(), filter, null, -1);
+    List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getSentence().size() - 1, 100, parser);
     if (parses.size() == 0) {
       // Provide a deeper analysis of why parsing failed.
       analyzeParseFailure(example.getSyntacticParse(), chart, parser.getSyntaxVarType(), "Parse failure", 0);
@@ -74,8 +75,8 @@ public class CcgParserUtils {
     return true;
   }
 
-  public static boolean analyzeParseFailure(CcgSyntaxTree tree, CcgChart chart,
-      DiscreteVariable syntaxVarType, String errorMessage, int failureNum) {
+  public static <T extends SupertaggedSentence> boolean analyzeParseFailure(CcgSyntaxTree tree,
+      CcgChart<T> chart, DiscreteVariable syntaxVarType, String errorMessage, int failureNum) {
     boolean foundFailurePoint = false;
     if (!tree.isTerminal()) {
       foundFailurePoint = foundFailurePoint || analyzeParseFailure(tree.getLeft(), chart,
@@ -124,12 +125,12 @@ public class CcgParserUtils {
     }
   }
 
-  public static <T extends CcgExample> SufficientStatistics getFeatureCounts(
-      ParametricCcgParser family, Collection<T> examples) {
+  public static <S extends SupertaggedSentence, T extends CcgExample<S>> SufficientStatistics getFeatureCounts(
+      ParametricCcgParser<S> family, Collection<T> examples) {
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
     CcgInference inference = new CcgExactInference(null, -1, Integer.MAX_VALUE);
-    Reducer<T, SufficientStatistics> reducer = new FeatureCountReducer<T>(family, inference);
+    Reducer<T, SufficientStatistics> reducer = new FeatureCountReducer<S, T>(family, inference);
     return executor.mapReduce(examples, Mappers.<T>identity(), reducer);
   }
 
@@ -144,14 +145,15 @@ public class CcgParserUtils {
    * @author jayantk
    * @param <T>
    */
-  private static class FeatureCountReducer<T extends CcgExample> implements Reducer<T, SufficientStatistics> {
-    
-    private final ParametricCcgParser ccgFamily;
-    private final CcgParser parser;
+  private static class FeatureCountReducer<S extends SupertaggedSentence, T extends CcgExample<S>> 
+  implements Reducer<T, SufficientStatistics> {
+
+    private final ParametricCcgParser<S> ccgFamily;
+    private final CcgParser<S> parser;
     private final CcgInference inference;
     private final LogFunction log;
-    
-    public FeatureCountReducer(ParametricCcgParser ccgFamily, CcgInference inference) {
+
+    public FeatureCountReducer(ParametricCcgParser<S> ccgFamily, CcgInference inference) {
       this.ccgFamily = Preconditions.checkNotNull(ccgFamily);
       this.parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
       this.inference = Preconditions.checkNotNull(inference);
@@ -164,7 +166,7 @@ public class CcgParserUtils {
     }
 
     @Override
-    public SufficientStatistics reduce(CcgExample example, SufficientStatistics featureCounts) {
+    public SufficientStatistics reduce(T example, SufficientStatistics featureCounts) {
       CcgParse bestParse = inference.getBestConditionalParse(parser, example.getSentence(), null,
           log, example.getSyntacticParse(), example.getDependencies(), example.getLogicalForm());
 

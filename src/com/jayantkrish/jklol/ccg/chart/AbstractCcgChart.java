@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -18,9 +19,10 @@ import com.jayantkrish.jklol.util.IntMultimap;
  * 
  * @author jayantk
  */
-public abstract class AbstractCcgChart implements CcgChart {
+public abstract class AbstractCcgChart<T extends SupertaggedSentence> implements CcgChart<T> {
 
   // The words and pos tags of the sentence being parsed.
+  private final T input;
   private final List<String> terminals;
   private final List<String> posTags;
   private int[] posTagsInt;
@@ -54,9 +56,10 @@ public abstract class AbstractCcgChart implements CcgChart {
 
   private boolean finishedParsing;
 
-  public AbstractCcgChart(List<String> terminals, List<String> posTags, int maxChartSize) {
-    this.terminals = ImmutableList.copyOf(terminals);
-    this.posTags = ImmutableList.copyOf(posTags);
+  public AbstractCcgChart(T input, int maxChartSize) {
+    this.input = input;
+    this.terminals = ImmutableList.copyOf(input.getWords());
+    this.posTags = ImmutableList.copyOf(input.getPosTags());
     this.maxChartSize = maxChartSize;
 
     // dependencyTensor, the distance arrays / tensors, and syntax distribution are
@@ -68,6 +71,11 @@ public abstract class AbstractCcgChart implements CcgChart {
   @Override
   public int size() {
     return terminals.size();
+  }
+  
+  @Override
+  public T getInput() {
+    return input;
   }
 
   @Override
@@ -233,13 +241,6 @@ public abstract class AbstractCcgChart implements CcgChart {
   public long[] getUnfilledDepAccumulator() {
     return unfilledDepAccumulator;
   }
-  
-  @Override
-  public void applyChartFilterToTerminals() {
-    if (entryFilter != null) {
-      entryFilter.applyToTerminals(this);
-    }
-  }
 
   @Override
   public boolean isFinishedParsing() {
@@ -260,7 +261,7 @@ public abstract class AbstractCcgChart implements CcgChart {
    * @param beamIndex
    * @return
    */
-  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, CcgParser parser) {
+  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, CcgParser<T> parser) {
     DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
     ChartEntry entry = getChartEntriesForSpan(spanStart, spanEnd)[beamIndex];
     HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(

@@ -1,14 +1,14 @@
 package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.Arrays;
-import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.IntMultimap;
 
-public class CcgExactHashTableChart extends AbstractCcgChart {
+public class CcgExactHashTableChart<T extends SupertaggedSentence> extends AbstractCcgChart<T> {
 
   // A hash table for storing chart entries as they are inserted.
   // The indexes store which entries of the hash table have been used.
@@ -28,9 +28,9 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
 
-  public CcgExactHashTableChart(List<String> terminals, List<String> posTags, int maxChartSize) {
-    super(terminals, posTags, maxChartSize);
-    int numTerminals = terminals.size();
+  public CcgExactHashTableChart(T input, int maxChartSize) {
+    super(input, maxChartSize);
+    int numTerminals = input.size();
 
     this.chart = new ChartEntry[numTerminals][numTerminals][NUM_INITIAL_SPAN_ENTRIES];
     this.probabilities = new double[numTerminals][numTerminals][NUM_INITIAL_SPAN_ENTRIES];
@@ -55,7 +55,7 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
    * @param parser
    * @return
    */
-  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser parser) {
+  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser<T> parser) {
     double maxProb = -1;
     int maxEntryIndex = -1;
     double[] probs = getChartEntryProbsForSpan(spanStart, spanEnd);
@@ -75,7 +75,7 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   }
 
   @Override
-  public CcgParse decodeBestParse(CcgParser parser) {
+  public CcgParse decodeBestParse(CcgParser<T> parser) {
     return decodeBestParseForSpan(0, size() - 1, parser);
   }
 

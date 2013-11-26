@@ -4,9 +4,8 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 
 /**
@@ -40,10 +39,5 @@ public class SupertagChartCost implements ChartCost {
       }
     }
     return Double.NEGATIVE_INFINITY;
-  }
-
-  @Override
-  public void applyToTerminals(CcgChart chart) {
-    // No need to modify chart -- all of the work is done in apply.
   }
 }

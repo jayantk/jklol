@@ -13,14 +13,14 @@ import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
 public class SupertaggingCcgParser {
-  private final CcgParser parser;
+  private final CcgParser<SupertaggedSentence> parser;
   private final CcgInference inference;
 
   // May be null, in which case supertagging is not used.
   private final Supertagger supertagger;
   private final double[] multitagThresholds;
 
-  public SupertaggingCcgParser(CcgParser parser, CcgInference inference,
+  public SupertaggingCcgParser(CcgParser<SupertaggedSentence> parser, CcgInference inference,
       Supertagger supertagger, double[] multitagThresholds) {
     this.parser = Preconditions.checkNotNull(parser);
     this.inference = Preconditions.checkNotNull(inference);
@@ -64,11 +64,11 @@ public class SupertaggingCcgParser {
   public CcgParseResult parse(List<String> terminals, List<String> posTags) {
     return parse(terminals, posTags, null);
   }
-  
-  public CcgParser getParser() {
+
+  public CcgParser<SupertaggedSentence> getParser() {
     return parser;
   }
-  
+
   public static class CcgParseResult {
     private final CcgParse parse;
     private final SupertaggedSentence sentence;

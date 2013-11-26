@@ -7,6 +7,7 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
@@ -21,7 +22,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  *
  */
-public class ParametricTableLexicon implements ParametricCcgLexicon {
+public class ParametricTableLexicon<T extends SupertaggedSentence> implements ParametricCcgLexicon<T> {
   private static final long serialVersionUID = 1L;
   
   private final VariableNumMap terminalVar;
@@ -69,7 +70,7 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
   }
 
   @Override
-  public CcgLexicon getModelFromParameters(SufficientStatistics parameters) {
+  public CcgLexicon<T> getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
     DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
@@ -78,12 +79,12 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
     DiscreteFactor terminalSyntaxDistribution = terminalSyntaxFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS)).coerceToDiscrete();
 
-    return new TableLexicon(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar,
+    return new TableLexicon<T>(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar,
         terminalSyntaxVar, terminalPosDistribution, terminalSyntaxDistribution);
   }
 
   @Override
-  public ParametricTableLexicon rescaleFeatures(SufficientStatistics rescaling) {
+  public ParametricTableLexicon<T> rescaleFeatures(SufficientStatistics rescaling) {
     if (rescaling == null) {
       return this;
     }
@@ -96,10 +97,9 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
     ParametricFactor newTerminalSyntaxFamily = terminalSyntaxFamily.rescaleFeatures(rescalingList
         .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS));
 
-    return new ParametricTableLexicon(terminalVar, ccgCategoryVar, newTerminalFamily,
+    return new ParametricTableLexicon<T>(terminalVar, ccgCategoryVar, newTerminalFamily,
         terminalPosVar, terminalSyntaxVar, newTerminalPosFamily, newTerminalSyntaxFamily);
   }
-
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters) {

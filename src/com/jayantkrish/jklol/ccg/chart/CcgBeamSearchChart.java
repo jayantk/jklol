@@ -8,6 +8,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;
@@ -18,7 +19,7 @@ import com.jayantkrish.jklol.util.IntMultimap;
  * 
  * @author jayant
  */
-public class CcgBeamSearchChart extends AbstractCcgChart {
+public class CcgBeamSearchChart<T extends SupertaggedSentence> extends AbstractCcgChart<T> {
 
   private final int beamSize;
   private final int numTerminals;
@@ -39,11 +40,11 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
    * @param posTags
    * @param beamSize
    */
-  public CcgBeamSearchChart(List<String> terminals, List<String> posTags, int maxChartSize, int beamSize) {
-    super(terminals, posTags, maxChartSize);
+  public CcgBeamSearchChart(T sentence, int maxChartSize, int beamSize) {
+    super(sentence, maxChartSize);
     this.beamSize = beamSize;
 
-    numTerminals = terminals.size();
+    numTerminals = sentence.size();
     this.chart = new ChartEntry[numTerminals][numTerminals][beamSize + 1];
     this.probabilities = new double[numTerminals][numTerminals][beamSize + 1];
     this.chartSizes = new int[numTerminals * numTerminals];
@@ -75,7 +76,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
    * @return
    */
   public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses,
-      CcgParser parser) {
+      CcgParser<T> parser) {
     // Perform a heap sort on the array indexes paired with the
     // probabilities.
     double[] probsCopy = ArrayUtils.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
@@ -102,7 +103,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   }
   
   @Override
-  public CcgParse decodeBestParse(CcgParser parser) {
+  public CcgParse decodeBestParse(CcgParser<T> parser) {
     List<CcgParse> bestParses = decodeBestParsesForSpan(0, size() - 1, 1, parser);
     return Iterables.getFirst(bestParses, null);
   }

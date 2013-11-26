@@ -55,6 +55,10 @@ public class SupertaggedSentence extends ListMultitaggedSequence<WordAndPos, Hea
         Collections.nCopies(words.size(), Collections.<Double>emptyList()));
   }
 
+  public int size() {
+    return getItems().size();
+  }
+
   public List<String> getWords() {
     List<String> words = Lists.newArrayList();
     for (WordAndPos wordAndPos : getItems()) {

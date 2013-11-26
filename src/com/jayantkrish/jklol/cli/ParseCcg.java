@@ -104,7 +104,7 @@ public class ParseCcg extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Read the parser.
-    CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
+    CcgParser<SupertaggedSentence> ccgParser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
 
     // Configure inference options
     CcgInference inferenceAlgorithm = null;
@@ -118,8 +118,8 @@ public class ParseCcg extends AbstractCli {
     
     if (options.has(testFile)) {
       // Parse all test examples.
-      List<CcgExample> testExamples = TrainCcg.readTrainingData(options.valueOf(testFile),
-          false, options.has(useCcgBankFormat), options.valueOf(syntaxMap));
+      List<CcgExample<SupertaggedSentence>> testExamples = TrainCcg.readTrainingData(
+          options.valueOf(testFile), false, options.has(useCcgBankFormat), options.valueOf(syntaxMap));
       System.out.println(testExamples.size() + " test examples after filtering.");
 
       Supertagger tagger = null;
@@ -148,8 +148,10 @@ public class ParseCcg extends AbstractCli {
         sentenceToParse = input;
         posTags = Collections.nCopies(sentenceToParse.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       }
+      SupertaggedSentence sentence = SupertaggedSentence.createWithUnobservedSupertags(
+          sentenceToParse, posTags);
 
-      List<CcgParse> parses = ccgParser.beamSearch(sentenceToParse, posTags, options.valueOf(beamSize));
+      List<CcgParse> parses = ccgParser.beamSearch(sentence, options.valueOf(beamSize));
       printCcgParses(parses, options.valueOf(numParses), options.has(atomic), options.has(printLf));
     }
   }
@@ -193,15 +195,15 @@ public class ParseCcg extends AbstractCli {
     }
   }
 
-  public static CcgLoss runTestSetEvaluation(Collection<CcgExample> testExamples, 
+  public static <T extends SupertaggedSentence> CcgLoss runTestSetEvaluation(Collection<CcgExample<T>> testExamples, 
       SupertaggingCcgParser ccgParser, boolean useCcgbankDerivations, boolean filterDependenciesCcgbank) {
     CcgLossMapper mapper = new CcgLossMapper(ccgParser, useCcgbankDerivations, filterDependenciesCcgbank);
     CcgLossReducer reducer = new CcgLossReducer();
     return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
   }
   
-  public static CcgLoss computeLoss(CcgParseResult parseResult, CcgExample example,
-      CcgParser parser, boolean filterDependenciesCcgbank) {
+  public static <T extends SupertaggedSentence> CcgLoss computeLoss(CcgParseResult parseResult,
+      CcgExample<T> example, CcgParser<T> parser, boolean filterDependenciesCcgbank) {
     CcgParse parse = parseResult.getParse();
     List<DependencyStructure> parseDeps = null;
     if (filterDependenciesCcgbank) {
@@ -215,7 +217,7 @@ public class ParseCcg extends AbstractCli {
     List<LabeledDep> trueDeps = dependenciesToLabeledDeps(example.getDependencies(),
         example.getSyntacticParse());
 
-    List<String> words = example.getWords();
+    List<String> words = example.getSentence().getWords();
     System.out.println("Predicted: ");
     for (LabeledDep dep : predictedDeps) {
       if (trueDeps.contains(dep)) {
@@ -544,7 +546,7 @@ public class ParseCcg extends AbstractCli {
     }
   }
 
-  public static class CcgLossMapper extends Mapper<CcgExample, CcgLoss> {
+  public static class CcgLossMapper<T extends SupertaggedSentence> extends Mapper<CcgExample<T>, CcgLoss> {
     private final SupertaggingCcgParser parser;
     private final boolean useCcgbankDerivation;
     private final boolean filterDependenciesCcgbank;

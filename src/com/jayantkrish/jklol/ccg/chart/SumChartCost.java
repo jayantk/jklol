@@ -50,11 +50,4 @@ public class SumChartCost implements ChartCost {
     }
     return value;
   }
-
-  @Override
-  public void applyToTerminals(CcgChart chart) {
-    for (ChartCost filter : filters) {
-      filter.applyToTerminals(chart);
-    }
-  }
 }

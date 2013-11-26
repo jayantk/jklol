@@ -21,33 +21,33 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class SampleMarginalSet extends AbstractMarginalSet {
 
-	private final VariableNumMap factorGraphVariables;
-	private final ImmutableList<Assignment> samples;
+  private final VariableNumMap factorGraphVariables;
+  private final ImmutableList<Assignment> samples;
 
-	public SampleMarginalSet(VariableNumMap factorGraphVariables, List<Assignment> samples,
-	    VariableNumMap conditionedVariables, Assignment conditionedValues) {
-	  super(factorGraphVariables, conditionedVariables, conditionedValues);
-	  this.factorGraphVariables = factorGraphVariables;
-	  this.samples = ImmutableList.copyOf(samples);
-	}
+  public SampleMarginalSet(VariableNumMap factorGraphVariables, List<Assignment> samples,
+      VariableNumMap conditionedVariables, Assignment conditionedValues) {
+    super(factorGraphVariables, conditionedVariables, conditionedValues);
+    this.factorGraphVariables = factorGraphVariables;
+    this.samples = ImmutableList.copyOf(samples);
+  }
 
-	@Override
-	public Factor getMarginal(Collection<Integer> varNums) {
-		Preconditions.checkNotNull(varNums);
-		VariableNumMap varsToRetain = factorGraphVariables.intersection(varNums);
-		TableFactorBuilder builder = new TableFactorBuilder(varsToRetain, SparseTensorBuilder.getFactory());
-		double increment = 1.0 / samples.size();
-		for (Assignment sample : samples) {
-			Assignment factorSample = sample.intersection(varNums);
-			builder.setWeight(factorSample, 
-			    builder.getWeight(factorSample) + increment);
-		}
-		return builder.build();
-	}
+  @Override
+  public Factor getMarginal(Collection<Integer> varNums) {
+    Preconditions.checkNotNull(varNums);
+    VariableNumMap varsToRetain = factorGraphVariables.intersection(varNums);
+    TableFactorBuilder builder = new TableFactorBuilder(varsToRetain, SparseTensorBuilder.getFactory());
+    double increment = 1.0 / samples.size();
+    for (Assignment sample : samples) {
+      Assignment factorSample = sample.intersection(varNums);
+      builder.setWeight(factorSample, 
+          builder.getWeight(factorSample) + increment);
+    }
+    return builder.build();
+  }
 
-	@Override
-	public double getLogPartitionFunction() {
-	  // This is definitely not right.
-		return Math.log(samples.size());
-	}
+  @Override
+  public double getLogPartitionFunction() {
+    // This is definitely not right.
+    return Math.log(samples.size());
+  }
 }

@@ -109,8 +109,8 @@ public class TrainSupertagger extends AbstractCli {
     // Read in the training data as sentences, to use for
     // feature generation.
     System.out.println("Reading training data...");
-    List<CcgExample> ccgExamples = TrainCcg.readTrainingData(options.valueOf(trainingFilename),
-        true, true, options.valueOf(syntaxMap));
+    List<CcgExample<SupertaggedSentence>> ccgExamples = TrainCcg.readTrainingData(
+        options.valueOf(trainingFilename), true, true, options.valueOf(syntaxMap));
     System.out.println("Reformatting training data...");
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData =
         reformatTrainingExamples(ccgExamples, true);
@@ -202,12 +202,14 @@ public class TrainSupertagger extends AbstractCli {
    * @return
    */
   public static List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> reformatTrainingExamples(
-      Collection<CcgExample> ccgExamples, boolean ignoreInvalid) {
+      Collection<CcgExample<SupertaggedSentence>> ccgExamples, boolean ignoreInvalid) {
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> examples = Lists.newArrayList();
-    for (CcgExample example : ccgExamples) {
+    for (CcgExample<SupertaggedSentence> example : ccgExamples) {
       Preconditions.checkArgument(example.hasSyntacticParse());
-      List<WordAndPos> taggedWords = WordAndPos.createExample(example.getWords(), example.getPosTags());
-      List<HeadedSyntacticCategory> syntacticCategories = example.getSyntacticParse().getAllSpannedHeadedSyntacticCategories();
+      List<WordAndPos> taggedWords = WordAndPos.createExample(example.getSentence().getWords(),
+          example.getSentence().getPosTags());
+      List<HeadedSyntacticCategory> syntacticCategories = example.getSyntacticParse()
+          .getAllSpannedHeadedSyntacticCategories();
 
       if (!ignoreInvalid || !syntacticCategories.contains(null)) {
         examples.add(new ListTaggedSequence<WordAndPos, HeadedSyntacticCategory>(taggedWords, syntacticCategories));

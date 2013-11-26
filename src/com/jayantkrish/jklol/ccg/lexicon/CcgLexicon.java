@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -17,11 +18,10 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * @author jayant
  *
  */
-public interface CcgLexicon extends Serializable {
+public interface CcgLexicon<T extends SupertaggedSentence> extends Serializable {
   public static final String UNKNOWN_WORD_PREFIX = "UNK-";
 
-  void initializeChartTerminals(List<String> terminals, List<String> posTags, CcgChart chart,
-      CcgParser parser);
+  void initializeChartTerminals(T input, CcgChart<T> chart, CcgParser<T> parser);
 
   VariableNumMap getTerminalVar();
   

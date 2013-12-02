@@ -109,7 +109,7 @@ public class TrainSupertagger extends AbstractCli {
     // Read in the training data as sentences, to use for
     // feature generation.
     System.out.println("Reading training data...");
-    List<CcgExample<SupertaggedSentence>> ccgExamples = TrainCcg.readTrainingData(
+    List<CcgExample> ccgExamples = TrainCcg.readTrainingData(
         options.valueOf(trainingFilename), true, true, options.valueOf(syntaxMap));
     System.out.println("Reformatting training data...");
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData =
@@ -202,9 +202,9 @@ public class TrainSupertagger extends AbstractCli {
    * @return
    */
   public static List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> reformatTrainingExamples(
-      Collection<CcgExample<SupertaggedSentence>> ccgExamples, boolean ignoreInvalid) {
+      Collection<CcgExample> ccgExamples, boolean ignoreInvalid) {
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> examples = Lists.newArrayList();
-    for (CcgExample<SupertaggedSentence> example : ccgExamples) {
+    for (CcgExample example : ccgExamples) {
       Preconditions.checkArgument(example.hasSyntacticParse());
       List<WordAndPos> taggedWords = WordAndPos.createExample(example.getSentence().getWords(),
           example.getSentence().getPosTags());

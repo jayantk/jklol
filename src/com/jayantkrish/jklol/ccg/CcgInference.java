@@ -26,8 +26,8 @@ public interface CcgInference {
    * @param log
    * @return
    */
-  public <T extends SupertaggedSentence> CcgParse getBestParse(CcgParser<T> parser,
-      T sentence, ChartCost chartFilter, LogFunction log);
+  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
+      ChartCost chartFilter, LogFunction log);
 
   /**
    * Finds the best parse of a supertagged {@code sentence},
@@ -43,7 +43,7 @@ public interface CcgInference {
    * @param observedLogicalForm
    * @return
    */
-  public <T extends SupertaggedSentence> CcgParse getBestConditionalParse(CcgParser<T> parser, 
-      T sentence, ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
+  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
+      ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
       Set<DependencyStructure> observedDependencies, Expression observedLogicalForm);
 }

@@ -18,10 +18,10 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * @author jayant
  *
  */
-public interface CcgLexicon<T extends SupertaggedSentence> extends Serializable {
+public interface CcgLexicon extends Serializable {
   public static final String UNKNOWN_WORD_PREFIX = "UNK-";
 
-  void initializeChartTerminals(T input, CcgChart<T> chart, CcgParser<T> parser);
+  void initializeChartTerminals(SupertaggedSentence input, CcgChart chart, CcgParser parser);
 
   VariableNumMap getTerminalVar();
   

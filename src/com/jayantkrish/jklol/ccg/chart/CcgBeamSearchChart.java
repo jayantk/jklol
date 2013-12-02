@@ -19,7 +19,7 @@ import com.jayantkrish.jklol.util.IntMultimap;
  * 
  * @author jayant
  */
-public class CcgBeamSearchChart<T extends SupertaggedSentence> extends AbstractCcgChart<T> {
+public class CcgBeamSearchChart extends AbstractCcgChart {
 
   private final int beamSize;
   private final int numTerminals;
@@ -40,7 +40,7 @@ public class CcgBeamSearchChart<T extends SupertaggedSentence> extends AbstractC
    * @param posTags
    * @param beamSize
    */
-  public CcgBeamSearchChart(T sentence, int maxChartSize, int beamSize) {
+  public CcgBeamSearchChart(SupertaggedSentence sentence, int maxChartSize, int beamSize) {
     super(sentence, maxChartSize);
     this.beamSize = beamSize;
 
@@ -76,7 +76,7 @@ public class CcgBeamSearchChart<T extends SupertaggedSentence> extends AbstractC
    * @return
    */
   public List<CcgParse> decodeBestParsesForSpan(int spanStart, int spanEnd, int numParses,
-      CcgParser<T> parser) {
+      CcgParser parser) {
     // Perform a heap sort on the array indexes paired with the
     // probabilities.
     double[] probsCopy = ArrayUtils.copyOf(probabilities[spanStart][spanEnd], probabilities[spanStart][spanEnd].length);
@@ -103,7 +103,7 @@ public class CcgBeamSearchChart<T extends SupertaggedSentence> extends AbstractC
   }
   
   @Override
-  public CcgParse decodeBestParse(CcgParser<T> parser) {
+  public CcgParse decodeBestParse(CcgParser parser) {
     List<CcgParse> bestParses = decodeBestParsesForSpan(0, size() - 1, 1, parser);
     return Iterables.getFirst(bestParses, null);
   }

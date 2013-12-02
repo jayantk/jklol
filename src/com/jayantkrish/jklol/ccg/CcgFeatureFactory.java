@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -22,7 +21,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
  * 
  * @author jayantk
  */
-public interface CcgFeatureFactory<T extends SupertaggedSentence> {
+public interface CcgFeatureFactory {
 
   /**
    * Gets a parametric factor defining the features of CCG dependency
@@ -107,7 +106,7 @@ public interface CcgFeatureFactory<T extends SupertaggedSentence> {
    * each outcome with value 1.0 represents a entry in the lexicon.
    * @return
    */
-  ParametricCcgLexicon<T> getLexiconFeatures(VariableNumMap terminalWordVar,
+  ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconIndicatorFactor);
 

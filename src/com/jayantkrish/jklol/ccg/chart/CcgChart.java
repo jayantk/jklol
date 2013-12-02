@@ -10,7 +10,7 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IntMultimap;
 
-public interface CcgChart<T extends SupertaggedSentence> {
+public interface CcgChart {
 
   /**
    * Gets the number of terminals in this parse chart.
@@ -24,7 +24,7 @@ public interface CcgChart<T extends SupertaggedSentence> {
    * 
    * @return
    */
-  public T getInput();
+  public SupertaggedSentence getInput();
 
   /**
    * Gets the maximum number of chart entries for this parse. This
@@ -218,7 +218,7 @@ public interface CcgChart<T extends SupertaggedSentence> {
    * @param parser Parser that produced this parse chart.
    * @return
    */
-  public CcgParse decodeBestParse(CcgParser<T> parser);
+  public CcgParse decodeBestParse(CcgParser parser);
   
   public boolean isFinishedParsing();
   

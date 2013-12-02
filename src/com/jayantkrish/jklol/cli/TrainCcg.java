@@ -93,7 +93,7 @@ public class TrainCcg extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    List<CcgExample<SupertaggedSentence>> unfilteredTrainingExamples = readTrainingData(options.valueOf(trainingData),
+    List<CcgExample> unfilteredTrainingExamples = readTrainingData(options.valueOf(trainingData),
         options.has(ignoreSemantics), options.has(useCcgBankFormat), options.valueOf(syntaxMap));
     Set<String> posTags = CcgExample.getPosTagVocabulary(unfilteredTrainingExamples);
     System.out.println(posTags.size() + " POS tags");
@@ -108,23 +108,23 @@ public class TrainCcg extends AbstractCli {
     Set<CcgRuleSchema> observedRules = null;
     if (options.has(onlyObservedBinaryRules)) {
       observedRules = Sets.newHashSet();
-      for (CcgExample<SupertaggedSentence> example : unfilteredTrainingExamples) {
+      for (CcgExample example : unfilteredTrainingExamples) {
         observedRules.addAll(example.getSyntacticParse().getObservedBinaryRules());
       }
     }
 
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
-    CcgFeatureFactory<SupertaggedSentence> featureFactory = new DefaultCcgFeatureFactory(null);
-    ParametricCcgParser<SupertaggedSentence> family = createCcgParser(posTags, observedRules, featureFactory);
+    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null);
+    ParametricCcgParser family = createCcgParser(posTags, observedRules, featureFactory);
     System.out.println("Done creating ParametricCcgParser.");
 
     // Read in training data and confirm its validity.
-    CcgParser<SupertaggedSentence> parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
 
     System.out.println(parser.getSyntaxDistribution().getParameterDescription());
 
-    List<CcgExample<SupertaggedSentence>> trainingExamples = CcgParserUtils.filterExampleCollection(
+    List<CcgExample> trainingExamples = CcgParserUtils.filterExampleCollection(
         parser, unfilteredTrainingExamples);
     System.out.println(trainingExamples.size() + " training examples.");
     int numDiscarded = unfilteredTrainingExamples.size() - trainingExamples.size();
@@ -147,17 +147,17 @@ public class TrainCcg extends AbstractCli {
     }
 
     // Train the model.
-    GradientOracle<CcgParser<SupertaggedSentence>, CcgExample<SupertaggedSentence>> oracle = null;
+    GradientOracle<CcgParser, CcgExample> oracle = null;
     if (options.has(maxMargin)) {
-      oracle = new CcgPerceptronOracle<SupertaggedSentence>(family, inferenceAlgorithm,
+      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm,
           options.valueOf(maxMargin));
     } else {
-      oracle = new CcgLoglikelihoodOracle<SupertaggedSentence>(family, options.valueOf(beamSize));
+      oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
     }
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
-    CcgParser<SupertaggedSentence> ccgParser = family.getModelFromParameters(parameters);
+    CcgParser ccgParser = family.getModelFromParameters(parameters);
 
     System.out.println("Serializing trained model...");
     IoUtils.serializeObjectToFile(ccgParser, options.valueOf(modelOutput));
@@ -166,7 +166,7 @@ public class TrainCcg extends AbstractCli {
     System.out.println(family.getParameterDescription(parameters, 10000));
   }
 
-  public static List<CcgExample<SupertaggedSentence>> readTrainingData(String filename,
+  public static List<CcgExample> readTrainingData(String filename,
       boolean ignoreSemantics, boolean useCcgBankFormat, String syntacticCategoryMapFilename) {
     // Read in all of the provided training examples.
     DataFormat<CcgSyntaxTree> syntaxTreeReader = null;
@@ -187,12 +187,12 @@ public class TrainCcg extends AbstractCli {
     return exampleReader.parseFromFile(filename);
   }
 
-  private static List<CcgExample<SupertaggedSentence>> supertagExamples(List<CcgExample<SupertaggedSentence>> examples,
+  private static List<CcgExample> supertagExamples(List<CcgExample> examples,
       Supertagger supertagger, double multitagThreshold, boolean includeGoldSupertags) {
     System.out.println("Supertagging examples...");
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
-    List<CcgExample<SupertaggedSentence>> newExamples = executor.map(examples,
-        new SupertaggerMapper<SupertaggedSentence>(supertagger, multitagThreshold, includeGoldSupertags));
+    List<CcgExample> newExamples = executor.map(examples,
+        new SupertaggerMapper(supertagger, multitagThreshold, includeGoldSupertags));
     System.out.println("Done supertagging.");
     return newExamples;
   }
@@ -213,8 +213,7 @@ public class TrainCcg extends AbstractCli {
     new TrainCcg().run(args);
   }
 
-  private static class SupertaggerMapper<T extends SupertaggedSentence> extends Mapper<CcgExample<T>, CcgExample<T>> {
-
+  private static class SupertaggerMapper extends Mapper<CcgExample, CcgExample> {
     private final Supertagger supertagger;
     private final double multitagThreshold;
     private final boolean includeGoldSupertags;
@@ -227,11 +226,9 @@ public class TrainCcg extends AbstractCli {
     }
 
     @Override @SuppressWarnings("unchecked")
-    public CcgExample<T> map(CcgExample<T> item) {
-      SupertaggedSentence supertaggerOutput = supertagger.multitag(
+    public CcgExample map(CcgExample item) {
+      SupertaggedSentence taggedSentence = supertagger.multitag(
           item.getSentence().getWordsAndPosTags(), multitagThreshold);
-      T taggedSentence = (T) item.getSentence().replaceSupertags(supertaggerOutput.getSupertags(),
-          supertaggerOutput.getSupertagScores());
 
       if (includeGoldSupertags) {
         // Make sure the correct headed syntactic category for each
@@ -265,10 +262,10 @@ public class TrainCcg extends AbstractCli {
           }
         }
         
-        taggedSentence = (T) taggedSentence.replaceSupertags(newLabels, newProbs);
+        taggedSentence = taggedSentence.replaceSupertags(newLabels, newProbs);
       }
 
-      return new CcgExample<T>(taggedSentence, item.getDependencies(), item.getSyntacticParse(),
+      return new CcgExample(taggedSentence, item.getDependencies(), item.getSyntacticParse(),
           item.getLogicalForm());
     }
   }

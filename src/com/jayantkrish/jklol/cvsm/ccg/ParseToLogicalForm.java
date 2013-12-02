@@ -25,7 +25,6 @@ import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cli.ParseCcg;
@@ -68,13 +67,12 @@ public class ParseToLogicalForm extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Read in supertagger and CCG parser.
-    @SuppressWarnings("unchecked")
-    CcgParser<SupertaggedSentence> ccgParser = IoUtils.readSerializedObject(options.valueOf(parser), CcgParser.class);
+    CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(parser), CcgParser.class);
     Supertagger tagger = IoUtils.readSerializedObject(options.valueOf(supertagger), Supertagger.class);
     double[] tagThresholds = Doubles.toArray(options.valuesOf(multitagThresholds));
 
-    SupertaggingCcgParser<SupertaggedSentence> supertaggingParser = new SupertaggingCcgParser<SupertaggedSentence>(
-        ccgParser, new CcgExactInference(null, options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize)),
+    SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser, 
+        new CcgExactInference(null, options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize)),
         tagger, tagThresholds);
 
     // Read the logical form templates.

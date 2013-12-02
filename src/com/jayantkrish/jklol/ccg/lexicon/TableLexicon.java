@@ -5,14 +5,13 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class TableLexicon<T extends SupertaggedSentence> extends AbstractCcgLexicon<T> {
+public class TableLexicon extends AbstractCcgLexicon {
   private static final long serialVersionUID = 1L;
 
   // Weights and pos tag -> syntactic category mappings for the

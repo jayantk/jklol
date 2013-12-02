@@ -16,7 +16,6 @@ import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmValueLoss;
@@ -170,8 +169,8 @@ public class CvsmTrainingTest extends TestCase {
 
   private static final int NUM_DIMS = 3;
 
-  private ParametricCcgParser<SupertaggedSentence> family;
-  private CcgParser<SupertaggedSentence> parser;
+  private ParametricCcgParser family;
+  private CcgParser parser;
 
   private CvsmFamily cvsmFamily, lowRankCvsmFamily, diagCvsmFamily;
 

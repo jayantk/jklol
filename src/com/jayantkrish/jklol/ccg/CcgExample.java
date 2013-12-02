@@ -18,11 +18,11 @@ import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
  * 
  * @author jayant
  */
-public class CcgExample<T extends SupertaggedSentence> {
+public class CcgExample {
 
   // The sentence to parse, along with part-of-speech tags for each word
   // and optional supertags (syntactic categories to consider for each word).
-  private final T sentence;
+  private final SupertaggedSentence sentence;
 
   // May be null, in which case the true dependencies are
   // unobserved.
@@ -48,7 +48,7 @@ public class CcgExample<T extends SupertaggedSentence> {
    * {@code words}. May be {@code null}, in which case the correct
    * value is treated as unobserved.
    */
-  public CcgExample(T sentence, Set<DependencyStructure> dependencies,
+  public CcgExample(SupertaggedSentence sentence, Set<DependencyStructure> dependencies,
       CcgSyntaxTree syntacticParse, Expression logicalForm) {
     this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
@@ -70,15 +70,15 @@ public class CcgExample<T extends SupertaggedSentence> {
    * @param examples
    * @return
    */
-  public static Set<String> getPosTagVocabulary(Iterable<? extends CcgExample<?>> examples) {
+  public static Set<String> getPosTagVocabulary(Iterable<? extends CcgExample> examples) {
     Set<String> posTagVocabulary = Sets.newHashSet();
-    for (CcgExample<?> example : examples) {
+    for (CcgExample example : examples) {
       posTagVocabulary.addAll(example.getSentence().getPosTags());
     }
     return posTagVocabulary;
   }
 
-  public T getSentence() {
+  public SupertaggedSentence getSentence() {
     return sentence;
   }
 

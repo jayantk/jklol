@@ -19,7 +19,6 @@ import com.jayantkrish.jklol.boost.FunctionalGradientAscent;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgRuleSchema;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.dtree.RegressionTreeTrainer;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
@@ -480,8 +479,8 @@ public abstract class AbstractCli {
     throw new UnsupportedOperationException("To use createGradientOptimizer, the CLI constructor must specify STOCHASTIC_GRADIENT and/or LBFGS.");
   }
 
-  protected <T extends SupertaggedSentence> ParametricCcgParser<T> createCcgParser(
-      Set<String> posTagSet, Set<CcgRuleSchema> rules, CcgFeatureFactory<T> featureFactory) {
+  protected ParametricCcgParser createCcgParser(Set<String> posTagSet, Set<CcgRuleSchema> rules,
+      CcgFeatureFactory featureFactory) {
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))

@@ -16,7 +16,6 @@ import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.probdb.DbAssignment;
@@ -44,9 +43,9 @@ public class NoExportHelpers {
     
     String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
 
-    ParametricCcgParser<SupertaggedSentence> ccgFamily = ParametricCcgParser.parseFromLexicon(
+    ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
         Arrays.asList(lexicon), Arrays.asList(rules), null, null, false, null, false, false);
-    CcgParser<SupertaggedSentence> parser = ccgFamily.getModelFromParameters(
+    CcgParser parser = ccgFamily.getModelFromParameters(
         ccgFamily.getNewSufficientStatistics());
 
     List<String> words = Arrays.asList(input.split(" "));

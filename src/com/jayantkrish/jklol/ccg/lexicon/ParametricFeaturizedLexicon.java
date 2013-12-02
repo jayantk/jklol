@@ -7,7 +7,6 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -22,7 +21,7 @@ import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class ParametricFeaturizedLexicon<T extends SupertaggedSentence> implements ParametricCcgLexicon<T> {
+public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
   private static final long serialVersionUID = 1L;
   
   private final VariableNumMap terminalVar;
@@ -66,14 +65,14 @@ public class ParametricFeaturizedLexicon<T extends SupertaggedSentence> implemen
   }
 
   @Override
-  public CcgLexicon<T> getModelFromParameters(SufficientStatistics parameters) {
+  public CcgLexicon getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
     DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
     ClassifierFactor terminalFeatureDistribution = featureFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_FEATURE_PARAMETERS));
 
-   return new FeaturizedLexicon<T>(terminalVar, ccgCategoryVar, terminalDistribution,
+   return new FeaturizedLexicon(terminalVar, ccgCategoryVar, terminalDistribution,
        featureGenerator, ccgSyntaxVar, featureVar, terminalFeatureDistribution);
   }
 

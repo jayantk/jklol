@@ -24,7 +24,6 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -37,7 +36,7 @@ import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
 
-  CcgParser<SupertaggedSentence> parser, parserWithComposition, parserWithCompositionNormalForm,
+  CcgParser parser, parserWithComposition, parserWithCompositionNormalForm,
   parserWithUnary,parserWithUnaryAndComposition, parserWordSkip;
 
   ExpressionParser<Expression> exp;
@@ -921,19 +920,19 @@ public class CcgParserTest extends TestCase {
     oos.close();
   }
 
-  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       int beamSize) {
     return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), beamSize);
   }
 
-  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
     return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
         posTags), beamSize);
   }
 
-  private CcgParse parse(CcgParser<SupertaggedSentence> parser, List<String> words) {
+  private CcgParse parse(CcgParser parser, List<String> words) {
     return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE);
   }
@@ -944,9 +943,8 @@ public class CcgParserTest extends TestCase {
     return new DependencyStructure(subject, subjIndex, cat, object, objectIndex, argNum);
   }
 
-  private CcgParser<SupertaggedSentence> parseLexicon(String[] lexicon, String[] binaryRuleArray,
-      String[] unaryRuleArray, double[] weights, boolean allowComposition, boolean allowWordSkipping,
-      boolean normalFormOnly) {
+  private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray, String[] unaryRuleArray,
+      double[] weights, boolean allowComposition, boolean allowWordSkipping, boolean normalFormOnly) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
     Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
@@ -1131,11 +1129,11 @@ public class CcgParserTest extends TestCase {
     }
     DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
     
-    TableLexicon<SupertaggedSentence> tableLexicon = new TableLexicon<SupertaggedSentence>(
-        terminalVar, ccgCategoryVar, terminalBuilder.build(), posTagVar, terminalSyntaxVar,
-        posDistribution, terminalSyntaxDistribution);
+    TableLexicon tableLexicon = new TableLexicon(terminalVar, ccgCategoryVar,
+        terminalBuilder.build(), posTagVar, terminalSyntaxVar, posDistribution,
+        terminalSyntaxDistribution);
 
-    return new CcgParser<SupertaggedSentence>(tableLexicon, semanticHeadVar, semanticSyntaxVar,
+    return new CcgParser(tableLexicon, semanticHeadVar, semanticSyntaxVar,
         semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,

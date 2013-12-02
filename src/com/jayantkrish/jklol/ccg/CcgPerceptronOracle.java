@@ -3,21 +3,19 @@ package com.jayantkrish.jklol.ccg;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
-public class CcgPerceptronOracle<T extends SupertaggedSentence> implements
-GradientOracle<CcgParser<T>, CcgExample<T>> {
+public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample> {
 
-  private final ParametricCcgParser<T> family;
+  private final ParametricCcgParser family;
   private final CcgInference inferenceAlgorithm;
 
   private final double marginCost;
 
-  public CcgPerceptronOracle(ParametricCcgParser<T> family, CcgInference inferenceAlgorithm,
+  public CcgPerceptronOracle(ParametricCcgParser family, CcgInference inferenceAlgorithm,
       double marginCost) {
     this.family = Preconditions.checkNotNull(family);
     this.inferenceAlgorithm = Preconditions.checkNotNull(inferenceAlgorithm);
@@ -31,13 +29,13 @@ GradientOracle<CcgParser<T>, CcgExample<T>> {
   }
 
   @Override
-  public CcgParser<T> instantiateModel(SufficientStatistics parameters) {
+  public CcgParser instantiateModel(SufficientStatistics parameters) {
     return family.getModelFromParameters(parameters);
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, CcgParser<T> instantiatedParser,
-      CcgExample<T> example, LogFunction log) {
+  public double accumulateGradient(SufficientStatistics gradient, CcgParser instantiatedParser,
+      CcgExample example, LogFunction log) {
     // Gradient is the features of the correct CCG parse minus the
     // features of the best predicted parse.
 

@@ -105,8 +105,7 @@ public class ParseCcg extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Read the parser.
-    @SuppressWarnings("unchecked")
-    CcgParser<SupertaggedSentence> ccgParser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
+    CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
 
     // Configure inference options
     CcgInference inferenceAlgorithm = null;
@@ -120,7 +119,7 @@ public class ParseCcg extends AbstractCli {
     
     if (options.has(testFile)) {
       // Parse all test examples.
-      List<CcgExample<SupertaggedSentence>> testExamples = TrainCcg.readTrainingData(
+      List<CcgExample> testExamples = TrainCcg.readTrainingData(
           options.valueOf(testFile), false, options.has(useCcgBankFormat), options.valueOf(syntaxMap));
       System.out.println(testExamples.size() + " test examples after filtering.");
 
@@ -133,10 +132,10 @@ public class ParseCcg extends AbstractCli {
       }
 
       LogFunctions.getLogFunction().notifyIterationStart(0);
-      SupertaggingCcgParser<SupertaggedSentence> supertaggingParser = 
-          new SupertaggingCcgParser<SupertaggedSentence>(ccgParser, inferenceAlgorithm, tagger, tagThresholds);
-      CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser, options.has(useGoldSyntacticTrees),
-          options.has(filterDependenciesCcgbank));
+      SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
+          inferenceAlgorithm, tagger, tagThresholds);
+      CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser,
+          options.has(useGoldSyntacticTrees), options.has(filterDependenciesCcgbank));
       LogFunctions.getLogFunction().notifyIterationEnd(0);
       System.out.println(loss);
     } else {
@@ -197,15 +196,15 @@ public class ParseCcg extends AbstractCli {
     }
   }
 
-  public static <T extends SupertaggedSentence> CcgLoss runTestSetEvaluation(Collection<CcgExample<T>> testExamples, 
-      SupertaggingCcgParser<T> ccgParser, boolean useCcgbankDerivations, boolean filterDependenciesCcgbank) {
-    CcgLossMapper<T> mapper = new CcgLossMapper<T>(ccgParser, useCcgbankDerivations, filterDependenciesCcgbank);
+  public static CcgLoss runTestSetEvaluation(Collection<CcgExample> testExamples, 
+      SupertaggingCcgParser ccgParser, boolean useCcgbankDerivations, boolean filterDependenciesCcgbank) {
+    CcgLossMapper mapper = new CcgLossMapper(ccgParser, useCcgbankDerivations, filterDependenciesCcgbank);
     CcgLossReducer reducer = new CcgLossReducer();
     return MapReduceConfiguration.getMapReduceExecutor().mapReduce(testExamples, mapper, reducer);
   }
   
-  public static <T extends SupertaggedSentence> CcgLoss computeLoss(CcgParseResult parseResult,
-      CcgExample<T> example, CcgParser<T> parser, boolean filterDependenciesCcgbank) {
+  public static CcgLoss computeLoss(CcgParseResult parseResult, CcgExample example,
+      CcgParser parser, boolean filterDependenciesCcgbank) {
     CcgParse parse = parseResult.getParse();
     List<DependencyStructure> parseDeps = null;
     if (filterDependenciesCcgbank) {
@@ -548,13 +547,13 @@ public class ParseCcg extends AbstractCli {
     }
   }
 
-  public static class CcgLossMapper<T extends SupertaggedSentence> extends Mapper<CcgExample<T>, CcgLoss> {
-    private final SupertaggingCcgParser<T> parser;
+  public static class CcgLossMapper extends Mapper<CcgExample, CcgLoss> {
+    private final SupertaggingCcgParser parser;
     private final boolean useCcgbankDerivation;
     private final boolean filterDependenciesCcgbank;
     private final LogFunction log;
 
-    public CcgLossMapper(SupertaggingCcgParser<T> parser, boolean useCcgbankDerivation,
+    public CcgLossMapper(SupertaggingCcgParser parser, boolean useCcgbankDerivation,
         boolean filterDependenciesCcgbank) {
       this.parser = Preconditions.checkNotNull(parser);
       this.useCcgbankDerivation = useCcgbankDerivation;
@@ -563,7 +562,7 @@ public class ParseCcg extends AbstractCli {
     }
 
     @Override
-    public CcgLoss map(CcgExample<T> example) {
+    public CcgLoss map(CcgExample example) {
       CcgParseResult parse = null;
       SyntacticChartCost filter = null;
       if (useCcgbankDerivation) {
@@ -582,8 +581,7 @@ public class ParseCcg extends AbstractCli {
         
         if (useCcgbankDerivation) {
           // Provide a deeper analysis of why parsing failed.
-          CcgChart<T> chart = new CcgExactHashTableChart<T>(example.getSentence(),
-              Integer.MAX_VALUE);
+          CcgChart chart = new CcgExactHashTableChart(example.getSentence(), Integer.MAX_VALUE);
           parser.getParser().parseCommon(chart, example.getSentence(), filter, null, -1);
           CcgParserUtils.analyzeParseFailure(example.getSyntacticParse(), chart,
               parser.getParser().getSyntaxVarType(), "Parse failure", 0);

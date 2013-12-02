@@ -9,7 +9,6 @@ import com.jayantkrish.jklol.ccg.lexicon.LexiconFeatureGenerator;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.TrainSupertagger;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -32,7 +31,7 @@ import com.jayantkrish.jklol.sequence.LocalContext;
  * 
  * @author jayantk
  */
-public class DefaultCcgFeatureFactory implements CcgFeatureFactory<SupertaggedSentence> {
+public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
 
   private final FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator;
 
@@ -48,13 +47,13 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory<SupertaggedSe
   }
 
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> getDefaultFeatureGenerator(
-      Collection<CcgExample<SupertaggedSentence>> examples) {
+      Collection<CcgExample> examples) {
     List<LocalContext<WordAndPos>> contexts = getContextsFromExamples(examples);
     return TrainSupertagger.buildFeatureVectorGenerator(contexts, null, Integer.MAX_VALUE, 250, 100, false);
   }
 
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> getPosFeatureGenerator(
-      Collection<CcgExample<SupertaggedSentence>> examples) {
+      Collection<CcgExample> examples) {
     List<LocalContext<WordAndPos>> contexts = getContextsFromExamples(examples);
 
     FeatureGenerator<LocalContext<WordAndPos>, String> posGenerator = new LexiconFeatureGenerator();
@@ -64,9 +63,9 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory<SupertaggedSe
   }
 
   private static List<LocalContext<WordAndPos>> getContextsFromExamples(
-      Collection<CcgExample<SupertaggedSentence>> examples) {
+      Collection<CcgExample> examples) {
     List<LocalContext<WordAndPos>> contexts = Lists.newArrayList();
-    for (CcgExample<SupertaggedSentence> example : examples) {
+    for (CcgExample example : examples) {
       List<WordAndPos> wordAndPos = example.getSentence().getWordsAndPosTags();
       for (int i = 0; i < wordAndPos.size(); i++) {
         contexts.add(new ListLocalContext<WordAndPos>(wordAndPos, i));
@@ -135,7 +134,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory<SupertaggedSe
   }
 
   @Override
-  public ParametricCcgLexicon<SupertaggedSentence> getLexiconFeatures(VariableNumMap terminalWordVar,
+  public ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
       DiscreteFactor lexiconIndicatorFactor) {
     if (featureGenerator == null) {
@@ -157,7 +156,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory<SupertaggedSe
       VariableNumMap terminalPosVars = VariableNumMap.unionAll(terminalPosVar, terminalSyntaxVar);
       ParametricFactor terminalPosParametricFactor = new DenseIndicatorLogLinearFactor(terminalPosVars, true, null);
      
-      return new ParametricTableLexicon<SupertaggedSentence>(terminalWordVar, ccgCategoryVar, terminalParametricFactor,
+      return new ParametricTableLexicon(terminalWordVar, ccgCategoryVar, terminalParametricFactor,
           terminalPosVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor);
     } else {
       ParametricFactor terminalFamily = new IndicatorLogLinearFactor(terminalWordVar.union(ccgCategoryVar),
@@ -168,7 +167,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory<SupertaggedSe
       ConditionalLogLinearFactor featureFamily = new ConditionalLogLinearFactor(featureVar, terminalSyntaxVar,
           VariableNumMap.EMPTY, featureGenerator.getFeatureDictionary());
 
-      return new ParametricFeaturizedLexicon<SupertaggedSentence>(terminalWordVar, ccgCategoryVar, terminalFamily,
+      return new ParametricFeaturizedLexicon(terminalWordVar, ccgCategoryVar, terminalFamily,
           featureGenerator, terminalSyntaxVar, featureVar, featureFamily);
     }
   }

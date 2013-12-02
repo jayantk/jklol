@@ -7,7 +7,6 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
@@ -22,7 +21,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * @author jayant
  *
  */
-public class ParametricTableLexicon<T extends SupertaggedSentence> implements ParametricCcgLexicon<T> {
+public class ParametricTableLexicon implements ParametricCcgLexicon {
   private static final long serialVersionUID = 1L;
   
   private final VariableNumMap terminalVar;
@@ -70,7 +69,7 @@ public class ParametricTableLexicon<T extends SupertaggedSentence> implements Pa
   }
 
   @Override
-  public CcgLexicon<T> getModelFromParameters(SufficientStatistics parameters) {
+  public CcgLexicon getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
     DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
@@ -79,7 +78,7 @@ public class ParametricTableLexicon<T extends SupertaggedSentence> implements Pa
     DiscreteFactor terminalSyntaxDistribution = terminalSyntaxFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS)).coerceToDiscrete();
 
-    return new TableLexicon<T>(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar,
+    return new TableLexicon(terminalVar, ccgCategoryVar, terminalDistribution, terminalPosVar,
         terminalSyntaxVar, terminalPosDistribution, terminalSyntaxDistribution);
   }
 

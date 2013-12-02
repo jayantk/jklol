@@ -40,7 +40,7 @@ public class CcgBeamSearchInference implements CcgInference {
   }
 
   @Override
-  public <T extends SupertaggedSentence> CcgParse getBestParse(CcgParser<T> parser, T sentence,
+  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log) {
     ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
         new SupertagChartCost(sentence.getSupertags()));
@@ -55,8 +55,8 @@ public class CcgBeamSearchInference implements CcgInference {
   }
 
   @Override
-  public <T extends SupertaggedSentence> CcgParse getBestConditionalParse(CcgParser<T> parser,
-      T sentence, ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
+  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
+      ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
       Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
 
     List<CcgParse> possibleParses = null; 

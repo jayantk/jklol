@@ -15,12 +15,11 @@ import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.data.LineDataFormat;
 import com.jayantkrish.jklol.util.CsvParser;
 
-public class CcgExampleFormat extends LineDataFormat<CcgExample<SupertaggedSentence>> {
+public class CcgExampleFormat extends LineDataFormat<CcgExample> {
   
   private final DataFormat<CcgSyntaxTree> syntaxTreeReader;
   private final boolean ignoreSemantics;
@@ -39,7 +38,7 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample<SupertaggedSente
    * @return
    */
   @Override
-  public CcgExample<SupertaggedSentence> parseFrom(String exampleString) {
+  public CcgExample parseFrom(String exampleString) {
     String[] parts = exampleString.split("###");
     List<String> words = Arrays.asList(parts[0].split("\\s+"));
 
@@ -75,11 +74,11 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample<SupertaggedSente
     }
 
     if (!ignoreSemantics) {
-      return new CcgExample<SupertaggedSentence>(ListSupertaggedSentence
-          .createWithUnobservedSupertags(words, posTags), dependencies, tree, logicalForm);
+      return new CcgExample(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags),
+          dependencies, tree, logicalForm);
     } else {
-      return new CcgExample<SupertaggedSentence>(ListSupertaggedSentence
-          .createWithUnobservedSupertags(words, posTags), null, tree, logicalForm);
+      return new CcgExample(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags),
+          null, tree, logicalForm);
     }
   }
 }

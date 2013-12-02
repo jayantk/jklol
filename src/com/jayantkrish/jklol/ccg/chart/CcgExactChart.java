@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.util.IntMultimap;
  * 
  * @author jayantk
  */
-public class CcgExactChart<T extends SupertaggedSentence> extends AbstractCcgChart<T> {
+public class CcgExactChart extends AbstractCcgChart {
 
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
@@ -23,7 +23,7 @@ public class CcgExactChart<T extends SupertaggedSentence> extends AbstractCcgCha
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 100;
 
-  public CcgExactChart(T input, int maxChartSize) {
+  public CcgExactChart(SupertaggedSentence input, int maxChartSize) {
     super(input, maxChartSize);
     int numTerminals = input.size();
     this.chart = new ChartEntry[numTerminals][numTerminals][];
@@ -50,7 +50,7 @@ public class CcgExactChart<T extends SupertaggedSentence> extends AbstractCcgCha
    * @param parser
    * @return
    */
-  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser<T> parser) {
+  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser parser) {
     double maxProb = -1;
     int maxEntryIndex = -1;
     double[] probs = getChartEntryProbsForSpan(spanStart, spanEnd);
@@ -70,7 +70,7 @@ public class CcgExactChart<T extends SupertaggedSentence> extends AbstractCcgCha
   }
 
   @Override
-  public CcgParse decodeBestParse(CcgParser<T> parser) {
+  public CcgParse decodeBestParse(CcgParser parser) {
     return decodeBestParseForSpan(0, size() - 1, parser);
   }
 

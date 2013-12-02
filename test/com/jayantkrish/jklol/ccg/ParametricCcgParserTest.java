@@ -9,7 +9,6 @@ import junit.framework.TestCase;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public class ParametricCcgParserTest extends TestCase {
@@ -44,9 +43,9 @@ public class ParametricCcgParserTest extends TestCase {
 
   private static final Set<String> posTags = Sets.newHashSet("NN", "JJ", "IN", "VB");
   
-  private ParametricCcgParser<SupertaggedSentence> family;
+  private ParametricCcgParser family;
   private SufficientStatistics parameters;
-  private CcgParser<SupertaggedSentence> parser;
+  private CcgParser parser;
   
   private static final double TOLERANCE = 1e-10;
   
@@ -87,7 +86,7 @@ public class ParametricCcgParserTest extends TestCase {
     family.incrementSufficientStatistics(parameters, nounParse, 1.0);
     family.incrementSufficientStatistics(parameters, adjParse, -0.5);
     family.incrementSufficientStatistics(parameters, unknownAdjParse, 0.75);
-    CcgParser<SupertaggedSentence> newParser = family.getModelFromParameters(parameters);
+    CcgParser newParser = family.getModelFromParameters(parameters);
 
     System.out.println(family.getParameterDescription(parameters));
     
@@ -125,7 +124,7 @@ public class ParametricCcgParserTest extends TestCase {
     assertEquals(nounCat, parses.get(1).getSyntacticCategory());
   }
 
-  private List<CcgParse> beamSearch(CcgParser<SupertaggedSentence> parser, List<String> words,
+  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
     return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
         posTags), beamSize);

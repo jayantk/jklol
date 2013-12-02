@@ -9,7 +9,6 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -20,15 +19,14 @@ import com.jayantkrish.jklol.training.LogFunction;
  * 
  * @author jayant
  */
-public class CcgLoglikelihoodOracle<T extends SupertaggedSentence> implements 
-GradientOracle<CcgParser<T>, CcgExample<T>> {
+public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExample> {
 
-  private final ParametricCcgParser<T> family;
+  private final ParametricCcgParser family;
 
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
 
-  public CcgLoglikelihoodOracle(ParametricCcgParser<T> family, int beamSize) {
+  public CcgLoglikelihoodOracle(ParametricCcgParser family, int beamSize) {
     this.family = Preconditions.checkNotNull(family);
     this.beamSize = beamSize;
   }
@@ -39,13 +37,13 @@ GradientOracle<CcgParser<T>, CcgExample<T>> {
   }
 
   @Override
-  public CcgParser<T> instantiateModel(SufficientStatistics parameters) {
+  public CcgParser instantiateModel(SufficientStatistics parameters) {
     return family.getModelFromParameters(parameters);
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, CcgParser<T> instantiatedParser,
-      CcgExample<T> example, LogFunction log) {
+  public double accumulateGradient(SufficientStatistics gradient, CcgParser instantiatedParser,
+      CcgExample example, LogFunction log) {
     // Gradient is the feature expectations of all correct CCG parses, minus all
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");

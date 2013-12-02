@@ -19,10 +19,10 @@ import com.jayantkrish.jklol.util.IntMultimap;
  * 
  * @author jayantk
  */
-public abstract class AbstractCcgChart<T extends SupertaggedSentence> implements CcgChart<T> {
+public abstract class AbstractCcgChart implements CcgChart {
 
   // The words and pos tags of the sentence being parsed.
-  private final T input;
+  private final SupertaggedSentence input;
   private final List<String> terminals;
   private final List<String> posTags;
   private int[] posTagsInt;
@@ -56,7 +56,7 @@ public abstract class AbstractCcgChart<T extends SupertaggedSentence> implements
 
   private boolean finishedParsing;
 
-  public AbstractCcgChart(T input, int maxChartSize) {
+  public AbstractCcgChart(SupertaggedSentence input, int maxChartSize) {
     this.input = input;
     this.terminals = ImmutableList.copyOf(input.getWords());
     this.posTags = ImmutableList.copyOf(input.getPosTags());
@@ -74,7 +74,7 @@ public abstract class AbstractCcgChart<T extends SupertaggedSentence> implements
   }
   
   @Override
-  public T getInput() {
+  public SupertaggedSentence getInput() {
     return input;
   }
 
@@ -261,7 +261,7 @@ public abstract class AbstractCcgChart<T extends SupertaggedSentence> implements
    * @param beamIndex
    * @return
    */
-  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, CcgParser<T> parser) {
+  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, CcgParser parser) {
     DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
     ChartEntry entry = getChartEntriesForSpan(spanStart, spanEnd)[beamIndex];
     HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(

@@ -15,7 +15,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -35,12 +34,11 @@ import com.jayantkrish.jklol.util.IndexedList;
  * 
  * @author jayant
  */
-public class ParametricCcgParser<T extends SupertaggedSentence> implements
-ParametricFamily<CcgParser<T>> {
+public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
   private static final long serialVersionUID = 1L;
 
-  private final ParametricCcgLexicon<T> lexiconFamily;
+  private final ParametricCcgLexicon lexiconFamily;
 
   private final VariableNumMap dependencyHeadVar;
   private final VariableNumMap dependencySyntaxVar;
@@ -129,7 +127,7 @@ ParametricFamily<CcgParser<T>> {
       UNARY_RULE_PARAMETERS, HEADED_SYNTAX_PARAMETERS, ROOT_SYNTAX_PARAMETERS,
       HEADED_ROOT_SYNTAX_PARAMETERS)); 
 
-  public ParametricCcgParser(ParametricCcgLexicon<T> lexiconFamily,
+  public ParametricCcgParser(ParametricCcgLexicon lexiconFamily,
       VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar, VariableNumMap dependencyHeadPosVar,
       VariableNumMap dependencyArgPosVar, ParametricFactor dependencyFamily, VariableNumMap wordDistanceVar,
@@ -210,9 +208,9 @@ ParametricFamily<CcgParser<T>> {
    * @param normalFormOnly
    * @return
    */
-  public static <T extends SupertaggedSentence> ParametricCcgParser<T> parseFromLexicon(
-      Iterable<String> unfilteredLexiconLines, Iterable<String> unfilteredRuleLines,
-      CcgFeatureFactory<T> featureFactory, Set<String> posTagSet, boolean allowComposition,
+  public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
+      Iterable<String> unfilteredRuleLines, CcgFeatureFactory featureFactory,
+      Set<String> posTagSet, boolean allowComposition,
       Iterable<CcgRuleSchema> allowedCombinationRules, boolean allowWordSkipping,
       boolean normalFormOnly) {
     Preconditions.checkNotNull(featureFactory);
@@ -339,7 +337,7 @@ ParametricFamily<CcgParser<T>> {
           lexiconEntry.getCategory().getSyntax()), 1.0);
     }
 
-    ParametricCcgLexicon<T> lexiconFamily = featureFactory.getLexiconFeatures(terminalVar,
+    ParametricCcgLexicon lexiconFamily = featureFactory.getLexiconFeatures(terminalVar,
         ccgCategoryVar, posVar, terminalSyntaxVar, terminalBuilder.build());
 
     // Create variables for representing the CCG parser's dependency
@@ -395,7 +393,7 @@ ParametricFamily<CcgParser<T>> {
     ParametricFactor parametricHeadedRootDistribution = featureFactory.getHeadedRootFeatures(
         leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar);
 
-    return new ParametricCcgParser<T>(lexiconFamily, dependencyHeadVar,
+    return new ParametricCcgParser(lexiconFamily, dependencyHeadVar,
         dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar,
         dependencyParametricFactor, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
         puncDistanceFactor, puncTagSet, verbDistanceVar,
@@ -495,9 +493,9 @@ ParametricFamily<CcgParser<T>> {
    * @return
    */
   @Override
-  public CcgParser<T> getModelFromParameters(SufficientStatistics parameters) {
+  public CcgParser getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
-    CcgLexicon<T> lexiconDistribution = lexiconFamily.getModelFromParameters(
+    CcgLexicon lexiconDistribution = lexiconFamily.getModelFromParameters(
         parameterList.getStatisticByName(LEXICON_PARAMETERS));
 
     DiscreteFactor dependencyDistribution = dependencyFamily.getModelFromParameters(
@@ -522,7 +520,7 @@ ParametricFamily<CcgParser<T>> {
     DiscreteFactor headedRootSyntaxDistribution = headedRootSyntaxFamily.getModelFromParameters(
         parameterList.getStatisticByName(HEADED_ROOT_SYNTAX_PARAMETERS)).coerceToDiscrete();
 
-    return new CcgParser<T>(lexiconDistribution,
+    return new CcgParser(lexiconDistribution,
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
         dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceDistribution, puncDistanceVar, puncDistanceDistribution,

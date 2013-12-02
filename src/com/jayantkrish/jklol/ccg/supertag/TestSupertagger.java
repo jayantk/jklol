@@ -55,7 +55,7 @@ public class TestSupertagger extends AbstractCli {
     }
 
     if (options.has(testFilename)) {
-      List<CcgExample<SupertaggedSentence>> ccgExamples = TrainCcg.readTrainingData(
+      List<CcgExample> ccgExamples = TrainCcg.readTrainingData(
           options.valueOf(testFilename), true, true, options.valueOf(syntaxMap));
 
       List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> testData = 

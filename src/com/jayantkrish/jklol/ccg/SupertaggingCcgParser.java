@@ -12,15 +12,15 @@ import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
-public class SupertaggingCcgParser<T extends SupertaggedSentence> {
-  private final CcgParser<T> parser;
+public class SupertaggingCcgParser {
+  private final CcgParser parser;
   private final CcgInference inference;
 
   // May be null, in which case supertagging is not used.
   private final Supertagger supertagger;
   private final double[] multitagThresholds;
 
-  public SupertaggingCcgParser(CcgParser<T> parser, CcgInference inference,
+  public SupertaggingCcgParser(CcgParser parser, CcgInference inference,
       Supertagger supertagger, double[] multitagThresholds) {
     this.parser = Preconditions.checkNotNull(parser);
     this.inference = Preconditions.checkNotNull(inference);
@@ -30,7 +30,7 @@ public class SupertaggingCcgParser<T extends SupertaggedSentence> {
     this.multitagThresholds = Arrays.copyOf(multitagThresholds, multitagThresholds.length);
   }
 
-  public CcgParseResult parse(T sentence, ChartCost inputFilter) {
+  public CcgParseResult parse(SupertaggedSentence sentence, ChartCost inputFilter) {
     SupertaggedSentence supertaggedSentence = null;
     if (supertagger != null) {
       for (int i = 0; i < multitagThresholds.length; i++) {
@@ -60,11 +60,11 @@ public class SupertaggingCcgParser<T extends SupertaggedSentence> {
     }
   }
 
-  public CcgParseResult parse(T sentence) {
+  public CcgParseResult parse(SupertaggedSentence sentence) {
     return parse(sentence, null);
   }
 
-  public CcgParser<T> getParser() {
+  public CcgParser getParser() {
     return parser;
   }
 

@@ -34,11 +34,11 @@ public class CcgParserUtils {
    * @param examples
    * @return
    */
-  public static List<CcgExample> filterExampleCollection(
-      final CcgParser parser, List<CcgExample> examples) {
+  public static <T extends CcgExample> List<T> filterExampleCollection(
+      final CcgParser parser, List<T> examples) {
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
-    List<CcgExample> filteredExamples = executor.filter(examples, new Predicate<CcgExample>() {
+    List<T> filteredExamples = executor.filter(examples, new Predicate<T>() {
       @Override
       public boolean apply(CcgExample example) {
         return isPossibleExample(parser, example);

@@ -41,6 +41,22 @@ public class TableLexicon extends AbstractCcgLexicon {
     VariableNumMap expectedTerminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
     Preconditions.checkArgument(expectedTerminalSyntaxVars.equals(terminalSyntaxDistribution.getVars()));
   }
+  
+  public VariableNumMap getTerminalPosVar() {
+    return terminalPosVar;
+  }
+  
+  public VariableNumMap getTerminalSyntaxVar() {
+    return terminalSyntaxVar;
+  }
+
+  public DiscreteFactor getTerminalPosDistribution() {
+    return terminalPosDistribution;
+  }
+
+  public DiscreteFactor getTerminalSyntaxDistribution() {
+    return terminalSyntaxDistribution;
+  }
 
   @Override
   protected double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,

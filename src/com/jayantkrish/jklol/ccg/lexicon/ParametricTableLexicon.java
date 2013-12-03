@@ -57,6 +57,22 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
     this.terminalSyntaxFamily = Preconditions.checkNotNull(terminalSyntaxFamily);
   }
 
+  public VariableNumMap getTerminalVar() {
+    return terminalVar;
+  }
+
+  public VariableNumMap getCcgCategoryVar() {
+    return ccgCategoryVar;
+  }
+
+  public VariableNumMap getTerminalPosVar() {
+    return terminalPosVar;
+  }
+
+  public VariableNumMap getTerminalSyntaxVar() {
+    return terminalSyntaxVar;
+  }
+
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
     SufficientStatistics terminalParameters = terminalFamily.getNewSufficientStatistics();
@@ -69,7 +85,7 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
   }
 
   @Override
-  public CcgLexicon getModelFromParameters(SufficientStatistics parameters) {
+  public TableLexicon getModelFromParameters(SufficientStatistics parameters) {
     ListSufficientStatistics parameterList = parameters.coerceToList();
     DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(parameterList
         .getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
@@ -108,7 +124,7 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
     int numEntries = lexiconEntries.size();
     for (int i = 0; i < numEntries; i++) {
       LexiconEntry lexiconEntry = lexiconEntries.get(i);
-      incrementLexiconSufficientStatistics(gradient, lexiconEntry, count);
+      incrementLexiconEntrySufficientStatistics(gradient, lexiconEntry, count);
       incrementPosSufficientStatistics(gradient, posTags.get(i), 
           lexiconEntry.getCategory().getSyntax(), count);
       incrementLexiconSyntaxSufficientStatistics(gradient, lexiconEntry.getWords(),
@@ -116,7 +132,7 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
     }
   }
 
-  private void incrementLexiconSufficientStatistics(SufficientStatistics gradient, 
+  public void incrementLexiconEntrySufficientStatistics(SufficientStatistics gradient, 
       LexiconEntry entry, double count) {
     SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
     Assignment assignment = Assignment.unionAll(
@@ -126,7 +142,7 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
         assignment, count);
   }
 
-  private void incrementPosSufficientStatistics(SufficientStatistics gradient, String posTag,
+  public void incrementPosSufficientStatistics(SufficientStatistics gradient, String posTag,
       HeadedSyntacticCategory syntax, double count) {
     SufficientStatistics terminalPosGradient = gradient.coerceToList().getStatisticByName(TERMINAL_POS_PARAMETERS);
     Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTag).union(
@@ -135,7 +151,7 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
         posAssignment, count);
   }
 
-  private void incrementLexiconSyntaxSufficientStatistics(SufficientStatistics gradient, 
+  public void incrementLexiconSyntaxSufficientStatistics(SufficientStatistics gradient, 
       List<String> words, HeadedSyntacticCategory syntax, double count) {
     SufficientStatistics terminalSyntaxGradient = gradient.coerceToList().getStatisticByName(TERMINAL_SYNTAX_PARAMETERS);    
     Assignment assignment = terminalVar.outcomeArrayToAssignment(words).union(

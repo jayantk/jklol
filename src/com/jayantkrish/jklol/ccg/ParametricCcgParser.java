@@ -437,29 +437,20 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     return dependencyHeadVar.getDiscreteVariables().get(0);
   }
 
-  /*
-   * // This code is presumably used in the mention ccg parser. public
-   * VariableNumMap getTerminalVar() { return terminalVar; }
-   * 
-   * public VariableNumMap getCcgCategoryVar() { return
-   * ccgCategoryVar; }
-   * 
-   * public ParametricCcgParser replaceTerminalFamily(ParametricFactor
-   * newTerminalFamily) { return new ParametricCcgParser(terminalVar,
-   * ccgCategoryVar, newTerminalFamily, terminalPosVar,
-   * terminalSyntaxVar, terminalPosFamily, terminalSyntaxFamily,
-   * dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar,
-   * dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar,
-   * dependencyFamily, wordDistanceVar, wordDistanceFamily,
-   * puncDistanceVar, puncDistanceFamily, puncTagSet, verbDistanceVar,
-   * verbDistanceFamily, verbTagSet, leftSyntaxVar, rightSyntaxVar,
-   * parentSyntaxVar, syntaxFamily, unaryRuleInputVar, unaryRuleVar,
-   * unaryRuleFamily, headedBinaryRulePredicateVar,
-   * headedBinaryRulePosVar, headedBinaryRuleFamily, searchMoveVar,
-   * compiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar,
-   * rootPosVar, rootSyntaxFamily, headedRootSyntaxFamily,
-   * allowWordSkipping, normalFormOnly); }
-   */
+  public ParametricCcgLexicon getLexicon() {
+    return lexiconFamily;
+  }
+
+  public ParametricCcgParser replaceLexicon(ParametricCcgLexicon newLexiconFamily) {
+    return new ParametricCcgParser(newLexiconFamily, dependencyHeadVar, dependencySyntaxVar,
+        dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar,
+        dependencyFamily, wordDistanceVar, wordDistanceFamily, puncDistanceVar,
+        puncDistanceFamily, puncTagSet, verbDistanceVar, verbDistanceFamily, verbTagSet,
+        leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxFamily, unaryRuleInputVar, unaryRuleVar,
+        unaryRuleFamily, headedBinaryRulePredicateVar, headedBinaryRulePosVar, headedBinaryRuleFamily,
+        searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar, rootPosVar,
+        rootSyntaxFamily, headedRootSyntaxFamily, allowWordSkipping, normalFormOnly);
+  }
 
   /**
    * Gets a new all-zero parameter vector.

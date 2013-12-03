@@ -197,7 +197,7 @@ public class TrainCcg extends AbstractCli {
     return newExamples;
   }
 
-  private static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {
+  public static Map<SyntacticCategory, HeadedSyntacticCategory> readSyntaxMap(String filename) {
     Map<SyntacticCategory, HeadedSyntacticCategory> catMap = Maps.newHashMap();
     for (String line : IoUtils.readLines(filename)) {
       String[] parts = line.split(" ");

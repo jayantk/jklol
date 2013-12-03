@@ -185,8 +185,8 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
       Outcome bestOutcome = iterator.next();
       CcgCategory category = (CcgCategory) bestOutcome.getAssignment().getValue(ccgCategoryVarNum);
 
-      // Look up how likely this syntactic entry is to occur with
-      // this part of speech.
+      // Look up how likely this syntactic entry is according to
+      // any additional parameters in subclasses.
       double subclassProb = getCategoryWeight(originalTerminals, preprocessedTerminals, posTags, ccgWordList,
           featureVectors, spanStart, spanEnd, terminalValue, category);
 

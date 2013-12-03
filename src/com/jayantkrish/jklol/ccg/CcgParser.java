@@ -1159,7 +1159,7 @@ public class CcgParser implements Serializable {
     chart.setFinishedParsing(finishedParsing);
   }
 
-  private void initializeChart(CcgChart chart, SupertaggedSentence input, ChartCost chartFilter) {
+  public void initializeChart(CcgChart chart, SupertaggedSentence input, ChartCost chartFilter) {
     int numWords = input.size();
     int[] puncCounts = computeDistanceCounts(input.getPosTags(), puncTagSet);
     int[] verbCounts = computeDistanceCounts(input.getPosTags(), verbTagSet);

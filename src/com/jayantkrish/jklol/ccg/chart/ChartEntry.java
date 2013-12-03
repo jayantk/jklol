@@ -266,35 +266,6 @@ public class ChartEntry {
     Arrays.fill(relabeledAssignments, -1);
     int numFilled = 0;
 
-    /*
-    // Invert relabeling to get which current assignment variable 
-    // to put in each result assignment slot.
-    int maxResultVarNum = Ints.max(relabeling);
-    int[] inverseRelabeling = new int[maxResultVarNum];
-    int[] relabeledAssignmentVarIndex = new int[maxResultVarNum + 1];
-    Arrays.fill(inverseRelabeling, -1);
-    for (int j = 0; j < relabeling.length; j++) {
-      if (relabeling[j] != -1) { 
-        inverseRelabeling[relabeling[j]] = uniqueVars[j];
-      }
-    }
-
-    for (int j = 0; j < inverseRelabeling.length; j++) {
-      relabeledAssignmentVarIndex[j] = numFilled;
-      int originalVarNum = inverseRelabeling[j];
-      if (originalVarNum != -1) {
-        int startIndex = assignmentVarIndex[originalVarNum];
-        int endIndex = assignmentVarIndex[originalVarNum + 1];
-        for (int i = startIndex; i < endIndex; i++) {
-          relabeledAssignments[numFilled] = CcgParser.replaceAssignmentVarNum(assignments[i],
-                originalVarNum, relabeling[j]);
-          numFilled++;
-        }
-      }
-    }
-    relabeledAssignmentVarIndex[inverseRelabeling.length] = numFilled;
-    */
-
     for (int i = 0; i < assignments.length; i++) {
       int assignmentVarNum = CcgParser.getAssignmentVarNum(assignments[i]);
       for (int j = 0; j < uniqueVars.length; j++) {
@@ -333,8 +304,7 @@ public class ChartEntry {
   public int getUnfilledDependenciesRelabeled(int[] relabeling, long[] dependencyAccumulator, int accumulatorStartIndex) {
     if (dependencyAccumulator.length < accumulatorStartIndex + unfilledDependencies.length) {
       // The accumulator does not have enough space to store the
-      // dependencies
-      // in this chart entry.
+      // dependencies in this chart entry.
       return -1;
     }
 

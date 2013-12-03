@@ -74,62 +74,12 @@ public class DenseIndicatorLogLinearFactorTest extends TestCase {
     factor = parametricFactor.getModelFromParameters(parameters);
     assertEquals(1.5, factor.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
   }
-  
-  private void runTestRestrictedFeatures(DenseIndicatorLogLinearFactor parametricFactor) {
-    SufficientStatistics parameters = parametricFactor.getNewSufficientStatistics();
-    Factor initial = parametricFactor.getModelFromParameters(parameters);
-    assertEquals(0.0, initial.getUnnormalizedLogProbability("A", "T"), TOLERANCE);
-    assertEquals(0.0, initial.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
-    assertEquals(0.0, initial.getUnnormalizedLogProbability("C", "F"), TOLERANCE);
-
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "F"), 2.0);
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "F"), -3.0);
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "T"), 3.0);
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("A", "T"), 1.0);
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("C", "T"), 2.0);
-
-    Factor factor = parametricFactor.getModelFromParameters(parameters);
-    assertEquals(1.0, factor.getUnnormalizedLogProbability("A", "T"), TOLERANCE);
-    assertEquals(-1.0, factor.getUnnormalizedLogProbability("B", "F"), TOLERANCE);
-    assertEquals(12.0, factor.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
-    assertEquals(0.0, factor.getUnnormalizedLogProbability("C", "T"), TOLERANCE);
-
-    TableFactorBuilder incrementBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
-    incrementBuilder.setWeight(4.0, "A", "F");
-    incrementBuilder.setWeight(6.0, "C", "F");
-    incrementBuilder.setWeight(-4.0, "B", "T");
-    Factor increment = incrementBuilder.build(); 
-    parametricFactor.incrementSufficientStatisticsFromMarginal(parameters, increment, Assignment.EMPTY, 3.0, 2.0);
-
-    factor = parametricFactor.getModelFromParameters(parameters);
-    assertEquals(-1.0, factor.getUnnormalizedLogProbability("B", "F"), TOLERANCE);
-    assertEquals(-12.0, factor.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
-    assertEquals(1.0, factor.getUnnormalizedLogProbability("A", "T"), TOLERANCE);
-    assertEquals(0.0, factor.getUnnormalizedLogProbability("C", "T"), TOLERANCE);
-    assertEquals(0.0, factor.getUnnormalizedLogProbability("A", "F"), TOLERANCE);
-    assertEquals(9.0, factor.getUnnormalizedLogProbability("C", "F"), TOLERANCE);
-
-    TableFactor pointDist = TableFactor.unity(truthVar);
-    parametricFactor.incrementSufficientStatisticsFromMarginal(parameters, pointDist,
-        alphabetVar.outcomeArrayToAssignment("C"), 3, 2.0);
-    factor = parametricFactor.getModelFromParameters(parameters);
-    assertEquals(0, factor.getUnnormalizedLogProbability("C", "T"), TOLERANCE);
-    assertEquals(10.5, factor.getUnnormalizedLogProbability("C", "F"), TOLERANCE);
-  }
 
   public void testIncrementDense() {
-    runTestAllFeatures(new DenseIndicatorLogLinearFactor(vars, false, null));
+    runTestAllFeatures(new DenseIndicatorLogLinearFactor(vars, false));
   }
   
   public void testIncrementSparse() {
-    runTestAllFeatures(new DenseIndicatorLogLinearFactor(vars, true, null));
-  }
-  
-  public void testIncrementDenseRestricted() {
-    runTestRestrictedFeatures(new DenseIndicatorLogLinearFactor(vars, false, featureIndicators));
-  }
-
-  public void testIncrementSparseRestricted() {
-    runTestRestrictedFeatures(new DenseIndicatorLogLinearFactor(vars, true, featureIndicators));
+    runTestAllFeatures(new DenseIndicatorLogLinearFactor(vars, true));
   }
 }

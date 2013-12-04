@@ -178,7 +178,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
     VariableNumMap allVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar, parentSyntaxVar);
     return new DenseIndicatorLogLinearFactor(allVars, true);
   }
-  
+
   @Override
   public ParametricFactor getUnaryRuleFeatures(VariableNumMap unaryRuleSyntaxVar,
       VariableNumMap unaryRuleVar, DiscreteFactor unaryRuleDistribution) {

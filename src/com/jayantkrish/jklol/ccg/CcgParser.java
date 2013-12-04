@@ -1462,6 +1462,12 @@ public class CcgParser implements Serializable {
         ChartEntry[] rightTrees = chart.getChartEntriesForSpan(spanStart + j, spanEnd);
         double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
         IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + j, spanEnd);
+        
+        if (leftTypes == null || rightTypes == null) {
+          // At least one of the partial spans has no possible parses. This may
+          // happen if some single-word spans have no lexicon entries.
+          continue;
+        }
 
         // log.startTimer("ccg_parse/beam_loop");
         for (int leftType : leftTypes.keySetArray()) {

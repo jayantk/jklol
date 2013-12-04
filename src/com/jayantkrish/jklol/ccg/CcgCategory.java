@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -112,8 +113,8 @@ public class CcgCategory implements Serializable {
    * @return
    */
   public static CcgCategory parseFrom(String categoryString) {
-    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE,
-        CsvParser.NULL_ESCAPE).parseLine(categoryString);
+    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(
+        categoryString);
     Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
         categoryString);
     return parseFrom(parts);

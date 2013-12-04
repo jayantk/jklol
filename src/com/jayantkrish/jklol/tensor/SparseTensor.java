@@ -227,7 +227,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   @Override
   public SparseTensor elementwiseProduct(Tensor other) {
     int[] dimensionNums = getDimensionNumbers();
+    int[] dimensionSizes = getDimensionSizes();
     int[] otherDimensions = other.getDimensionNumbers();
+    int[] otherSizes = other.getDimensionSizes();
     
     // Check that dimensionNums contains a superset of otherDimensions
     int myInd = 0, otherInd = 0;
@@ -237,6 +239,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       if (dimensionNums[myInd] < otherDimensions[otherInd]) {
         myInd++;
       } else if (dimensionNums[myInd] == otherDimensions[otherInd]) {
+        Preconditions.checkArgument(dimensionSizes[myInd] == otherSizes[otherInd]);
         myInd++;
         otherInd++;
       } else {

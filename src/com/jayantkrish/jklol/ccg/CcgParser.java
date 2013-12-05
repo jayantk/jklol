@@ -55,10 +55,10 @@ public class CcgParser implements Serializable {
   private static final int PREDICATE_BITS = 16;
   private static final long PREDICATE_MASK = ~(-1L << PREDICATE_BITS);
   private static final int MAX_PREDICATES = 1 << PREDICATE_BITS;
-  private static final int SYNTACTIC_CATEGORY_BITS = 11;
+  private static final int SYNTACTIC_CATEGORY_BITS = 13;
   private static final long SYNTACTIC_CATEGORY_MASK = ~(-1L << SYNTACTIC_CATEGORY_BITS);
   private static final int MAX_SYNTACTIC_CATEGORIES = 1 << SYNTACTIC_CATEGORY_BITS;
-  private static final int ARG_NUM_BITS = 4;
+  private static final int ARG_NUM_BITS = 3;
   private static final long ARG_NUM_MASK = ~(-1L << ARG_NUM_BITS);
   private static final int WORD_IND_BITS = 8;
   private static final long WORD_IND_MASK = ~(-1L << WORD_IND_BITS);

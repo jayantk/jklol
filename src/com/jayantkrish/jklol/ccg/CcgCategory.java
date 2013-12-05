@@ -367,8 +367,7 @@ public class CcgCategory implements Serializable {
           null, objects.get(i));
 
       // Technically, this is unnecessary since removing the
-      // possibility of pre-filled dependencies. TODO: add back
-      // pre-filled dependencies.
+      // possibility of pre-filled dependencies.
       if (dep.isFilledDependency()) {
         filledDependencies.add(dep);
       } else {

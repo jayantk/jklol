@@ -49,9 +49,13 @@ public class ForAllExpression extends AbstractExpression {
       
       List<Expression> clauses = Lists.newArrayList();
       for (Expression arg : set.getArguments()) {
-        clauses.add(baseClause.substitute(boundVar, arg));
+        Expression clause = baseClause.substitute(boundVar, arg).simplify();
+        if (clause instanceof ForAllExpression) {
+          clause = ((ForAllExpression) clause).expandQuantifier();
+        }
+        clauses.add(clause);
       }
-      baseClause = new CommutativeOperator(new ConstantExpression("and"), clauses);
+      baseClause = (new CommutativeOperator(new ConstantExpression("and"), clauses));
     }
     
     Expression simplified = baseClause.simplify();

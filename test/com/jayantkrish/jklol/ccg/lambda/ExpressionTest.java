@@ -193,7 +193,7 @@ public class ExpressionTest extends TestCase {
   public void testExpandForAll5() {
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(
         "(forall (b (set d (lambda a (forall (x (set p q)) (x a))))) (exists d (b d)))");    
-    Expression expected = parser.parseSingleExpression("(exists w x y z (and (d w) (d x) (p y) (q z)))");
+    Expression expected = parser.parseSingleExpression("(exists x y z (and (d x) (p y) (q z)))");
     assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
   }
   
@@ -203,6 +203,26 @@ public class ExpressionTest extends TestCase {
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(expressionString);
 
     System.out.println(expression.expandQuantifier().simplify());
+  }
+
+  /**
+   * Verify that forall quantifier expansion doesn't cause an
+   * exponential blow-up in expression size.
+   */
+  public void testExpandForAll7() {
+    String expressionString = "(exists var246019 (forall (pred (set (lambda var970051 (forall (pred (set (lambda var932563 (forall (pred (set (lambda var872754 (forall (pred (set unknown unknown)) (pred var872754))) unknown)) (pred var932563))) (lambda x (mention x \"spain\" concept:musicartist)))) (pred var970051))) (lambda var586411 (forall (pred (set (lambda var784596 (forall (pred (set (lambda x (mention x \"italy\" concept:city)) unknown)) (pred var784596))) unknown)) (pred var586411))))) (pred var246019)))";
+
+    Expression expression = parser.parseSingleExpression(expressionString).simplify();
+    expression = expression.simplify();
+
+    if (expression instanceof ForAllExpression) {
+      expression = ((ForAllExpression) expression).expandQuantifier().simplify();
+    }
+    
+    String expectedString = "(exists var126514 var294420 var437854 var507881 var810806 var87387 var999153 (and (unknown var294420) (unknown var437854) (unknown var810806) (mention var999153 \"spain\" concept:musicartist) (mention var507881 \"italy\" concept:city) (unknown var87387) (unknown var126514)))";
+    Expression expected = parser.parseSingleExpression(expectedString).simplify();
+
+    assertTrue(expected.functionallyEquals(expression));
   }
 
   public void testFunctionallyEquals() {

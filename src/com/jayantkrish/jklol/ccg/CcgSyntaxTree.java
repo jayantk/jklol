@@ -233,9 +233,13 @@ public class CcgSyntaxTree {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
+    if (!syntax.equals(originalSyntax)) {
+      sb.append("<");
+      sb.append(syntax);
+      sb.append(" ");
+    }
+
     sb.append("<");
-    sb.append(syntax);
-    sb.append("_");
     sb.append(originalSyntax);
     sb.append(spanStart);
     sb.append(".");
@@ -250,6 +254,10 @@ public class CcgSyntaxTree {
       sb.append(Joiner.on(" ").join(words));
     }
     sb.append(">");
+    
+    if (!syntax.equals(originalSyntax)) {
+      sb.append(">");
+    }
     return sb.toString();
   }
 

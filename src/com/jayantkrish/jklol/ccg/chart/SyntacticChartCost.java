@@ -135,6 +135,7 @@ public class SyntacticChartCost implements ChartCost {
   private boolean isSyntaxCompatible(SyntacticCategory expected, int actual, DiscreteVariable syntaxType) {
     HeadedSyntacticCategory headedSyntax = (HeadedSyntacticCategory) syntaxType.getValue(actual);
     SyntacticCategory syntax = headedSyntax.getSyntax().assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);
-    return expected.equals(syntax);
+    SyntacticCategory expectedSyntax = expected.assignAllFeatures(SyntacticCategory.DEFAULT_FEATURE_VALUE);
+    return expectedSyntax.equals(syntax);
   }
 }

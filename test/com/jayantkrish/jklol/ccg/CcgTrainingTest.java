@@ -163,6 +163,26 @@ public class CcgTrainingTest extends TestCase {
     
     assertEquals(1, correctParses.size());
   }
+  
+  public void testSyntacticChartFilter3() {
+    CcgExample example = exampleReader.parseFrom("foo######<ABCD_ABC NN foo>");
+    CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());
+    
+    List<CcgParse> parses = parser.beamSearch(example.getSentence(), 10);
+    for (CcgParse parse : parses) {
+      System.out.println("parse: " + parse);
+    }
+
+    SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
+    List<CcgParse> correctParses = parser.beamSearch(example.getSentence(),
+        10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
+
+    for (CcgParse correct : correctParses) {
+      System.out.println(correct);
+    }
+
+    assertEquals(2, correctParses.size());
+  }
 
   public void testParseFromLexicon() {
     CcgParser parser = family.getModelFromParameters(family.getNewSufficientStatistics());

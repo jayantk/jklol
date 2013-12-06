@@ -205,20 +205,22 @@ public class CcgParse {
    * @return
    */
   public CcgSyntaxTree getSyntacticParse() {
-    SyntacticCategory originalSyntax = null;
+    HeadedSyntacticCategory originalSyntax = null;
     if (unaryRule != null) {
-      originalSyntax = unaryRule.getUnaryRule().getInputSyntacticCategory().getSyntax();
+      originalSyntax = unaryRule.getUnaryRule().getInputSyntacticCategory();
     } else {
-      originalSyntax = syntax.getSyntax();
+      originalSyntax = syntax;
     }
 
     if (isTerminal()) {
-      return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax, spanStart, spanEnd, spannedWords, posTags, syntax);
+      return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax.getSyntax(),
+          spanStart, spanEnd, spannedWords, posTags, originalSyntax);
     } else {
       CcgSyntaxTree leftTree = left.getSyntacticParse();
       CcgSyntaxTree rightTree = right.getSyntacticParse();
 
-      return CcgSyntaxTree.createNonterminal(syntax.getSyntax(), originalSyntax, leftTree, rightTree);
+      return CcgSyntaxTree.createNonterminal(syntax.getSyntax(), originalSyntax.getSyntax(),
+          leftTree, rightTree);
     }
   }
 

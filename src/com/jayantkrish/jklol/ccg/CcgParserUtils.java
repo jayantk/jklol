@@ -93,7 +93,7 @@ public class CcgParserUtils {
       if (numChartEntries == failureNum) {
         if (tree.isTerminal()) {
           System.out.println(errorMessage + " terminal: " + tree.getWords() + " -> " +
-              tree.getRootSyntax() + " headed: " + tree.getHeadedSyntacticCategory());
+              tree.getPreUnaryRuleSyntax() + "_" + tree.getRootSyntax() + " headed: " + tree.getHeadedSyntacticCategory());
         } else {
           System.out.println(errorMessage + " nonterminal: " + tree.getLeft().getRootSyntax() + " "
               + tree.getRight().getRootSyntax() + " -> " + tree.getRootSyntax());

@@ -207,7 +207,7 @@ public class CcgParse {
   public CcgSyntaxTree getSyntacticParse() {
     HeadedSyntacticCategory originalSyntax = null;
     if (unaryRule != null) {
-      originalSyntax = unaryRule.getUnaryRule().getInputSyntacticCategory();
+      originalSyntax = unaryRule.getUnaryRule().getInputSyntacticCategory().getCanonicalForm();
     } else {
       originalSyntax = syntax;
     }

@@ -198,11 +198,12 @@ public class ExpressionTest extends TestCase {
   }
   
   public void testExpandForAll6() {
+    // The goal of this test is to ensure that the quantifiers in
+    // this expression expand without crashing or producing an
+    // exponential blow-up (causing the program to hang).
     String expressionString = "(forall (b (set (lambda f (forall (b (set (lambda e (mention e \"chad hurley\" concept:person)) (lambda e (mention e \"steve chen\" concept:person)))) (b f))) (lambda e (mention e \"jawed karim\" concept:person)))) (exists h c d g a (and (mention a \"youtube\" concept:company) (concept:company d) (equals c d) (mention g \"google\" concept:company) (concept:acquired g c) (equals d a) (b h) (concept:organizationhiredperson a h))))";
- 
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(expressionString);
-
-    System.out.println(expression.expandQuantifier().simplify());
+    expression.simplify();
   }
 
   /**
@@ -223,6 +224,20 @@ public class ExpressionTest extends TestCase {
     Expression expected = parser.parseSingleExpression(expectedString).simplify();
 
     assertTrue(expected.functionallyEquals(expression));
+  }
+  
+  public void testExpandForAll8() {
+    // The goal of this test is to ensure that the quantifiers in
+    // this expression expand without crashing or producing an
+    // exponential blow-up (causing the program to hang).
+    String expressionString = "(exists var404023 var611108 (forall (var233536 (set (lambda var560038 (mention var560038 \"austria\" concept:country)) (lambda var560038 (mention var560038 \"switzerland\" concept:country)))) (var492872 (set (lambda var411041 (forall (var492872 (set (lambda var657553 (forall (var492872 (set (lambda var475227 (mention var475227 \"european union\" concept:location)) (lambda var397358 (forall (var492872 (set (lambda var475227 (mention var475227 \"herzegovina\" concept:location)) (lambda var475227 (mention var475227 \"bosnia\" concept:location)))) (var492872 var397358))))) (var492872 var657553))) (lambda var475227 (mention var475227 \"belgium\" concept:city)))) (var492872 var411041))) (lambda var475227 (mention var475227 \"germany\" concept:city)))) (exists var826985 y (and (var233536 y) (var492872 var826985) (var404023 var611108) (concept:locationlocatedwithinlocation var826985 var611108) (concept:eventatlocation var611108 y)))))";
+
+    Expression expression = parser.parseSingleExpression(expressionString).simplify();
+    expression = expression.simplify();
+    
+    if (expression instanceof ForAllExpression) {
+      expression = ((ForAllExpression) expression).expandQuantifier().simplify();
+    }
   }
 
   public void testFunctionallyEquals() {

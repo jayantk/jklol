@@ -23,10 +23,15 @@ public class CcgExactInference implements CcgInference {
   // Maximum number of chart entries for a single sentence.
   private final int maxChartSize;
 
-  public CcgExactInference(ChartCost searchFilter, long maxParseTimeMillis, int maxChartSize) {
+  // Maximum number of threads to use while parsing.
+  private final int numThreads;
+
+  public CcgExactInference(ChartCost searchFilter, long maxParseTimeMillis, int maxChartSize,
+      int numThreads) {
     this.searchFilter = searchFilter;
     this.maxParseTimeMillis = maxParseTimeMillis;
     this.maxChartSize = maxChartSize;
+    this.numThreads = numThreads;
   }
 
   @Override
@@ -35,7 +40,7 @@ public class CcgExactInference implements CcgInference {
     ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
         new SupertagChartCost(sentence.getSupertags()));
 
-    return parser.parse(sentence, filter, log, maxParseTimeMillis, maxChartSize);
+    return parser.parse(sentence, filter, log, maxParseTimeMillis, maxChartSize, numThreads);
   }
 
   @Override
@@ -50,12 +55,12 @@ public class CcgExactInference implements CcgInference {
           SyntacticChartCost.createAgreementCost(observedSyntacticTree), searchFilter,
           new SupertagChartCost(sentence.getSupertags()));
       bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
-          maxChartSize);
+          maxChartSize, numThreads);
     } else {
       ChartCost conditionalChartFilter = SumChartCost.create(
           new SupertagChartCost(sentence.getSupertags()), searchFilter);
       bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
-          maxChartSize);
+          maxChartSize, numThreads);
     }
 
     // Note that bestParse may still be null, if parsing failed.

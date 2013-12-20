@@ -239,6 +239,20 @@ public class ExpressionTest extends TestCase {
       expression = ((ForAllExpression) expression).expandQuantifier().simplify();
     }
   }
+  
+  public void testExpandForAll9() {
+    String expressionString = "(exists a b ((lambda input ((lambda predicate (lambda x (forall (var2323 (set (lambda var560038 (mention var560038 \"austria\" concept:country)) (lambda var560038 (mention var560038 \"germany\" concept:country))))  (exists y (and (predicate x) (citylocatedincountry x y) (var2323 y)))))) ((lambda predicate2 (lambda x  (exists y (forall (var2323 (set (lambda var560038 (mention var560038 \"foo\" concept:country)) (lambda var560038 (mention var560038 \"bar\" concept:country))))  (and (predicate2 x) (headquarteredin x y) (var2323 y)))))) input))) a b))";
+
+    Expression expression = parser.parseSingleExpression(expressionString).simplify();
+    expression = expression.simplify();
+
+    System.out.println(expression);
+    if (expression instanceof ForAllExpression) {
+      expression = ((ForAllExpression) expression).expandQuantifier().simplify();
+    }
+    
+    System.out.println(expression);
+  }
 
   public void testFunctionallyEquals() {
     assertTrue(application.functionallyEquals(application));

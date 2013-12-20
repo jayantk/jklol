@@ -25,16 +25,20 @@ public class CcgBeamSearchInference implements CcgInference {
   
   // Maximum number of chart entries for a single sentence.
   private final int maxChartSize;
+  
+  // Number of threads to use while parsing.
+  private final int numThreads;
 
   // Whether to print out information about correct parses, etc.
   private final boolean verbose;
 
   public CcgBeamSearchInference(ChartCost searchFilter, int beamSize, long maxParseTimeMillis,
-      int maxChartSize, boolean verbose) {
+      int maxChartSize, int numThreads, boolean verbose) {
     this.searchFilter = searchFilter;
     this.beamSize = beamSize;
     this.maxParseTimeMillis = maxParseTimeMillis;
     this.maxChartSize = maxChartSize;
+    this.numThreads = numThreads;
 
     this.verbose = verbose;
   }
@@ -46,7 +50,7 @@ public class CcgBeamSearchInference implements CcgInference {
         new SupertagChartCost(sentence.getSupertags()));
 
     List<CcgParse> parses = parser.beamSearch(sentence, beamSize, filter, log,
-        maxParseTimeMillis, maxChartSize);
+        maxParseTimeMillis, maxChartSize, numThreads);
     if (parses.size() > 0) {
       return parses.get(0);
     } else {
@@ -64,12 +68,12 @@ public class CcgBeamSearchInference implements CcgInference {
       ChartCost conditionalChartFilter = SumChartCost.create(SyntacticChartCost.createAgreementCost(observedSyntacticTree),
           new SupertagChartCost(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
-          log, -1, maxChartSize);
+          log, -1, maxChartSize, numThreads);
     } else {
       ChartCost conditionalChartFilter = SumChartCost.create(
           new SupertagChartCost(sentence.getSupertags()), searchFilter);
       possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
-          log, -1, maxChartSize);
+          log, -1, maxChartSize, numThreads);
     }
 
     possibleParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(

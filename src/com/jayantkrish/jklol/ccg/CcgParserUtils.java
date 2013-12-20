@@ -59,7 +59,7 @@ public class CcgParserUtils {
   public static boolean isPossibleExample(CcgParser parser, CcgExample example) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(example.getSentence(), Integer.MAX_VALUE, 100);
     SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
-    parser.parseCommon(chart, example.getSentence(), filter, null, -1);
+    parser.parseCommon(chart, example.getSentence(), filter, null, -1, 1);
     List<CcgParse> parses = chart.decodeBestParsesForSpan(0, example.getSentence().size() - 1, 100, parser);
     if (parses.size() == 0) {
       // Provide a deeper analysis of why parsing failed.
@@ -127,7 +127,7 @@ public class CcgParserUtils {
       Collection<CcgExample> examples) {
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
-    CcgInference inference = new CcgExactInference(null, -1, Integer.MAX_VALUE);
+    CcgInference inference = new CcgExactInference(null, -1, Integer.MAX_VALUE, 1);
     Reducer<CcgExample, SufficientStatistics> reducer = new FeatureCountReducer(family, inference);
     return executor.mapReduce(examples, Mappers.<CcgExample>identity(), reducer);
   }

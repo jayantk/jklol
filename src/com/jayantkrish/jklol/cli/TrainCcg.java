@@ -58,6 +58,7 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Long> maxParseTimeMillis;
   private OptionSpec<Integer> maxChartSize;
+  private OptionSpec<Integer> parserThreads;
   private OptionSpec<String> supertagger;
   private OptionSpec<Double> multitagThreshold;
   private OptionSpec<Void> useCcgBankFormat;
@@ -82,6 +83,7 @@ public class TrainCcg extends AbstractCli {
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     maxParseTimeMillis = parser.accepts("maxParseTimeMillis").withRequiredArg().ofType(Long.class).defaultsTo(-1L);
     maxChartSize = parser.accepts("maxChartSize").withRequiredArg().ofType(Integer.class).defaultsTo(Integer.MAX_VALUE);
+    parserThreads = parser.accepts("parserThreads").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
     useCcgBankFormat = parser.accepts("useCcgBankFormat");
@@ -140,10 +142,10 @@ public class TrainCcg extends AbstractCli {
     CcgInference inferenceAlgorithm = null;
     if (options.has(exactInference)) {
       inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
-          options.valueOf(maxChartSize));
+          options.valueOf(maxChartSize), options.valueOf(parserThreads));
     } else {
       inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
-          options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), true);
+          options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), options.valueOf(parserThreads), true);
     }
 
     // Train the model.

@@ -32,6 +32,9 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -40,6 +43,7 @@ import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntMultimap;
+import com.jayantkrish.jklol.util.Pair;
 
 /**
  * A chart parser for Combinatory Categorial Grammar (CCG).
@@ -1094,7 +1098,7 @@ public class CcgParser implements Serializable {
    * @return {@code beamSize} best parses for {@code terminals}.
    */
   public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize, LogFunction log) {
-    return beamSearch(input, beamSize, null, log, -1, Integer.MAX_VALUE);
+    return beamSearch(input, beamSize, null, log, -1, Integer.MAX_VALUE, 1);
   }
 
   public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize) {
@@ -1116,9 +1120,9 @@ public class CcgParser implements Serializable {
    * @return
    */
   public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize, ChartCost beamFilter,
-      LogFunction log, long maxParseTimeMillis, int maxChartSize) {
+      LogFunction log, long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(input, maxChartSize, beamSize);
-    parseCommon(chart, input, beamFilter, log, maxParseTimeMillis);
+    parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
 
     if (chart.isFinishedParsing()) {
       int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
@@ -1130,9 +1134,9 @@ public class CcgParser implements Serializable {
   }
 
   public CcgParse parse(SupertaggedSentence input, ChartCost beamFilter, LogFunction log,
-      long maxParseTimeMillis, int maxChartSize) {
+      long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgExactHashTableChart chart = new CcgExactHashTableChart(input, maxChartSize);
-    parseCommon(chart, input, beamFilter, log, maxParseTimeMillis);
+    parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
 
     if (chart.isFinishedParsing()) {
       return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
@@ -1143,7 +1147,7 @@ public class CcgParser implements Serializable {
   }
 
   public void parseCommon(CcgChart chart, SupertaggedSentence input, ChartCost beamFilter,
-      LogFunction log, long maxParseTimeMillis) {
+      LogFunction log, long maxParseTimeMillis, int numThreads) {
     if (log == null) {
       log = new NullLogFunction();
     }
@@ -1155,7 +1159,11 @@ public class CcgParser implements Serializable {
 
     log.startTimer("calculate_inside_beam");
     boolean finishedParsing = false;
-    finishedParsing = calculateInsideBeam(chart, log, maxParseTimeMillis);
+    if (numThreads <= 1) {
+      finishedParsing = calculateInsideBeamSingleThreaded(chart, log, maxParseTimeMillis);
+    } else {
+      finishedParsing = calculateInsideBeamParallel(chart, log, maxParseTimeMillis, numThreads);
+    }
     log.stopTimer("calculate_inside_beam");
 
     if (finishedParsing) {
@@ -1357,7 +1365,7 @@ public class CcgParser implements Serializable {
    * @param chart
    * @param log
    */
-  public boolean calculateInsideBeam(CcgChart chart, LogFunction log, long maxParseTimeMillis) {
+  public boolean calculateInsideBeamSingleThreaded(CcgChart chart, LogFunction log, long maxParseTimeMillis) {
     int chartSize = chart.size();
     long currentTime = 0;
     long endTime = System.currentTimeMillis() + maxParseTimeMillis;
@@ -1365,19 +1373,44 @@ public class CcgParser implements Serializable {
       for (int spanStart = 0; spanStart + spanSize < chartSize; spanStart++) {
         int spanEnd = spanStart + spanSize;
         calculateInsideBeam(spanStart, spanEnd, chart, log);
-
+        
         if (maxParseTimeMillis >= 0) {
           currentTime = System.currentTimeMillis();
           if (currentTime > endTime) {
             return false;
           }
         }
-
+        
         if (chart.getTotalNumChartEntries() > chart.getMaxChartEntries()) {
           return false;
         }
         // System.out.println(spanStart + "." + spanEnd + " : " +
         // chart.getNumChartEntriesForSpan(spanStart, spanEnd));
+      }
+    }
+    return true;
+  }
+
+  public boolean calculateInsideBeamParallel(CcgChart chart, LogFunction log, long maxParseTimeMillis,
+      int numThreads) {
+    int chartSize = chart.size();
+    long currentTime = 0;
+    long endTime = System.currentTimeMillis() + maxParseTimeMillis;
+    MapReduceExecutor executor = new LocalMapReduceExecutor(numThreads, Integer.MAX_VALUE);
+    for (int spanSize = 1; spanSize < chartSize; spanSize++) {
+      List<Pair<Integer, Integer>> spans = Lists.newArrayList();
+      for (int spanStart = 0; spanStart + spanSize < chartSize; spanStart++) {
+        int spanEnd = spanStart + spanSize;
+        spans.add(Pair.of(spanStart, spanEnd));
+      }
+
+      executor.map(spans, new CalculateInsideBeamMapper(this, chart, log));
+
+      if (maxParseTimeMillis >= 0) {
+        currentTime = System.currentTimeMillis();
+        if (currentTime > endTime) {
+          return false;
+        }
       }
     }
     return true;
@@ -2176,5 +2209,24 @@ public class CcgParser implements Serializable {
   public static final long replaceAssignmentVarNum(long assignment, int oldVarNum, int newVarNum) {
     // Switch the variable numbers using a fancy XOR trick.
     return assignment ^ (((long) oldVarNum ^ newVarNum) << ASSIGNMENT_VAR_NUM_OFFSET);
+  }
+  
+  private static class CalculateInsideBeamMapper extends Mapper<Pair<Integer, Integer>, Boolean> {
+
+    private final CcgParser parser;
+    private final CcgChart chart;
+    private final LogFunction log;
+    
+    public CalculateInsideBeamMapper(CcgParser parser, CcgChart chart, LogFunction log) {
+      this.parser = Preconditions.checkNotNull(parser);
+      this.chart = Preconditions.checkNotNull(chart);
+      this.log = log;
+    }
+
+    @Override
+    public Boolean map(Pair<Integer, Integer> span) {
+      parser.calculateInsideBeam(span.getLeft(), span.getRight(), chart, log);
+      return true;
+    }
   }
 }

@@ -923,18 +923,19 @@ public class CcgParserTest extends TestCase {
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       int beamSize) {
     return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
-        Collections.nCopies(words.size(), DEFAULT_POS)), beamSize);
+        Collections.nCopies(words.size(), DEFAULT_POS)), beamSize, null, new NullLogFunction(),
+        -1, Integer.MAX_VALUE, 16);
   }
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
     return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
-        posTags), beamSize);
+        posTags), beamSize, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 16);
   }
 
   private CcgParse parse(CcgParser parser, List<String> words) {
     return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
-        Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE, 1);
+        Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE, 16);
   }
 
   private DependencyStructure parseDependency(String subject, String syntacticCategory, int subjIndex, 

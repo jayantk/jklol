@@ -8,6 +8,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
@@ -32,9 +37,6 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
-import com.jayantkrish.jklol.parallel.MapReduceExecutor;
-import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -43,7 +45,6 @@ import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntMultimap;
-import com.jayantkrish.jklol.util.Pair;
 
 /**
  * A chart parser for Combinatory Categorial Grammar (CCG).
@@ -1396,22 +1397,38 @@ public class CcgParser implements Serializable {
     int chartSize = chart.size();
     long currentTime = 0;
     long endTime = System.currentTimeMillis() + maxParseTimeMillis;
-    MapReduceExecutor executor = new LocalMapReduceExecutor(numThreads, Integer.MAX_VALUE);
-    for (int spanSize = 1; spanSize < chartSize; spanSize++) {
-      List<Pair<Integer, Integer>> spans = Lists.newArrayList();
-      for (int spanStart = 0; spanStart + spanSize < chartSize; spanStart++) {
-        int spanEnd = spanStart + spanSize;
-        spans.add(Pair.of(spanStart, spanEnd));
-      }
+    ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+    try {
+      List<Future<Void>> results = Lists.newArrayListWithCapacity(chartSize);
+      for (int spanSize = 1; spanSize < chartSize; spanSize++) {
+        results.clear();
+        for (int spanStart = 0; spanStart + spanSize < chartSize; spanStart++) {
+          int spanEnd = spanStart + spanSize;
+          results.add(executor.submit(new CalculateInsideBeamCallable(this, chart, spanStart, spanEnd, log)));
+        }
 
-      executor.map(spans, new CalculateInsideBeamMapper(this, chart, log));
+        // Wait for the current set of spans to finish.
+        for (Future<Void> result : results) {
+          result.get();
+        }
 
-      if (maxParseTimeMillis >= 0) {
-        currentTime = System.currentTimeMillis();
-        if (currentTime > endTime) {
-          return false;
+        if (maxParseTimeMillis >= 0) {
+          currentTime = System.currentTimeMillis();
+          if (currentTime > endTime) {
+            return false;
+          }
         }
       }
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+      e.getCause().printStackTrace();
+      throw new RuntimeException(e);
+    } catch (ExecutionException e) {
+      e.printStackTrace();
+      e.getCause().printStackTrace();
+      throw new RuntimeException(e);
+    } finally {
+      executor.shutdown();
     }
     return true;
   }
@@ -1464,11 +1481,19 @@ public class CcgParser implements Serializable {
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
+    /*
     int[] assignmentVarIndexAccumulator = chart.getAssignmentVarIndexAccumulator();
     long[] assignmentAccumulator = chart.getAssignmentAccumulator();
     long[] filledDepAccumulator = chart.getFilledDepAccumulator();
     int[] unfilledDepVarIndexAccumulator = chart.getUnfilledDepVarIndexAccumulator();
     long[] unfilledDepAccumulator = chart.getUnfilledDepAccumulator();
+    */
+    
+    int[] assignmentVarIndexAccumulator = new int[MAX_CHART_VAR_INDEX];
+    long[] assignmentAccumulator = new long[MAX_CHART_ASSIGNMENTS];
+    long[] filledDepAccumulator = new long[MAX_CHART_DEPS];
+    int[] unfilledDepVarIndexAccumulator = new int[MAX_CHART_VAR_INDEX];
+    long[] unfilledDepAccumulator = new long[MAX_CHART_DEPS];
 
     SparseTensor syntaxDistributionTensor = (SparseTensor) chart.getSyntaxDistribution().getWeights();
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
@@ -2211,22 +2236,28 @@ public class CcgParser implements Serializable {
     return assignment ^ (((long) oldVarNum ^ newVarNum) << ASSIGNMENT_VAR_NUM_OFFSET);
   }
   
-  private static class CalculateInsideBeamMapper extends Mapper<Pair<Integer, Integer>, Boolean> {
-
+  private static class CalculateInsideBeamCallable implements Callable<Void> {
     private final CcgParser parser;
     private final CcgChart chart;
+
+    private final int spanStart;
+    private final int spanEnd;
+
     private final LogFunction log;
-    
-    public CalculateInsideBeamMapper(CcgParser parser, CcgChart chart, LogFunction log) {
+
+    public CalculateInsideBeamCallable(CcgParser parser, CcgChart chart, int spanStart, int spanEnd,
+        LogFunction log) {
       this.parser = Preconditions.checkNotNull(parser);
       this.chart = Preconditions.checkNotNull(chart);
+      this.spanStart = spanStart;
+      this.spanEnd = spanEnd;
       this.log = log;
     }
 
     @Override
-    public Boolean map(Pair<Integer, Integer> span) {
-      parser.calculateInsideBeam(span.getLeft(), span.getRight(), chart, log);
-      return true;
+    public Void call() {
+      parser.calculateInsideBeam(spanStart, spanEnd, chart, log);
+      return null;
     }
   }
 }

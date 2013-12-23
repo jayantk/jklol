@@ -58,7 +58,8 @@ public class CcgParserTest extends TestCase {
       "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},,0 almost,almost 1 2",
       "is,((S[b]{0}\\N{1}){0}/N{2}){0},,0 is,is 1 1, is 2 2",
       "directed,((S[b]{0}\\N{1}){0}/N{2}){0},,0 directed,directed 1 2,directed 2 1",
-      ";,;{0},;,0 ;", "or,conj{0},word:or,0 or",
+      ";,;{0},;,0 ;",
+      "or,conj{0},word:or,0 or",
       "about,(NP{0}/(S[1]{1}\\N{2}){1}){0},,0 about,about 1 1",
       "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},,0 eat,eat 1 1,eat 2 2",
       "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},,0 rapidly,rapidly 1 1",
@@ -72,7 +73,8 @@ public class CcgParserTest extends TestCase {
       "blue,(N{0}/N{0}){1},blue,0 blue",
       "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
       "a,(NP{1}/N{1}){0},,0 a,a 1 1",
-      "unk-nn,N{0},,0 unk-nn"};
+      "unk-nn,N{0},,0 unk-nn",
+      "#,#{0},#,0 #"};
   
   private static final String DEFAULT_POS = ParametricCcgParser.DEFAULT_POS_TAG;
 
@@ -85,13 +87,15 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 3.0 };
+      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 3.0, 1.0};
 
   private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
       "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x)))))",
       "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2}",
-      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"special:compound 1 0\",\"special:compound 2 1\"" };
+      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"special:compound 1 0\",\"special:compound 2 1\"",
+      "#{5} N{1} (N{0}\\N{0}){1},(lambda $C $R (lambda $L (lambda x (exists y (and ($L x) ($R y) (compound y x)))))),special:compound 1 0,special:compound 2 1"
+  };
 
   private static final String[] unaryRuleArray = { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
       "N{0} (N{1}/N{1}){0}", "((S[0]{0}\\N{1}){0}/N{2}){0} ((S[0]{0}/NP{1}){0}/NP{2}){0}",
@@ -794,7 +798,22 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(expected, deps);
   }
+  
+  public void testBinaryRuleUnfilledDependencies() {
+    List<CcgParse> parses = beamSearch(parser, 
+        Arrays.asList("people", "#", "berries"), 10);
 
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+
+    Set<DependencyStructure> expected = Sets.newHashSet(
+        parseDependency("special:compound", "N{0}", 2, "people", 0, 1),
+        parseDependency("special:compound", "N{0}", 2, "berries", 2, 2));
+
+    assertEquals(expected, Sets.newHashSet(parse.getAllDependencies()));
+  }
+
+  // This test exists purely to test parsing speed with large conjunctions.
   /*
   public void testLargeConjunction() {
     List<CcgParse> parses = beamSearch(parser, 

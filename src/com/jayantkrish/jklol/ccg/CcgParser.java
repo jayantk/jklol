@@ -1611,21 +1611,23 @@ public class CcgParser implements Serializable {
                       searchMove.getLeftDepRelabeling(), filledDepAccumulator, numFilledDeps);
 
                   // Fill dependencies created by the binary rule.
+                  long[] combinatorUnfilledDeps = null;
+                  int[] combinatorUnfilledDepsVarIndex = null;
                   if (resultCombinator.hasUnfilledDependencies()) {
                     List<UnfilledDependency> unfilledDeps = resultCombinator.getUnfilledDependencies(spanEnd);
                     long[] unfilledDepsOrig = unfilledDependencyArrayToLongArray(unfilledDeps);
 
                     int maxVarNum = Ints.max(Ints.max(resultCombinator.getLeftVariableRelabeling()),
                         Ints.max(resultCombinator.getRightVariableRelabeling()));
-                    long[] combinatorDeps = new long[unfilledDepsOrig.length];
-                    int[] combinatorVarIndex = new int[maxVarNum + 2];
-                    orderUnfilledDependencies(unfilledDepsOrig, combinatorDeps, combinatorVarIndex);
+                    combinatorUnfilledDeps = new long[unfilledDepsOrig.length];
+                    combinatorUnfilledDepsVarIndex = new int[maxVarNum + 2];
+                    orderUnfilledDependencies(unfilledDepsOrig, combinatorUnfilledDeps, combinatorUnfilledDepsVarIndex);
 
                     numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
-                        combinatorVarIndex, combinatorDeps, searchMove.getLeftInverseRelabeling(),
+                        combinatorUnfilledDepsVarIndex, combinatorUnfilledDeps, searchMove.getLeftInverseRelabeling(),
                         filledDepAccumulator, numFilledDeps);
                     numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
-                        combinatorVarIndex, combinatorDeps, searchMove.getRightInverseRelabeling(),
+                        combinatorUnfilledDepsVarIndex, combinatorUnfilledDeps, searchMove.getRightInverseRelabeling(),
                         filledDepAccumulator, numFilledDeps);
                   }
                   // log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
@@ -1689,10 +1691,12 @@ public class CcgParser implements Serializable {
                   long[] rightUnfilledDeps = rightRoot.getUnfilledDependencies();
                   int[] leftToReturnInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
                   int[] rightToReturnInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
+                  int[] combinatorToReturnInverseRelabeling = null;
+                  if (combinatorUnfilledDeps != null) {
+                    combinatorToReturnInverseRelabeling = searchMove.getBinaryCombinator().getResultInverseRelabeling();
+                  }
                   int numVars = searchMove.getLeftToReturnInverseRelabeling().length;
                   int numUnfilledDeps = 0;
-                  int startIndex, endIndex, originalVarNum;
-                  long unfilledDependency;
                   for (int k = 0; k < numVars; k++) {
                     unfilledDepVarIndexAccumulator[k] = numUnfilledDeps;
                     if (assignmentVarIndexAccumulator[k] != assignmentVarIndexAccumulator[k + 1]) {
@@ -1700,48 +1704,26 @@ public class CcgParser implements Serializable {
                       // dependencies on this variable have already been filled.
                       continue;
                     }
-
-                    originalVarNum = leftToReturnInverseRelabeling[k];
-                    if (originalVarNum != -1) {
-                      startIndex = leftUnfilledDepsVarIndex[originalVarNum];
-                      endIndex = leftUnfilledDepsVarIndex[originalVarNum + 1];
-
-                      if (startIndex != endIndex) {
-                        for (int m = startIndex; m < endIndex; m++) {
-                          if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                            // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
-                            continue deploop;
-                          }
-
-                          unfilledDependency = leftUnfilledDeps[m];
-                          unfilledDependency = unfilledDependency - (originalVarNum << OBJECT_OFFSET);
-                          unfilledDependency |= (k << OBJECT_OFFSET);
-
-                          unfilledDepAccumulator[numUnfilledDeps] = unfilledDependency;
-                          numUnfilledDeps++;
-                        }
-                      }
+                    
+                    // Unfilled dependencies are copied (with possible variable 
+                    // relabeling) from the left and right chart entries, and
+                    // also the combinator (if it creates new dependencies). 
+                    numUnfilledDeps = propagateUnfilledDependencies(leftUnfilledDeps, leftUnfilledDepsVarIndex, 
+                        leftToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
+                    if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                      continue deploop;
+                    }
+                    numUnfilledDeps = propagateUnfilledDependencies(rightUnfilledDeps, rightUnfilledDepsVarIndex, 
+                        rightToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
+                    if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                      continue deploop;
                     }
 
-                    originalVarNum = rightToReturnInverseRelabeling[k];
-                    if (originalVarNum != -1) {
-                      startIndex = rightUnfilledDepsVarIndex[originalVarNum];
-                      endIndex = rightUnfilledDepsVarIndex[originalVarNum + 1];
-
-                      if (startIndex != endIndex) {
-                        for (int m = startIndex; m < endIndex; m++) {
-                          if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                            // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
-                            continue deploop;
-                          }
-
-                          unfilledDependency = rightUnfilledDeps[m];
-                          unfilledDependency = unfilledDependency - (originalVarNum << OBJECT_OFFSET);
-                          unfilledDependency |= (k << OBJECT_OFFSET);
-
-                          unfilledDepAccumulator[numUnfilledDeps] = unfilledDependency;
-                          numUnfilledDeps++;
-                        }
+                    if (combinatorUnfilledDeps != null) {
+                      numUnfilledDeps = propagateUnfilledDependencies(combinatorUnfilledDeps, combinatorUnfilledDepsVarIndex, 
+                          combinatorToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
+                      if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                        continue deploop;
                       }
                     }
                   }
@@ -1970,6 +1952,32 @@ public class CcgParser implements Serializable {
       }
     }
     return numFilledDeps;
+  }
+  
+  private static final int propagateUnfilledDependencies(long[] originalUnfilledDeps, int[] originalUnfilledDepsVarIndex,
+      int[] inverseRelabeling, int k, long[] unfilledDepAccumulator, int numUnfilledDeps) {
+    int originalVarNum = inverseRelabeling[k];
+    long unfilledDependency;
+    if (originalVarNum != -1) {
+      int startIndex = originalUnfilledDepsVarIndex[originalVarNum];
+      int endIndex = originalUnfilledDepsVarIndex[originalVarNum + 1];
+
+      if (startIndex != endIndex) {
+        for (int m = startIndex; m < endIndex; m++) {
+          if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+            return numUnfilledDeps;
+          }
+
+          unfilledDependency = originalUnfilledDeps[m];
+          unfilledDependency = unfilledDependency - (originalVarNum << OBJECT_OFFSET);
+          unfilledDependency |= (k << OBJECT_OFFSET);
+
+          unfilledDepAccumulator[numUnfilledDeps] = unfilledDependency;
+          numUnfilledDeps++;
+        }
+      }
+    }
+    return numUnfilledDeps;
   }
 
   private static int[] invertRelabeling(int[] relabeling, int[] uniqueVars, int maxVarNum) {

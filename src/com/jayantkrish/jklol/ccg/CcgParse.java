@@ -252,8 +252,8 @@ public class CcgParse {
     CcgParse spanningParse = getParseForSpan(spanStart, spanEnd);
     Expression lf = spanningParse.getPreUnaryLogicalForm();
     if (lf != null) {
-      return new SpannedExpression(spanningParse.getLogicalForm(),
-          spanningParse.getSpanStart(), spanningParse.getSpanEnd());
+      return new SpannedExpression(spanningParse.getHeadedSyntacticCategory(),
+          spanningParse.getLogicalForm(), spanningParse.getSpanStart(), spanningParse.getSpanEnd());
     } else {
       return null;
     }
@@ -289,14 +289,14 @@ public class CcgParse {
       boolean onlyMaximal) {
     Expression logicalForm = getLogicalForm();
     if (logicalForm != null) {
-      spannedExpressions.add(new SpannedExpression(logicalForm.simplify(), spanStart, spanEnd));
+      spannedExpressions.add(new SpannedExpression(syntax, logicalForm.simplify(), spanStart, spanEnd));
       if (onlyMaximal) { return; }
     } 
     Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
 
     if (preUnaryLogicalForm != null && !preUnaryLogicalForm.equals(logicalForm)) {
-      spannedExpressions.add(new SpannedExpression(preUnaryLogicalForm.simplify(),
-          spanStart, spanEnd));
+      spannedExpressions.add(new SpannedExpression(unaryRule.getInputType().getCanonicalForm(),
+          preUnaryLogicalForm.simplify(), spanStart, spanEnd));
       if (onlyMaximal) { return; }
     }
 
@@ -758,14 +758,21 @@ public class CcgParse {
   }
   
   public static class SpannedExpression {
+    private final HeadedSyntacticCategory syntax;
     private final Expression expression;
     private final int spanStart;
     private final int spanEnd;
 
-    public SpannedExpression(Expression expression, int spanStart, int spanEnd) {
+    public SpannedExpression(HeadedSyntacticCategory syntax, Expression expression, int spanStart,
+        int spanEnd) {
+      this.syntax = Preconditions.checkNotNull(syntax);
       this.expression = Preconditions.checkNotNull(expression);
       this.spanStart = spanStart;
       this.spanEnd = spanEnd;
+    }
+
+    public HeadedSyntacticCategory getSyntax() {
+      return syntax;
     }
     
     public Expression getExpression() {

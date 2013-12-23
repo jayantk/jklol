@@ -830,12 +830,12 @@ public class CcgParserTest extends TestCase {
   public void testParseTimeout() {
     List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE);
+        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
     assertTrue(parses.size() > 0);
     
     parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE);
+        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE, 1);
     assertEquals(0, parses.size());
   }
 
@@ -903,7 +903,7 @@ public class CcgParserTest extends TestCase {
     ChartCost filter = new TestChartFilter();
     List<CcgParse> parses = parserWithUnary.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
-        Collections.nCopies(6, DEFAULT_POS)), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE);
+        Collections.nCopies(6, DEFAULT_POS)), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
 
     // The filter disallows the verb modifier syntactic category for
     // "in"
@@ -929,7 +929,7 @@ public class CcgParserTest extends TestCase {
 
     parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)), 10,
-        supertagChartFilter, new NullLogFunction(), -1, Integer.MAX_VALUE);
+        supertagChartFilter, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
     assertEquals(1, parses.size());
   }
 
@@ -953,7 +953,7 @@ public class CcgParserTest extends TestCase {
 
   private CcgParse parse(CcgParser parser, List<String> words) {
     return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
-        Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE);
+        Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE, 1);
   }
 
   private DependencyStructure parseDependency(String subject, String syntacticCategory, int subjIndex, 

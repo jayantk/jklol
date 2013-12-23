@@ -45,6 +45,15 @@ public class Eval {
           SExpression functionBody = subexpressions.get(2); 
           return new EvalResult(new FunctionValue(argumentNames, functionBody, environment),
               environment);
+        } else if (constantName.equals("+")) {
+          // TODO
+          /*
+          Preconditions.checkState(subexpressions.size() > 1);
+          int result = 0;
+          for (int i = 1; i < subexpressions.size(); i++) {
+            eval(subexpressions.get(i))
+          } 
+          */         
         }
       }
 

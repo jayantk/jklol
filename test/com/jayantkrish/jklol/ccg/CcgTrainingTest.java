@@ -135,7 +135,7 @@ public class CcgTrainingTest extends TestCase {
 
     SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getSentence(), 10,
-        filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
+        filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE, 1);
 
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
@@ -155,7 +155,7 @@ public class CcgTrainingTest extends TestCase {
 
     SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getSentence(),
-        10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
+        10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE, 1);
 
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
@@ -175,7 +175,7 @@ public class CcgTrainingTest extends TestCase {
 
     SyntacticChartCost filter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     List<CcgParse> correctParses = parser.beamSearch(example.getSentence(),
-        10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE);
+        10, filter, new DefaultLogFunction(), -1, Integer.MAX_VALUE, 1);
 
     for (CcgParse correct : correctParses) {
       System.out.println(correct);
@@ -287,9 +287,9 @@ public class CcgTrainingTest extends TestCase {
       List<CcgExample> examples, boolean exactInference, boolean maxMargin) {
     CcgInference inferenceAlg = null;
     if (exactInference) {
-      inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE);
+      inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE, 1);
     } else {
-      inferenceAlg = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, true);
+      inferenceAlg = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, 1, true);
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(
         family, inferenceAlg, maxMargin ? 1.0 : 0.0);

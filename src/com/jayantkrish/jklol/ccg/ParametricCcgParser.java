@@ -342,7 +342,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     // Create variables for representing the CCG parser's dependency
     // structures.
-    DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates",
+    DiscreteVariable semanticPredicateType = featureFactory.getSemanticPredicateVar(
         semanticPredicates.items());
     // The set of possible argument numbers depends on the entries
     // provided in the lexicon.

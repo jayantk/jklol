@@ -1,7 +1,10 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.List;
+
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 
@@ -22,6 +25,16 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
  * @author jayantk
  */
 public interface CcgFeatureFactory {
+  
+  /**
+   * Gets the discrete variable used to code predicate strings as 
+   * integers. This method allows the feature factory to impose
+   * additional structure on coding scheme.
+   * 
+   * @param semanticPredicates
+   * @return
+   */
+  DiscreteVariable getSemanticPredicateVar(List<String> semanticPredicates);
 
   /**
    * Gets a parametric factor defining the features of CCG dependency

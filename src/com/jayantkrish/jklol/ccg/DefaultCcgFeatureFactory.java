@@ -12,6 +12,7 @@ import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.ccg.supertag.TrainSupertagger;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
@@ -72,6 +73,11 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       }
     }
     return contexts;
+  }
+
+  @Override
+  public DiscreteVariable getSemanticPredicateVar(List<String> semanticPredicates) {
+    return new DiscreteVariable("semanticPredicates", semanticPredicates);
   }
 
   @Override

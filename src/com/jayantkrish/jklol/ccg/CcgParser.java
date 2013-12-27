@@ -815,7 +815,7 @@ public class CcgParser implements Serializable {
         rightRelabelingArray, rightInverseRelabelingArray, parentOriginalVars,
         parentRelabelingArray, inverseParentRelabelingArray, unifiedVariables, rule.getSubjects(),
         rule.getSubjectSyntacticCategories(), rule.getArgumentNumbers(), rule.getObjects(),
-        false, -1, rule, Combinator.Type.OTHER);
+        false, -1, rule, rule.getCombinatorType());
   }
 
   private static int[] relabelingMapToArray(Map<Integer, Integer> relabelingMap, int[] originalVars) {
@@ -1575,6 +1575,7 @@ public class CcgParser implements Serializable {
                   // normal form constraints. Normal form constraints state that 
                   // the result of a forward (backward) composition cannot be the
                   // left (right) element of a forward (backward) combinator.
+                  boolean isProducedByConjunction = false;
                   if (normalFormOnly) {
                     Combinator.Type leftCombinator = leftRoot.getDerivingCombinatorType();
                     Combinator.Type resultCombinatorType = resultCombinator.getType();
@@ -1591,6 +1592,17 @@ public class CcgParser implements Serializable {
                         && (resultCombinator.getType() == Combinator.Type.BACKWARD_APPLICATION
                         || resultCombinator.getType() == Combinator.Type.BACKWARD_COMPOSITION)) {
                       continue;
+                    }
+
+                    // Restrict the syntactic parses of conjunctions to permit only
+                    // right branching analyses.
+                    if (rightCombinator == Combinator.Type.CONJUNCTION
+                        && resultCombinatorType == Combinator.Type.BACKWARD_APPLICATION) {
+                      if (leftRoot.isProducedByConjunction()) {
+                        continue;
+                      } else {
+                        isProducedByConjunction = true;
+                      }
                     }
                   }
 
@@ -1742,7 +1754,7 @@ public class CcgParser implements Serializable {
                   ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars, resultSyntaxHead,
                       null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVarIndex, newAssignments,
                       unfilledDepVarIndex, unfilledDepArray, filledDepArray, spanStart, spanStart + i,
-                      leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator);
+                      leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator, isProducedByConjunction);
                   // log.stopTimer("ccg_parse/beam_loop/copy_stuff");
 
                   // Get the weights of applying this syntactic combination rule 

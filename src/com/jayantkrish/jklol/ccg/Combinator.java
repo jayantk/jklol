@@ -17,7 +17,8 @@ public class Combinator implements Serializable {
   private static final long serialVersionUID = 2L;
 
   public static enum Type {
-    FORWARD_APPLICATION, BACKWARD_APPLICATION, FORWARD_COMPOSITION, BACKWARD_COMPOSITION, OTHER
+    FORWARD_APPLICATION, BACKWARD_APPLICATION, FORWARD_COMPOSITION, BACKWARD_COMPOSITION, OTHER,
+    CONJUNCTION
   };
 
   private final int syntax;

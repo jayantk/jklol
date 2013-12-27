@@ -46,10 +46,13 @@ public class CcgBinaryRule implements Serializable {
   private final int[] argumentNumbers;
   // The variables each dependency accepts.
   private final int[] objects;
+  
+  private final Combinator.Type type;
 
   public CcgBinaryRule(HeadedSyntacticCategory leftSyntax, HeadedSyntacticCategory rightSyntax,
       HeadedSyntacticCategory returnSyntax, LambdaExpression logicalForm, List<String> subjects,
-      List<HeadedSyntacticCategory> subjectSyntaxes, List<Integer> argumentNumbers, List<Integer> objects) {
+      List<HeadedSyntacticCategory> subjectSyntaxes, List<Integer> argumentNumbers,
+      List<Integer> objects, Combinator.Type type) {
     this.leftSyntax = leftSyntax;
     this.rightSyntax = rightSyntax;
     this.parentSyntax = returnSyntax;
@@ -60,6 +63,8 @@ public class CcgBinaryRule implements Serializable {
     this.subjectSyntacticCategories = subjectSyntaxes.toArray(new HeadedSyntacticCategory[0]);
     this.argumentNumbers = Ints.toArray(argumentNumbers);
     this.objects = Ints.toArray(objects);
+    
+    this.type = Preconditions.checkNotNull(type);
   }
 
   /**
@@ -100,12 +105,19 @@ public class CcgBinaryRule implements Serializable {
           "Illegal logical form for binary rule: " + logicalForm);
     }
 
+    // Parse the type of combinator, if one is given.
+    Combinator.Type type = Combinator.Type.OTHER;
+    if (chunks.length >= 3) {
+      type = Combinator.Type.valueOf(chunks[2]);
+    }
+
+    // Parse any dependencies, if given.
     List<String> subjects = Lists.newArrayList();
     List<HeadedSyntacticCategory> subjectSyntacticCategories = Lists.newArrayList();
     List<Integer> argNums = Lists.newArrayList();
     List<Integer> objects = Lists.newArrayList();
-    if (chunks.length >= 3) {
-      for (int i = 2; i < chunks.length; i++) {
+    if (chunks.length >= 4) {  
+      for (int i = 3; i < chunks.length; i++) {
         String[] newDeps = chunks[i].split(" ");
         Preconditions.checkArgument(newDeps.length == 3);
         subjects.add(newDeps[0]);
@@ -116,7 +128,7 @@ public class CcgBinaryRule implements Serializable {
     }
 
     return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, logicalForm,
-        subjects, subjectSyntacticCategories, argNums, objects);
+        subjects, subjectSyntacticCategories, argNums, objects, type);
   }
 
   /**
@@ -194,6 +206,22 @@ public class CcgBinaryRule implements Serializable {
    */
   public int[] getObjects() {
     return objects;
+  }
+
+  /**
+   * Gets the type of combinator represented by this rule.
+   * 
+   * @return
+   */
+  public Combinator.Type getCombinatorType() {
+    if (type == null) {
+      // This check is included for backward compatibility with
+      // serialized BinaryCombinators that do not include the
+      // type field.
+      return Combinator.Type.OTHER;
+    } else {
+      return type;
+    }
   }
 
   @Override

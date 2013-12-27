@@ -91,10 +91,10 @@ public class CcgParserTest extends TestCase {
 
   private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
-      "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x)))))",
-      "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2}",
-      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"special:compound 1 0\",\"special:compound 2 1\"",
-      "#{5} N{1} (N{0}\\N{0}){1},(lambda $C $R (lambda $L (lambda x (exists y (and ($L x) ($R y) (compound y x)))))),special:compound 1 0,special:compound 2 1"
+      "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x))))),CONJUNCTION",
+      "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2},,CONJUNCTION",
+      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"OTHER\",\"special:compound 1 0\",\"special:compound 2 1\"",
+      "#{5} N{1} (N{0}\\N{0}){1},(lambda $C $R (lambda $L (lambda x (exists y (and ($L x) ($R y) (compound y x)))))),OTHER,special:compound 1 0,special:compound 2 1"
   };
 
   private static final String[] unaryRuleArray = { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
@@ -814,18 +814,18 @@ public class CcgParserTest extends TestCase {
   }
 
   // This test exists purely to test parsing speed with large conjunctions.
-  /*
   public void testLargeConjunction() {
-    List<CcgParse> parses = beamSearch(parser, 
+    List<CcgParse> parses = beamSearch(parserWithCompositionNormalForm, 
         Arrays.asList("people", "or", "berries", "or", "people", "or", "people", "or", "people",
             "or", "people"), 100);
     // "eat", "berries", "or", "eat", "people"
+    
+    System.out.println(parses.size());
     
     for (CcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse);
     }
   }
-  */
 
   public void testParseTimeout() {
     List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(

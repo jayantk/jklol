@@ -83,6 +83,10 @@ public class ChartEntry {
 
   private final Combinator combinator;
   
+  // True if this chart entry is the direct result of applying a
+  // conjunction rule.
+  private final boolean isProducedByConjunction;
+
   /**
    * Use this constructor for nonterminals in the parse tree.
    * 
@@ -104,12 +108,13 @@ public class ChartEntry {
    * @param rightSpanEnd
    * @param rightChartIndex
    * @param combinator
+   * @param isProducedByConjunction
    */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, UnaryCombinator rootUnaryRule,
       UnaryCombinator leftUnaryRule, UnaryCombinator rightUnaryRule, int[] assignmentVarIndex,
       long[] assignments, int[] unfilledDependencyVarIndex, long[] unfilledDependencies,
       long[] deps, int leftSpanStart, int leftSpanEnd, int leftChartIndex, int rightSpanStart,
-      int rightSpanEnd, int rightChartIndex, Combinator combinator) {
+      int rightSpanEnd, int rightChartIndex, Combinator combinator, boolean isProducedByConjunction) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
     this.syntaxHeadVar = syntaxHeadVar;
@@ -122,7 +127,8 @@ public class ChartEntry {
     this.assignments = Preconditions.checkNotNull(assignments);
     this.unfilledDependencyVarIndex = Preconditions.checkNotNull(unfilledDependencyVarIndex);
     this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
-    this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies);
+    this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies,
+        isProducedByConjunction);
 
     this.lexiconEntry = null;
     this.lexiconTriggerWords = null;
@@ -137,6 +143,7 @@ public class ChartEntry {
     this.rightChartIndex = rightChartIndex;
 
     this.combinator = combinator;
+    this.isProducedByConjunction = isProducedByConjunction;
   }
 
   /**
@@ -172,7 +179,7 @@ public class ChartEntry {
     this.assignments = Preconditions.checkNotNull(assignments);
     this.unfilledDependencyVarIndex = Preconditions.checkNotNull(unfilledDependencyVarIndex);
     this.unfilledDependencies = Preconditions.checkNotNull(unfilledDependencies);
-    this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies);
+    this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies, false);
 
     this.lexiconEntry = ccgCategory;
     this.lexiconTriggerWords = terminalWords;
@@ -188,6 +195,7 @@ public class ChartEntry {
     this.rightChartIndex = -1;
 
     this.combinator = null;
+    this.isProducedByConjunction = false;
   }
 
   public int getHeadedSyntax() {
@@ -380,6 +388,10 @@ public class ChartEntry {
   public Combinator getCombinator() {
     return combinator;
   }
+  
+  public boolean isProducedByConjunction() {
+    return isProducedByConjunction;
+  }
 
   public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
       int resultHeadVar, UnaryCombinator unaryRuleCombinator, int[] newAssignmentVarIndex,
@@ -393,7 +405,7 @@ public class ChartEntry {
     } else {
       return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
           newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex, newUnfilledDeps, newFilledDeps, leftSpanStart,
-          leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator);
+          leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator, isProducedByConjunction);
     }
   }
 
@@ -404,7 +416,7 @@ public class ChartEntry {
   }
 
   private static long computeSyntaxHeadHashCode(int syntax, long[] assignments,
-      long[] unfilledDependencies) {
+      long[] unfilledDependencies, boolean isProducedByConjunction) {
 
     long assignmentHashCode = 3;
     for (int i = 0; i < assignments.length; i++) {
@@ -416,6 +428,7 @@ public class ChartEntry {
       depHashCode *= unfilledDependencies[i];
     }
 
-    return ((((long) syntax) * 31) + assignmentHashCode + depHashCode) * 63;
+    return (((((long) syntax) * 31) + assignmentHashCode + depHashCode) * 63) 
+        + (isProducedByConjunction ? 123 : 0);
   }
 }

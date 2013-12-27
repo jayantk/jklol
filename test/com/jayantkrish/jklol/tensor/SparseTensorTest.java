@@ -148,4 +148,16 @@ public class SparseTensorTest extends TensorTest {
     assertEquals(0.0, tensor.getByDimKey(0, 3, 4));
     assertEquals(0.0, tensor.getByDimKey(1, 2, 3));
   }
+
+  /**
+   * Ensure that when two tensors are added, keys that sum to
+   * 0 are removed from the result.
+   */
+  public void testAdditionSparse() {
+    Tensor tensor = SparseTensor.vector(2, 4, new double[] {0, 2, 3, 0});
+    Tensor tensor2 = SparseTensor.vector(2, 4, new double[] {0, -2, 4, 1});
+    
+    Tensor result = tensor.elementwiseAddition(tensor2);
+    assertEquals(2, result.size());
+  }
 }

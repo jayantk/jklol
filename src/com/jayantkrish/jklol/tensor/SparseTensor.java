@@ -639,13 +639,17 @@ public class SparseTensor extends AbstractTensor implements Serializable {
         otherInd++;
       } else {
         // Keys are equal.
-        resultKeyInts[resultInd] = keyNums[myInd];
         if (useSum) {
           resultValues[resultInd] = values[myInd] + other.getByIndex(otherInd);
         } else {
           resultValues[resultInd] = Math.max(values[myInd], other.getByIndex(otherInd));
         }
-        resultInd++;
+
+        if (resultValues[resultInd] != 0.0) {
+          // Ignore the resulting value if it is zero.
+          resultKeyInts[resultInd] = keyNums[myInd];
+          resultInd++;
+        }
         myInd++;
         otherInd++;
       }

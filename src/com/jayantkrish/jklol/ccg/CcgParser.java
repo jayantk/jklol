@@ -1085,6 +1085,14 @@ public class CcgParser implements Serializable {
   public DiscreteFactor getBinaryRuleDistribution() {
     return binaryRuleDistribution;
   }
+  
+  public boolean allowsWordSkipping() {
+    return allowWordSkipping;
+  }
+
+  public boolean isNormalFormOnly() {
+    return normalFormOnly;
+  }
 
   /**
    * Performs a beam search to find the best CCG parses of

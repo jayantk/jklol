@@ -2127,6 +2127,14 @@ public class CcgParser implements Serializable {
     }
   }
 
+  public static final int getSubjectWordIndexFromDep(long depLong) {
+    return (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+  }
+
+  public static final int getObjectWordIndexFromDep(long depLong) {
+    return (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+  }
+
   /**
    * Returns {@code true} if {@code depLong} represents a filled
    * dependency structure.

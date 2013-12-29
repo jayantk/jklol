@@ -825,7 +825,22 @@ public class CcgParserTest extends TestCase {
     for (CcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse);
     }
+    
+    assertEquals(1, parses.size());
   }
+  
+  public void testLargeConjunction2() {
+    List<CcgParse> parses = beamSearch(parserWithCompositionNormalForm, 
+        Arrays.asList("people", "in", "berries", "or", "people", "in", "people", "or", "people",
+            "in", "people", "or", "people", "in", "berries"), 1000);
+
+    System.out.println(parses.size());
+
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
+  }
+
 
   public void testParseTimeout() {
     List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(

@@ -74,6 +74,22 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
     }
   }
 
+  public CcgParse decodeBestParseForSubspan(int spanStart, int spanEnd, CcgParser parser) {
+    CcgParse bestParse = null;
+    double bestScore = Double.NEGATIVE_INFINITY;
+
+    for (int i = spanStart; i <= spanEnd; i++) {
+      for (int j = i; j <= spanEnd; j++) {
+        CcgParse parse = decodeBestParseForSpan(i, j, parser);
+        if (parse != null && parse.getSubtreeProbability() > bestScore) {
+          bestParse = parse;
+          bestScore = parse.getSubtreeProbability();
+        }
+      }
+    }
+    return bestParse;
+  }
+
   @Override
   public CcgParse decodeBestParse(CcgParser parser) {
     return decodeBestParseForSpan(0, size() - 1, parser);

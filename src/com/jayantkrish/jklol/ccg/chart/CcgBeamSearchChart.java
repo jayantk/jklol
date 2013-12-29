@@ -102,6 +102,49 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
     return bestParses;
   }
   
+  /**
+   * Gets the highest-scoring {@code numParses} parses spanning
+   * any subspan of {@code spanStart} to {@code spanEnd}.
+   * 
+   * @param spanStart
+   * @param spanEnd
+   * @param numParses
+   * @param parser
+   * @return
+   */
+  public List<CcgParse> decodeBestParsesForSubspan(int spanStart, int spanEnd, int numParses,
+      CcgParser parser) {
+    double[] probs = new double[numParses + 1];
+    CcgParse[] parses = new CcgParse[numParses + 1];
+    int heapSize = 0;
+    
+    for (int i = spanStart; i <= spanEnd; i++) {
+      for (int j = i; j <= spanEnd; j++) {
+        List<CcgParse> spanParses = decodeBestParsesForSpan(i, j, numParses, parser);
+        
+        for (CcgParse parse : spanParses) {
+          HeapUtils.offer(parses, probs, heapSize, parse, parse.getSubtreeProbability());
+          heapSize++;
+          
+          if (heapSize > numParses) {
+            HeapUtils.removeMin(parses, probs, heapSize);
+            heapSize--;
+          }
+        }
+      }
+    }
+
+    List<CcgParse> bestParses = Lists.newArrayList();
+    while (heapSize > 0) {
+      bestParses.add(parses[0]);
+      HeapUtils.removeMin(parses, probs, heapSize);
+      heapSize--;
+    }
+
+    Collections.reverse(bestParses);
+    return bestParses;
+  }
+  
   @Override
   public CcgParse decodeBestParse(CcgParser parser) {
     List<CcgParse> bestParses = decodeBestParsesForSpan(0, size() - 1, 1, parser);

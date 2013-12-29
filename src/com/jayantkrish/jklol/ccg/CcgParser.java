@@ -1126,8 +1126,12 @@ public class CcgParser implements Serializable {
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
 
     if (chart.isFinishedParsing()) {
-      int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
-      return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this);
+      if (allowWordSkipping) {
+        return chart.decodeBestParsesForSubspan(0, chart.size() - 1, beamSize, this);
+      } else {
+        int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
+        return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this);
+      }
     } else {
       System.out.println("CCG Parser Timeout");
       return Lists.newArrayList();
@@ -1140,7 +1144,11 @@ public class CcgParser implements Serializable {
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
 
     if (chart.isFinishedParsing()) {
-      return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
+      if (allowWordSkipping) {
+        return chart.decodeBestParseForSubspan(0, chart.size() - 1, this);
+      } else {
+        return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
+      }
     } else {
       System.out.println("CCG Parser Timeout");
       return null;
@@ -1518,7 +1526,7 @@ public class CcgParser implements Serializable {
 
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j only gets used if we allow the skipping of terminals.
-      int maxInd = allowWordSkipping ? spanEnd - spanStart : i + 2;
+      int maxInd = allowWordSkipping ? 1 + spanEnd - spanStart : i + 2;
       for (int j = i + 1; j < maxInd; j++) {
         ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
         double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);

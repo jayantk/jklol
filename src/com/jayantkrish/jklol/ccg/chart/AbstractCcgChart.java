@@ -27,6 +27,7 @@ public abstract class AbstractCcgChart implements CcgChart {
   private final List<String> posTags;
   private int[] posTagsInt;
   
+  // Maximum number of chart entries.
   private final int maxChartSize;
 
   // Various kinds of distances between words in the sentence.

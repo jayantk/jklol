@@ -16,7 +16,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.io.NullOutputStream;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
+import com.google.gwt.thirdparty.guava.common.collect.Ordering;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -87,7 +89,7 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 3.0, 1.0};
+      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 3.0, 1.0};
 
   private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
@@ -310,12 +312,12 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = beamSearch(parser, Arrays.asList("green", "people"), 10);
 
     assertEquals(1, parses.size());
-    assertEquals(2.0, parses.get(0).getSubtreeProbability());
+    assertEquals(2.0 * 0.75, parses.get(0).getSubtreeProbability());
   }
   
   public void testExactParse3() {
     CcgParse parse = parse(parser, Arrays.asList("green", "people"));
-    assertEquals(2.0, parse.getSubtreeProbability());
+    assertEquals(2.0 * 0.75, parse.getSubtreeProbability());
   }
 
   public void testParseLogicalFormApplication() {
@@ -538,6 +540,27 @@ public class CcgParserTest extends TestCase {
     assertEquals(1, parses.size());
   }
   
+  public void testParseWordSkip() {
+    List<CcgParse> parses = beamSearch(parserWordSkip, Arrays.asList("green", "green", "i"), 10);
+
+    double[] probs = new double[parses.size()];
+    for (int i = 0; i < parses.size(); i++) {
+      CcgParse parse = parses.get(i);
+      probs[i] = parse.getSubtreeProbability();
+    }
+
+    assertEquals(6, parses.size());
+    assertTrue(Ordering.natural().reverse().isOrdered(Doubles.asList(probs)));
+  }
+  
+  public void testParseWordSkipExact() {
+    CcgParse bestParse = parse(parserWordSkip, Arrays.asList("green", "green", "i"));
+    
+    assertEquals(2, bestParse.getSpanStart());
+    assertEquals(2, bestParse.getSpanEnd());
+    assertEquals(1.5, bestParse.getSubtreeProbability());
+  }
+
   public void testParseHeadedSyntaxWeights() {
     List<CcgParse> parses = beamSearch(parser, Arrays.asList("tasty", "apple"), 10);
     assertEquals(1, parses.size());

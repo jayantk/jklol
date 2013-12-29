@@ -55,10 +55,9 @@ public class ChartEntry {
   private final long[] deps;
 
   // A hash code for the headed syntactic category, unfilled
-  // dependencies,
-  // and assignments of this entry. Two chart entries with different
-  // hash
-  // codes differ in at least one of these three values.
+  // dependencies, and assignments of this entry. Two chart
+  // entries with different hash codes differ in at least one
+  // of these three values.
   private final long syntaxHeadHashCode;
 
   // If this is a terminal, lexiconEntry contains the CcgCategory
@@ -68,8 +67,7 @@ public class ChartEntry {
   private final CcgCategory lexiconEntry;
   // If this is a terminal, this contains the words used to trigger
   // the category. This may be different from the words in the
-  // sentence,
-  // if the original words were not part of the lexicon.
+  // sentence, if the original words were not part of the lexicon.
   private final List<String> lexiconTriggerWords;
 
   // Backpointer information

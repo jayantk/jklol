@@ -296,11 +296,11 @@ public abstract class AbstractCcgChart implements CcgChart {
 
       return CcgParse.forNonterminal(syntax,
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
-          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
-          entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb,
+          left, right, entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
     }
   }
-  
+
   protected  IntMultimap aggregateBySyntacticType(ChartEntry[] entries, int numEntries) {
     int[] keys = new int[numEntries];
     int[] values = new int[numEntries];

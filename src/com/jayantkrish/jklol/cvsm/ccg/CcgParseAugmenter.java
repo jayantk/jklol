@@ -59,7 +59,7 @@ public class CcgParseAugmenter {
       }
 
       CcgCategory lexiconEntry = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
-                                                 currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
+          currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
 
       result = CcgParse.forTerminal(cat, lexiconEntry, input.getLexiconTriggerWords(), 
           input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(), 
@@ -73,7 +73,7 @@ public class CcgParseAugmenter {
           input.getNodeDependencies(), input.getNodeProbability(), left, right, input.getCombinator(),
           input.getUnaryRule(), input.getSpanStart(), input.getSpanEnd());
     }
-    
+
     // Handle unary rules
     if (result.hasUnaryRule()) {
       LambdaExpression logicalForm = null;

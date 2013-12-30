@@ -539,9 +539,10 @@ public class CcgParserTest extends TestCase {
         "green", "green", "green", "green", "green", "berries"), 1000);
     assertEquals(1, parses.size());
   }
-  
+
   public void testParseWordSkip() {
-    List<CcgParse> parses = beamSearch(parserWordSkip, Arrays.asList("green", "green", "i"), 10);
+    List<String> words = Arrays.asList("green", "green", "i");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
 
     double[] probs = new double[parses.size()];
     for (int i = 0; i < parses.size(); i++) {
@@ -551,14 +552,20 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(6, parses.size());
     assertTrue(Ordering.natural().reverse().isOrdered(Doubles.asList(probs)));
+    
+    for (CcgParse parse : parses) {
+      assertEquals(words, parse.getSentenceWords());
+    }
   }
-  
+
   public void testParseWordSkipExact() {
-    CcgParse bestParse = parse(parserWordSkip, Arrays.asList("green", "green", "i"));
+    List<String> words = Arrays.asList("green", "green", "i");
+    CcgParse bestParse = parse(parserWordSkip, words);
     
     assertEquals(2, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
     assertEquals(1.5, bestParse.getSubtreeProbability());
+    assertEquals(words, bestParse.getSentenceWords());
   }
 
   public void testParseHeadedSyntaxWeights() {

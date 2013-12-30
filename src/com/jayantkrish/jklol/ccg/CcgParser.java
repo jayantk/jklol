@@ -1135,10 +1135,12 @@ public class CcgParser implements Serializable {
 
     if (chart.isFinishedParsing()) {
       if (allowWordSkipping) {
-        return chart.decodeBestParsesForSubspan(0, chart.size() - 1, beamSize, this);
+        return addSentenceToParses(chart.decodeBestParsesForSubspan(
+            0, chart.size() - 1, beamSize, this), chart);
       } else {
         int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
-        return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this);
+        return addSentenceToParses(chart.decodeBestParsesForSpan(
+            0, chart.size() - 1, numParses, this), chart);
       }
     } else {
       System.out.println("CCG Parser Timeout");
@@ -1153,14 +1155,32 @@ public class CcgParser implements Serializable {
 
     if (chart.isFinishedParsing()) {
       if (allowWordSkipping) {
-        return chart.decodeBestParseForSubspan(0, chart.size() - 1, this);
+        return addSentenceToParse(chart.decodeBestParseForSubspan(
+            0, chart.size() - 1, this), chart);
       } else {
-        return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
+        return addSentenceToParse(chart.decodeBestParseForSpan(
+            0, chart.size() - 1, this), chart);
       }
     } else {
       System.out.println("CCG Parser Timeout");
       return null;
     }
+  }
+  
+  public static final CcgParse addSentenceToParse(CcgParse parse, CcgChart chart) {
+    if (parse == null) {
+      return null;
+    } else {
+      return parse.addSentence(chart.getWords(), chart.getPosTags());
+    }
+  }
+
+  public static final List<CcgParse> addSentenceToParses(List<CcgParse> parses, CcgChart chart) {
+    List<CcgParse> newParses = Lists.newArrayList();
+    for (CcgParse parse : parses) {
+      newParses.add(addSentenceToParse(parse, chart));
+    }
+    return newParses;
   }
 
   public void parseCommon(CcgChart chart, SupertaggedSentence input, ChartCost beamFilter,

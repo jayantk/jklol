@@ -62,6 +62,14 @@ public class CcgParse {
   // has spanStart == spanEnd).
   private final int spanStart;
   private final int spanEnd;
+  
+  // If this parse is a complete parse of a sentence, the words and 
+  // part-of-speech tags spanned by the parse. These values may
+  // differ from the values returned by getSpannedPosTags() if the
+  // parser skipped words during parsing. Only non-null at the
+  // root node of a complete parse of a sentence.
+  private final List<String> originalSentenceWords;
+  private final List<String> originalSentencePosTags;
 
   /**
    * 
@@ -78,7 +86,8 @@ public class CcgParse {
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
       List<String> lexiconTriggerWords, List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
-      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
+      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd,
+      List<String> originalSentenceWords, List<String> originalSentencePosTags) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
     this.lexiconTriggerWords = lexiconTriggerWords;
@@ -106,6 +115,9 @@ public class CcgParse {
     } else {
       this.subtreeProbability = probability;
     }
+
+    this.originalSentenceWords = originalSentenceWords;
+    this.originalSentencePosTags = originalSentencePosTags;
   }
 
   /**
@@ -128,14 +140,14 @@ public class CcgParse {
       List<String> spannedWords, double probability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd) {
     return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, deps,
-        probability, null, null, null, unaryRule, spanStart, spanEnd);
+        probability, null, null, null, unaryRule, spanStart, spanEnd, null, null);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left,
       CcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     return new CcgParse(syntax, null, null, null, null, heads, dependencies, probability, left,
-        right, combinator, unaryRule, spanStart, spanEnd);
+        right, combinator, unaryRule, spanStart, spanEnd, null, null);
   }
 
   /**
@@ -512,6 +524,30 @@ public class CcgParse {
   }
 
   /**
+   * Gets the list of words in the sentence being parsed. Non-null
+   * only if this is the root node of a sentence's parse tree. The
+   * returned list may include words that were skipped during
+   * parsing.
+   * 
+   * @return
+   */
+  public List<String> getSentenceWords() {
+    return originalSentenceWords;
+  }
+
+  /**
+   * Gets the list of POS tags in the sentence being parsed. Non-null
+   * only if this is the root node of a sentence's parse tree. The
+   * returned list may include pos tags that were skipped during
+   * parsing.
+   * 
+   * @return
+   */
+  public List<String> getSentencePosTags() {
+    return originalSentencePosTags;
+  }
+
+  /**
    * The result is null unless this is a terminal in the parse tree.
    * 
    * @return
@@ -677,12 +713,28 @@ public class CcgParse {
     }
     return filteredDeps;
   }
-  
+
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
     return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
-        dependencies, probability, left, right, combinator, rule, spanStart, spanEnd);
+        dependencies, probability, left, right, combinator, rule, spanStart, spanEnd,
+        originalSentenceWords, originalSentencePosTags);
   }
-  
+
+  /**
+   * Adds information about the full sentence parsed. This
+   * information should be attached to the root of every 
+   * complete parse tree of a sentence.
+   * 
+   * @param words
+   * @param posTags
+   * @return
+   */
+  public CcgParse addSentence(List<String> words, List<String> posTags) {
+    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
+        dependencies, probability, left, right, combinator, unaryRule, spanStart, spanEnd, words,
+        posTags);
+  }
+
   /**
    * Returns a representation of this tree in HTML format.
    * 

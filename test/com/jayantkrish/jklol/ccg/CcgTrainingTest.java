@@ -81,7 +81,7 @@ public class CcgTrainingTest extends TestCase {
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
 
   private DataFormat<CcgExample> exampleReader;
-  private ParametricCcgParser family;
+  private ParametricCcgParser family, wordSkipFamily;
   private List<CcgExample> trainingExamples;
   private List<CcgExample> trainingExamplesWithSyntax;
   private List<CcgExample> trainingExamplesSyntaxOnly;
@@ -127,6 +127,10 @@ public class CcgTrainingTest extends TestCase {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
         new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax)),
         posTags, true, null, false, false);
+    
+    wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
+        new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax)),
+        posTags, true, null, true, false);
   }
   
   public void testSyntacticChartFilter1() {
@@ -205,27 +209,27 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrainLoglikelihoodDependenciesOnly() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesDepsOnly);
+    CcgParser parser = trainLoglikelihoodParser(family, trainingExamplesDepsOnly);
     assertZeroDependencyError(parser, trainingExamples);
     // Check that the resulting parameters are sensible.
     assertEquals(1.0, beamSearch(parser, Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
   }
   
   public void testTrainLoglikelihoodLogicalFormOnly() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesLfOnly);
+    CcgParser parser = trainLoglikelihoodParser(family, trainingExamplesLfOnly);
     assertZeroDependencyError(parser, trainingExamples);
     // Check that the resulting parameters are sensible.
     assertEquals(1.0, beamSearch(parser, Arrays.asList("red"), 10).get(0).getSubtreeProbability(), 0.000001);
   }
 
   public void testTrainLoglikelihoodWithSyntax() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesWithSyntax);
+    CcgParser parser = trainLoglikelihoodParser(family, trainingExamplesWithSyntax);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainLoglikelihoodSyntaxOnly() {
-    CcgParser parser = trainLoglikelihoodParser(trainingExamplesSyntaxOnly);
+    CcgParser parser = trainLoglikelihoodParser(family, trainingExamplesSyntaxOnly);
     assertTrainedParserUsesSyntax(parser);
 
     List<CcgParse> parses = filterNonAtomicParses(beamSearch(parser, 
@@ -237,44 +241,49 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrainPerceptronLogicalFormOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesLfOnly, false, false);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesLfOnly, false, false);
     assertZeroDependencyError(parser, trainingExamples);
   }
 
   public void testTrainPerceptronWithSyntax() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false, false);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesWithSyntax, false, false);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, false);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, false, false);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnlyExactInference() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, false);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, true, false);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginWithSyntax() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesWithSyntax, false, true);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesWithSyntax, false, true);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, false, true);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, false, true);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginSyntaxOnlyExactInference() {
-    CcgParser parser = trainPerceptronParser(trainingExamplesSyntaxOnly, true, true);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, true, true);
     assertTrainedParserUsesSyntax(parser);
   }
 
-  private CcgParser trainLoglikelihoodParser(List<CcgExample> examples) {
-    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 100);
+  public void testTrainWordSkip() {
+    CcgParser parser = trainLoglikelihoodParser(wordSkipFamily, trainingExamplesWithSyntax);
+    assertZeroDependencyError(parser, trainingExamplesWithSyntax);
+  }
+
+  private CcgParser trainLoglikelihoodParser(ParametricCcgParser family, List<CcgExample> examples) {
+    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(wordSkipFamily, 100);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
         true, false, 0.1, new DefaultLogFunction());
 
@@ -283,7 +292,7 @@ public class CcgTrainingTest extends TestCase {
     return parser;
   }
 
-  private CcgParser trainPerceptronParser(
+  private CcgParser trainPerceptronParser(ParametricCcgParser family,
       List<CcgExample> examples, boolean exactInference, boolean maxMargin) {
     CcgInference inferenceAlg = null;
     if (exactInference) {
@@ -293,8 +302,8 @@ public class CcgTrainingTest extends TestCase {
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(
         family, inferenceAlg, maxMargin ? 1.0 : 0.0);
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100, 1, 1,
-        false, true, 0.0, new DefaultLogFunction());
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
+        1, 1, false, true, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);

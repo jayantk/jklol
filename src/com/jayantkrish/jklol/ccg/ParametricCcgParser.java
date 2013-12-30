@@ -655,17 +655,20 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public void incrementSufficientStatistics(SufficientStatistics gradient, CcgParse parse,
       double count) {
+    List<String> posTags = parse.getSentencePosTags();
+
     // Update the dependency structure parameters, including distance
     // parameters.
-    incrementDependencySufficientStatistics(gradient, parse.getSpannedPosTags(),
-        parse.getAllDependencies(), count);
+    incrementDependencySufficientStatistics(gradient, posTags, parse.getAllDependencies(), count);
+
     // Update syntactic combination parameters. (Both unary and binary
     // rules)
-    incrementSyntaxSufficientStatistics(gradient, parse, parse.getSpannedPosTags(), count);
+    incrementSyntaxSufficientStatistics(gradient, parse, posTags, count);
     incrementRootSyntaxSufficientStatistics(gradient, parse.getHeadedSyntacticCategory(),
-        parse.getSemanticHeads(), parse.getSpannedPosTags(), count);
+        parse.getSemanticHeads(), posTags, count);
     // Update terminal distribution parameters.
-    SufficientStatistics lexiconParameters = gradient.coerceToList().getStatisticByName(LEXICON_PARAMETERS);
+    SufficientStatistics lexiconParameters = gradient.coerceToList()
+        .getStatisticByName(LEXICON_PARAMETERS);
     lexiconFamily.incrementLexiconSufficientStatistics(lexiconParameters, parse, count);
   }
 

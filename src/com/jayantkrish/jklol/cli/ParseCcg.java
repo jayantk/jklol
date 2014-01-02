@@ -321,7 +321,7 @@ public class ParseCcg extends AbstractCli {
         supertaggerErrors, lexiconErrors, parserErrors, 0, 0);
   }
 
-  private static List<DependencyStructure> getDependenciesCcgbank(CcgParse parse) {
+  public static List<DependencyStructure> getDependenciesCcgbank(CcgParse parse) {
     SyntacticCategory toCat = SyntacticCategory.parseFrom("((S[to]\\NP)/(S[b]\\NP))");
     
     Set<SyntacticCategory> beLightVerbCats = Sets.newHashSet();

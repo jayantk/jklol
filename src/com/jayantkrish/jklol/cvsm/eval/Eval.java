@@ -4,13 +4,22 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.cvsm.eval.Value.ConsValue;
 import com.jayantkrish.jklol.cvsm.eval.Value.ConstantValue;
+import com.jayantkrish.jklol.cvsm.eval.Value.StringValue;
 
 public class Eval {
 
   public EvalResult eval(SExpression expression, Environment environment) {
     if (expression.isConstant()) {
-      return new EvalResult(environment.getValue(expression.getConstant()), environment);
+      // The expression may be a primitive type or a variable.
+      String constantString = expression.getConstant();
+      if (constantString.startsWith("\"") && constantString.endsWith("\"")) {
+        String strippedQuotes = constantString.substring(1, constantString.length() - 1);
+        return new EvalResult(new StringValue(strippedQuotes), environment);
+      } else {
+        return new EvalResult(environment.getValue(constantString), environment);
+      }
     } else {
       List<SExpression> subexpressions = expression.getSubexpressions();
       SExpression first = subexpressions.get(0); 
@@ -34,7 +43,7 @@ public class Eval {
         } else if (constantName.equals("lambda")) {
           // Create and return a function value representing this function.
           Preconditions.checkArgument(subexpressions.size() == 3);
-          
+
           List<String> argumentNames = Lists.newArrayList();
           List<SExpression> argumentExpressions = subexpressions.get(1).getSubexpressions();
           for (SExpression argumentExpression : argumentExpressions) {
@@ -45,15 +54,48 @@ public class Eval {
           SExpression functionBody = subexpressions.get(2); 
           return new EvalResult(new FunctionValue(argumentNames, functionBody, environment),
               environment);
-        } else if (constantName.equals("+")) {
-          // TODO
-          /*
-          Preconditions.checkState(subexpressions.size() > 1);
-          int result = 0;
-          for (int i = 1; i < subexpressions.size(); i++) {
-            eval(subexpressions.get(i))
-          } 
-          */         
+        } else if (constantName.equals("cons")) {
+          Preconditions.checkArgument(subexpressions.size() == 3);
+
+          Value car = eval(subexpressions.get(1), environment).getValue();
+          Value cdr = eval(subexpressions.get(2), environment).getValue();
+
+          return new EvalResult(new ConsValue(car, cdr), environment);
+        } else if (constantName.equals("car")) {
+          Preconditions.checkArgument(subexpressions.size() == 2);
+          ConsValue value = (ConsValue) eval(subexpressions.get(1), environment).getValue();
+          return new EvalResult(value.getCar(), environment);
+        } else if (constantName.equals("cdr")) {
+          Preconditions.checkArgument(subexpressions.size() == 2);
+          ConsValue value = (ConsValue) eval(subexpressions.get(1), environment).getValue();
+          return new EvalResult(value.getCdr(), environment);
+        } else if (constantName.equals("list")) {
+          int numExpressions = subexpressions.size();
+          Value listValue = ConstantValue.NIL;
+          for (int i = numExpressions - 1; i > 0; i--) {
+            Value value = eval(subexpressions.get(i), environment).getValue();
+            listValue = new ConsValue(value, listValue);
+          }
+          return new EvalResult(listValue, environment);
+        } else if (constantName.equals("nil?")) {
+          Preconditions.checkArgument(subexpressions.size() == 2);
+          Value value = eval(subexpressions.get(1), environment).getValue();
+          
+          Value result = null;
+          if (ConstantValue.NIL.equals(value)) {
+            result = ConstantValue.TRUE;
+          } else {
+            result = ConstantValue.FALSE;
+          }
+          return new EvalResult(result, environment);
+        } else if (constantName.equals("if")) {
+          Preconditions.checkArgument(subexpressions.size() == 4);
+          Value testCondition = eval(subexpressions.get(1), environment).getValue();
+          if (ConstantValue.TRUE.equals(testCondition)) {
+            return eval(subexpressions.get(2), environment);
+          } else {
+            return eval(subexpressions.get(3), environment);
+          }
         }
       }
 

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm.eval;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +16,10 @@ public class Environment {
   public Environment(Map<String, Value> bindings, Environment parentEnvironment) {
     this.boundVariables = Preconditions.checkNotNull(bindings);
     this.parentEnvironment = parentEnvironment;
+  }
+
+  public static Environment empty() {
+    return new Environment(Collections.<String, Value>emptyMap(), null);
   }
 
   public Environment bindName(String name, Value value) {

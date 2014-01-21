@@ -77,6 +77,10 @@ public class StochasticGradientTrainerTest extends TestCase {
 	public void testTrainStochasticL2() {
 	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, false, 1, 0.1, new DefaultLogFunction()));
 	}
+	
+	public void testL2Sag() {
+	  runTest(new StochasticAverageGradientOptimizer(100, 0.01, new DefaultLogFunction()));
+	}
 
 	public void testTrainL1() {
 	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, false, 0.1, new DefaultLogFunction()));
@@ -94,7 +98,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, true, 0.1, new DefaultLogFunction()));
 	}
 
-	private void runTest(StochasticGradientTrainer trainer) {
+	private void runTest(GradientOptimizer trainer) {
 	  		// These assignments should have positive weight for clique 1
 		Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
 		clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)

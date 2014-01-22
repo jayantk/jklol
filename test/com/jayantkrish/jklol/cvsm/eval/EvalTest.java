@@ -54,6 +54,11 @@ public class EvalTest extends TestCase {
     assertEquals(3, value);
   }
 
+  public void testAmb() {
+    int value = runTestInt("(get-best-assignment (amb 1 2 3))");
+    System.out.println(value);
+  }
+
   /*
   public void testRecursion() {
     // "(define predict-labels (lambda (seq) (if (nil? seq) (list) (let ((prev-seq (predict-labels (cdr seq)))) (cons (amb"

@@ -6,14 +6,20 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 
 public class Environment {
 
   private final Map<String, Object> boundVariables;
+  private final ParametricFactorGraphBuilder factorGraphBuilder;
+
   private final Environment parentEnvironment;
-  
-  public Environment(Map<String, Object> bindings, Environment parentEnvironment) {
+
+  public Environment(Map<String, Object> bindings, ParametricFactorGraphBuilder factorGraphBuilder,
+      Environment parentEnvironment) {
     this.boundVariables = Preconditions.checkNotNull(bindings);
+    this.factorGraphBuilder = Preconditions.checkNotNull(factorGraphBuilder);
+
     this.parentEnvironment = parentEnvironment;
   }
 
@@ -22,7 +28,8 @@ public class Environment {
   }
 
   public static Environment empty(Environment parentEnvironment) {
-    return new Environment(Maps.<String, Object>newHashMap(), parentEnvironment);
+    return new Environment(Maps.<String, Object>newHashMap(), new ParametricFactorGraphBuilder(),
+        parentEnvironment);
   }
 
   public void bindName(String name, Object value) {
@@ -44,5 +51,9 @@ public class Environment {
     Preconditions.checkState(parentEnvironment != null,
         "Tried accessing unbound variable: %s", name);
     return parentEnvironment.getValue(name);
+  }
+
+  public ParametricFactorGraphBuilder getFactorGraphBuilder() {
+    return factorGraphBuilder;
   }
 }

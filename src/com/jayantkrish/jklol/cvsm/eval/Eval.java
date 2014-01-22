@@ -4,8 +4,19 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.inference.MaxMarginalSet;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.util.Assignment;
 
 public class Eval {
+
+  private static int nextVarNum = 0;
 
   public EvalResult eval(SExpression expression, Environment environment) {
     if (expression.isConstant()) {
@@ -54,6 +65,40 @@ public class Eval {
 
           SExpression functionBody = subexpressions.get(2); 
           return new EvalResult(new FunctionValue(argumentNames, functionBody, environment));
+        } else if (constantName.equals("amb")) { 
+          Preconditions.checkArgument(subexpressions.size() > 1);
+
+          List<Object> possibleValues = Lists.newArrayList();
+          for (int i = 1; i < subexpressions.size(); i++) {
+            possibleValues.add(eval(subexpressions.get(i), environment).getValue());
+          }          
+
+          String varName = Integer.toHexString(possibleValues.hashCode());
+          DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
+          VariableNumMap fgVar = VariableNumMap.singleton(getUniqueVarNum(), varName, fgVarType);
+
+          environment.getFactorGraphBuilder().addVariables(fgVar);
+          environment.getFactorGraphBuilder().addConstantFactor(varName, TableFactor.unity(fgVar));
+
+          return new EvalResult(new AmbValue(fgVar));
+        } else if (constantName.equals("get-best-assignment")) {
+          Preconditions.checkArgument(subexpressions.size() == 2);
+
+          Object value = eval(subexpressions.get(1), environment).getValue();
+
+          if (value instanceof AmbValue) {
+            ParametricFactorGraph currentFactorGraph = environment.getFactorGraphBuilder().build();
+            FactorGraph fg = currentFactorGraph.getModelFromParameters(
+                currentFactorGraph.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
+
+            JunctionTree jt = new JunctionTree();
+            MaxMarginalSet maxMarginals = jt.computeMaxMarginals(fg);
+            Assignment assignment = maxMarginals.getNthBestAssignment(0);
+
+            return new EvalResult(assignment.getValue(((AmbValue) value).getVar().getOnlyVariableNum())); 
+          } else {
+            return new EvalResult(value);
+          }
         } else if (constantName.equals("cons")) {
           Preconditions.checkArgument(subexpressions.size() == 3);
 
@@ -128,6 +173,10 @@ public class Eval {
       Object result = functionToApply.apply(arguments, this);
       return new EvalResult(result);
     }
+  }
+
+  private static int getUniqueVarNum() {
+    return nextVarNum++;
   }
 
   public static class EvalResult {

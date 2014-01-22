@@ -56,7 +56,7 @@ public class EvalTest extends TestCase {
 
   public void testAmb() {
     String value = runTestString("(get-best-assignment (amb \"a\" 1 \"b\" 2 \"c\" 1))");
-    System.out.println(value);
+    assertEquals("b", value);
   }
 
   /*

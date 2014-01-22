@@ -69,9 +69,14 @@ public class TableFactor extends DiscreteFactor {
 
     return builder.build();
   }
-  
+
   public static TableFactor vector(VariableNumMap vars, Assignment[] assignments, double[] values) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    Preconditions.checkArgument(assignments.length == values.length);
+    TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+    for (int i = 0; i < assignments.length; i++) {
+      builder.setWeight(assignments[i], values[i]);
+    }
+    return builder.build();
   }
 
   /**

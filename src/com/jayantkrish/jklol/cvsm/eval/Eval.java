@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -67,18 +68,27 @@ public class Eval {
           return new EvalResult(new FunctionValue(argumentNames, functionBody, environment));
         } else if (constantName.equals("amb")) { 
           Preconditions.checkArgument(subexpressions.size() > 1);
+          Preconditions.checkArgument(subexpressions.size() % 2 == 1);
 
           List<Object> possibleValues = Lists.newArrayList();
-          for (int i = 1; i < subexpressions.size(); i++) {
+          List<Double> weights = Lists.newArrayList();
+          for (int i = 1; i < subexpressions.size(); i += 2) {
             possibleValues.add(eval(subexpressions.get(i), environment).getValue());
+            weights.add((double) ((int) ((Integer) eval(subexpressions.get(i + 1), environment).getValue())));
           }          
 
           String varName = Integer.toHexString(possibleValues.hashCode());
           DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
           VariableNumMap fgVar = VariableNumMap.singleton(getUniqueVarNum(), varName, fgVarType);
-
           environment.getFactorGraphBuilder().addVariables(fgVar);
-          environment.getFactorGraphBuilder().addConstantFactor(varName, TableFactor.unity(fgVar));
+          
+          Assignment[] assignmentArray = new Assignment[possibleValues.size()];
+          double[] weightArray = Doubles.toArray(weights);
+          for (int i = 0; i < possibleValues.size(); i++) {
+            assignmentArray[i] = fgVar.outcomeArrayToAssignment(possibleValues.get(i));
+          }
+          TableFactor factor = TableFactor.vector(fgVar, assignmentArray, weightArray);
+          environment.getFactorGraphBuilder().addConstantFactor(varName, factor);
 
           return new EvalResult(new AmbValue(fgVar));
         } else if (constantName.equals("get-best-assignment")) {

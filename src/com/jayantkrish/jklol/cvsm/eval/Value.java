@@ -8,7 +8,7 @@ public interface Value {
   }
 
   public class StringValue implements Value {
-    private String value;
+    private final String value;
     
     public StringValue(String value) {
       this.value = Preconditions.checkNotNull(value);
@@ -20,8 +20,8 @@ public interface Value {
   }
 
   public class ConsValue implements Value {
-    private Value car;
-    private Value cdr;
+    private final Value car;
+    private final Value cdr;
 
     public ConsValue(Value car, Value cdr) {
       this.car = Preconditions.checkNotNull(car);
@@ -40,6 +40,18 @@ public interface Value {
      */
     public Value getCdr() {
       return cdr;
+    }
+  }
+  
+  public class IntValue implements Value {
+    private final int value;
+    
+    public IntValue(int value) {
+      this.value = value;
+    }
+    
+    public int getValue() {
+      return value;
     }
   }
 }

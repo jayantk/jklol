@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.cvsm.eval;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -19,22 +18,24 @@ public class Environment {
   }
 
   public static Environment empty() {
-    return new Environment(Collections.<String, Value>emptyMap(), null);
+    return Environment.empty(null);
   }
 
-  public Environment bindName(String name, Value value) {
-    return bindNames(Arrays.asList(name), Arrays.asList(value));
+  public static Environment empty(Environment parentEnvironment) {
+    return new Environment(Maps.<String, Value>newHashMap(), parentEnvironment);
   }
 
-  public Environment bindNames(List<String> names, List<Value> values) {
+  public void bindName(String name, Value value) {
+    bindNames(Arrays.asList(name), Arrays.asList(value));
+  }
+
+  public void bindNames(List<String> names, List<Value> values) {
     Preconditions.checkArgument(names.size() == values.size());
-    Map<String, Value> bindings = Maps.newHashMap();
     for (int i = 0; i < names.size(); i++) {
-      bindings.put(names.get(i), values.get(i));
+      boundVariables.put(names.get(i), values.get(i));
     }
-    return new Environment(bindings, this);
   }
-  
+
   public Value getValue(String name) {
     if (boundVariables.containsKey(name)) {
       return boundVariables.get(name);

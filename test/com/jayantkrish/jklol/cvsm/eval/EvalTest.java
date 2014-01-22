@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.cvsm.eval;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.cvsm.eval.Value.IntValue;
 import com.jayantkrish.jklol.cvsm.eval.Value.StringValue;
 
 public class EvalTest extends TestCase {
@@ -49,12 +50,19 @@ public class EvalTest extends TestCase {
     String value = runTestString("(if (nil? (list \"a\" \"b\")) \"true\" \"false\")");
     assertEquals("false", value);
   }
+  
+  public void testRecursion() {
+    int value = runTestInt("(define length (lambda (seq) (if (nil? seq) 0 (+ (length (cdr seq)) 1)))) (length (list \"a\" \"b\" \"c\"))");
+    assertEquals(3, value);
+  }
 
+  /*
   public void testRecursion() {
     // "(define predict-labels (lambda (seq) (if (nil? seq) (list) (let ((prev-seq (predict-labels (cdr seq)))) (cons (amb"
     Value value = runTest("(define predict-labels (lambda (seq) (if (nil? seq) (list) (cons \"a\" (predict-labels (cdr seq)))))) (predict-labels (list \"x\" \"y\"))");
     System.out.println(value);
   }
+  */
 
   private Value runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
@@ -65,5 +73,10 @@ public class EvalTest extends TestCase {
   private String runTestString(String expressionString) {
     Value value = runTest(expressionString);
     return ((StringValue) value).getValue();
+  }
+
+  private int runTestInt(String expressionString) {
+    Value value = runTest(expressionString);
+    return ((IntValue) value).getValue();
   }
 }

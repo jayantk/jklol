@@ -6,6 +6,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cvsm.eval.Value.ConsValue;
 import com.jayantkrish.jklol.cvsm.eval.Value.ConstantValue;
+import com.jayantkrish.jklol.cvsm.eval.Value.IntValue;
 import com.jayantkrish.jklol.cvsm.eval.Value.StringValue;
 
 public class Eval {
@@ -17,6 +18,10 @@ public class Eval {
       if (constantString.startsWith("\"") && constantString.endsWith("\"")) {
         String strippedQuotes = constantString.substring(1, constantString.length() - 1);
         return new EvalResult(new StringValue(strippedQuotes), environment);
+      } else if (constantString.matches("-?[0-9]+")) {
+        // Integer primitive type
+        int intValue = Integer.parseInt(constantString);
+        return new EvalResult(new IntValue(intValue), environment);
       } else {
         return new EvalResult(environment.getValue(constantString), environment);
       }
@@ -30,8 +35,8 @@ public class Eval {
           // Binds a name to a value in the environment.
           String nameToBind = subexpressions.get(1).getConstant();
           Value valueToBind = eval(subexpressions.get(2), environment).getValue();
-          Environment newEnvironment = environment.bindName(nameToBind, valueToBind);
-          return new EvalResult(ConstantValue.UNDEFINED, newEnvironment);
+          environment.bindName(nameToBind, valueToBind);
+          return new EvalResult(ConstantValue.UNDEFINED, environment);
         } else if (constantName.equals("begin")) {
           // Sequentially evaluates its subexpressions, chaining any 
           // environment changes.
@@ -96,6 +101,24 @@ public class Eval {
           } else {
             return eval(subexpressions.get(3), environment);
           }
+        } else if (constantName.equals("+")) {
+          int resultValue = 0;
+          for (int i = 1; i < subexpressions.size(); i++) {
+            IntValue subexpressionValue = (IntValue) eval(subexpressions.get(i), environment).getValue();
+            resultValue += subexpressionValue.getValue();
+          }
+          return new EvalResult(new IntValue(resultValue), environment);
+        } else if (constantName.equals("-")) {
+          int resultValue = 0;
+          for (int i = 1; i < subexpressions.size(); i++) {
+            IntValue subexpressionValue = (IntValue) eval(subexpressions.get(i), environment).getValue();
+            if (i == 1) {
+              resultValue += subexpressionValue.getValue();
+            } else {
+              resultValue -= subexpressionValue.getValue();
+            }
+          }
+          return new EvalResult(new IntValue(resultValue), environment);
         }
       }
 

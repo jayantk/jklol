@@ -9,10 +9,10 @@ import com.google.common.collect.Maps;
 
 public class Environment {
 
-  private final Map<String, Value> boundVariables;
+  private final Map<String, Object> boundVariables;
   private final Environment parentEnvironment;
   
-  public Environment(Map<String, Value> bindings, Environment parentEnvironment) {
+  public Environment(Map<String, Object> bindings, Environment parentEnvironment) {
     this.boundVariables = Preconditions.checkNotNull(bindings);
     this.parentEnvironment = parentEnvironment;
   }
@@ -22,21 +22,21 @@ public class Environment {
   }
 
   public static Environment empty(Environment parentEnvironment) {
-    return new Environment(Maps.<String, Value>newHashMap(), parentEnvironment);
+    return new Environment(Maps.<String, Object>newHashMap(), parentEnvironment);
   }
 
-  public void bindName(String name, Value value) {
+  public void bindName(String name, Object value) {
     bindNames(Arrays.asList(name), Arrays.asList(value));
   }
 
-  public void bindNames(List<String> names, List<Value> values) {
+  public void bindNames(List<String> names, List<Object> values) {
     Preconditions.checkArgument(names.size() == values.size());
     for (int i = 0; i < names.size(); i++) {
       boundVariables.put(names.get(i), values.get(i));
     }
   }
 
-  public Value getValue(String name) {
+  public Object getValue(String name) {
     if (boundVariables.containsKey(name)) {
       return boundVariables.get(name);
     }

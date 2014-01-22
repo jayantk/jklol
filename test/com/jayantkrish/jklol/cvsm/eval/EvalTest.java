@@ -3,8 +3,6 @@ package com.jayantkrish.jklol.cvsm.eval;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.cvsm.eval.Value.IntValue;
-import com.jayantkrish.jklol.cvsm.eval.Value.StringValue;
 
 public class EvalTest extends TestCase {
 
@@ -64,19 +62,17 @@ public class EvalTest extends TestCase {
   }
   */
 
-  private Value runTest(String expressionString) {
+  private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
     return eval.eval(parser.parseSingleExpression(wrappedExpressionString), Environment.empty())
         .getValue();
   }
 
   private String runTestString(String expressionString) {
-    Value value = runTest(expressionString);
-    return ((StringValue) value).getValue();
+    return (String) runTest(expressionString);
   }
 
   private int runTestInt(String expressionString) {
-    Value value = runTest(expressionString);
-    return ((IntValue) value).getValue();
+    return (Integer) runTest(expressionString);
   }
 }

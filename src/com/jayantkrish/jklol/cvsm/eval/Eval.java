@@ -4,10 +4,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.cvsm.eval.Value.ConsValue;
-import com.jayantkrish.jklol.cvsm.eval.Value.ConstantValue;
-import com.jayantkrish.jklol.cvsm.eval.Value.IntValue;
-import com.jayantkrish.jklol.cvsm.eval.Value.StringValue;
 
 public class Eval {
 
@@ -17,13 +13,13 @@ public class Eval {
       String constantString = expression.getConstant();
       if (constantString.startsWith("\"") && constantString.endsWith("\"")) {
         String strippedQuotes = constantString.substring(1, constantString.length() - 1);
-        return new EvalResult(new StringValue(strippedQuotes), environment);
+        return new EvalResult(strippedQuotes);
       } else if (constantString.matches("-?[0-9]+")) {
         // Integer primitive type
         int intValue = Integer.parseInt(constantString);
-        return new EvalResult(new IntValue(intValue), environment);
+        return new EvalResult(intValue);
       } else {
-        return new EvalResult(environment.getValue(constantString), environment);
+        return new EvalResult(environment.getValue(constantString));
       }
     } else {
       List<SExpression> subexpressions = expression.getSubexpressions();
@@ -34,15 +30,15 @@ public class Eval {
         if (constantName.equals("define")) {
           // Binds a name to a value in the environment.
           String nameToBind = subexpressions.get(1).getConstant();
-          Value valueToBind = eval(subexpressions.get(2), environment).getValue();
+          Object valueToBind = eval(subexpressions.get(2), environment).getValue();
           environment.bindName(nameToBind, valueToBind);
-          return new EvalResult(ConstantValue.UNDEFINED, environment);
+          return new EvalResult(ConstantValue.UNDEFINED);
         } else if (constantName.equals("begin")) {
           // Sequentially evaluates its subexpressions, chaining any 
           // environment changes.
-          EvalResult result = new EvalResult(ConstantValue.UNDEFINED, environment);
+          EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
           for (int i = 1; i < subexpressions.size(); i++) {
-            result = eval(subexpressions.get(i), result.getEnvironment());
+            result = eval(subexpressions.get(i), environment);
           }
           return result;
         } else if (constantName.equals("lambda")) {
@@ -57,45 +53,44 @@ public class Eval {
           }
 
           SExpression functionBody = subexpressions.get(2); 
-          return new EvalResult(new FunctionValue(argumentNames, functionBody, environment),
-              environment);
+          return new EvalResult(new FunctionValue(argumentNames, functionBody, environment));
         } else if (constantName.equals("cons")) {
           Preconditions.checkArgument(subexpressions.size() == 3);
 
-          Value car = eval(subexpressions.get(1), environment).getValue();
-          Value cdr = eval(subexpressions.get(2), environment).getValue();
+          Object car = eval(subexpressions.get(1), environment).getValue();
+          Object cdr = eval(subexpressions.get(2), environment).getValue();
 
-          return new EvalResult(new ConsValue(car, cdr), environment);
+          return new EvalResult(new ConsValue(car, cdr));
         } else if (constantName.equals("car")) {
           Preconditions.checkArgument(subexpressions.size() == 2);
           ConsValue value = (ConsValue) eval(subexpressions.get(1), environment).getValue();
-          return new EvalResult(value.getCar(), environment);
+          return new EvalResult(value.getCar());
         } else if (constantName.equals("cdr")) {
           Preconditions.checkArgument(subexpressions.size() == 2);
           ConsValue value = (ConsValue) eval(subexpressions.get(1), environment).getValue();
-          return new EvalResult(value.getCdr(), environment);
+          return new EvalResult(value.getCdr());
         } else if (constantName.equals("list")) {
           int numExpressions = subexpressions.size();
-          Value listValue = ConstantValue.NIL;
+          Object listValue = ConstantValue.NIL;
           for (int i = numExpressions - 1; i > 0; i--) {
-            Value value = eval(subexpressions.get(i), environment).getValue();
+            Object value = eval(subexpressions.get(i), environment).getValue();
             listValue = new ConsValue(value, listValue);
           }
-          return new EvalResult(listValue, environment);
+          return new EvalResult(listValue);
         } else if (constantName.equals("nil?")) {
           Preconditions.checkArgument(subexpressions.size() == 2);
-          Value value = eval(subexpressions.get(1), environment).getValue();
+          Object value = eval(subexpressions.get(1), environment).getValue();
           
-          Value result = null;
+          Object result = null;
           if (ConstantValue.NIL.equals(value)) {
             result = ConstantValue.TRUE;
           } else {
             result = ConstantValue.FALSE;
           }
-          return new EvalResult(result, environment);
+          return new EvalResult(result);
         } else if (constantName.equals("if")) {
           Preconditions.checkArgument(subexpressions.size() == 4);
-          Value testCondition = eval(subexpressions.get(1), environment).getValue();
+          Object testCondition = eval(subexpressions.get(1), environment).getValue();
           if (ConstantValue.TRUE.equals(testCondition)) {
             return eval(subexpressions.get(2), environment);
           } else {
@@ -104,52 +99,46 @@ public class Eval {
         } else if (constantName.equals("+")) {
           int resultValue = 0;
           for (int i = 1; i < subexpressions.size(); i++) {
-            IntValue subexpressionValue = (IntValue) eval(subexpressions.get(i), environment).getValue();
-            resultValue += subexpressionValue.getValue();
+            Integer subexpressionValue = (Integer) eval(subexpressions.get(i), environment).getValue();
+            resultValue += subexpressionValue;
           }
-          return new EvalResult(new IntValue(resultValue), environment);
+          return new EvalResult(resultValue);
         } else if (constantName.equals("-")) {
           int resultValue = 0;
           for (int i = 1; i < subexpressions.size(); i++) {
-            IntValue subexpressionValue = (IntValue) eval(subexpressions.get(i), environment).getValue();
+            Integer subexpressionValue = (Integer) eval(subexpressions.get(i), environment).getValue();
             if (i == 1) {
-              resultValue += subexpressionValue.getValue();
+              resultValue += subexpressionValue;
             } else {
-              resultValue -= subexpressionValue.getValue();
+              resultValue -= subexpressionValue;
             }
           }
-          return new EvalResult(new IntValue(resultValue), environment);
+          return new EvalResult(resultValue);
         }
       }
 
       // Default case: perform function application.
-      List<Value> values = Lists.newArrayList();
+      List<Object> values = Lists.newArrayList();
       for (SExpression subexpression : subexpressions) {
         values.add(eval(subexpression, environment).getValue());
       }
 
       FunctionValue functionToApply = (FunctionValue) values.get(0);
-      List<Value> arguments = values.subList(1, values.size());
-      Value result = functionToApply.apply(arguments, this);
-      return new EvalResult(result, environment);
+      List<Object> arguments = values.subList(1, values.size());
+      Object result = functionToApply.apply(arguments, this);
+      return new EvalResult(result);
     }
   }
 
   public static class EvalResult {
-    private final Value value;
-    private final Environment environment;
+    private final Object value;
 
-    public EvalResult(Value value, Environment environment) {
+    public EvalResult(Object value) {
       this.value = Preconditions.checkNotNull(value);
-      this.environment = Preconditions.checkNotNull(environment);
     }
 
-    public Value getValue() {
+    public Object getValue() {
       return value;
-    }
-
-    public Environment getEnvironment() {
-      return environment;
     }
   }
 }

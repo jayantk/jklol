@@ -5,7 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
-public class FunctionValue implements Value {
+public class FunctionValue {
   private final List<String> argumentNames;
   private final SExpression body;
   private final Environment parentEnvironment;
@@ -16,7 +16,7 @@ public class FunctionValue implements Value {
     this.parentEnvironment = Preconditions.checkNotNull(parentEnvironment);
   }
 
-  public Value apply(List<Value> argumentValues, Eval eval) {
+  public Object apply(List<Object> argumentValues, Eval eval) {
     Preconditions.checkArgument(argumentValues.size() == argumentNames.size(),
         "Wrong number of arguments: expected %s, got %s", argumentNames, argumentValues);
 

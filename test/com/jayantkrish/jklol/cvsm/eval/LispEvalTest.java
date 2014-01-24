@@ -4,13 +4,13 @@ import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 
-public class EvalTest extends TestCase {
+public class LispEvalTest extends TestCase {
 
-  Eval eval;
+  LispEval eval;
   ExpressionParser<SExpression> parser;
 
   public void setUp() {
-    eval = new Eval();
+    eval = new LispEval();
     parser = ExpressionParser.sExpression();
   }
 
@@ -54,11 +54,6 @@ public class EvalTest extends TestCase {
     assertEquals(3, value);
   }
 
-  public void testAmb() {
-    String value = runTestString("(get-best-assignment (amb \"a\" 1 \"b\" 2 \"c\" 1))");
-    assertEquals("b", value);
-  }
-
   /*
   public void testRecursion() {
     // "(define predict-labels (lambda (seq) (if (nil? seq) (list) (let ((prev-seq (predict-labels (cdr seq)))) (cons (amb"
@@ -69,8 +64,8 @@ public class EvalTest extends TestCase {
 
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
-    return eval.eval(parser.parseSingleExpression(wrappedExpressionString), Environment.empty())
-        .getValue();
+    return eval.eval(parser.parseSingleExpression(wrappedExpressionString),
+        LispEval.getDefaultEnvironment()).getValue();
   }
 
   private String runTestString(String expressionString) {

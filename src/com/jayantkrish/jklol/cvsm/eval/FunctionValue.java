@@ -10,5 +10,5 @@ import java.util.List;
  */
 public interface FunctionValue {
 
-  Object apply(List<Object> argumentValues, Eval eval);
+  Object apply(List<Object> argumentValues, Environment env, Eval eval);
 }

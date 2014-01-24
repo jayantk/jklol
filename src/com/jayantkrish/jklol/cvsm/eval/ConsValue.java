@@ -36,4 +36,40 @@ public class ConsValue {
   public Object getCdr() {
     return cdr;
   }
+  
+  @Override
+  public String toString() {
+    return "(" + car.toString() + " " + cdr.toString() + ")";
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((car == null) ? 0 : car.hashCode());
+    result = prime * result + ((cdr == null) ? 0 : cdr.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    ConsValue other = (ConsValue) obj;
+    if (car == null) {
+      if (other.car != null)
+        return false;
+    } else if (!car.equals(other.car))
+      return false;
+    if (cdr == null) {
+      if (other.cdr != null)
+        return false;
+    } else if (!cdr.equals(other.cdr))
+      return false;
+    return true;
+  }
 }

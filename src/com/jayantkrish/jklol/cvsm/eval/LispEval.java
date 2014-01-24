@@ -74,7 +74,7 @@ public class LispEval implements Eval {
 
       FunctionValue functionToApply = (FunctionValue) values.get(0);
       List<Object> arguments = values.subList(1, values.size());
-      Object result = functionToApply.apply(arguments, this);
+      Object result = functionToApply.apply(arguments, environment, this);
       return new EvalResult(result);
     }
   }
@@ -88,6 +88,10 @@ public class LispEval implements Eval {
     env.bindName("nil?", new BuiltinFunctions.NilFunction());
     env.bindName("+", new BuiltinFunctions.PlusFunction());
     env.bindName("-", new BuiltinFunctions.MinusFunction());
+    env.bindName("=", new BuiltinFunctions.EqualsFunction());
+    env.bindName("not", new BuiltinFunctions.NotFunction());
+    env.bindName("and", new BuiltinFunctions.AndFunction());
+    env.bindName("or", new BuiltinFunctions.OrFunction());
     return env;
   }
 }

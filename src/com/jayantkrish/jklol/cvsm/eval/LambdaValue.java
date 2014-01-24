@@ -16,7 +16,7 @@ public class LambdaValue implements FunctionValue {
     this.parentEnvironment = Preconditions.checkNotNull(parentEnvironment);
   }
 
-  public Object apply(List<Object> argumentValues, Eval eval) {
+  public Object apply(List<Object> argumentValues, Environment env, Eval eval) {
     Preconditions.checkArgument(argumentValues.size() == argumentNames.size(),
         "Wrong number of arguments: expected %s, got %s", argumentNames, argumentValues);
 

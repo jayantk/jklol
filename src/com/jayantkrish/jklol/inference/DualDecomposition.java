@@ -77,16 +77,17 @@ public class DualDecomposition implements MarginalCalculator {
 
     int numDisagreements = 1;
     for (int i = 0; i < maxIterations && numDisagreements > 0; i++) {
+      /*
       for (int j = 0; j < numVars; j++) {
         System.out.println(variableWeights.get(j));
       }
       for (int j = 0; j < factorWeights.size(); j++) {
         System.out.println(factorWeights.get(j));
       }
+      */
 
       numDisagreements = gradientUpdate(factorWeights, variableWeights, 0.1 / Math.sqrt(i + 2));
-
-      System.out.println("ITERATION " + i + ": " + numDisagreements + " disagreements");
+      // System.out.println("ITERATION " + i + ": " + numDisagreements + " disagreements");
     }
 
     // Locally decode factors to an assignment.
@@ -145,8 +146,10 @@ public class DualDecomposition implements MarginalCalculator {
           factorDisagreementList.add(i);
           factorValueList.add(bestFactorValues[j]);
 
+          /*
           System.out.println("Disagreement " + Arrays.toString(factorVariableNums) + "=" + Arrays.toString(bestFactorValues) + ", "
               + variableNums[index] + "=" + variableValues[index]);
+              */
         }
       }
     }

@@ -54,6 +54,10 @@ public class Environment {
   }
 
   public ParametricFactorGraphBuilder getFactorGraphBuilder() {
-    return factorGraphBuilder;
+    if (parentEnvironment == null) {
+      return factorGraphBuilder;
+    } else {
+      return parentEnvironment.getFactorGraphBuilder();
+    }
   }
 }

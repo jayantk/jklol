@@ -36,8 +36,8 @@ public class AmbEvalTest extends TestCase {
   }
   
   public void testAmbMarginals1() {
-    Object value = runTest("(get-marginals (list (amb (list 1 2) (list 1 2)) (amb (list 1 2 3) (list 1 2 1))))");
-    Object expected = runTest("(list 2 2)");
+    Object value = runTest("(get-marginals (amb (list 1 2) (list 2 2)))");
+    Object expected = runTest("(cons (list 1 2) (list 0.5 0.5))");
     assertEquals(expected, value);
   }
 

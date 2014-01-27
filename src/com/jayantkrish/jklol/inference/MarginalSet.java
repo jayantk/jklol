@@ -35,10 +35,11 @@ public interface MarginalSet {
   public Assignment getConditionedValues();
 
   /**
-   * Gets the unnormalized marginal distribution associated with the given
-   * variables as a {@link Factor}. {@link #getPartitionFunction()} returns the
-   * normalization constant required to convert the values of the returned
-   * factor into a probability distribution.
+   * Gets the normalized marginal distribution associated with the given
+   * variables as a {@link Factor}. The returned factor is a probability 
+   * distribution; {@link #getPartitionFunction()} returns the normalization
+   * constant used to convert the unnormalized probabilities into a
+   * probability distribution.
    * 
    * @param varNums
    * @return

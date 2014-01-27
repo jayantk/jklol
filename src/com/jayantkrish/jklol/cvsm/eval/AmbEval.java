@@ -44,8 +44,11 @@ public class AmbEval implements Eval {
         // Integer primitive type
         int intValue = Integer.parseInt(constantString);
         primitiveValue = intValue;
-      } 
-      
+      } else if (constantString.matches("^-?[0-9]+\\.[0-9]*$")) {
+        double doubleValue = Double.parseDouble(constantString);
+        primitiveValue = doubleValue;
+      }
+
       if (primitiveValue != null) {
         return new EvalResult(primitiveValue);
       } else {
@@ -101,12 +104,12 @@ public class AmbEval implements Eval {
 
           List<Object> possibleValues = consListToList(eval(subexpressions.get(1), environment)
               .getValue(), Object.class);
-          List<Integer> weights;
+          List<Number> weights;
           if (subexpressions.size() > 2) {
             weights = consListToList(eval(subexpressions.get(2), environment)
-                .getValue(), Integer.class);
+                .getValue(), Number.class);
           } else {
-            weights = Collections.nCopies(possibleValues.size(), 1);
+            weights = Collections.<Number>nCopies(possibleValues.size(), 1);
           }
 
           String varName = subexpressions.get(1).toString();
@@ -192,16 +195,17 @@ public class AmbEval implements Eval {
             }
             
             System.out.println(varMarginal.getParameterDescription());
-            // TODO: need to support doubles.
+            Object outcomesConsList = listToConsList(outcomes);
+            Object weightsConsList = listToConsList(weights);
 
-            return new EvalResult(ConstantValue.UNDEFINED); 
+            return new EvalResult(new ConsValue(outcomesConsList, weightsConsList)); 
           } else {
             return new EvalResult(value);
           }
         } else if (constantName.equals("add-weight")) {
           Preconditions.checkArgument(subexpressions.size() == 3);
           Object value = eval(subexpressions.get(1), environment).getValue();
-          Integer weight = (Integer) eval(subexpressions.get(2), environment).getValue();
+          double weight = ((Number) eval(subexpressions.get(2), environment).getValue()).doubleValue();
 
           if (value instanceof AmbValue) {
             VariableNumMap fgVar = ((AmbValue) value).getVar();
@@ -313,6 +317,14 @@ public class AmbEval implements Eval {
       accumulator.add(clazz.cast(consValue.getCar()));
       consListToListHelper(consValue.getCdr(), accumulator, clazz);
     }
+  }
+
+  private static Object listToConsList(List<?> list) {
+    Object value = ConstantValue.NIL;
+    for (int i = list.size() - 1; i >= 0; i--) {
+      value = new ConsValue(list.get(i), value);
+    }
+    return value;
   }
 
   private static int getUniqueVarNum() {

@@ -6,7 +6,7 @@ import java.util.Stack;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.cvsm.eval.SExpression;
+import com.jayantkrish.jklol.lisp.SExpression;
 
 /**
  * A parser for LISP-style S-expressions. An example expression is:

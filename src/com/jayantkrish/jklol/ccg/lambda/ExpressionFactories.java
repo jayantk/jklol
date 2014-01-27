@@ -5,7 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.cvsm.eval.SExpression;
+import com.jayantkrish.jklol.lisp.SExpression;
 
 /**
  * Implementations of common {@code ExpressionFactory}s.

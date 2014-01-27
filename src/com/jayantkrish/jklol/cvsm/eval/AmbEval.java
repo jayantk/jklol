@@ -13,7 +13,10 @@ import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.inference.DualDecomposition;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -152,6 +155,49 @@ public class AmbEval implements Eval {
           } else {
             return new EvalResult(value);
           }
+        } else if (constantName.equals("get-marginals")) {
+          Preconditions.checkArgument(subexpressions.size() == 2 || subexpressions.size() == 3);
+          Object value = eval(subexpressions.get(1), environment).getValue();
+
+          // Second, optional argument selects the inference algorithm.
+          String inferenceAlgString = "junction-tree";
+          if (subexpressions.size() == 3) {
+            inferenceAlgString = (String) eval(subexpressions.get(2), environment).getValue();
+          }
+
+          if (value instanceof AmbValue) {
+            ParametricFactorGraph currentFactorGraph = environment.getFactorGraphBuilder().build();
+            FactorGraph fg = currentFactorGraph.getModelFromParameters(
+                currentFactorGraph.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
+
+            System.out.println("factor graph: " + fg.getParameterDescription());
+            
+            MarginalCalculator inferenceAlg = null;
+            if (inferenceAlgString.equals("junction-tree")) {
+              inferenceAlg = new JunctionTree();
+            } else {
+              throw new IllegalArgumentException("Unsupported inference algorithm: " + inferenceAlgString);
+            }
+            MarginalSet marginals = inferenceAlg.computeMarginals(fg);
+            DiscreteFactor varMarginal = marginals.getMarginal(((AmbValue) value).getVar().getOnlyVariableNum())
+                .coerceToDiscrete();
+
+            Iterator<Outcome> iter = varMarginal.outcomeIterator();
+            List<Object> outcomes = Lists.newArrayList();
+            List<Double> weights = Lists.newArrayList();
+            while (iter.hasNext()) {
+              Outcome outcome = iter.next();
+              outcomes.add(outcome.getAssignment().getOnlyValue());
+              weights.add(outcome.getProbability());
+            }
+            
+            System.out.println(varMarginal.getParameterDescription());
+            // TODO: need to support doubles.
+
+            return new EvalResult(ConstantValue.UNDEFINED); 
+          } else {
+            return new EvalResult(value);
+          }
         } else if (constantName.equals("add-weight")) {
           Preconditions.checkArgument(subexpressions.size() == 3);
           Object value = eval(subexpressions.get(1), environment).getValue();
@@ -178,7 +224,7 @@ public class AmbEval implements Eval {
     for (SExpression expression : subexpressions) {
       values.add(eval(expression, environment).getValue());
     }
-    
+
     Object functionObject = values.get(0);
     List<Object> argumentValues = values.subList(1, values.size());
     if (functionObject instanceof FunctionValue) {

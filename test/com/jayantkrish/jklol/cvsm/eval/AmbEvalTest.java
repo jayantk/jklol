@@ -34,6 +34,12 @@ public class AmbEvalTest extends TestCase {
     Object expected = runTest("(list 2 2)");
     assertEquals(expected, value);
   }
+  
+  public void testAmbMarginals1() {
+    Object value = runTest("(get-marginals (list (amb (list 1 2) (list 1 2)) (amb (list 1 2 3) (list 1 2 1))))");
+    Object expected = runTest("(list 2 2)");
+    assertEquals(expected, value);
+  }
 
   public void testAddWeight1() {
     int value = runTestInt("(define x (amb (list 1 2) (list 1 2))) (define y (amb (list 1 2) (list 1 2))) (add-weight (not (= (+ x y) 2)) 0) (get-best-assignment x)");

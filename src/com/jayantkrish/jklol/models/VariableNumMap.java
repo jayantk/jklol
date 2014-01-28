@@ -899,7 +899,7 @@ public class VariableNumMap implements Serializable {
     StringBuilder sb = new StringBuilder();
     sb.append("[");
     for (int i = 0; i < nums.length; i++) {
-      sb.append(i);
+      sb.append(nums[i]);
       sb.append(":");
       sb.append(names[i]);
       sb.append("=");

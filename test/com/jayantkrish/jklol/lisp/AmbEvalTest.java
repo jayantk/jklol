@@ -36,12 +36,36 @@ public class AmbEvalTest extends TestCase {
   }
 
   public void testAmbIf() {
-    fail();
+    try {
+      runTest("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) \"true\" \"false\"))");
+    } catch (Exception e) {
+      return;
+    }
+    fail("Cannot use amb statements in conditionals.");
   }
   
   public void testAmbMarginals1() {
     Object value = runTest("(get-marginals (amb (list 1 2) (list 2 2)))");
     Object expected = runTest("(cons (list 1 2) (list 0.5 0.5))");
+    assertEquals(expected, value);
+  }
+  
+  public void testVariableElimination() {
+    String program = "(define label-list (list \"DT\" \"NN\" \"JJ\" \"VB\")) " +
+    		"(define new-label (lambda () (amb label-list (list 1 1 1 1))))" +
+    		"" +
+        "(define transition-factor (lambda (left right root) (begin " +
+    		"(add-weight (and (= left \"DT\") (and (= right \"NN\") (= root \"NN\"))) 2)" +
+    		"(add-weight (and (= left \"JJ\") (and (= right \"NN\") (= root \"NN\"))) 3))))" +
+    		"" +
+    		"(define x (new-label))" +
+    		"(define y (new-label))" +
+    		"(define z (new-label))" +
+    		"(transition-factor x y z)" +
+    		"(get-best-assignment (list x y z))";
+
+    Object value = runTest(program);
+    Object expected = runTest("(list \"JJ\" \"NN\" \"NN\")");
     assertEquals(expected, value);
   }
 

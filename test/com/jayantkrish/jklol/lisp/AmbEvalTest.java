@@ -143,32 +143,43 @@ public class AmbEvalTest extends TestCase {
     		"" +
     		"(define first-n (lambda (seq n) (if (= n 0) (list) (cons (car seq) (first-n (cdr seq) (- n 1))))))" +
     		"(define remainder-n (lambda (seq n) (if (= n 0) seq (remainder-n (cdr seq) (- n 1)))))" +
-    		"(define 1-to-n (lambda (n) (if (= n 0) (list) (cons n (1-to-n (- n 1))))))" +
+    		"(define 1-to-n (lambda (n) (1-to-n-helper n 1)))" +
+    		"(define 1-to-n-helper (lambda (n i) (if (= (+ n 1) i) (list) (cons i (1-to-n-helper n (+ i 1))))))" +
+    		"(define get-ith-element (lambda (i seq) (if (= i 0) (car seq) (get-ith-element (- i 1) (cdr seq)))))" +
     		"(define map (lambda (f seq) (if (nil? seq) (list) (cons (f (car seq)) (map f (cdr seq))))))" +
     		"(define length (lambda (seq) (if (nil? seq) 0 (+ (length (cdr seq)) 1))))" +
     		"" +
     		"(define cfg-parse (lambda (input-seq) (begin " +
     		"(define label-var (new-label))" +
     		"(if (= (length input-seq) 1) " +
-    		"    (word-factor label-var (car input-seq))" +
+    		"    (begin (word-factor label-var (car input-seq))" +
+    		"           (list label-var (car input-seq)))" +
     		"    (begin " +
     		"       (define split-list (1-to-n (- (length input-seq) 1)))" +
     		"       (define choice-var (amb split-list))" +
-    		"       (map (lambda (i) (do-split input-seq i label-var choice-var)) split-list)))" +
-    		"label-var)))" +
+    		"       (list label-var choice-var (map (lambda (i) (do-split input-seq i label-var choice-var)) split-list)))))))" +
     		"" +
     		"(define do-split (lambda (seq i root-var choice-var) (begin" +
     		"  (define left-seq (first-n seq i))" +
     		"  (define right-seq (remainder-n seq i))" +
-    		"  (define left-parse-root (cfg-parse left-seq))" +
-    		"  (define right-parse-root (cfg-parse right-seq))" +
+    		"  (define left-parse (cfg-parse left-seq))" +
+    		"  (define right-parse (cfg-parse right-seq))" +
+    		"  (define left-parse-root (car left-parse))" +
+    		"  (define right-parse-root (car right-parse))" +
     		"  (define cur-root (new-label))" +
     		"  (transition-factor left-parse-root right-parse-root cur-root)" +
-    		"  (add-weight (and (= choice-var i) (not (= cur-root root-var))) 0))))" +
+    		"  (add-weight (and (= choice-var i) (not (= cur-root root-var))) 0)" +
+    		"  (list cur-root left-parse right-parse))))" +
     		"" +
-    		"(get-best-assignment (cfg-parse (list \"big\" \"car\")) \"junction-tree\")";
+    		"(define decode-parse (lambda (chart) (if (= (length chart) 2)" +
+    		"   chart" +
+    		"   (begin" +
+    		"      (define chosen-subtree (get-ith-element (- (car (cdr chart)) 1) (car (cdr (cdr chart)))))" +
+    		"      (list (car chart) (decode-parse (car (cdr chosen-subtree))) (decode-parse (car (cdr (cdr chosen-subtree)))))))))" +
+    		"" +
+    		"(decode-parse (get-best-assignment (cfg-parse (list \"the\" \"big\" \"car\")) \"junction-tree\"))";
 
-    String value = runTestString(program);
+    Object value = runTest(program);
     System.out.println(value);
   }
 

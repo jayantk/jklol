@@ -6,19 +6,24 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 
 public class Environment {
 
   private final Map<String, Object> boundVariables;
+
+  // The factor graph being built by the program execution.
   private final ParametricFactorGraphBuilder factorGraphBuilder;
+  private VariableNumMap variablesToEliminate;
 
   private final Environment parentEnvironment;
 
   public Environment(Map<String, Object> bindings, ParametricFactorGraphBuilder factorGraphBuilder,
-      Environment parentEnvironment) {
+      VariableNumMap variablesToEliminate, Environment parentEnvironment) {
     this.boundVariables = Preconditions.checkNotNull(bindings);
     this.factorGraphBuilder = Preconditions.checkNotNull(factorGraphBuilder);
+    this.variablesToEliminate = Preconditions.checkNotNull(variablesToEliminate);
 
     this.parentEnvironment = parentEnvironment;
   }
@@ -29,7 +34,7 @@ public class Environment {
 
   public static Environment empty(Environment parentEnvironment) {
     return new Environment(Maps.<String, Object>newHashMap(), new ParametricFactorGraphBuilder(),
-        parentEnvironment);
+        VariableNumMap.EMPTY, parentEnvironment);
   }
 
   public void bindName(String name, Object value) {
@@ -58,6 +63,14 @@ public class Environment {
       return factorGraphBuilder;
     } else {
       return parentEnvironment.getFactorGraphBuilder();
+    }
+  }
+
+  public void addVariableToEliminate(VariableNumMap var) {
+    if (parentEnvironment == null) {
+      this.variablesToEliminate = variablesToEliminate.union(var);
+    } else {
+      parentEnvironment.addVariableToEliminate(var);
     }
   }
 }

@@ -29,7 +29,7 @@ public class BuiltinFunctions {
       return ((ConsValue) argumentValues.get(0)).getCdr();
     }
   }
-  
+
   public static class ListFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, Eval eval) {
@@ -41,7 +41,7 @@ public class BuiltinFunctions {
       return listValue;
     }
   }
-  
+
   public static class NilFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, Eval eval) {

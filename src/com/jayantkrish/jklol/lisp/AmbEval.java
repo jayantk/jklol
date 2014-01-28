@@ -140,7 +140,7 @@ public class AmbEval implements Eval {
             inferenceAlgString = (String) eval(subexpressions.get(2), environment).getValue();
           }
 
-          if (value instanceof AmbValue) {
+          if (value instanceof AmbValue || value instanceof ConsValue) {
             ParametricFactorGraph currentFactorGraph = environment.getFactorGraphBuilder().build();
             FactorGraph fg = currentFactorGraph.getModelFromParameters(
                 currentFactorGraph.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
@@ -158,7 +158,7 @@ public class AmbEval implements Eval {
             MaxMarginalSet maxMarginals = inferenceAlg.computeMaxMarginals(fg);
             Assignment assignment = maxMarginals.getNthBestAssignment(0);
 
-            return new EvalResult(assignment.getValue(((AmbValue) value).getVar().getOnlyVariableNum())); 
+            return new EvalResult(resolveAmbValueWithAssignment(value, assignment)); 
           } else {
             return new EvalResult(value);
           }
@@ -311,12 +311,24 @@ public class AmbEval implements Eval {
     return nextVarNum++;
   }
 
+  private static Object resolveAmbValueWithAssignment(Object value, Assignment assignment) {
+    if (value instanceof AmbValue) {
+      return assignment.getValue(((AmbValue) value).getVar().getOnlyVariableNum());
+    } else if (value instanceof ConsValue) {
+      ConsValue consValue = (ConsValue) value;
+      return new ConsValue(resolveAmbValueWithAssignment(consValue.getCar(), assignment),
+          resolveAmbValueWithAssignment(consValue.getCdr(), assignment));
+    } else {
+      return value;
+    }
+  }
+
   public static Environment getDefaultEnvironment() {
     Environment env = Environment.empty();
-    env.bindName("cons", new RaisedBuiltinFunction(new BuiltinFunctions.ConsFunction()));
-    env.bindName("car", new RaisedBuiltinFunction(new BuiltinFunctions.CarFunction()));
-    env.bindName("cdr", new RaisedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
-    env.bindName("list", new RaisedBuiltinFunction(new BuiltinFunctions.ListFunction()));
+    env.bindName("cons", new BuiltinFunctions.ConsFunction());
+    env.bindName("car", new BuiltinFunctions.CarFunction());
+    env.bindName("cdr", new BuiltinFunctions.CdrFunction());
+    env.bindName("list", new BuiltinFunctions.ListFunction());
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));
     env.bindName("-", new RaisedBuiltinFunction(new BuiltinFunctions.MinusFunction()));

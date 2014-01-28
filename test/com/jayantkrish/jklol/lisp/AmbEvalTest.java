@@ -85,12 +85,14 @@ public class AmbEvalTest extends TestCase {
     		"" +
     		"(define sequence-tag (lambda (input-seq) (if (nil? input-seq) (list) (begin " +
     		"(define cur-label (amb (list \"N\" \"V\") (list 1 1)))" +
+    		"(define next-labels (sequence-tag (cdr input-seq))) " +
     		"(word-factor cur-label (car input-seq))" +
     		"(if (not (nil? (cdr input-seq)))" +
-    		" (begin (define next-label (sequence-tag (cdr input-seq)))" +
+     		" (begin " +
+    		"        (define next-label (car next-labels))" +
     		"        (transition-factor cur-label next-label)" +
-    		"        cur-label)" +
-    		" cur-label)))))" +
+    		"        (cons cur-label next-labels))" +
+    		" (cons cur-label next-labels))))))" +
     		"" +
     		"(define x (get-best-assignment (sequence-tag (list \"car\"))))" +
     		"(define y (get-best-assignment (sequence-tag (list \"goes\" \"car\")))) " +
@@ -98,10 +100,10 @@ public class AmbEvalTest extends TestCase {
     		"(list x y z)";
 
     Object value = runTest(program);
-    Object expected = runTest("(list \"N\" \"V\" \"N\")");
+    Object expected = runTest("(list (list \"N\") (list \"V\" \"N\") (list \"N\" \"N\"))");
     assertEquals(expected, value);
   }
-  
+
   public void testCfg() {
     String program = "(define label-list (list \"DT\" \"NN\" \"JJ\" \"VB\")) " +
     		"(define new-label (lambda () (amb label-list (list 1 1 1 1))))" +

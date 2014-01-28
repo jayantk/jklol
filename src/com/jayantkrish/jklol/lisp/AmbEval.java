@@ -111,7 +111,7 @@ public class AmbEval implements Eval {
           List<Number> weights;
           if (subexpressions.size() > 2) {
             weights = ConsValue.consListToList(eval(subexpressions.get(2), environment)
-                .getValue(), Number.class);
+                 .getValue(), Number.class);
           } else {
             weights = Collections.<Number>nCopies(possibleValues.size(), 1);
           }

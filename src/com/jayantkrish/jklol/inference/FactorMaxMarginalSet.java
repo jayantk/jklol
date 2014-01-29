@@ -80,6 +80,8 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
       // Special case where the factor graph has no factors in it.
       return conditionedValues;
     } else {
+      System.out.println(factorGraph.getParameterDescription());
+      
       // General case
       SortedSet<Integer> unvisited = Sets.newTreeSet();
       for (int i = 0; i < factorGraph.getFactors().size(); i++) {
@@ -126,6 +128,8 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
     if (bestAssignments.size() == 0) {
       // This condition implies that the factor graph does not have a positive
       // probability assignment.
+      System.out.println(curFactor.getVars());
+      System.out.println(a.intersection(curFactor.getVars().getVariableNumsArray()));
       throw new ZeroProbabilityError();
     }
     Assignment best = bestAssignments.get(0).union(a);

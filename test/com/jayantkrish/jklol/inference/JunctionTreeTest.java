@@ -20,7 +20,7 @@ public class JunctionTreeTest extends TestCase {
 	public void testBasicMarginals() {
 		InferenceTestCases.testBasicUnconditional().runTest(new JunctionTree(), TOLERANCE);
 	}
-	
+
 	public void testNonTreeStructuredMarginals() {
 		InferenceTestCases.testNonCliqueTreeUnconditional().runTest(new JunctionTree(), TOLERANCE);
 	}

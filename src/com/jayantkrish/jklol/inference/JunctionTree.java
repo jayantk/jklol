@@ -434,6 +434,8 @@ public class JunctionTree implements MarginalCalculator {
             // within a single factor. In this case, simply create such a factor.
             allVars = allVars.removeAll(varToEliminate);
           }
+          
+          System.out.println("Adding factor: " + allVars);
 
           // Create a new factor containing all neighboring variables
           // and add it to the variable elimination data structures.

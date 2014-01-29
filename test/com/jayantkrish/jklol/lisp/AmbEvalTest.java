@@ -135,6 +135,8 @@ public class AmbEvalTest extends TestCase {
     		"(define word-factor (lambda (label word) (begin " +
     		"(add-weight (and (= word \"car\") (= label \"NN\")) 2) " +
     		"(add-weight (and (= word \"big\") (= label \"JJ\")) 2) " +
+    		"(add-weight (and (= word \"the\") (= label \"JJ\")) 0.5) " +
+    		"(add-weight (and (= word \"the\") (= label \"DT\")) 2) " +
     		"(add-weight (and (= word \"goes\") (= label \"VB\")) 3))))" +
     		"" +
     		"(define transition-factor (lambda (left right root) (begin " +
@@ -180,7 +182,13 @@ public class AmbEvalTest extends TestCase {
     		"(decode-parse (get-best-assignment (cfg-parse (list \"the\" \"big\" \"car\")) \"junction-tree\"))";
 
     Object value = runTest(program);
-    System.out.println(value);
+    Object expected = runTest("(list \"NN\" (list \"DT\" \"the\") (list \"NN\" (list \"JJ\" \"big\") (list \"NN\" \"car\")))");
+    assertEquals(expected, value);
+
+    // CFGs can't be correctly implemented in this language as is. The above
+    // program includes decisions in un-chosen subtrees in the score of a parse,
+    // which is not correct.
+    fail();
   }
 
   private Object runTest(String expressionString) {

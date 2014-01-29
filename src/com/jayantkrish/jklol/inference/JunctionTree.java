@@ -112,7 +112,8 @@ public class JunctionTree implements MarginalCalculator {
     // Efficiency override -- all variables in the factor graph have assigned
     // values.
     if (factorGraph.getVariables().size() == 0) {
-      return new FactorMaxMarginalSet(new FactorGraph(), factorGraph.getConditionedValues());
+      return new FactorMaxMarginalSet(CliqueTree.fromHeuristicVariableElimination(new FactorGraph()),
+          factorGraph.getConditionedValues());
     }
 
     LogFunction log = LogFunctions.getLogFunction();
@@ -260,7 +261,6 @@ public class JunctionTree implements MarginalCalculator {
    * @return
    */
   private static Factor computeMarginal(CliqueTree cliqueTree, int factorNum, boolean useSumProduct) {
-
     Set<Integer> factorNumsToCombine = Sets.newHashSet(cliqueTree.getNeighboringFactors(factorNum));
     factorNumsToCombine.removeAll(cliqueTree.getFactorsInMarginal(factorNum));
 
@@ -312,12 +312,10 @@ public class JunctionTree implements MarginalCalculator {
    */
   private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree,
       FactorGraph originalFactorGraph) {
-    List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
-      marginalFactors.add(computeMarginal(cliqueTree, i, false));
+      computeMarginal(cliqueTree, i, false);
     }
-    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors),
-        originalFactorGraph.getConditionedValues());
+    return new FactorMaxMarginalSet(cliqueTree, originalFactorGraph.getConditionedValues());
   }
   
   /**
@@ -434,8 +432,6 @@ public class JunctionTree implements MarginalCalculator {
             // within a single factor. In this case, simply create such a factor.
             allVars = allVars.removeAll(varToEliminate);
           }
-          
-          System.out.println("Adding factor: " + allVars);
 
           // Create a new factor containing all neighboring variables
           // and add it to the variable elimination data structures.
@@ -482,9 +478,6 @@ public class JunctionTree implements MarginalCalculator {
           // Eliminate factors in the same order that they were eliminated to build
           // this clique tree.
           bestEliminationOrder = possibleEliminationOrder;
-
-          // TODO: Use a heuristic to select a good order.
-          // bestEliminationOrder.put(i, cliqueFactors.get(i));
         }
       }
 
@@ -612,6 +605,10 @@ public class JunctionTree implements MarginalCalculator {
 
     public Factor getMarginal(int factorNum) {
       return marginals.get(factorNum);
+    }
+    
+    public List<Factor> getMarginals() {
+      return marginals;
     }
 
     public void setMarginal(int factorNum, Factor marginal) {

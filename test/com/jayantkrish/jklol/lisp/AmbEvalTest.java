@@ -98,6 +98,25 @@ public class AmbEvalTest extends TestCase {
     int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo (amb (list 1 2) (list 2 3)))) (add-weight (= x 4) 0) (get-best-assignment x)");
     assertEquals(3, value);
   }
+  
+  public void testAmbLambda5() {
+    int value = runTestInt(
+        // "(define rand-op (lambda () (amb (list + * - (lambda (x y) x) (lambda (x y) y))))) " +
+        "(define rand-op (lambda () (amb (list + * (lambda (x y) x) (lambda (x y) y))))) " +
+        "(define unroll-op (lambda (op-func depth) (begin (define cur-op (op-func)) " +
+        "  (if (= depth 1) (lambda (x y) (cur-op x y)) " +
+        "                  (begin (define unrolled1 (unroll-op op-func (- depth 1))) " +
+        "                         (define unrolled2 (unroll-op op-func (- depth 1)))" +
+        "                         (lambda (x y) (cur-op (unrolled1 x y) (unrolled2 x y))))))))" +
+        "(define func-to-learn (unroll-op rand-op 1)) " +
+        // "(define f1 (rand-op)) (define f2 (rand-op)) (define f3 (rand-op))" +
+        // "(define func-to-learn (lambda (x y) (f1 (f2 x y) (f3 x y)))) " +
+        "(add-weight (= (func-to-learn 1 2) 2) 2.0)" +
+        "(add-weight (= (func-to-learn 3 2) 6) 2.0)" +
+        "(add-weight (= (func-to-learn 4 7) 28) 2.0)" +
+        "(get-best-assignment (func-to-learn 2 3))");
+    System.out.println(value);
+  }
 
   public void testRecursion() {
     String program = "(define word-factor (lambda (label word) (begin " +

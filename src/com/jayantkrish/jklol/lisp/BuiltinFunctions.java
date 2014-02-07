@@ -5,7 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 
 public class BuiltinFunctions {
-
+  
   public static class ConsFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
@@ -107,6 +107,25 @@ public class BuiltinFunctions {
         }
       }
       return resultValue;
+    }
+  }
+
+  public static class MultiplyFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      int resultValue = 1;
+      for (int i = 0; i < argumentValues.size(); i++) {
+        resultValue *= (Integer) argumentValues.get(i);
+      }
+      return resultValue;
+    }
+  }
+
+  public static class DivideFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      return ((Integer) argumentValues.get(0)) / ((Integer) argumentValues.get(1));
     }
   }
 

@@ -27,4 +27,9 @@ public class LambdaValue {
   public Environment getEnvironment() {
     return parentEnvironment;
   }
+  
+  @Override
+  public String toString() {
+    return "[lambda procedure: " + body + "]";
+  }
 }

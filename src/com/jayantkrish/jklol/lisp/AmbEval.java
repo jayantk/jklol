@@ -85,6 +85,7 @@ public class AmbEval {
         } else if (constantName.equals("lambda")) {
           // Create and return a function value representing this function.
           Preconditions.checkArgument(subexpressions.size() >= 3, "Invalid lambda expression arguments: " + subexpressions);
+          Preconditions.checkArgument(subexpressions.get(1).getSubexpressions() != null, "Illegal argument list in lambda: " + subexpressions);
 
           List<String> argumentNames = Lists.newArrayList();
           List<SExpression> argumentExpressions = subexpressions.get(1).getSubexpressions();
@@ -93,11 +94,16 @@ public class AmbEval {
             argumentNames.add(argumentExpression.getConstant());
           }
 
-          List<SExpression> functionBodyComponents = Lists.newArrayList();
-          functionBodyComponents.add(SExpression.constant("begin"));
-          functionBodyComponents.addAll(subexpressions.subList(2, subexpressions.size()));
+          SExpression functionBody = null;
+          if (subexpressions.size() == 3) {
+            functionBody = subexpressions.get(2);
+          } else {
+            List<SExpression> functionBodyComponents = Lists.newArrayList();
+            functionBodyComponents.add(SExpression.constant("begin"));
+            functionBodyComponents.addAll(subexpressions.subList(2, subexpressions.size()));
+            functionBody = SExpression.nested(functionBodyComponents);
+          }
 
-          SExpression functionBody = SExpression.nested(functionBodyComponents); 
           return new EvalResult(new AmbLambdaValue(new LambdaValue(argumentNames, functionBody, environment), this));
         } else if (constantName.equals("if")) {
           Preconditions.checkArgument(subexpressions.size() == 4);
@@ -249,7 +255,6 @@ public class AmbEval {
       return new EvalResult(function.apply(argumentValues, environment, gfgBuilder));
     } else if (functionObject instanceof AmbValue) {
       // TODO: This gets fucked up if the called functions themselves modify gfgBuilder.
-
       AmbValue functionAmb = ((AmbValue) functionObject);
       List<Object> possibleFunctionObjects = functionAmb.getPossibleValues();
       List<Object> functionResults = Lists.newArrayList();
@@ -343,6 +348,8 @@ public class AmbEval {
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));
     env.bindName("-", new RaisedBuiltinFunction(new BuiltinFunctions.MinusFunction()));
+    env.bindName("*", new RaisedBuiltinFunction(new BuiltinFunctions.MultiplyFunction()));
+    env.bindName("/", new RaisedBuiltinFunction(new BuiltinFunctions.DivideFunction()));
     env.bindName("=", new RaisedBuiltinFunction(new BuiltinFunctions.EqualsFunction()));
     env.bindName("not", new RaisedBuiltinFunction(new BuiltinFunctions.NotFunction()));
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()));
@@ -377,6 +384,11 @@ public class AmbEval {
 
       return eval.eval(lambdaValue.getBody(), boundEnvironment, gfgBuilder).getValue();
     }
+    
+    @Override
+    public String toString() {
+      return lambdaValue.toString();
+    }
   }
 
   private static class WrappedBuiltinFunction implements AmbFunctionValue {
@@ -389,6 +401,11 @@ public class AmbEval {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricGfgBuilder gfgBuilder) {
       return baseFunction.apply(argumentValues, env);
+    }
+    
+    @Override
+    public String toString() {
+      return baseFunction.toString();
     }
   }
 
@@ -479,6 +496,11 @@ public class AmbEval {
       gfgBuilder.addConstantFactor(varName, factor);
 
       return new AmbValue(fgVar);
+    }
+    
+    @Override
+    public String toString() {
+      return baseFunction.toString();
     }
   }
 }

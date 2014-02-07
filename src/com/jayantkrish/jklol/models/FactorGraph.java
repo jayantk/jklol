@@ -420,7 +420,7 @@ public class FactorGraph implements Serializable {
 
   public String getParameterDescription() {
     StringBuilder sb = new StringBuilder();
-    for (Factor factor : factors) {
+    for (Factor factor : getMinimalFactors()) {
       sb.append(factor.getParameterDescription());
     }
     return sb.toString();

@@ -2,15 +2,19 @@ package com.jayantkrish.jklol.ccg.lambda;
 
 import junit.framework.TestCase;
 
+import com.jayantkrish.jklol.lisp.SExpression;
+
 public class ExpressionParserTest extends TestCase {
   
   ExpressionParser<Expression> parser;
   ExpressionParser<Expression> unequalQuoteParser;
+  ExpressionParser<SExpression> lispParser;
   
   public void setUp() {
     parser = ExpressionParser.lambdaCalculus();
     unequalQuoteParser = new ExpressionParser<Expression>('(', ')', '<', '>',
         ExpressionFactories.getDefaultFactory());
+    lispParser = ExpressionParser.sExpression();
   }
 
   public void testParseConstant() {
@@ -61,5 +65,11 @@ public class ExpressionParserTest extends TestCase {
     assertEquals("and", ((ConstantExpression) application.getFunction()).getName());
     assertEquals(2, application.getArguments().size());
     assertEquals("<(/m/abc x) (/m/bcd y)>", ((ConstantExpression) application.getArguments().get(0)).getName());
+  }
+  
+  public void testEmptyExpression() {
+    SExpression result = lispParser.parseSingleExpression("()");
+    assertNull(result.getConstant());
+    assertEquals(0, result.getSubexpressions().size());
   }
 }

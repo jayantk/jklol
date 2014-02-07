@@ -395,7 +395,7 @@ public class JunctionTree implements MarginalCalculator {
       }
 
       Set<Factor> remainingFactors = Sets.newHashSet(cliqueFactors);
-      SortedMap<Integer, Factor> possibleEliminationOrder = Maps.newTreeMap();
+      SortedMap<Integer, Integer> possibleEliminationOrder = Maps.newTreeMap();
       int eliminationIndex = 0;
       while (remainingFactors.size() > 1) {
         // Each iteration eliminates one factor from the factor graph.
@@ -408,7 +408,7 @@ public class JunctionTree implements MarginalCalculator {
 
           if (justEliminated != null) {
             remainingFactors.remove(justEliminated);
-            possibleEliminationOrder.put(eliminationIndex, justEliminated);
+            possibleEliminationOrder.put(eliminationIndex, factorIndexMap.get(justEliminated));
             eliminationIndex++;
             break;
           }
@@ -416,7 +416,9 @@ public class JunctionTree implements MarginalCalculator {
 
         if (justEliminated == null) {
           // Heuristic of eliminating only variables in a single factor
-          // has failed.
+          // has failed. Pick a variable (that only occurs in a few factors)
+          // eliminate it, potentially creating large factors in the
+          // clique tree.
           Integer minCount = countsOfVars.keySet().first();
           int varToEliminate = Iterables.getFirst(countsOfVars.get(minCount), null);
 
@@ -426,68 +428,71 @@ public class JunctionTree implements MarginalCalculator {
             allVars = allVars.union(factor.getVars());
           }
           
+          Preconditions.checkState(factorsContainingVar.size() != 0);
+          
+          Factor factorToMergeWith = null;
           if (minCount == 1) {
-            // The variable elimination heuristic above can fail to eliminate
-            // a single variable if the remaining variables don't all occur
-            // within a single factor. In this case, simply create such a factor.
+            // If there's only a single factor containing this variable, 
+            // simply sum out this variable to create a smaller factor.
             allVars = allVars.removeAll(varToEliminate);
           }
 
-          // Create a new factor containing all neighboring variables
-          // and add it to the variable elimination data structures.
-          Factor newFactor = TableFactor.unity(allVars);
-          int newFactorIndex = cliqueFactors.size();
-          cliqueFactors.add(newFactor);
-          remainingFactors.add(newFactor);
-          factorIndexMap.put(newFactor, newFactorIndex);
+          if (factorToMergeWith == null) {
+            // Create a new factor containing all neighboring variables
+            // and add it to the variable elimination data structures.
+            factorToMergeWith = TableFactor.unity(allVars);
+            int newFactorIndex = cliqueFactors.size();
+            cliqueFactors.add(factorToMergeWith);
+            remainingFactors.add(factorToMergeWith);
+            factorIndexMap.put(factorToMergeWith, newFactorIndex);
 
-          for (int varNum : newFactor.getVars().getVariableNumsArray()) {
-            int oldCount = varFactorMap.get(varNum).size();
-            countsOfVars.remove(oldCount, varNum);
-            countsOfVars.put(oldCount + 1, varNum);
-            varFactorMap.put(varNum, newFactor);
+            for (int varNum : factorToMergeWith.getVars().getVariableNumsArray()) {
+              int oldCount = varFactorMap.get(varNum).size();
+              countsOfVars.remove(oldCount, varNum);
+              countsOfVars.put(oldCount + 1, varNum);
+              varFactorMap.put(varNum, factorToMergeWith);
+            }
           }
 
-          // Eliminate every factor containing a subset of the
-          // variables of the created factor.
+          // Eliminate every factor containing the variable.
           for (Factor factor : factorsContainingVar) {
-            justEliminated = tryEliminateFactor(factor, varFactorMap, factorIndexMap, countsOfVars,
-                factorEdges);
-
-            if (justEliminated != null) {
-              remainingFactors.remove(justEliminated);
-              possibleEliminationOrder.put(eliminationIndex, justEliminated);
-              eliminationIndex++;
+            // Remove the factor from the map containing variable counts.
+            for (int variableNum : factor.getVars().getVariableNumsArray()) {
+              // First decrement the occurrence count of this variable.
+              int count = varFactorMap.get(variableNum).size();
+              countsOfVars.remove(count, variableNum);
+              if (count > 1) {
+                countsOfVars.put(count - 1, variableNum);
+              }
+              varFactorMap.remove(variableNum, factor);
             }
+            
+            int curFactorIndex = factorIndexMap.get(factor);
+            int destFactorIndex = factorIndexMap.get(factorToMergeWith);
+            factorEdges.put(curFactorIndex, destFactorIndex);
+            factorEdges.put(destFactorIndex, curFactorIndex);
+
+            justEliminated = factor;
+            remainingFactors.remove(justEliminated);
+            possibleEliminationOrder.put(eliminationIndex, curFactorIndex);
+            eliminationIndex++;
           }
         }
         Preconditions.checkState(justEliminated != null,
             "Could not convert %s into a clique tree.", factorGraph);
       }
-      possibleEliminationOrder.put(eliminationIndex, Iterables.getOnlyElement(remainingFactors));
-
-      // Select an elimination order.
-      SortedMap<Integer, Factor> bestEliminationOrder = Maps.newTreeMap();
-      if (factorGraph.getInferenceHint() != null) {
-        for (int i = 0; i < cliqueFactors.size(); i++) {
-          bestEliminationOrder.put(factorGraph.getInferenceHint().getFactorEliminationOrder()[i],
-              cliqueFactors.get(i));
-        }
-      } else {
-        for (int i = 0; i < cliqueFactors.size(); i++) {
-          // Eliminate factors in the same order that they were eliminated to build
-          // this clique tree.
-          bestEliminationOrder = possibleEliminationOrder;
-        }
+      if (remainingFactors.size() > 0) {
+        possibleEliminationOrder.put(eliminationIndex, factorIndexMap.get(Iterables.getOnlyElement(remainingFactors)));
       }
-
+      
       List<Integer> cliqueEliminationOrder = new ArrayList<Integer>();
       // System.out.println("Elimination Order:");
-      for (Integer position : bestEliminationOrder.keySet()) {
-        cliqueEliminationOrder.add(factorIndexMap.get(bestEliminationOrder.get(position)));
+      for (int i = 0; i < cliqueFactors.size(); i++) {
+        cliqueEliminationOrder.add(possibleEliminationOrder.get(i));
         // System.out.println("  " + cliqueEliminationOrder.size() + " " +
         // cliqueFactors.get(bestEliminationOrder.get(position)).getVars());
       }
+      
       return new CliqueTree(cliqueFactors, factorEdges, cliqueEliminationOrder);
     }
 

@@ -401,22 +401,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     return sb.toString();
   }
 
-  @Override
-  public int hashCode() {
-    return getVars().hashCode();
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    if (other == this) {
-      return true;
-    } else if (other instanceof DiscreteFactor) {
-      DiscreteFactor factor = (DiscreteFactor) other;
-      return factor.getVars().equals(getVars()) && factor.getWeights().equals(getWeights());
-    }
-    return false;
-  }
-
   /**
    * Get the partition function = denominator = total sum probability of all
    * assignments.

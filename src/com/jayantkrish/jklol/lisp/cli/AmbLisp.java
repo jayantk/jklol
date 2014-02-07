@@ -8,8 +8,7 @@ import joptsimple.OptionSet;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.lisp.AmbEval;
-import com.jayantkrish.jklol.lisp.Eval;
-import com.jayantkrish.jklol.lisp.Eval.EvalResult;
+import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -37,10 +36,9 @@ public class AmbLisp extends AbstractCli {
     }
     programBuilder.append(" )");
 
-    Eval eval = new AmbEval();
+    AmbEval eval = new AmbEval();
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
-    EvalResult result = eval.eval(parser.parseSingleExpression(programBuilder.toString()),
-        AmbEval.getDefaultEnvironment());
+    EvalResult result = eval.eval(parser.parseSingleExpression(programBuilder.toString()));
 
     System.out.println(result.getValue());
   }

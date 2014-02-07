@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
+import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -24,15 +25,20 @@ import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
-public class AmbEval implements Eval {
+public class AmbEval {
 
   private static int nextVarNum = 0;
+  
+  public EvalResult eval(SExpression expression) {
+    return eval(expression, getDefaultEnvironment(), new ParametricGfgBuilder(new ParametricFactorGraphBuilder()));
+  }
 
-  public EvalResult eval(SExpression expression, Environment environment) {
+  public EvalResult eval(SExpression expression, Environment environment, ParametricGfgBuilder builder) {
     if (expression.isConstant()) {
       // The expression may be a primitive type or a variable.
       Object primitiveValue = null;
@@ -65,7 +71,7 @@ public class AmbEval implements Eval {
         if (constantName.equals("define")) {
           // Binds a name to a value in the environment.
           String nameToBind = subexpressions.get(1).getConstant();
-          Object valueToBind = eval(subexpressions.get(2), environment).getValue();
+          Object valueToBind = eval(subexpressions.get(2), environment, builder).getValue();
           environment.bindName(nameToBind, valueToBind);
           return new EvalResult(ConstantValue.UNDEFINED);
         } else if (constantName.equals("begin")) {
@@ -73,7 +79,7 @@ public class AmbEval implements Eval {
           // environment changes.
           EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
           for (int i = 1; i < subexpressions.size(); i++) {
-            result = eval(subexpressions.get(i), environment);
+            result = eval(subexpressions.get(i), environment, builder);
           }
           return result;
         } else if (constantName.equals("lambda")) {
@@ -92,25 +98,27 @@ public class AmbEval implements Eval {
           functionBodyComponents.addAll(subexpressions.subList(2, subexpressions.size()));
 
           SExpression functionBody = SExpression.nested(functionBodyComponents); 
-          return new EvalResult(new LambdaValue(argumentNames, functionBody, environment));
+          return new EvalResult(new AmbLambdaValue(new LambdaValue(argumentNames, functionBody, environment), this));
         } else if (constantName.equals("if")) {
           Preconditions.checkArgument(subexpressions.size() == 4);
-          Object testCondition = eval(subexpressions.get(1), environment).getValue();
+          Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
           Preconditions.checkState(!(testCondition instanceof AmbValue));
 
+          // TODO: Handling conditionals on amb values requires changing the builder
+          // passed to the evaluated subexpressions.
           if (ConstantValue.TRUE.equals(testCondition)) {
-            return eval(subexpressions.get(2), environment);
+            return eval(subexpressions.get(2), environment, builder);
           } else {
-            return eval(subexpressions.get(3), environment);
+            return eval(subexpressions.get(3), environment, builder);
           }
         } else if (constantName.equals("amb")) {
           Preconditions.checkArgument(subexpressions.size() >= 2 && subexpressions.size() <= 3);
 
-          List<Object> possibleValues = ConsValue.consListToList(eval(subexpressions.get(1), environment)
+          List<Object> possibleValues = ConsValue.consListToList(eval(subexpressions.get(1), environment, builder)
               .getValue(), Object.class);
           List<Number> weights;
           if (subexpressions.size() > 2) {
-            weights = ConsValue.consListToList(eval(subexpressions.get(2), environment)
+            weights = ConsValue.consListToList(eval(subexpressions.get(2), environment, builder)
                  .getValue(), Number.class);
           } else {
             weights = Collections.<Number>nCopies(possibleValues.size(), 1);
@@ -119,7 +127,7 @@ public class AmbEval implements Eval {
           String varName = subexpressions.get(1).toString();
           DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
           VariableNumMap fgVar = VariableNumMap.singleton(getUniqueVarNum(), varName, fgVarType);
-          environment.getFactorGraphBuilder().addVariables(fgVar);
+          builder.addVariables(fgVar);
 
           Assignment[] assignmentArray = new Assignment[possibleValues.size()];
           double[] weightArray = Doubles.toArray(weights);
@@ -127,21 +135,21 @@ public class AmbEval implements Eval {
             assignmentArray[i] = fgVar.outcomeArrayToAssignment(possibleValues.get(i));
           }
           TableFactor factor = TableFactor.vector(fgVar, assignmentArray, weightArray);
-          environment.getFactorGraphBuilder().addConstantFactor(varName, factor);
+          builder.addConstantFactor(varName, factor);
 
           return new EvalResult(new AmbValue(fgVar));
         } else if (constantName.equals("get-best-assignment")) {
           Preconditions.checkArgument(subexpressions.size() == 2 || subexpressions.size() == 3);
-          Object value = eval(subexpressions.get(1), environment).getValue();
-          
+          Object value = eval(subexpressions.get(1), environment, builder).getValue();
+
           // Second, optional argument selects the inference algorithm.
           String inferenceAlgString = "junction-tree";
           if (subexpressions.size() == 3) {
-            inferenceAlgString = (String) eval(subexpressions.get(2), environment).getValue();
+            inferenceAlgString = (String) eval(subexpressions.get(2), environment, builder).getValue();
           }
 
           if (value instanceof AmbValue || value instanceof ConsValue) {
-            ParametricFactorGraph currentFactorGraph = environment.getFactorGraphBuilder().build();
+            ParametricFactorGraph currentFactorGraph = builder.build();
             FactorGraph fg = currentFactorGraph.getModelFromParameters(
                 currentFactorGraph.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
 
@@ -164,16 +172,16 @@ public class AmbEval implements Eval {
           }
         } else if (constantName.equals("get-marginals")) {
           Preconditions.checkArgument(subexpressions.size() == 2 || subexpressions.size() == 3);
-          Object value = eval(subexpressions.get(1), environment).getValue();
+          Object value = eval(subexpressions.get(1), environment, builder).getValue();
 
           // Second, optional argument selects the inference algorithm.
           String inferenceAlgString = "junction-tree";
           if (subexpressions.size() == 3) {
-            inferenceAlgString = (String) eval(subexpressions.get(2), environment).getValue();
+            inferenceAlgString = (String) eval(subexpressions.get(2), environment, builder).getValue();
           }
 
           if (value instanceof AmbValue) {
-            ParametricFactorGraph currentFactorGraph = environment.getFactorGraphBuilder().build();
+            ParametricFactorGraph currentFactorGraph = builder.build();
             FactorGraph fg = currentFactorGraph.getModelFromParameters(
                 currentFactorGraph.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
 
@@ -208,44 +216,47 @@ public class AmbEval implements Eval {
           }
         } else if (constantName.equals("add-weight")) {
           Preconditions.checkArgument(subexpressions.size() == 3);
-          Object value = eval(subexpressions.get(1), environment).getValue();
-          double weight = ((Number) eval(subexpressions.get(2), environment).getValue()).doubleValue();
+          Object value = eval(subexpressions.get(1), environment, builder).getValue();
+          double weight = ((Number) eval(subexpressions.get(2), environment, builder).getValue()).doubleValue();
 
           if (value instanceof AmbValue) {
             VariableNumMap fgVar = ((AmbValue) value).getVar();
 
-            TableFactorBuilder builder = TableFactorBuilder.ones(fgVar);
-            builder.setWeight(weight, ConstantValue.TRUE); 
-            TableFactor factor = builder.build();
-            environment.getFactorGraphBuilder().addConstantFactor(fgVar.getOnlyVariableName(), factor);
+            TableFactorBuilder tfBuilder = TableFactorBuilder.ones(fgVar);
+            tfBuilder.setWeight(weight, ConstantValue.TRUE); 
+            TableFactor factor = tfBuilder.build();
+            builder.addConstantFactor(fgVar.getOnlyVariableName(), factor);
           } 
           return new EvalResult(ConstantValue.UNDEFINED);
         }
       }
 
-      return doFunctionApplication(subexpressions, environment);
+      return doFunctionApplication(subexpressions, environment, builder);
     }
   }
 
-  public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment) {
+  public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment,
+      ParametricGfgBuilder gfgBuilder) {
     List<Object> values = Lists.newArrayList();
     for (SExpression expression : subexpressions) {
-      values.add(eval(expression, environment).getValue());
+      values.add(eval(expression, environment, gfgBuilder).getValue());
     }
 
     Object functionObject = values.get(0);
     List<Object> argumentValues = values.subList(1, values.size());
-    if (functionObject instanceof FunctionValue) {
-      FunctionValue function = (FunctionValue) functionObject;
-      return new EvalResult(function.apply(argumentValues, environment, this));
+    if (functionObject instanceof AmbFunctionValue) {
+      AmbFunctionValue function = (AmbFunctionValue) functionObject;
+      return new EvalResult(function.apply(argumentValues, environment, gfgBuilder));
     } else if (functionObject instanceof AmbValue) {
+      // TODO: This gets fucked up if the called functions themselves modify gfgBuilder.
+
       AmbValue functionAmb = ((AmbValue) functionObject);
       List<Object> possibleFunctionObjects = functionAmb.getPossibleValues();
       List<Object> functionResults = Lists.newArrayList();
       List<Object> possibleReturnValues = Lists.newArrayList();
       for (Object possibleFunctionObject : possibleFunctionObjects) {
-        FunctionValue function = (FunctionValue) possibleFunctionObject;
-        Object result = function.apply(argumentValues, environment, this);
+        AmbFunctionValue function = (AmbFunctionValue) possibleFunctionObject;
+        Object result = function.apply(argumentValues, environment, gfgBuilder);
         functionResults.add(result);
 
         if (result instanceof AmbValue) {
@@ -254,7 +265,7 @@ public class AmbEval implements Eval {
           possibleReturnValues.add(result);
         }
       }
-      
+
       if (possibleReturnValues.size() == 1) {
         // Although there are possibly many functions being run,
         // only a single return value is possible in every case.
@@ -264,7 +275,7 @@ public class AmbEval implements Eval {
       String varName = Integer.toHexString(possibleReturnValues.hashCode());
       DiscreteVariable varType = new DiscreteVariable(varName, possibleReturnValues);
       VariableNumMap returnValueVar = VariableNumMap.singleton(getUniqueVarNum(), varName, varType);
-      environment.getFactorGraphBuilder().addVariables(returnValueVar);
+      gfgBuilder.addVariables(returnValueVar);
       VariableNumMap functionVar = functionAmb.getVar();
 
       for (int i = 0; i < possibleFunctionObjects.size(); i++) {
@@ -288,7 +299,7 @@ public class AmbEval implements Eval {
             builder.setWeight(Assignment.unionAll(functionReturnAssignment, returnAssignment, functionAssignment), 1.0);
           }
 
-          environment.getFactorGraphBuilder().addConstantFactor(varName, builder.build());
+          gfgBuilder.addConstantFactor(varName, builder.build());
         } else {
           TableFactorBuilder builder = TableFactorBuilder.ones(returnValueVar.union(functionVar));
           Assignment returnValueAssignment = returnValueVar.outcomeArrayToAssignment(returnValue);
@@ -296,7 +307,7 @@ public class AmbEval implements Eval {
               .outerProduct(TableFactor.unity(returnValueVar)).product(-1.0));
           builder.setWeight(returnValueAssignment.union(functionAssignment), 1.0);
 
-          environment.getFactorGraphBuilder().addConstantFactor(varName, builder.build());
+          gfgBuilder.addConstantFactor(varName, builder.build());
         }
       }
 
@@ -325,10 +336,10 @@ public class AmbEval implements Eval {
 
   public static Environment getDefaultEnvironment() {
     Environment env = Environment.empty();
-    env.bindName("cons", new BuiltinFunctions.ConsFunction());
-    env.bindName("car", new BuiltinFunctions.CarFunction());
-    env.bindName("cdr", new BuiltinFunctions.CdrFunction());
-    env.bindName("list", new BuiltinFunctions.ListFunction());
+    env.bindName("cons", new WrappedBuiltinFunction(new BuiltinFunctions.ConsFunction()));
+    env.bindName("car", new WrappedBuiltinFunction(new BuiltinFunctions.CarFunction()));
+    env.bindName("cdr", new WrappedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
+    env.bindName("list", new WrappedBuiltinFunction(new BuiltinFunctions.ListFunction()));
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));
     env.bindName("-", new RaisedBuiltinFunction(new BuiltinFunctions.MinusFunction()));
@@ -340,7 +351,48 @@ public class AmbEval implements Eval {
     return env;
   }
 
-  private static class RaisedBuiltinFunction implements FunctionValue {
+  private static interface AmbFunctionValue {
+    
+    public Object apply(List<Object> argumentValues, Environment env,
+        ParametricGfgBuilder gfgBuilder);
+  }
+  
+  private static class AmbLambdaValue implements AmbFunctionValue {
+    private final LambdaValue lambdaValue;
+    private final AmbEval eval;
+
+    public AmbLambdaValue(LambdaValue lambdaValue, AmbEval eval) {
+      this.lambdaValue = Preconditions.checkNotNull(lambdaValue);
+      this.eval = Preconditions.checkNotNull(eval);
+    }
+
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricGfgBuilder gfgBuilder) {
+      List<String> argumentNames = lambdaValue.getArgumentNames(); 
+      Preconditions.checkArgument(argumentNames.size() == argumentValues.size(),
+          "Wrong number of arguments: expected %s, got %s", argumentNames, argumentValues);
+
+      Environment boundEnvironment = Environment.extend(lambdaValue.getEnvironment());
+      boundEnvironment.bindNames(argumentNames, argumentValues);
+
+      return eval.eval(lambdaValue.getBody(), boundEnvironment, gfgBuilder).getValue();
+    }
+  }
+
+  private static class WrappedBuiltinFunction implements AmbFunctionValue {
+    private final FunctionValue baseFunction;
+
+    public WrappedBuiltinFunction(FunctionValue baseFunction) {
+      this.baseFunction = baseFunction;
+    }
+
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricGfgBuilder gfgBuilder) {
+      return baseFunction.apply(argumentValues, env);
+    }
+  }
+
+  private static class RaisedBuiltinFunction implements AmbFunctionValue {
     private final FunctionValue baseFunction;
 
     public RaisedBuiltinFunction(FunctionValue baseFunction) {
@@ -348,7 +400,7 @@ public class AmbEval implements Eval {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, Eval eval) {
+    public Object apply(List<Object> argumentValues, Environment env, ParametricGfgBuilder gfgBuilder) {
       // Default case: perform function application.
       List<List<Object>> inputVarValues = Lists.newArrayList();
       List<VariableNumMap> inputVars = Lists.newArrayList();
@@ -381,7 +433,7 @@ public class AmbEval implements Eval {
           chosenValues.add(inputVarValues.get(i).get(indexes[i]));
         }
 
-        Object result = baseFunction.apply(chosenValues, env, eval);
+        Object result = baseFunction.apply(chosenValues, env);
         if (result instanceof AmbValue) {
           possibleValues.addAll(((AmbValue) result).getPossibleValues());
         } else {
@@ -396,7 +448,7 @@ public class AmbEval implements Eval {
       String varName = Integer.toHexString(possibleValues.hashCode());
       DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
       VariableNumMap fgVar = VariableNumMap.singleton(getUniqueVarNum(), varName, fgVarType);
-      env.getFactorGraphBuilder().addVariables(fgVar);
+      gfgBuilder.addVariables(fgVar);
 
       // Construct the factor representing the function application.
       VariableNumMap factorVars = ambVars.union(fgVar);
@@ -414,7 +466,7 @@ public class AmbEval implements Eval {
           }
         }
 
-        Object result = baseFunction.apply(chosenValues, env, eval);
+        Object result = baseFunction.apply(chosenValues, env);
         if (result instanceof AmbValue) {
           Preconditions.checkState(false, "Probabilistic functions not yet supported.");
         } else {
@@ -424,7 +476,7 @@ public class AmbEval implements Eval {
       }
 
       TableFactor factor = builder.build();
-      env.getFactorGraphBuilder().addConstantFactor(varName, factor);
+      gfgBuilder.addConstantFactor(varName, factor);
 
       return new AmbValue(fgVar);
     }

@@ -11,6 +11,13 @@ import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
+/**
+ * Beam search inference algorithm for CCG parsing. This algorithm 
+ * performs a CKY-style chart parse, maintaining only a limited
+ * number of chart entries for each sentence span.
+ *  
+ * @author jayantk
+ */
 public class CcgBeamSearchInference implements CcgInference {
 
   // Optional constraint to use during inference. Null if

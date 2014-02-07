@@ -65,11 +65,17 @@ public abstract class AbstractFactorGraphBuilder<T> {
    * constantFactors, constantFactorNames), parametricFactors,
    * factorPatterns, parametricFactorNames); }
    */
-
+  
   public void addVariable(String name, Variable variable) {
     variables = variables.addFixedVariable(name, variable);
   }
 
+  /**
+   * Adds {@code newVariables} to the variables in the factor
+   * graph.
+   * 
+   * @param newVariables
+   */
   public void addVariables(VariableNumMap newVariables) {
     variables = variables.addFixedVariables(newVariables);
   }

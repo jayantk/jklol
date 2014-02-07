@@ -5,7 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-public class LispEval implements Eval {
+public class LispEval {
 
   public EvalResult eval(SExpression expression, Environment environment) {
     if (expression.isConstant()) {
@@ -72,10 +72,28 @@ public class LispEval implements Eval {
         values.add(eval(subexpression, environment).getValue());
       }
 
-      FunctionValue functionToApply = (FunctionValue) values.get(0);
-      List<Object> arguments = values.subList(1, values.size());
-      Object result = functionToApply.apply(arguments, environment, this);
-      return new EvalResult(result);
+      if (values.get(0) instanceof FunctionValue) {
+        // Primitive procedures.
+        FunctionValue functionToApply = (FunctionValue) values.get(0);
+        List<Object> arguments = values.subList(1, values.size());
+        Object result = functionToApply.apply(arguments, environment);
+        return new EvalResult(result);
+      } else if (values.get(0) instanceof LambdaValue) {
+        // Lambda procedures.
+        LambdaValue functionToApply = (LambdaValue) values.get(0);
+        List<Object> arguments = values.subList(1, values.size());
+
+        List<String> argumentNames = functionToApply.getArgumentNames(); 
+        Preconditions.checkArgument(argumentNames.size() == arguments.size(),
+            "Wrong number of arguments: expected %s, got %s", argumentNames, arguments);
+
+        Environment boundEnvironment = Environment.extend(functionToApply.getEnvironment());
+        boundEnvironment.bindNames(argumentNames, arguments);
+
+        return new EvalResult(eval(functionToApply.getBody(), boundEnvironment).getValue());
+      } else {
+        throw new IllegalArgumentException("Tried applying a non-function value: " + values.get(0));
+      }
     }
   }
 
@@ -93,5 +111,17 @@ public class LispEval implements Eval {
     env.bindName("and", new BuiltinFunctions.AndFunction());
     env.bindName("or", new BuiltinFunctions.OrFunction());
     return env;
+  }
+
+  public static class EvalResult {
+    private final Object value;
+
+    public EvalResult(Object value) {
+      this.value = Preconditions.checkNotNull(value);
+    }
+
+    public Object getValue() {
+      return value;
+    }
   }
 }

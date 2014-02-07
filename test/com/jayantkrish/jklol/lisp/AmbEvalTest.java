@@ -6,7 +6,7 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 
 public class AmbEvalTest extends TestCase {
 
-  Eval eval;
+  AmbEval eval;
   ExpressionParser<SExpression> parser;
 
   public void setUp() {
@@ -95,7 +95,7 @@ public class AmbEvalTest extends TestCase {
   }
   
   public void testAmbLambda4() {
-    int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo (amb (list 1 2) (list 2 3)))) (add-weight (= x 4) 0) (get-best-assignment x \"dual-decomposition\")");
+    int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo (amb (list 1 2) (list 2 3)))) (add-weight (= x 4) 0) (get-best-assignment x)");
     assertEquals(3, value);
   }
 
@@ -193,8 +193,7 @@ public class AmbEvalTest extends TestCase {
 
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
-    return eval.eval(parser.parseSingleExpression(wrappedExpressionString),
-        AmbEval.getDefaultEnvironment()).getValue();
+    return eval.eval(parser.parseSingleExpression(wrappedExpressionString)).getValue();
   }
 
   private String runTestString(String expressionString) {

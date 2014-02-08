@@ -216,7 +216,7 @@ public class AmbEval {
             Object outcomesConsList = ConsValue.listToConsList(outcomes);
             Object weightsConsList = ConsValue.listToConsList(weights);
 
-            return new EvalResult(new ConsValue(outcomesConsList, weightsConsList)); 
+            return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
           } else {
             return new EvalResult(value);
           }
@@ -350,6 +350,7 @@ public class AmbEval {
     env.bindName("-", new RaisedBuiltinFunction(new BuiltinFunctions.MinusFunction()));
     env.bindName("*", new RaisedBuiltinFunction(new BuiltinFunctions.MultiplyFunction()));
     env.bindName("/", new RaisedBuiltinFunction(new BuiltinFunctions.DivideFunction()));
+    env.bindName("log", new RaisedBuiltinFunction(new BuiltinFunctions.LogFunction()));
     env.bindName("=", new RaisedBuiltinFunction(new BuiltinFunctions.EqualsFunction()));
     env.bindName("not", new RaisedBuiltinFunction(new BuiltinFunctions.NotFunction()));
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()));

@@ -46,7 +46,7 @@ public class AmbEvalTest extends TestCase {
   
   public void testAmbMarginals1() {
     Object value = runTest("(get-marginals (amb (list 1 2) (list 2 2)))");
-    Object expected = runTest("(cons (list 1 2) (list 0.5 0.5))");
+    Object expected = runTest("(list (list 1 2) (list 0.5 0.5))");
     assertEquals(expected, value);
   }
   
@@ -128,6 +128,22 @@ public class AmbEvalTest extends TestCase {
         "(add-weight (= (func-to-learn 2) 0) 2.0)" +
         "(get-best-assignment (func-to-learn 4))");
     assertEquals(6, value);
+  }
+
+  public void testSquareLoss() {
+    Object value = runTest(
+        "(define sum-outcomes (lambda (o p) (if (nil? o) 0.0 (+ (* (car o) (car p)) (sum-outcomes (cdr o) (cdr p))))))" +
+        "(define sq-loss (lambda (m) (lambda (a) (define marginals (get-marginals (* (- a m) (- a m)))) (sum-outcomes (car marginals) (car (cdr marginals))))))" +
+        "((sq-loss 2) (amb (list 1.0 2.0 3.0 4.0 5.0)))");
+    assertEquals(3.0, value);
+  }
+
+  public void testLogLoss() {
+    Object value = runTest(
+        "(define get-item-prob (lambda (i o p) (if (nil? o) 0.0 (if (= i (car o)) (car p) (get-item-prob i (cdr o) (cdr p))))))" +
+        "(define log-loss (lambda (item) (lambda (a) (define marginals (get-marginals a)) (log (get-item-prob item (car marginals) (car (cdr marginals)))))))" +
+        "((log-loss \"a\") (amb (list \"a\" \"b\" \"c\") (list 2 1 1)))");
+    assertEquals(Math.log(0.5), (Double) value, 0.000001);
   }
 
   public void testRecursion() {

@@ -87,37 +87,69 @@ public class BuiltinFunctions {
   public static class PlusFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
-      int resultValue = 0;
-      for (int i = 0; i < argumentValues.size(); i++) {
-        resultValue += (Integer) argumentValues.get(i);
+      if (allArgumentsInteger(argumentValues)) {
+        int resultValue = 0;
+        for (int i = 0; i < argumentValues.size(); i++) {
+          resultValue += (Integer) argumentValues.get(i);
+        }
+        return resultValue;
+      } else {
+        double resultValue = 0.0;
+        for (int i = 0; i < argumentValues.size(); i++) {
+          if (argumentValues.get(i) instanceof Integer) {
+            resultValue += (double) ((Integer) argumentValues.get(i));
+          } else {
+            resultValue += (Double) argumentValues.get(i);
+          }
+        }
+        return resultValue;
       }
-      return resultValue;
     }
   }
 
   public static class MinusFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
-      int resultValue = 0;
-      for (int i = 0; i < argumentValues.size(); i++) {
-        if (i == 0) {
-          resultValue += (Integer) argumentValues.get(i);
-        } else {
+      if (allArgumentsInteger(argumentValues)) {
+        int resultValue = (Integer) argumentValues.get(0);
+        for (int i = 1; i < argumentValues.size(); i++) {
           resultValue -= (Integer) argumentValues.get(i);
         }
+        return resultValue;
+      } else {
+        double resultValue = (Double) argumentValues.get(0);
+        for (int i = 1; i < argumentValues.size(); i++) {
+          if (argumentValues.get(i) instanceof Integer) {
+            resultValue -= (double) ((Integer) argumentValues.get(i));
+          } else {
+            resultValue -= (Double) argumentValues.get(i);
+          }
+        }
+        return resultValue;
       }
-      return resultValue;
     }
   }
 
   public static class MultiplyFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
-      int resultValue = 1;
-      for (int i = 0; i < argumentValues.size(); i++) {
-        resultValue *= (Integer) argumentValues.get(i);
+      if (allArgumentsInteger(argumentValues)) {
+        int resultValue = 1;
+        for (int i = 0; i < argumentValues.size(); i++) {
+          resultValue *= (Integer) argumentValues.get(i);
+        }
+        return resultValue;
+      } else {
+        double resultValue = 1.0;
+        for (int i = 0; i < argumentValues.size(); i++) {
+          if (argumentValues.get(i) instanceof Integer) {
+            resultValue *= (double) ((Integer) argumentValues.get(i));
+          } else {
+            resultValue *= (Double) argumentValues.get(i);
+          }
+        }
+        return resultValue;
       }
-      return resultValue;
     }
   }
 
@@ -125,7 +157,23 @@ public class BuiltinFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 2);
-      return ((Integer) argumentValues.get(0)) / ((Integer) argumentValues.get(1));
+      if (allArgumentsInteger(argumentValues)) {
+        return ((Integer) argumentValues.get(0)) / ((Integer) argumentValues.get(1));
+      } else {
+        return ((Double) argumentValues.get(0)) / ((Double) argumentValues.get(1));
+      }
+    }
+  }
+
+  public static class LogFunction implements FunctionValue {
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      Object value = argumentValues.get(0);
+      if (value instanceof Integer) {
+        return Math.log((double) (Integer) value);
+      } else {
+        return Math.log((Double) value);
+      }
     }
   }
 
@@ -144,5 +192,15 @@ public class BuiltinFunctions {
       System.out.println(argumentValues.get(0));
       return ConstantValue.UNDEFINED;
     }
+  }
+
+  private static boolean allArgumentsInteger(List<Object> argumentValues) {
+    boolean integerMultiply = true;
+    for (int i = 0; i < argumentValues.size(); i++) {
+      if (argumentValues.get(i) instanceof Double) {
+        integerMultiply = false;
+      }
+    }
+    return integerMultiply;
   }
 }

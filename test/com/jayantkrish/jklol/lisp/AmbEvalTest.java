@@ -98,7 +98,7 @@ public class AmbEvalTest extends TestCase {
     int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo (amb (list 1 2) (list 2 3)))) (add-weight (= x 4) 0) (get-best-assignment x)");
     assertEquals(3, value);
   }
-  
+
   public void testAmbLambda5() {
     int value = runTestInt(
         // "(define rand-op (lambda () (amb (list + * - (lambda (x y) x) (lambda (x y) y))))) " +
@@ -109,13 +109,25 @@ public class AmbEvalTest extends TestCase {
         "                         (define unrolled2 (unroll-op op-func (- depth 1)))" +
         "                         (lambda (x y) (cur-op (unrolled1 x y) (unrolled2 x y))))))))" +
         "(define func-to-learn (unroll-op rand-op 2)) " +
-        // "(define f1 (rand-op)) (define f2 (rand-op)) (define f3 (rand-op))" +
-        // "(define func-to-learn (lambda (x y) (f1 (f2 x y) (f3 x y)))) " +
         "(add-weight (= (func-to-learn 1 2) 4) 2.0)" +
         "(add-weight (= (func-to-learn 3 2) 8) 2.0)" +
         "(add-weight (= (func-to-learn 4 7) 35) 2.0)" +
         "(get-best-assignment (func-to-learn 2 3))");
     assertEquals(9, value);
+  }
+
+  public void testAmbLambda6() {
+    int value = runTestInt(
+        "(define rand-int (lambda () (amb (list 1 2 3 4 5 6 7 8 9 10))))" +
+        "(define poly (lambda (degree) (begin (define cur-root (rand-int)) " +
+        "  (if (= degree 1) (lambda (x) (- x cur-root)) " +
+        "                  (begin (define unrolled (poly (- degree 1))) " +
+        "                         (lambda (x) (* (- x cur-root) (unrolled x))))))))" +
+        "(define func-to-learn (poly 2)) " +
+        "(add-weight (= (func-to-learn 1) 0) 2.0)" +
+        "(add-weight (= (func-to-learn 2) 0) 2.0)" +
+        "(get-best-assignment (func-to-learn 4))");
+    assertEquals(6, value);
   }
 
   public void testRecursion() {

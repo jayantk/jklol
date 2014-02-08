@@ -108,14 +108,14 @@ public class AmbEvalTest extends TestCase {
         "                  (begin (define unrolled1 (unroll-op op-func (- depth 1))) " +
         "                         (define unrolled2 (unroll-op op-func (- depth 1)))" +
         "                         (lambda (x y) (cur-op (unrolled1 x y) (unrolled2 x y))))))))" +
-        "(define func-to-learn (unroll-op rand-op 1)) " +
+        "(define func-to-learn (unroll-op rand-op 2)) " +
         // "(define f1 (rand-op)) (define f2 (rand-op)) (define f3 (rand-op))" +
         // "(define func-to-learn (lambda (x y) (f1 (f2 x y) (f3 x y)))) " +
-        "(add-weight (= (func-to-learn 1 2) 2) 2.0)" +
-        "(add-weight (= (func-to-learn 3 2) 6) 2.0)" +
-        "(add-weight (= (func-to-learn 4 7) 28) 2.0)" +
+        "(add-weight (= (func-to-learn 1 2) 4) 2.0)" +
+        "(add-weight (= (func-to-learn 3 2) 8) 2.0)" +
+        "(add-weight (= (func-to-learn 4 7) 35) 2.0)" +
         "(get-best-assignment (func-to-learn 2 3))");
-    System.out.println(value);
+    assertEquals(9, value);
   }
 
   public void testRecursion() {

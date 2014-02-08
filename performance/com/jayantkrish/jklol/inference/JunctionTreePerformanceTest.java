@@ -178,7 +178,8 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
   
   @PerformanceTest(1)
   public void testSingleFactorCliqueTree() {
-    new JunctionTree.CliqueTree(FactorGraph.createFromFactors(Arrays.<Factor>asList(factor1)));
+    JunctionTree.CliqueTree.fromHeuristicVariableElimination(FactorGraph.createFromFactors(
+        Arrays.<Factor>asList(factor1)));
   }
 
   @PerformanceTest

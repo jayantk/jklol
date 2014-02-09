@@ -34,16 +34,27 @@ public class AmbEvalTest extends TestCase {
     Object expected = runTest("(list 2 2)");
     assertEquals(expected, value);
   }
+  
+  public void testIf() {
+    String value = runTestString("(if (= (list 1 2) (list 1 2)) \"true\" \"false\")");
+    assertEquals("true", value);
+  }
 
-  public void testAmbIf() {
-    try {
-      runTest("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) \"true\" \"false\"))");
-    } catch (Exception e) {
-      return;
-    }
-    fail("Cannot use amb statements in conditionals.");
+  public void testIfAmb1() {
+    String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) \"true\" \"false\"))");
+    assertEquals("false", value);
   }
   
+  public void testIfAmb2() {
+    String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (begin (add-weight (= 1 1) 4.0) \"true\") \"false\"))");
+    assertEquals("true", value);
+  }
+  
+  public void testIfAmb3() {
+    String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (amb (list \"a\" \"b\") (list 2 4)) \"false\"))");
+    assertEquals("b", value);
+  }
+
   public void testAmbMarginals1() {
     Object value = runTest("(get-marginals (amb (list 1 2) (list 2 2)))");
     Object expected = runTest("(list (list 1 2) (list 0.5 0.5))");
@@ -215,10 +226,9 @@ public class AmbEvalTest extends TestCase {
     		"  (define right-parse (cfg-parse right-seq))" +
     		"  (define left-parse-root (car left-parse))" +
     		"  (define right-parse-root (car right-parse))" +
-    		"  (define cur-root (new-label))" +
-    		"  (transition-factor left-parse-root right-parse-root cur-root)" +
-    		"  (add-weight (and (= choice-var i) (not (= cur-root root-var))) 0)" +
-    		"  (list cur-root left-parse right-parse))))" +
+    		"  (if (choice-var == i)" +
+    		"    (begin (transition-factor left-parse-root right-parse-root root-var)" +
+    		"           (list cur-root left-parse right-parse))))))" +
     		"" +
     		"(define decode-parse (lambda (chart) (if (= (length chart) 2)" +
     		"   chart" +

@@ -108,14 +108,55 @@ public class AmbEval {
         } else if (constantName.equals("if")) {
           Preconditions.checkArgument(subexpressions.size() == 4);
           Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
-          Preconditions.checkState(!(testCondition instanceof AmbValue));
-
-          // TODO: Handling conditionals on amb values requires changing the builder
-          // passed to the evaluated subexpressions.
-          if (ConstantValue.TRUE.equals(testCondition)) {
-            return eval(subexpressions.get(2), environment, builder);
+          
+          if (!(testCondition instanceof AmbValue)) {
+            // This condition evaluates to the same value in all program 
+            // executions that reach this point.
+            if (ConstantValue.TRUE.equals(testCondition)) {
+              return eval(subexpressions.get(2), environment, builder);
+            } else {
+              return eval(subexpressions.get(3), environment, builder);
+            }
           } else {
-            return eval(subexpressions.get(3), environment, builder);
+            // Some program executions evaluate the test condition to true,
+            // and others evaluate the condition to false. Create a branch 
+            // in the graphical model and execute each component of the if
+            // body in the corresponding builder.
+            AmbValue testConditionAmb = (AmbValue) testCondition;
+            VariableNumMap ambVar = testConditionAmb.getVar();
+            Assignment trueAssignment = ambVar.outcomeArrayToAssignment(ConstantValue.TRUE);
+            ParametricGfgBuilder trueBuilder = builder.createChild(testConditionAmb.getVar(),
+                trueAssignment);
+            EvalResult trueResult = eval(subexpressions.get(2), environment, trueBuilder);
+
+            Assignment falseAssignment = testConditionAmb.getVar()
+                .outcomeArrayToAssignment(ConstantValue.FALSE);
+            ParametricGfgBuilder falseBuilder = builder.createChild(testConditionAmb.getVar(),
+                falseAssignment);
+            EvalResult falseResult = eval(subexpressions.get(3), environment, falseBuilder);
+            
+            // The return value of the if statement is 
+            Object trueValue = trueResult.getValue();
+            Object falseValue = falseResult.getValue();
+            Preconditions.checkArgument(!(trueValue instanceof AmbValue) &&
+                !(falseValue instanceof AmbValue));
+            
+            List<Object> returnValues = Lists.newArrayList(trueValue, falseValue);
+            String varName = Integer.toHexString(returnValues.hashCode());
+            DiscreteVariable returnVarType = new DiscreteVariable(varName, returnValues);
+            VariableNumMap returnValueVar = VariableNumMap.singleton(getUniqueVarNum(), varName,
+                returnVarType);
+            builder.addVariables(returnValueVar);
+
+            TableFactorBuilder tfBuilder = new TableFactorBuilder(ambVar.union(returnValueVar),
+                SparseTensorBuilder.getFactory());
+            tfBuilder.setWeight(ambVar.outcomeArrayToAssignment(ConstantValue.TRUE)
+                .union(returnValueVar.outcomeArrayToAssignment(trueValue)), 1.0);
+            tfBuilder.setWeight(ambVar.outcomeArrayToAssignment(ConstantValue.FALSE)
+                .union(returnValueVar.outcomeArrayToAssignment(falseValue)), 1.0);
+
+            builder.addConstantFactor(varName, tfBuilder.build());
+            return new EvalResult(new AmbValue(returnValueVar));
           }
         } else if (constantName.equals("amb")) {
           Preconditions.checkArgument(subexpressions.size() >= 2 && subexpressions.size() <= 3);

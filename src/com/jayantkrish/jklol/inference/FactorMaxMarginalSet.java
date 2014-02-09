@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.inference.JunctionTree.CliqueTree;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -150,6 +151,10 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
       if (factor.getVars().containsAll(variables)) {
         return factor.maxMarginalize(factor.getVars().removeAll(variables));
       }
+    }
+
+    if (variables.size() == 0 && cliqueTree.getMarginals().size() == 0) {
+      return TableFactor.unity(VariableNumMap.EMPTY);
     }
 
     // No factor was found.

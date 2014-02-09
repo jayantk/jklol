@@ -43,6 +43,11 @@ public abstract class AbstractMarginalSet implements MarginalSet {
     return getMarginal(Ints.asList(varNums));
   }
   
+  @Override
+  public Factor getMarginal(VariableNumMap vars) {
+    return getMarginal(vars.getVariableNums());
+  }
+
   protected VariableNumMap getMarginalVariables() {
     return marginalVariables;
   }

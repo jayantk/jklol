@@ -53,6 +53,14 @@ public interface MarginalSet {
    * @return
    */
   public Factor getMarginal(int... varNums);
+  
+  /**
+   * Same as {@link #getMarginal(Collection)}.
+   * 
+   * @param vars
+   * @return
+   */
+  public Factor getMarginal(VariableNumMap vars);
 
   /**
    * Gets the log partition function for the graphical model, which is 

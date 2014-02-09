@@ -44,14 +44,19 @@ public class AmbEvalTest extends TestCase {
     String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) \"true\" \"false\"))");
     assertEquals("false", value);
   }
-  
+
   public void testIfAmb2() {
     String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (begin (add-weight (= 1 1) 4.0) \"true\") \"false\"))");
     assertEquals("true", value);
   }
-  
+
   public void testIfAmb3() {
     String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (amb (list \"a\" \"b\") (list 2 4)) \"false\"))");
+    assertEquals("b", value);
+  }
+
+  public void testIfAmb4() {
+    String value = runTestString("(define x (amb (list \"a\" \"b\") (list 2 1))) (get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (add-weight (= x \"b\") 5.0) \"false\")) (get-best-assignment x)");
     assertEquals("b", value);
   }
 

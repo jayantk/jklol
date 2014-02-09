@@ -10,21 +10,15 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
-import com.jayantkrish.jklol.inference.DualDecomposition;
-import com.jayantkrish.jklol.inference.JunctionTree;
-import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
@@ -35,10 +29,12 @@ public class AmbEval {
   private static int nextVarNum = 0;
   
   public EvalResult eval(SExpression expression) {
-    return eval(expression, getDefaultEnvironment(), new ParametricGfgBuilder(new ParametricFactorGraphBuilder()));
+    return eval(expression, getDefaultEnvironment(),
+        new ParametricBfgBuilder(new ParametricFactorGraphBuilder(), true));
   }
 
-  public EvalResult eval(SExpression expression, Environment environment, ParametricGfgBuilder builder) {
+  public EvalResult eval(SExpression expression, Environment environment,
+      ParametricBfgBuilder builder) {
     if (expression.isConstant()) {
       // The expression may be a primitive type or a variable.
       Object primitiveValue = null;
@@ -125,16 +121,16 @@ public class AmbEval {
             AmbValue testConditionAmb = (AmbValue) testCondition;
             VariableNumMap ambVar = testConditionAmb.getVar();
             Assignment trueAssignment = ambVar.outcomeArrayToAssignment(ConstantValue.TRUE);
-            ParametricGfgBuilder trueBuilder = builder.createChild(testConditionAmb.getVar(),
+            ParametricBfgBuilder trueBuilder = builder.createChild(testConditionAmb.getVar(),
                 trueAssignment);
             EvalResult trueResult = eval(subexpressions.get(2), environment, trueBuilder);
 
             Assignment falseAssignment = testConditionAmb.getVar()
                 .outcomeArrayToAssignment(ConstantValue.FALSE);
-            ParametricGfgBuilder falseBuilder = builder.createChild(testConditionAmb.getVar(),
+            ParametricBfgBuilder falseBuilder = builder.createChild(testConditionAmb.getVar(),
                 falseAssignment);
             EvalResult falseResult = eval(subexpressions.get(3), environment, falseBuilder);
-            
+
             // The return value of the if statement is 
             Object trueValue = trueResult.getValue();
             Object falseValue = falseResult.getValue();
@@ -186,31 +182,14 @@ public class AmbEval {
 
           return new EvalResult(new AmbValue(fgVar));
         } else if (constantName.equals("get-best-assignment")) {
-          Preconditions.checkArgument(subexpressions.size() == 2 || subexpressions.size() == 3);
+          Preconditions.checkArgument(subexpressions.size() == 2);
           Object value = eval(subexpressions.get(1), environment, builder).getValue();
 
-          // Second, optional argument selects the inference algorithm.
-          String inferenceAlgString = "junction-tree";
-          if (subexpressions.size() == 3) {
-            inferenceAlgString = (String) eval(subexpressions.get(2), environment, builder).getValue();
-          }
-
           if (value instanceof AmbValue || value instanceof ConsValue) {
-            ParametricFactorGraph currentFactorGraph = builder.build();
-            FactorGraph fg = currentFactorGraph.getModelFromParameters(
-                currentFactorGraph.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
-
+            BranchingFactorGraph fg = builder.build();
             System.out.println("factor graph: " + fg.getParameterDescription());
 
-            MarginalCalculator inferenceAlg = null;
-            if (inferenceAlgString.equals("junction-tree")) {
-              inferenceAlg = new JunctionTree();
-            } else if (inferenceAlgString.equals("dual-decomposition")) {
-              inferenceAlg = new DualDecomposition(100);
-            } else {
-              throw new IllegalArgumentException("Unsupported inference algorithm: " + inferenceAlgString);
-            }
-            MaxMarginalSet maxMarginals = inferenceAlg.computeMaxMarginals(fg);
+            MaxMarginalSet maxMarginals = fg.getMaxMarginals();
             Assignment assignment = maxMarginals.getNthBestAssignment(0);
 
             return new EvalResult(resolveAmbValueWithAssignment(value, assignment)); 
@@ -218,29 +197,14 @@ public class AmbEval {
             return new EvalResult(value);
           }
         } else if (constantName.equals("get-marginals")) {
-          Preconditions.checkArgument(subexpressions.size() == 2 || subexpressions.size() == 3);
+          Preconditions.checkArgument(subexpressions.size() == 2);
           Object value = eval(subexpressions.get(1), environment, builder).getValue();
 
-          // Second, optional argument selects the inference algorithm.
-          String inferenceAlgString = "junction-tree";
-          if (subexpressions.size() == 3) {
-            inferenceAlgString = (String) eval(subexpressions.get(2), environment, builder).getValue();
-          }
-
           if (value instanceof AmbValue) {
-            ParametricFactorGraph currentFactorGraph = builder.build();
-            FactorGraph fg = currentFactorGraph.getModelFromParameters(
-                currentFactorGraph.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
-
+            BranchingFactorGraph fg = builder.build();
             System.out.println("factor graph: " + fg.getParameterDescription());
-            
-            MarginalCalculator inferenceAlg = null;
-            if (inferenceAlgString.equals("junction-tree")) {
-              inferenceAlg = new JunctionTree();
-            } else {
-              throw new IllegalArgumentException("Unsupported inference algorithm: " + inferenceAlgString);
-            }
-            MarginalSet marginals = inferenceAlg.computeMarginals(fg);
+
+            MarginalSet marginals = fg.getMarginals();
             DiscreteFactor varMarginal = marginals.getMarginal(((AmbValue) value).getVar().getOnlyVariableNum())
                 .coerceToDiscrete();
 
@@ -273,7 +237,10 @@ public class AmbEval {
             tfBuilder.setWeight(weight, ConstantValue.TRUE); 
             TableFactor factor = tfBuilder.build();
             builder.addConstantFactor(fgVar.getOnlyVariableName(), factor);
-          } 
+          } else {
+            builder.addConstantFactor("constant-factor",
+                TableFactor.unity(VariableNumMap.EMPTY).product(weight));
+          }
           return new EvalResult(ConstantValue.UNDEFINED);
         }
       }
@@ -283,7 +250,7 @@ public class AmbEval {
   }
 
   public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment,
-      ParametricGfgBuilder gfgBuilder) {
+      ParametricBfgBuilder gfgBuilder) {
     List<Object> values = Lists.newArrayList();
     for (SExpression expression : subexpressions) {
       values.add(eval(expression, environment, gfgBuilder).getValue());
@@ -403,7 +370,7 @@ public class AmbEval {
   private static interface AmbFunctionValue {
     
     public Object apply(List<Object> argumentValues, Environment env,
-        ParametricGfgBuilder gfgBuilder);
+        ParametricBfgBuilder gfgBuilder);
   }
   
   private static class AmbLambdaValue implements AmbFunctionValue {
@@ -416,7 +383,7 @@ public class AmbEval {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricGfgBuilder gfgBuilder) {
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
       List<String> argumentNames = lambdaValue.getArgumentNames(); 
       Preconditions.checkArgument(argumentNames.size() == argumentValues.size(),
           "Wrong number of arguments: expected %s, got %s", argumentNames, argumentValues);
@@ -441,7 +408,7 @@ public class AmbEval {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricGfgBuilder gfgBuilder) {
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
       return baseFunction.apply(argumentValues, env);
     }
     
@@ -459,7 +426,7 @@ public class AmbEval {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricGfgBuilder gfgBuilder) {
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
       // Default case: perform function application.
       List<List<Object>> inputVarValues = Lists.newArrayList();
       List<VariableNumMap> inputVars = Lists.newArrayList();

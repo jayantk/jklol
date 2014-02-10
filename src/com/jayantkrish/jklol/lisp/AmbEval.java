@@ -27,7 +27,7 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
 public class AmbEval {
 
   private static int nextVarNum = 0;
-  
+
   public EvalResult eval(SExpression expression) {
     return eval(expression, getDefaultEnvironment(),
         new ParametricBfgBuilder(new ParametricFactorGraphBuilder(), true));
@@ -49,6 +49,10 @@ public class AmbEval {
       } else if (constantString.matches("^-?[0-9]+\\.[0-9]*$")) {
         double doubleValue = Double.parseDouble(constantString);
         primitiveValue = doubleValue;
+      } else if (constantString.equals("#t")) {
+        primitiveValue = ConstantValue.TRUE;
+      } else if (constantString.equals("#f")) {
+        primitiveValue = ConstantValue.FALSE;
       }
 
       if (primitiveValue != null) {
@@ -104,7 +108,7 @@ public class AmbEval {
         } else if (constantName.equals("if")) {
           Preconditions.checkArgument(subexpressions.size() == 4);
           Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
-          
+
           if (!(testCondition instanceof AmbValue)) {
             // This condition evaluates to the same value in all program 
             // executions that reach this point.
@@ -187,7 +191,7 @@ public class AmbEval {
 
           if (value instanceof AmbValue || value instanceof ConsValue) {
             BranchingFactorGraph fg = builder.build();
-            System.out.println("factor graph: " + fg.getParameterDescription());
+            // System.out.println("factor graph: " + fg.getParameterDescription());
 
             MaxMarginalSet maxMarginals = fg.getMaxMarginals();
             Assignment assignment = maxMarginals.getNthBestAssignment(0);
@@ -202,7 +206,7 @@ public class AmbEval {
 
           if (value instanceof AmbValue) {
             BranchingFactorGraph fg = builder.build();
-            System.out.println("factor graph: " + fg.getParameterDescription());
+            // System.out.println("factor graph: " + fg.getParameterDescription());
 
             MarginalSet marginals = fg.getMarginals();
             DiscreteFactor varMarginal = marginals.getMarginal(((AmbValue) value).getVar().getOnlyVariableNum())
@@ -216,11 +220,9 @@ public class AmbEval {
               outcomes.add(outcome.getAssignment().getOnlyValue());
               weights.add(outcome.getProbability());
             }
-            
-            System.out.println(varMarginal.getParameterDescription());
+
             Object outcomesConsList = ConsValue.listToConsList(outcomes);
             Object weightsConsList = ConsValue.listToConsList(weights);
-
             return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
           } else {
             return new EvalResult(value);
@@ -237,7 +239,7 @@ public class AmbEval {
             tfBuilder.setWeight(weight, ConstantValue.TRUE); 
             TableFactor factor = tfBuilder.build();
             builder.addConstantFactor(fgVar.getOnlyVariableName(), factor);
-          } else {
+          } else if (ConstantValue.TRUE.equals(value)) {
             builder.addConstantFactor("constant-factor",
                 TableFactor.unity(VariableNumMap.EMPTY).product(weight));
           }
@@ -363,7 +365,7 @@ public class AmbEval {
     env.bindName("not", new RaisedBuiltinFunction(new BuiltinFunctions.NotFunction()));
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()));
     env.bindName("or", new RaisedBuiltinFunction(new BuiltinFunctions.OrFunction()));
-    env.bindName("display", new BuiltinFunctions.DisplayFunction());
+    env.bindName("display", new WrappedBuiltinFunction(new BuiltinFunctions.DisplayFunction()));
     return env;
   }
 

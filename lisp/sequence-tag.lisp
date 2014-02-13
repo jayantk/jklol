@@ -33,11 +33,11 @@
                            (begin (define remaining-tags (sequence-tag (cdr input-seq)))
                                   ;; Add the transition factor between this label
                                   ;; and the first label of the rest of the sequence
-                                  (transition-factor cur-label (car remaining-tags))
+                                  (transition-factor cur-label (lifted-car remaining-tags))
                                   ;; Return the sequence of label variables.
-                                  (cons cur-label remaining-tags))
+                                  (lifted-cons cur-label remaining-tags))
                            ;; No need to recurse: just return the current label
-                           (list cur-label))))
+                           (lifted-list cur-label))))
 
 ;; Calling sequence-tag on an input instantiates a graphical model.
 ;; get-best-assignment performs inference on this model to identify

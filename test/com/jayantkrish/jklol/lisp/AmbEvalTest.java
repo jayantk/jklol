@@ -9,6 +9,8 @@ public class AmbEvalTest extends TestCase {
   AmbEval eval;
   ExpressionParser<SExpression> parser;
 
+  private static final double TOLERANCE = 1e-3;
+
   public void setUp() {
     eval = new AmbEval();
     parser = ExpressionParser.sExpression();
@@ -58,6 +60,12 @@ public class AmbEvalTest extends TestCase {
   public void testIfAmb4() {
     String value = runTestString("(define x (amb (list \"a\" \"b\") (list 2 1))) (get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (add-weight (= x \"b\") 5.0) \"false\")) (get-best-assignment x)");
     assertEquals("b", value);
+  }
+  
+  public void testIfAmb5() {
+    String value = runTestString("(define x (amb (list (list) (list \"a\" \"b\")) (list 2 1))) " +
+    		"(get-best-assignment (if (not (nil? x)) (car x) \"nil\"))");
+    assertEquals("nil", value);
   }
 
   public void testAmbMarginals1() {
@@ -170,16 +178,16 @@ public class AmbEvalTest extends TestCase {
     		"(define transition-factor (lambda (cur-label next-label)" +
     		"(add-weight (and (= next-label \"N\") (= cur-label \"N\")) 2))) " +
     		"" +
-    		"(define sequence-tag (lambda (input-seq) (if (nil? input-seq) (list) (begin " +
+    		"(define sequence-tag (lambda (input-seq) (if (nil? input-seq) (lifted-list) (begin " +
     		"(define cur-label (amb (list \"N\" \"V\") (list 1 1)))" +
-    		"(define next-labels (sequence-tag (cdr input-seq))) " +
+    		"(define next-labels (sequence-tag (lifted-cdr input-seq))) " +
     		"(word-factor cur-label (car input-seq))" +
     		"(if (not (nil? (cdr input-seq)))" +
      		" (begin " +
-    		"        (define next-label (car next-labels))" +
+    		"        (define next-label (lifted-car next-labels))" +
     		"        (transition-factor cur-label next-label)" +
-    		"        (cons cur-label next-labels))" +
-    		" (cons cur-label next-labels))))))" +
+    		"        (lifted-cons cur-label next-labels))" +
+    		" (lifted-cons cur-label next-labels))))))" +
     		"" +
     		"(define x (get-best-assignment (sequence-tag (list \"car\"))))" +
     		"(define y (get-best-assignment (sequence-tag (list \"goes\" \"car\")))) " +
@@ -253,6 +261,56 @@ public class AmbEvalTest extends TestCase {
     fail();
   }
 
+  public void testOpt1() {
+    String program = "(define label-list (list #t #f))" +
+    		"(define discrete-family (lambda (parameters) " +
+    		"  (lambda () " +
+    		"    (define label (amb label-list))" +
+    		"    (make-indicator-classifier label parameters)" +
+    		"    label)))" +
+    		"" +
+    		"(define require (lambda (x) (add-weight (not x) 0.0)))" +
+    		"" +
+    		"(define training-data (list (list (list) (lambda (label) (require (= label	#t))))" +
+    		"                             (list (list) (lambda (label) (require (= label #t))))" +
+        "                             (list (list) (lambda (label) (require (= label #t))))" +
+        "                             (list (list) (lambda (label) (require (= label #f))))))" +
+        "" +
+    		"(define best-params (opt discrete-family (make-indicator-classifier-parameters label-list) training-data))" +
+    		"(define factor (discrete-family best-params))" +
+    		"(define marginals (get-marginals (factor)))" +
+    		"(define probs (car (cdr marginals)))" +
+    		"(define tp (car probs))" +
+    		"(define fp (car (cdr probs)))" +
+    		"(+ (* (- tp 0.75) (- tp 0.75)) (* (- fp 0.25) (- fp 0.25)))";
+
+    Double value = runTestDouble(program);
+    assertEquals(0.0, value, TOLERANCE);
+  }
+
+  public void testOpt3() {
+    String program = "(define label-list (list #t #f))" +
+    		"(define sequence-family (lambda (parameters)" +
+    		"  (define sequence-tag (lambda (seq)" +
+    		"    (if (nil? seq) " +
+    		"        (lifted-list)" +
+    		"        (begin (define cur-label (amb label-list))" +
+    		"          (make-featurized-classifier cur-label (feat-func (car seq)))" +
+    		"          (if (nil? (cdr seq))" +
+    		"            (lifted-list cur-label)" +
+    		"            (begin (define remaining-labels (sequence-tag (cdr seq)))" +
+    		"              (make-indicator-classifier (lifted-list cur-label (car remaining-labels)) parameters)" +
+    		"              (lifted-cons cur-label remaining-labels)))))))" +
+    		"  sequence-tag))" +
+    		"" +
+    		"(define require-seq-equal (lambda (predicted actual)" +
+    		"  (if (nil? actual) " +
+    		"      #t " +
+    		"     (begin (require (= (car predicted) (car actual)))" +
+    		"        (require-seq-equal (cdr predicted) (cdr actual))))))" +
+    		"";
+  }
+
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
     return eval.eval(parser.parseSingleExpression(wrappedExpressionString)).getValue();
@@ -264,5 +322,9 @@ public class AmbEvalTest extends TestCase {
 
   private int runTestInt(String expressionString) {
     return (Integer) runTest(expressionString);
+  }
+
+  private double runTestDouble(String expressionString) {
+    return (Double) runTest(expressionString);
   }
 }

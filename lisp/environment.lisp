@@ -1,11 +1,16 @@
 ;; list functions
 (define map (lambda (f seq) (if (nil? seq) (list) (cons (f (car seq)) (map f (cdr seq))))))
+(define lifted-map (lambda (f seq) (if (nil? seq) (lifted-list) (lifted-cons (f (lifted-car seq)) (lifted-map f (lifted-cdr seq))))))
 (define length (lambda (seq) (if (nil? seq) 0 (+ (length (cdr seq)) 1))))
 (define first-n (lambda (seq n) (if (= n 0) (list) (cons (car seq) (first-n (cdr seq) (- n 1))))))
 (define remainder-n (lambda (seq n) (if (= n 0) seq (remainder-n (cdr seq) (- n 1)))))
 (define get-ith-element (lambda (seq i) (if (nil? seq) (list) 
                                           (if (= i 0) (car seq)
                                             (get-ith-element (cdr seq) (- i 1))))))
+
+(define lifted-get-ith-element (lambda (seq i) (if (nil? seq) (lifted-list) 
+                                                 (if (= i 0) (lifted-car seq)
+                                                   (lifted-get-ith-element (lifted-cdr seq) (- i 1))))))
 
 ;; Appends two lists.
 (define append (lambda (l1 l2)
@@ -19,3 +24,5 @@
 ;; Forces all nondeterministic executions to satisfy the given condition
 (define require (lambda (condition) (add-weight (not condition) 0.0)))
 
+;; Math functions
+(define square (lambda (n) (* n n)))

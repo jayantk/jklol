@@ -28,7 +28,7 @@
                                            (get-proposition-index-helper proposition (+ cur-index 1) (cdr proposition-list))))))
 
 (define get-proposition-var (lambda (proposition proposition-list proposition-var-list)
-  (get-ith-element proposition-var-list (get-proposition-index proposition proposition-list))))
+  (lifted-get-ith-element proposition-var-list (get-proposition-index proposition proposition-list))))
 
 ;; MLN definition ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; The set of unary predicates and terms they can be
@@ -39,8 +39,9 @@
 ;; Instantiate the set of all unary propositions.
 (define unary-propositions (instantiate-unary-propositions terms unary-predicates))
 ;; Create a random variable for each unary proposition.
-(define unary-proposition-vars (map (lambda (x) (amb (list #t #f) (list 1 1)))
+(define unary-proposition-vars (lifted-map (lambda (x) (amb (list #t #f) (list 1 1)))
                                             unary-propositions))
+
 
 ;; Function for looking up a proposition var in the instantiated set of
 ;; unary propositions.
@@ -53,8 +54,9 @@
 (add-weight (get-propv (list "Smokes" "John")) 0.5)
 (add-weight (get-propv (list "Smokes" "Smith")) 0.75)
 
+
 ;; Cancer is unlikely a priori.
-(map (lambda (term) (add-weight (get-propv (list "Cancer" term)) 0.9)) terms)
+(lifted-map (lambda (term) (add-weight (get-propv (list "Cancer" term)) 0.9)) terms)
 
 ;; It's unlikely that both Anna and Bob smoke.
 (add-weight (and (get-propv (list "Smokes" "Bob"))
@@ -65,7 +67,7 @@
 (define => (lambda (x y) (not (and x (not y)))))
 (define smoking-causes-cancer (lambda (term) (add-weight (=> (get-propv (list "Smokes" term))
                                                              (get-propv (list "Cancer" term))) 2.0)))
-(map smoking-causes-cancer terms)
+(lifted-map smoking-causes-cancer terms)
 
 
 ;; Output ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

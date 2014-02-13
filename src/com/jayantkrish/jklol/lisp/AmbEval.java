@@ -10,6 +10,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
+import com.jayantkrish.jklol.evaluation.Example;
+import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
@@ -19,8 +21,10 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
@@ -29,8 +33,7 @@ public class AmbEval {
   private static int nextVarNum = 0;
 
   public EvalResult eval(SExpression expression) {
-    return eval(expression, getDefaultEnvironment(),
-        new ParametricBfgBuilder(new ParametricFactorGraphBuilder(), true));
+    return eval(expression, getDefaultEnvironment(), new ParametricBfgBuilder(true));
   }
 
   public EvalResult eval(SExpression expression, Environment environment,
@@ -244,8 +247,35 @@ public class AmbEval {
                 TableFactor.unity(VariableNumMap.EMPTY).product(weight));
           }
           return new EvalResult(ConstantValue.UNDEFINED);
+        } else if (constantName.equals("opt")) {
+          Preconditions.checkArgument(subexpressions.size() == 4);
+
+          Object value = eval(subexpressions.get(1), environment, builder).getValue();
+          Preconditions.checkArgument(value instanceof AmbFunctionValue);
+          AmbFunctionValue modelFamily = (AmbFunctionValue) value;
+          ParameterSpec parameterSpec = (ParameterSpec) eval(subexpressions.get(2), environment,
+              builder).getValue();
+
+          Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
+          List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
+          List<Example<List<Object>, AmbFunctionValue>> trainingData = Lists.newArrayList();
+          for (ConsValue example : trainingExampleObjects) {
+            List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
+            Preconditions.checkArgument(inputOutput.size() == 2);
+            trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
+                (AmbFunctionValue) inputOutput.get(1)));
+          }
+
+          AmbLispGradientOracle oracle = new AmbLispGradientOracle(modelFamily, environment,
+              parameterSpec, new JunctionTree());
+          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
+              trainingData.size() * 10, 1, 1, true, true, 0.0, new DefaultLogFunction(1, false));
+
+          SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
+
+          return new EvalResult(parameters);
         }
-      }
+      } 
 
       return doFunctionApplication(subexpressions, environment, builder);
     }
@@ -264,7 +294,7 @@ public class AmbEval {
       AmbFunctionValue function = (AmbFunctionValue) functionObject;
       return new EvalResult(function.apply(argumentValues, environment, gfgBuilder));
     } else if (functionObject instanceof AmbValue) {
-      // TODO: This gets fucked up if the called functions themselves modify gfgBuilder.
+      // TODO: This gets messed up if the called functions themselves modify gfgBuilder.
       AmbValue functionAmb = ((AmbValue) functionObject);
       List<Object> possibleFunctionObjects = functionAmb.getPossibleValues();
       List<Object> functionResults = Lists.newArrayList();
@@ -351,10 +381,19 @@ public class AmbEval {
 
   public static Environment getDefaultEnvironment() {
     Environment env = Environment.empty();
-    env.bindName("cons", new WrappedBuiltinFunction(new BuiltinFunctions.ConsFunction()));
-    env.bindName("car", new WrappedBuiltinFunction(new BuiltinFunctions.CarFunction()));
-    env.bindName("cdr", new WrappedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
-    env.bindName("list", new WrappedBuiltinFunction(new BuiltinFunctions.ListFunction()));
+    env.bindName("cons", new RaisedBuiltinFunction(new BuiltinFunctions.ConsFunction()));
+    env.bindName("car", new RaisedBuiltinFunction(new BuiltinFunctions.CarFunction()));
+    env.bindName("cdr", new RaisedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
+    env.bindName("list", new RaisedBuiltinFunction(new BuiltinFunctions.ListFunction()));
+
+    env.bindName("lifted-cons", new WrappedBuiltinFunction(new BuiltinFunctions.ConsFunction()));
+    env.bindName("lifted-car", new WrappedBuiltinFunction(new BuiltinFunctions.CarFunction()));
+    env.bindName("lifted-cdr", new WrappedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
+    env.bindName("lifted-list", new WrappedBuiltinFunction(new BuiltinFunctions.ListFunction()));
+
+    env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
+    env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());
+
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));
     env.bindName("-", new RaisedBuiltinFunction(new BuiltinFunctions.MinusFunction()));
@@ -369,8 +408,7 @@ public class AmbEval {
     return env;
   }
 
-  private static interface AmbFunctionValue {
-    
+  public static interface AmbFunctionValue {
     public Object apply(List<Object> argumentValues, Environment env,
         ParametricBfgBuilder gfgBuilder);
   }

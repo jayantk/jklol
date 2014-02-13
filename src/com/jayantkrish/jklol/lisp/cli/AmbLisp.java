@@ -12,7 +12,6 @@ import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class AmbLisp extends AbstractCli {
@@ -44,7 +43,7 @@ public class AmbLisp extends AbstractCli {
     AmbEval eval = new AmbEval();
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
     SExpression programExpression = parser.parseSingleExpression(programBuilder.toString());
-    ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(new ParametricFactorGraphBuilder(), true);
+    ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
     EvalResult result = eval.eval(programExpression, AmbEval.getDefaultEnvironment(), 
         fgBuilder);
 

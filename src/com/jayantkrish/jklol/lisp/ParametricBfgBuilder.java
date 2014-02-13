@@ -8,6 +8,7 @@ import com.jayantkrish.jklol.lisp.BranchingFactorGraph.ChildBfg;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.util.Assignment;
@@ -19,10 +20,12 @@ public class ParametricBfgBuilder {
 
   private final List<Factor> crossingFactors;
   private final List<ChildBuilder> children;
-  
-  public ParametricBfgBuilder(ParametricFactorGraphBuilder fgBuilder,
-      boolean isRoot) {
-    this.fgBuilder = Preconditions.checkNotNull(fgBuilder);
+
+  private final List<MarkedVars> markedVars;
+
+  public ParametricBfgBuilder(boolean isRoot) {
+    this.fgBuilder = new ParametricFactorGraphBuilder();
+    this.markedVars = Lists.newArrayList();
     this.isRoot = isRoot;
 
     this.crossingFactors = Lists.newArrayList();
@@ -52,7 +55,7 @@ public class ParametricBfgBuilder {
   }
 
   public ParametricBfgBuilder createChild(VariableNumMap vars, Assignment assignment) {
-    ParametricBfgBuilder childBuilder = new ParametricBfgBuilder(new ParametricFactorGraphBuilder(), false);
+    ParametricBfgBuilder childBuilder = new ParametricBfgBuilder(false);
     children.add(new ChildBuilder(childBuilder, vars, assignment));
     return childBuilder;
   }
@@ -66,6 +69,19 @@ public class ParametricBfgBuilder {
     ParametricFactorGraph pfg = fgBuilder.build();
     return new BranchingFactorGraph(pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
         .conditional(DynamicAssignment.EMPTY), childrenFgs);
+  }
+
+  public ParametricFactorGraph buildNoBranching() {
+    Preconditions.checkState(isRoot && children.size() == 0);
+    return fgBuilder.build();
+  }
+
+  public void addMark(VariableNumMap vars, ParametricFactor pf, int parameterIndex) {
+    markedVars.add(new MarkedVars(vars, pf, parameterIndex));
+  }
+
+  public List<MarkedVars> getMarkedVars() {
+    return markedVars;
   }
 
   private static class ChildBuilder {
@@ -94,6 +110,30 @@ public class ParametricBfgBuilder {
 
     public ChildBfg build() {
       return new ChildBfg(builder.build(), vars, assignment, builder.getCrossingFactors());
+    }
+  }
+  
+  public static class MarkedVars {
+    private final VariableNumMap vars;
+    private final ParametricFactor factor;
+    private final int parameterIndex;
+
+    public MarkedVars(VariableNumMap vars, ParametricFactor factor, int parameterIndex) {
+      this.vars = Preconditions.checkNotNull(vars);
+      this.factor = Preconditions.checkNotNull(factor);
+      this.parameterIndex = parameterIndex;
+    }
+
+    public VariableNumMap getVars() {
+      return vars;
+    }
+
+    public ParametricFactor getFactor() {
+      return factor;
+    }
+
+    public int getParameterIndex() {
+      return parameterIndex;
     }
   }
 }

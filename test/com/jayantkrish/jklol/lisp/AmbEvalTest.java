@@ -67,6 +67,12 @@ public class AmbEvalTest extends TestCase {
     		"(get-best-assignment (if (not (nil? x)) (car x) \"nil\"))");
     assertEquals("nil", value);
   }
+  
+  public void testLet() {
+    Object value = runTest("(let ((x 123) (y 456)) (list x y))");
+    Object expected = runTest("(list 123 456)");
+    assertEquals(expected, value);
+  }
 
   public void testAmbMarginals1() {
     Object value = runTest("(get-marginals (amb (list 1 2) (list 2 2)))");

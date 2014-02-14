@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
+import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -11,6 +12,9 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.tensor.TensorBuilder;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class ClassifierFunctions {
 
@@ -70,6 +74,41 @@ public class ClassifierFunctions {
       ParametricFactor pf = new IndicatorLogLinearFactor(vars, TableFactor.unity(vars));
 
       return new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf, pf.getNewSufficientStatistics());
+    }
+  }
+  
+  public static class MakeFeatureFactory implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      List<Object> values = ConsValue.consListToList(argumentValues.get(0), Object.class);
+
+      return new WrappedBuiltinFunction(new FeatureFactory(IndexedList.create(values)));
+    }
+  }
+
+  public static class FeatureFactory implements FunctionValue {
+    private final IndexedList<Object> dictionary;
+
+    public FeatureFactory(IndexedList<Object> dictionary) {
+      this.dictionary = Preconditions.checkNotNull(dictionary);
+    }
+
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      List<Object> values = ConsValue.consListToList(argumentValues.get(0), Object.class);
+      
+      TensorBuilder builder = new SparseTensorBuilder(new int[] {0}, new int[] {dictionary.size()});
+      for (Object value : values) {
+        List<Object> tuple = ConsValue.consListToList(value, Object.class);
+        Object featureName = tuple.get(0);
+        int featureIndex = dictionary.getIndex(featureName);
+        double featureValue = (Double) tuple.get(1);
+        builder.incrementEntry(featureValue, featureIndex);
+      }
+
+      return builder.build();
     }
   }
 }

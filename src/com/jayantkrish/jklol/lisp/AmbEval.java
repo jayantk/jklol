@@ -72,10 +72,19 @@ public class AmbEval {
 
         // Check for syntactic special forms (define, lambda, etc.)
         if (constantName.equals("define")) {
-          // Binds a name to a value in the environment.
           String nameToBind = subexpressions.get(1).getConstant();
-          Object valueToBind = eval(subexpressions.get(2), environment, builder).getValue();
-          environment.bindName(nameToBind, valueToBind);
+          if (subexpressions.size() == 3) {
+            // (define name value-expression)
+            // Binds a name to the value of value-expression
+            Object valueToBind = eval(subexpressions.get(2), environment, builder).getValue();
+            environment.bindName(nameToBind, valueToBind);
+          } else if (subexpressions.size() >= 4) {
+            // (define procedure-name (arg1 ...) procedure-body)
+            // syntactic sugar equivalent to (define procedure-name (lambda (arg1 ...) procedure-body
+            AmbLambdaValue lambdaValue =  makeLambda(subexpressions.get(2),
+                subexpressions.subList(3, subexpressions.size()), environment);
+            environment.bindName(nameToBind, lambdaValue);
+          }
           return new EvalResult(ConstantValue.UNDEFINED);
         } else if (constantName.equals("begin")) {
           // Sequentially evaluates its subexpressions, chaining any 
@@ -85,29 +94,34 @@ public class AmbEval {
             result = eval(subexpressions.get(i), environment, builder);
           }
           return result;
+        } else if (constantName.equals("let")) {
+          // (let ((name1 value-expr1) (name2 value-expr2) ...) body)
+          Environment newEnv = Environment.extend(environment);
+          
+          List<SExpression> bindings = subexpressions.get(1).getSubexpressions();
+          for (SExpression binding : bindings) {
+            String name = binding.getSubexpressions().get(0).getConstant();
+            SExpression valueExpression = binding.getSubexpressions().get(1);
+            
+            Object value = eval(valueExpression, newEnv, builder).getValue();
+            newEnv.bindName(name, value);
+          }
+
+          EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
+          for (int i = 2; i < subexpressions.size(); i++) {
+            result = eval(subexpressions.get(i), newEnv, builder);
+          }
+          return result;
         } else if (constantName.equals("lambda")) {
           // Create and return a function value representing this function.
           Preconditions.checkArgument(subexpressions.size() >= 3, "Invalid lambda expression arguments: " + subexpressions);
-          Preconditions.checkArgument(subexpressions.get(1).getSubexpressions() != null, "Illegal argument list in lambda: " + subexpressions);
-
-          List<String> argumentNames = Lists.newArrayList();
-          List<SExpression> argumentExpressions = subexpressions.get(1).getSubexpressions();
-          for (SExpression argumentExpression : argumentExpressions) {
-            Preconditions.checkArgument(argumentExpression.isConstant());
-            argumentNames.add(argumentExpression.getConstant());
-          }
-
-          SExpression functionBody = null;
-          if (subexpressions.size() == 3) {
-            functionBody = subexpressions.get(2);
-          } else {
-            List<SExpression> functionBodyComponents = Lists.newArrayList();
-            functionBodyComponents.add(SExpression.constant("begin"));
-            functionBodyComponents.addAll(subexpressions.subList(2, subexpressions.size()));
-            functionBody = SExpression.nested(functionBodyComponents);
-          }
-
-          return new EvalResult(new AmbLambdaValue(new LambdaValue(argumentNames, functionBody, environment), this));
+          return new EvalResult(makeLambda(subexpressions.get(1), subexpressions.subList(2, subexpressions.size()), environment));
+        } else if (constantName.equals("apply")) {
+          Preconditions.checkArgument(subexpressions.size() == 3, "Invalid apply expression: " + subexpressions);
+          AmbLambdaValue lambdaValue = (AmbLambdaValue) eval(subexpressions.get(1), environment, builder).getValue();
+          List<Object> argumentValues = ConsValue.consListToList(
+              eval(subexpressions.get(2), environment, builder).getValue(), Object.class);
+          return new EvalResult(lambdaValue.apply(argumentValues, environment, builder));
         } else if (constantName.equals("if")) {
           Preconditions.checkArgument(subexpressions.size() == 4);
           Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
@@ -298,6 +312,32 @@ public class AmbEval {
     }
   }
 
+  private AmbLambdaValue makeLambda(SExpression arguments, List<SExpression> bodyExpressions,
+      Environment environment) {
+    Preconditions.checkArgument(arguments.getSubexpressions() != null,
+        "Illegal argument list in lambda: " + arguments);
+
+    List<String> argumentNames = Lists.newArrayList();
+    List<SExpression> argumentExpressions = arguments.getSubexpressions();
+    for (SExpression argumentExpression : argumentExpressions) {
+      Preconditions.checkArgument(argumentExpression.isConstant(),
+          argumentExpression + " is not a constant. Argument list: " + arguments);
+      argumentNames.add(argumentExpression.getConstant());
+    }
+
+    SExpression functionBody = null;
+    if (bodyExpressions.size() == 1) {
+      functionBody = bodyExpressions.get(0);
+    } else {
+      List<SExpression> functionBodyComponents = Lists.newArrayList();
+      functionBodyComponents.add(SExpression.constant("begin"));
+      functionBodyComponents.addAll(bodyExpressions);
+      functionBody = SExpression.nested(functionBodyComponents);
+    }
+
+    return new AmbLambdaValue(new LambdaValue(argumentNames, functionBody, environment), this);
+  }
+
   public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment,
       ParametricBfgBuilder gfgBuilder) {
     List<Object> values = Lists.newArrayList();
@@ -410,6 +450,7 @@ public class AmbEval {
 
     env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
     env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());
+    env.bindName("make-feature-factory", new WrappedBuiltinFunction(new ClassifierFunctions.MakeFeatureFactory()));
 
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));
@@ -457,7 +498,7 @@ public class AmbEval {
     }
   }
 
-  private static class WrappedBuiltinFunction implements AmbFunctionValue {
+  public static class WrappedBuiltinFunction implements AmbFunctionValue {
     private final FunctionValue baseFunction;
 
     public WrappedBuiltinFunction(FunctionValue baseFunction) {
@@ -475,7 +516,7 @@ public class AmbEval {
     }
   }
 
-  private static class RaisedBuiltinFunction implements AmbFunctionValue {
+  public static class RaisedBuiltinFunction implements AmbFunctionValue {
     private final FunctionValue baseFunction;
 
     public RaisedBuiltinFunction(FunctionValue baseFunction) {

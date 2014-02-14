@@ -9,7 +9,7 @@ public class AmbEvalTest extends TestCase {
   AmbEval eval;
   ExpressionParser<SExpression> parser;
 
-  private static final double TOLERANCE = 1e-3;
+  private static final double TOLERANCE = 1e-2;
 
   public void setUp() {
     eval = new AmbEval();
@@ -276,7 +276,7 @@ public class AmbEvalTest extends TestCase {
         "                             (list (list) (lambda (label) (require (= label #t))))" +
         "                             (list (list) (lambda (label) (require (= label #f))))))" +
         "" +
-    		"(define best-params (opt discrete-family (make-indicator-classifier-parameters label-list) training-data))" +
+    		"(define best-params (opt discrete-family (make-indicator-classifier-parameters (list label-list)) training-data))" +
     		"(define factor (discrete-family best-params))" +
     		"(define marginals (get-marginals (factor)))" +
     		"(define probs (car (cdr marginals)))" +
@@ -288,27 +288,81 @@ public class AmbEvalTest extends TestCase {
     assertEquals(0.0, value, TOLERANCE);
   }
 
+  public void testOpt2() {
+    String program = "(define label-list (list #t #f))" +
+    		"(define label-list2 (list \"A\" \"B\" \"C\"))" +
+        "(define discrete-family (lambda (parameters) " +
+        "  (lambda () " +
+        "    (define label1 (amb label-list))" +
+        "    (define label2 (amb label-list2))" +
+        "    (make-indicator-classifier (lifted-list label1 label2) parameters)" +
+        "    (lifted-list label1 label2))))" +
+        "" +
+        "(define require1 (lambda (x) (add-weight (not x) 0.0)))" +
+        "" +
+        "(define training-data (list (list (list) (lambda (label) (require1 (= (lifted-car label)	#t))))" +
+        "                             (list (list) (lambda (label) (require1 (= (lifted-car label) #t))))" +
+        "                             (list (list) (lambda (label) (require1 (= (lifted-car label) #t))))" +
+        "                             (list (list) (lambda (label) (require1 (= (lifted-car label) #f))))))" +
+        "" +
+        "(define best-params (opt discrete-family (make-indicator-classifier-parameters (list label-list label-list2)) training-data))" +
+        "(define factor (discrete-family best-params))" +
+        "(define dist (factor))" +
+        "(define var1 (lifted-car dist))" +
+        "(define var2 (lifted-car (lifted-cdr dist)))" +
+        "(define marginals (get-marginals var1))" +
+        "(display marginals)" +
+        "(display (get-marginals var2))" +
+        "(define probs (car (cdr marginals)))" +
+        "(define tp (car probs))" +
+        "(define fp (car (cdr probs)))" +
+        "(+ (* (- tp 0.75) (- tp 0.75)) (* (- fp 0.25) (- fp 0.25)))";
+
+    Double value = runTestDouble(program);
+    assertEquals(0.0, value, TOLERANCE);
+  }
+
   public void testOpt3() {
     String program = "(define label-list (list #t #f))" +
-    		"(define sequence-family (lambda (parameters)" +
+    		"(define word-list (list \"A\" \"B\" \"C\"))" +
+    		"" +
+    		"(define sequence-family (lambda (word-parameters transition-parameters)" +
     		"  (define sequence-tag (lambda (seq)" +
     		"    (if (nil? seq) " +
     		"        (lifted-list)" +
-    		"        (begin (define cur-label (amb label-list))" +
-    		"          (make-featurized-classifier cur-label (feat-func (car seq)))" +
+    		"        (begin " +
+    		"          (define cur-label (amb label-list)) "+ 
+    		"          (define cur-word (amb word-list)) " +
+    		"          (add-weight (not (= cur-word (car seq))) 0.0)" +
+    		"          (make-indicator-classifier (lifted-list cur-word cur-label) word-parameters)" +
     		"          (if (nil? (cdr seq))" +
     		"            (lifted-list cur-label)" +
     		"            (begin (define remaining-labels (sequence-tag (cdr seq)))" +
-    		"              (make-indicator-classifier (lifted-list cur-label (car remaining-labels)) parameters)" +
+    		"              (make-indicator-classifier (lifted-list cur-label (lifted-car remaining-labels)) transition-parameters)" +
     		"              (lifted-cons cur-label remaining-labels)))))))" +
     		"  sequence-tag))" +
     		"" +
     		"(define require-seq-equal (lambda (predicted actual)" +
     		"  (if (nil? actual) " +
-    		"      #t " +
-    		"     (begin (require (= (car predicted) (car actual)))" +
-    		"        (require-seq-equal (cdr predicted) (cdr actual))))))" +
-    		"";
+    		"      #t" +
+    		"     (begin (add-weight (not (= (lifted-car predicted) (car actual))) 0.0)" +
+    		"        (require-seq-equal (lifted-cdr predicted) (cdr actual))))))" +
+    		"" +
+    		"(define training-data (list (list (list (list \"A\" \"B\" \"C\")) (lambda (label-seq) (require-seq-equal label-seq (list #t #f #t))))" +
+    		"                            (list (list (list \"C\" \"B\" \"A\")) (lambda (label-seq) (require-seq-equal label-seq (list #t #t #t))))" +
+    		"))" +
+    		"" +
+    		"(define parameter-spec (list (make-indicator-classifier-parameters (list word-list label-list))" +
+    		"                             (make-indicator-classifier-parameters (list label-list label-list))))" +
+    		"(define best-params (opt sequence-family parameter-spec training-data))" +
+    		"(define sequence-model (sequence-family (car best-params) (car (cdr best-params))))" +
+    		"(define foo (get-best-assignment (sequence-model (list \"A\" \"C\" \"A\" \"B\"))))" +
+    		"(define bar (get-best-assignment (sequence-model (list \"C\" \"B\" \"C\"))))" +
+    		"(list foo bar)";
+
+    Object value = runTest(program);
+    Object expected = runTest("(list (list #t #t #t #f) (list #t #t #t))");
+    assertEquals(expected, value);
   }
 
   private Object runTest(String expressionString) {

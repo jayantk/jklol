@@ -1,7 +1,9 @@
 package com.jayantkrish.jklol.models.loglinear;
 
+import java.util.Arrays;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -101,6 +103,8 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   private Tensor getFeatureWeights(SufficientStatistics parameters) {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     Tensor featureWeights = featureParameters.get();
+    Preconditions.checkArgument(Arrays.equals(featureWeights.getDimensionNumbers(),
+        getVars().getVariableNumsArray()));
     return featureWeights;
   }
 

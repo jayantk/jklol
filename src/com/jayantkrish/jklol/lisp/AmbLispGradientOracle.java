@@ -37,18 +37,18 @@ public class AmbLispGradientOracle implements GradientOracle<AmbFunctionValue, E
     this.parameterSpec = Preconditions.checkNotNull(parameterSpec);
     this.marginalCalculator = Preconditions.checkNotNull(marginalCalculator);
   }
-
+  
   @Override
   public AmbFunctionValue instantiateModel(SufficientStatistics parameters) {
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
-    Object value = family.apply(Arrays.<Object>asList(parameters), environment, newBuilder);
+    Object value = family.apply(parameterSpec.wrap(parameters).toArgumentList(), environment, newBuilder);
     Preconditions.checkState(value instanceof AmbFunctionValue);    
     return (AmbFunctionValue) value;
   }
 
   @Override
   public SufficientStatistics initializeGradient() {
-    return parameterSpec.getParameters();
+    return parameterSpec.getNewParameters();
   }
 
   @Override
@@ -60,7 +60,6 @@ public class AmbLispGradientOracle implements GradientOracle<AmbFunctionValue, E
     Object inputApplicationResult = instantiatedModel.apply(example.getInput(), environment, newBuilder);
     ParametricFactorGraph pfg = newBuilder.buildNoBranching();
 
-    System.out.println("parametric factors: " + pfg.getParametricFactors());
     FactorGraph inputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics()).conditional(DynamicAssignment.EMPTY);
 
     // Compute the marginal distribution in this factor graph for
@@ -90,12 +89,13 @@ public class AmbLispGradientOracle implements GradientOracle<AmbFunctionValue, E
     // calculations, since the marginal calculations may throw ZeroProbabilityErrors
     // (if inference in the graphical model fails.)
     log.startTimer("update_gradient/increment");
-    incrementSufficientStatistics(newBuilder, gradient, inputMarginals, -1.0);
+    ParameterSpec wrappedGradient = parameterSpec.wrap(gradient);
+    incrementSufficientStatistics(newBuilder, wrappedGradient, inputMarginals, -1.0);
     // System.out.println("=== input marginals ===");
     // System.out.println(inputMarginals);
     // System.out.println(family.getParameterDescription(gradient));
 
-    incrementSufficientStatistics(newBuilder, gradient, outputMarginals, 1.0);
+    incrementSufficientStatistics(newBuilder, wrappedGradient, outputMarginals, 1.0);
     // System.out.println("=== output marginals ===");
     // System.out.println(outputMarginals);
     // System.out.println(gradient);
@@ -103,15 +103,18 @@ public class AmbLispGradientOracle implements GradientOracle<AmbFunctionValue, E
 
     return outputLogPartitionFunction - inputLogPartitionFunction;
   }
-  
+
   private static void incrementSufficientStatistics(ParametricBfgBuilder builder,
-      SufficientStatistics parameters, MarginalSet marginals, double multiplier) {
+      ParameterSpec parameters, MarginalSet marginals, double multiplier) {
     for (MarkedVars mark : builder.getMarkedVars()) {
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
-      Factor marginal = marginals.getMarginal(vars).relabelVariables(VariableRelabeling.createFromVariables(vars, pf.getVars()));
+      SufficientStatistics factorParameters = parameters.getParametersById(mark.getParameterId()).getCurrentParameters();
+      VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
 
-      pf.incrementSufficientStatisticsFromMarginal(parameters, marginal,
+      Factor marginal = marginals.getMarginal(vars).relabelVariables(relabeling);
+
+      pf.incrementSufficientStatisticsFromMarginal(factorParameters, marginal,
           Assignment.EMPTY, multiplier, 1.0);
     }
   }

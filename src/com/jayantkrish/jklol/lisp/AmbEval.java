@@ -24,6 +24,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
@@ -199,7 +200,8 @@ public class AmbEval {
             MaxMarginalSet maxMarginals = fg.getMaxMarginals();
             Assignment assignment = maxMarginals.getNthBestAssignment(0);
 
-            return new EvalResult(resolveAmbValueWithAssignment(value, assignment)); 
+            Object bestAssignment = resolveAmbValueWithAssignment(value, assignment);
+            return new EvalResult(bestAssignment); 
           } else {
             return new EvalResult(value);
           }
@@ -253,8 +255,17 @@ public class AmbEval {
           Object value = eval(subexpressions.get(1), environment, builder).getValue();
           Preconditions.checkArgument(value instanceof AmbFunctionValue);
           AmbFunctionValue modelFamily = (AmbFunctionValue) value;
-          ParameterSpec parameterSpec = (ParameterSpec) eval(subexpressions.get(2), environment,
-              builder).getValue();
+          
+          ParameterSpec parameterSpec = null;
+          Object parameterValue = eval(subexpressions.get(2), environment, builder).getValue();
+          if (parameterValue instanceof ParameterSpec) {
+            parameterSpec = (ParameterSpec) parameterValue;
+          } else if (parameterValue instanceof ConsValue) {
+            parameterSpec = new ListParameterSpec(AbstractParameterSpec.getUniqueId(),
+              ConsValue.consListToList(parameterValue, ParameterSpec.class));
+          } else {
+            throw new IllegalArgumentException("Illegal parameterSpec for opt: " + parameterValue);
+          }
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
           List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
@@ -268,14 +279,21 @@ public class AmbEval {
 
           AmbLispGradientOracle oracle = new AmbLispGradientOracle(modelFamily, environment,
               parameterSpec, new JunctionTree());
+
           StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * 10, 1, 1, true, true, 0.0, new DefaultLogFunction(1, false));
+              trainingData.size() * 50, 1, 1, true, true, 0.0, new DefaultLogFunction(trainingData.size(), false));
 
-          SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
+          SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
 
-          return new EvalResult(parameters);
+          System.out.println(parameters.getDescription());
+
+          if (parameterValue instanceof ConsValue) {
+            return new EvalResult(ConsValue.listToConsList(parameterSpec.wrap(parameters).toArgumentList()));
+          } else {
+            return new EvalResult(parameterSpec.wrap(parameters));
+          }
         }
-      } 
+      }
 
       return doFunctionApplication(subexpressions, environment, builder);
     }

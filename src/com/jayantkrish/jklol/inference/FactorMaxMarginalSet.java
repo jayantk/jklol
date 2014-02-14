@@ -70,7 +70,7 @@ public class FactorMaxMarginalSet implements MaxMarginalSet {
    * Searches for the best assignment to {@code cliqueTree} consistent with
    * {@code portion}. This method merges together assignments from possibly
    * disjoint subgraphs of {@code cliqueTree}, using
-   * {@link #getBestAssignment(Assignment, FactorGraph, int)} for each subgraph.
+   * {@link #getBestAssignment(Assignment, CliqueTree, int)} for each subgraph.
    * 
    * @param portion
    * @param cliqueTree

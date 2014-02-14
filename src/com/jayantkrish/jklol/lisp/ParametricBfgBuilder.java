@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.lisp.BranchingFactorGraph.ChildBfg;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
@@ -76,8 +77,9 @@ public class ParametricBfgBuilder {
     return fgBuilder.build();
   }
 
-  public void addMark(VariableNumMap vars, ParametricFactor pf, int parameterIndex) {
-    markedVars.add(new MarkedVars(vars, pf, parameterIndex));
+  public void addMark(VariableNumMap vars, ParametricFactor pf,
+      VariableRelabeling varsToFactorRelabeling, int parameterIndex) {
+    markedVars.add(new MarkedVars(vars, pf, varsToFactorRelabeling, parameterIndex));
   }
 
   public List<MarkedVars> getMarkedVars() {
@@ -116,12 +118,15 @@ public class ParametricBfgBuilder {
   public static class MarkedVars {
     private final VariableNumMap vars;
     private final ParametricFactor factor;
-    private final int parameterIndex;
+    private final VariableRelabeling varsToFactorRelabeling;
+    private final int parameterId;
 
-    public MarkedVars(VariableNumMap vars, ParametricFactor factor, int parameterIndex) {
+    public MarkedVars(VariableNumMap vars, ParametricFactor factor,
+        VariableRelabeling varsToFactorRelabeling, int parameterId) {
       this.vars = Preconditions.checkNotNull(vars);
       this.factor = Preconditions.checkNotNull(factor);
-      this.parameterIndex = parameterIndex;
+      this.varsToFactorRelabeling = Preconditions.checkNotNull(varsToFactorRelabeling);
+      this.parameterId = parameterId;
     }
 
     public VariableNumMap getVars() {
@@ -132,8 +137,12 @@ public class ParametricBfgBuilder {
       return factor;
     }
 
-    public int getParameterIndex() {
-      return parameterIndex;
+    public VariableRelabeling getVarsToFactorRelabeling() {
+      return varsToFactorRelabeling;
+    }
+
+    public int getParameterId() {
+      return parameterId;
     }
   }
 }

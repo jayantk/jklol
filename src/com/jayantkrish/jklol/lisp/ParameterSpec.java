@@ -1,12 +1,20 @@
 package com.jayantkrish.jklol.lisp;
 
+import java.util.List;
+
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public interface ParameterSpec {
 
-  int getParameterId();
+  SufficientStatistics getCurrentParameters();
 
-  SufficientStatistics getParameters();
+  SufficientStatistics getNewParameters();
 
-  SufficientStatistics getParametersById(int id);
+  int getId();
+
+  ParameterSpec getParametersById(int id);
+  
+  ParameterSpec wrap(SufficientStatistics parameters);
+
+  List<Object> toArgumentList();
 }

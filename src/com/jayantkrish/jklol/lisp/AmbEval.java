@@ -161,7 +161,7 @@ public class AmbEval {
             List<Object> returnValues = Lists.newArrayList(trueValue, falseValue);
             String varName = Integer.toHexString(returnValues.hashCode());
             DiscreteVariable returnVarType = new DiscreteVariable(varName, returnValues);
-            VariableNumMap returnValueVar = VariableNumMap.singleton(getUniqueVarNum(), varName,
+            VariableNumMap returnValueVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName,
                 returnVarType);
             builder.addVariables(returnValueVar);
 
@@ -190,7 +190,7 @@ public class AmbEval {
 
           String varName = subexpressions.get(1).toString();
           DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
-          VariableNumMap fgVar = VariableNumMap.singleton(getUniqueVarNum(), varName, fgVarType);
+          VariableNumMap fgVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName, fgVarType);
           builder.addVariables(fgVar);
 
           Assignment[] assignmentArray = new Assignment[possibleValues.size()];
@@ -376,7 +376,7 @@ public class AmbEval {
 
       String varName = Integer.toHexString(possibleReturnValues.hashCode());
       DiscreteVariable varType = new DiscreteVariable(varName, possibleReturnValues);
-      VariableNumMap returnValueVar = VariableNumMap.singleton(getUniqueVarNum(), varName, varType);
+      VariableNumMap returnValueVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName, varType);
       gfgBuilder.addVariables(returnValueVar);
       VariableNumMap functionVar = functionAmb.getVar();
 
@@ -420,10 +420,6 @@ public class AmbEval {
     }
   }
 
-  private static int getUniqueVarNum() {
-    return nextVarNum++;
-  }
-
   private static Object resolveAmbValueWithAssignment(Object value, Assignment assignment) {
     if (value instanceof AmbValue) {
       return assignment.getValue(((AmbValue) value).getVar().getOnlyVariableNum());
@@ -451,6 +447,8 @@ public class AmbEval {
     env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
     env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());
     env.bindName("make-feature-factory", new WrappedBuiltinFunction(new ClassifierFunctions.MakeFeatureFactory()));
+    env.bindName("make-featurized-classifier", new ClassifierFunctions.MakeFeaturizedClassifier());
+    env.bindName("make-featurized-classifier-parameters", new ClassifierFunctions.MakeFeaturizedClassifierParameters());
 
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));
@@ -571,7 +569,7 @@ public class AmbEval {
 
       String varName = Integer.toHexString(possibleValues.hashCode());
       DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
-      VariableNumMap fgVar = VariableNumMap.singleton(getUniqueVarNum(), varName, fgVarType);
+      VariableNumMap fgVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName, fgVarType);
       gfgBuilder.addVariables(fgVar);
 
       // Construct the factor representing the function application.

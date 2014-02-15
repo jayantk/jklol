@@ -86,6 +86,10 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     this.sufficientStatisticVars = featureVar.union(outputVars);
   }
 
+  public DiscreteVariable getFeatureDictionary() {
+    return featureDictionary;
+  }
+
   @Override
   public ClassifierFactor getModelFromParameters(SufficientStatistics parameters) {
     return new LinearClassifierFactor(inputVar, outputVars, conditionalVars, featureDictionary, 

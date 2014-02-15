@@ -18,23 +18,39 @@ public class ParametricBfgBuilder {
 
   private final ParametricFactorGraphBuilder fgBuilder;
   private final boolean isRoot;
+  private Assignment assignment;
 
   private final List<Factor> crossingFactors;
   private final List<ChildBuilder> children;
 
   private final List<MarkedVars> markedVars;
+  
+  private static int nextVarNum;
 
   public ParametricBfgBuilder(boolean isRoot) {
     this.fgBuilder = new ParametricFactorGraphBuilder();
     this.markedVars = Lists.newArrayList();
     this.isRoot = isRoot;
+    this.assignment = Assignment.EMPTY;
 
     this.crossingFactors = Lists.newArrayList();
     this.children = Lists.newArrayList();
   }
 
+  public static int getUniqueVarNum() {
+    return nextVarNum++;
+  }
+
   public void addVariables(VariableNumMap newVariables) {
     fgBuilder.addVariables(newVariables);
+  }
+
+  public void addAssignment(Assignment newAssignment) {
+    assignment = assignment.union(newAssignment);
+  }
+  
+  public Assignment getAssignment() {
+    return assignment;
   }
 
   /**
@@ -69,7 +85,7 @@ public class ParametricBfgBuilder {
 
     ParametricFactorGraph pfg = fgBuilder.build();
     return new BranchingFactorGraph(pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
-        .conditional(DynamicAssignment.EMPTY), childrenFgs);
+        .conditional(DynamicAssignment.EMPTY).conditional(assignment), childrenFgs);
   }
 
   public ParametricFactorGraph buildNoBranching() {

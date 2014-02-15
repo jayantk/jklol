@@ -266,6 +266,36 @@ public class AmbEvalTest extends TestCase {
     // which is not correct.
     fail();
   }
+  
+  public void testFeaturizedClassifier() {
+    String program = "(define label-list (list #t #f))" +
+    		"(define feature-list (list \"A\" \"B\" \"C\"))" +
+    		"(define feature-func (make-feature-factory feature-list))" +
+    		"" +
+    		"(define classifier-family (lambda (parameters) " +
+    		"  (lambda (feature-vec)" +
+    		"    (define label (amb label-list))" +
+    		"    (make-featurized-classifier label feature-vec parameters)" +
+    		"    label)))" +
+    		"" +
+    		"(define require (lambda (x) (add-weight (not x) 0.0)))" +
+    		"" +
+    		"(define vec1 (feature-func (list (list \"A\" 1.0) (list \"B\" 2.0))))" +
+    		"(define vec2 (feature-func (list (list \"A\" 1.0) (list \"C\" 1.0))))" +
+    		"(define training-data (list (list (list vec1) (lambda (label) (require (= label #t))))" +
+    		"                            (list (list vec2) (lambda (label) (require (= label #f))))" +
+    		"  ))" +
+    		"(define classifier (classifier-family (make-featurized-classifier-parameters (list label-list) feature-list)))" +
+    		"(define best-params (opt classifier-family" +
+    		"   (make-featurized-classifier-parameters (list label-list) feature-list) training-data))" +
+    		"(define classifier (classifier-family best-params))" + 
+    		"(list (get-best-assignment (classifier vec1))" +
+    		"      (get-best-assignment (classifier vec2)))";
+
+    Object value = runTest(program);
+    Object expected = runTest("(list #t #f)");
+    assertEquals(value, expected);
+  }
 
   public void testOpt1() {
     String program = "(define label-list (list #t #f))" +

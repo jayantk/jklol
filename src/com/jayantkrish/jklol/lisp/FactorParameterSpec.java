@@ -17,6 +17,10 @@ public class FactorParameterSpec extends AbstractParameterSpec {
     this.factor = Preconditions.checkNotNull(factor);
     this.currentParameters = Preconditions.checkNotNull(currentParameters);
   }
+  
+  public ParametricFactor getFactor() {
+    return factor;
+  }
 
   @Override
   public SufficientStatistics getCurrentParameters() {

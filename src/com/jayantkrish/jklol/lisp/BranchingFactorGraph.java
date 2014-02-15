@@ -15,7 +15,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class BranchingFactorGraph {
-  private final FactorGraph factorGraph;  
+  private final FactorGraph factorGraph;
   private final List<ChildBfg> children;
 
   public BranchingFactorGraph(FactorGraph factorGraph, List<ChildBfg> children) {

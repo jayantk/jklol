@@ -17,22 +17,22 @@ public class AmbEvalTest extends TestCase {
   }
 
   public void testAmb() {
-    String value = runTestString("(get-best-assignment (amb (list \"a\" \"b\" \"c\") (list 1 2 1)))");
+    String value = runTestString("(get-best-value (amb (list \"a\" \"b\" \"c\") (list 1 2 1)))");
     assertEquals("b", value);
   }
 
   public void testAmb2() {
-    int value = runTestInt("(get-best-assignment (+ 1 (amb (list 1 2 3) (list 1 2 1))))");
+    int value = runTestInt("(get-best-value (+ 1 (amb (list 1 2 3) (list 1 2 1))))");
     assertEquals(3, value);
   }
 
   public void testAmb3() {
-    int value = runTestInt("(get-best-assignment (+ (amb (list 1 2) (list 1 2)) (amb (list 1 2 3) (list 1 2 1))))");
+    int value = runTestInt("(get-best-value (+ (amb (list 1 2) (list 1 2)) (amb (list 1 2 3) (list 1 2 1))))");
     assertEquals(4, value);
   }
 
   public void testAmb4() {
-    Object value = runTest("(get-best-assignment (list (amb (list 1 2) (list 1 2)) (amb (list 1 2 3) (list 1 2 1))))");
+    Object value = runTest("(get-best-value (list (amb (list 1 2) (list 1 2)) (amb (list 1 2 3) (list 1 2 1))))");
     Object expected = runTest("(list 2 2)");
     assertEquals(expected, value);
   }
@@ -43,28 +43,28 @@ public class AmbEvalTest extends TestCase {
   }
 
   public void testIfAmb1() {
-    String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) \"true\" \"false\"))");
+    String value = runTestString("(get-best-value (if (= (amb (list 1 2) (list 1 2)) 1) \"true\" \"false\"))");
     assertEquals("false", value);
   }
 
   public void testIfAmb2() {
-    String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (begin (add-weight (= 1 1) 4.0) \"true\") \"false\"))");
+    String value = runTestString("(get-best-value (if (= (amb (list 1 2) (list 1 2)) 1) (begin (add-weight (= 1 1) 4.0) \"true\") \"false\"))");
     assertEquals("true", value);
   }
 
   public void testIfAmb3() {
-    String value = runTestString("(get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (amb (list \"a\" \"b\") (list 2 4)) \"false\"))");
+    String value = runTestString("(get-best-value (if (= (amb (list 1 2) (list 1 2)) 1) (amb (list \"a\" \"b\") (list 2 4)) \"false\"))");
     assertEquals("b", value);
   }
 
   public void testIfAmb4() {
-    String value = runTestString("(define x (amb (list \"a\" \"b\") (list 2 1))) (get-best-assignment (if (= (amb (list 1 2) (list 1 2)) 1) (add-weight (= x \"b\") 5.0) \"false\")) (get-best-assignment x)");
+    String value = runTestString("(define x (amb (list \"a\" \"b\") (list 2 1))) (get-best-value (if (= (amb (list 1 2) (list 1 2)) 1) (add-weight (= x \"b\") 5.0) \"false\")) (get-best-value x)");
     assertEquals("b", value);
   }
   
   public void testIfAmb5() {
     String value = runTestString("(define x (amb (list (list) (list \"a\" \"b\")) (list 2 1))) " +
-    		"(get-best-assignment (if (not (nil? x)) (car x) \"nil\"))");
+    		"(get-best-value (if (not (nil? x)) (car x) \"nil\"))");
     assertEquals("nil", value);
   }
   
@@ -92,7 +92,7 @@ public class AmbEvalTest extends TestCase {
     		"(define y (new-label))" +
     		"(define z (new-label))" +
     		"(transition-factor x y z)" +
-    		"(get-best-assignment (list x y z))";
+    		"(get-best-value (list x y z))";
 
     Object value = runTest(program);
     Object expected = runTest("(list \"JJ\" \"NN\" \"NN\")");
@@ -100,32 +100,32 @@ public class AmbEvalTest extends TestCase {
   }
 
   public void testAddWeight1() {
-    int value = runTestInt("(define x (amb (list 1 2) (list 1 2))) (define y (amb (list 1 2) (list 1 2))) (add-weight (not (= (+ x y) 2)) 0) (get-best-assignment x)");
+    int value = runTestInt("(define x (amb (list 1 2) (list 1 2))) (define y (amb (list 1 2) (list 1 2))) (add-weight (not (= (+ x y) 2)) 0) (get-best-value x)");
     assertEquals(1, value);
   }
 
   public void testAddWeight2() {
-    int value = runTestInt("(define x (amb (list 1 2) (list 1 2))) (define y (amb (list 1 2) (list 1 2))) (add-weight (and (= x 1) (= y 1)) 8) (get-best-assignment x)");
+    int value = runTestInt("(define x (amb (list 1 2) (list 1 2))) (define y (amb (list 1 2) (list 1 2))) (add-weight (and (= x 1) (= y 1)) 8) (get-best-value x)");
     assertEquals(1, value);
   }
 
   public void testAmbLambda() {
-    int value = runTestInt("(define x (amb (list 1 2) (list 1 6))) (define foo (lambda (x) (add-weight (= x 1) 4))) (foo x) (foo x) (get-best-assignment x)");
+    int value = runTestInt("(define x (amb (list 1 2) (list 1 6))) (define foo (lambda (x) (add-weight (= x 1) 4))) (foo x) (foo x) (get-best-value x)");
     assertEquals(1, value);
   }
   
   public void testAmbLambda2() {
-    int value = runTestInt("(define x (amb (list 1 2) (list 1 6))) (define foo (lambda (x) (begin (define y (amb (list 1 2) (list 1 4))) (add-weight (not (= (+ x y) 3)) 0)))) (foo x) (foo x) (get-best-assignment x)");
+    int value = runTestInt("(define x (amb (list 1 2) (list 1 6))) (define foo (lambda (x) (begin (define y (amb (list 1 2) (list 1 4))) (add-weight (not (= (+ x y) 3)) 0)))) (foo x) (foo x) (get-best-value x)");
     assertEquals(1, value);
   }
 
   public void testAmbLambda3() {
-    int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo 1)) (get-best-assignment x)");
+    int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo 1)) (get-best-value x)");
     assertEquals(3, value);
   }
   
   public void testAmbLambda4() {
-    int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo (amb (list 1 2) (list 2 3)))) (add-weight (= x 4) 0) (get-best-assignment x)");
+    int value = runTestInt("(define foo (amb (list (lambda (x) (+ x 1)) (lambda (x) (+ x 2))) (list 1 2))) (define x (foo (amb (list 1 2) (list 2 3)))) (add-weight (= x 4) 0) (get-best-value x)");
     assertEquals(3, value);
   }
 
@@ -142,7 +142,7 @@ public class AmbEvalTest extends TestCase {
         "(add-weight (= (func-to-learn 1 2) 4) 2.0)" +
         "(add-weight (= (func-to-learn 3 2) 8) 2.0)" +
         "(add-weight (= (func-to-learn 4 7) 35) 2.0)" +
-        "(get-best-assignment (func-to-learn 2 3))");
+        "(get-best-value (func-to-learn 2 3))");
     assertEquals(9, value);
   }
 
@@ -156,7 +156,7 @@ public class AmbEvalTest extends TestCase {
         "(define func-to-learn (poly 2)) " +
         "(add-weight (= (func-to-learn 1) 0) 2.0)" +
         "(add-weight (= (func-to-learn 2) 0) 2.0)" +
-        "(get-best-assignment (func-to-learn 4))");
+        "(get-best-value (func-to-learn 4))");
     assertEquals(6, value);
   }
 
@@ -195,9 +195,9 @@ public class AmbEvalTest extends TestCase {
     		"        (lifted-cons cur-label next-labels))" +
     		" (lifted-cons cur-label next-labels))))))" +
     		"" +
-    		"(define x (get-best-assignment (sequence-tag (list \"car\"))))" +
-    		"(define y (get-best-assignment (sequence-tag (list \"goes\" \"car\")))) " +
-    		"(define z (get-best-assignment (sequence-tag (list \"the\" \"car\"))))" +
+    		"(define x (get-best-value (sequence-tag (list \"car\"))))" +
+    		"(define y (get-best-value (sequence-tag (list \"goes\" \"car\")))) " +
+    		"(define z (get-best-value (sequence-tag (list \"the\" \"car\"))))" +
     		"(list x y z)";
 
     Object value = runTest(program);
@@ -255,7 +255,7 @@ public class AmbEvalTest extends TestCase {
     		"      (define chosen-subtree (get-ith-element (- (car (cdr chart)) 1) (car (cdr (cdr chart)))))" +
     		"      (list (car chart) (decode-parse (car (cdr chosen-subtree))) (decode-parse (car (cdr (cdr chosen-subtree)))))))))" +
     		"" +
-    		"(decode-parse (get-best-assignment (cfg-parse (list \"the\" \"big\" \"car\")) \"junction-tree\"))";
+    		"(decode-parse (get-best-value (cfg-parse (list \"the\" \"big\" \"car\")) \"junction-tree\"))";
 
     Object value = runTest(program);
     Object expected = runTest("(list \"NN\" (list \"DT\" \"the\") (list \"NN\" (list \"JJ\" \"big\") (list \"NN\" \"car\")))");
@@ -289,8 +289,8 @@ public class AmbEvalTest extends TestCase {
     		"(define best-params (opt classifier-family" +
     		"   (make-featurized-classifier-parameters (list label-list) feature-list) training-data))" +
     		"(define classifier (classifier-family best-params))" + 
-    		"(list (get-best-assignment (classifier vec1))" +
-    		"      (get-best-assignment (classifier vec2)))";
+    		"(list (get-best-value (classifier vec1))" +
+    		"      (get-best-value (classifier vec2)))";
 
     Object value = runTest(program);
     Object expected = runTest("(list #t #f)");
@@ -392,8 +392,8 @@ public class AmbEvalTest extends TestCase {
     		"                             (make-indicator-classifier-parameters (list label-list label-list))))" +
     		"(define best-params (opt sequence-family parameter-spec training-data))" +
     		"(define sequence-model (sequence-family (car best-params) (car (cdr best-params))))" +
-    		"(define foo (get-best-assignment (sequence-model (list \"A\" \"C\" \"A\" \"B\"))))" +
-    		"(define bar (get-best-assignment (sequence-model (list \"C\" \"B\" \"C\"))))" +
+    		"(define foo (get-best-value (sequence-model (list \"A\" \"C\" \"A\" \"B\"))))" +
+    		"(define bar (get-best-value (sequence-model (list \"C\" \"B\" \"C\"))))" +
     		"(list foo bar)";
 
     Object value = runTest(program);

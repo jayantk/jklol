@@ -31,10 +31,7 @@ public class AmbLisp extends AbstractCli {
     programBuilder.append("(begin ");
     for (String filename : filenames) {
       for (String line : IoUtils.readLines(filename)) {
-        if (line.matches("^\\s*;.*")) {
-          // This line is a comment.
-          continue;
-        }
+        line = line.replaceAll(";.*", "");
         programBuilder.append(line);
       }
     }

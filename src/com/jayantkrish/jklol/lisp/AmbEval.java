@@ -202,7 +202,7 @@ public class AmbEval {
           builder.addConstantFactor(varName, factor);
 
           return new EvalResult(new AmbValue(fgVar));
-        } else if (constantName.equals("get-best-assignment")) {
+        } else if (constantName.equals("get-best-value")) {
           Preconditions.checkArgument(subexpressions.size() == 2);
           Object value = eval(subexpressions.get(1), environment, builder).getValue();
 

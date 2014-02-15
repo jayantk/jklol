@@ -67,20 +67,22 @@ public class BuiltinFunctions {
   public static class AndFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
-      ConstantValue arg1 = (ConstantValue) argumentValues.get(0);
-      ConstantValue arg2 = (ConstantValue) argumentValues.get(1);
-      return ConstantValue.fromBoolean(arg1.toBoolean() && arg2.toBoolean());
+      Boolean value = true;
+      for (int i = 0; i < argumentValues.size(); i++) {
+        value = value && ((ConstantValue) argumentValues.get(i)).toBoolean();
+      }
+      return ConstantValue.fromBoolean(value);
     }
   }
 
   public static class OrFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
-      ConstantValue arg1 = (ConstantValue) argumentValues.get(0);
-      ConstantValue arg2 = (ConstantValue) argumentValues.get(1);
-      return ConstantValue.fromBoolean(arg1.toBoolean() || arg2.toBoolean());
+      Boolean value = false;
+      for (int i = 0; i < argumentValues.size(); i++) {
+        value = value || ((ConstantValue) argumentValues.get(i)).toBoolean();
+      }
+      return ConstantValue.fromBoolean(value);
     }
   }
 

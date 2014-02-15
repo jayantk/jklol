@@ -77,8 +77,8 @@
 (define trained-sequence-model (apply joint-label-sequence-family best-parameters))
 
 (display "Best tags for the man:")
-(display (get-best-assignment (trained-sequence-model (generate-token-features (list "the" "man")))))
+(display (get-best-value (trained-sequence-model (generate-token-features (list "the" "man")))))
 (display "Best tags for the man eats fast food:")
-(display (get-best-assignment (trained-sequence-model (generate-token-features (list "the" "man" "eats" "fast" "food")))))
+(display (get-best-value (trained-sequence-model (generate-token-features (list "the" "man" "eats" "fast" "food")))))
 
 

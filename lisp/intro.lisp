@@ -1,9 +1,9 @@
 ;; Introduction to AmbLisp.
 
-;; AmbLisp is a variant of LISP (technically, Scheme) intended for
+;; AmbLisp is a variant of Lisp (technically, Scheme) intended for
 ;; defining, training, and performing inference in probabilistic
 ;; models. AmbLisp enables these operations by adding several
-;; nondeterministic primitives to LISP that let a single program
+;; nondeterministic primitives to Lisp that let a single program
 ;; evaluate in multiple ways (potentially returning different values
 ;; each way). Each such evaluation is assigned a weight, and the
 ;; probability of an evaluation is its weight divided by the total
@@ -17,7 +17,7 @@
 ;; ./scripts/run.sh com.jayantkrish.jklol.lisp.cli.AmbLisp lisp/environment.lisp lisp/intro.lisp
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; AmbLisp supports standard LISP operations, such as:
+;; AmbLisp supports standard Lisp operations, such as:
 
 ;; Defining and accessing variables:
 (define two 2)

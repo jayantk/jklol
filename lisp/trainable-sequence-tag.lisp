@@ -40,6 +40,6 @@
 (define sequence-model (apply sequence-family best-params))
 
 ;; Make predictions with the trained model.
-(define foo (get-best-assignment (sequence-model (list "A" "C" "A" "B"))))
-(define bar (get-best-assignment (sequence-model (list "C" "B" "C"))))
+(define foo (get-best-value (sequence-model (list "A" "C" "A" "B"))))
+(define bar (get-best-value (sequence-model (list "C" "B" "C"))))
 (list foo bar)

@@ -1,7 +1,7 @@
 ;; Introduction to AmbLisp.
 
 ;; AmbLisp is a variant of LISP (technically, Scheme) intended for
-;; defining, training, and performing inference in graphical
+;; defining, training, and performing inference in probabilistic
 ;; models. AmbLisp enables these operations by adding several
 ;; nondeterministic primitives to LISP that let a single program
 ;; evaluate in multiple ways (potentially returning different values
@@ -12,6 +12,9 @@
 ;; This file is an introduction to AmbLisp, and also
 ;; a runnable program. Anything following a semicolon on a line is
 ;; treated as a comment, and is ignored by the interpreter.
+
+;; You can run this program using:
+;; ./scripts/run.sh com.jayantkrish.jklol.lisp.cli.AmbLisp lisp/environment.lisp lisp/intro.lisp
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AmbLisp supports standard LISP operations, such as:
@@ -41,13 +44,21 @@ foo ;; <- evaluates to "foo"
 (+ 1 1) ;; <- evaluates to 2
 (or (= 1 2) (= 1 1)) ;; <- evaluates to #t (true)
 
-;; Other supported Lisp constructions include begin and let. So far,
-;; all of these operations have been deterministic. There are two
-;; nondeterministic operations:
+;; Printing to screen:
+(display "Hello world!") ;; <- evaluates to UNDEFINED, but prints to the screen.
+
+;; Other supported Lisp constructions include begin, let, and list
+;; operations like map. AmbLisp is purely functional subset of Lisp,
+;; so mutation operations such as set! are not supported. (The
+;; semantics of these operations become unclear when combined with
+;; nondeterministic evaluation.)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Nondeterministic primitives:
 
 ;; amb represents a weighted, nondeterministic choice from a list of
 ;; possibilities:
-(define val (amb (list "a" "b" "c") (list 1.0 2.0 3.0)))
+(define val (amb (list "a" "b" "c") (list 1.0 2.0 4.0)))
 ;; val now evaluates to either "a" "b" or "c". If val is "a", the
 ;; weight of the current evaluation is 1, etc. amb can alse be called
 ;; with no weights, in which case all weights are assumed to be 1.0:
@@ -60,7 +71,17 @@ foo ;; <- evaluates to "foo"
 (add-weight (= val "b") 2.0)
 ;; At this point, the set of possible values for val and their
 ;; corresponding weights are: "a" (1.0), "b" (4.0, because add-weight
-;; increased the weight of this value), and "c" (3.0).
+;; increased the weight of this value), and "c" (4.0).
+
+;; require forces all evaluations to satisfy some condition. If the
+;; evaluation fails the condition, it is assigned 0 weight.
+(require (not (= val "a")))
+;; At this point, the set of possible values for val and their
+;; corresponding weights are: "a" (0.0), "b" (4.0), and "c" (4.0).
+;;
+;; Note that (require <condition>) is equivalent to (add-weight (not
+;; <condition>) 0.0). (require is actually a library function that's
+;; defined in environment.lisp.) 
 
 ;; Nondeterministic values can be used exactly like normal values:
 (define rand-int (amb (list 1 2 3) (list 2.0 3.0 4.0)))
@@ -133,6 +154,11 @@ foo ;; <- evaluates to "foo"
 
 (get-marginals (binomial 2 0.3)) ;; <- evaluates to:
 ;; (list (list 0 1 2) (list 0.49 0.42 0.09))
+;; 
+;; Note that the recursive call in the binomial procedure enables us
+;; to call amb a variable number of times, depending on the input
+;; parameter n. Recursion is a flexible way to define variably-sized
+;; probabilistic models in AmbLisp.
 
 
 ;; Graphical model example:
@@ -205,4 +231,81 @@ foo ;; <- evaluates to "foo"
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Learning
+;; Training models
+
+;; The weight of an evaluation in AmbLisp can be set in a parametric
+;; fashion. In fact, we've already seen this in the coin flip example
+;; above: (flip p) sets the weight of the values 1 and 0 using
+;; p. Training a model in AmbLisp amounts to optimizing parameters
+;; like p using a data set.
+
+;; Simple example: find the best coin flip probability.
+;;
+;; The basic way we train a model in AmbLisp is we first create a
+;; procedure that defines a parametric family of models. A model is a
+;; procedure, so a family of models is a procedure that accepts
+;; parameters and returns a procedure:
+
+(define flip-family (params)
+  (lambda ()
+    (define coin (amb (list 0 1)))
+    (make-indicator-classifier coin params)
+    coin)
+  )
+
+;; The flip-family function accepts a parameter vector params, and
+;; returns a zero-argument function that flips a coin. Generally, the
+;; returned procedure may accept arguments, as we'll see later.
+
+;; We can instantiate a particular coin-flipping model from the
+;; parametric family by passing in a particular parameter vector:
+
+(define zero-parameters (make-indicator-classifier-parameters (list (list 0 1))))
+(define flip1 (flip-family zero-parameters))
+(get-marginals (flip1))
+;; evaluates to: (list (list 0 1) (list 0.5 0.5))
+;;
+;; In the above code snippet, we've used the
+;; make-indicator-classifier-parameters to create a new, all-zero
+;; parameter vector that can be used with the
+;; make-indicator-classifier function. Generally, each classifier in
+;; AmbLisp has a corresponding function that creates its
+;; parameters. Classifiers in AmbLisp are loglinear models, so passing
+;; in a zero parameter vector leads to a uniform distribution over
+;; outcomes.
+
+;; Finally, we can optimize the parameters of our coin-flipping model
+;; using a training data set. For example, say we've observed 3 heads (1)
+;; and 1 tails (0):
+
+(define observed-flips (list 1 1 1 0))
+
+;; We make a training data set as follows. Each row defines a single
+;; training example. The first element of the list is a list of
+;; arguments to provide during training. Since flip-family returns a
+;; 0-argument procedure, we use an empty list. The second element is a
+;; validation procedure that gets applied to the output and filters
+;; out invalid executions. In our case, each procedure tests whether
+;; the coin flip came up heads or tails:
+
+(define flip-training-data (list (list (list) (lambda (x) (require (= x 1))))
+                                 (list (list) (lambda (x) (require (= x 1))))
+                                 (list (list) (lambda (x) (require (= x 1))))
+                                 (list (list) (lambda (x) (require (= x 0))))
+                                 ))
+
+;; We can now optimize the coin flip parameters using opt, which
+;; performs a gradient-based optimization to maximize the
+;; loglikelihood of the training data:
+
+(define optimized-parameters (opt flip-family zero-parameters flip-training-data))
+
+;; Finally, we can instantiate our coin flipping model with the
+;; optimized parameters:
+
+(define flip2 (flip-family optimized-parameters))
+(get-marginals (flip2))
+;; evaluates to: (list (list 0 1) (list 0.251051315193832 0.7489486848061679))
+;;
+;; As we can see, the probability of heads is approximately 3/4, as
+;; we'd expect from our training data.

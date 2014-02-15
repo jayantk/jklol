@@ -35,3 +35,4 @@
 (define square (lambda (n) (* n n)))
 
 ;; Training data stuff
+(define make-eq-require (output-value) (lambda (x) (require (= x output-value))))

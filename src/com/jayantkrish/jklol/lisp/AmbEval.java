@@ -23,7 +23,7 @@ import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
@@ -294,11 +294,11 @@ public class AmbEval {
               parameterSpec, new JunctionTree());
 
           StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * 50, 1, 1, true, true, 0.0, new DefaultLogFunction(trainingData.size(), false));
+              trainingData.size() * 50, 1, 1, true, true, 0.0, new NullLogFunction());
 
           SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
 
-          System.out.println(parameters.getDescription());
+          // System.out.println(parameters.getDescription());
 
           if (parameterValue instanceof ConsValue) {
             return new EvalResult(ConsValue.listToConsList(parameterSpec.wrap(parameters).toArgumentList()));

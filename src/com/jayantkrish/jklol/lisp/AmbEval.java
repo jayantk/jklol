@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.lisp;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -263,7 +264,7 @@ public class AmbEval {
           }
           return new EvalResult(ConstantValue.UNDEFINED);
         } else if (constantName.equals("opt")) {
-          Preconditions.checkArgument(subexpressions.size() == 4);
+          Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
 
           Object value = eval(subexpressions.get(1), environment, builder).getValue();
           Preconditions.checkArgument(value instanceof AmbFunctionValue);
@@ -292,9 +293,24 @@ public class AmbEval {
 
           AmbLispGradientOracle oracle = new AmbLispGradientOracle(modelFamily, environment,
               parameterSpec, new JunctionTree());
+          
+          // 4th argument is an optional parameter for providing optimization parameters.
+          int epochs = 50;
+          double l2Penalty = 0.0;
+          if (subexpressions.size() >= 5) {
+            Map<String, Object> optimizationParams = ConsValue.associationListToMap(
+                subexpressions.get(4), String.class, Object.class);
+            
+            if (optimizationParams.containsKey("epochs")) {
+              epochs = (Integer) optimizationParams.get("epochs");
+            }
+            if (optimizationParams.containsKey("l2-regularization")) {
+              l2Penalty = (Double) optimizationParams.get("l2-regularization");
+            }
+          }
 
           StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * 50, 1, 1, true, true, 0.0, new NullLogFunction());
+              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new NullLogFunction());
 
           SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
 

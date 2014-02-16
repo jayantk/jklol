@@ -1,10 +1,12 @@
 package com.jayantkrish.jklol.lisp;
 
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * A LISP cons cell, which is a tuple. Nested cons cells
@@ -74,6 +76,16 @@ public class ConsValue {
       value = new ConsValue(list.get(i), value);
     }
     return value;
+  }
+
+  public static <K, V> Map<K, V> associationListToMap(Object consList, Class<K> keyClass, Class<V> valueClass) {
+    List<Object> elements = consListToList(consList, Object.class);
+    Map<K, V> map = Maps.newHashMap();
+    for (Object element : elements) {
+      List<Object> keyValue = consListToList(element, Object.class);
+      map.put(keyClass.cast(keyValue.get(0)), valueClass.cast(keyValue.get(1)));
+    }
+    return map;
   }
 
   @Override

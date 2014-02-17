@@ -298,8 +298,9 @@ public class AmbEval {
           int epochs = 50;
           double l2Penalty = 0.0;
           if (subexpressions.size() >= 5) {
+            Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
             Map<String, Object> optimizationParams = ConsValue.associationListToMap(
-                subexpressions.get(4), String.class, Object.class);
+                optimizationParamsAlist, String.class, Object.class);
             
             if (optimizationParams.containsKey("epochs")) {
               epochs = (Integer) optimizationParams.get("epochs");

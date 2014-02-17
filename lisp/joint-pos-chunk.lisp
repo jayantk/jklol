@@ -73,7 +73,9 @@
   (make-indicator-classifier-parameters (list label2-list label2-list))
   (make-indicator-classifier-parameters (list label1-list label2-list))))
 
-(define best-parameters (opt joint-label-sequence-family initial-parameters training-data))
+(define optimization-params (list (list "epochs" 10) (list "l2-regularization" 1.0)))
+
+(define best-parameters (opt joint-label-sequence-family initial-parameters training-data optimization-params))
 (define trained-sequence-model (apply joint-label-sequence-family best-parameters))
 
 (display "Best tags for the man:")

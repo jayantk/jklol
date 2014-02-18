@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class AmbLispGradientOracle implements GradientOracle<AmbFunctionValue, Example<List<Object>, AmbFunctionValue>> {
+public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionValue, Example<List<Object>, AmbFunctionValue>> {
 
   private final AmbFunctionValue family;
   private final Environment environment;
@@ -30,7 +30,7 @@ public class AmbLispGradientOracle implements GradientOracle<AmbFunctionValue, E
 
   private final MarginalCalculator marginalCalculator;
 
-  public AmbLispGradientOracle(AmbFunctionValue family, Environment environment,
+  public AmbLispLoglikelihoodOracle(AmbFunctionValue family, Environment environment,
       ParameterSpec parameterSpec, MarginalCalculator marginalCalculator) {
     this.family = Preconditions.checkNotNull(family);
     this.environment = Preconditions.checkNotNull(environment);

@@ -291,7 +291,7 @@ public class AmbEval {
                 (AmbFunctionValue) inputOutput.get(1)));
           }
 
-          AmbLispGradientOracle oracle = new AmbLispGradientOracle(modelFamily, environment,
+          AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, environment,
               parameterSpec, new JunctionTree());
           
           // 4th argument is an optional parameter for providing optimization parameters.

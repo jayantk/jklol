@@ -198,12 +198,13 @@ public class BuiltinFunctions {
       return argumentValues.get(0).equals(argumentValues.get(1)) ? ConstantValue.TRUE : ConstantValue.FALSE;
     }
   }
-  
+
   public static class DisplayFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      System.out.println(argumentValues.get(0));
+      Object argument = argumentValues.get(0);
+      System.out.println(argument);
       return ConstantValue.UNDEFINED;
     }
   }

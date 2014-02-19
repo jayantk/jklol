@@ -50,4 +50,8 @@ public class FactorParameterSpec extends AbstractParameterSpec {
   public List<Object> toArgumentList() {
     return Arrays.<Object>asList(this);
   }
+
+  public String toString() {
+    return currentParameters.getDescription();
+  }
 }

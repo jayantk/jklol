@@ -322,6 +322,66 @@ public class AmbEval {
           } else {
             return new EvalResult(parameterSpec.wrap(parameters));
           }
+        } else if (constantName.equals("opt-mm")) {
+          Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
+
+          Object value = eval(subexpressions.get(1), environment, builder).getValue();
+          Preconditions.checkArgument(value instanceof AmbFunctionValue);
+          AmbFunctionValue modelFamily = (AmbFunctionValue) value;
+          
+          ParameterSpec parameterSpec = null;
+          Object parameterValue = eval(subexpressions.get(2), environment, builder).getValue();
+          if (parameterValue instanceof ParameterSpec) {
+            parameterSpec = (ParameterSpec) parameterValue;
+          } else if (parameterValue instanceof ConsValue) {
+            parameterSpec = new ListParameterSpec(AbstractParameterSpec.getUniqueId(),
+              ConsValue.consListToList(parameterValue, ParameterSpec.class));
+          } else {
+            throw new IllegalArgumentException("Illegal parameterSpec for opt: " + parameterValue);
+          }
+
+          Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
+          List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
+          List<Example<List<Object>, Example<AmbFunctionValue, AmbFunctionValue>>> trainingData = Lists.newArrayList();
+          for (ConsValue example : trainingExampleObjects) {
+            List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
+            Preconditions.checkArgument(inputOutput.size() == 3);
+            trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
+                Example.create((AmbFunctionValue) inputOutput.get(1), (AmbFunctionValue) inputOutput.get(2))));
+          }
+
+          AmbLispMaxMarginOracle oracle = new AmbLispMaxMarginOracle(modelFamily, environment,
+              parameterSpec, new JunctionTree());
+
+          // 4th argument is an optional parameter for providing optimization parameters.
+          int epochs = 50;
+          double l2Penalty = 0.0;
+          if (subexpressions.size() >= 5) {
+            Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
+            Map<String, Object> optimizationParams = ConsValue.associationListToMap(
+                optimizationParamsAlist, String.class, Object.class);
+            
+            if (optimizationParams.containsKey("epochs")) {
+              epochs = (Integer) optimizationParams.get("epochs");
+            }
+            if (optimizationParams.containsKey("l2-regularization")) {
+              l2Penalty = (Double) optimizationParams.get("l2-regularization");
+            }
+          }
+
+          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
+              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new NullLogFunction());
+
+          SufficientStatistics parameters = trainer.train(oracle,
+              parameterSpec.getCurrentParameters(), trainingData);
+
+          // System.out.println(parameters.getDescription());
+
+          if (parameterValue instanceof ConsValue) {
+            return new EvalResult(ConsValue.listToConsList(parameterSpec.wrap(parameters).toArgumentList()));
+          } else {
+            return new EvalResult(parameterSpec.wrap(parameters));
+          }
         }
       }
 
@@ -473,6 +533,7 @@ public class AmbEval {
     env.bindName("*", new RaisedBuiltinFunction(new BuiltinFunctions.MultiplyFunction()));
     env.bindName("/", new RaisedBuiltinFunction(new BuiltinFunctions.DivideFunction()));
     env.bindName("log", new RaisedBuiltinFunction(new BuiltinFunctions.LogFunction()));
+    env.bindName("exp", new RaisedBuiltinFunction(new BuiltinFunctions.ExpFunction()));
     env.bindName("=", new RaisedBuiltinFunction(new BuiltinFunctions.EqualsFunction()));
     env.bindName("not", new RaisedBuiltinFunction(new BuiltinFunctions.NotFunction()));
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()));
@@ -499,7 +560,7 @@ public class AmbEval {
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
       List<String> argumentNames = lambdaValue.getArgumentNames(); 
       Preconditions.checkArgument(argumentNames.size() == argumentValues.size(),
-          "Wrong number of arguments: expected %s, got %s", argumentNames, argumentValues);
+          "Wrong number of arguments: expected %s, got %s to procedure: ", argumentNames, argumentValues, this);
 
       Environment boundEnvironment = Environment.extend(lambdaValue.getEnvironment());
       boundEnvironment.bindNames(argumentNames, argumentValues);

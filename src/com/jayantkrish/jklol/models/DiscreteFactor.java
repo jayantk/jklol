@@ -390,17 +390,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     return sb.toString();
   }
 
-  @Override
-  public String getParameterDescriptionXML() {
-    StringBuilder sb = new StringBuilder();
-    Iterator<Outcome> iter = outcomeIterator();
-    while (iter.hasNext()) {
-      Outcome outcome = iter.next();
-      sb.append("<outcome>\n" + outcome.toXML() + "</outcome>\n");
-    }
-    return sb.toString();
-  }
-
   /**
    * Get the partition function = denominator = total sum probability of all
    * assignments.
@@ -458,10 +447,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
     public String toCsv() {
       return Joiner.on(",").join(assignment.getValues()) + "," + probability;
-    }
-
-    public String toXML() {
-      return assignment.toXML() + "<probability>" + probability + "</probability>\n";
     }
   }
 }

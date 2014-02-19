@@ -67,11 +67,6 @@ public class CptTableFactor extends AbstractParametricFactor {
       return factor.getParameterDescription();
     }
   }
-  
-  @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
 
   @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {

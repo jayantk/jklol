@@ -35,14 +35,6 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
   public VariableNumMap getVars();
 
   /**
-   * Gets a human-interpretable XML description {@code parameters}.
-   * 
-   * @param parameters
-   * @return
-   */
-  public String getParameterDescriptionXML(SufficientStatistics parameters);
-
-  /**
    * Gets a {@code Factor} from a set of {@code parameters}. This method returns
    * an element of this parametric family. Note that multiple values of
    * {@code parameters} may return the same factor; that is, there is no

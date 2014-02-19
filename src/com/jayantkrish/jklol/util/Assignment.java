@@ -394,14 +394,6 @@ public class Assignment implements Serializable {
   public String toString() {
     return Arrays.toString(vars) + "=" + Arrays.toString(values);
   }
-  
-  public String toXML() {
-	  StringBuilder sb = new StringBuilder();
-	  for (int i = 0; i < vars.length; i++) {
-	    sb.append("<key>" + vars[i] + "</key>\n" + "<value>" + values[i] + "</value>\n");
-	  }
-	  return sb.toString();
-  }
 
   /**
    * Computes the union of {@code assignments}. Equivalent to computing the

@@ -94,7 +94,7 @@
 
 ;; These parameters control the number of iterations of gradient descent, etc.
 ;; They're optional, and the last argument to opt can be omitted.
-(define optimization-params (list (list "epochs" 10) (list "l2-regularization" 1.0)))
+(define optimization-params (list (list "epochs" 10) (list "l2-regularization" 0.0)))
 
 ;; Train the parameters (using stochastic gradient).
 (define best-parameters (opt joint-label-sequence-family initial-parameters training-data optimization-params))
@@ -116,10 +116,18 @@
          (list "some" "DT")
          (list "coffee" "NN")
          (list "or" "CC")
-         (list "tea" "NN"))))
+         (list "tea" "NN"))
+        (list 
+         (list "Get" "VB")
+         (list "me" "PRP")
+         (list "my" "PRP$")
+         (list "pencil" "NN")
+         (list "from" "IN")
+         (list "the" "DT")
+         (list "office" "NN"))))
 
 (define do-test (lambda (test-sent) 
-                  (display "Best tags for:" )
+                  (display "Best tags for (TEST):" )
                   (display (map car test-sent))
                   (display (get-best-value (trained-sequence-model (generate-token-features test-sent))))))
 

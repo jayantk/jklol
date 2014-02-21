@@ -109,4 +109,19 @@
 (display (map car (cadr training-sentences)))
 (display (get-best-value (trained-sequence-model (generate-token-features (cadr training-sentences)))))
 
+(define test-data
+  (list (list 
+         (list "Bring" "VB")
+         (list "me" "PRP")
+         (list "some" "DT")
+         (list "coffee" "NN")
+         (list "or" "CC")
+         (list "tea" "NN"))))
+
+(define do-test (lambda (test-sent) 
+                  (display "Best tags for:" )
+                  (display (map car test-sent))
+                  (display (get-best-value (trained-sequence-model (generate-token-features test-sent))))))
+
+(map do-test test-data)
 

@@ -73,7 +73,7 @@
 ;; Output ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (display "What is the most likely truth value of every proposition?")
 (display unary-propositions)
-(display (get-best-assignment unary-proposition-vars))
+(display (get-best-value unary-proposition-vars))
 (display "")
 (display "What is the probability that Bob smokes?")
 (display (get-marginals (get-propv (list "Smokes" "Bob"))))

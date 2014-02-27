@@ -56,18 +56,12 @@ public class ConsValue {
 
   public static <T> List<T> consListToList(Object consList, Class<T> clazz) {
     List<T> accumulator = Lists.newArrayList();
-    consListToListHelper(consList, accumulator, clazz);
-    return accumulator;
-  }
-
-  private static <T> void consListToListHelper(Object consList, List<T> accumulator, Class<T> clazz) {
-    if (ConstantValue.NIL.equals(consList)) {
-      return;
-    } else {
+    while (!ConstantValue.NIL.equals(consList)) {
       ConsValue consValue = (ConsValue) consList;
       accumulator.add(clazz.cast(consValue.getCar()));
-      consListToListHelper(consValue.getCdr(), accumulator, clazz);
+      consList = consValue.getCdr();
     }
+    return accumulator;
   }
 
   public static Object listToConsList(List<?> list) {

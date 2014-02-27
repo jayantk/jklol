@@ -193,9 +193,11 @@ public class ClassifierFunctions {
       for (Object value : values) {
         List<Object> tuple = ConsValue.consListToList(value, Object.class);
         Object featureName = tuple.get(0);
-        int featureIndex = dictionary.getValueIndex(featureName);
-        double featureValue = (Double) tuple.get(1);
-        builder.incrementEntry(featureValue, featureIndex);
+        if (dictionary.canTakeValue(featureName)) {
+          int featureIndex = dictionary.getValueIndex(featureName);
+          double featureValue = (Double) tuple.get(1);
+          builder.incrementEntry(featureValue, featureIndex);
+        }
       }
 
       return builder.build();

@@ -187,6 +187,30 @@ public class BuiltinFunctions {
     }
   }
   
+  public static class LessThanFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      if (allArgumentsInteger(argumentValues)) {
+        return ConstantValue.fromBoolean(((Integer) argumentValues.get(0)) < ((Integer) argumentValues.get(1)));
+      } else {
+        return ConstantValue.fromBoolean(((Double) argumentValues.get(0)) < ((Double) argumentValues.get(1)));
+      }
+    }
+  }
+
+  public static class GreaterThanFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      if (allArgumentsInteger(argumentValues)) {
+        return ConstantValue.fromBoolean(((Integer) argumentValues.get(0)) > ((Integer) argumentValues.get(1)));
+      } else {
+        return ConstantValue.fromBoolean(((Double) argumentValues.get(0)) > ((Double) argumentValues.get(1)));
+      }
+    }
+  }
+
   public static class DisplayFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {

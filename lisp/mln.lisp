@@ -1,5 +1,5 @@
 ;; MLN definition ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; The set of unary predicates and terms they can be
+;; The set of unary predicates and objects they can be
 ;; applied to.
 (define objects (list "Anna" "Bob" "John" "Smith"))
 (define unary-predicates (list "Smokes" "Cancer"))
@@ -8,45 +8,49 @@
 ;; of tuples, e.g., (list (list "Smokes" "Anna") (list "Smokes" "Bob") ...)
 (define unary-propositions (outer-product (list unary-predicates objects)))
 
-;; Create a random variable for each unary proposition.
+;; Create a random variable for every unary proposition.
 (define unary-proposition-vars (lifted-map (lambda (x) (amb (list #t #f) (list 1 1)))
                                             unary-propositions))
 
-;; Function for looking up a proposition's variable in the
-;; instantiated set of unary propositions.
+;; Function for getting the random variable associated with a 
+;; proposition. A proposition is a list, e.g., (list "Smokes" "Anna").
 (define get-propv (lambda (proposition) 
                     (lifted-get-ith-element unary-proposition-vars 
                                             (find-index proposition unary-propositions))))
 
-;; Implementations of quantifiers.
-(define forall (formula weight)
-  (lifted-map (lambda (term) (add-weight (formula term) weight)) objects))
+;; Instantiates a formula with a given weight for every object.
+(define instantiate-formula (formula weight)
+  (lifted-map (lambda (object) (add-weight (formula object) weight)) objects))
 
-(define exists (formula weight)
-  (add-weight (lifted-foldr or (lifted-map formula objects) #f) weight))
+;; Implementations of quantifiers. These functions return a random
+;; variable which is true iff the quantified formula is true.
+(define forall (formula)
+  (lifted-foldr and (lifted-map formula objects) #t))
+
+(define exists (formula)
+  (lifted-foldr or (lifted-map formula objects) #f))
 
 ;; Formulas ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Bob probably smokes, but not John.
 (add-weight (get-propv (list "Smokes" "Bob")) 3.0)
 (add-weight (get-propv (list "Smokes" "John")) 0.5)
 
-;; Cancer is unlikely a priori.
-(forall (lambda (term) (get-propv (list "Cancer" term))) 0.9)
-
 ;; It's unlikely that both Anna and Bob smoke.
 (add-weight (and (get-propv (list "Smokes" "Bob"))
                  (get-propv (list "Smokes" "Anna")))
                  0.3)
 
-;; Smoking causes cancer
+;; Cancer is unlikely a priori.
+(instantiate-formula (lambda (object) (get-propv (list "Cancer" object))) 0.9)
+
+;; Smoking causes cancer.
 (define => (lambda (x y) (not (and x (not y)))))
-(define smoking-causes-cancer (lambda (term) (=> (get-propv (list "Smokes" term))
-                                                 (get-propv (list "Cancer" term)))))
-(forall smoking-causes-cancer 2.0)
+(define smoking-causes-cancer (lambda (object) (=> (get-propv (list "Smokes" object))
+                                                 (get-propv (list "Cancer" object)))))
+(instantiate-formula smoking-causes-cancer 2.0)
 
 ;; Someone smokes.
-(exists (lambda (term) (get-propv (list "Smokes" term))) 2.0)
-
+(add-weight (exists (lambda (object) (get-propv (list "Smokes" object)))) 2.0)
 
 ;; Queries ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (display "What is the most likely truth value of every proposition?")
@@ -56,12 +60,5 @@
 (display "What is the probability that Bob smokes?")
 (display (get-marginals (get-propv (list "Smokes" "Bob"))))
 (display "")
-(display "What is the probability that Bob has cancer?")
-(display (get-marginals (get-propv (list "Cancer" "Bob"))))
-(display "")
-(display "What is the probability that Smith smokes?")
-(display (get-marginals (get-propv (list "Smokes" "Smith"))))
-(display "")
-(display "What is the probability that Smith has cancer?")
-(display (get-marginals (get-propv (list "Cancer" "Smith"))))
-(display "")
+(display "What is the probability that someone has cancer?")
+(display (get-marginals (exists (lambda (object) (get-propv (list "Smokes" object))))))

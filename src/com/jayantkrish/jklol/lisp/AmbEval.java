@@ -478,6 +478,8 @@ public class AmbEval {
     env.bindName("/", new RaisedBuiltinFunction(new BuiltinFunctions.DivideFunction()));
     env.bindName("log", new RaisedBuiltinFunction(new BuiltinFunctions.LogFunction()));
     env.bindName("=", new RaisedBuiltinFunction(new BuiltinFunctions.EqualsFunction()));
+    env.bindName("<", new RaisedBuiltinFunction(new BuiltinFunctions.LessThanFunction()));
+    env.bindName(">", new RaisedBuiltinFunction(new BuiltinFunctions.GreaterThanFunction()));
     env.bindName("not", new RaisedBuiltinFunction(new BuiltinFunctions.NotFunction()));
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()));
     env.bindName("or", new RaisedBuiltinFunction(new BuiltinFunctions.OrFunction()));
@@ -611,7 +613,7 @@ public class AmbEval {
 
         Object result = baseFunction.apply(chosenValues, env);
         if (result instanceof AmbValue) {
-          Preconditions.checkState(false, "Probabilistic functions not yet supported.");
+          Preconditions.checkState(false, "Probabilistic functions not yet supported. baseFunction %s", baseFunction);
         } else {
           assignment = assignment.union(fgVar.outcomeArrayToAssignment(result));
           builder.setWeight(assignment, 1.0);

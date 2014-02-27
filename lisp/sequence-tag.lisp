@@ -42,4 +42,4 @@
 ;; Calling sequence-tag on an input instantiates a graphical model.
 ;; get-best-assignment performs inference on this model to identify
 ;; the best assignment to the labels of the sequence.
-(get-best-assignment (sequence-tag (list "the" "car" "goes")))
+(get-best-value (sequence-tag (list "the" "car" "goes")))

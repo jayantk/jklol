@@ -98,15 +98,6 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
         .getMostLikelyAssignments(numFeatures);
     return featureValues.describeAssignments(biggestAssignments);
   }
-  
-  @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    Tensor featureWeights = getFeatureWeights(parameters);
-    
-    TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
-        initialWeights.getWeights().replaceValues(featureWeights.getValues()));
-    return featureValues.getParameterDescriptionXML();
-  }
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,

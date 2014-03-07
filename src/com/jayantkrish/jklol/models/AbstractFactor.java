@@ -152,12 +152,4 @@ public abstract class AbstractFactor implements Factor, Serializable {
     // correct implementation.
     return toString();
   }
-  
-  @Override
-  public String getParameterDescriptionXML() {
-    // This implementation will probably not be detailed enough.
-    // Subclasses should override this method with a
-    // correct implementation.
-    return "<parameter>"+toString()+"</parameter>";
-  }
 }

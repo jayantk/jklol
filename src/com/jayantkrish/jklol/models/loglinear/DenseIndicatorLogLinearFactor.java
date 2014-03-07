@@ -57,11 +57,6 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
   public SufficientStatistics getNewSufficientStatistics() {
     if (isSparse) {
       return TensorSufficientStatistics.createSparse(getVars(), 

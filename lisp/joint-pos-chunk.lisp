@@ -75,11 +75,27 @@
       (require (= cur-actual-label2 cur-predicted-label2))
       (require-seq-equal (lifted-cdr predicted) (cdr actual)))))
 
+;; Procedure for conditioning the output distribution given the true labels.
+(define make-seq-cost (predicted actual)
+  (if (nil? actual)
+      #t
+    (let ((cur-predicted-labels (lifted-car predicted))
+          (cur-predicted-label1 (lifted-car cur-predicted-labels))
+          (cur-predicted-label2 (lifted-cadr cur-predicted-labels))
+          (cur-actual-label1 (car (car actual)))
+          (cur-actual-label2 (cadr (car actual))))
+      (add-weight (not (= cur-actual-label1 cur-predicted-label1)) (exp 1.0))
+      (add-weight (not (= cur-actual-label2 cur-predicted-label2)) (exp 1.0))
+      (make-seq-cost (lifted-cdr predicted) (cdr actual)))))
+
 ;; Convert the labels into the verification procedures, then
 ;; create training data in the input/output format.
 (define zipped-labels (map (lambda (x) (zip (car x) (cadr x))) labels))
 (define label-detection-procs (map (lambda (x) (lambda (predicted) (require-seq-equal predicted x))) zipped-labels))
 (define training-data (zip featurized-inputs label-detection-procs))
+
+(define max-margin-cost-procs (map (lambda (x) (lambda (predicted) (make-seq-cost predicted x))) zipped-labels))
+(define max-margin-training-data (zip3 featurized-inputs max-margin-cost-procs label-detection-procs))
 
 ;; Create initial, all-zero parameters for the model. When multiple
 ;; classifiers are used in a model family, the parameters for each
@@ -97,13 +113,27 @@
 
 ;; Train the parameters (using stochastic gradient).
 (define best-parameters (opt joint-label-sequence-family initial-parameters training-data optimization-params))
+
+
+(define best-mm-parameters (opt-mm joint-label-sequence-family initial-parameters max-margin-training-data optimization-params))
 ;; Instantiate the model with the trained parameters.
-(define trained-sequence-model (apply joint-label-sequence-family best-parameters))
+
+(define crf-sequence-model (apply joint-label-sequence-family best-parameters))
+(define m3n-sequence-model (apply joint-label-sequence-family best-mm-parameters))
 
 ;; Print out some sample tags for stuff.
-(display "Best tags for the man:")
-(display (get-best-value (trained-sequence-model (generate-token-features (list "the" "man")))))
-(display "Best tags for the man eats fast food:")
-(display (get-best-value (trained-sequence-model (generate-token-features (list "the" "man" "eats" "fast" "food")))))
+(display "Best CRF tags for the man:")
+(display (get-best-value (crf-sequence-model (generate-token-features (list "the" "man")))))
+(display "Best CRF tags for the man eats fast food:")
+(display (get-best-value (crf-sequence-model (generate-token-features (list "the" "man" "eats" "fast" "food")))))
+(display "")
+(display "Best M3N tags for the man:")
+(display (get-best-value (m3n-sequence-model (generate-token-features (list "the" "man")))))
+(display "Best M3N tags for the man eats fast food:")
+(display (get-best-value (m3n-sequence-model (generate-token-features (list "the" "man" "eats" "fast" "food")))))
 
-
+; (display "CRF parameters:")
+; (display best-parameters)
+; (display "")
+; (display "M3N parameters:")
+; (display best-mm-parameters)

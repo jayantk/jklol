@@ -60,59 +60,6 @@
   ;; a sequence.
   sequence-model)
 
-;; This code generates indicator features for the words in the input sequence.
-(define generate-token-features (token-list index offsets)
-  (if (nil? offsets)
-      (list)
-    (let ((remaining-features (generate-token-features token-list index offsets))
-          (cur-offset (car offsets))
-          (cur-index (+ index cur-offset)))
-      (if (and (> cur-index 0)
-               (< cur-index (length token-list)))
-          (append (generate-index-features token-list cur-index cur-offset)
-                  remaining-features)
-        remaining-features))))
-
-(define generate-index-features (token-list index offset)
-  (let ((cur-index (+ index offset)))
-    (if (and (> cur-index -1) (< cur-index (length token-list)))
-        (let ((cur-token (get-ith-element token-list cur-index))
-              (cur-word (car cur-token))
-              (cur-pos (cadr cur-token)))
-          (list (list (list cur-word offset) 1.0)
-                (list (list cur-pos offset) 1.0)))
-      (list)
-      )))
-
-(define generate-token-list-features (token-list) 
-  (map (lambda (index)
-         (feature-func (foldr append (map (lambda (o) (generate-index-features token-list index o)) feature-offsets) (list))))
-       (generate-int-seq 0 (length token-list))))
-
-(define featurized-inputs (map (lambda (x) (list (generate-token-list-features x))) training-sentences))
-
-;(display (car training-sentences))
-;(display (car featurized-inputs))
-
-;; Procedure for conditioning the output distribution given the true labels.
-(define require-seq-equal (predicted actual)
-  (if (nil? actual)
-      #t
-    (let ((cur-predicted-labels (lifted-car predicted))
-          (cur-predicted-label1 (lifted-car cur-predicted-labels))
-          (cur-predicted-label2 (lifted-cadr cur-predicted-labels))
-          (cur-actual-label1 (car (car actual)))
-          (cur-actual-label2 (cadr (car actual))))
-      (require (= cur-actual-label1 cur-predicted-label1))
-      (require (= cur-actual-label2 cur-predicted-label2))
-      (require-seq-equal (lifted-cdr predicted) (cdr actual)))))
-
-;; Convert the labels into the verification procedures, then
-;; create training data in the input/output format.
-(define zipped-labels (map (lambda (x) (zip (map caddr x) (map cadddr x))) training-sentences))
-(define label-detection-procs (map (lambda (x) (lambda (predicted) (require-seq-equal predicted x))) zipped-labels))
-(define training-data (zip featurized-inputs label-detection-procs))
-
 ;; Create initial, all-zero parameters for the model. When multiple
 ;; classifiers are used in a model family, the parameters for each
 ;; classifier are given in a list.
@@ -129,22 +76,11 @@
 (define optimization-params (list (list "epochs" 10) (list "l2-regularization" 0.001)))
 
 ;; Train the parameters (using stochastic gradient).
+(define training-data (make-loglikelihood-data training-sentences))
 (define best-parameters (opt joint-label-sequence-family initial-parameters training-data optimization-params))
 ;; Instantiate the model with the trained parameters.
 (define trained-sequence-model (apply joint-label-sequence-family best-parameters))
 (display "Done.")
-
-;; Evaluation code
-(define get-word-accuracy (predicted-seq true-seq)
-  (if (nil? true-seq)
-      0
-    (let ((rest-accuracy (get-word-accuracy (cdr predicted-seq) (cdr true-seq)))
-          (predicted-label (car predicted-seq))
-          (true-label (car true-seq)))
-      (if (and (= (car predicted-label) (caddr true-label))
-               (= (cadr predicted-label) (cadddr true-label)))
-          (+ 1 rest-accuracy)
-        rest-accuracy))))
 
 (define do-test (lambda (test-sent) 
                   (let ((test-words (map car test-sent))

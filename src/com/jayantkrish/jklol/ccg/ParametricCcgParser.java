@@ -237,6 +237,21 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       }
     }
 
+    List<LexiconEntry> lexiconEntries = Lists.newArrayList(); 
+    for (String lexiconLine : lexiconLines) {
+      // Create the CCG category.
+      lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLine));
+    }
+    return ParametricCcgParser.parseFromLexicon(lexiconEntries, binaryRules, unaryRules,
+        featureFactory, posTagSet, allowComposition, allowedCombinationRules, allowWordSkipping,
+        normalFormOnly);
+  }
+
+  public static ParametricCcgParser parseFromLexicon(Collection<LexiconEntry> lexiconEntries,
+      List<CcgBinaryRule> binaryRules, List<CcgUnaryRule> unaryRules, CcgFeatureFactory featureFactory,
+      Set<String> posTagSet, boolean allowComposition, Iterable<CcgRuleSchema> allowedCombinationRules,
+      boolean allowWordSkipping, boolean normalFormOnly) {
+
     // Parse out all of the categories, words, and semanticPredicates
     // from the lexicon.
     IndexedList<CcgCategory> categories = IndexedList.create();
@@ -244,9 +259,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     IndexedList<String> semanticPredicates = IndexedList.create();
     Map<Integer, Integer> maxNumArgs = Maps.newHashMap();
     Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
-    for (String lexiconLine : lexiconLines) {
-      // Create the CCG category.
-      LexiconEntry lexiconEntry = LexiconEntry.parseLexiconEntry(lexiconLine);
+    for (LexiconEntry lexiconEntry : lexiconEntries) {
       words.add(lexiconEntry.getWords());
       categories.add(lexiconEntry.getCategory());
       syntacticCategories.add(lexiconEntry.getCategory().getSyntax().getCanonicalForm());
@@ -324,8 +337,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalWordVars, SparseTensorBuilder.getFactory());
     TableFactorBuilder terminalSyntaxBuilder = new TableFactorBuilder(terminalWordSyntaxVars, SparseTensorBuilder.getFactory());
-    for (String lexiconLine : lexiconLines) {
-      LexiconEntry lexiconEntry = LexiconEntry.parseLexiconEntry(lexiconLine);
+    for (LexiconEntry lexiconEntry : lexiconEntries) {
       List<String> lexiconWords = lexiconEntry.getWords();
       for (String word : lexiconWords) {
         Preconditions.checkArgument(word.toLowerCase().equals(word), "Lexicon entry is not lowercased: " + lexiconEntry);
@@ -346,7 +358,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         semanticPredicates.items());
     // The set of possible argument numbers depends on the entries
     // provided in the lexicon.
-    int maxArgNum = Collections.max(maxNumArgs.values());
+    int maxArgNum = 0;
+    if (maxNumArgs.size() > 0) {
+      maxArgNum = Collections.max(maxNumArgs.values());
+    }
     List<Integer> argNumValues = Lists.newArrayList();
     for (int i = 0; i <= maxArgNum; i++) {
       argNumValues.add(i);

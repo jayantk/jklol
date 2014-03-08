@@ -73,11 +73,16 @@
 ;; These parameters control the number of iterations of gradient descent, etc.
 ;; They're optional, and the last argument to opt can be omitted.
 (display "Training...")
-(define optimization-params (list (list "epochs" 10) (list "l2-regularization" 0.001)))
+(define optimization-params (list (list "epochs" 30) (list "l2-regularization" 0.0001)))
 
-;; Train the parameters (using stochastic gradient).
-(define training-data (make-loglikelihood-data training-sentences))
-(define best-parameters (opt joint-label-sequence-family initial-parameters training-data optimization-params))
+;; Train the parameters (using max-margin)
+(define training-data (make-mm-data training-sentences))
+(define best-parameters (opt-mm joint-label-sequence-family initial-parameters training-data optimization-params))
+
+;; Train the parameters (using loglikelihood & stochastic gradient).
+;(define training-data (make-loglikelihood-data training-sentences))
+;(define best-parameters (opt joint-label-sequence-family initial-parameters training-data optimization-params))
+
 ;; Instantiate the model with the trained parameters.
 (define trained-sequence-model (apply joint-label-sequence-family best-parameters))
 (display "Done.")

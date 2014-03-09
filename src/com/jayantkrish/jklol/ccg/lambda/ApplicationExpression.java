@@ -26,9 +26,13 @@ public class ApplicationExpression extends AbstractExpression {
   public Expression getFunction() {
     return subexpressions.get(0);
   }
-  
+
   public List<Expression> getArguments() {
     return subexpressions.subList(1, subexpressions.size());
+  }
+
+  public List<Expression> getSubexpressions() {
+    return subexpressions;
   }
 
   @Override

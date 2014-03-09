@@ -16,12 +16,12 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgUnaryRule;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
+import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -32,17 +32,30 @@ public class BatchLexiconInductionTest extends TestCase {
   
   BatchLexiconInduction lexiconInduction;
   
-  CcgInference inference;
+  CcgBeamSearchInference inference;
   
   private static final String[] trainingWords = {
-      "city",
-      "the city",
-      "the city in california"
+      "translate hello to spanish",
+      "translate hello to french",
+      "translate hello to hindi",
+      "translate restaurant to spanish",
+      "translate restaurant to french",
+      "translate restaurant to hindi",
+      "translate french to hindi",
+      "translate spanish to hindi",
+      "translate spanish to french",
   };
+
   private static final String[] trainingLfs = {
-    "(lambda x (city x))",
-    "(lambda x (city x))",
-    "(lambda x (exists y (and (city x) (in x y) (california y))))"
+    "(translate (x-source thisApp) (word hello) (language spanish))",
+    "(translate (x-source thisApp) (word hello) (language french))",
+    "(translate (x-source thisApp) (word hello) (language hindi))",
+    "(translate (x-source thisApp) (word restaurant) (language spanish))",
+    "(translate (x-source thisApp) (word restaurant) (language french))",
+    "(translate (x-source thisApp) (word restaurant) (language hindi))",
+    "(translate (x-source thisApp) (word french) (language spanish))",
+    "(translate (x-source thisApp) (word spanish) (language french))",
+    "(translate (x-source thisApp) (word spanish) (language french))",
   };
 
   public void setUp() {
@@ -61,19 +74,27 @@ public class BatchLexiconInductionTest extends TestCase {
       trainingData.add(new CcgExample(sentence, null, null, logicalForm));
     }
 
-    GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        trainingData.size(), 1, 1, true, true, 0.0, new DefaultLogFunction());
-    lexiconInduction = new BatchLexiconInduction(1, true, true, false,
-        new DefaultCcgFeatureFactory(null), binaryRules, unaryRules, trainer);
-    
     inference = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, 1, false);
+    GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(
+        trainingData.size() * 10, 1, 1, true, true, 0.1, new NullLogFunction());
+    lexiconInduction = new BatchLexiconInduction(4, true, false, false,
+        new DefaultCcgFeatureFactory(null, false), binaryRules, unaryRules, inference, trainer);
   }
 
   public void testLexiconInduction() {
     CcgParser parser = lexiconInduction.induceLexicon(trainingData);
-    CcgParse parse = inference.getBestParse(parser, createSupertaggedSentence("the city"),
+    List<CcgParse> parses = inference.beamSearch(parser, createSupertaggedSentence("translate hello to french"),
         null, new NullLogFunction());
-    System.out.println(parse + " " + parse.getLogicalForm());
+
+    System.out.println("PARSES:");
+    for (CcgParse parse : parses) {
+      System.out.println(parse + " " + parse.getLogicalForm().simplify());
+      System.out.println(parse.getSubtreeProbability());
+      for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {
+        System.out.println(entry);
+      }
+      System.out.println("======");
+    }
   }
 
   private static SupertaggedSentence createSupertaggedSentence(String sentence) {

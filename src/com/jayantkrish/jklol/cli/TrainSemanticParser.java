@@ -55,7 +55,7 @@ public class TrainSemanticParser extends AbstractCli {
   public void run(OptionSet options) {
     List<CcgExample> trainingExamples = readCcgExamplesJson(options.valueOf(trainingData));
     
-    ParametricCcgParser family = createCcgParser(null, null, new DefaultCcgFeatureFactory(null));
+    ParametricCcgParser family = createCcgParser(null, null, new DefaultCcgFeatureFactory(null, true));
 
     CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
         -1, Integer.MAX_VALUE, 1, false);

@@ -51,7 +51,7 @@ public class ParametricCcgParserTest extends TestCase {
   
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(null), posTags, true, null, false, false);
+        new DefaultCcgFeatureFactory(null, true), posTags, true, null, false, false);
     parameters = family.getNewSufficientStatistics();
     parser = family.getModelFromParameters(parameters);
   }

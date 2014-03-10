@@ -471,7 +471,6 @@ public class CcgParser implements Serializable {
     }
 
     DiscreteFactor syntaxDistribution = syntaxDistributionBuilder.build();
-    System.out.println("Number of binary rules: " + syntaxDistribution.getTotalUnnormalizedProbability());
     return syntaxDistribution;
   }
 
@@ -875,7 +874,6 @@ public class CcgParser implements Serializable {
       unaryRuleBuilder.setWeightList(outcome, 1.0);
     }
     DiscreteFactor unaryRuleDistribution = unaryRuleBuilder.build();
-    System.out.println("Number of unary rules: " + unaryRuleDistribution.getTotalUnnormalizedProbability());
     return unaryRuleDistribution;
   }
 
@@ -975,7 +973,6 @@ public class CcgParser implements Serializable {
     }
 
     DiscreteFactor syntaxDistribution = syntaxDistributionBuilder.build();
-    System.out.println("Number of compiled (unary and binary) rules: " + syntaxDistribution.getTotalUnnormalizedProbability());
     return syntaxDistribution;
   }
 

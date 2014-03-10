@@ -11,7 +11,6 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgBinaryRule;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgUnaryRule;
@@ -22,6 +21,7 @@ import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
@@ -44,18 +44,22 @@ public class BatchLexiconInductionTest extends TestCase {
       "translate french to hindi",
       "translate spanish to hindi",
       "translate spanish to french",
+      "find restaurants",
+      "find italian restaurants"
   };
 
   private static final String[] trainingLfs = {
-    "(translate (x-source thisApp) (word hello) (language spanish))",
-    "(translate (x-source thisApp) (word hello) (language french))",
-    "(translate (x-source thisApp) (word hello) (language hindi))",
-    "(translate (x-source thisApp) (word restaurant) (language spanish))",
-    "(translate (x-source thisApp) (word restaurant) (language french))",
-    "(translate (x-source thisApp) (word restaurant) (language hindi))",
-    "(translate (x-source thisApp) (word french) (language spanish))",
-    "(translate (x-source thisApp) (word spanish) (language french))",
-    "(translate (x-source thisApp) (word spanish) (language french))",
+    "(translate (x-source= thisApp) (word= hello) (language= spanish))",
+    "(translate (x-source= thisApp) (word= hello) (language= french))",
+    "(translate (x-source= thisApp) (word= hello) (language= hindi))",
+    "(translate (x-source= thisApp) (word= restaurant) (language= spanish))",
+    "(translate (x-source= thisApp) (word= restaurant) (language= french))",
+    "(translate (x-source= thisApp) (word= restaurant) (language= hindi))",
+    "(translate (x-source= thisApp) (word= french) (language= hindi))",
+    "(translate (x-source= thisApp) (word= spanish) (language= hindi))",
+    "(translate (x-source= thisApp) (word= spanish) (language= french))",
+    "(map-search (x-source= thisApp) (query= restaurants))",
+    "(map-search (x-source= thisApp) (query= italian restaurants))"
   };
 
   public void setUp() {
@@ -77,8 +81,9 @@ public class BatchLexiconInductionTest extends TestCase {
     inference = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, 1, false);
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(
         trainingData.size() * 10, 1, 1, true, true, 0.1, new NullLogFunction());
-    lexiconInduction = new BatchLexiconInduction(4, true, false, false,
-        new DefaultCcgFeatureFactory(null, false), binaryRules, unaryRules, inference, trainer);
+    lexiconInduction = new BatchLexiconInduction(10, true, false, false,
+        new DefaultCcgFeatureFactory(null, false), binaryRules, unaryRules, trainer,
+        new UnificationLexiconInductionStrategy(inference), new DefaultLogFunction());
   }
 
   public void testLexiconInduction() {
@@ -87,7 +92,8 @@ public class BatchLexiconInductionTest extends TestCase {
         null, new NullLogFunction());
 
     System.out.println("PARSES:");
-    for (CcgParse parse : parses) {
+    for (int i = 0; i < Math.min(10, parses.size()); i++) {
+      CcgParse parse = parses.get(i);
       System.out.println(parse + " " + parse.getLogicalForm().simplify());
       System.out.println(parse.getSubtreeProbability());
       for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {

@@ -215,11 +215,11 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       boolean normalFormOnly) {
     Preconditions.checkNotNull(featureFactory);
 
-    System.out.println("Reading lexicon and rules...");
+    // System.out.println("Reading lexicon and rules...");
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
     for (String line : unfilteredRuleLines) {
-      System.out.println(line);
+      // System.out.println(line);
       if (!line.startsWith("#")) {
         try {
           binaryRules.add(CcgBinaryRule.parseFrom(line));
@@ -290,7 +290,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     }
 
     // Create features over ways to combine syntactic categories.
-    System.out.println("Building syntactic distribution...");
+    // System.out.println("Building syntactic distribution...");
     DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
     DiscreteFactor binaryRuleDistribution = null;
     if (allowedCombinationRules == null) {

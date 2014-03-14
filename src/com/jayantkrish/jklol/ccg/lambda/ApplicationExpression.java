@@ -139,13 +139,15 @@ public class ApplicationExpression extends AbstractExpression {
     Expression function = subexpressions.get(0);
     Type type = function.getType(context);
 
-    for (int i = 0; i < subexpressions.size(); i++) {
+    for (int i = 1; i < subexpressions.size(); i++) {
       if (type == null || !type.isFunctional()) {
         return null;
       }
 
       if (context.unify(type.getArgumentType(), subexpressions.get(i).getType(context)) != null) {
         type = type.getReturnType();
+      } else {
+        return null;
       }
     }
     return type;

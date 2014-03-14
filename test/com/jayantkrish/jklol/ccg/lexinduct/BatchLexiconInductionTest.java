@@ -19,6 +19,8 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda.MapTypeContext;
+import com.jayantkrish.jklol.ccg.lambda.TypeContext;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
@@ -31,6 +33,7 @@ public class BatchLexiconInductionTest extends TestCase {
   List<CcgExample> trainingData;
   
   BatchLexiconInduction lexiconInduction;
+  TypeContext typeContext;
   
   CcgBeamSearchInference inference;
   
@@ -45,27 +48,38 @@ public class BatchLexiconInductionTest extends TestCase {
       "translate spanish to hindi",
       "translate spanish to french",
       "find restaurants",
-      "find italian restaurants"
   };
 
   private static final String[] trainingLfs = {
-    "(translate (x-source= thisApp) (word= hello) (language= spanish))",
-    "(translate (x-source= thisApp) (word= hello) (language= french))",
-    "(translate (x-source= thisApp) (word= hello) (language= hindi))",
-    "(translate (x-source= thisApp) (word= restaurant) (language= spanish))",
-    "(translate (x-source= thisApp) (word= restaurant) (language= french))",
-    "(translate (x-source= thisApp) (word= restaurant) (language= hindi))",
-    "(translate (x-source= thisApp) (word= french) (language= hindi))",
-    "(translate (x-source= thisApp) (word= spanish) (language= hindi))",
-    "(translate (x-source= thisApp) (word= spanish) (language= french))",
-    "(map-search (x-source= thisApp) (query= restaurants))",
-    "(map-search (x-source= thisApp) (query= italian restaurants))"
+    "(translate (word= hello) (language= spanish))",
+    "(translate (word= hello) (language= french))",
+    "(translate (word= hello) (language= hindi))",
+    "(translate (word= restaurant) (language= spanish))",
+    "(translate (word= restaurant) (language= french))",
+    "(translate (word= restaurant) (language= hindi))",
+    "(translate (word= french) (language= hindi))",
+    "(translate (word= spanish) (language= hindi))",
+    "(translate (word= spanish) (language= french))",
+    "(map-search (query= restaurant))",
+  };
+  
+  private static final String[] typeDeclarations = {
+    "translate:<ga,<ga,url>>",
+    "map-search:<ga,url>",
+    "word=:<s,ga>",
+    "language=:<s,ga>",
+    "query=:<s,ga>",
+    "hello:s",
+    "spanish:s",
+    "french:s",
+    "hindi:s",
+    "restaurant:s",
   };
 
   public void setUp() {
     Preconditions.checkState(trainingWords.length == trainingLfs.length);
     ExpressionParser<Expression> parser = ExpressionParser.lambdaCalculus();
-    
+
     List<CcgBinaryRule> binaryRules = Lists.newArrayList(CcgBinaryRule.parseFrom(
         "NOT_A_CAT{0} NOT_A_CAT{0} NOT_A_CAT{0},,OTHER,NOT_A_DEP 0 0"));
     List<CcgUnaryRule> unaryRules = Lists.newArrayList(CcgUnaryRule.parseFrom(
@@ -78,12 +92,14 @@ public class BatchLexiconInductionTest extends TestCase {
       trainingData.add(new CcgExample(sentence, null, null, logicalForm));
     }
 
-    inference = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, 1, false);
+    typeContext = MapTypeContext.readTypeDeclarations(Arrays.asList(typeDeclarations));
+
+    inference = new CcgBeamSearchInference(null, 1000, -1, Integer.MAX_VALUE, 1, false);
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        trainingData.size() * 10, 1, 1, true, true, 0.1, new NullLogFunction());
-    lexiconInduction = new BatchLexiconInduction(10, true, false, false,
+        trainingData.size() * 1, 1, 1, true, true, 0.1, new NullLogFunction());
+    lexiconInduction = new BatchLexiconInduction(20, true, false, false,
         new DefaultCcgFeatureFactory(null, false), binaryRules, unaryRules, trainer,
-        new UnificationLexiconInductionStrategy(inference), new DefaultLogFunction());
+        new UnificationLexiconInductionStrategy(inference, typeContext), new DefaultLogFunction());
   }
 
   public void testLexiconInduction() {

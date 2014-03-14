@@ -68,7 +68,8 @@ public class LambdaExpression extends AbstractExpression {
         if (argumentFreeVars.contains(boundVar)) {
           // Rename the bound variable to avoid a variable name collision.
           ConstantExpression newBoundVarName = ConstantExpression.generateUniqueVariable();
-          substitutedBody = substitutedBody.renameVariable(boundVar, newBoundVarName);
+          ConstantExpression newBoundVar = new ConstantExpression(newBoundVarName.getName());
+          substitutedBody = substitutedBody.renameVariable(boundVar, newBoundVar);
         }
       }
       substitutedBody = substitutedBody.substitute(argumentVariables.get(i), argumentValue);
@@ -77,7 +78,8 @@ public class LambdaExpression extends AbstractExpression {
     if (argumentValues.size() == argumentVariables.size()) {
       return substitutedBody;
     } else {
-      return new LambdaExpression(argumentVariables.subList(argumentValues.size(), argumentVariables.size()), substitutedBody);
+      return new LambdaExpression(argumentVariables.subList(argumentValues.size(),
+          argumentVariables.size()), substitutedBody);
     }
   }
 

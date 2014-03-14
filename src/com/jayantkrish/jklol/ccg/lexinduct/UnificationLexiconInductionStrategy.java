@@ -27,40 +27,44 @@ import com.jayantkrish.jklol.training.NullLogFunction;
 public class UnificationLexiconInductionStrategy implements LexiconInductionStrategy {
   
   private final CcgInference inferenceAlg;
+  private final TypeContext typeContext;
 
-  public UnificationLexiconInductionStrategy(CcgInference inferenceAlg) {
+  public UnificationLexiconInductionStrategy(CcgInference inferenceAlg,
+      TypeContext typeContext) {
     this.inferenceAlg = Preconditions.checkNotNull(inferenceAlg);
+    this.typeContext = Preconditions.checkNotNull(typeContext);
   }
 
-  public Set<LexiconEntry> proposeLexiconEntries(CcgExample example, CcgParser parser) {
+  public void proposeLexiconEntries(CcgExample example, CcgParser parser,
+      Set<LexiconEntry> entriesToAdd, Set<LexiconEntry> entriesToRemove) {
     if (parser == null) {
       Preconditions.checkArgument(example.hasLogicalForm());
       HeadedSyntacticCategory sentenceCat = makeSyntacticCategory(example.getLogicalForm());
-      return Collections.singleton(createLexiconEntry(example.getSentence().getWords(),
+      entriesToAdd.add(createLexiconEntry(example.getSentence().getWords(),
           sentenceCat, example.getLogicalForm()));
+      System.out.println(sentenceCat + " " + example.getLogicalForm());
     } else {
       CcgParse bestParse = inferenceAlg.getBestConditionalParse(parser, example.getSentence(),
           null, new NullLogFunction(), null, null, example.getLogicalForm());
-      Set<LexiconEntry> lexiconEntries = Sets.newHashSet();
+
       if (bestParse != null) {
         System.out.println(bestParse + " " + bestParse.getLogicalForm());
-        proposeAllSplits(bestParse, lexiconEntries);
+        proposeAllSplits(bestParse, entriesToAdd, entriesToRemove);
       } 
-
-      for (LexiconEntry entry : lexiconEntries) {
-        System.out.println(entry);
-      }
-
-      return lexiconEntries;
     }
   }
 
-  private void proposeAllSplits(CcgParse parse, Set<LexiconEntry> accumulator) {
+  private void proposeAllSplits(CcgParse parse, Set<LexiconEntry> addAccumulator,
+      Set<LexiconEntry> removeAccumulator) {
     if (parse.isTerminal()) {
-      accumulator.addAll(proposeSplit(parse));
+      addAccumulator.addAll(proposeSplit(parse.getLexiconTriggerWords(), parse.getLogicalForm()));
+
+      if (parse.getWords().size() > 0) {
+        removeAccumulator.add(new LexiconEntry(parse.getWords(), parse.getLexiconEntry()));
+      }
     } else {
-      proposeAllSplits(parse.getLeft(), accumulator);
-      proposeAllSplits(parse.getRight(), accumulator);
+      proposeAllSplits(parse.getLeft(), addAccumulator, removeAccumulator);
+      proposeAllSplits(parse.getRight(), addAccumulator, removeAccumulator);
     }
   }
 
@@ -71,12 +75,7 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
    * @param parse
    * @return
    */
-  private Set<LexiconEntry> proposeSplit(CcgParse parse) {
-    Preconditions.checkArgument(parse.isTerminal());
-    List<String> words = parse.getLexiconTriggerWords();
-    HeadedSyntacticCategory rootCat = parse.getHeadedSyntacticCategory();
-    Expression rootLf = parse.getLogicalForm();
-
+  public Set<LexiconEntry> proposeSplit(List<String> words, Expression rootLf) {
     Set<LexiconEntry> lexiconEntries = Sets.newHashSet();
     for (int splitIndex = 1; splitIndex < words.size(); splitIndex++) {
       List<String> leftWords = words.subList(0, splitIndex);
@@ -121,7 +120,7 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
     // Add the logical form where one of the splits 
     // just applies the other split.
     List<ConstantExpression> newArgs = Lists.newArrayList(newArg);
-    List<Type> newArgTypes = Lists.newArrayList(expression.getType(TypeContext.empty()));
+    List<Type> newArgTypes = Lists.newArrayList(expression.getType(typeContext));
     newArgs.addAll(arguments);
     newArgTypes.addAll(argumentTypes);
     argAccumulator.add(expression);
@@ -139,10 +138,10 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
     if (body instanceof ApplicationExpression) {
       ApplicationExpression applicationBody = (ApplicationExpression) body;
       List<Expression> subexpressions = applicationBody.getSubexpressions();
-      
+
       for (int i = 0; i < subexpressions.size(); i++) {
         if (!arguments.contains(subexpressions.get(i))) {
-          Type type = subexpressions.get(i).getType(TypeContext.empty());
+          Type type = subexpressions.get(i).getType(typeContext);
           if (type != null) {
             argAccumulator.add(subexpressions.get(i));
             HeadedSyntacticCategory argCat = makeSyntacticCategory(subexpressions.get(i));
@@ -150,12 +149,18 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
             List<Expression> newBodyList = Lists.newArrayList(subexpressions);
             newBodyList.set(i, newArg);
             Expression newBody = new ApplicationExpression(newBodyList);
-            if (arguments.size() > 0) {
-              newBody = new LambdaExpression(arguments, newBody);
-            }
 
-            funcAccumulator.add(new LambdaExpression(Arrays.asList(newArg),
-                Arrays.asList(type), newBody));
+            if (arguments.size() > 0) {
+              newArgs = Lists.newArrayList(newArg);
+              newArgs.addAll(arguments);
+              newArgTypes = Lists.newArrayList(type);
+              newArgTypes.addAll(argumentTypes);
+
+              funcAccumulator.add(new LambdaExpression(newArgs, newArgTypes, newBody));
+            } else {
+              funcAccumulator.add(new LambdaExpression(Arrays.asList(newArg),
+                  Arrays.asList(type), newBody));
+            }
             HeadedSyntacticCategory funcCat = expressionCat.addArgument(argCat, direction, 0);
             funcCatAccumulator.add(funcCat);
           }
@@ -180,9 +185,9 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
   }
 
   private HeadedSyntacticCategory makeSyntacticCategory(Expression lf) {
-    Type type = lf.getType(TypeContext.empty());
+    Type type = lf.getType(typeContext);
     Preconditions.checkState(type != null, "Cannot type expression: " + lf);
-    
+
     String syntacticCatString = "N:" + type.toString() + "{0}";
     return HeadedSyntacticCategory.parseFrom(syntacticCatString);
   }

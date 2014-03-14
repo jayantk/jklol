@@ -59,8 +59,8 @@ public class ExpressionParser<T> {
         DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getLambdaCalculusFactory());
   }
 
-  public static ExpressionParser<Expression> typedLambdaCalculus() {
-    return new ExpressionParser<Expression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
+  public static ExpressionParser<TypedExpression> typedLambdaCalculus() {
+    return new ExpressionParser<TypedExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
         DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getTypedLambdaCalculusFactory());
   }
 

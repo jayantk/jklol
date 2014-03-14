@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import java.util.Arrays;
+
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.lisp.SExpression;
@@ -7,11 +9,13 @@ import com.jayantkrish.jklol.lisp.SExpression;
 public class ExpressionParserTest extends TestCase {
   
   ExpressionParser<Expression> parser;
-  ExpressionParser<Expression> tlcParser;
+  ExpressionParser<TypedExpression> tlcParser;
   ExpressionParser<Expression> unequalQuoteParser;
   ExpressionParser<SExpression> lispParser;
   ExpressionParser<Type> typeParser;
 
+  TypeContext context;
+  
   public void setUp() {
     parser = ExpressionParser.lambdaCalculus();
     tlcParser = ExpressionParser.typedLambdaCalculus();
@@ -19,6 +23,9 @@ public class ExpressionParserTest extends TestCase {
         ExpressionParser.DEFAULT_SEPARATOR, ExpressionFactories.getDefaultFactory());
     lispParser = ExpressionParser.sExpression();
     typeParser = ExpressionParser.typeParser();
+    
+    context = MapTypeContext.empty().bindNames(Arrays.asList("x", "f"),
+        Arrays.<Type>asList(typeParser.parseSingleExpression("e"), typeParser.parseSingleExpression("<e,t>")));
   }
 
   public void testParseConstant() {
@@ -93,24 +100,30 @@ public class ExpressionParserTest extends TestCase {
   }
   
   public void testTypedLambdaCalculus() {
-    ConstantExpression result = (ConstantExpression) tlcParser.parseSingleExpression("x:e");
+    ConstantExpression result = (ConstantExpression) tlcParser.parseSingleExpression("x:e").getExpression();
     
     assertEquals("x", result.getName());
-    assertEquals("e", result.getType(TypeContext.empty()).getAtomicTypeName());
+    assertEquals("e", result.getType(context).getAtomicTypeName());
   }
   
   public void testTypedLambdaCalculus2() {
-    ConstantExpression result = (ConstantExpression) tlcParser.parseSingleExpression("f:<e,t>");
+    ConstantExpression result = (ConstantExpression) tlcParser.parseSingleExpression("f:<e,t>").getExpression();
 
     assertEquals("f", result.getName());
-    assertEquals("e", result.getType(TypeContext.empty()).getArgumentType().getAtomicTypeName());
-    assertEquals("t", result.getType(TypeContext.empty()).getReturnType().getAtomicTypeName());
+    assertEquals("e", result.getType(context).getArgumentType().getAtomicTypeName());
+    assertEquals("t", result.getType(context).getReturnType().getAtomicTypeName());
+  }
+  
+  public void testTypedLambdaCalculus3() {
+    Expression result = tlcParser.parseSingleExpression("(f x)").getExpression();
+
+    assertEquals("t", result.getType(context).getAtomicTypeName());
   }
 
-  public void testTypedLambdaCalculus3() {
-    LambdaExpression result = (LambdaExpression) tlcParser.parseSingleExpression("(lambda f:<e,t> x:e (f x))");
+  public void testTypedLambdaCalculus4() {
+    LambdaExpression result = (LambdaExpression) tlcParser.parseSingleExpression("(lambda f:<e,t> x:e (f x))").getExpression();
 
-    assertEquals("<<e,t>,<e,t>>", result.getType(TypeContext.empty()).toString());
+    assertEquals("<<e,t>,<e,t>>", result.getType(context).toString());
     assertEquals("(f x)", result.getBody().toString());
   }
 }

@@ -1,6 +1,9 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
-public class Type {
+import java.io.Serializable;
+
+public class Type implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   // Non-null if this is an atomic type
   private final String atomicType;

@@ -42,8 +42,8 @@ public class BatchLexiconInduction {
 
   public BatchLexiconInduction(int numIterations, boolean allowComposition,
       boolean allowWordSkipping, boolean normalFormOnly, CcgFeatureFactory featureFactory,
-      List<CcgBinaryRule> binaryRules, List<CcgUnaryRule> unaryRules, GradientOptimizer trainer,
-      LexiconInductionStrategy strategy, LogFunction log) {
+      List<CcgBinaryRule> binaryRules, List<CcgUnaryRule> unaryRules,
+      GradientOptimizer trainer, LexiconInductionStrategy strategy, LogFunction log) {
     this.numIterations = numIterations;
     this.allowComposition = allowComposition;
     this.allowWordSkipping = allowWordSkipping;
@@ -70,14 +70,16 @@ public class BatchLexiconInduction {
       log.notifyIterationStart(i);
       log.startTimer("propose_entries");
       Set<LexiconEntry> proposedEntries = Sets.newHashSet();
+      Set<LexiconEntry> removedEntries = Sets.newHashSet();
       for (CcgExample example : examples) {
-        Set<LexiconEntry> exampleProposals = strategy.proposeLexiconEntries(example, parser);
-        proposedEntries.addAll(exampleProposals);
+        strategy.proposeLexiconEntries(example, parser, proposedEntries, removedEntries);
       }
       log.stopTimer("propose_entries");
 
       currentLexicon.addAll(proposedEntries);
+      currentLexicon.removeAll(removedEntries);
       log.logStatistic(i, "num_proposed_lexicon_entries", proposedEntries.size());
+      log.logStatistic(i, "num_removed_lexicon_entries", removedEntries.size());
       log.logStatistic(i, "lexicon_size", currentLexicon.size());
 
       parserFamily = ParametricCcgParser.parseFromLexicon(currentLexicon,

@@ -7,14 +7,18 @@ import com.jayantkrish.jklol.lisp.SExpression;
 public class ExpressionParserTest extends TestCase {
   
   ExpressionParser<Expression> parser;
+  ExpressionParser<Expression> tlcParser;
   ExpressionParser<Expression> unequalQuoteParser;
   ExpressionParser<SExpression> lispParser;
-  
+  ExpressionParser<Type> typeParser;
+
   public void setUp() {
     parser = ExpressionParser.lambdaCalculus();
-    unequalQuoteParser = new ExpressionParser<Expression>('(', ')', '<', '>',
-        ExpressionFactories.getDefaultFactory());
+    tlcParser = ExpressionParser.typedLambdaCalculus();
+    unequalQuoteParser = new ExpressionParser<Expression>('(', ')', '<', '>', true,
+        ExpressionParser.DEFAULT_SEPARATOR, ExpressionFactories.getDefaultFactory());
     lispParser = ExpressionParser.sExpression();
+    typeParser = ExpressionParser.typeParser();
   }
 
   public void testParseConstant() {
@@ -55,7 +59,7 @@ public class ExpressionParserTest extends TestCase {
     assertEquals("and", ((ConstantExpression) application.getFunction()).getName());
     assertEquals(5, application.getArguments().size());
   }
-  
+
   public void testParseUnequalQuotes() {
     // Check that the unequal quotes work properly.
     Expression result = unequalQuoteParser.parseSingleExpression("(and <(/m/abc x) (/m/bcd y)> /m/cde)");
@@ -66,10 +70,47 @@ public class ExpressionParserTest extends TestCase {
     assertEquals(2, application.getArguments().size());
     assertEquals("<(/m/abc x) (/m/bcd y)>", ((ConstantExpression) application.getArguments().get(0)).getName());
   }
-  
+
   public void testEmptyExpression() {
     SExpression result = lispParser.parseSingleExpression("()");
     assertNull(result.getConstant());
     assertEquals(0, result.getSubexpressions().size());
+  }
+
+  public void testParseAtomicType() {
+    Type result = typeParser.parseSingleExpression("e");
+    assertTrue(result.isAtomic());
+    assertEquals("e", result.getAtomicTypeName());
+  }
+
+  public void testParseFunctionalType() {
+    Type result = typeParser.parseSingleExpression("<e,<<e,t>,t>>");
+    assertTrue(result.isFunctional());
+    assertFalse(result.isAtomic());
+    assertEquals("e", result.getArgumentType().getAtomicTypeName());
+    assertEquals("t", result.getReturnType().getReturnType().getAtomicTypeName());
+    assertEquals("<e,t>", result.getReturnType().getArgumentType().toString());
+  }
+  
+  public void testTypedLambdaCalculus() {
+    ConstantExpression result = (ConstantExpression) tlcParser.parseSingleExpression("x:e");
+    
+    assertEquals("x", result.getName());
+    assertEquals("e", result.getType(TypeContext.empty()).getAtomicTypeName());
+  }
+  
+  public void testTypedLambdaCalculus2() {
+    ConstantExpression result = (ConstantExpression) tlcParser.parseSingleExpression("f:<e,t>");
+
+    assertEquals("f", result.getName());
+    assertEquals("e", result.getType(TypeContext.empty()).getArgumentType().getAtomicTypeName());
+    assertEquals("t", result.getType(TypeContext.empty()).getReturnType().getAtomicTypeName());
+  }
+
+  public void testTypedLambdaCalculus3() {
+    LambdaExpression result = (LambdaExpression) tlcParser.parseSingleExpression("(lambda f:<e,t> x:e (f x))");
+
+    assertEquals("<<e,t>,<e,t>>", result.getType(TypeContext.empty()).toString());
+    assertEquals("(f x)", result.getBody().toString());
   }
 }

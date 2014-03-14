@@ -38,7 +38,8 @@ public class CcgbankSyntaxTreeFormat extends LineDataFormat<CcgSyntaxTree> {
 
   @Override
   public CcgSyntaxTree parseFrom(String treeString) {
-    ExpressionParser<Expression> parser = new ExpressionParser<Expression>('(', ')', '<', '>', ExpressionFactories.getDefaultFactory());
+    ExpressionParser<Expression> parser = new ExpressionParser<Expression>('(', ')', '<', '>', true,
+        ExpressionParser.DEFAULT_SEPARATOR, ExpressionFactories.getDefaultFactory());
     Expression treeExpression = parser.parseSingleExpression(treeString);
     return expressionToSyntaxTree(treeExpression, 0);
   }

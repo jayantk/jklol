@@ -132,6 +132,11 @@ public class QuantifierExpression extends AbstractExpression {
   }
 
   @Override
+  public Type getType(TypeContext context) {
+    return null;
+  }
+
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("(");

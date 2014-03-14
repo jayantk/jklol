@@ -117,6 +117,16 @@ public interface Expression extends Serializable {
    */
   boolean functionallyEquals(Expression expression);
 
+  /**
+   * Returns the type specification of this expression. Returns
+   * {@code null} if this expression is not well-typed, or the
+   * expression is untyped.
+   * 
+   * @param context
+   * @return
+   */
+  Type getType(TypeContext context);
+
   @Override
   int hashCode();
 

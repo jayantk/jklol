@@ -12,6 +12,7 @@ import joptsimple.OptionSpec;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
@@ -31,8 +32,10 @@ import com.jayantkrish.jklol.util.IoUtils;
 
 public class TrainSemanticParser extends AbstractCli {
 
-  private OptionSpec<String> trainingData;
   private OptionSpec<String> modelOutput;
+
+  private OptionSpec<String> jsonTrainingData;
+  private OptionSpec<String> trainingData;
 
   private OptionSpec<Integer> beamSize;
   
@@ -44,17 +47,28 @@ public class TrainSemanticParser extends AbstractCli {
   @Override
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
-    trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+    
+    // At least one of the training data options is required. 
+    jsonTrainingData = parser.accepts("jsonTrainingData").withRequiredArg().ofType(String.class);
+    trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class);
 
     // Optional options
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
   }
-  
+
   @Override
   public void run(OptionSet options) {
-    List<CcgExample> trainingExamples = readCcgExamplesJson(options.valueOf(trainingData));
-    
+    List<CcgExample> trainingExamples = null; 
+    if (options.has(jsonTrainingData)) {
+      trainingExamples = readCcgExamplesJson(options.valueOf(jsonTrainingData));
+    } else if (options.has(trainingData)) {
+      trainingExamples = readCcgExamples(options.valueOf(trainingData));
+    }
+
+    Preconditions.checkState(trainingExamples != null);
+    System.out.println("Read " + trainingExamples.size() + " training examples");
+
     ParametricCcgParser family = createCcgParser(null, null, new DefaultCcgFeatureFactory(null, true));
 
     CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
@@ -74,7 +88,7 @@ public class TrainSemanticParser extends AbstractCli {
     System.out.println(family.getParameterDescription(parameters));
   }
 
-  private static List<CcgExample> readCcgExamplesJson(String jsonFilename) {
+  public static List<CcgExample> readCcgExamplesJson(String jsonFilename) {
     List<CcgExample> examples = Lists.newArrayList();
     try {
       ExpressionParser<Expression> lfParser = ExpressionParser.lambdaCalculus();
@@ -99,6 +113,46 @@ public class TrainSemanticParser extends AbstractCli {
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
+    }
+    return examples;
+  }
+  
+  /**
+   * Reads in training data consisting of natural language queries
+   * paired with logical forms. The expected format is:
+   * <p>
+   * 
+   * <code>
+   * (query)
+   * (logical form)
+   * (blank line)
+   * (query)
+   * ...
+   * </code>
+   * 
+   * @param filename
+   * @return
+   */
+  public static List<CcgExample> readCcgExamples(String filename) {
+    List<String> lines = IoUtils.readLines(filename);
+    List<CcgExample> examples = Lists.newArrayList();
+    List<String> words = null;
+    Expression expression = null;
+    ExpressionParser<Expression> parser = ExpressionParser.typedLambdaCalculus();
+    for (String line : lines) {
+      if (line.trim().length() == 0 && words != null && expression != null) {
+        words = null;
+        expression = null;
+      } else if (line.startsWith("(")) {
+        expression = parser.parseSingleExpression(line);
+
+        List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
+        SupertaggedSentence supertaggedSentence = ListSupertaggedSentence
+            .createWithUnobservedSupertags(words, posTags);
+        examples.add(new CcgExample(supertaggedSentence, null, null, expression));
+      } else {
+        words = Arrays.asList(line.split("\\s"));
+      }
     }
     return examples;
   }

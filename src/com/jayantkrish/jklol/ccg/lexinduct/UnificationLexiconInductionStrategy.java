@@ -20,6 +20,8 @@ import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeContext;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
 public class UnificationLexiconInductionStrategy implements LexiconInductionStrategy {
@@ -33,7 +35,7 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
   public Set<LexiconEntry> proposeLexiconEntries(CcgExample example, CcgParser parser) {
     if (parser == null) {
       Preconditions.checkArgument(example.hasLogicalForm());
-      HeadedSyntacticCategory sentenceCat = HeadedSyntacticCategory.parseFrom("N{0}");
+      HeadedSyntacticCategory sentenceCat = makeSyntacticCategory(example.getLogicalForm());
       return Collections.singleton(createLexiconEntry(example.getSentence().getWords(),
           sentenceCat, example.getLogicalForm()));
     } else {
@@ -41,9 +43,14 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
           null, new NullLogFunction(), null, null, example.getLogicalForm());
       Set<LexiconEntry> lexiconEntries = Sets.newHashSet();
       if (bestParse != null) {
-        // System.out.println(bestParse + " " + bestParse.getLogicalForm());
+        System.out.println(bestParse + " " + bestParse.getLogicalForm());
         proposeAllSplits(bestParse, lexiconEntries);
       } 
+
+      for (LexiconEntry entry : lexiconEntries) {
+        System.out.println(entry);
+      }
+
       return lexiconEntries;
     }
   }
@@ -69,7 +76,6 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
     List<String> words = parse.getLexiconTriggerWords();
     HeadedSyntacticCategory rootCat = parse.getHeadedSyntacticCategory();
     Expression rootLf = parse.getLogicalForm();
-    HeadedSyntacticCategory nounCat = HeadedSyntacticCategory.parseFrom("N{0}");
 
     Set<LexiconEntry> lexiconEntries = Sets.newHashSet();
     for (int splitIndex = 1; splitIndex < words.size(); splitIndex++) {
@@ -81,44 +87,52 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
         List<String> argWords = (i == 0) ? leftWords : rightWords;
         List<String> funcWords = (i == 0) ? rightWords : leftWords;
 
-        HeadedSyntacticCategory funcCat = rootCat.addArgument(nounCat, direction, 0);
-        HeadedSyntacticCategory argCat = nounCat;
-
+        List<HeadedSyntacticCategory> funcCats = Lists.newArrayList();
+        List<HeadedSyntacticCategory> argCats = Lists.newArrayList();
         List<Expression> funcAccumulator = Lists.newArrayList();
         List<Expression> argAccumulator = Lists.newArrayList();
-        generateExpressions(rootLf, argAccumulator, funcAccumulator);
+        generateExpressions(rootLf, direction, argAccumulator, funcAccumulator, argCats, funcCats);
 
         for (int j = 0; j < argAccumulator.size(); j++) {
           Expression funcLf = funcAccumulator.get(j);
           Expression argLf = argAccumulator.get(j);
-          lexiconEntries.add(createLexiconEntry(funcWords, funcCat, funcLf));
-          lexiconEntries.add(createLexiconEntry(argWords, argCat, argLf));
+          lexiconEntries.add(createLexiconEntry(funcWords, funcCats.get(j), funcLf));
+          lexiconEntries.add(createLexiconEntry(argWords, argCats.get(j), argLf));
         }
       }
     }
     return lexiconEntries;
   }
 
-  private void generateExpressions(Expression expression, List<Expression> argAccumulator,
-      List<Expression> funcAccumulator) {
+  private void generateExpressions(Expression expression, Direction direction, List<Expression> argAccumulator,
+      List<Expression> funcAccumulator, List<HeadedSyntacticCategory> argCatAccumulator,
+      List<HeadedSyntacticCategory> funcCatAccumulator) {
     Expression body = expression;
     List<ConstantExpression> arguments = Lists.newArrayList();
+    List<Type> argumentTypes = Lists.newArrayList();
     if (expression instanceof LambdaExpression) {
       LambdaExpression lambdaExpression = (LambdaExpression) expression;
       arguments = lambdaExpression.getArguments();
+      argumentTypes = lambdaExpression.getArgumentTypes();
       body = lambdaExpression.getBody();
     }
 
-    ConstantExpression newArg = new ConstantExpression("$" + arguments.size());
+    ConstantExpression newArg = new ConstantExpression("arg-" + arguments.size());
     // Add the logical form where one of the splits 
     // just applies the other split.
     List<ConstantExpression> newArgs = Lists.newArrayList(newArg);
+    List<Type> newArgTypes = Lists.newArrayList(expression.getType(TypeContext.empty()));
     newArgs.addAll(arguments);
-    argAccumulator.add(body);
+    newArgTypes.addAll(argumentTypes);
+    argAccumulator.add(expression);
+    HeadedSyntacticCategory expressionCat = makeSyntacticCategory(expression);
+    argCatAccumulator.add(expressionCat);
     if (newArgs.size() > 1) {
-      funcAccumulator.add(new LambdaExpression(newArgs, new ApplicationExpression(newArgs)));
+      funcAccumulator.add(new LambdaExpression(newArgs, newArgTypes, new ApplicationExpression(newArgs)));
+      funcCatAccumulator.add(expressionCat.addArgument(expressionCat, direction, 0));
     } else {
-      funcAccumulator.add(new LambdaExpression(newArgs, newArgs.get(0)));
+      funcAccumulator.add(new LambdaExpression(newArgs, newArgTypes, newArgs.get(0)));
+      funcCatAccumulator.add(expressionCat.addArgument(expressionCat, direction, 0));
     }
 
     // Try splitting up the current function application. 
@@ -128,15 +142,23 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
       
       for (int i = 0; i < subexpressions.size(); i++) {
         if (!arguments.contains(subexpressions.get(i))) {
-          argAccumulator.add(subexpressions.get(i));
-          List<Expression> newBodyList = Lists.newArrayList(subexpressions);
-          newBodyList.set(i, newArg);
-          Expression newBody = new ApplicationExpression(newBodyList);
-          if (arguments.size() > 0) {
-            newBody = new LambdaExpression(arguments, newBody);
-          }
+          Type type = subexpressions.get(i).getType(TypeContext.empty());
+          if (type != null) {
+            argAccumulator.add(subexpressions.get(i));
+            HeadedSyntacticCategory argCat = makeSyntacticCategory(subexpressions.get(i));
+            argCatAccumulator.add(argCat);
+            List<Expression> newBodyList = Lists.newArrayList(subexpressions);
+            newBodyList.set(i, newArg);
+            Expression newBody = new ApplicationExpression(newBodyList);
+            if (arguments.size() > 0) {
+              newBody = new LambdaExpression(arguments, newBody);
+            }
 
-          funcAccumulator.add(new LambdaExpression(Arrays.asList(newArg), newBody));
+            funcAccumulator.add(new LambdaExpression(Arrays.asList(newArg),
+                Arrays.asList(type), newBody));
+            HeadedSyntacticCategory funcCat = expressionCat.addArgument(argCat, direction, 0);
+            funcCatAccumulator.add(funcCat);
+          }
         }
       }
     }
@@ -155,5 +177,13 @@ public class UnificationLexiconInductionStrategy implements LexiconInductionStra
 
     return new CcgCategory(cat, logicalForm, Collections.<String>emptyList(),
         Collections.<Integer>emptyList(), Collections.<Integer>emptyList(), assignment);
+  }
+
+  private HeadedSyntacticCategory makeSyntacticCategory(Expression lf) {
+    Type type = lf.getType(TypeContext.empty());
+    Preconditions.checkState(type != null, "Cannot type expression: " + lf);
+    
+    String syntacticCatString = "N:" + type.toString() + "{0}";
+    return HeadedSyntacticCategory.parseFrom(syntacticCatString);
   }
 }

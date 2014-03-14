@@ -98,7 +98,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // assigned to all correct parses.
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
   }
-  
+
   public static List<CcgParse> filterSemanticallyCompatibleParses(Set<DependencyStructure> observedDependencies,
       Expression observedLogicalForm, Iterable<CcgParse> parses) {
     List<CcgParse> correctParses = Lists.newArrayList();
@@ -110,6 +110,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       }
       if (observedLogicalForm != null) {
         Expression predictedLogicalForm = parse.getLogicalForm();
+        
         if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm.simplify())) {
           compatible = false;
         }

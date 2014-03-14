@@ -11,10 +11,22 @@ public class LambdaExpression extends AbstractExpression {
   private static final long serialVersionUID = 1L;
 
   private final List<ConstantExpression> argumentVariables;
+  private final List<Type> argumentTypes;
+
   private final Expression body;
 
   public LambdaExpression(List<ConstantExpression> argumentVariables, Expression body) {
     this.argumentVariables = ImmutableList.copyOf(argumentVariables);
+    this.argumentTypes = null;
+    this.body = Preconditions.checkNotNull(body);
+  }
+
+  public LambdaExpression(List<ConstantExpression> argumentVariables,
+      List<Type> argumentTypes, Expression body) {
+    this.argumentVariables = ImmutableList.copyOf(argumentVariables);
+    this.argumentTypes = ImmutableList.copyOf(argumentTypes);
+    Preconditions.checkArgument(argumentTypes.size() == argumentVariables.size());
+
     this.body = Preconditions.checkNotNull(body);
   }
 
@@ -37,10 +49,15 @@ public class LambdaExpression extends AbstractExpression {
     return argumentVariables;
   }
 
+  public List<Type> getArgumentTypes() {
+    return argumentTypes;
+  }
+
   public Expression reduce(List<Expression> argumentValues) {
-      Preconditions.checkArgument(argumentValues.size() <= argumentVariables.size(), 
-				  "Too many arguments. Expected %s, got %s", argumentVariables, argumentValues);
-    
+    Preconditions.checkArgument(argumentValues.size() <= argumentVariables.size(), 
+        "Too many arguments. Expected %s, got %s. This expression: %s", argumentVariables,
+        argumentValues, this);
+
     Expression substitutedBody = body;
     for (int i = 0; i < argumentValues.size(); i++) {
       Expression argumentValue = argumentValues.get(i);
@@ -165,6 +182,25 @@ public class LambdaExpression extends AbstractExpression {
       }
     }
     return false;
+  }
+
+  @Override
+  public Type getType(TypeContext context) {
+    if (argumentTypes == null) {
+      return null;
+    }
+
+    List<String> argumentNames = Lists.newArrayList();
+    for (ConstantExpression var : argumentVariables) {
+      argumentNames.add(var.getName());
+    }
+
+    TypeContext boundContext = context.bindNames(argumentNames, argumentTypes);
+    Type type = body.getType(boundContext);
+    for (int i = argumentTypes.size() - 1; i >= 0; i--) {
+      type = Type.createFunctional(argumentTypes.get(i), type);
+    }
+    return type;
   }
 
   @Override

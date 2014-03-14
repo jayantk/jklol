@@ -135,6 +135,23 @@ public class ApplicationExpression extends AbstractExpression {
   }
 
   @Override
+  public Type getType(TypeContext context) {
+    Expression function = subexpressions.get(0);
+    Type type = function.getType(context);
+
+    for (int i = 0; i < subexpressions.size(); i++) {
+      if (type == null || !type.isFunctional()) {
+        return null;
+      }
+
+      if (context.unify(type.getArgumentType(), subexpressions.get(i).getType(context)) != null) {
+        type = type.getReturnType();
+      }
+    }
+    return type;
+  }
+
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("(");

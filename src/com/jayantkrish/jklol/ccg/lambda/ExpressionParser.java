@@ -23,21 +23,30 @@ public class ExpressionParser<T> {
   private final char openQuote;
   private final char closeQuote;
 
+  // Whether terms in the expression are separated by whitespace or 
+  // alternateSeparator.
+  private final boolean whitespaceSeparated;
+  private final char alternateSeparator;
+
   private final T openParenExpression;
   private final T closeParenExpression;
   
   private final ExpressionFactory<T> factory;
 
-  private static final char DEFAULT_OPEN_PAREN = '(';
-  private static final char DEFAULT_CLOSE_PAREN = ')';
-  private static final char DEFAULT_QUOTE = '"';
+  public static final char DEFAULT_OPEN_PAREN = '(';
+  public static final char DEFAULT_CLOSE_PAREN = ')';
+  public static final char DEFAULT_QUOTE = '"';
+  public static final char DEFAULT_SEPARATOR = Character.MIN_VALUE;
 
   public ExpressionParser(char openParen, char closeParen, char openQuote, char closeQuote,
-      ExpressionFactory<T> factory) {
+      boolean whitespaceSeparated, char alternateSeparator, ExpressionFactory<T> factory) {
     this.openParen = openParen;
     this.closeParen = closeParen;
     this.openQuote = openQuote;
     this.closeQuote = closeQuote;
+
+    this.whitespaceSeparated = whitespaceSeparated;
+    this.alternateSeparator = alternateSeparator;
 
     this.factory = factory;
     
@@ -47,12 +56,22 @@ public class ExpressionParser<T> {
 
   public static ExpressionParser<Expression> lambdaCalculus() {
     return new ExpressionParser<Expression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, ExpressionFactories.getLambdaCalculusFactory());
+        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getLambdaCalculusFactory());
+  }
+
+  public static ExpressionParser<Expression> typedLambdaCalculus() {
+    return new ExpressionParser<Expression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
+        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getTypedLambdaCalculusFactory());
   }
 
   public static ExpressionParser<SExpression> sExpression() {
     return new ExpressionParser<SExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, ExpressionFactories.getSExpressionFactory());
+        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getSExpressionFactory());
+  }
+
+  public static ExpressionParser<Type> typeParser() {
+    return new ExpressionParser<Type>('<', '>', DEFAULT_QUOTE, DEFAULT_QUOTE,
+        false, ',', ExpressionFactories.getTypeFactory());
   }
 
   private List<String> tokenize(String expression) {
@@ -80,7 +99,8 @@ public class ExpressionParser<T> {
           "Quoting error. Current: " + expression);
 
       if (!inQuotes) {
-        if (Character.isWhitespace(character)) {
+        if ((whitespaceSeparated && Character.isWhitespace(character)) ||
+            (!whitespaceSeparated && character == alternateSeparator)) {
           if (exprStart != -1) {
             tokens.add(expression.substring(exprStart, i));
             exprStart = -1;

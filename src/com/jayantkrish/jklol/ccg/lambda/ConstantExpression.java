@@ -11,9 +11,16 @@ public class ConstantExpression extends AbstractExpression implements Comparable
   private static final long serialVersionUID = 1L;
   
   private final String name;
+  private final Type type;
   
   public ConstantExpression(String name) {
     this.name = Preconditions.checkNotNull(name);
+    this.type = null;
+  }
+  
+  public ConstantExpression(String name, Type type) {
+    this.name = Preconditions.checkNotNull(name);
+    this.type = type;
   }
 
   public static ConstantExpression generateUniqueVariable() {
@@ -81,8 +88,21 @@ public class ConstantExpression extends AbstractExpression implements Comparable
   }
 
   @Override
+  public Type getType(TypeContext context) {
+    if (type == null) {
+      return context.getTypeForName(name);
+    } else {
+      return type;
+    }
+  }
+
+  @Override
   public String toString() {
-    return name;
+    if (type == null) {
+      return name;
+    } else {
+      return name + ":" + type;
+    }
   }
 
   @Override
@@ -90,6 +110,7 @@ public class ConstantExpression extends AbstractExpression implements Comparable
     final int prime = 31;
     int result = 1;
     result = prime * result + ((name == null) ? 0 : name.hashCode());
+    result = prime * result + ((type == null) ? 0 : type.hashCode());
     return result;
   }
 
@@ -106,6 +127,11 @@ public class ConstantExpression extends AbstractExpression implements Comparable
       if (other.name != null)
         return false;
     } else if (!name.equals(other.name))
+      return false;
+    if (type == null) {
+      if (other.type != null)
+        return false;
+    } else if (!type.equals(other.type))
       return false;
     return true;
   }

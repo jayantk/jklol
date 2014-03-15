@@ -108,11 +108,6 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
         .getMostLikelyAssignments(numFeatures);
     return parameterFactor.describeAssignments(assignments);
   }
-  
-  @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {

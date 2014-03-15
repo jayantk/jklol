@@ -179,6 +179,18 @@ public class BuiltinFunctions {
     }
   }
 
+  public static class ExpFunction implements FunctionValue {
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      Object value = argumentValues.get(0);
+      if (value instanceof Integer) {
+        return Math.exp((double) (Integer) value);
+      } else {
+        return Math.exp((Double) value);
+      }
+    }
+  }
+
   public static class EqualsFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
@@ -215,7 +227,8 @@ public class BuiltinFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      System.out.println(argumentValues.get(0));
+      Object argument = argumentValues.get(0);
+      System.out.println(argument);
       return ConstantValue.UNDEFINED;
     }
   }

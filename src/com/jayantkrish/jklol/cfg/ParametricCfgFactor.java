@@ -105,24 +105,6 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     sb.append(terminalFactor.getParameterDescription(terminalStatistics, numFeatures));
     return sb.toString();
   }
-  
-  @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-	    Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
-	    ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
-	    Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
-	    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
-	    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
-	    
-	    StringBuilder sb = new StringBuilder();
-	    sb.append("<nonterminal_distribution>\n");
-	    sb.append(nonterminalFactor.getParameterDescriptionXML(nonterminalStatistics));
-	    sb.append("</nonterminal_distribution>\n");
-	    sb.append("<terminal_distribution>\n");
-	    sb.append(terminalFactor.getParameterDescriptionXML(terminalStatistics));
-	    sb.append("</terminal_distribution>\n");
-	    return sb.toString();
-}
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {

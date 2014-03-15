@@ -85,17 +85,6 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    List<SufficientStatistics> parameterList = getParameterList(parameters);
-
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < parametricFactors.size(); i++) {
-      sb.append(parametricFactors.get(i).getParameterDescriptionXML(parameterList.get(i)));
-    }
-    return sb.toString();
-  }
-
-  @Override
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> parameterList = Lists.newArrayList();
     for (int i = 0; i < parametricFactors.size(); i++) {

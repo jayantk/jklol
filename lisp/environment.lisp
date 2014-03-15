@@ -16,6 +16,7 @@
                   (f (lifted-car seq) (lifted-foldr f (lifted-cdr seq) init)))))
 
 (define zip (list1 list2) (if (nil? list1) (list) (cons (list (car list1) (car list2)) (zip (cdr list1) (cdr list2)))))
+(define zip3 (list1 list2 list3) (if (nil? list1) (list) (cons (list (car list1) (car list2) (car list3)) (zip3 (cdr list1) (cdr list2) (cdr list3)))))
 
 (define cadr (x) (car (cdr x)))
 (define caddr (x) (car (cdr (cdr x))))

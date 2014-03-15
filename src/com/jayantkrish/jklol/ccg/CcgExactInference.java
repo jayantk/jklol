@@ -34,6 +34,10 @@ public class CcgExactInference implements CcgInference {
     this.numThreads = numThreads;
   }
 
+  public static CcgExactInference createDefault() {
+    return new CcgExactInference(null, -1L, Integer.MAX_VALUE, 1);
+  }
+
   @Override
   public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log) {

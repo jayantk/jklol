@@ -26,9 +26,13 @@ public class ApplicationExpression extends AbstractExpression {
   public Expression getFunction() {
     return subexpressions.get(0);
   }
-  
+
   public List<Expression> getArguments() {
     return subexpressions.subList(1, subexpressions.size());
+  }
+
+  public List<Expression> getSubexpressions() {
+    return subexpressions;
   }
 
   @Override
@@ -128,6 +132,25 @@ public class ApplicationExpression extends AbstractExpression {
       }
     }
     return false;
+  }
+
+  @Override
+  public Type getType(TypeContext context) {
+    Expression function = subexpressions.get(0);
+    Type type = function.getType(context);
+
+    for (int i = 1; i < subexpressions.size(); i++) {
+      if (type == null || !type.isFunctional()) {
+        return null;
+      }
+
+      if (context.unify(type.getArgumentType(), subexpressions.get(i).getType(context)) != null) {
+        type = type.getReturnType();
+      } else {
+        return null;
+      }
+    }
+    return type;
   }
 
   @Override

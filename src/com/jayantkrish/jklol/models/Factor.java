@@ -325,15 +325,6 @@ public interface Factor {
    */
   public String getParameterDescription();
 
-  /**
-   * Gets a detailed human-readable XML description of this factor. This
-   * description should contain all parameters of this factor, each on its own
-   * line.
-   * 
-   * @return
-   */
-  public String getParameterDescriptionXML();
-
   // Coercion methods
 
   /**

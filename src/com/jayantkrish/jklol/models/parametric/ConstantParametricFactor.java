@@ -27,11 +27,6 @@ public class ConstantParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    return "constant\n";
-  }
-
-  @Override
   public Factor getModelFromParameters(SufficientStatistics parameters) {
     return factor;
   }

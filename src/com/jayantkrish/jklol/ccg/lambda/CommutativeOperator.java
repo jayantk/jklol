@@ -172,6 +172,11 @@ public class CommutativeOperator extends AbstractExpression {
     }
     return false;
   }
+  
+  @Override
+  public Type getType(TypeContext context) {
+    return null;
+  }
 
   @Override
   public String toString() {

@@ -31,6 +31,19 @@ public class ExpressionFactories {
       }
     };
   }
+  
+  public static ExpressionFactory<Type> getTypeFactory() {
+    return new ExpressionFactory<Type>() {
+      public Type createTokenExpression(String token) {
+        return Type.createAtomic(token);
+      }
+      
+      public Type createExpression(List<Type> types) {
+        Preconditions.checkArgument(types.size() == 2);
+        return Type.createFunctional(types.get(0), types.get(1));
+      }
+    };
+  }
 
   /**
    * The default expression factory, which has no special forms. This
@@ -46,6 +59,53 @@ public class ExpressionFactories {
       
       public Expression createExpression(List<Expression> subexpressions) {
         return new ApplicationExpression(subexpressions);
+      }
+    };
+  }
+
+  public static ExpressionFactory<TypedExpression> getTypedLambdaCalculusFactory() {
+    return new ExpressionFactory<TypedExpression>() {
+      ExpressionParser<Type> typeParser = ExpressionParser.typeParser();
+
+      public TypedExpression createTokenExpression(String token) {
+        if (token.contains(":")) {
+          String[] parts = token.split(":");
+          Preconditions.checkArgument(parts.length == 2);
+          return new TypedExpression(new ConstantExpression(parts[0]), typeParser.parseSingleExpression(parts[1]));
+        } else {
+          return new TypedExpression(new ConstantExpression(token), null);
+        }
+      }
+
+      public TypedExpression createExpression(List<TypedExpression> typedSubexpressions) {
+        Preconditions.checkArgument(typedSubexpressions.size() > 0);
+        List<Expression> subexpressions = TypedExpression.getExpressions(typedSubexpressions);
+        Expression firstTermExpression = subexpressions.get(0);
+        if (!(firstTermExpression instanceof ConstantExpression)) {
+          // Special forms require the first term of the expression to be a constant.
+          return new TypedExpression(new ApplicationExpression(subexpressions), null);
+        }
+
+        ConstantExpression firstTerm = (ConstantExpression) firstTermExpression;
+        String firstTermName = firstTerm.getName();
+        List<TypedExpression> remaining = typedSubexpressions.subList(1, subexpressions.size());
+
+        if (firstTermName.equals("lambda")) {
+          // A lambda expression defines a function. Expected format
+          // is (lambda x y z (body x y z))
+          List<ConstantExpression> variables = Lists.newArrayList();
+          List<Type> argTypes = Lists.newArrayList();
+          for (int i = 0; i < remaining.size() - 1; i++) {
+            variables.add((ConstantExpression) remaining.get(i).getExpression());
+            Type argType = remaining.get(i).getType();
+            Preconditions.checkArgument(argType != null, "%s", subexpressions);
+            argTypes.add(argType);
+          }
+          Expression body = remaining.get(remaining.size() - 1).getExpression();
+          return new TypedExpression(new LambdaExpression(variables, argTypes, body), null);
+        } else {
+          return new TypedExpression(new ApplicationExpression(subexpressions), null);
+        }
       }
     };
   }

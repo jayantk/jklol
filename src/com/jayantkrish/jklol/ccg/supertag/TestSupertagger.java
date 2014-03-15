@@ -8,8 +8,8 @@ import joptsimple.OptionSpec;
 
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.cli.TrainCcg;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.cli.TrainCcg;
 import com.jayantkrish.jklol.inference.BeamPruningStrategy;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.sequence.TaggedSequence;

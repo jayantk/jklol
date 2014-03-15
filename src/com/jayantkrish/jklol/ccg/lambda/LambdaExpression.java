@@ -24,8 +24,9 @@ public class LambdaExpression extends AbstractExpression {
   public LambdaExpression(List<ConstantExpression> argumentVariables,
       List<Type> argumentTypes, Expression body) {
     this.argumentVariables = ImmutableList.copyOf(argumentVariables);
-    this.argumentTypes = ImmutableList.copyOf(argumentTypes);
-    Preconditions.checkArgument(argumentTypes.size() == argumentVariables.size());
+    this.argumentTypes = argumentTypes;
+    Preconditions.checkArgument(argumentTypes == null ||
+        argumentTypes.size() == argumentVariables.size());
 
     this.body = Preconditions.checkNotNull(body);
   }
@@ -78,8 +79,13 @@ public class LambdaExpression extends AbstractExpression {
     if (argumentValues.size() == argumentVariables.size()) {
       return substitutedBody;
     } else {
-      return new LambdaExpression(argumentVariables.subList(argumentValues.size(),
-          argumentVariables.size()), substitutedBody);
+      if (argumentTypes != null) {
+        return new LambdaExpression(argumentVariables.subList(argumentValues.size(), argumentVariables.size()),
+            argumentTypes.subList(argumentValues.size(), argumentVariables.size()), substitutedBody);
+      } else {
+        return new LambdaExpression(argumentVariables.subList(argumentValues.size(), argumentVariables.size()),
+            substitutedBody);
+      }
     }
   }
 
@@ -87,6 +93,7 @@ public class LambdaExpression extends AbstractExpression {
     Preconditions.checkArgument(argumentVariables.contains(argumentVariable));
 
     List<ConstantExpression> remainingArguments = Lists.newArrayList();
+    List<Type> remainingArgumentTypes = Lists.newArrayList();
     Expression substitutedBody = body;
     for (int i = 0; i < argumentVariables.size(); i++) {
       if (argumentVariables.get(i).equals(argumentVariable)) {
@@ -104,11 +111,18 @@ public class LambdaExpression extends AbstractExpression {
         substitutedBody = substitutedBody.substitute(argumentVariables.get(i), value);
       } else {
         remainingArguments.add(argumentVariables.get(i));
+        if (argumentTypes != null) {
+          remainingArgumentTypes.add(argumentTypes.get(i));
+        }
       }
     }
 
     if (remainingArguments.size() > 0) {
-      return new LambdaExpression(remainingArguments, substitutedBody);
+      if (argumentTypes == null) {
+        return new LambdaExpression(remainingArguments, substitutedBody);
+      } else {
+        return new LambdaExpression(remainingArguments, remainingArgumentTypes, substitutedBody);
+      }
     } else {
       return substitutedBody;
     }
@@ -139,14 +153,14 @@ public class LambdaExpression extends AbstractExpression {
     }
     Expression substitutedBody = body.renameVariable(variable, replacement);
 
-    return new LambdaExpression(substitutedArguments, substitutedBody);
+    return new LambdaExpression(substitutedArguments, argumentTypes, substitutedBody);
   }
 
   @Override
   public Expression substitute(ConstantExpression constant, Expression replacement) {
     if (!argumentVariables.contains(constant)) {
       Expression substitution = body.substitute(constant, replacement);
-      return new LambdaExpression(argumentVariables, substitution);
+      return new LambdaExpression(argumentVariables, argumentTypes, substitution);
     } else {
       return this;
     }
@@ -159,10 +173,15 @@ public class LambdaExpression extends AbstractExpression {
       LambdaExpression bodyAsLambda = (LambdaExpression) simplifiedBody;
       List<ConstantExpression> argumentList = Lists.newArrayList(argumentVariables);
       argumentList.addAll(bodyAsLambda.getArguments());
-      
-      return new LambdaExpression(argumentList, bodyAsLambda.getBody());
+      List<Type> newArgumentTypes = null;
+      if (argumentTypes != null && bodyAsLambda.getArgumentTypes() != null) {
+        newArgumentTypes = Lists.newArrayList(argumentTypes);
+        newArgumentTypes.addAll(bodyAsLambda.getArgumentTypes());
+      }
+
+      return new LambdaExpression(argumentList, newArgumentTypes, bodyAsLambda.getBody());
     }
-    return new LambdaExpression(argumentVariables, simplifiedBody);
+    return new LambdaExpression(argumentVariables, argumentTypes, simplifiedBody);
   }
 
   @Override
@@ -200,7 +219,7 @@ public class LambdaExpression extends AbstractExpression {
     TypeContext boundContext = context.bindNames(argumentNames, argumentTypes);
     Type type = body.getType(boundContext);
     for (int i = argumentTypes.size() - 1; i >= 0; i--) {
-      type = Type.createFunctional(argumentTypes.get(i), type);
+      type = Type.createFunctional(argumentTypes.get(i), type, false);
     }
     return type;
   }
@@ -224,7 +243,10 @@ public class LambdaExpression extends AbstractExpression {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((argumentVariables == null) ? 0 : argumentVariables.hashCode());
+    result = prime * result
+        + ((argumentTypes == null) ? 0 : argumentTypes.hashCode());
+    result = prime * result
+        + ((argumentVariables == null) ? 0 : argumentVariables.hashCode());
     result = prime * result + ((body == null) ? 0 : body.hashCode());
     return result;
   }
@@ -238,6 +260,11 @@ public class LambdaExpression extends AbstractExpression {
     if (getClass() != obj.getClass())
       return false;
     LambdaExpression other = (LambdaExpression) obj;
+    if (argumentTypes == null) {
+      if (other.argumentTypes != null)
+        return false;
+    } else if (!argumentTypes.equals(other.argumentTypes))
+      return false;
     if (argumentVariables == null) {
       if (other.argumentVariables != null)
         return false;

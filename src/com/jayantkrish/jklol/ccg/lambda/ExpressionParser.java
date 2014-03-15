@@ -3,9 +3,11 @@ package com.jayantkrish.jklol.ccg.lambda;
 import java.util.EmptyStackException;
 import java.util.List;
 import java.util.Stack;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Chars;
 import com.jayantkrish.jklol.lisp.SExpression;
 
 /**
@@ -24,9 +26,12 @@ public class ExpressionParser<T> {
   private final char closeQuote;
 
   // Whether terms in the expression are separated by whitespace or 
-  // alternateSeparator.
+  // any character in alternateSeparators.
   private final boolean whitespaceSeparated;
-  private final char alternateSeparator;
+  private final char[] alternateSeparators;
+
+  private final String[] preprocessingPatterns;
+  private final String[] preprocessingReplacements;
 
   private final T openParenExpression;
   private final T closeParenExpression;
@@ -36,17 +41,22 @@ public class ExpressionParser<T> {
   public static final char DEFAULT_OPEN_PAREN = '(';
   public static final char DEFAULT_CLOSE_PAREN = ')';
   public static final char DEFAULT_QUOTE = '"';
-  public static final char DEFAULT_SEPARATOR = Character.MIN_VALUE;
+  public static final char[] DEFAULT_SEPARATOR = null;
 
   public ExpressionParser(char openParen, char closeParen, char openQuote, char closeQuote,
-      boolean whitespaceSeparated, char alternateSeparator, ExpressionFactory<T> factory) {
+      boolean whitespaceSeparated, char[] alternateSeparators, String[] preprocessingPatterns,
+      String[] preprocessingReplacements, ExpressionFactory<T> factory) {
     this.openParen = openParen;
     this.closeParen = closeParen;
     this.openQuote = openQuote;
     this.closeQuote = closeQuote;
 
     this.whitespaceSeparated = whitespaceSeparated;
-    this.alternateSeparator = alternateSeparator;
+    this.alternateSeparators = alternateSeparators;
+
+    this.preprocessingPatterns = preprocessingPatterns;
+    this.preprocessingReplacements = preprocessingReplacements;
+    Preconditions.checkArgument(preprocessingPatterns.length == preprocessingReplacements.length);
 
     this.factory = factory;
     
@@ -56,25 +66,34 @@ public class ExpressionParser<T> {
 
   public static ExpressionParser<Expression> lambdaCalculus() {
     return new ExpressionParser<Expression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getLambdaCalculusFactory());
+        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0], 
+        ExpressionFactories.getLambdaCalculusFactory());
   }
 
   public static ExpressionParser<TypedExpression> typedLambdaCalculus() {
     return new ExpressionParser<TypedExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getTypedLambdaCalculusFactory());
+        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
+        ExpressionFactories.getTypedLambdaCalculusFactory());
   }
 
   public static ExpressionParser<SExpression> sExpression() {
     return new ExpressionParser<SExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, ExpressionFactories.getSExpressionFactory());
+        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
+        ExpressionFactories.getSExpressionFactory());
   }
 
   public static ExpressionParser<Type> typeParser() {
     return new ExpressionParser<Type>('<', '>', DEFAULT_QUOTE, DEFAULT_QUOTE,
-        false, ',', ExpressionFactories.getTypeFactory());
+        false, new char[] {','}, new String[] {"\\*"}, new String[] {",\\*"},
+        ExpressionFactories.getTypeFactory());
   }
 
   private List<String> tokenize(String expression) {
+    for (int i = 0; i < preprocessingPatterns.length; i++) {
+      expression = Pattern.compile(preprocessingPatterns[i]).matcher(expression)
+          .replaceAll(preprocessingReplacements[i]);
+    }
+
     boolean inQuotes = false;
     int exprStart = -1;
     List<String> tokens = Lists.newArrayList();
@@ -100,7 +119,7 @@ public class ExpressionParser<T> {
 
       if (!inQuotes) {
         if ((whitespaceSeparated && Character.isWhitespace(character)) ||
-            (!whitespaceSeparated && character == alternateSeparator)) {
+            (!whitespaceSeparated && Chars.contains(alternateSeparators, character))) {
           if (exprStart != -1) {
             tokens.add(expression.substring(exprStart, i));
             exprStart = -1;

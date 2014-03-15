@@ -20,7 +20,8 @@ public class ExpressionParserTest extends TestCase {
     parser = ExpressionParser.lambdaCalculus();
     tlcParser = ExpressionParser.typedLambdaCalculus();
     unequalQuoteParser = new ExpressionParser<Expression>('(', ')', '<', '>', true,
-        ExpressionParser.DEFAULT_SEPARATOR, ExpressionFactories.getDefaultFactory());
+        ExpressionParser.DEFAULT_SEPARATOR, new String[0], new String[0],
+        ExpressionFactories.getDefaultFactory());
     lispParser = ExpressionParser.sExpression();
     typeParser = ExpressionParser.typeParser();
     
@@ -98,7 +99,16 @@ public class ExpressionParserTest extends TestCase {
     assertEquals("t", result.getReturnType().getReturnType().getAtomicTypeName());
     assertEquals("<e,t>", result.getReturnType().getArgumentType().toString());
   }
-  
+
+  public void testParseRepeatedFunctionalType() {
+    Type result = typeParser.parseSingleExpression("<e*,<<e,t>,t>>");
+    assertTrue(result.isFunctional());
+    assertFalse(result.isAtomic());
+    assertEquals("e", result.getArgumentType().getAtomicTypeName());
+    assertEquals("t", result.getReturnType().getReturnType().getAtomicTypeName());
+    assertEquals("<e,t>", result.getReturnType().getArgumentType().toString());
+  }
+
   public void testTypedLambdaCalculus() {
     ConstantExpression result = (ConstantExpression) tlcParser.parseSingleExpression("x:e").getExpression();
     

@@ -79,7 +79,7 @@ public class MapTypeContext implements TypeContext {
       Type unifiedReturn = unify(type1.getReturnType(), (type2.getReturnType()));
       
       if (unifiedArg != null && unifiedReturn != null) {
-        return Type.createFunctional(unifiedArg, unifiedReturn);
+        return Type.createFunctional(unifiedArg, unifiedReturn, false);
       }
     }
     return null;

@@ -297,7 +297,7 @@ public class AmbEval {
 
           AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, environment,
               parameterSpec, new JunctionTree());
-          
+
           // 4th argument is an optional parameter for providing optimization parameters.
           int epochs = 50;
           double l2Penalty = 0.0;

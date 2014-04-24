@@ -31,7 +31,7 @@ public class ExpressionFactories {
       }
     };
   }
-  
+
   public static ExpressionFactory<Type> getTypeFactory() {
     return new ExpressionFactory<Type>() {
       public Type createTokenExpression(String token) {
@@ -39,8 +39,14 @@ public class ExpressionFactories {
       }
       
       public Type createExpression(List<Type> types) {
-        Preconditions.checkArgument(types.size() == 2);
-        return Type.createFunctional(types.get(0), types.get(1));
+        if (types.size() == 2) {
+          return Type.createFunctional(types.get(0), types.get(1), false);
+        } else if (types.size() == 3) {
+          Preconditions.checkArgument(types.get(1).getAtomicTypeName().equals("*"));
+          return Type.createFunctional(types.get(0), types.get(2), true);
+        } else {
+          throw new IllegalArgumentException("Invalid arguments: " + types);
+        }
       }
     };
   }

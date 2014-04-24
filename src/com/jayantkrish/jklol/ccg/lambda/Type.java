@@ -7,23 +7,28 @@ public class Type implements Serializable {
 
   // Non-null if this is an atomic type
   private final String atomicType;
-  
+
   // Non-null if this is a function type.
   private final Type argType;
   private final Type returnType;
+  // If true, this is a function that accepts any number of
+  // argType arguments.
+  private final boolean acceptRepeatedArguments;
 
-  private Type(String atomicType, Type argType, Type returnType) {
+  private Type(String atomicType, Type argType, Type returnType, boolean acceptRepeatedArguments) {
     this.atomicType = atomicType;
     this.argType = argType;
     this.returnType = returnType;
-  }
-  
-  public static Type createAtomic(String type) {
-    return new Type(type, null, null);
+    this.acceptRepeatedArguments = acceptRepeatedArguments;
   }
 
-  public static Type createFunctional(Type argType, Type returnType) {
-    return new Type(null, argType, returnType);
+  public static Type createAtomic(String type) {
+    return new Type(type, null, null, false);
+  }
+
+  public static Type createFunctional(Type argType, Type returnType,
+      boolean acceptRepeatedArguments) {
+    return new Type(null, argType, returnType, acceptRepeatedArguments);
   }
 
   public boolean isAtomic() {
@@ -45,13 +50,17 @@ public class Type implements Serializable {
   public Type getReturnType() {
     return returnType;
   }
-  
+
+  public boolean acceptsRepeatedArguments() {
+    return acceptRepeatedArguments;
+  }
+
   @Override
   public String toString() {
     if (isAtomic()) {
       return atomicType;
     } else {
-      return "<" + argType + "," + returnType + ">";
+      return "<" + argType + (acceptRepeatedArguments ? "*" : "") + "," + returnType + ">";
     }
   }
 
@@ -59,9 +68,12 @@ public class Type implements Serializable {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
+    result = prime * result + (acceptRepeatedArguments ? 1231 : 1237);
     result = prime * result + ((argType == null) ? 0 : argType.hashCode());
-    result = prime * result + ((atomicType == null) ? 0 : atomicType.hashCode());
-    result = prime * result + ((returnType == null) ? 0 : returnType.hashCode());
+    result = prime * result
+        + ((atomicType == null) ? 0 : atomicType.hashCode());
+    result = prime * result
+        + ((returnType == null) ? 0 : returnType.hashCode());
     return result;
   }
 
@@ -74,6 +86,8 @@ public class Type implements Serializable {
     if (getClass() != obj.getClass())
       return false;
     Type other = (Type) obj;
+    if (acceptRepeatedArguments != other.acceptRepeatedArguments)
+      return false;
     if (argType == null) {
       if (other.argType != null)
         return false;

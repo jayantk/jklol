@@ -1,10 +1,13 @@
 package com.jayantkrish.jklol.lisp.cli;
 
 import java.util.List;
+import java.util.Scanner;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+
+import com.google.common.base.Joiner;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -17,29 +20,45 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class AmbLisp extends AbstractCli {
 
   private OptionSpec<Void> printFactorGraph;
+  private OptionSpec<Void> stdin;
   
   @Override
   public void initializeOptions(OptionParser parser) {
     printFactorGraph = parser.accepts("printFactorGraph");
+    stdin = parser.accepts("stdin");
   }
 
   @Override
   public void run(OptionSet options) {
-    List<String> filenames = options.nonOptionArguments();
 
     StringBuilder programBuilder = new StringBuilder();
     programBuilder.append("(begin ");
+    // Non-option arguments are filenames containing the code to execute.
+    List<String> filenames = options.nonOptionArguments();
+
     for (String filename : filenames) {
       for (String line : IoUtils.readLines(filename)) {
         line = line.replaceAll(";.*", "");
         programBuilder.append(line);
       }
     }
+
+    if (options.has(stdin)) {
+      // Any input on stdin is also evaluated after the filenames.
+      Scanner scanner = new Scanner(System.in);
+      while (scanner.hasNextLine()) {
+        String line = scanner.nextLine();
+        line = line.replaceAll(";.*", "");
+        programBuilder.append(line);
+      }
+    }
+
     programBuilder.append(" )");
+    String program = programBuilder.toString();
 
     AmbEval eval = new AmbEval();
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
-    SExpression programExpression = parser.parseSingleExpression(programBuilder.toString());
+    SExpression programExpression = parser.parseSingleExpression(program);
     ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
     EvalResult result = eval.eval(programExpression, AmbEval.getDefaultEnvironment(), 
         fgBuilder);

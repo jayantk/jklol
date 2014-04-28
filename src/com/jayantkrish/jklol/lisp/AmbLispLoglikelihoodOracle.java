@@ -22,6 +22,15 @@ import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * Loglikelihood objective function and gradient computation oracle
+ * for Lisp programs. The function family being optimized is provided 
+ * as a Lisp function that maps parameter vectors to probabilistic
+ * functions. Training data consists of inputs and outputs for these 
+ * returned probabilistic functions.
+ * 
+ * @author jayantk
+ */
 public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionValue, Example<List<Object>, AmbFunctionValue>> {
 
   private final AmbFunctionValue family;
@@ -41,7 +50,8 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
   @Override
   public AmbFunctionValue instantiateModel(SufficientStatistics parameters) {
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
-    Object value = family.apply(parameterSpec.wrap(parameters).toArgumentList(), environment, newBuilder);
+    Object value = family.apply(Arrays.asList(parameterSpec.wrap(parameters).toArgument()),
+        environment, newBuilder);
     Preconditions.checkState(value instanceof AmbFunctionValue);    
     return (AmbFunctionValue) value;
   }
@@ -95,14 +105,16 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     log.startTimer("update_gradient/increment");
     ParameterSpec wrappedGradient = parameterSpec.wrap(gradient);
     incrementSufficientStatistics(newBuilder, wrappedGradient, inputMarginals, inputAssignment, -1.0);
-    // System.out.println("=== input marginals ===");
-    // System.out.println(inputMarginals);
-    // System.out.println(family.getParameterDescription(gradient));
+    System.out.println("=== input marginals ===");
+    System.out.println(inputMarginals);
+    System.out.println(gradient);
+    System.out.println("gradient l2: " + gradient.getL2Norm());
 
     incrementSufficientStatistics(newBuilder, wrappedGradient, outputMarginals, outputAssignment, 1.0);
-    // System.out.println("=== output marginals ===");
-    // System.out.println(outputMarginals);
-    // System.out.println(gradient);
+    System.out.println("=== output marginals ===");
+    System.out.println(outputMarginals);
+    System.out.println(gradient);
+    System.out.println("gradient l2: " + gradient.getL2Norm());
     log.stopTimer("update_gradient/increment");
 
     return outputLogPartitionFunction - inputLogPartitionFunction;
@@ -111,20 +123,29 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
   private static void incrementSufficientStatistics(ParametricBfgBuilder builder,
       ParameterSpec parameters, MarginalSet marginals, Assignment assignment, double multiplier) {
     for (MarkedVars mark : builder.getMarkedVars()) {
+      System.out.println(mark);
+      
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
-      SufficientStatistics factorParameters = parameters.getParametersById(mark.getParameterId()).getCurrentParameters();
+      SufficientStatistics factorParameters = parameters.getCurrentParametersByIds(mark.getParameterIds());
       VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
-      
+      System.out.println("factorParameters l2: " + factorParameters.getL2Norm());
+
       // Figure out which variables have been conditioned on.
       Assignment factorAssignment = assignment.intersection(vars.getVariableNumsArray());
       VariableNumMap unconditionedVars = vars.removeAll(factorAssignment.getVariableNumsArray());
 
       Assignment relabeledAssignment = factorAssignment.mapVariables(relabeling.getVariableIndexReplacementMap());
       Factor marginal = marginals.getMarginal(unconditionedVars).relabelVariables(relabeling);
+      double partitionFunction = marginal.getTotalUnnormalizedProbability();
+
+      System.out.println("marginal: " + partitionFunction);
+      System.out.println(marginal.getParameterDescription());
 
       pf.incrementSufficientStatisticsFromMarginal(factorParameters, marginal,
-          relabeledAssignment, multiplier, 1.0);
+          relabeledAssignment, multiplier, partitionFunction);
+      
+      System.out.println("factorParameters l2: " + factorParameters.getL2Norm());
     }
   }
 }

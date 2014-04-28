@@ -31,8 +31,6 @@ import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 public class AmbEval {
 
-  private static int nextVarNum = 0;
-
   public EvalResult eval(SExpression expression) {
     return eval(expression, getDefaultEnvironment(), new ParametricBfgBuilder(true));
   }
@@ -117,6 +115,16 @@ public class AmbEval {
           // Create and return a function value representing this function.
           Preconditions.checkArgument(subexpressions.size() >= 3, "Invalid lambda expression arguments: " + subexpressions);
           return new EvalResult(makeLambda(subexpressions.get(1), subexpressions.subList(2, subexpressions.size()), environment));
+        } else if (constantName.equals("quote")) {
+          Preconditions.checkArgument(subexpressions.size() == 2, "Invalid quote arguments: " + subexpressions);
+          return new EvalResult(subexpressions.get(1));
+        } else if (constantName.equals("eval")) {
+          Preconditions.checkArgument(subexpressions.size() == 2, "Invalid eval arguments: " + subexpressions);
+          
+          Object value = eval(subexpressions.get(1), environment, builder).getValue();
+          Preconditions.checkArgument(value instanceof SExpression, "Argument to eval must be an expression. Got: " + value);
+          
+          return eval((SExpression) value, environment, builder);
         } else if (constantName.equals("apply")) {
           Preconditions.checkArgument(subexpressions.size() == 3, "Invalid apply expression: " + subexpressions);
           AmbLambdaValue lambdaValue = (AmbLambdaValue) eval(subexpressions.get(1), environment, builder).getValue();
@@ -276,14 +284,7 @@ public class AmbEval {
           
           ParameterSpec parameterSpec = null;
           Object parameterValue = eval(subexpressions.get(2), environment, builder).getValue();
-          if (parameterValue instanceof ParameterSpec) {
-            parameterSpec = (ParameterSpec) parameterValue;
-          } else if (parameterValue instanceof ConsValue) {
-            parameterSpec = new ListParameterSpec(AbstractParameterSpec.getUniqueId(),
-              ConsValue.consListToList(parameterValue, ParameterSpec.class));
-          } else {
-            throw new IllegalArgumentException("Illegal parameterSpec for opt: " + parameterValue);
-          }
+          parameterSpec = recursivelyBuildParameterSpec(parameterValue);
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
           List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
@@ -319,13 +320,7 @@ public class AmbEval {
 
           SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
 
-          // System.out.println(parameters.getDescription());
-
-          if (parameterValue instanceof ConsValue) {
-            return new EvalResult(ConsValue.listToConsList(parameterSpec.wrap(parameters).toArgumentList()));
-          } else {
-            return new EvalResult(parameterSpec.wrap(parameters));
-          }
+          return new EvalResult(parameterSpec.wrap(parameters).toArgument());
         } else if (constantName.equals("opt-mm")) {
           Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
 
@@ -381,15 +376,25 @@ public class AmbEval {
 
           // System.out.println(parameters.getDescription());
 
-          if (parameterValue instanceof ConsValue) {
-            return new EvalResult(ConsValue.listToConsList(parameterSpec.wrap(parameters).toArgumentList()));
-          } else {
-            return new EvalResult(parameterSpec.wrap(parameters));
-          }
+          return new EvalResult(parameterSpec.wrap(parameters).toArgument());
         }
       }
 
       return doFunctionApplication(subexpressions, environment, builder);
+    }
+  }
+  
+  private ParameterSpec recursivelyBuildParameterSpec(Object parameterValue) {
+    if (parameterValue instanceof ParameterSpec) {
+      return (ParameterSpec) parameterValue;
+    } else if (parameterValue instanceof ConsValue) {
+      List<ParameterSpec> childParameters = Lists.newArrayList();
+      for (Object childValue : ConsValue.consListToList(parameterValue, Object.class)) {
+        childParameters.add(recursivelyBuildParameterSpec(childValue));
+      }
+      return new ListParameterSpec(AbstractParameterSpec.getUniqueId(), childParameters);
+    } else {
+      throw new IllegalArgumentException("Illegal parameterSpec for opt: " + parameterValue);
     }
   }
 
@@ -530,6 +535,8 @@ public class AmbEval {
     env.bindName("make-feature-factory", new WrappedBuiltinFunction(new ClassifierFunctions.MakeFeatureFactory()));
     env.bindName("make-featurized-classifier", new ClassifierFunctions.MakeFeaturizedClassifier());
     env.bindName("make-featurized-classifier-parameters", new ClassifierFunctions.MakeFeaturizedClassifierParameters());
+    env.bindName("make-vector-parameters", new ClassifierFunctions.MakeVectorParameters());
+    env.bindName("make-inner-product-classifier", new ClassifierFunctions.MakeInnerProductClassifier());
 
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));

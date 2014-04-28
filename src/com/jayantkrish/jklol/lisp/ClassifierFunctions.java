@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.lisp;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -13,13 +14,27 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
+import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * Implementations of functions for creating classifiers,
+ * their parameter vectors, and feature vectors.
+ * 
+ * @author jayantk
+ */
 public class ClassifierFunctions {
 
+  /**
+   * Classifier with an indicator feature for every possible
+   * outcome of the given random variables. 
+   * 
+   * @author jayantk
+   */
   public static class MakeIndicatorClassifier implements AmbFunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
@@ -78,7 +93,13 @@ public class ClassifierFunctions {
       return new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf, pf.getNewSufficientStatistics());
     }
   }
-  
+
+  /**
+   * Classifier using an input feature vector. The classifier
+   * has independent parameters for each (label, feature) pair.
+   * 
+   * @author jayantk
+   */
   public static class MakeFeaturizedClassifier implements AmbFunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
@@ -201,6 +222,62 @@ public class ClassifierFunctions {
       }
 
       return builder.build();
+    }
+  }
+
+  /**
+   * Classifier that sets the weight of a single outcome 
+   * based on the inner product of two given parameter vectors.
+   * 
+   * @author jayantk
+   */
+  public static class MakeInnerProductClassifier implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      // Argument spec: 1st arg is the variable to add weight to
+      // 2nd arg is the value of that variable to weight
+      // 3rd and 4th args are the parameter vectors whose inner product
+      // determines the weight.
+      Preconditions.checkArgument(argumentValues.size() == 4);
+      Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue);
+      Preconditions.checkArgument(argumentValues.get(2) instanceof ParameterSpec);
+      Preconditions.checkArgument(argumentValues.get(3) instanceof ParameterSpec);
+
+      ParameterSpec parameters1 = (ParameterSpec) argumentValues.get(2);
+      ParameterSpec parameters2 = (ParameterSpec) argumentValues.get(3);
+
+      AmbValue ambValue = (AmbValue) argumentValues.get(0);
+      VariableNumMap factorVars = ambValue.getVar();
+      VariableRelabeling relabeling = VariableRelabeling.createFromVariables(
+          factorVars, factorVars.relabelVariableNums(new int[] {0}));
+      VariableNumMap relabeledVars = relabeling.apply(factorVars);
+      Assignment assignment = relabeledVars.outcomeArrayToAssignment(argumentValues.get(1));
+
+      ParametricFactor pf = new InnerProductParametricFactor(relabeledVars, assignment, -1);
+
+      ListSufficientStatistics combinedParameters = new ListSufficientStatistics(Arrays.asList("0", "1"),
+          Arrays.asList(parameters1.getCurrentParameters(), parameters2.getCurrentParameters()));
+      Factor factor = pf.getModelFromParameters(combinedParameters).relabelVariables(
+          relabeling.inverse());
+
+      builder.addConstantFactor("classifier-" + factorVars.getVariableNums(), factor);
+      builder.addMark(factorVars, pf, relabeling, new int[] {parameters1.getId(), parameters2.getId()});
+
+      return ConstantValue.UNDEFINED;
+    }
+  }
+  
+  public static class MakeVectorParameters implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      int dimensionality = (Integer) argumentValues.get(0);
+      
+      String name = "vector-features-" + dimensionality;
+      VariableNumMap parameterVar = VariableNumMap.singleton(0, name,
+          DiscreteVariable.sequence(name, dimensionality));
+
+      return TensorParameterSpec.zero(AbstractParameterSpec.getUniqueId(), parameterVar);        
     }
   }
 }

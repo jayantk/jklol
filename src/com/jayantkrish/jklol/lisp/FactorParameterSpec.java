@@ -1,8 +1,5 @@
 package com.jayantkrish.jklol.lisp;
 
-import java.util.Arrays;
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -47,11 +44,11 @@ public class FactorParameterSpec extends AbstractParameterSpec {
   }
   
   @Override
-  public List<Object> toArgumentList() {
-    return Arrays.<Object>asList(this);
+  public Object toArgument() {
+    return this;
   }
 
   public String toString() {
-    return currentParameters.getDescription();
+    return "parameters:" + currentParameters.getDescription();
   }
 }

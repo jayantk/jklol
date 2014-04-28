@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.lisp;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -95,7 +96,12 @@ public class ParametricBfgBuilder {
 
   public void addMark(VariableNumMap vars, ParametricFactor pf,
       VariableRelabeling varsToFactorRelabeling, int parameterIndex) {
-    markedVars.add(new MarkedVars(vars, pf, varsToFactorRelabeling, parameterIndex));
+    markedVars.add(new MarkedVars(vars, pf, varsToFactorRelabeling, new int[] {parameterIndex}));
+  }
+
+  public void addMark(VariableNumMap vars, ParametricFactor pf,
+      VariableRelabeling varsToFactorRelabeling, int[] parameterIndexes) {
+    markedVars.add(new MarkedVars(vars, pf, varsToFactorRelabeling, parameterIndexes));
   }
 
   public List<MarkedVars> getMarkedVars() {
@@ -135,14 +141,14 @@ public class ParametricBfgBuilder {
     private final VariableNumMap vars;
     private final ParametricFactor factor;
     private final VariableRelabeling varsToFactorRelabeling;
-    private final int parameterId;
+    private final int[] parameterIds;
 
     public MarkedVars(VariableNumMap vars, ParametricFactor factor,
-        VariableRelabeling varsToFactorRelabeling, int parameterId) {
+        VariableRelabeling varsToFactorRelabeling, int[] parameterIds) {
       this.vars = Preconditions.checkNotNull(vars);
       this.factor = Preconditions.checkNotNull(factor);
       this.varsToFactorRelabeling = Preconditions.checkNotNull(varsToFactorRelabeling);
-      this.parameterId = parameterId;
+      this.parameterIds = parameterIds;
     }
 
     public VariableNumMap getVars() {
@@ -157,8 +163,13 @@ public class ParametricBfgBuilder {
       return varsToFactorRelabeling;
     }
 
-    public int getParameterId() {
-      return parameterId;
+    public int[] getParameterIds() {
+      return parameterIds;
+    }
+    
+    @Override
+    public String toString() {
+      return "mark:" + vars + ":" + Arrays.toString(parameterIds);
     }
   }
 }

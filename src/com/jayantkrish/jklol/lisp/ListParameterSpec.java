@@ -70,7 +70,12 @@ public class ListParameterSpec extends AbstractParameterSpec {
   }
 
   @Override
-  public List<Object> toArgumentList() {
-    return Lists.<Object>newArrayList(children);
+  public Object toArgument() {
+    List<Object> childArguments = Lists.newArrayList();
+    for (ParameterSpec child : children) {
+      childArguments.add(child.toArgument());
+    }
+
+    return ConsValue.listToConsList(childArguments);
   }
 }

@@ -40,7 +40,7 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
   @Override
   public AmbFunctionValue instantiateModel(SufficientStatistics parameters) {
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
-    Object value = family.apply(parameterSpec.wrap(parameters).toArgumentList(),
+    Object value = family.apply(Arrays.asList(parameterSpec.wrap(parameters).toArgument()),
         environment, newBuilder);
     Preconditions.checkState(value instanceof AmbFunctionValue);    
     return (AmbFunctionValue) value;
@@ -103,7 +103,8 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
     for (MarkedVars mark : builder.getMarkedVars()) {
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
-      SufficientStatistics factorParameters = parameters.getParametersById(mark.getParameterId()).getCurrentParameters();
+      SufficientStatistics factorParameters = parameters.getCurrentParametersByIds(
+          mark.getParameterIds());
       VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
 
       // Figure out which variables have been conditioned on.

@@ -544,12 +544,14 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * structures in {@code dependencies}.
    * 
    * @param gradient
+   * @param parameters
    * @param posTags
    * @param dependencies
    * @param count
    */
   public void incrementDependencySufficientStatistics(SufficientStatistics gradient,
-      List<String> posTags, Collection<DependencyStructure> dependencies, double count) {
+      SufficientStatistics parameters, List<String> posTags,
+      Collection<DependencyStructure> dependencies, double count) {
 
     int[] puncCounts = CcgParser.computeDistanceCounts(posTags, puncTagSet);
     int[] verbCounts = CcgParser.computeDistanceCounts(posTags, verbTagSet);
@@ -558,6 +560,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     SufficientStatistics wordDistanceGradient = gradient.coerceToList().getStatisticByName(WORD_DISTANCE_PARAMETERS);
     SufficientStatistics puncDistanceGradient = gradient.coerceToList().getStatisticByName(PUNC_DISTANCE_PARAMETERS);
     SufficientStatistics verbDistanceGradient = gradient.coerceToList().getStatisticByName(VERB_DISTANCE_PARAMETERS);
+    
+    SufficientStatistics dependencyParameters = parameters.coerceToList().getStatisticByName(DEPENDENCY_PARAMETERS);
+    SufficientStatistics wordDistanceParameters = parameters.coerceToList().getStatisticByName(WORD_DISTANCE_PARAMETERS);
+    SufficientStatistics puncDistanceParameters = parameters.coerceToList().getStatisticByName(PUNC_DISTANCE_PARAMETERS);
+    SufficientStatistics verbDistanceParameters = parameters.coerceToList().getStatisticByName(VERB_DISTANCE_PARAMETERS);
+    
     for (DependencyStructure dependency : dependencies) {
       int headWordIndex = dependency.getHeadWordIndex();
       int objectWordIndex = dependency.getObjectWordIndex();
@@ -571,7 +579,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       Assignment assignment = predicateAssignment.union(
           dependencyArgVar.outcomeArrayToAssignment(dependency.getObject()));
 
-      dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient, assignment, count);
+      dependencyFamily.incrementSufficientStatisticsFromAssignment(dependencyGradient,
+          dependencyParameters, assignment, count);
 
       // Update distance parameters.
       int wordDistance = CcgParser.computeWordDistance(headWordIndex, objectWordIndex);
@@ -581,24 +590,27 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       Assignment wordDistanceAssignment = predicateAssignment.union(
           wordDistanceVar.outcomeArrayToAssignment(wordDistance));
       wordDistanceFamily.incrementSufficientStatisticsFromAssignment(wordDistanceGradient,
-          wordDistanceAssignment, count);
+          wordDistanceParameters, wordDistanceAssignment, count);
 
       Assignment puncDistanceAssignment = predicateAssignment.union(
           puncDistanceVar.outcomeArrayToAssignment(puncDistance));
       puncDistanceFamily.incrementSufficientStatisticsFromAssignment(puncDistanceGradient,
-          puncDistanceAssignment, count);
+          puncDistanceParameters, puncDistanceAssignment, count);
 
       Assignment verbDistanceAssignment = predicateAssignment.union(
           verbDistanceVar.outcomeArrayToAssignment(verbDistance));
       verbDistanceFamily.incrementSufficientStatisticsFromAssignment(verbDistanceGradient,
-          verbDistanceAssignment, count);
+          verbDistanceParameters, verbDistanceAssignment, count);
     }
   }
 
-  public void incrementSyntaxSufficientStatistics(SufficientStatistics gradient, CcgParse parse,
-      List<String> posTags, double count) {
+  public void incrementSyntaxSufficientStatistics(SufficientStatistics gradient,
+      SufficientStatistics parameters, CcgParse parse, List<String> posTags, double count) {
     SufficientStatistics syntaxGradient = gradient.coerceToList().getStatisticByName(SYNTAX_PARAMETERS);
     SufficientStatistics headedSyntaxGradient = gradient.coerceToList().getStatisticByName(HEADED_SYNTAX_PARAMETERS);
+    
+    SufficientStatistics syntaxParameters = parameters.coerceToList().getStatisticByName(SYNTAX_PARAMETERS);
+    SufficientStatistics headedSyntaxParameters = parameters.coerceToList().getStatisticByName(HEADED_SYNTAX_PARAMETERS);
     if (!parse.isTerminal()) {
       CcgParse left = parse.getLeft();
       CcgParse right = parse.getRight();
@@ -608,7 +620,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           leftSyntaxVar.outcomeArrayToAssignment(left.getHeadedSyntacticCategory()),
           rightSyntaxVar.outcomeArrayToAssignment(right.getHeadedSyntacticCategory()),
           parentSyntaxVar.outcomeArrayToAssignment(combinator));
-      syntaxFamily.incrementSufficientStatisticsFromAssignment(syntaxGradient, assignment, count);
+      syntaxFamily.incrementSufficientStatisticsFromAssignment(syntaxGradient, syntaxParameters,
+          assignment, count);
 
       // Increment the headed syntax gradient.
       for (IndexedPredicate semanticHead : parse.getSemanticHeads()) {
@@ -617,34 +630,42 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
             headedBinaryRulePredicateVar.outcomeArrayToAssignment(semanticHead.getHead()),
             headedBinaryRulePosVar.outcomeArrayToAssignment(posTag));
         headedBinaryRuleFamily.incrementSufficientStatisticsFromAssignment(headedSyntaxGradient,
-            headedSyntaxAssignment, count);
+            headedSyntaxParameters, headedSyntaxAssignment, count);
       }
 
       // Recursively increment gradient for rules in subtrees.
-      incrementSyntaxSufficientStatistics(gradient, left, posTags, count);
-      incrementSyntaxSufficientStatistics(gradient, right, posTags, count);
+      incrementSyntaxSufficientStatistics(gradient, parameters, left, posTags, count);
+      incrementSyntaxSufficientStatistics(gradient, parameters, right, posTags, count);
     }
 
     // Increment unary rule parameters.
     if (parse.getUnaryRule() != null) {
       UnaryCombinator rule = parse.getUnaryRule();
       SufficientStatistics unaryRuleGradient = gradient.coerceToList().getStatisticByName(UNARY_RULE_PARAMETERS);
+      SufficientStatistics unaryRuleParameters = parameters.coerceToList().getStatisticByName(UNARY_RULE_PARAMETERS);
       Assignment unaryRuleAssignment = unaryRuleInputVar.outcomeArrayToAssignment(
           rule.getInputType()).union(unaryRuleVar.outcomeArrayToAssignment(rule));
       unaryRuleFamily.incrementSufficientStatisticsFromAssignment(unaryRuleGradient,
-          unaryRuleAssignment, count);
+          unaryRuleParameters, unaryRuleAssignment, count);
     }
   }
 
-  public void incrementRootSyntaxSufficientStatistics(SufficientStatistics parameters,
-      HeadedSyntacticCategory category, Collection<IndexedPredicate> heads, List<String> posTags, double count) {
+  public void incrementRootSyntaxSufficientStatistics(SufficientStatistics gradient,
+      SufficientStatistics parameters, HeadedSyntacticCategory category,
+      Collection<IndexedPredicate> heads, List<String> posTags, double count) {
+    SufficientStatistics rootGradient = gradient.coerceToList()
+        .getStatisticByName(ROOT_SYNTAX_PARAMETERS);
+    SufficientStatistics headedRootGradient = gradient.coerceToList()
+        .getStatisticByName(HEADED_ROOT_SYNTAX_PARAMETERS);
+    
     SufficientStatistics rootParameters = parameters.coerceToList()
         .getStatisticByName(ROOT_SYNTAX_PARAMETERS);
     SufficientStatistics headedRootParameters = parameters.coerceToList()
         .getStatisticByName(HEADED_ROOT_SYNTAX_PARAMETERS);
 
     Assignment assignment = rootSyntaxVar.outcomeArrayToAssignment(category);
-    rootSyntaxFamily.incrementSufficientStatisticsFromAssignment(rootParameters, assignment, count);
+    rootSyntaxFamily.incrementSufficientStatisticsFromAssignment(rootGradient, rootParameters,
+        assignment, count);
 
     for (IndexedPredicate head : heads) {
       String headPredicate = head.getHead();
@@ -654,8 +675,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           rootSyntaxVar.outcomeArrayToAssignment(category),
           rootPredicateVar.outcomeArrayToAssignment(headPredicate),
           rootPosVar.outcomeArrayToAssignment(posTag));
-      headedRootSyntaxFamily.incrementSufficientStatisticsFromAssignment(headedRootParameters,
-          headedAssignment, count);
+      headedRootSyntaxFamily.incrementSufficientStatisticsFromAssignment(headedRootGradient,
+          headedRootParameters, headedAssignment, count);
     }
   }
 
@@ -665,26 +686,31 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * vectors.
    * 
    * @param gradient
+   * @param currentParameters
    * @param parse
    * @param count
    */
-  public void incrementSufficientStatistics(SufficientStatistics gradient, CcgParse parse,
-      double count) {
+  public void incrementSufficientStatistics(SufficientStatistics gradient, 
+      SufficientStatistics currentParameters, CcgParse parse, double count) {
     List<String> posTags = parse.getSentencePosTags();
 
     // Update the dependency structure parameters, including distance
     // parameters.
-    incrementDependencySufficientStatistics(gradient, posTags, parse.getAllDependencies(), count);
+    incrementDependencySufficientStatistics(gradient, currentParameters, posTags,
+        parse.getAllDependencies(), count);
 
     // Update syntactic combination parameters. (Both unary and binary
     // rules)
-    incrementSyntaxSufficientStatistics(gradient, parse, posTags, count);
-    incrementRootSyntaxSufficientStatistics(gradient, parse.getHeadedSyntacticCategory(),
-        parse.getSemanticHeads(), posTags, count);
+    incrementSyntaxSufficientStatistics(gradient, currentParameters, parse, posTags, count);
+    incrementRootSyntaxSufficientStatistics(gradient, currentParameters,
+        parse.getHeadedSyntacticCategory(), parse.getSemanticHeads(), posTags, count);
     // Update terminal distribution parameters.
-    SufficientStatistics lexiconParameters = gradient.coerceToList()
+    SufficientStatistics lexiconGradient = gradient.coerceToList()
         .getStatisticByName(LEXICON_PARAMETERS);
-    lexiconFamily.incrementLexiconSufficientStatistics(lexiconParameters, parse, count);
+    SufficientStatistics lexiconParameters = currentParameters.coerceToList()
+        .getStatisticByName(LEXICON_PARAMETERS);
+    lexiconFamily.incrementLexiconSufficientStatistics(lexiconGradient, lexiconParameters,
+        parse, count);
   }
 
   public String getParameterDescription(SufficientStatistics parameters) {

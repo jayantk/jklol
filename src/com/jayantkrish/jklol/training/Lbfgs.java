@@ -239,7 +239,7 @@ public class Lbfgs implements GradientOptimizer {
     // regularization term.
     log.startTimer("compute_gradient_(serial)");
     GradientEvaluation evaluation = executor.mapReduce(dataList,
-        Mappers.<T>identity(), new GradientReducer<M, T>(nextModel, oracle, log));
+        Mappers.<T>identity(), new GradientReducer<M, T>(nextModel, parameters, oracle, log));
     log.stopTimer("compute_gradient_(serial)");
 
     // Normalize the objective term, then apply regularization

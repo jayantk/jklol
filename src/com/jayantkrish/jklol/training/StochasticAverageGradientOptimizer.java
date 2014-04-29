@@ -54,8 +54,8 @@ public class StochasticAverageGradientOptimizer implements GradientOptimizer {
       int exampleIndex = i % trainingDataSize;
       M currentModel = oracle.instantiateModel(initialParameters);
       SufficientStatistics currentGradient = oracle.initializeGradient();
-      double objectiveValue = oracle.accumulateGradient(currentGradient, currentModel,
-          trainingDataList.get(exampleIndex), log);
+      double objectiveValue = oracle.accumulateGradient(currentGradient, initialParameters,
+          currentModel, trainingDataList.get(exampleIndex), log);
 
       // Apply l2 regularization if necessary.
       if (l2Regularization > 0.0) {
@@ -73,7 +73,8 @@ public class StochasticAverageGradientOptimizer implements GradientOptimizer {
       SufficientStatistics lipschitzPoint = initialParameters.duplicate();
       lipschitzPoint.increment(currentGradient, -1.0 / lipschitzEstimate);
       double lipschitzPointObjectiveValue = oracle.accumulateGradient(oracle.initializeGradient(),
-          oracle.instantiateModel(lipschitzPoint), trainingDataList.get(exampleIndex), log);
+          lipschitzPoint, oracle.instantiateModel(lipschitzPoint),
+          trainingDataList.get(exampleIndex), log);
       double gradientSquaredNorm = currentGradient.getL2Norm();
       gradientSquaredNorm = gradientSquaredNorm * gradientSquaredNorm;
       if (gradientSquaredNorm > MIN_GRADIENT_NORM_FOR_LIPSCHITZ && 

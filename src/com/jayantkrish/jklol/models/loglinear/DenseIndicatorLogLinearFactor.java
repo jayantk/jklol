@@ -68,16 +68,17 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, 
-      Assignment assignment, double count) {
-    ((TensorSufficientStatistics) statistics).incrementFeature(assignment, count);
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient, 
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
+    ((TensorSufficientStatistics) gradient).incrementFeature(assignment, count);
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     if (marginal.getVars().size() == 0) {
-      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment,
+      incrementSufficientStatisticsFromAssignment(gradient, currentParameters, conditionalAssignment,
           marginal.getTotalUnnormalizedProbability() * count / partitionFunction);
     } else {
       Tensor expectedFeatureCounts = marginal.coerceToDiscrete().getWeights();
@@ -86,10 +87,10 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
         VariableNumMap vars = getVars().intersection(conditionalAssignment.getVariableNumsArray());
         SparseTensor pointDistribution = SparseTensor.singleElement(vars.getVariableNumsArray(),
             vars.getVariableSizes(), vars.assignmentToIntArray(conditionalAssignment), 1.0);
-        ((TensorSufficientStatistics) statistics).incrementOuterProduct(pointDistribution,
+        ((TensorSufficientStatistics) gradient).incrementOuterProduct(pointDistribution,
             expectedFeatureCounts, count / partitionFunction);
       } else {
-        ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts,
+        ((TensorSufficientStatistics) gradient).increment(expectedFeatureCounts,
             count / partitionFunction);
       }
     }

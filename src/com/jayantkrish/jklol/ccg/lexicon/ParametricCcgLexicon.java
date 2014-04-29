@@ -6,5 +6,6 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public interface ParametricCcgLexicon extends ParametricFamily<CcgLexicon> {
 
-  void incrementLexiconSufficientStatistics(SufficientStatistics gradient, CcgParse parse, double count);
+  void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, CcgParse parse, double count);
 }

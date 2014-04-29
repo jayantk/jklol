@@ -83,9 +83,9 @@ public class ParametricCcgParserTest extends TestCase {
     }
     Preconditions.checkState(unknownAdjParse != null);
 
-    family.incrementSufficientStatistics(parameters, nounParse, 1.0);
-    family.incrementSufficientStatistics(parameters, adjParse, -0.5);
-    family.incrementSufficientStatistics(parameters, unknownAdjParse, 0.75);
+    family.incrementSufficientStatistics(parameters, parameters, nounParse, 1.0);
+    family.incrementSufficientStatistics(parameters, parameters, adjParse, -0.5);
+    family.incrementSufficientStatistics(parameters, parameters, unknownAdjParse, 0.75);
     CcgParser newParser = family.getModelFromParameters(parameters);
 
     System.out.println(family.getParameterDescription(parameters));

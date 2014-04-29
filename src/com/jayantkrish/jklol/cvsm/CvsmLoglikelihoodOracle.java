@@ -43,7 +43,8 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, Cvsm instantiatedModel,
+  public double accumulateGradient(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Cvsm instantiatedModel,
       CvsmExample example, LogFunction log) {
     CvsmTree tree = instantiatedModel.getInterpretationTree(example.getLogicalForm());
     CvsmTree gradientTree = lossFunction.augmentTreeWithLoss(tree, instantiatedModel, example.getTargets());

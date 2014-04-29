@@ -49,17 +49,18 @@ public class ConditionalLogLinearFactorTest extends TestCase {
   }
   
   public void testGetFactorFromParameters() {
-    Factor uniform = factor.getModelFromParameters(factor.getNewSufficientStatistics())
+    SufficientStatistics currentParams = factor.getNewSufficientStatistics();
+    Factor uniform = factor.getModelFromParameters(currentParams)
         .conditional(input.outcomeArrayToAssignment(featureVectors.get(0)));
     Factor empty = uniform.marginalize(output); 
     
     SufficientStatistics stats = factor.getNewSufficientStatistics();
-    factor.incrementSufficientStatisticsFromAssignment(stats, 
+    factor.incrementSufficientStatisticsFromAssignment(stats, currentParams,
         both.outcomeArrayToAssignment(featureVectors.get(0), "A"), 1.0);
-    factor.incrementSufficientStatisticsFromMarginal(stats, empty,  
+    factor.incrementSufficientStatisticsFromMarginal(stats, currentParams, empty,  
         both.outcomeArrayToAssignment(featureVectors.get(1), "B"), 1.0,
         empty.getTotalUnnormalizedProbability());
-    
+
     Factor classifier = factor.getModelFromParameters(stats);
     Assignment inputAssignment = input.outcomeArrayToAssignment(featureVectors.get(0));
     Factor conditional = classifier.conditional(inputAssignment);
@@ -67,11 +68,11 @@ public class ConditionalLogLinearFactorTest extends TestCase {
     assertEquals(Math.exp(2.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("B")), 0.001);
     assertEquals(Math.exp(5.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("A")), 0.001);
     assertEquals(Math.exp(0.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("C")), 0.001);
-    
-    
+
     // Try incrementing the sufficient statistics with a marginal distribution.
     double partitionFunction = conditional.getTotalUnnormalizedProbability();
-    factor.incrementSufficientStatisticsFromMarginal(stats, conditional, inputAssignment, 1.0, partitionFunction);
+    factor.incrementSufficientStatisticsFromMarginal(stats, currentParams, conditional,
+        inputAssignment, 1.0, partitionFunction);
     
     classifier = factor.getModelFromParameters(stats);
     conditional = classifier.conditional(inputAssignment);

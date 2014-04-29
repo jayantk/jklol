@@ -127,8 +127,8 @@ public class EMTrainerTest extends TestCase {
     Assignment probAssignment = allVars.outcomeArrayToAssignment("F", "F");
     SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
     initialParameters.increment(1.0);
-    bn.incrementSufficientStatistics(initialParameters, allVars, zeroProbAssignment, -1.0);
-    bn.incrementSufficientStatistics(initialParameters, allVars, probAssignment, 1.0);
+    bn.incrementSufficientStatistics(initialParameters, initialParameters, allVars, zeroProbAssignment, -1.0);
+    bn.incrementSufficientStatistics(initialParameters, initialParameters, allVars, probAssignment, 1.0);
 
     SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
     FactorGraph factorGraph = bn.getModelFromParameters(trainedParameters)

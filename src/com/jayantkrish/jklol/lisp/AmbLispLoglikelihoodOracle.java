@@ -62,7 +62,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient,
+  public double accumulateGradient(SufficientStatistics gradient, SufficientStatistics currentParameters,
       AmbFunctionValue instantiatedModel, Example<List<Object>, AmbFunctionValue> example, LogFunction log) {
     // Evaluate the nondeterministic function on the current example to 
     // produce a factor graph for the distribution over outputs.
@@ -104,13 +104,16 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     // (if inference in the graphical model fails.)
     log.startTimer("update_gradient/increment");
     ParameterSpec wrappedGradient = parameterSpec.wrap(gradient);
-    incrementSufficientStatistics(newBuilder, wrappedGradient, inputMarginals, inputAssignment, -1.0);
+    ParameterSpec wrappedCurrentParameters = parameterSpec.wrap(currentParameters);
+    incrementSufficientStatistics(newBuilder, wrappedGradient, wrappedCurrentParameters,
+        inputMarginals, inputAssignment, -1.0);
     System.out.println("=== input marginals ===");
     System.out.println(inputMarginals);
     System.out.println(gradient);
     System.out.println("gradient l2: " + gradient.getL2Norm());
 
-    incrementSufficientStatistics(newBuilder, wrappedGradient, outputMarginals, outputAssignment, 1.0);
+    incrementSufficientStatistics(newBuilder, wrappedGradient, wrappedCurrentParameters,
+        outputMarginals, outputAssignment, 1.0);
     System.out.println("=== output marginals ===");
     System.out.println(outputMarginals);
     System.out.println(gradient);
@@ -121,31 +124,36 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
   }
 
   private static void incrementSufficientStatistics(ParametricBfgBuilder builder,
-      ParameterSpec parameters, MarginalSet marginals, Assignment assignment, double multiplier) {
+      ParameterSpec gradient, ParameterSpec currentParameters, MarginalSet marginals,
+      Assignment assignment, double multiplier) {
     for (MarkedVars mark : builder.getMarkedVars()) {
       System.out.println(mark);
       
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
-      SufficientStatistics factorParameters = parameters.getCurrentParametersByIds(mark.getParameterIds());
+      SufficientStatistics factorGradient = gradient
+          .getCurrentParametersByIds(mark.getParameterIds());
+      SufficientStatistics factorCurrentParameters = currentParameters
+          .getCurrentParametersByIds(mark.getParameterIds());
       VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
-      System.out.println("factorParameters l2: " + factorParameters.getL2Norm());
+      System.out.println("factorGradient l2: " + factorGradient.getL2Norm());
 
       // Figure out which variables have been conditioned on.
       Assignment factorAssignment = assignment.intersection(vars.getVariableNumsArray());
       VariableNumMap unconditionedVars = vars.removeAll(factorAssignment.getVariableNumsArray());
 
-      Assignment relabeledAssignment = factorAssignment.mapVariables(relabeling.getVariableIndexReplacementMap());
+      Assignment relabeledAssignment = factorAssignment.mapVariables(
+          relabeling.getVariableIndexReplacementMap());
       Factor marginal = marginals.getMarginal(unconditionedVars).relabelVariables(relabeling);
       double partitionFunction = marginal.getTotalUnnormalizedProbability();
 
       System.out.println("marginal: " + partitionFunction);
       System.out.println(marginal.getParameterDescription());
 
-      pf.incrementSufficientStatisticsFromMarginal(factorParameters, marginal,
-          relabeledAssignment, multiplier, partitionFunction);
+      pf.incrementSufficientStatisticsFromMarginal(factorGradient, factorCurrentParameters,
+          marginal, relabeledAssignment, multiplier, partitionFunction);
       
-      System.out.println("factorParameters l2: " + factorParameters.getL2Norm());
+      System.out.println("factorGradient l2: " + factorGradient.getL2Norm());
     }
   }
 }

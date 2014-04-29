@@ -42,7 +42,8 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, CcgParser instantiatedParser,
+  public double accumulateGradient(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, CcgParser instantiatedParser,
       CcgExample example, LogFunction log) {
     // Gradient is the feature expectations of all correct CCG parses, minus all
     // CCG parses.
@@ -82,15 +83,15 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Subtract the unconditional expected feature counts.
     double unconditionalPartitionFunction = getPartitionFunction(parses);
     for (CcgParse parse : parses) {
-      family.incrementSufficientStatistics(gradient, parse, -1.0 * 
+      family.incrementSufficientStatistics(gradient, currentParameters, parse, -1.0 * 
           parse.getSubtreeProbability() / unconditionalPartitionFunction);
     }
 
     // Add conditional expected feature counts.
     double conditionalPartitionFunction = getPartitionFunction(correctParses);
     for (CcgParse parse : correctParses) {
-      family.incrementSufficientStatistics(gradient, parse, parse.getSubtreeProbability() 
-          / conditionalPartitionFunction);
+      family.incrementSufficientStatistics(gradient, currentParameters, parse,
+          parse.getSubtreeProbability() / conditionalPartitionFunction);
     }
     log.stopTimer("update_gradient/increment_gradient");
 

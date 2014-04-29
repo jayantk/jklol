@@ -41,7 +41,8 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics subgradient, DynamicFactorGraph currentDynamicModel,
+  public double accumulateGradient(SufficientStatistics subgradient,
+      SufficientStatistics currentParameters, DynamicFactorGraph currentDynamicModel,
       Example<DynamicAssignment, DynamicAssignment> example, LogFunction log) {
 
     log.startTimer("dynamic_instantiation");
@@ -99,11 +100,13 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
       log.startTimer("update_subgradient/increment_subgradient");
       // Convert the assignments into marginal (point) distributions in order to
       // update the parameter vector.
-      MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionalOutputModel.getAllVariables(), actual, 1.0);
-      MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionalCostAugmentedModel.getAllVariables(), prediction, 1.0);
+      MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(
+          conditionalOutputModel.getAllVariables(), actual, 1.0);
+      MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(
+          conditionalCostAugmentedModel.getAllVariables(), prediction, 1.0);
       // Update the parameter vector
-      family.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
-      family.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
+      family.incrementSufficientStatistics(subgradient, currentParameters, actualMarginal, 1.0);
+      family.incrementSufficientStatistics(subgradient, currentParameters, predictedMarginal, -1.0);
 
       log.stopTimer("update_subgradient/increment_subgradient");
     }

@@ -94,24 +94,27 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
-    List<SufficientStatistics> parameterList = getParameterList(statistics);
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
+    List<SufficientStatistics> gradientList = getParameterList(gradient);
+    List<SufficientStatistics> parameterList = getParameterList(currentParameters);
     for (int i = 0; i < parametricFactors.size(); i++) {
-      parametricFactors.get(i).incrementSufficientStatisticsFromAssignment(parameterList.get(i),
-          assignment, count);
+      parametricFactors.get(i).incrementSufficientStatisticsFromAssignment(gradientList.get(i),
+          parameterList.get(i), assignment, count);
     }
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    List<SufficientStatistics> parameterList = getParameterList(statistics);
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
+    List<SufficientStatistics> gradientList = getParameterList(gradient);
+    List<SufficientStatistics> parameterList = getParameterList(currentParameters);
     for (int i = 0; i < parametricFactors.size(); i++) {
       Factor componentMarginal = marginal.marginalize(getVars().removeAll(
           parametricFactors.get(i).getVars()));
-      parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(parameterList.get(i),
-          componentMarginal, conditionalAssignment, count, partitionFunction);
+      parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(gradientList.get(i),
+          parameterList.get(i), componentMarginal, conditionalAssignment, count, partitionFunction);
     }
   }
 

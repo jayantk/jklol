@@ -116,13 +116,14 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
-    incrementSufficientStatisticsFromMarginal(statistics, null, assignment, count, 1.0);
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
+    incrementSufficientStatisticsFromMarginal(statistics, currentParameters, null, assignment, count, 1.0);
   }
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNumsArray()));
     
     Preconditions.checkArgument(statistics instanceof ListSufficientStatistics);
@@ -130,11 +131,18 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
     SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
+    
+    Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
+    ListSufficientStatistics parameterList = (ListSufficientStatistics) currentParameters;
+    Preconditions.checkArgument(parameterList.getStatistics().size() == 2);
+    SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(0);
+    SufficientStatistics terminalParameters = parameterList.getStatistics().get(1);
 
     if (conditionalAssignment.containsAll(treeVar.getVariableNumsArray())) {
       ParseTree tree = (ParseTree) conditionalAssignment.getValue(treeVar.getOnlyVariableNum());
       
-      accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, count);
+      accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, 
+          nonterminalParameters, terminalParameters, count);
     } else {
       DiscreteObjectFactor objectMarginal = (DiscreteObjectFactor) marginal;
       
@@ -142,6 +150,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
         ParseTree tree = (ParseTree) assignment.getValue(treeVar.getOnlyVariableNum());
         
         accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, 
+            nonterminalParameters, terminalParameters,
             count * objectMarginal.getUnnormalizedProbability(assignment) / partitionFunction);
       }
     }
@@ -153,13 +162,16 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
    * sufficient statistics (for the rule) by {@code weight}.
    * 
    * @param tree
-   * @param nonterminalFactor
-   * @param terminalFactor
+   * @param nonterminalStatistics
+   * @param terminalStatistics
+   * @param nonterminalParameters
+   * @param terminalParameters
    * @param weight
    */
   private void accumulateSufficientStatistics(ParseTree tree,
-      SufficientStatistics nonterminalStatistics,
-      SufficientStatistics terminalStatistics, double weight) {
+      SufficientStatistics nonterminalStatistics, SufficientStatistics terminalStatistics,
+      SufficientStatistics nonterminalParameters, SufficientStatistics terminalParameters,
+      double weight) {
     if (tree == ParseTree.EMPTY) {
       return;
     }
@@ -168,8 +180,8 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
       Assignment terminalRule = parentVar.outcomeArrayToAssignment(tree.getRoot())
           .union(terminalVar.outcomeArrayToAssignment(tree.getTerminalProductions()))
           .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
-      terminalFactor.incrementSufficientStatisticsFromAssignment(terminalStatistics, terminalRule,
-          weight);
+      terminalFactor.incrementSufficientStatisticsFromAssignment(terminalStatistics,
+          terminalParameters, terminalRule, weight);
       // System.out.println(weight + " " + terminalRule);
     } else {
       Assignment nonterminalRule = parentVar.outcomeArrayToAssignment(tree.getRoot())
@@ -177,10 +189,12 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
           .union(rightVar.outcomeArrayToAssignment(tree.getRight().getRoot()))
           .union(ruleTypeVar.outcomeArrayToAssignment(tree.getRuleType()));
       nonterminalFactor.incrementSufficientStatisticsFromAssignment(nonterminalStatistics,
-          nonterminalRule, weight);
+          terminalParameters, nonterminalRule, weight);
       // System.out.println(weight + " " + nonterminalRule);
-      accumulateSufficientStatistics(tree.getLeft(), nonterminalStatistics, terminalStatistics, weight);
-      accumulateSufficientStatistics(tree.getRight(), nonterminalStatistics, terminalStatistics, weight);
+      accumulateSufficientStatistics(tree.getLeft(), nonterminalStatistics, terminalStatistics,
+          nonterminalParameters, terminalParameters, weight);
+      accumulateSufficientStatistics(tree.getRight(), nonterminalStatistics, terminalStatistics,
+          nonterminalParameters, terminalParameters, weight);
     }
   }
 }

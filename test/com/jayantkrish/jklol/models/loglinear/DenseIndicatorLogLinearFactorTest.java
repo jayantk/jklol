@@ -45,10 +45,14 @@ public class DenseIndicatorLogLinearFactorTest extends TestCase {
     assertEquals(0.0, initial.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
     assertEquals(0.0, initial.getUnnormalizedLogProbability("C", "F"), TOLERANCE);
 
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "F"), 2.0);
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("B", "F"), -3.0);
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("A", "T"), 1.0);
-    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("C", "T"), 2.0);
+    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("B", "F"), 2.0);
+    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("B", "F"), -3.0);
+    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("A", "T"), 1.0);
+    parametricFactor.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("C", "T"), 2.0);
 
     Factor factor = parametricFactor.getModelFromParameters(parameters);
     assertEquals(-1.0, factor.getUnnormalizedLogProbability("B", "F"), TOLERANCE);
@@ -59,7 +63,8 @@ public class DenseIndicatorLogLinearFactorTest extends TestCase {
     incrementBuilder.setWeight(4.0, "A", "F");
     incrementBuilder.setWeight(6.0, "C", "F");
     Factor increment = incrementBuilder.build(); 
-    parametricFactor.incrementSufficientStatisticsFromMarginal(parameters, increment, Assignment.EMPTY, 3.0, 2.0);
+    parametricFactor.incrementSufficientStatisticsFromMarginal(parameters, parameters,
+        increment, Assignment.EMPTY, 3.0, 2.0);
 
     factor = parametricFactor.getModelFromParameters(parameters);
     assertEquals(-1.0, factor.getUnnormalizedLogProbability("B", "F"), TOLERANCE);
@@ -69,8 +74,8 @@ public class DenseIndicatorLogLinearFactorTest extends TestCase {
     assertEquals(9.0, factor.getUnnormalizedLogProbability("C", "F"), TOLERANCE);
 
     TableFactor pointDist = TableFactor.logPointDistribution(truthVar, truthVar.outcomeArrayToAssignment("T"));
-    parametricFactor.incrementSufficientStatisticsFromMarginal(parameters, pointDist,
-        alphabetVar.outcomeArrayToAssignment("B"), 3, 2.0);
+    parametricFactor.incrementSufficientStatisticsFromMarginal(parameters, parameters,
+        pointDist, alphabetVar.outcomeArrayToAssignment("B"), 3, 2.0);
     factor = parametricFactor.getModelFromParameters(parameters);
     assertEquals(1.5, factor.getUnnormalizedLogProbability("B", "T"), TOLERANCE);
   }

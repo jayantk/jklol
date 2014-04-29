@@ -29,10 +29,13 @@ public interface EmOracle<M, E, O> {
    * E-step of the Expectation-Maximization algorithm.
    * 
    * @param model
+   * @param currentParameters
    * @param example
+   * @param log
    * @return
    */
-  public O computeExpectations(M model, E example, LogFunction log);
+  public O computeExpectations(M model, SufficientStatistics currentParameters,
+      E example, LogFunction log);
 
   /**
    * M-step of the Expectation-Maximization algorithm. Re-estimates parameters

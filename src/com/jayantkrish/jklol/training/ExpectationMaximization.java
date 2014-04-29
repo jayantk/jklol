@@ -33,7 +33,8 @@ public class ExpectationMaximization {
       log.startTimer("e_step");
       M model = oracle.instantiateModel(parameters);
       List<O> expectations = executor.mapReduce(trainingDataList, 
-          new ExpectationMapper<M, E, O>(model, oracle, log), Reducers.<O>getAggregatingListReducer());
+          new ExpectationMapper<M, E, O>(model, parameters, oracle, log),
+          Reducers.<O>getAggregatingListReducer());
       log.stopTimer("e_step");
 
       log.startTimer("m_step");
@@ -57,18 +58,21 @@ public class ExpectationMaximization {
   private static class ExpectationMapper<M, E, O> extends Mapper<E, O> {
 
     private final M model;
+    private final SufficientStatistics modelParameters;
     private final EmOracle<M, E, O> oracle;
     private final LogFunction log;
     
-    public ExpectationMapper(M model, EmOracle<M, E, O> oracle, LogFunction log) {
+    public ExpectationMapper(M model, SufficientStatistics modelParameters,
+        EmOracle<M, E, O> oracle, LogFunction log) {
       this.model = Preconditions.checkNotNull(model);
+      this.modelParameters = Preconditions.checkNotNull(modelParameters);
       this.oracle = Preconditions.checkNotNull(oracle);
       this.log = Preconditions.checkNotNull(log);
     }
     
     @Override
     public O map(E input) {
-      return oracle.computeExpectations(model, input, log);
+      return oracle.computeExpectations(model, modelParameters, input, log);
     }
   }
 }

@@ -122,7 +122,7 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics, 
-      Assignment assignment, double count) {
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
 
     Tensor inputValueFeatures = ((Tensor) assignment.getValue(inputVarNums[0]))
@@ -132,19 +132,22 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     
     // The expected feature counts are equal to the outer product of
     // inputTensor and outputMarginal.
-    ((TensorSufficientStatistics) statistics).incrementOuterProduct(inputValueFeatures, outputDistribution, count);
+    ((TensorSufficientStatistics) statistics).incrementOuterProduct(inputValueFeatures,
+        outputDistribution, count);
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, Factor marginal, 
-      Assignment conditionalAssignment, double count, double partitionFunction) {
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     Preconditions.checkArgument(conditionalAssignment.containsAll(inputVarNums));
 
     if (conditionalAssignment.containsAll(varNums)) {
       Preconditions.checkState(marginal.getVars().size() == 0);
       // Easy case where all variables' values are known.
       double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
-      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);
+      incrementSufficientStatisticsFromAssignment(statistics, currentParameters,
+          conditionalAssignment, multiplier);
     } else {
       // Construct a factor representing the unnormalized probability distribution over all
       // of the output variables.

@@ -100,8 +100,8 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
     Assignment subAssignment = assignment.intersection(getVars().getVariableNumsArray());
 
@@ -109,16 +109,18 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
         initialWeights.getVars().assignmentToIntArray(subAssignment));
     int index = initialWeights.getWeights().keyNumToIndex(keyNum);
 
-    ((TensorSufficientStatistics) statistics).incrementFeatureByIndex(count, index);
+    ((TensorSufficientStatistics) gradient).incrementFeatureByIndex(count, index);
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     if (conditionalAssignment.containsAll(getVars().getVariableNumsArray())) {
       // Short-circuit the slow computation below if possible.
       double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
-      incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);
+      incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
+          conditionalAssignment, multiplier);
     } else {
       VariableNumMap conditionedVars = initialWeights.getVars().intersection(
           conditionalAssignment.getVariableNumsArray());
@@ -131,10 +133,10 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
       double[] productFactorValues = productFactorWeights.getValues();
       int tensorSize = productFactorWeights.size();
       double multiplier = count / partitionFunction;
-      TensorSufficientStatistics stats = (TensorSufficientStatistics) statistics;
+      TensorSufficientStatistics tensorGradient = (TensorSufficientStatistics) gradient;
       for (int i = 0; i < tensorSize; i++) {
         int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
-        stats.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
+        tensorGradient.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
       }
     }
   }

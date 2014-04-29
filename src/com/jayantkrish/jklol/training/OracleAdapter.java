@@ -50,11 +50,13 @@ public class OracleAdapter<E> implements GradientOracle<DynamicFactorGraph, E> {
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, DynamicFactorGraph instantiatedModel, 
+  public double accumulateGradient(SufficientStatistics gradient, 
+      SufficientStatistics currentParameters, DynamicFactorGraph instantiatedModel, 
       E example, LogFunction log) {
-    return oracle.accumulateGradient(gradient, instantiatedModel, converter.apply(example), log);
+    return oracle.accumulateGradient(gradient, currentParameters, instantiatedModel,
+        converter.apply(example), log);
   }
-  
+
   /**
    * Class for converting {@code Example}s containing {@code DynamicAssignment}s
    * to {@code Example}s containing {@code Assignment}s. This is a very common

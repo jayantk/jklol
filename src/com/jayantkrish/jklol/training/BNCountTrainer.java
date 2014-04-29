@@ -42,7 +42,7 @@ public class BNCountTrainer {
     SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()
         .mapReduce(trainingData,
             new SufficientStatisticsMapper(factorGraph, new AssignmentMarginalCalculator(), new NullLogFunction()),
-            new SufficientStatisticsReducer(bn));
+            new SufficientStatisticsReducer(bn, parameters));
     return result.getStatistics();
   }
   

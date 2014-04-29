@@ -97,7 +97,7 @@ public class CptTableFactor extends AbstractParametricFactor {
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment a, double count) {
+      SufficientStatistics currentParameters, Assignment a, double count) {
     Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
     tensorStats.incrementFeature(a, count);
@@ -105,7 +105,8 @@ public class CptTableFactor extends AbstractParametricFactor {
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     Assignment conditionalSubAssignment = conditionalAssignment.intersection(getVars());
 
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;

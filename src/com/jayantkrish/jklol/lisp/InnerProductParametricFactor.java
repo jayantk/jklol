@@ -47,26 +47,31 @@ public class InnerProductParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics parameters,
-      Assignment givenAssignment, double count) {
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment givenAssignment, double count) {
     if (givenAssignment.equals(assignment)) {
-      List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
+      List<SufficientStatistics> gradientList = gradient.coerceToList().getStatistics();
+      SufficientStatistics gradient1 = gradientList.get(0);
+      SufficientStatistics gradient2 = gradientList.get(1);
+      
+      List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
       SufficientStatistics params1 = parameterList.get(0);
       SufficientStatistics params2 = parameterList.get(1);
-      
+
       System.out.println(params1.getL2Norm());
       System.out.println(params2.getL2Norm());
       
-      params1.increment(params2, count);
-      params2.increment(params1, count);
-      
+      gradient1.increment(params2, count);
+      gradient2.increment(params1, count);
+
       System.out.println("count: " + count);
     }
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics parameters,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
 
     Assignment intersection = assignment.intersection(
         conditionalAssignment.getVariableNumsArray());
@@ -78,7 +83,7 @@ public class InnerProductParametricFactor extends AbstractParametricFactor {
       
       System.out.println("prob: " + probability + " " + partitionFunction + " " + count);
 
-      incrementSufficientStatisticsFromAssignment(parameters, assignment,
+      incrementSufficientStatisticsFromAssignment(gradient, currentParameters, assignment,
           count * probability / partitionFunction);
     }
   }

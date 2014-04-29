@@ -147,12 +147,14 @@ public class CcgParserUtils {
 
     private final ParametricCcgParser ccgFamily;
     private final CcgParser parser;
+    private final SufficientStatistics parserZeroParameters;
     private final CcgInference inference;
     private final LogFunction log;
 
     public FeatureCountReducer(ParametricCcgParser ccgFamily, CcgInference inference) {
       this.ccgFamily = Preconditions.checkNotNull(ccgFamily);
-      this.parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
+      this.parserZeroParameters = ccgFamily.getNewSufficientStatistics();
+      this.parser = ccgFamily.getModelFromParameters(parserZeroParameters);
       this.inference = Preconditions.checkNotNull(inference);
       this.log = new NullLogFunction();
     }
@@ -168,7 +170,8 @@ public class CcgParserUtils {
           log, example.getSyntacticParse(), example.getDependencies(), example.getLogicalForm());
 
       if (bestParse != null) {
-        ccgFamily.incrementSufficientStatistics(featureCounts, bestParse, 1.0);
+        ccgFamily.incrementSufficientStatistics(featureCounts, parserZeroParameters,
+            bestParse, 1.0);
       }
       
       return featureCounts;

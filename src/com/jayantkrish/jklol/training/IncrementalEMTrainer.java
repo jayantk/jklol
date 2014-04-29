@@ -84,7 +84,7 @@ public class IncrementalEMTrainer extends AbstractTrainer
             
         // Update new sufficient statistics
         SufficientStatistics exampleStatistics = bn.getNewSufficientStatistics(); 
-        bn.incrementSufficientStatistics(exampleStatistics, marginals, 1.0);
+        bn.incrementSufficientStatistics(exampleStatistics, initialParameters, marginals, 1.0);
         previousIterationStatistics[j] = exampleStatistics;
         initialParameters.increment(exampleStatistics, 1.0);
       }

@@ -117,45 +117,57 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
   }
 
   @Override
-  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, CcgParse parse, double count) {
+  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, 
+      SufficientStatistics currentParameters, CcgParse parse, double count) {
     List<LexiconEntry> lexiconEntries = parse.getSpannedLexiconEntries();
     List<String> posTags = parse.getSpannedPosTagsByLexiconEntry();
     Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
     int numEntries = lexiconEntries.size();
     for (int i = 0; i < numEntries; i++) {
       LexiconEntry lexiconEntry = lexiconEntries.get(i);
-      incrementLexiconEntrySufficientStatistics(gradient, lexiconEntry, count);
-      incrementPosSufficientStatistics(gradient, posTags.get(i), 
+      incrementLexiconEntrySufficientStatistics(gradient, currentParameters, lexiconEntry, count);
+      incrementPosSufficientStatistics(gradient, currentParameters, posTags.get(i), 
           lexiconEntry.getCategory().getSyntax(), count);
-      incrementLexiconSyntaxSufficientStatistics(gradient, lexiconEntry.getWords(),
-          lexiconEntry.getCategory().getSyntax(), count);
+      incrementLexiconSyntaxSufficientStatistics(gradient, currentParameters,
+          lexiconEntry.getWords(), lexiconEntry.getCategory().getSyntax(), count);
     }
   }
 
   public void incrementLexiconEntrySufficientStatistics(SufficientStatistics gradient, 
-      LexiconEntry entry, double count) {
+      SufficientStatistics currentParameters, LexiconEntry entry, double count) {
     SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
+    SufficientStatistics terminalParameters = currentParameters.coerceToList()
+        .getStatisticByName(TERMINAL_PARAMETERS);
     Assignment assignment = Assignment.unionAll(
         terminalVar.outcomeArrayToAssignment(entry.getWords()),
         ccgCategoryVar.outcomeArrayToAssignment(entry.getCategory()));
     terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
-        assignment, count);
+        terminalParameters, assignment, count);
   }
 
-  public void incrementPosSufficientStatistics(SufficientStatistics gradient, String posTag,
+  public void incrementPosSufficientStatistics(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, String posTag,
       HeadedSyntacticCategory syntax, double count) {
-    SufficientStatistics terminalPosGradient = gradient.coerceToList().getStatisticByName(TERMINAL_POS_PARAMETERS);
+    SufficientStatistics terminalPosGradient = gradient.coerceToList()
+        .getStatisticByName(TERMINAL_POS_PARAMETERS);
+    SufficientStatistics terminalPosParameters = currentParameters.coerceToList()
+        .getStatisticByName(TERMINAL_POS_PARAMETERS);
     Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTag).union(
         terminalSyntaxVar.outcomeArrayToAssignment(syntax));
     terminalPosFamily.incrementSufficientStatisticsFromAssignment(terminalPosGradient,
-        posAssignment, count);
+        terminalPosParameters, posAssignment, count);
   }
 
   public void incrementLexiconSyntaxSufficientStatistics(SufficientStatistics gradient, 
-      List<String> words, HeadedSyntacticCategory syntax, double count) {
-    SufficientStatistics terminalSyntaxGradient = gradient.coerceToList().getStatisticByName(TERMINAL_SYNTAX_PARAMETERS);    
+      SufficientStatistics currentParameters, List<String> words,
+      HeadedSyntacticCategory syntax, double count) {
+    SufficientStatistics terminalSyntaxGradient = gradient.coerceToList()
+        .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS);
+    SufficientStatistics terminalSyntaxParameters = currentParameters.coerceToList()
+        .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS);
     Assignment assignment = terminalVar.outcomeArrayToAssignment(words).union(
         terminalSyntaxVar.outcomeArrayToAssignment(syntax));
-    terminalSyntaxFamily.incrementSufficientStatisticsFromAssignment(terminalSyntaxGradient, assignment, count);
+    terminalSyntaxFamily.incrementSufficientStatisticsFromAssignment(terminalSyntaxGradient,
+        terminalSyntaxParameters, assignment, count);
   }
 }

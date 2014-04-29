@@ -47,12 +47,12 @@ public class DiscreteLogLinearFactorTest extends TestCase {
         vars.getVariablesByName("v3"), Arrays.asList(normalizedFactor));
 
     parameters = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "F"),
-        1.0);
-    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "T"),
-        0.5);
-    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "T"),
-        0.5);
+    f.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("T", "F"), 1.0);
+    f.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("T", "T"), 0.5);
+    f.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("T", "T"), 0.5);
     
     DiscreteVariable featureVar1 = new DiscreteVariable("features1", Arrays.asList("f1", "f2", "f3"));
     DiscreteVariable featureVar2 = new DiscreteVariable("features2", Arrays.asList("g1", "g2"));
@@ -90,7 +90,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   public void testGetSufficientStatisticsFromAssignment() {
     Assignment tf = vars.outcomeArrayToAssignment("T", "F"); 
     SufficientStatistics s = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
+    f.incrementSufficientStatisticsFromAssignment(s, s, tf, 1.0);
     
     TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
@@ -105,7 +105,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
         Arrays.asList("foo", "bar")));
     Assignment tf = moreVars.outcomeArrayToAssignment("T", "F", "bar"); 
     SufficientStatistics s = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
+    f.incrementSufficientStatisticsFromAssignment(s, s, tf, 1.0);
     
     TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
@@ -119,7 +119,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     TableFactor factor = (TableFactor) f.getModelFromParameters(parameters);
     double partitionFunction = 1.0 + (2 * Math.E);
     SufficientStatistics s = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromMarginal(s, factor, Assignment.EMPTY, 1.0, partitionFunction);
+    f.incrementSufficientStatisticsFromMarginal(s, s, factor, Assignment.EMPTY, 1.0, partitionFunction);
     
     TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
@@ -133,8 +133,8 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     TensorSufficientStatistics gParams = g.getNewSufficientStatistics();
     assertEquals(6, gParams.get().size());
     
-    g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("T", "T"), 1.0);
-    g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("F", "F"), 1.0);
+    g.incrementSufficientStatisticsFromAssignment(gParams, gParams, vars.outcomeArrayToAssignment("T", "T"), 1.0);
+    g.incrementSufficientStatisticsFromAssignment(gParams, gParams, vars.outcomeArrayToAssignment("F", "F"), 1.0);
     DiscreteFactor d = g.getModelFromParameters(gParams);
     assertEquals(1.0, d.getUnnormalizedLogProbability("T", "T"), 0.00001);
     assertEquals(24.0, d.getUnnormalizedLogProbability("T", "F"), 0.00001);

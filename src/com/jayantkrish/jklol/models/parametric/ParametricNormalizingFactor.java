@@ -81,27 +81,30 @@ public class ParametricNormalizingFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics parameters, 
-      Assignment assignment, double count) {
-    List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
+    List<SufficientStatistics> gradientList = gradient.coerceToList().getStatistics();
+    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
     for (int i = 0; i < wrappedFactors.size(); i++) {
-      wrappedFactors.get(i).incrementSufficientStatisticsFromAssignment(parameterList.get(i),
-          assignment, count);
+      wrappedFactors.get(i).incrementSufficientStatisticsFromAssignment(gradientList.get(i),
+          parameterList.get(i), assignment, count);
     }
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics parameters, 
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient, 
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     VariableNumMap marginalVars = marginal.getVars();
-    List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
+    List<SufficientStatistics> gradientList = gradient.coerceToList().getStatistics();
+    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
     for (int i = 0; i < wrappedFactors.size(); i++) {
       ParametricFactor wrappedFactor = wrappedFactors.get(i);
       VariableNumMap varsNotInFactor = marginalVars.removeAll(wrappedFactor.getVars());
       Factor curMarginal = marginal.marginalize(varsNotInFactor);
 
-      wrappedFactor.incrementSufficientStatisticsFromMarginal(parameterList.get(i), curMarginal, 
-        conditionalAssignment, count, partitionFunction);
+      wrappedFactor.incrementSufficientStatisticsFromMarginal(gradientList.get(i),
+          parameterList.get(i), curMarginal, conditionalAssignment, count, partitionFunction);
     }
   }
 }

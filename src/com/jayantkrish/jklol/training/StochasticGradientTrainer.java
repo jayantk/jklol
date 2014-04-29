@@ -141,7 +141,8 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.startTimer("compute_gradient_(serial)");
       int iterSearchErrors = 0;
       Mapper<T, T> mapper = Mappers.<T>identity();
-      GradientReducer<M, T> reducer = new GradientReducer<M, T>(currentModel, oracle, log);
+      GradientReducer<M, T> reducer = new GradientReducer<M, T>(currentModel, initialParameters,
+          oracle, log);
       GradientEvaluation oracleResult = executor.mapReduce(batchData, mapper, reducer);
 
       iterSearchErrors = oracleResult.getSearchErrors();

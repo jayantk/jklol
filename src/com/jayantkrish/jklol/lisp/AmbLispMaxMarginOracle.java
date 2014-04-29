@@ -52,8 +52,9 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, AmbFunctionValue instantiatedModel,
-      Example<List<Object>, Example<AmbFunctionValue, AmbFunctionValue>> example, LogFunction log) {
+  public double accumulateGradient(SufficientStatistics gradient, SufficientStatistics currentParameters,
+      AmbFunctionValue instantiatedModel, Example<List<Object>,
+      Example<AmbFunctionValue, AmbFunctionValue>> example, LogFunction log) {
     List<Object> input = example.getInput();
     AmbFunctionValue costFunction = example.getOutput().getInput();
     AmbFunctionValue outputFunction = example.getOutput().getOutput();
@@ -92,26 +93,34 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
 
     // Compute the gradient as a function of the two assignments.
     ParameterSpec wrappedGradient = parameterSpec.wrap(gradient);
-    incrementSufficientStatistics(inputBuilder, wrappedGradient, costConditionalAssignment, -1.0);
-    incrementSufficientStatistics(outputBuilder, wrappedGradient, outputConditionalAssignment, 1.0);
+    ParameterSpec wrappedCurrentParameters = parameterSpec.wrap(currentParameters);
+    incrementSufficientStatistics(inputBuilder, wrappedGradient, wrappedCurrentParameters,
+        costConditionalAssignment, -1.0);
+    incrementSufficientStatistics(outputBuilder, wrappedGradient, wrappedCurrentParameters,
+        outputConditionalAssignment, 1.0);
 
     return Math.min(0.0, outputConditionalScore - costConditionalScore);
   }
 
   private static void incrementSufficientStatistics(ParametricBfgBuilder builder,
-      ParameterSpec parameters, Assignment assignment, double multiplier) {
+      ParameterSpec gradient, ParameterSpec currentParameters, Assignment assignment,
+      double multiplier) {
     for (MarkedVars mark : builder.getMarkedVars()) {
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
-      SufficientStatistics factorParameters = parameters.getCurrentParametersByIds(
+      SufficientStatistics factorGradient = gradient.getCurrentParametersByIds(
+          mark.getParameterIds());
+      SufficientStatistics factorCurrentParameters = currentParameters.getCurrentParametersByIds(
           mark.getParameterIds());
       VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
 
       // Figure out which variables have been conditioned on.
       Assignment factorAssignment = assignment.intersection(vars.getVariableNumsArray());
-      Assignment relabeledAssignment = factorAssignment.mapVariables(relabeling.getVariableIndexReplacementMap());
+      Assignment relabeledAssignment = factorAssignment.mapVariables(
+          relabeling.getVariableIndexReplacementMap());
 
-      pf.incrementSufficientStatisticsFromAssignment(factorParameters, relabeledAssignment, multiplier);
+      pf.incrementSufficientStatisticsFromAssignment(factorGradient, factorCurrentParameters,
+          relabeledAssignment, multiplier);
     }
   }
 }

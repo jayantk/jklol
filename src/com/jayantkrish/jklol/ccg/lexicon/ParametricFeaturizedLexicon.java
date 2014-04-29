@@ -93,10 +93,15 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
   }
 
   @Override
-  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, CcgParse parse,
-      double count) {
+  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, 
+      SufficientStatistics currentParameters, CcgParse parse, double count) {
     SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
     SufficientStatistics featureGradient = gradient.coerceToList().getStatisticByName(TERMINAL_FEATURE_PARAMETERS);
+    
+    SufficientStatistics terminalCurrentParameters = currentParameters.coerceToList()
+        .getStatisticByName(TERMINAL_PARAMETERS);
+    SufficientStatistics featureCurrentParameters = currentParameters.coerceToList()
+        .getStatisticByName(TERMINAL_FEATURE_PARAMETERS);
 
     List<String> originalWords = parse.getSentenceWords();
     List<String> posTags = parse.getSentencePosTags();
@@ -112,7 +117,7 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
           terminalVar.outcomeArrayToAssignment(terminals),
           ccgCategoryVar.outcomeArrayToAssignment(ccgCategory));
       terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
-          assignment, count);
+          terminalCurrentParameters, assignment, count);
 
       // Update the feature weights for the generated feature vectors.
       int sentenceIndex = wordIndexes.get(i);
@@ -122,7 +127,8 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
       assignment = Assignment.unionAll(
           ccgSyntaxVar.outcomeArrayToAssignment(lexiconEntries.get(i).getCategory().getSyntax()),
           featureVar.outcomeArrayToAssignment(featureWeights));
-      featureFamily.incrementSufficientStatisticsFromAssignment(featureGradient, assignment, count);
+      featureFamily.incrementSufficientStatisticsFromAssignment(featureGradient,
+          featureCurrentParameters, assignment, count);
     }
   }
 }

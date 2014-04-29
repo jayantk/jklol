@@ -8,7 +8,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -163,25 +162,26 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
     Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
     Assignment subAssignment = assignment.intersection(getVars().getVariableNumsArray());
 
     // Get a factor containing only the feature variable.
     Tensor assignmentFeatures = featureValues.conditional(subAssignment).getWeights();
-    ((TensorSufficientStatistics) statistics).increment(assignmentFeatures, count);
+    ((TensorSufficientStatistics) gradient).increment(assignmentFeatures, count);
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     // Compute expected feature counts based on the input marginal distribution.
     DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
         .innerProduct(marginal);
     Preconditions.checkState(expectedFeatureCounts.getVars().equals(featureVariables));
 
-    ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts.getWeights(), 
+    ((TensorSufficientStatistics) gradient).increment(expectedFeatureCounts.getWeights(), 
         count / partitionFunction);
   }
 

@@ -49,11 +49,12 @@ public interface GradientOracle<M, E> {
    * value, and the method returns the current objective value.
    *
    * @param gradient
+   * @param currentParameters
    * @param instantiatedModel
    * @param example
    * @param log stores time statistics, etc., about the optimization  
    * @return objective value evaluated at {@code example}.
    */
   public double accumulateGradient(SufficientStatistics gradient,
-      M instantiatedModel, E example, LogFunction log);
+      SufficientStatistics currentParameters, M instantiatedModel, E example, LogFunction log);
 }

@@ -8,10 +8,9 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
-import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -48,7 +47,7 @@ public class CptTableFactorTest extends TestCase {
     parameters = f.getNewSufficientStatistics();
     for (int i = 0; i < assignments.length; i++) {
       Assignment assignment = f.getVars().outcomeToAssignment(assignments[i]);
-      f.incrementSufficientStatisticsFromAssignment(parameters, assignment, 1.0);
+      f.incrementSufficientStatisticsFromAssignment(parameters, parameters, assignment, 1.0);
       factorAssignments.add(assignment);
     }
   }
@@ -68,7 +67,7 @@ public class CptTableFactorTest extends TestCase {
   
   public void testGetSufficientStatisticsFromAssignment() {
     SufficientStatistics newStats = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromAssignment(newStats,
+    f.incrementSufficientStatisticsFromAssignment(newStats, newStats,
         f.getVars().outcomeToAssignment(assignments[1]), 2.0);
     newStats.increment(1.0);
 
@@ -78,7 +77,7 @@ public class CptTableFactorTest extends TestCase {
   
   public void testGetSufficientStatisticsFromMarginal() {
     SufficientStatistics newStats = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromMarginal(newStats, 
+    f.incrementSufficientStatisticsFromMarginal(newStats, newStats,
         f.getModelFromParameters(parameters), Assignment.EMPTY, 6.0, 3.0);
     newStats.increment(1.0);
     

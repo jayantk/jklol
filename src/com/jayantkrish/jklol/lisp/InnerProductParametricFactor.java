@@ -58,13 +58,8 @@ public class InnerProductParametricFactor extends AbstractParametricFactor {
       SufficientStatistics params1 = parameterList.get(0);
       SufficientStatistics params2 = parameterList.get(1);
 
-      System.out.println(params1.getL2Norm());
-      System.out.println(params2.getL2Norm());
-      
       gradient1.increment(params2, count);
       gradient2.increment(params1, count);
-
-      System.out.println("count: " + count);
     }
   }
 
@@ -80,8 +75,6 @@ public class InnerProductParametricFactor extends AbstractParametricFactor {
           conditionalAssignment.getVariableNumsArray());
       
       double probability = marginal.getUnnormalizedProbability(factorAssignment);
-      
-      System.out.println("prob: " + probability + " " + partitionFunction + " " + count);
 
       incrementSufficientStatisticsFromAssignment(gradient, currentParameters, assignment,
           count * probability / partitionFunction);

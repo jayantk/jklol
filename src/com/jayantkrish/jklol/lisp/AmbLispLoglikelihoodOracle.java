@@ -107,17 +107,17 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     ParameterSpec wrappedCurrentParameters = parameterSpec.wrap(currentParameters);
     incrementSufficientStatistics(newBuilder, wrappedGradient, wrappedCurrentParameters,
         inputMarginals, inputAssignment, -1.0);
-    System.out.println("=== input marginals ===");
-    System.out.println(inputMarginals);
-    System.out.println(gradient);
-    System.out.println("gradient l2: " + gradient.getL2Norm());
+    // System.out.println("=== input marginals ===");
+    // System.out.println(inputMarginals);
+    // System.out.println(gradient);
+    // System.out.println("gradient l2: " + gradient.getL2Norm());
 
     incrementSufficientStatistics(newBuilder, wrappedGradient, wrappedCurrentParameters,
         outputMarginals, outputAssignment, 1.0);
-    System.out.println("=== output marginals ===");
-    System.out.println(outputMarginals);
-    System.out.println(gradient);
-    System.out.println("gradient l2: " + gradient.getL2Norm());
+    // System.out.println("=== output marginals ===");
+    // System.out.println(outputMarginals);
+    // System.out.println(gradient);
+    // System.out.println("gradient l2: " + gradient.getL2Norm());
     log.stopTimer("update_gradient/increment");
 
     return outputLogPartitionFunction - inputLogPartitionFunction;
@@ -127,8 +127,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
       ParameterSpec gradient, ParameterSpec currentParameters, MarginalSet marginals,
       Assignment assignment, double multiplier) {
     for (MarkedVars mark : builder.getMarkedVars()) {
-      System.out.println(mark);
-      
+
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
       SufficientStatistics factorGradient = gradient
@@ -136,7 +135,6 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
       SufficientStatistics factorCurrentParameters = currentParameters
           .getCurrentParametersByIds(mark.getParameterIds());
       VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
-      System.out.println("factorGradient l2: " + factorGradient.getL2Norm());
 
       // Figure out which variables have been conditioned on.
       Assignment factorAssignment = assignment.intersection(vars.getVariableNumsArray());
@@ -147,13 +145,8 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
       Factor marginal = marginals.getMarginal(unconditionedVars).relabelVariables(relabeling);
       double partitionFunction = marginal.getTotalUnnormalizedProbability();
 
-      System.out.println("marginal: " + partitionFunction);
-      System.out.println(marginal.getParameterDescription());
-
       pf.incrementSufficientStatisticsFromMarginal(factorGradient, factorCurrentParameters,
           marginal, relabeledAssignment, multiplier, partitionFunction);
-      
-      System.out.println("factorGradient l2: " + factorGradient.getL2Norm());
     }
   }
 }

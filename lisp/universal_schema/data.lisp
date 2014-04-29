@@ -3,7 +3,7 @@
 (define entities (lifted-list "/en/plano" "/en/Texas"))
 (define words (list "city" "place"))
 (define true-false (list #t #f))
-(define latent-dimensionality 2)
+(define latent-dimensionality 100)
 
 ;; Constant functions ;;;;;;;;;;;;;;;;;;;;;;
 
@@ -74,15 +74,12 @@
 ;        #f))
 
 (define training-inputs
-  (list (quote (lifted-car (word-cat "city")))
+  (list (quote (elementof (mention "/en/plano") (word-cat "city")))
+        (quote (not (elementof (mention "/en/Texas") (word-cat "city"))))
         ))
-; (quote (not (elementof (mention "/en/Texas") (word-cat "city")))) 
-
-(define training-labels 
-  (list #t))
 
 (define training-data (zip (map (lambda (x) (list x)) training-inputs)
-                           (map (lambda (x) (lambda (prediction) (require (= prediction x)))) training-labels)))
+                           (map (lambda (x) (lambda (prediction) (require (= prediction #t)))) training-inputs)))
 
 (define expression-parameters (list (map (lambda (x) (make-vector-parameters latent-dimensionality)) words)
                                     (map (lambda (x) (make-vector-parameters latent-dimensionality)) entities)))
@@ -93,11 +90,18 @@
 
 (display best-params)
 
-
 (define expression-eval (expression-family best-params))
 
-(display "city(plano)")
-(display (get-marginals (expression-eval (car training-inputs))))
+(display "city")
+(display (get-marginals (expression-eval (quote (lifted-car  (word-cat "city"))))))
+(display (get-marginals (expression-eval (quote (lifted-cadr (word-cat "city"))))))
 
-; (display "city(Texas)")
-; (display (get-marginals (expression-eval (cadr training-inputs))))
+(display "(intersect plano city)")
+(display (get-marginals (expression-eval (quote (lifted-car (intersect (mention "/en/plano") (word-cat "city")))))))
+(display (get-marginals (expression-eval (quote (lifted-cadr (intersect (mention "/en/plano") (word-cat "city")))))))
+
+(display "(elementof plano city)")
+(display (get-marginals (expression-eval (quote (elementof (mention "/en/plano") (word-cat "city"))))))
+
+(display "(elementof Texas city)")
+(display (get-marginals (expression-eval (quote (elementof (mention "/en/Texas") (word-cat "city"))))))

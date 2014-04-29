@@ -24,6 +24,10 @@
 (define caddr (x) (car (cdr (cdr x))))
 (define cadddr (x) (car (cdr (cdr (cdr x)))))
 
+(define lifted-cadr (x) (lifted-car (lifted-cdr x)))
+(define lifted-caddr (x) (lifted-car (lifted-cdr (lifted-cdr x))))
+(define lifted-cadddr (x) (lifted-car (lifted-cdr (lifted-cdr (lifted-cdr x)))))
+
 (define length (lambda (seq) (if (nil? seq) 0 (+ (length (cdr seq)) 1))))
 (define first-n (lambda (seq n) (if (= n 0) (list) (cons (car seq) (first-n (cdr seq) (- n 1))))))
 (define remainder-n (lambda (seq n) (if (= n 0) seq (remainder-n (cdr seq) (- n 1)))))

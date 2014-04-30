@@ -337,17 +337,6 @@ public class CcgParse {
       Expression leftLogicalForm = left.getLogicalForm();
       Expression rightLogicalForm = right.getLogicalForm();
 
-      /*
-      System.out.println(left.getSemanticHeads());
-      System.out.println(leftLogicalForm);
-      System.out.println(right.getSemanticHeads());
-      System.out.println(rightLogicalForm);
-      System.out.println(dependencies);
-      System.out.println(combinator);
-      System.out.println("left: " + leftLogicalForm);
-      System.out.println("right: " + rightLogicalForm);
-      */
-
       Expression result = null;
       if (combinator.getBinaryRule() != null) {
         // Binary rules may not require both argument logical forms to be

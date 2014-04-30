@@ -240,8 +240,10 @@ public class ClassifierFunctions {
       // determines the weight.
       Preconditions.checkArgument(argumentValues.size() == 4);
       Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue);
-      Preconditions.checkArgument(argumentValues.get(2) instanceof ParameterSpec);
-      Preconditions.checkArgument(argumentValues.get(3) instanceof ParameterSpec);
+      Preconditions.checkArgument(argumentValues.get(2) instanceof ParameterSpec,
+          "Third argument to make-inner-product-classifier must be a parameter vector");
+      Preconditions.checkArgument(argumentValues.get(3) instanceof ParameterSpec,
+          "Fourth argument to make-inner-product-classifier must be a parameter vector");
 
       ParameterSpec parameters1 = (ParameterSpec) argumentValues.get(2);
       ParameterSpec parameters2 = (ParameterSpec) argumentValues.get(3);

@@ -99,6 +99,8 @@ public class AmbEval {
           
           List<SExpression> bindings = subexpressions.get(1).getSubexpressions();
           for (SExpression binding : bindings) {
+            Preconditions.checkArgument(binding.getSubexpressions().size() == 2,
+                "Illegal element in let bindings: %s", binding);
             String name = binding.getSubexpressions().get(0).getConstant();
             SExpression valueExpression = binding.getSubexpressions().get(1);
             

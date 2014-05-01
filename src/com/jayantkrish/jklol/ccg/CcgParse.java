@@ -241,8 +241,13 @@ public class CcgParse {
    * 
    * @return
    */
+  @Deprecated
   public Expression getLogicalForm() {
-    Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
+    return getLogicalForm(true);
+  }
+
+  public Expression getLogicalForm(boolean induceLogicalForms) {
+    Expression preUnaryLogicalForm = getPreUnaryLogicalForm(induceLogicalForms);
     if (unaryRule == null) {
       return preUnaryLogicalForm;
     } else if (preUnaryLogicalForm == null || unaryRule.getUnaryRule().getLogicalForm() == null) {
@@ -262,7 +267,7 @@ public class CcgParse {
    */
   public SpannedExpression getLogicalFormForSpan(int spanStart, int spanEnd) {
     CcgParse spanningParse = getParseForSpan(spanStart, spanEnd);
-    Expression lf = spanningParse.getPreUnaryLogicalForm();
+    Expression lf = spanningParse.getPreUnaryLogicalForm(true);
     if (lf != null) {
       return new SpannedExpression(spanningParse.getHeadedSyntacticCategory(),
           spanningParse.getLogicalForm(), spanningParse.getSpanStart(), spanningParse.getSpanEnd());
@@ -304,7 +309,7 @@ public class CcgParse {
       spannedExpressions.add(new SpannedExpression(syntax, logicalForm.simplify(), spanStart, spanEnd));
       if (onlyMaximal) { return; }
     } 
-    Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
+    Expression preUnaryLogicalForm = getPreUnaryLogicalForm(true);
 
     if (preUnaryLogicalForm != null && unaryRule != null) {
       spannedExpressions.add(new SpannedExpression(unaryRule.getInputType().getCanonicalForm(),
@@ -324,18 +329,18 @@ public class CcgParse {
    * 
    * @return
    */
-  private Expression getPreUnaryLogicalForm() {
+  private Expression getPreUnaryLogicalForm(boolean induceLogicalForms) {
     if (isTerminal()) {
       Expression logicalForm = lexiconEntry.getLogicalForm();
-      if (logicalForm == null) { 
+      if (logicalForm == null && induceLogicalForms) { 
         // Try and guess a suitable logical form based on the syntactic category.
         // This method also returns null on failure. 
         logicalForm = CcgCategory.induceLogicalFormFromSyntax(lexiconEntry.getSyntax());
       }
       return logicalForm;
     } else {
-      Expression leftLogicalForm = left.getLogicalForm();
-      Expression rightLogicalForm = right.getLogicalForm();
+      Expression leftLogicalForm = left.getLogicalForm(induceLogicalForms);
+      Expression rightLogicalForm = right.getLogicalForm(induceLogicalForms);
 
       Expression result = null;
       if (combinator.getBinaryRule() != null) {

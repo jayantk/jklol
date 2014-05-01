@@ -1,12 +1,16 @@
 package com.jayantkrish.jklol.cvsm.ccg;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.CcgBinaryRule;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgUnaryRule;
+import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -73,6 +77,31 @@ public class CcgParseAugmenter {
           input.getNodeDependencies(), input.getNodeProbability(), left, right, input.getCombinator(),
           input.getUnaryRule(), input.getSpanStart(), input.getSpanEnd());
     }
+    
+    // Handle binary rules in combinators
+    if (!result.isTerminal() && result.getCombinator().getBinaryRule() != null) {
+      Combinator combinator = result.getCombinator();
+      CcgBinaryRule rule = combinator.getBinaryRule();
+      
+      LambdaExpression newLogicalForm = null;
+      
+      CcgBinaryRule newRule = new CcgBinaryRule(rule.getLeftSyntacticType(), rule.getRightSyntacticType(),
+          rule.getParentSyntacticType(), newLogicalForm, Arrays.asList(rule.getSubjects()),
+          Arrays.asList(rule.getSubjectSyntacticCategories()), Ints.asList(rule.getArgumentNumbers()),
+          Ints.asList(rule.getObjects()), rule.getCombinatorType());
+      
+      Combinator newCombinator = new Combinator(combinator.getSyntax(), combinator.getSyntaxUniqueVars(),
+          combinator.getSyntaxHeadVar(), combinator.getLeftVariableRelabeling(), combinator.getLeftInverseRelabeling(), 
+          combinator.getRightVariableRelabeling(), combinator.getRightInverseRelabeling(), 
+          combinator.getResultOriginalVars(), combinator.getResultVariableRelabeling(), combinator.getResultInverseRelabeling(),
+          combinator.getUnifiedVariables(), combinator.getSubjects(), combinator.getSubjectSyntacticCategories(),
+          combinator.getArgumentNumbers(), combinator.getObjects(), combinator.isArgumentOnLeft(), 
+          combinator.getArgumentReturnDepth(), newRule, combinator.getType());
+
+      result = CcgParse.forNonterminal(result.getHeadedSyntacticCategory(), result.getSemanticHeads(),
+          result.getNodeDependencies(), result.getNodeProbability(), result.getLeft(), result.getRight(), newCombinator,
+          result.getUnaryRule(), result.getSpanStart(), result.getSpanEnd());
+    }
 
     // Handle unary rules
     if (result.hasUnaryRule()) {
@@ -92,6 +121,8 @@ public class CcgParseAugmenter {
           combinator.getVariableRelabeling(), combinator.getInverseRelabeling(), newRule);
       result = result.addUnaryRule(newCombinator, result.getHeadedSyntacticCategory());
     }
+    
+    
 
     return result;
   }

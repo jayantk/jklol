@@ -139,6 +139,18 @@ public class Combinator implements Serializable {
     return subjects;
   }
   
+  public final HeadedSyntacticCategory[] getSubjectSyntacticCategories() {
+    return subjectSyntacticCategories;
+  }
+
+  public final int[] getArgumentNumbers() {
+    return argumentNumbers;
+  }
+
+  public final int[] getObjects() {
+    return objects;
+  }
+
   public final boolean hasUnfilledDependencies() {
     return subjects.length > 0;
   }

@@ -88,7 +88,7 @@ public class ExpressionParser<T> {
         ExpressionFactories.getTypeFactory());
   }
 
-  private List<String> tokenize(String expression) {
+  public List<String> tokenize(String expression) {
     for (int i = 0; i < preprocessingPatterns.length; i++) {
       expression = Pattern.compile(preprocessingPatterns[i]).matcher(expression)
           .replaceAll(preprocessingReplacements[i]);
@@ -97,7 +97,8 @@ public class ExpressionParser<T> {
     boolean inQuotes = false;
     int exprStart = -1;
     List<String> tokens = Lists.newArrayList();
-    for (int i = 0; i < expression.length(); i++) {
+    int length = expression.length();
+    for (int i = 0; i < length; i++) {
       char character = expression.charAt(i);
 
       boolean quoteOk = false;
@@ -115,7 +116,7 @@ public class ExpressionParser<T> {
         } 
       }
       Preconditions.checkState((character != openQuote && character != closeQuote) || quoteOk,
-          "Quoting error. Current: " + expression);
+          "Quoting error. Current: %s", expression);
 
       if (!inQuotes) {
         if ((whitespaceSeparated && Character.isWhitespace(character)) ||

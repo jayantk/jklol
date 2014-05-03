@@ -46,7 +46,8 @@ public class BuiltinFunctions {
   public static class NilFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1, "Wrong number of arguments: " + argumentValues);
+      Preconditions.checkArgument(argumentValues.size() == 1, "Wrong number of arguments: %s",
+          argumentValues);
       return ConstantValue.NIL == argumentValues.get(0) ? ConstantValue.TRUE : ConstantValue.FALSE; 
     }
   }

@@ -43,6 +43,7 @@ public class Environment {
 
     Preconditions.checkState(parentEnvironment != null,
         "Tried accessing unbound variable: %s", name);
-    return parentEnvironment.getValue(name);
+    Object value = parentEnvironment.getValue(name);
+    return value;
   }
 }

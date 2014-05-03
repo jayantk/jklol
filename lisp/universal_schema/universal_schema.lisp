@@ -118,6 +118,11 @@
         (eval expression)))
     expression-evaluator))
 
+(display "Making training data...")
+(define foo (map (lambda (x) 0) training-inputs))
+
+(display "foo...")
+
 (define training-data (zip training-inputs
                            (map (lambda (x) (lambda (prediction) (require (= prediction #t)))) training-inputs)))
 

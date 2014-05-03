@@ -1,7 +1,7 @@
 ;; list functions
 
 ;; Apply function f to every element of seq
-(define map (lambda (f seq) (if (nil? seq) (list) (cons (f (car seq)) (map f (cdr seq))))))
+(define map (lambda (f seq) (begin (if (nil? seq) (list) (cons (f (car seq)) (map f (cdr seq)))))))
 (define lifted-map (lambda (f seq) (if (nil? seq) (lifted-list) (lifted-cons (f (lifted-car seq)) (lifted-map f (lifted-cdr seq))))))
 
 ;; Combines the elements of seq using f.

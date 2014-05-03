@@ -87,31 +87,31 @@ public class CcgPatternTest extends TestCase {
     List<CcgParse> matches = pattern.match(parse);
     assertEquals(2, matches.size());
     
-    pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (and (syntax \"N{0}\") isTerminal))))");
+    pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (chain (syntax \"N{0}\") isTerminal))))");
     parse = parse(parser, Arrays.asList("the", "green", "block", "near", "object"));
     matches = pattern.match(parse);
     assertEquals(4, matches.size());
   }
 
   public void testSubtreePattern() {    
-    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (and (syntax \"N{0}\")))))");
+    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (chain (syntax \"N{0}\")))))");
     CcgParse parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     List<CcgParse> matches = pattern.match(parse);
     assertEquals(3, matches.size());
     
-    pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (head_subtree (and (syntax \"N{0}\")))))");
+    pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (head-subtree (chain (syntax \"N{0}\")))))");
     parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     matches = pattern.match(parse);
     assertEquals(2, matches.size());
   }
 
   public void testLogicalFormPattern() {
-    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (lf_regex \".*pred:object.*\"))");
+    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (lf-regex \".*pred:object.*\"))");
     CcgParse parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     List<CcgParse> matches = pattern.match(parse);
     assertEquals(4, matches.size());
     
-    pattern = CcgPatternUtils.parseFrom("(subtree (lf_regex \".*pred:block.*\"))");
+    pattern = CcgPatternUtils.parseFrom("(subtree (lf-regex \".*pred:block.*\"))");
     parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     matches = pattern.match(parse);
     assertEquals(3, matches.size());

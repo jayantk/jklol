@@ -22,12 +22,13 @@ public class CcgPatternUtils {
     Environment env = Environment.empty();
     env.bindName("word", new WordPatternFunction());
     env.bindName("syntax", new SyntaxPatternFunction());
-    env.bindName("lf_regex", new LogicalFormPatternFunction());
-    env.bindName("and", new AndPatternFunction());
-    env.bindName("or", new OrPatternFunction());
+    env.bindName("lf-regex", new LogicalFormPatternFunction());
+    env.bindName("chain", new AndPatternFunction());
+    env.bindName("union", new OrPatternFunction());
     env.bindName("subtree", new SubtreePatternFunction(false));
-    env.bindName("head_subtree", new SubtreePatternFunction(true));
+    env.bindName("head-subtree", new SubtreePatternFunction(true));
     env.bindName("combinator", new CombinatorPatternFunction());
+    env.bindName("smallest", new SmallestPatternFunction());
     env.bindName("isTerminal", new CcgTerminalPattern(true));
     env.bindName("isNonterminal", new CcgTerminalPattern(false));
 
@@ -71,7 +72,7 @@ public class CcgPatternUtils {
       for (Object argumentValue : argumentValues) {
         childPatterns.add((CcgPattern) argumentValue);
       }
-      return new CcgAndPattern(childPatterns);
+      return new CcgChainPattern(childPatterns);
     }
   }
 
@@ -82,7 +83,7 @@ public class CcgPatternUtils {
       for (Object argumentValue : argumentValues) {
         childPatterns.add((CcgPattern) argumentValue);
       }
-      return new CcgOrPattern(childPatterns);
+      return new CcgUnionPattern(childPatterns);
     }
   }
 
@@ -106,6 +107,14 @@ public class CcgPatternUtils {
       Preconditions.checkArgument(argumentValues.size() == 2);
       return new CcgCombinatorPattern((CcgPattern) argumentValues.get(0),
           (CcgPattern) argumentValues.get(1));
+    }
+  }
+
+  private static class SmallestPatternFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return new CcgSmallestPattern((CcgPattern) argumentValues.get(0));
     }
   }
 

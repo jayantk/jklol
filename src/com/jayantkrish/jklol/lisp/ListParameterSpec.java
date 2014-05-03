@@ -41,6 +41,16 @@ public class ListParameterSpec extends AbstractParameterSpec {
 
     return new ListSufficientStatistics(names, parameters);
   }
+  
+  /**
+   * Gets the ith set of parameters in this list.
+   * 
+   * @param i
+   * @return
+   */
+  public ParameterSpec get(int i) {
+    return children.get(i);
+  }
 
   @Override
   public ParameterSpec getParametersById(int id) {
@@ -67,15 +77,5 @@ public class ListParameterSpec extends AbstractParameterSpec {
     }
     
     return new ListParameterSpec(getId(), wrapped);
-  }
-
-  @Override
-  public Object toArgument() {
-    List<Object> childArguments = Lists.newArrayList();
-    for (ParameterSpec child : children) {
-      childArguments.add(child.toArgument());
-    }
-
-    return ConsValue.listToConsList(childArguments);
   }
 }

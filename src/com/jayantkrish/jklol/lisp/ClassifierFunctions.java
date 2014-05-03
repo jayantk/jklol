@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
 import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -280,6 +281,26 @@ public class ClassifierFunctions {
           DiscreteVariable.sequence(name, dimensionality));
 
       return TensorParameterSpec.zero(AbstractParameterSpec.getUniqueId(), parameterVar);        
+    }
+  }
+
+  public static class MakeParameterList implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      List<ParameterSpec> childParameters = Lists.newArrayList(ConsValue
+          .consListToList(argumentValues.get(0), ParameterSpec.class));
+      return new ListParameterSpec(AbstractParameterSpec.getUniqueId(), childParameters);
+    }
+  }
+
+  public static class GetIthParameter implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      ListParameterSpec parameters = (ListParameterSpec) argumentValues.get(0);
+      int index = (Integer) argumentValues.get(1);
+      return parameters.get(index);
     }
   }
 }

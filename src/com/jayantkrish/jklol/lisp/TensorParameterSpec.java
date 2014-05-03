@@ -52,11 +52,6 @@ public class TensorParameterSpec extends AbstractParameterSpec {
     return new TensorParameterSpec(getId(), parameterVars, parameters);
   }
 
-  @Override
-  public Object toArgument() {
-    return this;
-  }
-
   public String toString() {
     return "parameters:" + currentParameters.getDescription();
   }

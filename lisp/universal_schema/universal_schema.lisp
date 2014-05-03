@@ -72,8 +72,7 @@
 ;; a particular word / entity.
 (define get-params (element element-list parameter-list)
   (let ((ind (dictionary-lookup element element-list)))
-    (get-ith-element parameter-list 0)))
-;    (get-ith-element parameter-list ind)))
+    (get-ith-parameter parameter-list ind)))
 
 (define get-word-params (word word-parameter-list)
   (get-params word words word-parameter-list))
@@ -107,15 +106,15 @@
   word-rel)
 
 (define expression-family (parameters)
-  (let ((word-parameters (car parameters))
-        (entity-parameters (cadr parameters))
-        (word-rel-parameters (caddr parameters))
-        (entity-tuple-parameters (cadddr parameters))
+  (let ((word-parameters (get-ith-parameter parameters 0))
+        (entity-parameters (get-ith-parameter parameters 1))
+        (word-rel-parameters (get-ith-parameter parameters 2))
+        (entity-tuple-parameters (get-ith-parameter parameters 3))
         (word-cat (word-family word-parameters entity-parameters))
         (word-rel (word-rel-family word-rel-parameters entity-tuple-parameters)))
     (define expression-evaluator (expression entities)
       (let ((cur-entities entities))
-        (display expression)
+        ; (display expression)
         (eval expression)))
     expression-evaluator))
 
@@ -124,13 +123,14 @@
 
 (display "Made training data.")
 
-(define expression-parameters (list (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size words)))
-                                    (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size entities)))
-                                    (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size words)))
-                                    (map (lambda (ent-row) (map 
+(define expression-parameters (make-parameter-list (list 
+                                                    (make-parameter-list (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size words))))
+                                                    (make-parameter-list (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size entities))))
+                                                    (make-parameter-list (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size words))))
+                                                    (make-parameter-list (map (lambda (ent-row) (map 
                                                             (lambda (x) (make-vector-parameters latent-dimensionality))
-                                                            (cadr ent-row))) entity-tuples)
-                                    ))
+                                                            (cadr ent-row))) entity-tuples))
+                                    )))
 
 (display "Training...")
 (define best-params (opt expression-family expression-parameters training-data))

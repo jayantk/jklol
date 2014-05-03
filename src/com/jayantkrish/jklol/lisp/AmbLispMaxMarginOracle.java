@@ -40,7 +40,7 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
   @Override
   public AmbFunctionValue instantiateModel(SufficientStatistics parameters) {
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
-    Object value = family.apply(Arrays.asList(parameterSpec.wrap(parameters).toArgument()),
+    Object value = family.apply(Arrays.<Object>asList(parameterSpec.wrap(parameters)),
         environment, newBuilder);
     Preconditions.checkState(value instanceof AmbFunctionValue);    
     return (AmbFunctionValue) value;

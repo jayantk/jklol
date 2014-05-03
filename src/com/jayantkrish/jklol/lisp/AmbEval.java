@@ -285,9 +285,8 @@ public class AmbEval {
           Preconditions.checkArgument(value instanceof AmbFunctionValue);
           AmbFunctionValue modelFamily = (AmbFunctionValue) value;
           
-          ParameterSpec parameterSpec = null;
-          Object parameterValue = eval(subexpressions.get(2), environment, builder).getValue();
-          parameterSpec = recursivelyBuildParameterSpec(parameterValue);
+          ParameterSpec parameterSpec = (ParameterSpec) eval(subexpressions.get(2), environment,
+              builder).getValue();
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
           List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
@@ -319,11 +318,11 @@ public class AmbEval {
           }
 
           StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new DefaultLogFunction());
+              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new DefaultLogFunction(100, false));
 
           SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
 
-          return new EvalResult(parameterSpec.wrap(parameters).toArgument());
+          return new EvalResult(parameterSpec.wrap(parameters));
         } else if (constantName.equals("opt-mm")) {
           Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
 
@@ -331,16 +330,8 @@ public class AmbEval {
           Preconditions.checkArgument(value instanceof AmbFunctionValue);
           AmbFunctionValue modelFamily = (AmbFunctionValue) value;
           
-          ParameterSpec parameterSpec = null;
-          Object parameterValue = eval(subexpressions.get(2), environment, builder).getValue();
-          if (parameterValue instanceof ParameterSpec) {
-            parameterSpec = (ParameterSpec) parameterValue;
-          } else if (parameterValue instanceof ConsValue) {
-            parameterSpec = new ListParameterSpec(AbstractParameterSpec.getUniqueId(),
-              ConsValue.consListToList(parameterValue, ParameterSpec.class));
-          } else {
-            throw new IllegalArgumentException("Illegal parameterSpec for opt: " + parameterValue);
-          }
+          ParameterSpec parameterSpec = (ParameterSpec) eval(subexpressions.get(2), environment,
+              builder).getValue();
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
           List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
@@ -379,25 +370,11 @@ public class AmbEval {
 
           // System.out.println(parameters.getDescription());
 
-          return new EvalResult(parameterSpec.wrap(parameters).toArgument());
+          return new EvalResult(parameterSpec.wrap(parameters));
         }
       }
 
       return doFunctionApplication(subexpressions, environment, builder);
-    }
-  }
-  
-  private ParameterSpec recursivelyBuildParameterSpec(Object parameterValue) {
-    if (parameterValue instanceof ParameterSpec) {
-      return (ParameterSpec) parameterValue;
-    } else if (parameterValue instanceof ConsValue || ConstantValue.NIL == parameterValue) {
-      List<ParameterSpec> childParameters = Lists.newArrayList();
-      for (Object childValue : ConsValue.consListToList(parameterValue, Object.class)) {
-        childParameters.add(recursivelyBuildParameterSpec(childValue));
-      }
-      return new ListParameterSpec(AbstractParameterSpec.getUniqueId(), childParameters);
-    } else {
-      throw new IllegalArgumentException("Illegal parameterSpec for opt: " + parameterValue);
     }
   }
 
@@ -544,6 +521,8 @@ public class AmbEval {
     env.bindName("make-featurized-classifier-parameters", new ClassifierFunctions.MakeFeaturizedClassifierParameters());
     env.bindName("make-vector-parameters", new ClassifierFunctions.MakeVectorParameters());
     env.bindName("make-inner-product-classifier", new ClassifierFunctions.MakeInnerProductClassifier());
+    env.bindName("make-parameter-list", new ClassifierFunctions.MakeParameterList());
+    env.bindName("get-ith-parameter", new ClassifierFunctions.GetIthParameter());
 
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));

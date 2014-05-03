@@ -42,11 +42,6 @@ public class FactorParameterSpec extends AbstractParameterSpec {
   public ParameterSpec wrap(SufficientStatistics parameters) {
     return new FactorParameterSpec(getId(), factor, parameters);
   }
-  
-  @Override
-  public Object toArgument() {
-    return this;
-  }
 
   public String toString() {
     return "parameters:" + currentParameters.getDescription();

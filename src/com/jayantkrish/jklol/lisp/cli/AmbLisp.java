@@ -38,6 +38,7 @@ public class AmbLisp extends AbstractCli {
       for (String line : IoUtils.readLines(filename)) {
         line = line.replaceAll(";.*", "");
         programBuilder.append(line);
+        programBuilder.append(" ");
       }
     }
 

@@ -66,6 +66,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
       AmbFunctionValue instantiatedModel, Example<List<Object>, AmbFunctionValue> example, LogFunction log) {
     // Evaluate the nondeterministic function on the current example to 
     // produce a factor graph for the distribution over outputs.
+    log.startTimer("compute_gradient/input_eval");
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
     Object inputApplicationResult = instantiatedModel.apply(example.getInput(), environment, newBuilder);
     ParametricFactorGraph pfg = newBuilder.buildNoBranching();
@@ -73,22 +74,29 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     Assignment inputAssignment = newBuilder.getAssignment();
     FactorGraph inputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
         .conditional(DynamicAssignment.EMPTY).conditional(inputAssignment);
+    log.stopTimer("compute_gradient/input_eval");
 
     // Compute the marginal distribution in this factor graph for
     // the first gradient term.
+    log.startTimer("compute_gradient/input_marginals");
     MarginalSet inputMarginals = marginalCalculator.computeMarginals(inputFactorGraph);
+    log.stopTimer("compute_gradient/input_marginals");
 
     // Apply the output filter.
+    log.startTimer("compute_gradient/output_eval");
     AmbFunctionValue outputCondition = example.getOutput();
     outputCondition.apply(Arrays.asList(inputApplicationResult), environment, newBuilder);
     pfg = newBuilder.buildNoBranching();
     Assignment outputAssignment = newBuilder.getAssignment();
     FactorGraph outputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
         .conditional(DynamicAssignment.EMPTY).conditional(outputAssignment);
+    log.stopTimer("compute_gradient/output_eval");
 
     // Compute the marginal distribution given the constraint on the
     // output.
+    log.startTimer("compute_gradient/output_marginals");
     MarginalSet outputMarginals = marginalCalculator.computeMarginals(outputFactorGraph);
+    log.stopTimer("compute_gradient/output_marginals");
 
     double inputLogPartitionFunction = inputMarginals.getLogPartitionFunction();
     double outputLogPartitionFunction = outputMarginals.getLogPartitionFunction();
@@ -102,7 +110,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     // Perform the gradient update. Note that this occurs after both marginal
     // calculations, since the marginal calculations may throw ZeroProbabilityErrors
     // (if inference in the graphical model fails.)
-    log.startTimer("update_gradient/increment");
+    log.startTimer("compute_gradient/increment_parameters");
     ParameterSpec wrappedGradient = parameterSpec.wrap(gradient);
     ParameterSpec wrappedCurrentParameters = parameterSpec.wrap(currentParameters);
     incrementSufficientStatistics(newBuilder, wrappedGradient, wrappedCurrentParameters,
@@ -118,7 +126,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     // System.out.println(outputMarginals);
     // System.out.println(gradient);
     // System.out.println("gradient l2: " + gradient.getL2Norm());
-    log.stopTimer("update_gradient/increment");
+    log.stopTimer("compute_gradient/increment_parameters");
 
     return outputLogPartitionFunction - inputLogPartitionFunction;
   }

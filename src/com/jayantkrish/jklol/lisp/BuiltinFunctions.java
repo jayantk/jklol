@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.lisp;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class BuiltinFunctions {
   
@@ -46,10 +47,10 @@ public class BuiltinFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1, "Wrong number of arguments: " + argumentValues);
-      return ConstantValue.NIL.equals(argumentValues.get(0)) ? ConstantValue.TRUE : ConstantValue.FALSE; 
+      return ConstantValue.NIL == argumentValues.get(0) ? ConstantValue.TRUE : ConstantValue.FALSE; 
     }
   }
-  
+
   public static class NotFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
@@ -241,5 +242,29 @@ public class BuiltinFunctions {
       }
     }
     return integerMultiply;
+  }
+
+  public static class MakeDictionaryFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      return IndexedList.<Object>create(argumentValues);
+    }
+  }
+
+  public static class DictionaryLookupFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      IndexedList<?> dictionary = (IndexedList<?>) argumentValues.get(1);
+      return dictionary.getIndex(argumentValues.get(0));
+    }
+  }
+
+  public static class DictionarySizeFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return ((IndexedList<?>) argumentValues.get(0)).size();
+    }
   }
 }

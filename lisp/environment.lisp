@@ -35,6 +35,8 @@
                                           (if (= i 0) (car seq)
                                             (get-ith-element (cdr seq) (- i 1))))))
 
+(define n-to-1 (lambda (n) (if (= n 0) (list) (cons n (n-to-1 (- n 1))))))
+
 (define find-index (elt seq) (find-index-helper elt seq 0))
 (define find-index-helper (elt seq i)
   (if (nil? seq)

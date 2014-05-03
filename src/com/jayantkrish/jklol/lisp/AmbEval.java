@@ -24,6 +24,7 @@ import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
@@ -318,7 +319,7 @@ public class AmbEval {
           }
 
           StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new NullLogFunction());
+              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new DefaultLogFunction());
 
           SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
 
@@ -389,7 +390,7 @@ public class AmbEval {
   private ParameterSpec recursivelyBuildParameterSpec(Object parameterValue) {
     if (parameterValue instanceof ParameterSpec) {
       return (ParameterSpec) parameterValue;
-    } else if (parameterValue instanceof ConsValue) {
+    } else if (parameterValue instanceof ConsValue || ConstantValue.NIL == parameterValue) {
       List<ParameterSpec> childParameters = Lists.newArrayList();
       for (Object childValue : ConsValue.consListToList(parameterValue, Object.class)) {
         childParameters.add(recursivelyBuildParameterSpec(childValue));
@@ -532,6 +533,10 @@ public class AmbEval {
     env.bindName("lifted-cdr", new WrappedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
     env.bindName("lifted-list", new WrappedBuiltinFunction(new BuiltinFunctions.ListFunction()));
 
+    env.bindName("make-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDictionaryFunction()));
+    env.bindName("dictionary-lookup", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryLookupFunction()));
+    env.bindName("dictionary-size", new RaisedBuiltinFunction(new BuiltinFunctions.DictionarySizeFunction()));
+
     env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
     env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());
     env.bindName("make-feature-factory", new WrappedBuiltinFunction(new ClassifierFunctions.MakeFeatureFactory()));
@@ -621,6 +626,7 @@ public class AmbEval {
       List<VariableNumMap> inputVars = Lists.newArrayList();
       VariableNumMap ambVars = VariableNumMap.EMPTY;
       int[] sizes = new int[argumentValues.size()];
+      boolean noAmbValues = true;
       for (int i = 0; i < argumentValues.size(); i++) {
         Object value = argumentValues.get(i);
         if (value instanceof AmbValue) {
@@ -629,11 +635,21 @@ public class AmbEval {
           sizes[i] = ambValue.getPossibleValues().size();
           ambVars = ambVars.union(ambValue.getVar());
           inputVars.add(ambValue.getVar());
+          noAmbValues = false;
         } else {
           inputVarValues.add(Lists.newArrayList(value));
           sizes[i] = 1;
           inputVars.add(null);
         }
+      }
+      
+      if (noAmbValues) {
+        // Short-circuit the more complex computation for efficiency.
+        List<Object> arguments = Lists.newArrayList();
+        for (List<Object> valueList : inputVarValues) {
+          arguments.add(Iterables.getOnlyElement(valueList));
+        }
+        return baseFunction.apply(arguments, env);
       }
 
       // Apply the function to every possible combination of 

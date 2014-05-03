@@ -45,18 +45,21 @@ public class ConsValue {
 
   /**
    * Returns {@code true} if this is a list, meaning it
-   * is a nested sequence of cons cell terminated by NIL.
+   * is a nested sequence of cons cells terminated by NIL.
    *
    * @return
    */
   public boolean isList() {
-    return ConstantValue.NIL.equals(cdr) ||
-        ((cdr instanceof ConsValue) && ((ConsValue) cdr).isList());
+    Object ptr = cdr;
+    while (ptr instanceof ConsValue) {
+      ptr = ((ConsValue) ptr).cdr;
+    }
+    return ptr == ConstantValue.NIL;
   }
 
   public static <T> List<T> consListToList(Object consList, Class<T> clazz) {
     List<T> accumulator = Lists.newArrayList();
-    while (!ConstantValue.NIL.equals(consList)) {
+    while (ConstantValue.NIL != consList) {
       ConsValue consValue = (ConsValue) consList;
       accumulator.add(clazz.cast(consValue.getCar()));
       consList = consValue.getCdr();

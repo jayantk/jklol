@@ -5,14 +5,19 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 public interface ParameterSpec {
 
   SufficientStatistics getCurrentParameters();
+
+  ParameterSpec wrap(SufficientStatistics parameters);
+
   
-  SufficientStatistics getCurrentParametersByIds(int[] ids);
+  SufficientStatistics getCurrentParametersByIds(int[] ids, SufficientStatistics parameters);
 
   SufficientStatistics getNewParameters();
 
   int getId();
 
-  ParameterSpec getParametersById(int id);
+  int[] getContainedIds();
 
-  ParameterSpec wrap(SufficientStatistics parameters);
+  boolean containsId(int id);
+
+  SufficientStatistics getParametersById(int id, SufficientStatistics parameters);
 }

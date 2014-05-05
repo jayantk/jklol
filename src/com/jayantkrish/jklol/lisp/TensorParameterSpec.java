@@ -39,14 +39,14 @@ public class TensorParameterSpec extends AbstractParameterSpec {
   }
 
   @Override
-  public ParameterSpec getParametersById(int id) {
+  public SufficientStatistics getParametersById(int id, SufficientStatistics parameters) {
     if (id == this.getId()) {
-      return this;
+      return parameters;
     } else {
       return null;
     }
   }
-  
+
   @Override
   public ParameterSpec wrap(SufficientStatistics parameters) {
     return new TensorParameterSpec(getId(), parameterVars, parameters);

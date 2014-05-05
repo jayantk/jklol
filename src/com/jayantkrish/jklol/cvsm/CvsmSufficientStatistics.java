@@ -197,9 +197,12 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
 
   @Override
   public ListSufficientStatistics coerceToList() {
-    // This method could actually be implemented fairly easily,
-    // at the risk of allowing inefficient code.
-    throw new UnsupportedOperationException("Not implemented.");
+    for (int i = 0; i < statistics.size(); i++) {
+      if (statistics.get(i) == null) {
+        statistics.set(i, families.get(i).get());
+      }
+    }
+    return new ListSufficientStatistics(names, statistics);
   }
 
   @Override

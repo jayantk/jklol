@@ -111,16 +111,14 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     // calculations, since the marginal calculations may throw ZeroProbabilityErrors
     // (if inference in the graphical model fails.)
     log.startTimer("compute_gradient/increment_parameters");
-    ParameterSpec wrappedGradient = parameterSpec.wrap(gradient);
-    ParameterSpec wrappedCurrentParameters = parameterSpec.wrap(currentParameters);
-    incrementSufficientStatistics(newBuilder, wrappedGradient, wrappedCurrentParameters,
+    incrementSufficientStatistics(newBuilder, parameterSpec, gradient, currentParameters,
         inputMarginals, inputAssignment, -1.0);
     // System.out.println("=== input marginals ===");
     // System.out.println(inputMarginals);
     // System.out.println(gradient);
     // System.out.println("gradient l2: " + gradient.getL2Norm());
 
-    incrementSufficientStatistics(newBuilder, wrappedGradient, wrappedCurrentParameters,
+    incrementSufficientStatistics(newBuilder, parameterSpec, gradient, currentParameters,
         outputMarginals, outputAssignment, 1.0);
     // System.out.println("=== output marginals ===");
     // System.out.println(outputMarginals);
@@ -132,16 +130,16 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
   }
 
   private static void incrementSufficientStatistics(ParametricBfgBuilder builder,
-      ParameterSpec gradient, ParameterSpec currentParameters, MarginalSet marginals,
-      Assignment assignment, double multiplier) {
+      ParameterSpec spec, SufficientStatistics gradient, SufficientStatistics currentParameters,
+      MarginalSet marginals, Assignment assignment, double multiplier) {
     for (MarkedVars mark : builder.getMarkedVars()) {
 
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
-      SufficientStatistics factorGradient = gradient
-          .getCurrentParametersByIds(mark.getParameterIds());
-      SufficientStatistics factorCurrentParameters = currentParameters
-          .getCurrentParametersByIds(mark.getParameterIds());
+      SufficientStatistics factorGradient = spec.getCurrentParametersByIds(
+          mark.getParameterIds(), gradient);
+      SufficientStatistics factorCurrentParameters = spec.getCurrentParametersByIds(
+          mark.getParameterIds(), currentParameters);
       VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
 
       // Figure out which variables have been conditioned on.

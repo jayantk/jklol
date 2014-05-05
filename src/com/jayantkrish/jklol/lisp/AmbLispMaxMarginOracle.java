@@ -92,26 +92,24 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
         outputConditionalAssignment);
 
     // Compute the gradient as a function of the two assignments.
-    ParameterSpec wrappedGradient = parameterSpec.wrap(gradient);
-    ParameterSpec wrappedCurrentParameters = parameterSpec.wrap(currentParameters);
-    incrementSufficientStatistics(inputBuilder, wrappedGradient, wrappedCurrentParameters,
+    incrementSufficientStatistics(inputBuilder, parameterSpec, gradient, currentParameters,
         costConditionalAssignment, -1.0);
-    incrementSufficientStatistics(outputBuilder, wrappedGradient, wrappedCurrentParameters,
+    incrementSufficientStatistics(outputBuilder, parameterSpec, gradient, currentParameters,
         outputConditionalAssignment, 1.0);
 
     return Math.min(0.0, outputConditionalScore - costConditionalScore);
   }
 
   private static void incrementSufficientStatistics(ParametricBfgBuilder builder,
-      ParameterSpec gradient, ParameterSpec currentParameters, Assignment assignment,
-      double multiplier) {
+      ParameterSpec spec, SufficientStatistics gradient, SufficientStatistics currentParameters,
+      Assignment assignment, double multiplier) {
     for (MarkedVars mark : builder.getMarkedVars()) {
       VariableNumMap vars = mark.getVars();
       ParametricFactor pf = mark.getFactor();
-      SufficientStatistics factorGradient = gradient.getCurrentParametersByIds(
-          mark.getParameterIds());
-      SufficientStatistics factorCurrentParameters = currentParameters.getCurrentParametersByIds(
-          mark.getParameterIds());
+      SufficientStatistics factorGradient = spec.getCurrentParametersByIds(
+          mark.getParameterIds(), gradient);
+      SufficientStatistics factorCurrentParameters = spec.getCurrentParametersByIds(
+          mark.getParameterIds(), currentParameters);
       VariableRelabeling relabeling = mark.getVarsToFactorRelabeling();
 
       // Figure out which variables have been conditioned on.

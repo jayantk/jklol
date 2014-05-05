@@ -247,7 +247,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
         double currentStepSize) {
       double rand = Pseudorandom.get().nextDouble();
       double objectiveValue = 0.0; 
-      if (rand < frequency) {
+      if (rand < frequency && l2Penalty != 0.0) {
         objectiveValue -= l2Penalty * currentParameters.getL2Norm() / (2.0 * frequency);
         gradient.increment(currentParameters, (-1 * l2Penalty) / frequency);
       }

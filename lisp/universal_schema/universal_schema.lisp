@@ -13,7 +13,7 @@
 (display "Running universal schema...")
 
 (define true-false (list #t #f))
-(define latent-dimensionality 10)
+(define latent-dimensionality 20)
 
 ;; (define entity-tuples (map (lambda (x) (list x entities)) entities))
 
@@ -61,6 +61,9 @@
    (lifted-map (lambda (tuple) (=> (lifted-car tuple) (lifted-cadr tuple)))
                (lifted-zip set1 set2))
    #t))
+
+(define get-elementwise-marginals (predicate-amb-list)
+  (lifted-map (lambda (x) (get-marginals x)) predicate-amb-list))
 
 ;; Trainable functions ;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -137,6 +140,8 @@
 (define best-params (opt expression-family expression-parameters training-data))
 
 (define expression-eval (lambda (expr) ((expression-family best-params) expr entities)))
+
+
 
 ;; (display "exists x st. (plano x) and (city x)?")
 ;; (display (get-marginals (expression-eval (quote (exists-func (lambda (x) (and ((mention "/en/plano") x) ((word-cat "city") x))) entities)))))

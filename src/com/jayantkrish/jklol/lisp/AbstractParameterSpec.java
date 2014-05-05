@@ -22,20 +22,30 @@ public abstract class AbstractParameterSpec implements ParameterSpec {
   }
 
   @Override
-  public SufficientStatistics getCurrentParametersByIds(int[] ids) {
+  public int[] getContainedIds() {
+    return new int[] {id};
+  }
+
+  @Override
+  public boolean containsId(int candidateId) {
+    return id == candidateId;
+  }
+
+  @Override
+  public SufficientStatistics getCurrentParametersByIds(int[] ids, SufficientStatistics parameters) {
     List<SufficientStatistics> stats = Lists.newArrayList();
     List<String> idNames = Lists.newArrayList();
     
     for (int id : ids) {
-      ParameterSpec params = getParametersById(id);
-      if (params == null) {
+      SufficientStatistics idParams = getParametersById(id, parameters);
+      if (idParams == null) {
         return null;
       } else {
-        stats.add(params.getCurrentParameters());
+        stats.add(idParams);
         idNames.add("id:" + id);
       }
     }
-    
+
     if (stats.size() == 1) {
       return stats.get(0);
     } else {

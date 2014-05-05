@@ -370,7 +370,9 @@ public class AmbEvalTest extends TestCase {
     String program = "(define label-list (list #t #f))" +
     		"(define word-list (list \"A\" \"B\" \"C\"))" +
     		"" +
-    		"(define sequence-family (lambda (word-parameters transition-parameters)" +
+    		"(define sequence-family (lambda (parameters)" +
+    		"  (let ((word-parameters (get-ith-parameter parameters 0))" +
+    		"        (transition-parameters (get-ith-parameter parameters 1)))" +
     		"  (define sequence-tag (lambda (seq)" +
     		"    (if (nil? seq) " +
     		"        (lifted-list)" +
@@ -384,7 +386,7 @@ public class AmbEvalTest extends TestCase {
     		"            (begin (define remaining-labels (sequence-tag (cdr seq)))" +
     		"              (make-indicator-classifier (lifted-list cur-label (lifted-car remaining-labels)) transition-parameters)" +
     		"              (lifted-cons cur-label remaining-labels)))))))" +
-    		"  sequence-tag))" +
+    		"  sequence-tag)))" +
     		"" +
     		"(define require-seq-equal (lambda (predicted actual)" +
     		"  (if (nil? actual) " +
@@ -396,10 +398,10 @@ public class AmbEvalTest extends TestCase {
     		"                            (list (list (list \"C\" \"B\" \"A\")) (lambda (label-seq) (require-seq-equal label-seq (list #t #t #t))))" +
     		"))" +
     		"" +
-    		"(define parameter-spec (list (make-indicator-classifier-parameters (list word-list label-list))" +
-    		"                             (make-indicator-classifier-parameters (list label-list label-list))))" +
+    		"(define parameter-spec (make-parameter-list (list (make-indicator-classifier-parameters (list word-list label-list))" +
+    		"                             (make-indicator-classifier-parameters (list label-list label-list)))))" +
     		"(define best-params (opt sequence-family parameter-spec training-data))" +
-    		"(define sequence-model (sequence-family (car best-params) (car (cdr best-params))))" +
+    		"(define sequence-model (sequence-family best-params))" +
     		"(define foo (get-best-value (sequence-model (list \"A\" \"C\" \"A\" \"B\"))))" +
     		"(define bar (get-best-value (sequence-model (list \"C\" \"B\" \"C\"))))" +
     		"(list foo bar)";

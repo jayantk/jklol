@@ -304,7 +304,7 @@ public class AmbEval {
               parameterSpec, new JunctionTree());
 
           // 4th argument is an optional parameter for providing optimization parameters.
-          int epochs = 50;
+          int epochs = 1;
           double l2Penalty = 0.0;
           if (subexpressions.size() >= 5) {
             Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
@@ -320,7 +320,7 @@ public class AmbEval {
           }
 
           StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new DefaultLogFunction(100, false));
+              trainingData.size() * epochs, 1, 1, true, false, l2Penalty, new DefaultLogFunction(100, false));
 
           SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
 

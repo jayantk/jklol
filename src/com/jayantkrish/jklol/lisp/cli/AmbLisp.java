@@ -1,7 +1,9 @@
 package com.jayantkrish.jklol.lisp.cli;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
-import java.util.Scanner;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -10,6 +12,7 @@ import joptsimple.OptionSpec;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.lisp.AmbEval;
+import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
@@ -18,17 +21,16 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class AmbLisp extends AbstractCli {
 
   private OptionSpec<Void> printFactorGraph;
-  private OptionSpec<Void> stdin;
+  private OptionSpec<Void> interactive;
   
   @Override
   public void initializeOptions(OptionParser parser) {
     printFactorGraph = parser.accepts("printFactorGraph");
-    stdin = parser.accepts("stdin");
+    interactive = parser.accepts("interactive");
   }
 
   @Override
   public void run(OptionSet options) {
-
     StringBuilder programBuilder = new StringBuilder();
     programBuilder.append("(begin ");
     // Non-option arguments are filenames containing the code to execute.
@@ -42,16 +44,6 @@ public class AmbLisp extends AbstractCli {
       }
     }
 
-    if (options.has(stdin)) {
-      // Any input on stdin is also evaluated after the filenames.
-      Scanner scanner = new Scanner(System.in);
-      while (scanner.hasNextLine()) {
-        String line = scanner.nextLine();
-        line = line.replaceAll(";.*", "");
-        programBuilder.append(line);
-      }
-    }
-
     programBuilder.append(" )");
     String program = programBuilder.toString();
 
@@ -59,11 +51,37 @@ public class AmbLisp extends AbstractCli {
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
     SExpression programExpression = parser.parseSingleExpression(program);
     ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
-    EvalResult result = eval.eval(programExpression, AmbEval.getDefaultEnvironment(), 
-        fgBuilder);
+    Environment environment = AmbEval.getDefaultEnvironment();
+    EvalResult result = eval.eval(programExpression, environment, fgBuilder);
 
     System.out.println(result.getValue());
-    
+
+    if (options.has(interactive)) {
+      System.out.println("Starting interactive mode.");
+            // Any input on stdin is also evaluated after the given files.
+      BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+      String line = null;
+      System.out.print(">> ");
+      try {
+        while ((line = in.readLine()) != null) {
+          line = line.replaceAll(";.*", "");
+
+          try {
+            SExpression expression = parser.parseSingleExpression(line);
+            result = eval.eval(expression, environment, fgBuilder);
+            System.out.println(result.getValue());
+          } catch (Exception e) {
+            System.out.println("Exception: " + e);
+          }
+
+          System.out.print(">> ");
+        }
+      } catch (IOException e) {
+        System.out.println("Terminating interactive mode.");
+      }
+    }
+
+
     if (options.has(printFactorGraph)) {
       System.out.println("Factor graph: ");
       System.out.println(fgBuilder.build().getParameterDescription());

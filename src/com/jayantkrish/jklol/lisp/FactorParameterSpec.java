@@ -14,7 +14,7 @@ public class FactorParameterSpec extends AbstractParameterSpec {
     this.factor = Preconditions.checkNotNull(factor);
     this.currentParameters = Preconditions.checkNotNull(currentParameters);
   }
-  
+
   public ParametricFactor getFactor() {
     return factor;
   }
@@ -30,14 +30,14 @@ public class FactorParameterSpec extends AbstractParameterSpec {
   }
 
   @Override
-  public ParameterSpec getParametersById(int id) {
+  public SufficientStatistics getParametersById(int id, SufficientStatistics parameters) {
     if (id == this.getId()) {
-      return this;
+      return parameters;
     } else {
       return null;
     }
   }
-  
+
   @Override
   public ParameterSpec wrap(SufficientStatistics parameters) {
     return new FactorParameterSpec(getId(), factor, parameters);

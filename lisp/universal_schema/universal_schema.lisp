@@ -114,24 +114,20 @@
         (word-rel (word-rel-family word-rel-parameters entity-tuple-parameters)))
     (define expression-evaluator (expression entities)
       (let ((cur-entities entities))
-        ; (display expression)
+;;      (display expression)
         (eval expression)))
     expression-evaluator))
 
 (display "Making training data...")
-(define foo (map (lambda (x) 0) training-inputs))
 
-(display "foo...")
-
-(define training-data (zip training-inputs
-                           (map (lambda (x) (lambda (prediction) (require (= prediction #t)))) training-inputs)))
+(define training-data (array-zip training-inputs
+                           (array-map (lambda (x) (lambda (prediction) (require (= prediction #t)))) training-inputs)))
 
 (display "Made training data.")
-
 (define expression-parameters (make-parameter-list (list 
-                                                    (make-parameter-list (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size words))))
-                                                    (make-parameter-list (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size entities))))
-                                                    (make-parameter-list (map (lambda (x) (make-vector-parameters latent-dimensionality)) (n-to-1 (dictionary-size words))))
+                                                    (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array words)))
+                                                    (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array entities)))
+                                                    (make-parameter-list (array-map (lambda (x) (make-vector-parameters latent-dimensionality)) (dictionary-to-array words)))
                                                     (make-parameter-list (map (lambda (ent-row) (map 
                                                             (lambda (x) (make-vector-parameters latent-dimensionality))
                                                             (cadr ent-row))) entity-tuples))

@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
 import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -288,8 +287,8 @@ public class ClassifierFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      List<ParameterSpec> childParameters = Lists.newArrayList(ConsValue
-          .consListToList(argumentValues.get(0), ParameterSpec.class));
+      List<ParameterSpec> childParameters = ConsValue.consListOrArrayToList(
+          argumentValues.get(0), ParameterSpec.class);
       return new ListParameterSpec(AbstractParameterSpec.getUniqueId(), childParameters);
     }
   }

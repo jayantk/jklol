@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.lisp;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class BuiltinFunctions {
@@ -266,6 +267,48 @@ public class BuiltinFunctions {
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return ((IndexedList<?>) argumentValues.get(0)).size();
+    }
+  }
+
+  public static class DictionaryToArrayFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return ((IndexedList<?>) argumentValues.get(0)).items().toArray();
+    }
+  }
+
+  public static class MakeArrayFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      return argumentValues.toArray();
+    }
+  }
+  
+  public static class ArrayZipFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() > 0);
+      Object[][] arrays = new Object[argumentValues.size()][];
+      for (int i = 0; i < argumentValues.size(); i++) {
+        arrays[i] = (Object[]) argumentValues.get(i);
+      }
+      
+      int size = arrays[0].length;
+      for (int i = 0; i < arrays.length; i++) {
+        Preconditions.checkArgument(arrays[i].length == size,
+            "All arrays passed to zip must have the same length.");
+      }
+      
+      Object[] result = new Object[size];
+      for (int i = 0; i < size; i++) {
+        List<Object> zippedElts = Lists.newArrayList();
+        for (int j = 0; j < arrays.length; j++) {
+          zippedElts.add(arrays[j][i]);
+        }
+        result[i] = ConsValue.listToConsList(zippedElts);
+      }
+      return result;
     }
   }
 }

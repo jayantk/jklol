@@ -57,6 +57,19 @@ public class ConsValue {
     return ptr == ConstantValue.NIL;
   }
 
+  public static <T> List<T> consListOrArrayToList(Object consList, Class<T> clazz) {
+    if (consList instanceof Object[]) {
+      List<T> list = Lists.newArrayList();
+      Object[] array = (Object[]) consList;
+      for (int i = 0; i < array.length; i++) {
+        list.add(clazz.cast(array[i]));
+      }
+      return list;
+    } else {
+      return ConsValue.consListToList(consList, clazz);
+    }
+  }
+
   public static <T> List<T> consListToList(Object consList, Class<T> clazz) {
     List<T> accumulator = Lists.newArrayList();
     while (ConstantValue.NIL != consList) {

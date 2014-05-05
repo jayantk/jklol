@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.lisp;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -289,7 +290,8 @@ public class AmbEval {
               builder).getValue();
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
-          List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
+          List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
+              trainingDataValue, ConsValue.class);
           List<Example<List<Object>, AmbFunctionValue>> trainingData = Lists.newArrayList();
           for (ConsValue example : trainingExampleObjects) {
             List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
@@ -334,7 +336,8 @@ public class AmbEval {
               builder).getValue();
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
-          List<ConsValue> trainingExampleObjects = ConsValue.consListToList(trainingDataValue, ConsValue.class);
+          List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
+              trainingDataValue, ConsValue.class);
           List<Example<List<Object>, Example<AmbFunctionValue, AmbFunctionValue>>> trainingData = Lists.newArrayList();
           for (ConsValue example : trainingExampleObjects) {
             List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
@@ -513,6 +516,11 @@ public class AmbEval {
     env.bindName("make-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDictionaryFunction()));
     env.bindName("dictionary-lookup", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryLookupFunction()));
     env.bindName("dictionary-size", new RaisedBuiltinFunction(new BuiltinFunctions.DictionarySizeFunction()));
+    env.bindName("dictionary-to-array", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryToArrayFunction()));
+
+    env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()));
+    env.bindName("array-map", new ArrayMapFunction());
+    env.bindName("array-zip", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayZipFunction()));
 
     env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
     env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());
@@ -694,6 +702,30 @@ public class AmbEval {
     @Override
     public String toString() {
       return baseFunction.toString();
+    }
+  }
+  
+  /**
+   * Applies a given function to each element of an array.
+   * This function cannot be implemented using raising because
+   * the function argument has a different type in {@code AmbEval}
+   * and {@code LispEval}.
+   * 
+   * @author jayant
+   */
+  public static class ArrayMapFunction implements AmbFunctionValue {
+    @Override    
+    public Object apply(List<Object> argumentValues, Environment env,
+        ParametricBfgBuilder gfgBuilder) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      AmbFunctionValue function = (AmbFunctionValue) argumentValues.get(0);
+      Object[] values = (Object[]) argumentValues.get(1);
+      
+      Object[] result = new Object[values.length];
+      for (int i = 0; i < values.length; i++) {
+        result[i] = function.apply(Arrays.asList(values[i]), env, gfgBuilder);
+      }
+      return result;
     }
   }
 }

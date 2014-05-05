@@ -1,8 +1,10 @@
 package com.jayantkrish.jklol.cvsm;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
@@ -25,11 +27,11 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
 
   // Names for the statistics.
   private final IndexedList<String> names;
-  private final List<? extends ParametricFamily<?>> families;
+  private final List<Supplier<SufficientStatistics>> families;
   private final List<SufficientStatistics> statistics;
 
   public CvsmSufficientStatistics(IndexedList<String> names,
-      List<? extends ParametricFamily<?>> families, List<SufficientStatistics> statistics) {
+      List<Supplier<SufficientStatistics>> families, List<SufficientStatistics> statistics) {
     this.names = Preconditions.checkNotNull(names);
     this.families = Preconditions.checkNotNull(families);
     this.statistics = Lists.newArrayList(Preconditions.checkNotNull(statistics));
@@ -61,7 +63,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
     if (statistics.get(i) == null) {
       // Note that the expected contract is that mutating the returned
       // value affects the values in this.
-      statistics.set(i, families.get(i).getNewSufficientStatistics());
+      statistics.set(i, families.get(i).get());
     }
     return statistics.get(i);
   }
@@ -75,7 +77,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
    */
   public void incrementEntry(int i, SufficientStatistics increment) {
     if (statistics.get(i) == null) {
-      statistics.set(i, families.get(i).getNewSufficientStatistics());
+      statistics.set(i, families.get(i).get());
     }
     statistics.get(i).increment(increment, 1.0);
   }
@@ -104,7 +106,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   public void increment(double amount) {
     for (int i = 0; i < statistics.size(); i++) {
       if (statistics.get(i) == null) {
-        statistics.set(i, families.get(i).getNewSufficientStatistics());
+        statistics.set(i, families.get(i).get());
       }
       statistics.get(i).increment(amount);
     }
@@ -128,7 +130,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   public void perturb(double stddev) {
     for (int i = 0; i < statistics.size(); i++) {
       if (statistics.get(i) == null) {
-        statistics.set(i, families.get(i).getNewSufficientStatistics());
+        statistics.set(i, families.get(i).get());
       }
       statistics.get(i).perturb(stddev);
     }
@@ -204,7 +206,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   public void makeDense() {
     for (int i = 0; i < statistics.size(); i++) {
       if (statistics.get(i) == null) {
-        statistics.set(i, families.get(i).getNewSufficientStatistics());
+        statistics.set(i, families.get(i).get());
       }
       statistics.get(i).makeDense();
     }
@@ -213,5 +215,20 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   @Override
   public String getDescription() {
     return statistics.toString();
+  }
+
+  public static class ParametricFamilySupplier implements Supplier<SufficientStatistics>, Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final ParametricFamily<?> family;
+
+    public ParametricFamilySupplier(ParametricFamily<?> family) {
+      this.family = Preconditions.checkNotNull(family);
+    }
+
+    @Override
+    public SufficientStatistics get() {
+      return family.getNewSufficientStatistics();
+    }
   }
 }

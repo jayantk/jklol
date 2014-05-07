@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public abstract class AbstractParameterSpec implements ParameterSpec {
+  private static final long serialVersionUID = 1L;
 
   private final int id;
   

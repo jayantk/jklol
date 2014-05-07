@@ -7,8 +7,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -25,19 +27,22 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
- * A graphical model represented as a set of factors over a set of variables.
- * Both {@code FactorGraph}s and the {@link Factor}s they contain are immutable.
+ * A graphical model represented as a set of factors over a set of
+ * variables. Both {@code FactorGraph}s and the {@link Factor}s they
+ * contain are immutable.
  * 
  * <p>
- * This class may represent a conditional probability distribution, where some
- * variables' values are provided as an {@code Assignment}. Conversely, factor
- * graphs may require some variables to be conditioned on before they represent
- * a legitimate probability distribution.
+ * This class may represent a conditional probability distribution,
+ * where some variables' values are provided as an {@code Assignment}.
+ * Conversely, factor graphs may require some variables to be
+ * conditioned on before they represent a legitimate probability
+ * distribution.
  * 
  * <p>
- * {@code FactorGraph}s can be constructed incrementally using methods such as
- * {@link #addVariable(String, Variable)}. These construction methods return new
- * instances of this class with certain fields modified.
+ * {@code FactorGraph}s can be constructed incrementally using methods
+ * such as {@link #addVariable(String, Variable)}. These construction
+ * methods return new instances of this class with certain fields
+ * modified.
  * 
  * @author jayantk
  */
@@ -60,9 +65,9 @@ public class FactorGraph implements Serializable {
   private InferenceHint inferenceHint;
 
   /**
-   * Create an empty factor graph, without any variables or factors. The factor
-   * graph can be incrementally constructed from this point using methods like
-   * {@link #addVariable(String, Variable)}.
+   * Create an empty factor graph, without any variables or factors.
+   * The factor graph can be incrementally constructed from this point
+   * using methods like {@link #addVariable(String, Variable)}.
    */
   public FactorGraph() {
     variables = VariableNumMap.EMPTY;
@@ -82,7 +87,7 @@ public class FactorGraph implements Serializable {
     this.factorNames = Preconditions.checkNotNull(factorNames);
     Preconditions.checkArgument(factors.length == factorNames.length,
         "factors and factorNames must have the same length.");
-    
+
     int numMapEntries = 0;
     for (int i = 0; i < factors.length; i++) {
       numMapEntries += factors[i].getVars().size();
@@ -131,9 +136,9 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Constructs a {@code FactorGraph} directly from a list of factors. The
-   * variables and variable numbers in the graph are determined by the factors,
-   * and their names are unspecified.
+   * Constructs a {@code FactorGraph} directly from a list of factors.
+   * The variables and variable numbers in the graph are determined by
+   * the factors, and their names are unspecified.
    * 
    * @param factors
    */
@@ -166,8 +171,8 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets the indices of all factors which are adjacent (that is, share at least
-   * one variable) with {@code factorNum}.
+   * Gets the indices of all factors which are adjacent (that is,
+   * share at least one variable) with {@code factorNum}.
    * 
    * @param factorNum
    * @return
@@ -186,7 +191,7 @@ public class FactorGraph implements Serializable {
   public List<Factor> getFactors() {
     return Arrays.asList(factors);
   }
-  
+
   private final int getFactorIndexByName(String name) {
     for (int i = 0; i < factorNames.length; i++) {
       if (factorNames[i].equals(name)) {
@@ -197,8 +202,8 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets the factor in this named {@code name}. Returns {@code null} if no such
-   * factor exists.
+   * Gets the factor in this named {@code name}. Returns {@code null}
+   * if no such factor exists.
    * 
    * @param name
    * @return
@@ -213,10 +218,11 @@ public class FactorGraph implements Serializable {
 
   /**
    * Gets a list of factors in this. This method is similar to
-   * {@link #getFactors()}, except that it merges together factors defined over
-   * the same variables. Hence, no factor in the returned list will be defined
-   * over a subset of the variables in another factor. The returned factors
-   * define the same probability distribution as this.
+   * {@link #getFactors()}, except that it merges together factors
+   * defined over the same variables. Hence, no factor in the returned
+   * list will be defined over a subset of the variables in another
+   * factor. The returned factors define the same probability
+   * distribution as this.
    * 
    * @return
    */
@@ -253,7 +259,8 @@ public class FactorGraph implements Serializable {
     // Merge factors using size as a guideline
     List<Factor> finalFactors = Lists.newArrayListWithCapacity(factorsToMerge.size());
     for (List<Factor> toMerge : factorsToMerge) {
-      // Sort the factors by their .size() attribute, sparsest factors first.
+      // Sort the factors by their .size() attribute, sparsest factors
+      // first.
       Collections.sort(toMerge, new Comparator<Factor>() {
         public int compare(Factor f1, Factor f2) {
           return (int) (f1.size() - f2.size());
@@ -265,8 +272,9 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets the names of the factors in {@code this}. The ith returned entry is
-   * the name of the ith factor returned by {@link #getFactors()}.
+   * Gets the names of the factors in {@code this}. The ith returned
+   * entry is the name of the ith factor returned by
+   * {@link #getFactors()}.
    * 
    * @return
    */
@@ -275,9 +283,9 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Get the variables that this factor graph is defined over. This method only
-   * returns variables with probability distributions over them, i.e., variables
-   * that have not been conditioned on.
+   * Get the variables that this factor graph is defined over. This
+   * method only returns variables with probability distributions over
+   * them, i.e., variables that have not been conditioned on.
    * 
    * @return
    */
@@ -286,9 +294,9 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets any variables whose values have been conditioned on. The returned set
-   * of variables matches the variables that {@code this.getConditionedValues()}
-   * is defined over.
+   * Gets any variables whose values have been conditioned on. The
+   * returned set of variables matches the variables that
+   * {@code this.getConditionedValues()} is defined over.
    * 
    * @return
    */
@@ -297,9 +305,9 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets all of the variables contained in this factor graph, including
-   * variables with probability distributions as well as variables with fixed
-   * values.
+   * Gets all of the variables contained in this factor graph,
+   * including variables with probability distributions as well as
+   * variables with fixed values.
    * 
    * @return
    */
@@ -308,7 +316,8 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets the assignment to variables whose values have been conditioned on.
+   * Gets the assignment to variables whose values have been
+   * conditioned on.
    * 
    * @return
    */
@@ -333,7 +342,8 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Identical to {@link #outcomeToAssignment(List, List)}, but with arrays.
+   * Identical to {@link #outcomeToAssignment(List, List)}, but with
+   * arrays.
    * 
    * @param factorVariables
    * @param outcome
@@ -371,18 +381,20 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets a hint about how to efficiently perform inference with this model. May
-   * return {@code null}, in which case the hint should be ignored.
+   * Gets a hint about how to efficiently perform inference with this
+   * model. May return {@code null}, in which case the hint should be
+   * ignored.
    */
   public InferenceHint getInferenceHint() {
     return inferenceHint;
   }
 
   /**
-   * Gets the unnormalized probability of {@code assignment}. This method only
-   * supports assignments which do not require inference, so {@code assignment}
-   * must contain a value for every variable in {@code this}. To calculate
-   * marginal probabilities or max-marginals, see {@link InferenceEngine}.
+   * Gets the unnormalized probability of {@code assignment}. This
+   * method only supports assignments which do not require inference,
+   * so {@code assignment} must contain a value for every variable in
+   * {@code this}. To calculate marginal probabilities or
+   * max-marginals, see {@link InferenceEngine}.
    * 
    * @param assignment
    * @return
@@ -399,11 +411,11 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets the unnormalized log probability of {@code assignment}. This method
-   * only supports assignments which do not require inference, so
-   * {@code assignment} must contain a value for every variable in {@code this}.
-   * To calculate marginal probabilities or max-marginals, see
-   * {@link InferenceEngine}.
+   * Gets the unnormalized log probability of {@code assignment}. This
+   * method only supports assignments which do not require inference,
+   * so {@code assignment} must contain a value for every variable in
+   * {@code this}. To calculate marginal probabilities or
+   * max-marginals, see {@link InferenceEngine}.
    * 
    * @param assignment
    * @return
@@ -436,11 +448,11 @@ public class FactorGraph implements Serializable {
   // /////////////////////////////////////////////////////////////////
 
   /**
-   * Gets a new {@code FactorGraph} identical to this one, except with an
-   * additional variable. The new variable is named {@code variableName} and has
-   * type {@code variable}. Each variable in a factor graph must have a unique
-   * name; hence {@code this} must not already contain a variable named
-   * {@code variableName}.
+   * Gets a new {@code FactorGraph} identical to this one, except with
+   * an additional variable. The new variable is named
+   * {@code variableName} and has type {@code variable}. Each variable
+   * in a factor graph must have a unique name; hence {@code this}
+   * must not already contain a variable named {@code variableName}.
    */
   public FactorGraph addVariable(String variableName, Variable variable) {
     Preconditions.checkArgument(!getVariables().contains(variableName));
@@ -455,15 +467,16 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets a new {@code FactorGraph} identical to this one, except with an
-   * additional factor. {@code factor} must be defined over variables which are
-   * already in {@code this} graph.
+   * Gets a new {@code FactorGraph} identical to this one, except with
+   * an additional factor. {@code factor} must be defined over
+   * variables which are already in {@code this} graph.
    */
   public FactorGraph addFactor(String factorName, Factor factor) {
     Preconditions.checkArgument(getVariables().containsAll(factor.getVars()));
 
     Factor[] newFactors = Arrays.copyOf(factors, factors.length + 1);
-    String[] newFactorNames = Arrays.copyOf(factorNames, factorNames.length + 1);;
+    String[] newFactorNames = Arrays.copyOf(factorNames, factorNames.length + 1);
+    ;
     newFactors[factors.length] = factor;
     newFactorNames[factors.length] = factorName;
     return new FactorGraph(variables, newFactors, newFactorNames, conditionedVariables,
@@ -471,15 +484,17 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets a new {@code FactorGraph} identical to this one, except with every
-   * variable in {@code varNumsToEliminate} marginalized out. The returned
-   * {@code FactorGraph} is defined on the variables in {@code this}, minus any
-   * of the passed-in variables. This procedure performs variable elimination on
-   * each variable in the order returned by the iterator over
-   * {@code varNumsToEliminate}. Choosing a good order (i.e., one with low
-   * treewidth) can dramatically improve the performance of this method. This
-   * method is preferred if you wish to actively manipulate the returned factor
-   * graph. If you simply want marginals, see {@link MarginalCalculator}.
+   * Gets a new {@code FactorGraph} identical to this one, except with
+   * every variable in {@code varNumsToEliminate} marginalized out.
+   * The returned {@code FactorGraph} is defined on the variables in
+   * {@code this}, minus any of the passed-in variables. This
+   * procedure performs variable elimination on each variable in the
+   * order returned by the iterator over {@code varNumsToEliminate}.
+   * Choosing a good order (i.e., one with low treewidth) can
+   * dramatically improve the performance of this method. This method
+   * is preferred if you wish to actively manipulate the returned
+   * factor graph. If you simply want marginals, see
+   * {@link MarginalCalculator}.
    * 
    * @param factor
    * @return
@@ -501,8 +516,10 @@ public class FactorGraph implements Serializable {
         }
       }
 
-      // Identify the factors which contain the variable, which must be
-      // multiplied together. All other factors can be immediately copied into
+      // Identify the factors which contain the variable, which must
+      // be
+      // multiplied together. All other factors can be immediately
+      // copied into
       // the next factor graph.
       List<Factor> factorsToMultiply = Lists.newArrayList();
       String mulName = null;
@@ -514,7 +531,8 @@ public class FactorGraph implements Serializable {
           factorsToMultiply.add(factor);
           mulName = currentFactorNames.get(i);
         } else {
-          // No variable in factor is being eliminated, so we don't have to
+          // No variable in factor is being eliminated, so we don't
+          // have to
           // modify it.
           nextFactorGraph = nextFactorGraph.addFactor(currentFactorNames.get(i), factor);
         }
@@ -533,11 +551,12 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Convert this factor graph into a conditional probability distribution given
-   * {@code assignment}. {@code assignment} may contain variables which this
-   * graph is not defined over; these extra variables are ignored by this
-   * method. The returned factor graph contains at least the variables in this,
-   * minus any variables with values in {@code assignment}. The names and
+   * Convert this factor graph into a conditional probability
+   * distribution given {@code assignment}. {@code assignment} may
+   * contain variables which this graph is not defined over; these
+   * extra variables are ignored by this method. The returned factor
+   * graph contains at least the variables in this, minus any
+   * variables with values in {@code assignment}. The names and
    * indices of these variables are preserved by this method.
    * 
    * @param assignment
@@ -570,10 +589,67 @@ public class FactorGraph implements Serializable {
   }
 
   /**
-   * Gets a new {@code FactorGraph} identical to this one, with an added
-   * inference hint. {@code inferenceHint} is a suggestion for performing
-   * efficient inference with {@code this}. {@code inferenceHint} can be
-   * {@code null}, in which case the hint is ignored during inference.
+   * Gets one or more connected components of this factor graph that
+   * contain all of {@code vars}. The returned factor graph accurately
+   * represent the marginal distribution over {@code vars} assuming
+   * that any discarded factor graph portions have nonzero partition
+   * functions.
+   * 
+   * @param vars
+   * @return
+   */
+  public FactorGraph getConnectedComponent(VariableNumMap vars) {
+    // Do a breadth-first search over the bipartite 
+    // variable and factor graph to identify the
+    // relevant subset of the factor graph.
+    Queue<Integer> varsToTraverse = new LinkedList<Integer>(vars.getVariableNums());
+    Queue<Integer> factorsToTraverse = new LinkedList<Integer>();
+
+    Set<Integer> traversedVars = Sets.newHashSet();
+    Set<Integer> traversedFactors = Sets.newHashSet();
+    while (varsToTraverse.size() > 0 || factorsToTraverse.size() > 0) {
+      if (varsToTraverse.size() > 0) {
+        // Traverse the next variable.
+        int var = varsToTraverse.poll();
+        Collection<Integer> adjacentFactors = variableFactorMap.get(var);
+        for (Integer factor : adjacentFactors) {
+          if (!traversedFactors.contains(factor)) {
+            factorsToTraverse.add(factor);
+          }
+        }
+        traversedVars.add(var);
+      } else if (factorsToTraverse.size() > 0) {
+        // Traverse the next factor.
+        int factor = factorsToTraverse.poll();
+        Collection<Integer> adjacentVars = factorVariableMap.get(factor);
+        for (Integer var : adjacentVars) {
+          if (!traversedVars.contains(var)) {
+            varsToTraverse.add(var);
+          }
+        }
+        traversedFactors.add(factor);
+      }
+    }
+
+    VariableNumMap componentVars = variables.intersection(traversedVars);
+    int[] traversedFactorIndexArray = Ints.toArray(traversedFactors);
+    Factor[] componentFactors = new Factor[traversedFactorIndexArray.length];
+    String[] componentFactorNames = new String[traversedFactorIndexArray.length];
+    for (int i = 0; i < traversedFactorIndexArray.length; i++) {
+      componentFactors[i] = factors[traversedFactorIndexArray[i]];
+      componentFactorNames[i] = factorNames[traversedFactorIndexArray[i]];
+    }
+
+    return new FactorGraph(componentVars, componentFactors, componentFactorNames,
+        conditionedVariables, conditionedValues, inferenceHint);
+  }
+
+  /**
+   * Gets a new {@code FactorGraph} identical to this one, with an
+   * added inference hint. {@code inferenceHint} is a suggestion for
+   * performing efficient inference with {@code this}.
+   * {@code inferenceHint} can be {@code null}, in which case the hint
+   * is ignored during inference.
    */
   public FactorGraph addInferenceHint(InferenceHint newInferenceHint) {
     return new FactorGraph(variables, factors, factorNames, variableFactorMap, factorVariableMap,

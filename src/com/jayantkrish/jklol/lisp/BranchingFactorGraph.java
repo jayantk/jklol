@@ -26,15 +26,31 @@ public class BranchingFactorGraph {
   private FactorGraph getFactorGraph() {
     return factorGraph;
   }
-
-  public MarginalSet getMarginals() {
+  
+  private FactorGraph buildChildFactorGraph(boolean useSumProduct) {
     FactorGraph combinedFactorGraph = factorGraph;
-
     for (int i = 0; i < children.size(); i++) {
-      Factor childMessage = children.get(i).getMessage(true);
+      Factor childMessage = children.get(i).getMessage(useSumProduct);
       combinedFactorGraph = combinedFactorGraph.addFactor("child-" + i, childMessage);
     }
+    return combinedFactorGraph;
+  }
+
+  public MarginalSet getMarginals() {
+    FactorGraph combinedFactorGraph = buildChildFactorGraph(true);
+
+    System.out.println("calculating marginals: " + combinedFactorGraph.getVariables().size() + " vars");
     
+    JunctionTree jt = new JunctionTree();
+    MarginalSet marginals = jt.computeMarginals(combinedFactorGraph);
+    return marginals;
+  }
+
+  public MarginalSet getMarginals(VariableNumMap vars) {
+    FactorGraph combinedFactorGraph = buildChildFactorGraph(true);
+
+    combinedFactorGraph = combinedFactorGraph.getConnectedComponent(vars);
+
     JunctionTree jt = new JunctionTree();
     MarginalSet marginals = jt.computeMarginals(combinedFactorGraph);
     return marginals;

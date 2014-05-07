@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class ListParameterSpec extends AbstractParameterSpec {
+  private static final long serialVersionUID = 1L;
 
   private final List<ParameterSpec> children;
   private final int[] childIdIndex;

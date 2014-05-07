@@ -12,6 +12,7 @@ import joptsimple.OptionSpec;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.lisp.AmbEval;
+import com.jayantkrish.jklol.lisp.BuiltinFunctions;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
@@ -54,7 +55,7 @@ public class AmbLisp extends AbstractCli {
     Environment environment = AmbEval.getDefaultEnvironment();
     EvalResult result = eval.eval(programExpression, environment, fgBuilder);
 
-    System.out.println(result.getValue());
+    BuiltinFunctions.display(result.getValue());
 
     if (options.has(interactive)) {
       System.out.println("Starting interactive mode.");
@@ -69,7 +70,7 @@ public class AmbLisp extends AbstractCli {
           try {
             SExpression expression = parser.parseSingleExpression(line);
             result = eval.eval(expression, environment, fgBuilder);
-            System.out.println(result.getValue());
+            BuiltinFunctions.display(result.getValue());
           } catch (Exception e) {
             System.out.println("Exception: " + e);
           }

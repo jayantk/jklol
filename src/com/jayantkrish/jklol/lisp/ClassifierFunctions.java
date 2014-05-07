@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IoUtils;
 
 /**
  * Implementations of functions for creating classifiers,
@@ -300,6 +301,26 @@ public class ClassifierFunctions {
       ListParameterSpec parameters = (ListParameterSpec) argumentValues.get(0);
       int index = (Integer) argumentValues.get(1);
       return parameters.get(index);
+    }
+  }
+
+  public static class Serialize implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      ParameterSpec parameters = (ParameterSpec) argumentValues.get(0);
+      String filename = (String) argumentValues.get(1);
+      IoUtils.serializeObjectToFile(parameters, filename);
+      return ConstantValue.UNDEFINED;
+    }
+  }
+
+  public static class Deserialize implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      String filename = (String) argumentValues.get(0);
+      return IoUtils.readSerializedObject(filename, Object.class);
     }
   }
 }

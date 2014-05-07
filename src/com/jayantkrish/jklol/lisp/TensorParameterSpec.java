@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 
 public class TensorParameterSpec extends AbstractParameterSpec {
+  private static final long serialVersionUID = 1L;
 
   private final SufficientStatistics currentParameters;
   private final VariableNumMap parameterVars;

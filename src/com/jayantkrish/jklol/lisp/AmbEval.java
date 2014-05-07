@@ -243,8 +243,9 @@ public class AmbEval {
             BranchingFactorGraph fg = builder.build();
             // System.out.println("factor graph: " + fg.getParameterDescription());
 
-            MarginalSet marginals = fg.getMarginals();
-            DiscreteFactor varMarginal = marginals.getMarginal(((AmbValue) value).getVar().getOnlyVariableNum())
+            VariableNumMap targetVar = ((AmbValue) value).getVar();
+            MarginalSet marginals = fg.getMarginals(targetVar);
+            DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
                 .coerceToDiscrete();
 
             Iterator<Outcome> iter = varMarginal.outcomeIterator();
@@ -304,7 +305,7 @@ public class AmbEval {
               parameterSpec, new JunctionTree());
 
           // 4th argument is an optional parameter for providing optimization parameters.
-          int epochs = 1;
+          int epochs = 50;
           double l2Penalty = 0.0;
           if (subexpressions.size() >= 5) {
             Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
@@ -515,6 +516,7 @@ public class AmbEval {
 
     env.bindName("make-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDictionaryFunction()));
     env.bindName("dictionary-lookup", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryLookupFunction()));
+    env.bindName("dictionary-contains", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryContainsFunction()));
     env.bindName("dictionary-size", new RaisedBuiltinFunction(new BuiltinFunctions.DictionarySizeFunction()));
     env.bindName("dictionary-to-array", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryToArrayFunction()));
 
@@ -531,6 +533,8 @@ public class AmbEval {
     env.bindName("make-inner-product-classifier", new ClassifierFunctions.MakeInnerProductClassifier());
     env.bindName("make-parameter-list", new ClassifierFunctions.MakeParameterList());
     env.bindName("get-ith-parameter", new ClassifierFunctions.GetIthParameter());
+    env.bindName("serialize", new ClassifierFunctions.Serialize());
+    env.bindName("deserialize", new ClassifierFunctions.Deserialize());
 
     env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
     env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));

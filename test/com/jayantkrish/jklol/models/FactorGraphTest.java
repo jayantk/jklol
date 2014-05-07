@@ -117,4 +117,38 @@ public class FactorGraphTest extends TestCase {
 	  assertEquals(0, c.getVariables().size());
 	  assertEquals(1.0, c.getUnnormalizedProbability(Assignment.EMPTY));
 	}
+	
+	public void testConnectedComponent1() {
+	  // The whole factor graph is connected in this case.
+	  FactorGraph connectedComponent = f.getConnectedComponent(f.getVariables()
+	      .getVariablesByName("Var0"));
+
+	  assertEquals(f.getVariables(), connectedComponent.getVariables());
+	  assertEquals(f.getFactors().size(), connectedComponent.getFactors().size());
+	}
+
+	public void testConnectedComponent2() {
+	  // Create a graph with another connected component.
+	  FactorGraph g = f.addVariable("Var4", tfVar);
+	  g = g.addVariable("Var5", tfVar);
+
+	  builder = new TableFactorBuilder(g.getVariables().getVariablesByName(Arrays.asList("Var4", "Var5")),
+	      SparseTensorBuilder.getFactory());
+		builder.incrementWeight(builder.getVars().intArrayToAssignment(new int[] {0, 0}), 1.0);
+		g = g.addFactor("f3", builder.build());
+
+	  // Select only the just-added variables and factors.
+	  FactorGraph connectedComponent = g.getConnectedComponent(g.getVariables()
+	      .getVariablesByName("Var4"));
+
+	  assertEquals(g.getVariables().getVariablesByName("Var4", "Var5"), connectedComponent.getVariables());
+	  assertEquals(1, connectedComponent.getFactors().size());
+	  
+	  // Select both components
+	  connectedComponent = g.getConnectedComponent(g.getVariables()
+	      .getVariablesByName("Var4", "Var1"));
+
+	  assertEquals(g.getVariables(), connectedComponent.getVariables());
+	  assertEquals(g.getFactors().size(), connectedComponent.getFactors().size());
+	}
 }

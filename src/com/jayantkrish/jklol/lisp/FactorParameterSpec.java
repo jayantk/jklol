@@ -5,6 +5,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public class FactorParameterSpec extends AbstractParameterSpec {
+  private static final long serialVersionUID = 1L;
 
   private final ParametricFactor factor;
   private final SufficientStatistics currentParameters;

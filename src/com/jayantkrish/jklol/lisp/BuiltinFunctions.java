@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.lisp;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -230,9 +231,16 @@ public class BuiltinFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      Object argument = argumentValues.get(0);
-      System.out.println(argument);
+      display(argumentValues.get(0));
       return ConstantValue.UNDEFINED;
+    }
+  }
+
+  public static void display(Object object) {
+    if (object instanceof Object[]) {
+      System.out.println(Arrays.toString((Object[]) object));
+    } else {
+      System.out.println(object);
     }
   }
 
@@ -259,6 +267,15 @@ public class BuiltinFunctions {
       Preconditions.checkArgument(argumentValues.size() == 2);
       IndexedList<?> dictionary = (IndexedList<?>) argumentValues.get(1);
       return dictionary.getIndex(argumentValues.get(0));
+    }
+  }
+
+  public static class DictionaryContainsFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      IndexedList<?> dictionary = (IndexedList<?>) argumentValues.get(1);
+      return dictionary.contains(argumentValues.get(0)) ? ConstantValue.TRUE : ConstantValue.FALSE;
     }
   }
 

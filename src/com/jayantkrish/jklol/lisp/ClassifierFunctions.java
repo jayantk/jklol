@@ -335,9 +335,9 @@ public class ClassifierFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
       Preconditions.checkArgument(argumentValues.size() == 2);
-      ParameterSpec parameters = (ParameterSpec) argumentValues.get(0);
+      Object object = argumentValues.get(0);
       String filename = (String) argumentValues.get(1);
-      IoUtils.serializeObjectToFile(parameters, filename);
+      IoUtils.serializeObjectToFile(object, filename);
       return ConstantValue.UNDEFINED;
     }
   }

@@ -286,9 +286,9 @@ public class AmbEval {
           Object value = eval(subexpressions.get(1), environment, builder).getValue();
           Preconditions.checkArgument(value instanceof AmbFunctionValue);
           AmbFunctionValue modelFamily = (AmbFunctionValue) value;
-          
-          ParameterSpec parameterSpec = (ParameterSpec) eval(subexpressions.get(2), environment,
-              builder).getValue();
+
+          SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
+              environment, builder).getValue();
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
           List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
@@ -302,7 +302,7 @@ public class AmbEval {
           }
 
           AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, environment,
-              parameterSpec, new JunctionTree());
+              parameterSpec.getParameterSpec(), new JunctionTree());
 
           // 4th argument is an optional parameter for providing optimization parameters.
           int epochs = 50;
@@ -323,9 +323,9 @@ public class AmbEval {
           StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
               trainingData.size() * epochs, 1, 1, true, false, l2Penalty, new DefaultLogFunction(100, false));
 
-          SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getCurrentParameters(), trainingData);
+          SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
 
-          return new EvalResult(parameterSpec.wrap(parameters));
+          return new EvalResult(new SpecAndParameters(parameterSpec.getParameterSpec(), parameters));
         } else if (constantName.equals("opt-mm")) {
           Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
 
@@ -333,8 +333,8 @@ public class AmbEval {
           Preconditions.checkArgument(value instanceof AmbFunctionValue);
           AmbFunctionValue modelFamily = (AmbFunctionValue) value;
           
-          ParameterSpec parameterSpec = (ParameterSpec) eval(subexpressions.get(2), environment,
-              builder).getValue();
+          SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
+              environment, builder).getValue();
 
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
           List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
@@ -348,7 +348,7 @@ public class AmbEval {
           }
 
           AmbLispMaxMarginOracle oracle = new AmbLispMaxMarginOracle(modelFamily, environment,
-              parameterSpec, new JunctionTree());
+              parameterSpec.getParameterSpec(), new JunctionTree());
 
           // 4th argument is an optional parameter for providing optimization parameters.
           int epochs = 50;
@@ -370,11 +370,11 @@ public class AmbEval {
               trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new NullLogFunction());
 
           SufficientStatistics parameters = trainer.train(oracle,
-              parameterSpec.getCurrentParameters(), trainingData);
+              parameterSpec.getParameters(), trainingData);
 
           // System.out.println(parameters.getDescription());
 
-          return new EvalResult(parameterSpec.wrap(parameters));
+          return new EvalResult(new SpecAndParameters(parameterSpec.getParameterSpec(), parameters));
         }
       }
 

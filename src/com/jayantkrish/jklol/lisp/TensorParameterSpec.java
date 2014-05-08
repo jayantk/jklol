@@ -9,28 +9,11 @@ import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 public class TensorParameterSpec extends AbstractParameterSpec {
   private static final long serialVersionUID = 1L;
 
-  private final SufficientStatistics currentParameters;
   private final VariableNumMap parameterVars;
 
-  public TensorParameterSpec(int id, VariableNumMap parameterVars, 
-      SufficientStatistics currentParameters) {
+  public TensorParameterSpec(int id, VariableNumMap parameterVars) {
     super(id);
     this.parameterVars = Preconditions.checkNotNull(parameterVars);
-    this.currentParameters = Preconditions.checkNotNull(currentParameters);
-  }
-  
-  public static TensorParameterSpec zero(int id, VariableNumMap parameterVars) {
-    SufficientStatistics parameters = new TensorSufficientStatistics(parameterVars,
-        new DenseTensorBuilder(parameterVars.getVariableNumsArray(), parameterVars.getVariableSizes()));
-    // TODO: remove this!
-    parameters.perturb(1);
-    
-    return new TensorParameterSpec(id, parameterVars, parameters);
-  }
-
-  @Override
-  public SufficientStatistics getCurrentParameters() {
-    return currentParameters;
   }
 
   @Override
@@ -46,14 +29,5 @@ public class TensorParameterSpec extends AbstractParameterSpec {
     } else {
       return null;
     }
-  }
-
-  @Override
-  public ParameterSpec wrap(SufficientStatistics parameters) {
-    return new TensorParameterSpec(getId(), parameterVars, parameters);
-  }
-
-  public String toString() {
-    return "parameters:" + currentParameters.getDescription();
   }
 }

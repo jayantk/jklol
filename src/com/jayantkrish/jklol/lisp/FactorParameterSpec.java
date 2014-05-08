@@ -5,24 +5,17 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public class FactorParameterSpec extends AbstractParameterSpec {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
 
   private final ParametricFactor factor;
-  private final SufficientStatistics currentParameters;
 
-  public FactorParameterSpec(int id, ParametricFactor factor, SufficientStatistics currentParameters) {
+  public FactorParameterSpec(int id, ParametricFactor factor) {
     super(id);
     this.factor = Preconditions.checkNotNull(factor);
-    this.currentParameters = Preconditions.checkNotNull(currentParameters);
   }
 
   public ParametricFactor getFactor() {
     return factor;
-  }
-
-  @Override
-  public SufficientStatistics getCurrentParameters() {
-    return currentParameters;
   }
 
   @Override
@@ -37,14 +30,5 @@ public class FactorParameterSpec extends AbstractParameterSpec {
     } else {
       return null;
     }
-  }
-
-  @Override
-  public ParameterSpec wrap(SufficientStatistics parameters) {
-    return new FactorParameterSpec(getId(), factor, parameters);
-  }
-
-  public String toString() {
-    return "parameters:" + currentParameters.getDescription();
   }
 }

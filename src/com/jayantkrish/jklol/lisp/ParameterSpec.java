@@ -6,12 +6,6 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
 public interface ParameterSpec extends Serializable {
 
-  SufficientStatistics getCurrentParameters();
-
-  ParameterSpec wrap(SufficientStatistics parameters);
-
-  SufficientStatistics getCurrentParametersByIds(int[] ids, SufficientStatistics parameters);
-
   SufficientStatistics getNewParameters();
 
   int getId();
@@ -21,4 +15,6 @@ public interface ParameterSpec extends Serializable {
   boolean containsId(int id);
 
   SufficientStatistics getParametersById(int id, SufficientStatistics parameters);
+
+  SufficientStatistics getParametersByIds(int[] ids, SufficientStatistics parameters);
 }

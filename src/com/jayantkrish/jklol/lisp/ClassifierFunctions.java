@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
 import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -16,6 +17,7 @@ import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
@@ -41,9 +43,9 @@ public class ClassifierFunctions {
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
       Preconditions.checkArgument(argumentValues.size() == 2);
       Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue || argumentValues.get(0) instanceof ConsValue);
-      Preconditions.checkArgument(argumentValues.get(1) instanceof ParameterSpec);
+      Preconditions.checkArgument(argumentValues.get(1) instanceof SpecAndParameters);
 
-      ParameterSpec parameters = (ParameterSpec) argumentValues.get(1);
+      SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(1);
 
       VariableNumMap factorVars = null;
       VariableRelabeling relabeling = VariableRelabeling.EMPTY;
@@ -64,11 +66,11 @@ public class ClassifierFunctions {
 
       VariableNumMap relabeledVars = relabeling.apply(factorVars);
       ParametricFactor pf = new IndicatorLogLinearFactor(relabeledVars, TableFactor.unity(relabeledVars));
-      Factor factor = pf.getModelFromParameters(parameters.getCurrentParameters()).relabelVariables(
+      Factor factor = pf.getModelFromParameters(parameters.getParameters()).relabelVariables(
           relabeling.inverse());
 
       builder.addConstantFactor("classifier-" + factorVars.getVariableNums(), factor);
-      builder.addMark(factorVars, pf, relabeling, parameters.getId());
+      builder.addMark(factorVars, pf, relabeling, parameters.getParameterSpec().getId());
 
       return ConstantValue.UNDEFINED;
     }
@@ -91,7 +93,9 @@ public class ClassifierFunctions {
 
       ParametricFactor pf = new IndicatorLogLinearFactor(vars, TableFactor.unity(vars));
 
-      return new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf, pf.getNewSufficientStatistics());
+      FactorParameterSpec fps = new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf);
+      SufficientStatistics params = fps.getNewParameters();
+      return new SpecAndParameters(fps, params);
     }
   }
 
@@ -107,10 +111,10 @@ public class ClassifierFunctions {
       Preconditions.checkArgument(argumentValues.size() == 3);
       Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue || argumentValues.get(0) instanceof ConsValue);
       Preconditions.checkArgument(argumentValues.get(1) instanceof Tensor);
-      Preconditions.checkArgument(argumentValues.get(2) instanceof ParameterSpec);
+      Preconditions.checkArgument(argumentValues.get(2) instanceof SpecAndParameters);
 
       Tensor featureVector = (Tensor) argumentValues.get(1);
-      ParameterSpec parameters = (ParameterSpec) argumentValues.get(2);
+      SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(2);
 
       VariableNumMap factorVars = null;
       VariableRelabeling relabeling = VariableRelabeling.EMPTY;
@@ -144,15 +148,15 @@ public class ClassifierFunctions {
       VariableNumMap relabeledFeatureVectorVar = relabeling.apply(featureVectorVar);
 
       DiscreteVariable featureDictionary = ((ConditionalLogLinearFactor)
-          ((FactorParameterSpec) parameters).getFactor()).getFeatureDictionary();
+          ((FactorParameterSpec) parameters.getParameterSpec()).getFactor()).getFeatureDictionary();
       ParametricFactor pf = new ConditionalLogLinearFactor(relabeledFeatureVectorVar,
           relabeledVars, VariableNumMap.EMPTY, featureDictionary);
 
-      Factor factor = pf.getModelFromParameters(parameters.getCurrentParameters())
+      Factor factor = pf.getModelFromParameters(parameters.getParameters())
           .relabelVariables(relabeling.inverse());
 
       builder.addConstantFactor("classifier-" + factor.getVars().getVariableNums(), factor);
-      builder.addMark(factor.getVars(), pf, relabeling, parameters.getId());
+      builder.addMark(factor.getVars(), pf, relabeling, parameters.getParameterSpec().getId());
 
       return ConstantValue.UNDEFINED;
     }
@@ -180,7 +184,9 @@ public class ClassifierFunctions {
       ParametricFactor pf = new ConditionalLogLinearFactor(featureVectorVar, vars,
           VariableNumMap.EMPTY, featureDictionary);
 
-      return new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf, pf.getNewSufficientStatistics());
+      FactorParameterSpec fps = new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf);
+      SufficientStatistics params = fps.getNewParameters();
+      return new SpecAndParameters(fps, params);
     }
   }
 
@@ -241,13 +247,13 @@ public class ClassifierFunctions {
       // determines the weight.
       Preconditions.checkArgument(argumentValues.size() == 4);
       Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue);
-      Preconditions.checkArgument(argumentValues.get(2) instanceof ParameterSpec,
+      Preconditions.checkArgument(argumentValues.get(2) instanceof SpecAndParameters,
           "Third argument to make-inner-product-classifier must be a parameter vector");
-      Preconditions.checkArgument(argumentValues.get(3) instanceof ParameterSpec,
+      Preconditions.checkArgument(argumentValues.get(3) instanceof SpecAndParameters,
           "Fourth argument to make-inner-product-classifier must be a parameter vector");
 
-      ParameterSpec parameters1 = (ParameterSpec) argumentValues.get(2);
-      ParameterSpec parameters2 = (ParameterSpec) argumentValues.get(3);
+      SpecAndParameters parameters1 = (SpecAndParameters) argumentValues.get(2);
+      SpecAndParameters parameters2 = (SpecAndParameters) argumentValues.get(3);
 
       AmbValue ambValue = (AmbValue) argumentValues.get(0);
       VariableNumMap factorVars = ambValue.getVar();
@@ -259,12 +265,13 @@ public class ClassifierFunctions {
       ParametricFactor pf = new InnerProductParametricFactor(relabeledVars, assignment, -1);
 
       ListSufficientStatistics combinedParameters = new ListSufficientStatistics(Arrays.asList("0", "1"),
-          Arrays.asList(parameters1.getCurrentParameters(), parameters2.getCurrentParameters()));
+          Arrays.asList(parameters1.getParameters(), parameters2.getParameters()));
       Factor factor = pf.getModelFromParameters(combinedParameters).relabelVariables(
           relabeling.inverse());
 
       builder.addConstantFactor("classifier-" + factorVars.getVariableNums(), factor);
-      builder.addMark(factorVars, pf, relabeling, new int[] {parameters1.getId(), parameters2.getId()});
+      builder.addMark(factorVars, pf, relabeling, new int[] {parameters1.getParameterSpec().getId(),
+          parameters2.getParameterSpec().getId()});
 
       return ConstantValue.UNDEFINED;
     }
@@ -280,7 +287,12 @@ public class ClassifierFunctions {
       VariableNumMap parameterVar = VariableNumMap.singleton(0, name,
           DiscreteVariable.sequence(name, dimensionality));
 
-      return TensorParameterSpec.zero(AbstractParameterSpec.getUniqueId(), parameterVar);        
+      TensorParameterSpec spec = new TensorParameterSpec(AbstractParameterSpec.getUniqueId(),
+          parameterVar);
+      SufficientStatistics params = spec.getNewParameters();
+      // TODO: remove this!
+      params.perturb(1);
+      return new SpecAndParameters(spec, params);        
     }
   }
 
@@ -288,9 +300,19 @@ public class ClassifierFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      List<ParameterSpec> childParameters = ConsValue.consListOrArrayToList(
-          argumentValues.get(0), ParameterSpec.class);
-      return new ListParameterSpec(AbstractParameterSpec.getUniqueId(), childParameters);
+      List<SpecAndParameters> childParameterList = ConsValue.consListOrArrayToList(
+          argumentValues.get(0), SpecAndParameters.class);
+      List<ParameterSpec> specs = Lists.newArrayList();
+      List<SufficientStatistics> childStatistics = Lists.newArrayList();
+      for (SpecAndParameters childParameters : childParameterList) {
+        specs.add(childParameters.getParameterSpec());
+        childStatistics.add(childParameters.getParameters());
+      }
+
+      ListParameterSpec listSpec = new ListParameterSpec(AbstractParameterSpec.getUniqueId(),
+          specs);
+      SufficientStatistics listStatistics = listSpec.wrap(childStatistics);
+      return new SpecAndParameters(listSpec, listStatistics);
     }
   }
 
@@ -298,9 +320,14 @@ public class ClassifierFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
       Preconditions.checkArgument(argumentValues.size() == 2);
-      ListParameterSpec parameters = (ListParameterSpec) argumentValues.get(0);
+      SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(0);
       int index = (Integer) argumentValues.get(1);
-      return parameters.get(index);
+
+      ListParameterSpec spec = (ListParameterSpec) parameters.getParameterSpec();
+      ParameterSpec childSpec = spec.get(index);
+
+      SufficientStatistics params = spec.getParameter(index, parameters.getParameters());
+      return new SpecAndParameters(childSpec, params);
     }
   }
 

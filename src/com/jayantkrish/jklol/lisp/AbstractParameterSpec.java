@@ -33,7 +33,7 @@ public abstract class AbstractParameterSpec implements ParameterSpec {
   }
 
   @Override
-  public SufficientStatistics getCurrentParametersByIds(int[] ids, SufficientStatistics parameters) {
+  public SufficientStatistics getParametersByIds(int[] ids, SufficientStatistics parameters) {
     List<SufficientStatistics> stats = Lists.newArrayList();
     List<String> idNames = Lists.newArrayList();
     

@@ -133,10 +133,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       // sample; however, deterministically iterating over the examples is
       // more efficient and is fairly close if the examples are provided in
       // random order.
-      log.startTimer("factor_graph_from_parameters");
+      log.startTimer("instantiate_model");
       List<T> batchData = getBatch(cycledTrainingData, batchSize);
       M currentModel = oracle.instantiateModel(initialParameters);
-      log.stopTimer("factor_graph_from_parameters");
+      log.stopTimer("instantiate_model");
 
       log.startTimer("compute_gradient_(serial)");
       int iterSearchErrors = 0;

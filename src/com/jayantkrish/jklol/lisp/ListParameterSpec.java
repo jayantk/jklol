@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.lisp;
 
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -14,16 +16,19 @@ import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class ListParameterSpec extends AbstractParameterSpec {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
 
   private final List<ParameterSpec> children;
   private final int[] childIdIndex;
   private final int[] childIdIndexValues;
+  
+  private final List<Supplier<SufficientStatistics>> suppliers;
+  private final IndexedList<String> childNames;
 
   public ListParameterSpec(int id, List<ParameterSpec> children) {
     super(id);
     this.children = ImmutableList.copyOf(children);
-    
+
     List<Integer> childIdIndexList = Lists.newArrayList();
     List<Integer> childIdIndexValueList = Lists.newArrayList();
     for (int i = 0; i < children.size(); i++) {
@@ -39,14 +44,25 @@ public class ListParameterSpec extends AbstractParameterSpec {
 
     ArrayUtils.sortKeyValuePairs(childIdIndex, childIdIndexValues,
         0, childIdIndex.length);
+    
+    suppliers = Lists.newArrayList();
+    List<String> childNameList = Lists.newArrayList();
+    for (ParameterSpec child : children) {
+      childNameList.add(Integer.toString(child.getId()));
+      suppliers.add(new ParameterSpecSupplier(child));
+    }
+    childNames = IndexedList.create(childNameList);
   }
 
   private ListParameterSpec(int id, List<ParameterSpec> children,
-      int[] childIdIndex, int[] childIdIndexValues) {
+      int[] childIdIndex, int[] childIdIndexValues,
+      List<Supplier<SufficientStatistics>> suppliers, IndexedList<String> childNames) {
     super(id);
     this.children = Preconditions.checkNotNull(children);
     this.childIdIndex = Preconditions.checkNotNull(childIdIndex);
     this.childIdIndexValues = Preconditions.checkNotNull(childIdIndexValues);
+    this.suppliers = Preconditions.checkNotNull(suppliers);
+    this.childNames = Preconditions.checkNotNull(childNames);
   }
 
   public int[] getContainedIds() {
@@ -61,29 +77,19 @@ public class ListParameterSpec extends AbstractParameterSpec {
   @Override
   public SufficientStatistics getCurrentParameters() {
     List<SufficientStatistics> parameters = Lists.newArrayList();
-    IndexedList<String> names = IndexedList.create();
-    List<Supplier<SufficientStatistics>> suppliers = Lists.newArrayList();
+    
     for (ParameterSpec child : children) {
       parameters.add(child.getCurrentParameters());
-      names.add(Integer.toString(child.getId()));
-      suppliers.add(new ParameterSpecSupplier(child));
     }
 
-    return new CvsmSufficientStatistics(names, suppliers, parameters);
+    return new CvsmSufficientStatistics(childNames, suppliers, parameters);
   }
 
   @Override
   public SufficientStatistics getNewParameters() {
-    List<SufficientStatistics> parameters = Lists.newArrayList();
-    IndexedList<String> names = IndexedList.create();
-    List<Supplier<SufficientStatistics>> suppliers = Lists.newArrayList();
-    for (ParameterSpec child : children) {
-      parameters.add(null);
-      names.add(Integer.toString(child.getId()));
-      suppliers.add(new ParameterSpecSupplier(child));
-    }
-
-    return new CvsmSufficientStatistics(names, suppliers, parameters);
+    List<SufficientStatistics> parameters = Lists.newArrayList(Collections
+        .<SufficientStatistics>nCopies(children.size(), null));
+    return new CvsmSufficientStatistics(childNames, suppliers, parameters);
   }
   
   /**
@@ -122,10 +128,13 @@ public class ListParameterSpec extends AbstractParameterSpec {
       wrapped.add(children.get(i).wrap(inputStats.get(i)));
     }
 
-    return new ListParameterSpec(getId(), wrapped, childIdIndex, childIdIndexValues);
+    return new ListParameterSpec(getId(), wrapped, childIdIndex, childIdIndexValues,
+        suppliers, childNames);
   }
 
-  private static class ParameterSpecSupplier implements Supplier<SufficientStatistics> {
+  private static class ParameterSpecSupplier implements Supplier<SufficientStatistics>, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final ParameterSpec parameterSpec;
 
     public ParameterSpecSupplier(ParameterSpec parameterSpec) {

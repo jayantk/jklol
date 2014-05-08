@@ -39,8 +39,6 @@ public class BranchingFactorGraph {
   public MarginalSet getMarginals() {
     FactorGraph combinedFactorGraph = buildChildFactorGraph(true);
 
-    System.out.println("calculating marginals: " + combinedFactorGraph.getVariables().size() + " vars");
-    
     JunctionTree jt = new JunctionTree();
     MarginalSet marginals = jt.computeMarginals(combinedFactorGraph);
     return marginals;
@@ -48,7 +46,8 @@ public class BranchingFactorGraph {
 
   public MarginalSet getMarginals(VariableNumMap vars) {
     FactorGraph combinedFactorGraph = buildChildFactorGraph(true);
-
+    // Only use the subset of the graph that's relevant for the
+    // given variables.
     combinedFactorGraph = combinedFactorGraph.getConnectedComponent(vars);
 
     JunctionTree jt = new JunctionTree();
@@ -57,20 +56,20 @@ public class BranchingFactorGraph {
   }
 
   public MaxMarginalSet getMaxMarginals() {
-    FactorGraph combinedFactorGraph = factorGraph;
-
-    for (int i = 0; i < children.size(); i++) {
-      Factor childMessage = children.get(i).getMessage(false);
-      System.out.println("childMessage: ");
-      System.out.println(childMessage.getParameterDescription());
-      combinedFactorGraph = combinedFactorGraph.addFactor("child-" + i, childMessage);
-    }
-    
+    FactorGraph combinedFactorGraph = buildChildFactorGraph(false);
     JunctionTree jt = new JunctionTree();
     MaxMarginalSet marginals = jt.computeMaxMarginals(combinedFactorGraph);
     return marginals;
   }
-  
+
+  public MaxMarginalSet getMaxMarginals(VariableNumMap vars) {
+    FactorGraph combinedFactorGraph = buildChildFactorGraph(false);
+    combinedFactorGraph = combinedFactorGraph.getConnectedComponent(vars);
+    JunctionTree jt = new JunctionTree();
+    MaxMarginalSet marginals = jt.computeMaxMarginals(combinedFactorGraph);
+    return marginals;
+  }
+
   public String getParameterDescription() {
     StringBuilder sb = new StringBuilder();
     getParameterDescription(sb, 0);

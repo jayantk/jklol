@@ -116,7 +116,8 @@ public class ExpressionParser<T> {
         } 
       }
       Preconditions.checkState((character != openQuote && character != closeQuote) || quoteOk,
-          "Quoting error. Current: %s", expression);
+          "Quoting error. Tokenizing: %s", expression.substring(Math.max(i - 20, 0),
+              Math.min(i + 20, expression.length())));
 
       if (!inQuotes) {
         if ((whitespaceSeparated && Character.isWhitespace(character)) ||

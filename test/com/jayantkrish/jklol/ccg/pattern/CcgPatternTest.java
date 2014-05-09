@@ -6,6 +6,7 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -57,7 +58,7 @@ public class CcgPatternTest extends TestCase {
   }
 
   public void testWordPattern() {
-    CcgPattern pattern = CcgPatternUtils.parseFrom("(word \"green\" \"block\")");
+    CcgPattern pattern = parsePattern("(word \"green\" \"block\")");
     
     CcgParse parse = parse(parser, Arrays.asList("green", "block"));
     List<CcgParse> matches = pattern.match(parse);
@@ -69,52 +70,58 @@ public class CcgPatternTest extends TestCase {
   }
 
   public void testSyntaxPattern() {
-    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (syntax \"N{0}\"))");
+    CcgPattern pattern = parsePattern("(subtree (syntax \"N{0}\"))");
 
     CcgParse parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     List<CcgParse> matches = pattern.match(parse);
     assertEquals(4, matches.size());
 
-    pattern = CcgPatternUtils.parseFrom("(subtree (syntax \"(N{0}\\N{0}){1}\"))");
+    pattern = parsePattern("(subtree (syntax \"(N{0}\\N{0}){1}\"))");
 
     matches = pattern.match(parse);
     assertEquals(1, matches.size());
   }
 
   public void testCombinatorPattern() {
-    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (syntax \"N{0}\")))");
+    CcgPattern pattern = parsePattern("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (syntax \"N{0}\")))");
     CcgParse parse = parse(parser, Arrays.asList("the", "green", "block"));
     List<CcgParse> matches = pattern.match(parse);
     assertEquals(2, matches.size());
     
-    pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (chain (syntax \"N{0}\") isTerminal))))");
+    pattern = parsePattern("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (chain (syntax \"N{0}\") isTerminal))))");
     parse = parse(parser, Arrays.asList("the", "green", "block", "near", "object"));
     matches = pattern.match(parse);
     assertEquals(4, matches.size());
   }
 
   public void testSubtreePattern() {    
-    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (chain (syntax \"N{0}\")))))");
+    CcgPattern pattern = parsePattern("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (subtree (chain (syntax \"N{0}\")))))");
     CcgParse parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     List<CcgParse> matches = pattern.match(parse);
     assertEquals(3, matches.size());
     
-    pattern = CcgPatternUtils.parseFrom("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (head-subtree (chain (syntax \"N{0}\")))))");
+    pattern = parsePattern("(subtree (combinator (syntax \"(N{0}/N{0}){1}\") (head-subtree (chain (syntax \"N{0}\")))))");
     parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     matches = pattern.match(parse);
     assertEquals(2, matches.size());
   }
 
   public void testLogicalFormPattern() {
-    CcgPattern pattern = CcgPatternUtils.parseFrom("(subtree (lf-regex \".*pred:object.*\"))");
+    CcgPattern pattern = parsePattern("(subtree (lf-regex \".*pred:object.*\"))");
     CcgParse parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     List<CcgParse> matches = pattern.match(parse);
     assertEquals(4, matches.size());
     
-    pattern = CcgPatternUtils.parseFrom("(subtree (lf-regex \".*pred:block.*\"))");
+    pattern = parsePattern("(subtree (lf-regex \".*pred:block.*\"))");
     parse = parse(parser, Arrays.asList("green", "block", "near", "object"));
     matches = pattern.match(parse);
     assertEquals(3, matches.size());
+  }
+
+  private static CcgPattern parsePattern(String patternString) {
+    List<CcgPattern> patterns = CcgPatternUtils.parseFrom(patternString);
+    Preconditions.checkArgument(patterns.size() == 1);
+    return patterns.get(0);
   }
 
   private CcgParse parse(CcgParser parser, List<String> words) {

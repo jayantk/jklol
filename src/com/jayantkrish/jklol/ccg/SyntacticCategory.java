@@ -148,7 +148,8 @@ public class SyntacticCategory implements Serializable {
     String featureValue = DEFAULT_FEATURE_VALUE;
     int featureVariable = -1;
     if (nextFeatureIndex > minParenDepthIndex && minParenDepthIndex == -1) {
-      Preconditions.checkState(nextFeatureIndex + 1 < nextCloseFeatureIndex);
+      Preconditions.checkState(nextFeatureIndex + 1 < nextCloseFeatureIndex,
+          "Illegal syntactic category string: %s", initialTypeString);
       String tempFeatureValue = typeString.substring(nextFeatureIndex + 1, nextCloseFeatureIndex);
       try {
         featureVariable = Integer.parseInt(tempFeatureValue);

@@ -14,9 +14,9 @@ import com.jayantkrish.jklol.lisp.SExpression;
 
 public class CcgPatternUtils {
 
-  public static CcgPattern parseFrom(String patternString) {
+  public static List<CcgPattern> parseFrom(String patternString) {
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
-    SExpression patternExpression = parser.parseSingleExpression(patternString);
+    List<SExpression> expressions = parser.parse(patternString);
 
     LispEval eval = new LispEval();
     Environment env = Environment.empty();
@@ -31,9 +31,18 @@ public class CcgPatternUtils {
     env.bindName("smallest", new SmallestPatternFunction());
     env.bindName("isTerminal", new CcgTerminalPattern(true));
     env.bindName("isNonterminal", new CcgTerminalPattern(false));
+    env.bindName("replace-syntax", new ReplaceSyntaxPatternFunction());
+    env.bindName("recurse", new RecursivePatternFunction());
+    env.bindName("if-then", new IfPatternFunction());
 
-    EvalResult result = eval.eval(patternExpression, env);
-    return (CcgPattern) result.getValue();
+    List<CcgPattern> patterns = Lists.newArrayList();
+    for (SExpression patternExpression : expressions) {
+      EvalResult result = eval.eval(patternExpression, env);
+      if (result.getValue() instanceof CcgPattern) {
+        patterns.add((CcgPattern) result.getValue());
+      }
+    }
+    return patterns;
   }
 
   private static class WordPatternFunction implements FunctionValue {
@@ -115,6 +124,32 @@ public class CcgPatternUtils {
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgSmallestPattern((CcgPattern) argumentValues.get(0));
+    }
+  }
+
+  private static class ReplaceSyntaxPatternFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return new CcgReplaceSyntaxPattern(HeadedSyntacticCategory.parseFrom(
+          (String) argumentValues.get(0)));
+    }
+  }
+
+  private static class IfPatternFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      return new CcgIfPattern((CcgPattern) argumentValues.get(0),
+          (CcgPattern) argumentValues.get(1));
+    }
+  }
+
+  private static class RecursivePatternFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return new CcgRecursivePattern((CcgPattern) argumentValues.get(0));
     }
   }
 

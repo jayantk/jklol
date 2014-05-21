@@ -77,7 +77,8 @@ public class CcgCategory implements Serializable {
     this.syntax = Preconditions.checkNotNull(syntax);
     // TODO: is this check really necessary? Seems useful, but could be 
     // weird edge cases where we don't want this.
-    Preconditions.checkArgument(syntax.isCanonicalForm());
+    Preconditions.checkArgument(syntax.isCanonicalForm(),
+        "Syntactic category must be in canonical form. Got: %s", syntax);
     this.logicalForm = logicalForm;
 
     this.subjects = ImmutableList.copyOf(subjects);
@@ -85,6 +86,8 @@ public class CcgCategory implements Serializable {
     this.objects = ImmutableList.copyOf(objects);
 
     this.variableAssignments = Preconditions.checkNotNull(variableAssignments);
+    Preconditions.checkArgument(syntax.getUniqueVariables().length == variableAssignments.size(),
+        "Invalid number of assignments for syntactic category %s", syntax);
   }
 
   /**

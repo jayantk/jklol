@@ -25,15 +25,20 @@ public class CcgPatternUtils {
     env.bindName("lf-regex", new LogicalFormPatternFunction());
     env.bindName("chain", new AndPatternFunction());
     env.bindName("union", new OrPatternFunction());
-    env.bindName("subtree", new SubtreePatternFunction(false));
-    env.bindName("head-subtree", new SubtreePatternFunction(true));
+    env.bindName("subtree", new SubtreePatternFunction(false, false));
+    env.bindName("subtree-contains", new SubtreePatternFunction(false, true));
+    env.bindName("head-subtree", new SubtreePatternFunction(true, false));
+    env.bindName("head-subtree-contains", new SubtreePatternFunction(true, true));
     env.bindName("combinator", new CombinatorPatternFunction());
     env.bindName("smallest", new SmallestPatternFunction());
     env.bindName("isTerminal", new CcgTerminalPattern(true));
     env.bindName("isNonterminal", new CcgTerminalPattern(false));
     env.bindName("replace-syntax", new ReplaceSyntaxPatternFunction());
+    env.bindName("propagate-features", new PropagateFeaturesPatternFunction());
     env.bindName("recurse", new RecursivePatternFunction());
     env.bindName("if-then", new IfPatternFunction());
+    env.bindName("not", new NotPatternFunction());
+    env.bindName("adjunct-to-argument", new CcgPrepositionFixingPattern());
 
     List<CcgPattern> patterns = Lists.newArrayList();
     for (SExpression patternExpression : expressions) {
@@ -98,15 +103,18 @@ public class CcgPatternUtils {
 
   private static class SubtreePatternFunction implements FunctionValue {
     private final boolean matchSameHead;
+    private final boolean returnWholeTree;
 
-    public SubtreePatternFunction(boolean matchSameHead) {
+    public SubtreePatternFunction(boolean matchSameHead, boolean returnWholeTree) {
       this.matchSameHead = matchSameHead;
+      this.returnWholeTree = returnWholeTree;
     }
 
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      return new CcgSubtreePattern((CcgPattern) argumentValues.get(0), matchSameHead);
+      return new CcgSubtreePattern((CcgPattern) argumentValues.get(0), matchSameHead,
+          returnWholeTree);
     }
   }
 
@@ -150,6 +158,22 @@ public class CcgPatternUtils {
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgRecursivePattern((CcgPattern) argumentValues.get(0));
+    }
+  }
+
+  private static class NotPatternFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return new CcgNotPattern((CcgPattern) argumentValues.get(0));
+    }
+  }
+
+  private static class PropagateFeaturesPatternFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 0);
+      return new CcgPropagateFeaturesPattern();
     }
   }
 

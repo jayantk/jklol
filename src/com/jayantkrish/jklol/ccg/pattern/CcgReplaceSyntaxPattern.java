@@ -12,7 +12,7 @@ public class CcgReplaceSyntaxPattern implements CcgPattern {
   private final HeadedSyntacticCategory newSyntax;
 
   public CcgReplaceSyntaxPattern(HeadedSyntacticCategory newSyntax) {
-    this.newSyntax = Preconditions.checkNotNull(newSyntax);
+    this.newSyntax = Preconditions.checkNotNull(newSyntax.getCanonicalForm());
   }
 
   @Override

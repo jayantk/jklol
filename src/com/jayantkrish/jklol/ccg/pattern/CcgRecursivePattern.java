@@ -7,7 +7,7 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgParse;
 
 public class CcgRecursivePattern implements CcgPattern {
-  
+
   private final CcgPattern pattern;
 
   public CcgRecursivePattern(CcgPattern pattern) {

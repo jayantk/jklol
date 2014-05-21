@@ -24,16 +24,11 @@ public class CcgCombinatorPattern implements CcgPattern {
       List<CcgParse> leftMatches = left.match(parse.getLeft());
       List<CcgParse> rightMatches = right.match(parse.getRight());
 
-      HeadedSyntacticCategory leftArgSyntax = parse.getLeft().getHeadedSyntacticCategory();
-      HeadedSyntacticCategory rightArgSyntax = parse.getRight().getHeadedSyntacticCategory();
       for (CcgParse leftMatch : leftMatches) {
         for (CcgParse rightMatch : rightMatches) {
-          if (leftMatch.getHeadedSyntacticCategory().equals(leftArgSyntax) &&
-              rightMatch.getHeadedSyntacticCategory().equals(rightArgSyntax)) {
-            matches.add(CcgParse.forNonterminal(parse.getHeadedSyntacticCategory(), parse.getSemanticHeads(),
-                parse.getNodeDependencies(), parse.getNodeProbability(), leftMatch, rightMatch, parse.getCombinator(),
-                parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd()));
-          }
+          matches.add(CcgParse.forNonterminal(parse.getHeadedSyntacticCategory(), parse.getSemanticHeads(),
+              parse.getNodeDependencies(), parse.getNodeProbability(), leftMatch, rightMatch, parse.getCombinator(),
+              parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd()));
         }
       }
     }

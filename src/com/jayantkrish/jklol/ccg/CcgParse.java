@@ -283,9 +283,9 @@ public class CcgParse {
    * 
    * @return
    */
-  public List<SpannedExpression> getSpannedLogicalForms() {
+  public List<SpannedExpression> getSpannedLogicalForms(boolean induceLogicalForms) {
     List<SpannedExpression> spannedExpressions = Lists.newArrayList();
-    getSpannedLogicalFormsHelper(spannedExpressions, false);
+    getSpannedLogicalFormsHelper(spannedExpressions, false, induceLogicalForms);
     return spannedExpressions;
   }
 
@@ -296,15 +296,15 @@ public class CcgParse {
    * 
    * @return
    */
-  public List<SpannedExpression> getMaximalSpannedLogicalForms() {    
+  public List<SpannedExpression> getMaximalSpannedLogicalForms(boolean induceLogicalForms) {
     List<SpannedExpression> spannedExpressions = Lists.newArrayList();
-    getSpannedLogicalFormsHelper(spannedExpressions, true);
+    getSpannedLogicalFormsHelper(spannedExpressions, true, induceLogicalForms);
     return spannedExpressions;
   }
 
   private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions,
-      boolean onlyMaximal) {
-    Expression logicalForm = getLogicalForm();
+      boolean onlyMaximal, boolean induceLogicalForms) {
+    Expression logicalForm = getLogicalForm(induceLogicalForms);
     if (logicalForm != null) {
       spannedExpressions.add(new SpannedExpression(syntax, logicalForm.simplify(), spanStart, spanEnd));
       if (onlyMaximal) { return; }
@@ -318,8 +318,8 @@ public class CcgParse {
     }
 
     if (!isTerminal()) {
-      left.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal);
-      right.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal);
+      left.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal, induceLogicalForms);
+      right.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal, induceLogicalForms);
     }
   }
 
@@ -369,15 +369,21 @@ public class CcgParse {
         // Function application or composition.
         Expression functionLogicalForm = null;
         Expression argumentLogicalForm = null;
+        CcgParse functionParse = null;
         if (combinator.isArgumentOnLeft()) {
           functionLogicalForm = rightLogicalForm;
+          functionParse = right;
           argumentLogicalForm = leftLogicalForm;
         } else {
           functionLogicalForm = leftLogicalForm;
+          functionParse = left;
           argumentLogicalForm = rightLogicalForm;
         }
 
-        LambdaExpression functionAsLambda = (LambdaExpression) functionLogicalForm.simplify();
+        Expression simplifiedFunction = functionLogicalForm.simplify();
+        Preconditions.checkState(simplifiedFunction instanceof LambdaExpression,
+            "Not a function: %s for parse %s", simplifiedFunction, functionParse);
+        LambdaExpression functionAsLambda = (LambdaExpression) simplifiedFunction;
         int numArgsToKeep = combinator.getArgumentReturnDepth();
         if (numArgsToKeep == 0) {
           // Function application.
@@ -691,6 +697,17 @@ public class CcgParse {
     List<DependencyStructure> filteredDeps = Lists.newArrayList();
     for (DependencyStructure dep : deps) {
       if (dep.getHeadWordIndex() == wordIndex) {
+        filteredDeps.add(dep);
+      }
+    }
+    return filteredDeps;
+  }
+
+  public List<DependencyStructure> getDependenciesWithHeadInSpan(int spanStart, int spanEnd) {
+    List<DependencyStructure> deps = getAllDependencies();
+    List<DependencyStructure> filteredDeps = Lists.newArrayList();
+    for (DependencyStructure dep : deps) {
+      if (dep.getHeadWordIndex() >= spanStart && dep.getHeadWordIndex() <= spanEnd) {
         filteredDeps.add(dep);
       }
     }

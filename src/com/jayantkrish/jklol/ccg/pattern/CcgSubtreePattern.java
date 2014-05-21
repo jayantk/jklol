@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.pattern;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -12,10 +13,12 @@ public class CcgSubtreePattern implements CcgPattern {
   
   private final CcgPattern pattern;
   private final boolean matchSameHead;
+  private final boolean returnWholeTree;
 
-  public CcgSubtreePattern(CcgPattern pattern, boolean matchSameHead) {
+  public CcgSubtreePattern(CcgPattern pattern, boolean matchSameHead, boolean returnWholeTree) {
     this.pattern = Preconditions.checkNotNull(pattern);
     this.matchSameHead = matchSameHead;
+    this.returnWholeTree = returnWholeTree;
   }
 
   @Override
@@ -24,7 +27,11 @@ public class CcgSubtreePattern implements CcgPattern {
     Set<IndexedPredicate> heads = parse.getSemanticHeads();
 
     matchHelper(matches, heads, parse);
-    return matches;
+    if (returnWholeTree) {
+      return Arrays.asList(parse);
+    } else {
+      return matches;
+    }
   }
 
   private final void matchHelper(List<CcgParse> accumulator, Set<IndexedPredicate> heads,

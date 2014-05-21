@@ -32,6 +32,10 @@ import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 public class AmbEval {
+  
+  public static final String OPT_EPOCHS_VAR_NAME="OPT-EPOCHS";
+  public static final String OPT_L2_VAR_NAME="OPT-L2";
+  public static final String CLI_ARGV_VAR_NAME="ARGV";
 
   public EvalResult eval(SExpression expression) {
     return eval(expression, getDefaultEnvironment(), new ParametricBfgBuilder(true));
@@ -261,7 +265,9 @@ public class AmbEval {
             Object weightsConsList = ConsValue.listToConsList(weights);
             return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
           } else {
-            return new EvalResult(value);
+            Object outcomesConsList = ConsValue.listToConsList(Arrays.asList(value));
+            Object weightsConsList = ConsValue.listToConsList(Arrays.asList(1.0));
+            return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
           }
         } else if (constantName.equals("add-weight")) {
           Preconditions.checkArgument(subexpressions.size() == 3);
@@ -305,8 +311,8 @@ public class AmbEval {
               parameterSpec, new JunctionTree());
 
           // 4th argument is an optional parameter for providing optimization parameters.
-          int epochs = 50;
-          double l2Penalty = 0.0;
+          int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
+          double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
           if (subexpressions.size() >= 5) {
             Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
             Map<String, Object> optimizationParams = ConsValue.associationListToMap(
@@ -351,8 +357,8 @@ public class AmbEval {
               parameterSpec, new JunctionTree());
 
           // 4th argument is an optional parameter for providing optimization parameters.
-          int epochs = 50;
-          double l2Penalty = 0.0;
+          int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
+          double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
           if (subexpressions.size() >= 5) {
             Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
             Map<String, Object> optimizationParams = ConsValue.associationListToMap(
@@ -522,7 +528,9 @@ public class AmbEval {
 
     env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()));
     env.bindName("array-map", new ArrayMapFunction());
+    env.bindName("array-foldr", new ArrayFoldRightFunction());
     env.bindName("array-zip", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayZipFunction()));
+    env.bindName("array-sort", new RaisedBuiltinFunction(new BuiltinFunctions.ArraySortFunction()));
 
     env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
     env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());
@@ -550,6 +558,13 @@ public class AmbEval {
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()));
     env.bindName("or", new RaisedBuiltinFunction(new BuiltinFunctions.OrFunction()));
     env.bindName("display", new WrappedBuiltinFunction(new BuiltinFunctions.DisplayFunction()));
+    
+    // Bind default environment parameters for opt and opt-mm.
+    env.bindName(OPT_EPOCHS_VAR_NAME, 50);
+    env.bindName(OPT_L2_VAR_NAME, 0.0);
+    
+    // Bind default command line arguments
+    env.bindName(CLI_ARGV_VAR_NAME, ConstantValue.NIL);
     return env;
   }
 
@@ -728,6 +743,32 @@ public class AmbEval {
       Object[] result = new Object[values.length];
       for (int i = 0; i < values.length; i++) {
         result[i] = function.apply(Arrays.asList(values[i]), env, gfgBuilder);
+      }
+      return result;
+    }
+  }
+  
+  /**
+   * Applies a given function to each element of an array.
+   * This function cannot be implemented using raising because
+   * the function argument has a different type in {@code AmbEval}
+   * and {@code LispEval}.
+   * 
+   * @author jayant
+   */
+  public static class ArrayFoldRightFunction implements AmbFunctionValue {
+    @Override    
+    public Object apply(List<Object> argumentValues, Environment env,
+        ParametricBfgBuilder gfgBuilder) {
+      // Arguments are: <function> <array> <initial val>
+      Preconditions.checkArgument(argumentValues.size() == 3);
+      AmbFunctionValue function = (AmbFunctionValue) argumentValues.get(0);
+      Object[] values = (Object[]) argumentValues.get(1);
+      Object initialValue = argumentValues.get(2);
+
+      Object result = initialValue;
+      for (int i = values.length - 1; i >= 0; i--) {
+        result = function.apply(Arrays.asList(values[i], result), env, gfgBuilder);
       }
       return result;
     }

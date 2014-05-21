@@ -9,10 +9,12 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.BuiltinFunctions;
+import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
@@ -23,11 +25,26 @@ public class AmbLisp extends AbstractCli {
 
   private OptionSpec<Void> printFactorGraph;
   private OptionSpec<Void> interactive;
+  private OptionSpec<String> evalOpt;
+  
+  private OptionSpec<Integer> optEpochs;
+  private OptionSpec<Double> optL2Regularization;
+  private OptionSpec<String> args;
   
   @Override
   public void initializeOptions(OptionParser parser) {
     printFactorGraph = parser.accepts("printFactorGraph");
     interactive = parser.accepts("interactive");
+    evalOpt = parser.accepts("eval").withRequiredArg().ofType(String.class);
+    
+    // Options for controlling the optimization procedure
+    optEpochs = parser.accepts("optEpochs").withRequiredArg().ofType(Integer.class).defaultsTo(50);
+    optL2Regularization = parser.accepts("optL2Regularization").withRequiredArg()
+        .ofType(Double.class).defaultsTo(0.0);
+
+    // Command line arguments passed through to the program
+    // being evaluated.
+    args = parser.accepts("args").withRequiredArg().ofType(String.class);
   }
 
   @Override
@@ -52,8 +69,13 @@ public class AmbLisp extends AbstractCli {
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
     SExpression programExpression = parser.parseSingleExpression(program);
     ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
-    Environment environment = AmbEval.getDefaultEnvironment();
+    Environment environment = createEnvironmentFromOptions(options);
     EvalResult result = eval.eval(programExpression, environment, fgBuilder);
+
+    if (options.has(evalOpt)) {
+      SExpression argExpression = parser.parseSingleExpression(options.valueOf(evalOpt));
+      result = eval.eval(argExpression, environment, fgBuilder);
+    }
 
     BuiltinFunctions.display(result.getValue());
 
@@ -82,11 +104,23 @@ public class AmbLisp extends AbstractCli {
       }
     }
 
-
     if (options.has(printFactorGraph)) {
       System.out.println("Factor graph: ");
       System.out.println(fgBuilder.build().getParameterDescription());
     }
+  }
+
+  private Environment createEnvironmentFromOptions(OptionSet options) {
+    Environment env = AmbEval.getDefaultEnvironment();
+    env.bindName(AmbEval.OPT_EPOCHS_VAR_NAME, options.valueOf(optEpochs));
+    env.bindName(AmbEval.OPT_L2_VAR_NAME, options.valueOf(optL2Regularization));
+
+    List<String> commandLineArgs = Lists.newArrayList();
+    for (String arg : options.valuesOf(args)) {
+      commandLineArgs.add(arg);
+    }
+    env.bindName(AmbEval.CLI_ARGV_VAR_NAME, ConsValue.listToConsList(commandLineArgs));
+    return env;
   }
 
   public static void main(String[] args) {

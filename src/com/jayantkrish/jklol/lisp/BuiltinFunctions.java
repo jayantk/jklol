@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.lisp;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -230,18 +231,25 @@ public class BuiltinFunctions {
   public static class DisplayFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
-      display(argumentValues.get(0));
+      List<String> argumentStrings = Lists.newArrayList();
+      for (Object o : argumentValues) {
+        argumentStrings.add(formatObjectForDisplay(o));
+      }
+      System.out.println(Joiner.on(" ").join(argumentStrings));
       return ConstantValue.UNDEFINED;
     }
   }
 
-  public static void display(Object object) {
+  public static String formatObjectForDisplay(Object object) {
     if (object instanceof Object[]) {
-      System.out.println(Arrays.toString((Object[]) object));
+      return Arrays.toString((Object[]) object);
     } else {
-      System.out.println(object);
+      return object.toString();
     }
+  }
+
+  public static void display(Object object) {
+    System.out.println(formatObjectForDisplay(object));
   }
 
   private static boolean allArgumentsInteger(List<Object> argumentValues) {
@@ -326,6 +334,20 @@ public class BuiltinFunctions {
         result[i] = ConsValue.listToConsList(zippedElts);
       }
       return result;
+    }
+  }
+  
+  public static class ArraySortFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1
+          && argumentValues.get(0) instanceof Object[]);
+      Object[] argumentArray = (Object[]) argumentValues.get(0);
+
+      Object[] argumentCopy = Arrays.copyOf(argumentArray, argumentArray.length);
+      Arrays.sort(argumentCopy);
+
+      return argumentCopy;
     }
   }
 }

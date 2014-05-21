@@ -75,17 +75,6 @@ public class ListParameterSpec extends AbstractParameterSpec {
   }
 
   @Override
-  public SufficientStatistics getCurrentParameters() {
-    List<SufficientStatistics> parameters = Lists.newArrayList();
-    
-    for (ParameterSpec child : children) {
-      parameters.add(child.getCurrentParameters());
-    }
-
-    return new CvsmSufficientStatistics(childNames, suppliers, parameters);
-  }
-
-  @Override
   public SufficientStatistics getNewParameters() {
     List<SufficientStatistics> parameters = Lists.newArrayList(Collections
         .<SufficientStatistics>nCopies(children.size(), null));
@@ -100,6 +89,14 @@ public class ListParameterSpec extends AbstractParameterSpec {
    */
   public ParameterSpec get(int i) {
     return children.get(i);
+  }
+
+  public SufficientStatistics wrap(List<SufficientStatistics> childParams) {
+    return new CvsmSufficientStatistics(childNames, suppliers, childParams);
+  }
+
+  public SufficientStatistics getParameter(int i, SufficientStatistics params) {
+    return ((CvsmSufficientStatistics) params).getSufficientStatistics(i);
   }
 
   @Override
@@ -117,19 +114,6 @@ public class ListParameterSpec extends AbstractParameterSpec {
       }
       return null;
     }
-  }
-
-  @Override
-  public ParameterSpec wrap(SufficientStatistics parameters) {
-    List<SufficientStatistics> inputStats = parameters.coerceToList().getStatistics();
-    Preconditions.checkArgument(inputStats.size() == children.size());
-    List<ParameterSpec> wrapped = Lists.newArrayList();
-    for (int i = 0; i < inputStats.size(); i++) {
-      wrapped.add(children.get(i).wrap(inputStats.get(i)));
-    }
-
-    return new ListParameterSpec(getId(), wrapped, childIdIndex, childIdIndexValues,
-        suppliers, childNames);
   }
 
   private static class ParameterSpecSupplier implements Supplier<SufficientStatistics>, Serializable {

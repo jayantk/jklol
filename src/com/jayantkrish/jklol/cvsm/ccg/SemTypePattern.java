@@ -1,10 +1,13 @@
 package com.jayantkrish.jklol.cvsm.ccg;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -23,6 +26,7 @@ public class SemTypePattern implements CategoryPattern {
   private static final String WORD_SEP = "_";
   private static final String WORD_PATTERN = "<word>";
   private static final String WORD_LC_PATTERN = "<lc_word>";
+  private static final String ARG_PATTERN = "<arg_([0-9]*)>";
 
   public SemTypePattern(String[] patterns, SyntacticCategory patternCategory, Expression template,
       boolean matchOnSemanticType) {
@@ -44,7 +48,8 @@ public class SemTypePattern implements CategoryPattern {
   }
 
   @Override
-  public boolean matches(List<String> argWords, SyntacticCategory category) {
+  public boolean matches(List<String> argWords, SyntacticCategory category,
+      Collection<DependencyStructure> deps) {
     boolean patternMatch = false;
     String argWordString = Joiner.on(" ").join(argWords);
     for (String pattern : patterns) {
@@ -84,7 +89,8 @@ public class SemTypePattern implements CategoryPattern {
   }
 
   @Override
-  public Expression getLogicalForm(List<String> words, SyntacticCategory category) {
+  public Expression getLogicalForm(List<String> words, SyntacticCategory category,
+      Collection<DependencyStructure> deps) {
     String parameterName = Joiner.on(WORD_SEP).join(words);
     Expression result = template;
     for (ConstantExpression expression : template.getFreeVariables()) {
@@ -96,6 +102,28 @@ public class SemTypePattern implements CategoryPattern {
       if (name.contains(WORD_LC_PATTERN)) {
         newName = name.replace(WORD_LC_PATTERN, parameterName.toLowerCase());
       }
+
+      StringBuffer sb = new StringBuffer();
+      Matcher argMatcher = Pattern.compile(ARG_PATTERN).matcher(newName);
+      while (argMatcher.find()) {
+        int argNum = Integer.parseInt(argMatcher.group(1));
+
+        boolean matchSuccess = false;
+        for (DependencyStructure dep : deps) {
+          if (dep.getArgIndex() == argNum) {
+            argMatcher.appendReplacement(sb, dep.getObject().toLowerCase());
+            matchSuccess = true;
+            break;
+          }
+        }
+
+        if (!matchSuccess) {
+          System.err.println("failed match: " + deps);
+          return null;
+        }
+      }
+      argMatcher.appendTail(sb);
+      newName = sb.toString();
 
       // TODO: possibly include part of speech tags, etc.
       if (!newName.equals(name)) {

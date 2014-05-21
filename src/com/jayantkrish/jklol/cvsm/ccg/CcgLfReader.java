@@ -410,8 +410,8 @@ public class CcgLfReader {
   private Expression getExpressionForWord(String word, SyntacticCategory syntax) {
     word = word.toLowerCase();
     for (CategoryPattern pattern : patterns) {
-      if (pattern.matches(Arrays.<String> asList(word), syntax)) {
-        return pattern.getLogicalForm(Arrays.<String> asList(word), syntax);
+      if (pattern.matches(Arrays.<String> asList(word), syntax, null)) {
+        return pattern.getLogicalForm(Arrays.<String> asList(word), syntax, null);
       }
     }
     return null;

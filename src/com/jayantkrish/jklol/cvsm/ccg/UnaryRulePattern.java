@@ -21,7 +21,7 @@ public class UnaryRulePattern {
   }
   
   public static UnaryRulePattern parseFrom(String line) {
-    String[] parts = CsvParser.noEscapeParser().parseLine(line);
+    String[] parts = new CsvParser(',', '"', CsvParser.DEFAULT_ESCAPE).parseLine(line);
     Preconditions.checkArgument(parts.length == 3);
 
     return new UnaryRulePattern(SyntacticCategory.parseFrom(parts[0]), SyntacticCategory.parseFrom(parts[1]),

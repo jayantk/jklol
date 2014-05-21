@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm.ccg;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -11,6 +12,7 @@ import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgUnaryRule;
 import com.jayantkrish.jklol.ccg.Combinator;
+import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
@@ -19,10 +21,13 @@ import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 public class CcgParseAugmenter {
   
   private final List<CategoryPattern> patterns;
+  private final List<BinaryRulePattern> binaryRulePatterns;
   private final List<UnaryRulePattern> unaryRulePatterns;
   
-  public CcgParseAugmenter(List<CategoryPattern> patterns, List<UnaryRulePattern> unaryRulePatterns) {
+  public CcgParseAugmenter(List<CategoryPattern> patterns, 
+      List<BinaryRulePattern> binaryRulePatterns, List<UnaryRulePattern> unaryRulePatterns) {
     this.patterns = ImmutableList.copyOf(patterns);
+    this.binaryRulePatterns = ImmutableList.copyOf(binaryRulePatterns); 
     this.unaryRulePatterns = ImmutableList.copyOf(unaryRulePatterns);
   }
 
@@ -32,10 +37,17 @@ public class CcgParseAugmenter {
       i++;
     }
     i++;
-
+    
     List<CategoryPattern> patterns = Lists.newArrayList();
-    while (!lines.get(i).trim().equals("UNARY RULES")) {
+    while (!lines.get(i).trim().equals("BINARY RULES")) {
       patterns.add(SemTypePattern.parseFrom(lines.get(i)));
+      i++;
+    }
+    i++;
+
+    List<BinaryRulePattern> binaryRulePatterns = Lists.newArrayList();
+    while (!lines.get(i).trim().equals("UNARY RULES")) {
+      binaryRulePatterns.add(BinaryRulePattern.parseFrom(lines.get(i)));
       i++;
     }
     i++;
@@ -46,18 +58,24 @@ public class CcgParseAugmenter {
       i++;
     }
 
-    return new CcgParseAugmenter(patterns, unaryRulePatterns);
+    return new CcgParseAugmenter(patterns, binaryRulePatterns, unaryRulePatterns);
   }
   
   public CcgParse addLogicalForms(CcgParse input) {
+    return addLogicalFormsHelper(input, input);
+  }
+
+  private CcgParse addLogicalFormsHelper(CcgParse input, CcgParse wholeParse) {
     CcgParse result = null;
     if (input.isTerminal()) {
-      HeadedSyntacticCategory cat = input.getHeadedSyntacticCategory();
       CcgCategory currentEntry = input.getLexiconEntry();
+      HeadedSyntacticCategory cat = currentEntry.getSyntax();
       Expression logicalForm = null;
+      Collection<DependencyStructure> deps = wholeParse
+          .getDependenciesWithHeadInSpan(input.getSpanStart(), input.getSpanEnd());
       for (CategoryPattern pattern : patterns) {
-        if (pattern.matches(input.getWords(), cat.getSyntax())) {
-          logicalForm = pattern.getLogicalForm(input.getWords(), cat.getSyntax());
+        if (pattern.matches(input.getWords(), cat.getSyntax(), deps)) {
+          logicalForm = pattern.getLogicalForm(input.getWords(), cat.getSyntax(), deps);
           break;
         }
       }
@@ -65,13 +83,13 @@ public class CcgParseAugmenter {
       CcgCategory lexiconEntry = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
           currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
 
-      result = CcgParse.forTerminal(cat, lexiconEntry, input.getLexiconTriggerWords(), 
-          input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(), 
+      result = CcgParse.forTerminal(input.getHeadedSyntacticCategory(), lexiconEntry,
+          input.getLexiconTriggerWords(), input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(), 
           input.getWords(), input.getNodeProbability(), input.getUnaryRule(),
           input.getSpanStart(), input.getSpanEnd()); 
     } else {
-      CcgParse left = addLogicalForms(input.getLeft());
-      CcgParse right = addLogicalForms(input.getRight());
+      CcgParse left = addLogicalFormsHelper(input.getLeft(), wholeParse);
+      CcgParse right = addLogicalFormsHelper(input.getRight(), wholeParse);
       
       result = CcgParse.forNonterminal(input.getHeadedSyntacticCategory(), input.getSemanticHeads(),
           input.getNodeDependencies(), input.getNodeProbability(), left, right, input.getCombinator(),
@@ -82,9 +100,15 @@ public class CcgParseAugmenter {
     if (!result.isTerminal() && result.getCombinator().getBinaryRule() != null) {
       Combinator combinator = result.getCombinator();
       CcgBinaryRule rule = combinator.getBinaryRule();
-      
+
       LambdaExpression newLogicalForm = null;
-      
+      for (BinaryRulePattern pattern : binaryRulePatterns) {
+        if (pattern.matches(rule)) {
+          newLogicalForm = pattern.getLogicalForm(rule);
+          break;
+        }
+      }
+
       CcgBinaryRule newRule = new CcgBinaryRule(rule.getLeftSyntacticType(), rule.getRightSyntacticType(),
           rule.getParentSyntacticType(), newLogicalForm, Arrays.asList(rule.getSubjects()),
           Arrays.asList(rule.getSubjectSyntacticCategories()), Ints.asList(rule.getArgumentNumbers()),

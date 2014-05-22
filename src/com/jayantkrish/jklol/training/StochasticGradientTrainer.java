@@ -253,8 +253,17 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       if (rand < frequency && l2Penalty != 0.0) {
         objectiveValue -= l2Penalty * currentParameters.getL2Norm() / (2.0 * frequency);
         gradient.increment(currentParameters, (-1 * l2Penalty) / frequency);
+
+        System.out.println("Regularizing by: " +  (-1 * l2Penalty) / frequency);
+        System.out.println(gradient.getL2Norm());
+        System.out.println(currentParameters.getL2Norm());
       }
       currentParameters.increment(gradient, currentStepSize);
+
+      if (rand < frequency) {
+        System.out.println(currentParameters.getL2Norm());
+      }
+
       return objectiveValue;
     }
   }

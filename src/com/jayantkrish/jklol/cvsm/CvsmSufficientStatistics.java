@@ -30,24 +30,25 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   // Names for the statistics.
   private final IndexedList<String> names;
   private final List<Supplier<SufficientStatistics>> families;
+  private final List<SufficientStatistics> statistics;
 
-  // Sparse representation of the child sufficient statistics.
-  private final SufficientStatistics[] statistics;
-  private final int[] indexes;
-  private int numFilled;
+  // Indexes of non-null (= zero) elements of statistics
+  private final int[] nonzeroIndexes;
+  private int numNonzeroIndexes;
 
   public CvsmSufficientStatistics(IndexedList<String> names,
-      List<Supplier<SufficientStatistics>> families, SufficientStatistics[] statistics,
-      int[] indexes, int numFilled) {
+      List<Supplier<SufficientStatistics>> families, List<SufficientStatistics> statistics,
+      int[] nonzeroIndexes, int numNonzeroIndexes) {
     this.names = Preconditions.checkNotNull(names);
     this.families = Preconditions.checkNotNull(families);
     this.statistics = Preconditions.checkNotNull(statistics);
 
-    this.indexes = Preconditions.checkNotNull(indexes);
-    this.numFilled = numFilled;
+    this.nonzeroIndexes = Preconditions.checkNotNull(nonzeroIndexes);
+    this.numNonzeroIndexes= numNonzeroIndexes;
 
     Preconditions.checkArgument(names.size() == families.size());
-    Preconditions.checkArgument(statistics.length == indexes.length);
+    Preconditions.checkArgument(names.size() == statistics.size());
+    Preconditions.checkArgument(names.size() == nonzeroIndexes.length);
   }
 
   public static CvsmSufficientStatistics zero(IndexedList<String> names,
@@ -73,19 +74,8 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   }
 
   private final void ensureStatisticInstantiated(int index) {
-    int i = Arrays.binarySearch(indexes, index);
-    if (i < 0) {
-      // Note that the expected contract is that mutating the returned
-      // value affects the values in this.
-      if (numFilled == statistics.length) {
-        // Arrays are full. Resize them to make space.
-        statistics = Arrays.copyOf(statistics, statistics.length * 2);
-        indexes = Arrays.copyOf(indexes, indexes.length * 2);
-      }
-
-      statistics[numFilled] = families.get(index).get();
-      indexes[numFilled] = index;
-      statistics.set(index, );
+    if (statistics.get(index) == null) {
+      statistics.set(index, families.get(index).get());
       nonzeroIndexes[numNonzeroIndexes] = index;
       numNonzeroIndexes++;
     }
@@ -98,6 +88,8 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
    * @return
    */
   public SufficientStatistics getSufficientStatistics(int i) {
+    // Note that the expected contract is that mutating the returned
+    // value affects the values in this.
     ensureStatisticInstantiated(i);
     return statistics.get(i);
   }

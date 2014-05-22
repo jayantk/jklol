@@ -527,10 +527,12 @@ public class AmbEval {
     env.bindName("dictionary-to-array", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryToArrayFunction()));
 
     env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()));
+    env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement())); 
     env.bindName("array-map", new ArrayMapFunction());
     env.bindName("array-foldr", new ArrayFoldRightFunction());
     env.bindName("array-zip", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayZipFunction()));
     env.bindName("array-sort", new RaisedBuiltinFunction(new BuiltinFunctions.ArraySortFunction()));
+    env.bindName("array-merge-sets", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayMergeSets()));
 
     env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
     env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());

@@ -2,10 +2,12 @@ package com.jayantkrish.jklol.lisp;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class BuiltinFunctions {
@@ -348,6 +350,41 @@ public class BuiltinFunctions {
       Arrays.sort(argumentCopy);
 
       return argumentCopy;
+    }
+  }
+  
+  public static class ArrayGetIthElement implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      Preconditions.checkArgument(argumentValues.get(0) instanceof Object[]);
+      Preconditions.checkArgument(argumentValues.get(1) instanceof Integer);
+      Object[] argumentArray = (Object[]) argumentValues.get(0);
+      int index = (Integer) argumentValues.get(1);
+
+      return argumentArray[index];
+    }
+  }
+  
+  public static class ArrayMergeSets implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      Preconditions.checkArgument(argumentValues.get(0) instanceof Object[]);
+      Preconditions.checkArgument(argumentValues.get(1) instanceof Object[]);
+      
+      Set<Object> objects = Sets.newHashSet();
+      objects.addAll(Arrays.asList((Object[]) argumentValues.get(0)));
+      objects.addAll(Arrays.asList((Object[]) argumentValues.get(1)));
+      
+      Object[] newArray = new Object[objects.size()];
+      int i = 0;
+      for (Object object : objects) {
+        newArray[i] = object;
+        i++;
+      }
+
+      return newArray;
     }
   }
 }

@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.lisp;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -76,11 +75,9 @@ public class ListParameterSpec extends AbstractParameterSpec {
 
   @Override
   public SufficientStatistics getNewParameters() {
-    List<SufficientStatistics> parameters = Lists.newArrayList(Collections
-        .<SufficientStatistics>nCopies(children.size(), null));
-    return new CvsmSufficientStatistics(childNames, suppliers, parameters);
+    return CvsmSufficientStatistics.zero(childNames, suppliers);
   }
-  
+
   /**
    * Gets the ith set of parameters in this list.
    * 
@@ -92,7 +89,16 @@ public class ListParameterSpec extends AbstractParameterSpec {
   }
 
   public SufficientStatistics wrap(List<SufficientStatistics> childParams) {
-    return new CvsmSufficientStatistics(childNames, suppliers, childParams);
+    int[] nonzeroIndexes = new int[childParams.size()];
+    int numNonzero = 0;
+    for (int i = 0; i < childParams.size(); i++) {
+      if (childParams.get(i) != null) {
+        nonzeroIndexes[numNonzero] = i;
+        numNonzero++;
+      }
+    }
+    return new CvsmSufficientStatistics(childNames, suppliers, childParams, nonzeroIndexes,
+        numNonzero);
   }
 
   public SufficientStatistics getParameter(int i, SufficientStatistics params) {

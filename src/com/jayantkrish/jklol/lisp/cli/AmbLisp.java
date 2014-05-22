@@ -81,7 +81,7 @@ public class AmbLisp extends AbstractCli {
 
     if (options.has(interactive)) {
       System.out.println("Starting interactive mode.");
-            // Any input on stdin is also evaluated after the given files.
+      // Any input on stdin is also evaluated after the given files.
       BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
       String line = null;
       System.out.print(">> ");

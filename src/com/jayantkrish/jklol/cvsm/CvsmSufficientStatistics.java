@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.cvsm;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -28,16 +30,33 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   // Names for the statistics.
   private final IndexedList<String> names;
   private final List<Supplier<SufficientStatistics>> families;
-  private final List<SufficientStatistics> statistics;
+
+  // Sparse representation of the child sufficient statistics.
+  private final SufficientStatistics[] statistics;
+  private final int[] indexes;
+  private int numFilled;
 
   public CvsmSufficientStatistics(IndexedList<String> names,
-      List<Supplier<SufficientStatistics>> families, List<SufficientStatistics> statistics) {
+      List<Supplier<SufficientStatistics>> families, SufficientStatistics[] statistics,
+      int[] indexes, int numFilled) {
     this.names = Preconditions.checkNotNull(names);
     this.families = Preconditions.checkNotNull(families);
-    this.statistics = Lists.newArrayList(Preconditions.checkNotNull(statistics));
+    this.statistics = Preconditions.checkNotNull(statistics);
+
+    this.indexes = Preconditions.checkNotNull(indexes);
+    this.numFilled = numFilled;
 
     Preconditions.checkArgument(names.size() == families.size());
-    Preconditions.checkArgument(names.size() == statistics.size());
+    Preconditions.checkArgument(statistics.length == indexes.length);
+  }
+
+  public static CvsmSufficientStatistics zero(IndexedList<String> names,
+      List<Supplier<SufficientStatistics>> families) {
+    int numFamilies = families.size();
+    List<SufficientStatistics> parameters = Lists.newArrayList(Collections
+        .<SufficientStatistics>nCopies(numFamilies, null));
+    return new CvsmSufficientStatistics(names, families, parameters, 
+        new int[numFamilies], 0);
   }
 
   /**
@@ -46,11 +65,30 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
    * @return
    */
   public int size() {
-    return statistics.size();
+    return families.size();
   }
 
   public IndexedList<String> getNames() {
     return names;
+  }
+
+  private final void ensureStatisticInstantiated(int index) {
+    int i = Arrays.binarySearch(indexes, index);
+    if (i < 0) {
+      // Note that the expected contract is that mutating the returned
+      // value affects the values in this.
+      if (numFilled == statistics.length) {
+        // Arrays are full. Resize them to make space.
+        statistics = Arrays.copyOf(statistics, statistics.length * 2);
+        indexes = Arrays.copyOf(indexes, indexes.length * 2);
+      }
+
+      statistics[numFilled] = families.get(index).get();
+      indexes[numFilled] = index;
+      statistics.set(index, );
+      nonzeroIndexes[numNonzeroIndexes] = index;
+      numNonzeroIndexes++;
+    }
   }
 
   /**
@@ -60,11 +98,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
    * @return
    */
   public SufficientStatistics getSufficientStatistics(int i) {
-    if (statistics.get(i) == null) {
-      // Note that the expected contract is that mutating the returned
-      // value affects the values in this.
-      statistics.set(i, families.get(i).get());
-    }
+    ensureStatisticInstantiated(i);
     return statistics.get(i);
   }
 
@@ -76,9 +110,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
    * @param increment
    */
   public void incrementEntry(int i, SufficientStatistics increment) {
-    if (statistics.get(i) == null) {
-      statistics.set(i, families.get(i).get());
-    }
+    ensureStatisticInstantiated(i);
     statistics.get(i).increment(increment, 1.0);
   }
 
@@ -87,17 +119,20 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
     Preconditions.checkNotNull(other);
     Preconditions.checkArgument(other instanceof CvsmSufficientStatistics);
 
-    List<SufficientStatistics> otherList = ((CvsmSufficientStatistics) other).statistics;
+    CvsmSufficientStatistics otherStats = ((CvsmSufficientStatistics) other);
+    List<SufficientStatistics> otherList = otherStats.statistics;
+    int[] otherNonZeroInds = otherStats.nonzeroIndexes;
+    int otherNumNonZero = otherStats.numNonzeroIndexes;
     Preconditions.checkArgument(otherList.size() == statistics.size());
 
-    for (int i = 0; i < statistics.size(); i++) {
-      if (otherList.get(i) != null) {
-        if (statistics.get(i) == null) {
-          statistics.set(i, otherList.get(i).duplicate());
-          statistics.get(i).multiply(multiplier);
-        } else {
-          statistics.get(i).increment(otherList.get(i), multiplier);
-        }
+    for (int i = 0; i < otherNumNonZero; i++) {
+      int ind = otherNonZeroInds[i];
+      Preconditions.checkState(otherList.get(ind) != null);
+      if (statistics.get(ind) == null) {
+        statistics.set(ind, otherList.get(ind).duplicate());
+        statistics.get(ind).multiply(multiplier);
+      } else {
+        statistics.get(ind).increment(otherList.get(ind), multiplier);
       }
     }
   }
@@ -105,9 +140,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   @Override
   public void increment(double amount) {
     for (int i = 0; i < statistics.size(); i++) {
-      if (statistics.get(i) == null) {
-        statistics.set(i, families.get(i).get());
-      }
+      ensureStatisticInstantiated(i);
       statistics.get(i).increment(amount);
     }
   }
@@ -129,9 +162,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   @Override
   public void perturb(double stddev) {
     for (int i = 0; i < statistics.size(); i++) {
-      if (statistics.get(i) == null) {
-        statistics.set(i, families.get(i).get());
-      }
+      ensureStatisticInstantiated(i);
       statistics.get(i).perturb(stddev);
     }
   }
@@ -158,13 +189,14 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   public SufficientStatistics duplicate() {
     List<SufficientStatistics> newStatistics = Lists.newArrayList();
     for (SufficientStatistics statistic : statistics) {
-      if (statistics != null) {
+      if (statistic != null) {
         newStatistics.add(statistic.duplicate());
       } else {
         newStatistics.add(null);
       }
     }
-    return new CvsmSufficientStatistics(names, families, newStatistics);
+    return new CvsmSufficientStatistics(names, families, newStatistics,
+        Arrays.copyOf(nonzeroIndexes, nonzeroIndexes.length), numNonzeroIndexes);
   }
 
   @Override
@@ -172,13 +204,17 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
     Preconditions.checkNotNull(other);
     Preconditions.checkArgument(other instanceof CvsmSufficientStatistics);
 
-    List<SufficientStatistics> otherList = ((CvsmSufficientStatistics) other).statistics;
+    CvsmSufficientStatistics otherStats = ((CvsmSufficientStatistics) other);
+    List<SufficientStatistics> otherList = otherStats.statistics;
+    int[] otherNonZeroInds = otherStats.nonzeroIndexes;
+    int otherNumNonZero = otherStats.numNonzeroIndexes;
     Preconditions.checkArgument(otherList.size() == statistics.size());
 
     double value = 0.0;
-    for (int i = 0; i < statistics.size(); i++) {
-      if (otherList.get(i) != null && statistics.get(i) != null) {
-        value += statistics.get(i).innerProduct(otherList.get(i));
+    for (int i = 0; i < otherNumNonZero; i++) {
+      int ind = otherNonZeroInds[i];
+      if (otherList.get(ind) != null && statistics.get(ind) != null) {
+        value += statistics.get(ind).innerProduct(otherList.get(ind));
       }
     }
     return value;
@@ -187,9 +223,10 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   @Override
   public double getL2Norm() {
     double l2Norm = 0.0;
-    for (int i = 0; i < statistics.size(); i++) {
-      if (statistics.get(i) != null) {
-        l2Norm += Math.pow(statistics.get(i).getL2Norm(), 2);
+    for (int i = 0; i < numNonzeroIndexes; i++) {
+      int ind = nonzeroIndexes[i];
+      if (statistics.get(ind) != null) {
+        l2Norm += Math.pow(statistics.get(ind).getL2Norm(), 2);
       }
     }
     return Math.sqrt(l2Norm);
@@ -198,9 +235,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   @Override
   public ListSufficientStatistics coerceToList() {
     for (int i = 0; i < statistics.size(); i++) {
-      if (statistics.get(i) == null) {
-        statistics.set(i, families.get(i).get());
-      }
+      ensureStatisticInstantiated(i);
     }
     return new ListSufficientStatistics(names, statistics);
   }
@@ -208,9 +243,7 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   @Override
   public void makeDense() {
     for (int i = 0; i < statistics.size(); i++) {
-      if (statistics.get(i) == null) {
-        statistics.set(i, families.get(i).get());
-      }
+      ensureStatisticInstantiated(i);
       statistics.get(i).makeDense();
     }
   }

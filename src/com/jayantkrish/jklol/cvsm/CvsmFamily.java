@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.cvsm;
 
-import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -36,8 +35,7 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    List<SufficientStatistics> parameters = Collections.<SufficientStatistics>nCopies(families.size(), null);
-    return new CvsmSufficientStatistics(valueNames, suppliers, parameters);
+    return CvsmSufficientStatistics.zero(valueNames, suppliers);
   }
 
   /**

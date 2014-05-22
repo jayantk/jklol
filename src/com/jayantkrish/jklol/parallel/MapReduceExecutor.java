@@ -20,6 +20,21 @@ public interface MapReduceExecutor {
       Collection<? extends A> items, D mapper, E reducer);
 
   /**
+   * Runs mapper on each element of {@code items}, then combines the 
+   * results using {@code reducer}. {@code accumulator} is the initial
+   * value into which results are reduced. If it is {@code null}, then
+   * {@code reducer.getInitialValue()} is used. 
+   * 
+   * @param items
+   * @param mapper
+   * @param reducer
+   * @param accumulator
+   * @return
+   */
+  public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
+      Collection<? extends A> items, D mapper, E reducer, C accumulator);
+
+  /**
    * Runs {@code mapper} on each of the given {@code items}.
    * 
    * @param items

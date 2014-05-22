@@ -51,4 +51,10 @@ public class GradientEvaluation {
     objectiveValue += other.objectiveValue;
     searchErrors += other.searchErrors;
   }
+
+  public final void zeroOut() {
+    gradient.zeroOut();
+    objectiveValue = 0;
+    searchErrors = 0;
+  }
 }

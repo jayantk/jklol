@@ -324,6 +324,15 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
+  public void zeroOut() {
+    if (isDense) {
+      statistics.multiply(0);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseProduct(0); 
+    }
+  }
+  
+  @Override
   public String getDescription() {
     return getFactor().getParameterDescription();
   }

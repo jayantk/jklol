@@ -182,7 +182,14 @@ public class ListSufficientStatistics implements SufficientStatistics {
       statistic.makeDense();
     }
   }
-  
+
+  @Override
+  public void zeroOut() {
+    for (SufficientStatistics statistic : statistics) {
+      statistic.zeroOut();
+    }
+  }
+
   @Override
   public String getDescription() {
     StringBuilder sb = new StringBuilder();

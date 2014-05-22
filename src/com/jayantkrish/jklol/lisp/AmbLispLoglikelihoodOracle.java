@@ -67,13 +67,17 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     // Evaluate the nondeterministic function on the current example to 
     // produce a factor graph for the distribution over outputs.
     log.startTimer("compute_gradient/input_eval");
+    log.startTimer("compute_gradient/input_eval/eval");
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
     Object inputApplicationResult = instantiatedModel.apply(example.getInput(), environment, newBuilder);
-    ParametricFactorGraph pfg = newBuilder.buildNoBranching();
+    log.stopTimer("compute_gradient/input_eval/eval");
 
+    log.startTimer("compute_gradient/input_eval/fg");
+    ParametricFactorGraph pfg = newBuilder.buildNoBranching();
     Assignment inputAssignment = newBuilder.getAssignment();
     FactorGraph inputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
         .conditional(DynamicAssignment.EMPTY).conditional(inputAssignment);
+    log.stopTimer("compute_gradient/input_eval/fg");
     log.stopTimer("compute_gradient/input_eval");
 
     // Compute the marginal distribution in this factor graph for
@@ -84,12 +88,17 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
 
     // Apply the output filter.
     log.startTimer("compute_gradient/output_eval");
+    log.startTimer("compute_gradient/output_eval/eval");
     AmbFunctionValue outputCondition = example.getOutput();
     outputCondition.apply(Arrays.asList(inputApplicationResult), environment, newBuilder);
+    log.stopTimer("compute_gradient/output_eval/eval");
+    
+    log.startTimer("compute_gradient/output_eval/fg");
     pfg = newBuilder.buildNoBranching();
     Assignment outputAssignment = newBuilder.getAssignment();
     FactorGraph outputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
         .conditional(DynamicAssignment.EMPTY).conditional(outputAssignment);
+    log.stopTimer("compute_gradient/output_eval/fg");
     log.stopTimer("compute_gradient/output_eval");
 
     // Compute the marginal distribution given the constraint on the

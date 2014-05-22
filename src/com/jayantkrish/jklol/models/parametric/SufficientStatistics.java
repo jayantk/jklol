@@ -137,6 +137,11 @@ public interface SufficientStatistics extends Serializable {
    * faster to update, but slower to copy.
    */
   public void makeDense();
+  
+  /**
+   * Sets all elements of these sufficient statistics to 0.
+   */
+  public void zeroOut();
 
   public String getDescription();
 }

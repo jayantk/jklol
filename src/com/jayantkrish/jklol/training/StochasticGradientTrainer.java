@@ -118,6 +118,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     }
 
     double gradientL2 = 0.0;
+    GradientEvaluation gradientAccumulator = null;
     // This is an attempt at estimating how much the parameters are still
     // changing.
     double exponentiallyWeightedUpdateNorm = stepSize;
@@ -143,10 +144,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       Mapper<T, T> mapper = Mappers.<T>identity();
       GradientReducer<M, T> reducer = new GradientReducer<M, T>(currentModel, initialParameters,
           oracle, log);
-      GradientEvaluation oracleResult = executor.mapReduce(batchData, mapper, reducer);
+      gradientAccumulator = executor.mapReduce(batchData, mapper, reducer, gradientAccumulator);
 
-      iterSearchErrors = oracleResult.getSearchErrors();
-      SufficientStatistics gradient = oracleResult.getGradient();
+      iterSearchErrors = gradientAccumulator.getSearchErrors();
+      SufficientStatistics gradient = gradientAccumulator.getGradient();
       if (batchSize > 1) {
         gradient.multiply(1.0 / batchSize);
       }
@@ -162,7 +163,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
 
       log.startTimer("compute_statistics");
       gradientL2 = gradient.getL2Norm();
-      double objectiveValue = regularizerObjectiveValue + (oracleResult.getObjectiveValue() / batchSize);
+      double objectiveValue = regularizerObjectiveValue + (gradientAccumulator.getObjectiveValue() / batchSize);
       exponentiallyWeightedUpdateNorm = gradientL2 
           + (MOVING_AVG_DISCOUNT * exponentiallyWeightedUpdateNorm);
       exponentiallyWeightedObjectiveValue = objectiveValue
@@ -184,6 +185,8 @@ public class StochasticGradientTrainer implements GradientOptimizer {
           / exponentiallyWeightedDenom);
       log.logStatistic(i, "gradient l2 norm (moving avg.)", exponentiallyWeightedUpdateNorm
           / exponentiallyWeightedDenom);
+
+      gradientAccumulator.zeroOut();
       log.notifyIterationEnd(i);
     }
 

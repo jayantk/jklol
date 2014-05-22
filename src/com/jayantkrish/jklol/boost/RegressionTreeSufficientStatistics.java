@@ -86,6 +86,9 @@ public class RegressionTreeSufficientStatistics implements SufficientStatistics 
   public void makeDense() {}
   
   @Override
+  public void zeroOut() {}
+
+  @Override
   public String getDescription() {
     StringBuilder sb = new StringBuilder();
     for (RegressionTree tree : trees) {

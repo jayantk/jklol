@@ -43,9 +43,18 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
   @Override
   public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
       Collection<? extends A> items, D mapper, E reducer) {
+    return mapReduce(items, mapper, reducer, null);
+  }
+
+  @Override
+  public <A, B, C, D extends Mapper<A, B>, E extends Reducer<B, C>> C mapReduce(
+      Collection<? extends A> items, D mapper, E reducer, C accumulator) {
+    if (accumulator == null) {
+      accumulator = reducer.getInitialValue();
+    }
+
     if (items.size() == 1) {
       // Run all computation in this thread, which is faster given only a small number of items.
-      C accumulator = reducer.getInitialValue();
       for (A item : items) {
         B mappedItem = mapper.map(item);
         accumulator = reducer.reduce(mappedItem, accumulator);
@@ -69,7 +78,6 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
 
     // Run the tasks in parallel, aggregating (reducing) their results as 
     // they become available.
-    C accumulator = reducer.getInitialValue();
     try {
       for (Future<C> result : results) {
         accumulator = reducer.combine(result.get(), accumulator);
@@ -87,7 +95,7 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
     }
     return accumulator;
   }
-  
+
   @Override
   public <A, B, C extends Mapper<A, B>> List<B> map(Collection<? extends A> items, C mapper) {
     List<B> results = Lists.newArrayList();

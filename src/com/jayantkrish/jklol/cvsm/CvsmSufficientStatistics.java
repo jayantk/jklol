@@ -240,6 +240,23 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
     }
   }
 
+  @Override 
+  public void zeroOut() {
+    int numDeleted = 0;
+    for (int i = 0; i < numNonzeroIndexes; i++) {
+      int ind = nonzeroIndexes[i];
+      if (statistics.get(ind) instanceof CvsmSufficientStatistics) {
+        statistics.get(ind).zeroOut();
+        nonzeroIndexes[i - numDeleted] = ind;
+      } else {
+        statistics.set(ind, null);
+        nonzeroIndexes[i] = -1;
+        numDeleted++;
+      }
+    }
+    numNonzeroIndexes = numNonzeroIndexes - numDeleted;
+  }
+
   @Override
   public String getDescription() {
     return statistics.toString();

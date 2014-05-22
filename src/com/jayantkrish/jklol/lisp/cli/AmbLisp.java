@@ -29,6 +29,7 @@ public class AmbLisp extends AbstractCli {
   
   private OptionSpec<Integer> optEpochs;
   private OptionSpec<Double> optL2Regularization;
+  private OptionSpec<Double> optL2RegularizationFrequency;
   private OptionSpec<String> args;
   
   @Override
@@ -41,6 +42,8 @@ public class AmbLisp extends AbstractCli {
     optEpochs = parser.accepts("optEpochs").withRequiredArg().ofType(Integer.class).defaultsTo(50);
     optL2Regularization = parser.accepts("optL2Regularization").withRequiredArg()
         .ofType(Double.class).defaultsTo(0.0);
+    optL2RegularizationFrequency  = parser.accepts("optL2RegularizationFrequency").withRequiredArg()
+        .ofType(Double.class).defaultsTo(1.0);
 
     // Command line arguments passed through to the program
     // being evaluated.
@@ -114,6 +117,7 @@ public class AmbLisp extends AbstractCli {
     Environment env = AmbEval.getDefaultEnvironment();
     env.bindName(AmbEval.OPT_EPOCHS_VAR_NAME, options.valueOf(optEpochs));
     env.bindName(AmbEval.OPT_L2_VAR_NAME, options.valueOf(optL2Regularization));
+    env.bindName(AmbEval.OPT_L2_FREQ_VAR_NAME, options.valueOf(optL2RegularizationFrequency));
 
     List<String> commandLineArgs = Lists.newArrayList();
     for (String arg : options.valuesOf(args)) {

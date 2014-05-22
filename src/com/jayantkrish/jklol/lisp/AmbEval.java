@@ -35,6 +35,8 @@ public class AmbEval {
   
   public static final String OPT_EPOCHS_VAR_NAME="OPT-EPOCHS";
   public static final String OPT_L2_VAR_NAME="OPT-L2";
+  public static final String OPT_L2_FREQ_VAR_NAME="OPT-L2-FREQ";
+
   public static final String CLI_ARGV_VAR_NAME="ARGV";
 
   public EvalResult eval(SExpression expression) {
@@ -313,6 +315,7 @@ public class AmbEval {
           // 4th argument is an optional parameter for providing optimization parameters.
           int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
           double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
+          double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
           if (subexpressions.size() >= 5) {
             Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
             Map<String, Object> optimizationParams = ConsValue.associationListToMap(
@@ -326,8 +329,9 @@ public class AmbEval {
             }
           }
 
-          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * epochs, 1, 1, true, false, l2Penalty, new DefaultLogFunction(10000, false));
+          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
+              trainingData.size() * epochs, 1, 1, true, false, l2Penalty, l2Frequency,
+              new DefaultLogFunction(10000, false));
 
           SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
 
@@ -359,6 +363,7 @@ public class AmbEval {
           // 4th argument is an optional parameter for providing optimization parameters.
           int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
           double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
+          double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
           if (subexpressions.size() >= 5) {
             Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
             Map<String, Object> optimizationParams = ConsValue.associationListToMap(
@@ -372,8 +377,8 @@ public class AmbEval {
             }
           }
 
-          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, new NullLogFunction());
+          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
+              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, l2Frequency, new NullLogFunction());
 
           SufficientStatistics parameters = trainer.train(oracle,
               parameterSpec.getParameters(), trainingData);
@@ -564,6 +569,7 @@ public class AmbEval {
     // Bind default environment parameters for opt and opt-mm.
     env.bindName(OPT_EPOCHS_VAR_NAME, 50);
     env.bindName(OPT_L2_VAR_NAME, 0.0);
+    env.bindName(OPT_L2_FREQ_VAR_NAME, 1.0);
     
     // Bind default command line arguments
     env.bindName(CLI_ARGV_VAR_NAME, ConstantValue.NIL);

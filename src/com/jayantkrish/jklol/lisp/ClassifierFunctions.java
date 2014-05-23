@@ -290,8 +290,6 @@ public class ClassifierFunctions {
       TensorParameterSpec spec = new TensorParameterSpec(AbstractParameterSpec.getUniqueId(),
           parameterVar);
       SufficientStatistics params = spec.getNewParameters();
-      // TODO: remove this!
-      params.perturb(1);
       return new SpecAndParameters(spec, params);        
     }
   }
@@ -328,6 +326,18 @@ public class ClassifierFunctions {
 
       SufficientStatistics params = spec.getParameter(index, parameters.getParameters());
       return new SpecAndParameters(childSpec, params);
+    }
+  }
+  
+  public static class PerturbFunction implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(0);
+      double stddev = (Double) argumentValues.get(1);
+      parameters.getParameters().perturb(stddev);
+
+      return parameters;
     }
   }
 

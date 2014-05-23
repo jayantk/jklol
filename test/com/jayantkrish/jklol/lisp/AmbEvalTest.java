@@ -411,6 +411,37 @@ public class AmbEvalTest extends TestCase {
     assertEquals(expected, value);
   }
 
+  public void testOpt4() {
+    String program = "(define entities (make-dictionary \"A\" \"B\" \"C\" \"D\"))" +
+        "(define labels (list #t #f))" +
+        "" +
+        "(define inner-prod-family (params) " +
+        "  (lambda (entity1 entity2) " +
+        "    (let ((var (amb labels))) " +
+        "      (make-inner-product-classifier var #t " +
+        "        (get-ith-parameter params (dictionary-lookup entity1 entities)) " +
+        "        (get-ith-parameter params (dictionary-lookup entity2 entities))) " +
+        "     var)))"  +
+        "" +
+        "(define require1 (lambda (x) (add-weight (not x) 0.0)))" +
+        "" +
+        "(define training-data (list (list (list \"A\" \"A\") (lambda (x) (require1 (= x #t)))) " +
+        "                            (list (list \"A\" \"B\") (lambda (x) (require1 (= x #t)))) " +
+        "                            (list (list \"A\" \"C\") (lambda (x) (require1 (= x #f)))) " +
+        "                            (list (list \"D\" \"C\") (lambda (x) (require1 (= x #t)))) " +
+        " ))" +
+        "(define parameters (make-parameter-list (array-map (lambda (x) (make-vector-parameters 2)) (dictionary-to-array entities))))" +
+        "(perturb-parameters parameters 1.0)" +
+        "(define best-params (opt inner-prod-family parameters training-data))" + 
+        "(define output (inner-prod-family best-params))" + 
+        "(get-best-value (lifted-list (output \"A\" \"A\") (output \"B\" \"A\") (output \"B\" \"C\") (output \"D\" \"A\")))" ;
+        
+    Object value = runTest(program);
+    Object expected = runTest("(lifted-list #t #t #f #f)");
+
+    assertEquals(expected, value);
+  }
+
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
     return eval.eval(parser.parseSingleExpression(wrappedExpressionString)).getValue();

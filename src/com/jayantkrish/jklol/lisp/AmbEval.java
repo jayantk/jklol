@@ -548,6 +548,7 @@ public class AmbEval {
     env.bindName("make-inner-product-classifier", new ClassifierFunctions.MakeInnerProductClassifier());
     env.bindName("make-parameter-list", new ClassifierFunctions.MakeParameterList());
     env.bindName("get-ith-parameter", new ClassifierFunctions.GetIthParameter());
+    env.bindName("perturb-parameters", new ClassifierFunctions.PerturbFunction());
     env.bindName("serialize", new ClassifierFunctions.Serialize());
     env.bindName("deserialize", new ClassifierFunctions.Deserialize());
 

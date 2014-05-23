@@ -120,12 +120,8 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
     for (int i = 0; i < otherNumNonZero; i++) {
       int ind = otherNonZeroInds[i];
       Preconditions.checkState(otherList.get(ind) != null);
-      if (statistics.get(ind) == null) {
-        statistics.set(ind, otherList.get(ind).duplicate());
-        statistics.get(ind).multiply(multiplier);
-      } else {
-        statistics.get(ind).increment(otherList.get(ind), multiplier);
-      }
+      ensureStatisticInstantiated(ind);
+      statistics.get(ind).increment(otherList.get(ind), multiplier);
     }
   }
 

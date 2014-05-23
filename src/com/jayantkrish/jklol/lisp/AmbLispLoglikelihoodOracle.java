@@ -67,8 +67,11 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     // Evaluate the nondeterministic function on the current example to 
     // produce a factor graph for the distribution over outputs.
     log.startTimer("compute_gradient/input_eval");
-    log.startTimer("compute_gradient/input_eval/eval");
+    log.startTimer("compute_gradient/input_eval/builder");
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
+    log.stopTimer("compute_gradient/input_eval/builder");
+
+    log.startTimer("compute_gradient/input_eval/eval");
     Object inputApplicationResult = instantiatedModel.apply(example.getInput(), environment, newBuilder);
     log.stopTimer("compute_gradient/input_eval/eval");
 

@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.lisp;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -26,7 +25,7 @@ public class Environment {
   }
 
   public void bindName(String name, Object value) {
-    bindNames(Arrays.asList(name), Arrays.asList(value));
+    boundVariables.put(name, value);
   }
 
   public void bindNames(List<String> names, List<Object> values) {

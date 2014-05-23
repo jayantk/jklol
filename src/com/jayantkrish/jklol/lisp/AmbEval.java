@@ -94,7 +94,7 @@ public class AmbEval {
           }
           return new EvalResult(ConstantValue.UNDEFINED);
         } else if (constantName.equals("begin")) {
-          // Sequentially evaluates its subexpressions, chaining any 
+          // Sequentially evaluates its subexpressions, chaining any  
           // environment changes.
           EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
           for (int i = 1; i < subexpressions.size(); i++) {
@@ -530,6 +530,7 @@ public class AmbEval {
     env.bindName("dictionary-contains", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryContainsFunction()));
     env.bindName("dictionary-size", new RaisedBuiltinFunction(new BuiltinFunctions.DictionarySizeFunction()));
     env.bindName("dictionary-to-array", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryToArrayFunction()));
+    env.bindName("dictionary-rand-elt", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryRandomElement()));
 
     env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()));
     env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement())); 

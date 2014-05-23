@@ -9,6 +9,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.util.IndexedList;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 public class BuiltinFunctions {
   
@@ -302,6 +303,16 @@ public class BuiltinFunctions {
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return ((IndexedList<?>) argumentValues.get(0)).items().toArray();
+    }
+  }
+
+  public static class DictionaryRandomElement implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      IndexedList<?> list = (IndexedList<?>) argumentValues.get(0);
+      int choice = Pseudorandom.get().nextInt(list.size());
+      return list.get(choice);
     }
   }
 

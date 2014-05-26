@@ -5,7 +5,9 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Implementations of common {@code ExpressionFactory}s.
@@ -20,16 +22,9 @@ public class ExpressionFactories {
    * 
    * @return
    */
-  public static ExpressionFactory<SExpression> getSExpressionFactory() {
-    return new ExpressionFactory<SExpression>() {
-      public SExpression createTokenExpression(String token) {
-        return SExpression.constant(token);
-      }
-      
-      public SExpression createExpression(List<SExpression> subexpressions) {
-        return SExpression.nested(subexpressions);
-      }
-    };
+  public static ExpressionFactory<SExpression> getSExpressionFactory(
+      IndexedList<String> symbolTable) {
+    return new SExpressionFactory(symbolTable);
   }
 
   public static ExpressionFactory<Type> getTypeFactory() {
@@ -183,6 +178,43 @@ public class ExpressionFactories {
         }
       }
     };
+  }
+
+  private static class SExpressionFactory implements ExpressionFactory<SExpression> {
+    private final IndexedList<String> symbolTable;
+
+    public SExpressionFactory(IndexedList<String> symbolTable) {
+      this.symbolTable = Preconditions.checkNotNull(symbolTable);
+    }
+
+    public SExpression createTokenExpression(String token) {
+      if (!symbolTable.contains(token)) {
+        symbolTable.add(token);
+      }
+      int symbolIndex = symbolTable.getIndex(token);
+      String internedString = symbolTable.get(symbolIndex);
+
+      Object primitiveValue = null;
+      if (internedString.startsWith("\"") && internedString.endsWith("\"")) {
+        String strippedQuotes = internedString.substring(1, internedString.length() - 1);
+        primitiveValue = strippedQuotes;
+      } else if (internedString.matches("^-?[0-9]+$")) {
+        // Integer primitive type
+        primitiveValue = Integer.parseInt(internedString);
+      } else if (internedString.matches("^-?[0-9]+\\.[0-9]*$")) {
+        primitiveValue = Double.parseDouble(internedString);
+      } else if (internedString.equals("#t")) {
+        primitiveValue = ConstantValue.TRUE;
+      } else if (internedString.equals("#f")) {
+        primitiveValue = ConstantValue.FALSE;
+      }
+
+      return SExpression.constant(internedString, symbolIndex, primitiveValue);
+    }
+
+    public SExpression createExpression(List<SExpression> subexpressions) {
+      return SExpression.nested(subexpressions);
+    }
   }
 
   private ExpressionFactories() {

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class ExpressionParserTest extends TestCase {
   
@@ -22,7 +23,7 @@ public class ExpressionParserTest extends TestCase {
     unequalQuoteParser = new ExpressionParser<Expression>('(', ')', '<', '>', true,
         ExpressionParser.DEFAULT_SEPARATOR, new String[0], new String[0],
         ExpressionFactories.getDefaultFactory());
-    lispParser = ExpressionParser.sExpression();
+    lispParser = ExpressionParser.sExpression(IndexedList.<String>create());
     typeParser = ExpressionParser.typeParser();
     
     context = MapTypeContext.empty().bindNames(Arrays.asList("x", "f"),

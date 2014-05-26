@@ -9,6 +9,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Chars;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * A parser for LISP-style S-expressions. An example expression is:
@@ -76,10 +77,10 @@ public class ExpressionParser<T> {
         ExpressionFactories.getTypedLambdaCalculusFactory());
   }
 
-  public static ExpressionParser<SExpression> sExpression() {
+  public static ExpressionParser<SExpression> sExpression(IndexedList<String> symbolTable) {
     return new ExpressionParser<SExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
         DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
-        ExpressionFactories.getSExpressionFactory());
+        ExpressionFactories.getSExpressionFactory(symbolTable));
   }
 
   public static ExpressionParser<Type> typeParser() {

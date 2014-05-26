@@ -19,6 +19,7 @@ import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class AmbLisp extends AbstractCli {
@@ -68,8 +69,9 @@ public class AmbLisp extends AbstractCli {
     programBuilder.append(" )");
     String program = programBuilder.toString();
 
-    AmbEval eval = new AmbEval();
-    ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
+    IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
+    AmbEval eval = new AmbEval(symbolTable);
+    ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
     SExpression programExpression = parser.parseSingleExpression(program);
     ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
     Environment environment = createEnvironmentFromOptions(options);

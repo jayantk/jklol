@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.lisp;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class LispEvalTest extends TestCase {
 
@@ -10,8 +11,9 @@ public class LispEvalTest extends TestCase {
   ExpressionParser<SExpression> parser;
 
   public void setUp() {
+    IndexedList<String> symbolTable = IndexedList.create();
     eval = new LispEval();
-    parser = ExpressionParser.sExpression();
+    parser = ExpressionParser.sExpression(symbolTable);
   }
 
   public void testCar() {

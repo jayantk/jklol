@@ -29,15 +29,41 @@ import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 public class AmbEval {
-  
+
   public static final String OPT_EPOCHS_VAR_NAME="OPT-EPOCHS";
   public static final String OPT_L2_VAR_NAME="OPT-L2";
   public static final String OPT_L2_FREQ_VAR_NAME="OPT-L2-FREQ";
-
+ 
   public static final String CLI_ARGV_VAR_NAME="ARGV";
+
+  // Indexes in the symbol table for built-in special forms.
+  // The indexes are defined by the order in getInitialSymbolTable()
+  private static final int DEFINE_SYMBOL_INDEX = 0;
+  private static final int BEGIN_SYMBOL_INDEX = 1;
+  private static final int LET_SYMBOL_INDEX = 2;
+  private static final int LAMBDA_SYMBOL_INDEX = 3;
+  private static final int QUOTE_SYMBOL_INDEX = 4;
+
+  private static final int EVAL_SYMBOL_INDEX = 5;
+  private static final int APPLY_SYMBOL_INDEX = 6;
+  private static final int IF_SYMBOL_INDEX = 7;
+  private static final int AMB_SYMBOL_INDEX = 8;
+  private static final int GET_BEST_VALUE_SYMBOL_INDEX = 9;
+
+  private static final int GET_MARGINALS_SYMBOL_INDEX = 10;
+  private static final int ADD_WEIGHT_SYMBOL_INDEX = 11;
+  private static final int OPT_SYMBOL_INDEX = 12;
+  private static final int OPT_MM_SYMBOL_INDEX = 13;
+  
+  private final IndexedList<String> symbolTable;
+
+  public AmbEval(IndexedList<String> symbolTable) {
+    this.symbolTable = Preconditions.checkNotNull(symbolTable);
+  }
 
   public EvalResult eval(SExpression expression) {
     return eval(expression, getDefaultEnvironment(), new ParametricBfgBuilder(true));
@@ -47,346 +73,57 @@ public class AmbEval {
       ParametricBfgBuilder builder) {
     if (expression.isConstant()) {
       // The expression may be a primitive type or a variable.
-      Object primitiveValue = null;
-      String constantString = expression.getConstant();
-      if (constantString.startsWith("\"") && constantString.endsWith("\"")) {
-        String strippedQuotes = constantString.substring(1, constantString.length() - 1);
-        primitiveValue = strippedQuotes;
-      } else if (constantString.matches("^-?[0-9]+$")) {
-        // Integer primitive type
-        primitiveValue = Integer.parseInt(constantString);
-      } else if (constantString.matches("^-?[0-9]+\\.[0-9]*$")) {
-        primitiveValue = Double.parseDouble(constantString);
-      } else if (constantString.equals("#t")) {
-        primitiveValue = ConstantValue.TRUE;
-      } else if (constantString.equals("#f")) {
-        primitiveValue = ConstantValue.FALSE;
-      }
+      Object primitiveValue = expression.getConstantPrimitiveValue(); 
 
       if (primitiveValue != null) {
         return new EvalResult(primitiveValue);
       } else {
         // Variable name
-        return new EvalResult(environment.getValue(constantString));
+        return new EvalResult(environment.getValue(expression.getConstant()));
       }
     } else {
       List<SExpression> subexpressions = expression.getSubexpressions();
       SExpression first = subexpressions.get(0);
       if (first.isConstant()) {
-        String constantName = first.getConstant();
+        int constantNameIndex = first.getConstantIndex();
 
-        // Check for syntactic special forms (define, lambda, etc.)
-        if (constantName.equals("define")) {
-          String nameToBind = subexpressions.get(1).getConstant();
-          if (subexpressions.size() == 3) {
-            // (define name value-expression)
-            // Binds a name to the value of value-expression
-            Object valueToBind = eval(subexpressions.get(2), environment, builder).getValue();
-            environment.bindName(nameToBind, valueToBind);
-          } else if (subexpressions.size() >= 4) {
-            // (define procedure-name (arg1 ...) procedure-body)
-            // syntactic sugar equivalent to (define procedure-name (lambda (arg1 ...) procedure-body
-            AmbLambdaValue lambdaValue =  makeLambda(subexpressions.get(2),
-                subexpressions.subList(3, subexpressions.size()), environment);
-            environment.bindName(nameToBind, lambdaValue);
-          }
-          return new EvalResult(ConstantValue.UNDEFINED);
-        } else if (constantName.equals("begin")) {
-          // Sequentially evaluates its subexpressions, chaining any  
-          // environment changes.
-          EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
-          for (int i = 1; i < subexpressions.size(); i++) {
-            result = eval(subexpressions.get(i), environment, builder);
-          }
-          return result;
-        } else if (constantName.equals("let")) {
-          // (let ((name1 value-expr1) (name2 value-expr2) ...) body)
-          Environment newEnv = Environment.extend(environment);
-          
-          List<SExpression> bindings = subexpressions.get(1).getSubexpressions();
-          for (SExpression binding : bindings) {
-            Preconditions.checkArgument(binding.getSubexpressions().size() == 2,
-                "Illegal element in let bindings: %s", binding);
-            String name = binding.getSubexpressions().get(0).getConstant();
-            SExpression valueExpression = binding.getSubexpressions().get(1);
-            
-            Object value = eval(valueExpression, newEnv, builder).getValue();
-            newEnv.bindName(name, value);
-          }
+        switch (constantNameIndex) {
+        case DEFINE_SYMBOL_INDEX: return doDefine(subexpressions, environment, builder); 
+        case BEGIN_SYMBOL_INDEX: return doBegin(subexpressions, environment, builder);
+        case LET_SYMBOL_INDEX: return doLet(subexpressions, environment, builder);
 
-          EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
-          for (int i = 2; i < subexpressions.size(); i++) {
-            result = eval(subexpressions.get(i), newEnv, builder);
-          }
-          return result;
-        } else if (constantName.equals("lambda")) {
+        case LAMBDA_SYMBOL_INDEX:
           // Create and return a function value representing this function.
           Preconditions.checkArgument(subexpressions.size() >= 3, "Invalid lambda expression arguments: " + subexpressions);
           return new EvalResult(makeLambda(subexpressions.get(1), subexpressions.subList(2, subexpressions.size()), environment));
-        } else if (constantName.equals("quote")) {
+
+        case QUOTE_SYMBOL_INDEX:
           Preconditions.checkArgument(subexpressions.size() == 2, "Invalid quote arguments: " + subexpressions);
           return new EvalResult(subexpressions.get(1));
-        } else if (constantName.equals("eval")) {
+
+        case EVAL_SYMBOL_INDEX:
           Preconditions.checkArgument(subexpressions.size() == 2, "Invalid eval arguments: " + subexpressions);
-          
           Object value = eval(subexpressions.get(1), environment, builder).getValue();
           Preconditions.checkArgument(value instanceof SExpression, "Argument to eval must be an expression. Got: " + value);
-          
           return eval((SExpression) value, environment, builder);
-        } else if (constantName.equals("apply")) {
+
+        case APPLY_SYMBOL_INDEX:
           Preconditions.checkArgument(subexpressions.size() == 3, "Invalid apply expression: " + subexpressions);
           AmbLambdaValue lambdaValue = (AmbLambdaValue) eval(subexpressions.get(1), environment, builder).getValue();
           List<Object> argumentValues = ConsValue.consListToList(
               eval(subexpressions.get(2), environment, builder).getValue(), Object.class);
           return new EvalResult(lambdaValue.apply(argumentValues, environment, builder));
-        } else if (constantName.equals("if")) {
-          Preconditions.checkArgument(subexpressions.size() == 4);
-          Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
 
-          if (!(testCondition instanceof AmbValue)) {
-            // This condition evaluates to the same value in all program 
-            // executions that reach this point.
-            if (ConstantValue.TRUE.equals(testCondition)) {
-              return eval(subexpressions.get(2), environment, builder);
-            } else {
-              return eval(subexpressions.get(3), environment, builder);
-            }
-          } else {
-            // We disallow this case for the moment.
-            Preconditions.checkArgument(false,
-                "Cannot use amb values in conditions of if statements. Subexpressions: %s", subexpressions);
-            
-            // Some program executions evaluate the test condition to true,
-            // and others evaluate the condition to false. Create a branch 
-            // in the graphical model and execute each component of the if
-            // body in the corresponding builder.
-            AmbValue testConditionAmb = (AmbValue) testCondition;
-            VariableNumMap ambVar = testConditionAmb.getVar();
-            Assignment trueAssignment = ambVar.outcomeArrayToAssignment(ConstantValue.TRUE);
-            ParametricBfgBuilder trueBuilder = builder.createChild(testConditionAmb.getVar(),
-                trueAssignment);
-            EvalResult trueResult = eval(subexpressions.get(2), environment, trueBuilder);
+        case IF_SYMBOL_INDEX: return doIf(subexpressions, environment, builder);
+        case AMB_SYMBOL_INDEX: return doAmb(subexpressions, environment, builder);
+        case GET_BEST_VALUE_SYMBOL_INDEX: return doGetBestValue(subexpressions, environment, builder);
+        case GET_MARGINALS_SYMBOL_INDEX: return doGetMarginals(subexpressions, environment, builder);
+        case ADD_WEIGHT_SYMBOL_INDEX: return doAddWeight(subexpressions, environment, builder);
+        case OPT_SYMBOL_INDEX: return doOpt(subexpressions, environment, builder);
 
-            Assignment falseAssignment = testConditionAmb.getVar()
-                .outcomeArrayToAssignment(ConstantValue.FALSE);
-            ParametricBfgBuilder falseBuilder = builder.createChild(testConditionAmb.getVar(),
-                falseAssignment);
-            EvalResult falseResult = eval(subexpressions.get(3), environment, falseBuilder);
-
-            // The return value of the if statement is 
-            Object trueValue = trueResult.getValue();
-            Object falseValue = falseResult.getValue();
-            Preconditions.checkArgument(!(trueValue instanceof AmbValue) &&
-                !(falseValue instanceof AmbValue));
-            
-            List<Object> returnValues = Lists.newArrayList(trueValue, falseValue);
-            String varName = Integer.toHexString(returnValues.hashCode());
-            DiscreteVariable returnVarType = new DiscreteVariable(varName, returnValues);
-            VariableNumMap returnValueVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName,
-                returnVarType);
-            builder.addVariables(returnValueVar);
-
-            TableFactorBuilder tfBuilder = new TableFactorBuilder(ambVar.union(returnValueVar),
-                SparseTensorBuilder.getFactory());
-            tfBuilder.setWeight(ambVar.outcomeArrayToAssignment(ConstantValue.TRUE)
-                .union(returnValueVar.outcomeArrayToAssignment(trueValue)), 1.0);
-            tfBuilder.setWeight(ambVar.outcomeArrayToAssignment(ConstantValue.FALSE)
-                .union(returnValueVar.outcomeArrayToAssignment(falseValue)), 1.0);
-
-            builder.addConstantFactor(varName, tfBuilder.build());
-            return new EvalResult(new AmbValue(returnValueVar));
-          }
-        } else if (constantName.equals("amb")) {
-          Preconditions.checkArgument(subexpressions.size() >= 2 && subexpressions.size() <= 3);
-
-          List<Object> possibleValues = ConsValue.consListToList(eval(subexpressions.get(1), environment, builder)
-              .getValue(), Object.class);
-          List<Number> weights;
-          if (subexpressions.size() > 2) {
-            weights = ConsValue.consListToList(eval(subexpressions.get(2), environment, builder)
-                 .getValue(), Number.class);
-          } else {
-            weights = Collections.<Number>nCopies(possibleValues.size(), 1);
-          }
-
-          String varName = subexpressions.get(1).toString();
-          DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
-          VariableNumMap fgVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName, fgVarType);
-          builder.addVariables(fgVar);
-
-          Assignment[] assignmentArray = new Assignment[possibleValues.size()];
-          double[] weightArray = Doubles.toArray(weights);
-          for (int i = 0; i < possibleValues.size(); i++) {
-            assignmentArray[i] = fgVar.outcomeArrayToAssignment(possibleValues.get(i));
-          }
-          TableFactor factor = TableFactor.vector(fgVar, assignmentArray, weightArray);
-          builder.addConstantFactor(varName, factor);
-
-          return new EvalResult(new AmbValue(fgVar));
-        } else if (constantName.equals("get-best-value")) {
-          Preconditions.checkArgument(subexpressions.size() == 2);
-          Object value = eval(subexpressions.get(1), environment, builder).getValue();
-
-          if (value instanceof AmbValue || value instanceof ConsValue) {
-            BranchingFactorGraph fg = builder.build();
-            // System.out.println("factor graph: " + fg.getParameterDescription());
-
-            MaxMarginalSet maxMarginals = fg.getMaxMarginals();
-            Assignment assignment = maxMarginals.getNthBestAssignment(0);
-
-            Object bestAssignment = resolveAmbValueWithAssignment(value, assignment);
-            return new EvalResult(bestAssignment); 
-          } else {
-            return new EvalResult(value);
-          }
-        } else if (constantName.equals("get-marginals")) {
-          Preconditions.checkArgument(subexpressions.size() == 2);
-          Object value = eval(subexpressions.get(1), environment, builder).getValue();
-
-          if (value instanceof AmbValue) {
-            BranchingFactorGraph fg = builder.build();
-            // System.out.println("factor graph: " + fg.getParameterDescription());
-
-            VariableNumMap targetVar = ((AmbValue) value).getVar();
-            MarginalSet marginals = fg.getMarginals(targetVar);
-            DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
-                .coerceToDiscrete();
-
-            Iterator<Outcome> iter = varMarginal.outcomeIterator();
-            List<Object> outcomes = Lists.newArrayList();
-            List<Double> weights = Lists.newArrayList();
-            while (iter.hasNext()) {
-              Outcome outcome = iter.next();
-              outcomes.add(outcome.getAssignment().getOnlyValue());
-              weights.add(outcome.getProbability());
-            }
-
-            Object outcomesConsList = ConsValue.listToConsList(outcomes);
-            Object weightsConsList = ConsValue.listToConsList(weights);
-            return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
-          } else {
-            Object outcomesConsList = ConsValue.listToConsList(Arrays.asList(value));
-            Object weightsConsList = ConsValue.listToConsList(Arrays.asList(1.0));
-            return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
-          }
-        } else if (constantName.equals("add-weight")) {
-          Preconditions.checkArgument(subexpressions.size() == 3);
-          Object value = eval(subexpressions.get(1), environment, builder).getValue();
-          double weight = ((Number) eval(subexpressions.get(2), environment, builder).getValue()).doubleValue();
-
-          if (value instanceof AmbValue) {
-            VariableNumMap fgVar = ((AmbValue) value).getVar();
-
-            TableFactorBuilder tfBuilder = TableFactorBuilder.ones(fgVar);
-            tfBuilder.setWeight(weight, ConstantValue.TRUE); 
-            TableFactor factor = tfBuilder.build();
-            builder.addConstantFactor(fgVar.getOnlyVariableName(), factor);
-          } else if (ConstantValue.TRUE.equals(value)) {
-            builder.addConstantFactor("constant-factor",
-                TableFactor.unity(VariableNumMap.EMPTY).product(weight));
-          }
-          return new EvalResult(ConstantValue.UNDEFINED);
-        } else if (constantName.equals("opt")) {
-          Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
-
-          Object value = eval(subexpressions.get(1), environment, builder).getValue();
-          Preconditions.checkArgument(value instanceof AmbFunctionValue);
-          AmbFunctionValue modelFamily = (AmbFunctionValue) value;
-
-          SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
-              environment, builder).getValue();
-
-          Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
-          List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
-              trainingDataValue, ConsValue.class);
-          List<Example<List<Object>, Object>> trainingData = Lists.newArrayList();
-          for (ConsValue example : trainingExampleObjects) {
-            List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
-            Preconditions.checkArgument(inputOutput.size() == 2);
-            trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
-                inputOutput.get(1)));
-          }
-
-          AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, environment,
-              parameterSpec.getParameterSpec(), new JunctionTree());
-
-          // 4th argument is an optional parameter for providing optimization parameters.
-          int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
-          double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
-          double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
-          if (subexpressions.size() >= 5) {
-            Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
-            Map<String, Object> optimizationParams = ConsValue.associationListToMap(
-                optimizationParamsAlist, String.class, Object.class);
-            
-            if (optimizationParams.containsKey("epochs")) {
-              epochs = (Integer) optimizationParams.get("epochs");
-            }
-            if (optimizationParams.containsKey("l2-regularization")) {
-              l2Penalty = (Double) optimizationParams.get("l2-regularization");
-            }
-          }
-
-          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
-              trainingData.size() * epochs, 1, 1, true, false, l2Penalty, l2Frequency,
-              new DefaultLogFunction(10000, false));
-
-          SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
-
-          return new EvalResult(new SpecAndParameters(parameterSpec.getParameterSpec(), parameters));
-        } else if (constantName.equals("opt-mm")) {
-          Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
-
-          Object value = eval(subexpressions.get(1), environment, builder).getValue();
-          Preconditions.checkArgument(value instanceof AmbFunctionValue);
-          AmbFunctionValue modelFamily = (AmbFunctionValue) value;
-          
-          SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
-              environment, builder).getValue();
-
-          Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
-          List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
-              trainingDataValue, ConsValue.class);
-          List<Example<List<Object>, Example<AmbFunctionValue, AmbFunctionValue>>> trainingData = Lists.newArrayList();
-          for (ConsValue example : trainingExampleObjects) {
-            List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
-            Preconditions.checkArgument(inputOutput.size() == 3);
-            trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
-                Example.create((AmbFunctionValue) inputOutput.get(1), (AmbFunctionValue) inputOutput.get(2))));
-          }
-
-          AmbLispMaxMarginOracle oracle = new AmbLispMaxMarginOracle(modelFamily, environment,
-              parameterSpec.getParameterSpec(), new JunctionTree());
-
-          // 4th argument is an optional parameter for providing optimization parameters.
-          int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
-          double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
-          double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
-          if (subexpressions.size() >= 5) {
-            Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
-            Map<String, Object> optimizationParams = ConsValue.associationListToMap(
-                optimizationParamsAlist, String.class, Object.class);
-            
-            if (optimizationParams.containsKey("epochs")) {
-              epochs = (Integer) optimizationParams.get("epochs");
-            }
-            if (optimizationParams.containsKey("l2-regularization")) {
-              l2Penalty = (Double) optimizationParams.get("l2-regularization");
-            }
-          }
-
-          StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
-              trainingData.size() * epochs, 1, 1, true, true, l2Penalty, l2Frequency, new NullLogFunction());
-
-          SufficientStatistics parameters = trainer.train(oracle,
-              parameterSpec.getParameters(), trainingData);
-
-          // System.out.println(parameters.getDescription());
-
-          return new EvalResult(new SpecAndParameters(parameterSpec.getParameterSpec(), parameters));
+        case OPT_MM_SYMBOL_INDEX: return doOptMm(subexpressions, environment, builder);
         }
       }
-
       return doFunctionApplication(subexpressions, environment, builder);
     }
   }
@@ -409,12 +146,339 @@ public class AmbEval {
       functionBody = bodyExpressions.get(0);
     } else {
       List<SExpression> functionBodyComponents = Lists.newArrayList();
-      functionBodyComponents.add(SExpression.constant("begin"));
+      functionBodyComponents.add(SExpression.constant("begin", symbolTable.getIndex("begin"), null));
       functionBodyComponents.addAll(bodyExpressions);
       functionBody = SExpression.nested(functionBodyComponents);
     }
 
     return new AmbLambdaValue(new LambdaValue(argumentNames, functionBody, environment), this);
+  }
+
+  
+  /**
+   * Evaluates the "define" special form.
+   *  
+   * @param subexpressions
+   * @param environment
+   * @param builder
+   * @return
+   */
+  private final EvalResult doDefine(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    String nameToBind = subexpressions.get(1).getConstant();
+    if (subexpressions.size() == 3) {
+      // (define name value-expression)
+      // Binds a name to the value of value-expression
+      Object valueToBind = eval(subexpressions.get(2), environment, builder).getValue();
+      environment.bindName(nameToBind, valueToBind);
+    } else if (subexpressions.size() >= 4) {
+      // (define procedure-name (arg1 ...) procedure-body)
+      // syntactic sugar equivalent to (define procedure-name (lambda (arg1 ...) procedure-body
+      AmbLambdaValue lambdaValue =  makeLambda(subexpressions.get(2),
+          subexpressions.subList(3, subexpressions.size()), environment);
+      environment.bindName(nameToBind, lambdaValue);
+    }
+    return new EvalResult(ConstantValue.UNDEFINED);
+  }
+  
+  private final EvalResult doBegin(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    // Sequentially evaluates its subexpressions, chaining any  
+    // environment changes.
+    EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
+    for (int i = 1; i < subexpressions.size(); i++) {
+      result = eval(subexpressions.get(i), environment, builder);
+    } 
+    return result;
+  }
+  
+  private final EvalResult doLet(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    // (let ((name1 value-expr1) (name2 value-expr2) ...) body)
+    Environment newEnv = Environment.extend(environment);
+
+    List<SExpression> bindings = subexpressions.get(1).getSubexpressions();
+    for (SExpression binding : bindings) {
+      Preconditions.checkArgument(binding.getSubexpressions().size() == 2,
+          "Illegal element in let bindings: %s", binding);
+      String name = binding.getSubexpressions().get(0).getConstant();
+      SExpression valueExpression = binding.getSubexpressions().get(1);
+
+      Object value = eval(valueExpression, newEnv, builder).getValue();
+      newEnv.bindName(name, value);
+    }
+
+    EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
+    for (int i = 2; i < subexpressions.size(); i++) {
+      result = eval(subexpressions.get(i), newEnv, builder);
+    }
+    return result;
+  }
+  
+  private final EvalResult doIf(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    Preconditions.checkArgument(subexpressions.size() == 4); 
+    Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
+
+    if (!(testCondition instanceof AmbValue)) {
+      // This condition evaluates to the same value in all program 
+      // executions that reach this point.
+      if (ConstantValue.TRUE.equals(testCondition)) {
+        return eval(subexpressions.get(2), environment, builder);
+      } else {
+        return eval(subexpressions.get(3), environment, builder);
+      }
+    } else {
+      // We disallow this case for the moment.
+      Preconditions.checkArgument(false,
+          "Cannot use amb values in conditions of if statements. Subexpressions: %s", subexpressions);
+
+      // Some program executions evaluate the test condition to true,
+      // and others evaluate the condition to false. Create a branch 
+      // in the graphical model and execute each component of the if
+      // body in the corresponding builder.
+      AmbValue testConditionAmb = (AmbValue) testCondition;
+      VariableNumMap ambVar = testConditionAmb.getVar();
+      Assignment trueAssignment = ambVar.outcomeArrayToAssignment(ConstantValue.TRUE);
+      ParametricBfgBuilder trueBuilder = builder.createChild(testConditionAmb.getVar(),
+          trueAssignment);
+      EvalResult trueResult = eval(subexpressions.get(2), environment, trueBuilder);
+
+      Assignment falseAssignment = testConditionAmb.getVar()
+          .outcomeArrayToAssignment(ConstantValue.FALSE);
+      ParametricBfgBuilder falseBuilder = builder.createChild(testConditionAmb.getVar(),
+          falseAssignment);
+      EvalResult falseResult = eval(subexpressions.get(3), environment, falseBuilder);
+
+      // The return value of the if statement is 
+      Object trueValue = trueResult.getValue();
+      Object falseValue = falseResult.getValue();
+      Preconditions.checkArgument(!(trueValue instanceof AmbValue) &&
+          !(falseValue instanceof AmbValue));
+
+      List<Object> returnValues = Lists.newArrayList(trueValue, falseValue);
+      String varName = Integer.toHexString(returnValues.hashCode());
+      DiscreteVariable returnVarType = new DiscreteVariable(varName, returnValues);
+      VariableNumMap returnValueVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName,
+          returnVarType);
+      builder.addVariables(returnValueVar);
+
+      TableFactorBuilder tfBuilder = new TableFactorBuilder(ambVar.union(returnValueVar),
+          SparseTensorBuilder.getFactory());
+      tfBuilder.setWeight(ambVar.outcomeArrayToAssignment(ConstantValue.TRUE)
+          .union(returnValueVar.outcomeArrayToAssignment(trueValue)), 1.0);
+      tfBuilder.setWeight(ambVar.outcomeArrayToAssignment(ConstantValue.FALSE)
+          .union(returnValueVar.outcomeArrayToAssignment(falseValue)), 1.0);
+
+      builder.addConstantFactor(varName, tfBuilder.build());
+      return new EvalResult(new AmbValue(returnValueVar));
+    }
+  }
+
+  private final EvalResult doAmb(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    Preconditions.checkArgument(subexpressions.size() >= 2 && subexpressions.size() <= 3);
+
+    List<Object> possibleValues = ConsValue.consListToList(eval(subexpressions.get(1), environment, builder)
+        .getValue(), Object.class);
+    List<Number> weights;
+    if (subexpressions.size() > 2) {
+      weights = ConsValue.consListToList(eval(subexpressions.get(2), environment, builder)
+          .getValue(), Number.class);
+    } else {
+      weights = Collections.<Number>nCopies(possibleValues.size(), 1);
+    }
+
+    String varName = subexpressions.get(1).toString();
+    DiscreteVariable fgVarType = new DiscreteVariable(varName, possibleValues);
+    VariableNumMap fgVar = VariableNumMap.singleton(ParametricBfgBuilder.getUniqueVarNum(), varName, fgVarType);
+    builder.addVariables(fgVar);
+
+    Assignment[] assignmentArray = new Assignment[possibleValues.size()];
+    double[] weightArray = Doubles.toArray(weights);
+    for (int i = 0; i < possibleValues.size(); i++) {
+      assignmentArray[i] = fgVar.outcomeArrayToAssignment(possibleValues.get(i));
+    }
+    TableFactor factor = TableFactor.vector(fgVar, assignmentArray, weightArray);
+    builder.addConstantFactor(varName, factor);
+
+    return new EvalResult(new AmbValue(fgVar));
+  }
+
+  private final EvalResult doGetBestValue(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    Preconditions.checkArgument(subexpressions.size() == 2);
+    Object value = eval(subexpressions.get(1), environment, builder).getValue();
+
+    if (value instanceof AmbValue || value instanceof ConsValue) {
+      BranchingFactorGraph fg = builder.build();
+      // System.out.println("factor graph: " + fg.getParameterDescription());
+
+      MaxMarginalSet maxMarginals = fg.getMaxMarginals();
+      Assignment assignment = maxMarginals.getNthBestAssignment(0);
+
+      Object bestAssignment = resolveAmbValueWithAssignment(value, assignment);
+      return new EvalResult(bestAssignment); 
+    } else {
+      return new EvalResult(value);
+    }
+  }
+
+  private final EvalResult doGetMarginals(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    Preconditions.checkArgument(subexpressions.size() == 2);
+    Object value = eval(subexpressions.get(1), environment, builder).getValue();
+
+    if (value instanceof AmbValue) {
+      BranchingFactorGraph fg = builder.build();
+      // System.out.println("factor graph: " + fg.getParameterDescription());
+
+      VariableNumMap targetVar = ((AmbValue) value).getVar();
+      MarginalSet marginals = fg.getMarginals(targetVar);
+      DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
+          .coerceToDiscrete();
+
+      Iterator<Outcome> iter = varMarginal.outcomeIterator();
+      List<Object> outcomes = Lists.newArrayList();
+      List<Double> weights = Lists.newArrayList();
+      while (iter.hasNext()) {
+        Outcome outcome = iter.next();
+        outcomes.add(outcome.getAssignment().getOnlyValue());
+        weights.add(outcome.getProbability());
+      }
+
+      Object outcomesConsList = ConsValue.listToConsList(outcomes);
+      Object weightsConsList = ConsValue.listToConsList(weights);
+      return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
+    } else {
+      Object outcomesConsList = ConsValue.listToConsList(Arrays.asList(value));
+      Object weightsConsList = ConsValue.listToConsList(Arrays.asList(1.0));
+      return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
+    }
+  }
+
+  private final EvalResult doAddWeight(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    Preconditions.checkArgument(subexpressions.size() == 3);
+    Object value = eval(subexpressions.get(1), environment, builder).getValue();
+    double weight = ((Number) eval(subexpressions.get(2), environment, builder).getValue()).doubleValue();
+
+    if (value instanceof AmbValue) {
+      VariableNumMap fgVar = ((AmbValue) value).getVar();
+
+      TableFactorBuilder tfBuilder = TableFactorBuilder.ones(fgVar);
+      tfBuilder.setWeight(weight, ConstantValue.TRUE); 
+      TableFactor factor = tfBuilder.build();
+      builder.addConstantFactor(fgVar.getOnlyVariableName(), factor);
+    } else if (ConstantValue.TRUE.equals(value)) {
+      builder.addConstantFactor("constant-factor",
+          TableFactor.unity(VariableNumMap.EMPTY).product(weight));
+    }
+    return new EvalResult(ConstantValue.UNDEFINED);
+  }
+
+  private final EvalResult doOpt(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
+
+    Object value = eval(subexpressions.get(1), environment, builder).getValue();
+    Preconditions.checkArgument(value instanceof AmbFunctionValue);
+    AmbFunctionValue modelFamily = (AmbFunctionValue) value;
+
+    SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
+        environment, builder).getValue();
+
+    Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
+    List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
+        trainingDataValue, ConsValue.class);
+    List<Example<List<Object>, Object>> trainingData = Lists.newArrayList();
+    for (ConsValue example : trainingExampleObjects) {
+      List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
+      Preconditions.checkArgument(inputOutput.size() == 2);
+      trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
+          inputOutput.get(1)));
+    }
+
+    AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, environment,
+        parameterSpec.getParameterSpec(), new JunctionTree());
+
+    // 4th argument is an optional parameter for providing optimization parameters.
+    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
+    double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
+    double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
+    if (subexpressions.size() >= 5) {
+      Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
+      Map<String, Object> optimizationParams = ConsValue.associationListToMap(
+          optimizationParamsAlist, String.class, Object.class);
+
+      if (optimizationParams.containsKey("epochs")) {
+        epochs = (Integer) optimizationParams.get("epochs");
+      }
+      if (optimizationParams.containsKey("l2-regularization")) {
+        l2Penalty = (Double) optimizationParams.get("l2-regularization");
+      }
+    }
+
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
+        trainingData.size() * epochs, 1, 1, true, false, l2Penalty, l2Frequency,
+        new DefaultLogFunction(10000, false));
+
+    SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
+
+    return new EvalResult(new SpecAndParameters(parameterSpec.getParameterSpec(), parameters));
+  }
+
+  private final EvalResult doOptMm(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder builder) {
+    Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
+
+    Object value = eval(subexpressions.get(1), environment, builder).getValue();
+    Preconditions.checkArgument(value instanceof AmbFunctionValue);
+    AmbFunctionValue modelFamily = (AmbFunctionValue) value;
+
+    SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
+        environment, builder).getValue();
+
+    Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
+    List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
+        trainingDataValue, ConsValue.class);
+    List<Example<List<Object>, Example<AmbFunctionValue, AmbFunctionValue>>> trainingData = Lists.newArrayList();
+    for (ConsValue example : trainingExampleObjects) {
+      List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
+      Preconditions.checkArgument(inputOutput.size() == 3);
+      trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
+          Example.create((AmbFunctionValue) inputOutput.get(1), (AmbFunctionValue) inputOutput.get(2))));
+    }
+
+    AmbLispMaxMarginOracle oracle = new AmbLispMaxMarginOracle(modelFamily, environment,
+        parameterSpec.getParameterSpec(), new JunctionTree());
+
+    // 4th argument is an optional parameter for providing optimization parameters.
+    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
+    double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
+    double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
+    if (subexpressions.size() >= 5) {
+      Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
+      Map<String, Object> optimizationParams = ConsValue.associationListToMap(
+          optimizationParamsAlist, String.class, Object.class);
+
+      if (optimizationParams.containsKey("epochs")) {
+        epochs = (Integer) optimizationParams.get("epochs");
+      }
+      if (optimizationParams.containsKey("l2-regularization")) {
+        l2Penalty = (Double) optimizationParams.get("l2-regularization");
+      }
+    }
+
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
+        trainingData.size() * epochs, 1, 1, true, true, l2Penalty, l2Frequency, new NullLogFunction());
+
+    SufficientStatistics parameters = trainer.train(oracle,
+        parameterSpec.getParameters(), trainingData);
+
+    // System.out.println(parameters.getDescription());
+
+    return new EvalResult(new SpecAndParameters(parameterSpec.getParameterSpec(), parameters));
   }
 
   public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment,
@@ -574,6 +638,31 @@ public class AmbEval {
     // Bind default command line arguments
     env.bindName(CLI_ARGV_VAR_NAME, ConstantValue.NIL);
     return env;
+  }
+
+  public static IndexedList<String> getInitialSymbolTable() {
+    IndexedList<String> symbolTable = IndexedList.create();
+    // The order of these additions must correspond to the symbol
+    // table indexes declared as static variables at the beginning
+    // of this class.
+    symbolTable.add("define");
+    symbolTable.add("begin");
+    symbolTable.add("let");
+    symbolTable.add("lambda");
+    symbolTable.add("quote");
+
+    symbolTable.add("eval");
+    symbolTable.add("apply");
+    symbolTable.add("if");
+    symbolTable.add("amb");
+    symbolTable.add("get-best-value");
+
+    symbolTable.add("get-marginals");
+    symbolTable.add("add-weight");
+    symbolTable.add("opt");
+    symbolTable.add("opt-mm");
+
+    return symbolTable;
   }
 
   public static interface AmbFunctionValue {

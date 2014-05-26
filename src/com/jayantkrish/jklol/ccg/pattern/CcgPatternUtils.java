@@ -11,11 +11,13 @@ import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class CcgPatternUtils {
 
   public static List<CcgPattern> parseFrom(String patternString) {
-    ExpressionParser<SExpression> parser = ExpressionParser.sExpression();
+    IndexedList<String> symbolTable = IndexedList.create();
+    ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
     List<SExpression> expressions = parser.parse(patternString);
 
     LispEval eval = new LispEval();

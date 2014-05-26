@@ -11,24 +11,36 @@ import com.google.common.base.Preconditions;
  * @author jayantk
  */
 public class SExpression {
-  
+
   // Null unless this expression is a constant.
   private final String constantName;
+  // Unique index in the symbol table containing the string
+  // constantName.
+  private final int constantNameIndex;
+
+  // If the constant is a primitive type (such as an integer
+  // or double), this variable contains its value.
+  private final Object primitiveValue;
+
   // Null unless this expression is not a constant. 
   private final List<SExpression> subexpressions;
 
-  private SExpression(String constantName, List<SExpression> subexpressions) {
+  private SExpression(String constantName, int constantNameIndex, Object primitiveValue,
+      List<SExpression> subexpressions) {
     Preconditions.checkArgument(constantName == null ^ subexpressions == null);
     this.constantName = constantName;
+    this.constantNameIndex = constantNameIndex;
+    this.primitiveValue = primitiveValue;
     this.subexpressions = subexpressions;
   }
 
-  public static SExpression constant(String constantName) {
-    return new SExpression(constantName, null);
+  public static SExpression constant(String constantName, int constantNameIndex,
+      Object primitiveValue) {
+    return new SExpression(constantName, constantNameIndex, primitiveValue, null);
   }
 
   public static SExpression nested(List<SExpression> subexpressions) {
-    return new SExpression(null, subexpressions);
+    return new SExpression(null, -1, null, subexpressions);
   }
 
   public boolean isConstant() {
@@ -38,7 +50,15 @@ public class SExpression {
   public String getConstant() {
     return constantName;
   }
-  
+
+  public int getConstantIndex() {
+    return constantNameIndex;
+  }
+
+  public Object getConstantPrimitiveValue() {
+    return primitiveValue;
+  }
+
   public List<SExpression> getSubexpressions() {
     return subexpressions;
   }

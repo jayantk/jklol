@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.lisp;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class AmbEvalTest extends TestCase {
 
@@ -12,8 +13,9 @@ public class AmbEvalTest extends TestCase {
   private static final double TOLERANCE = 1e-2;
 
   public void setUp() {
-    eval = new AmbEval();
-    parser = ExpressionParser.sExpression();
+    IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
+    eval = new AmbEval(symbolTable);
+    parser = ExpressionParser.sExpression(symbolTable);
   }
 
   public void testAmb() {

@@ -165,14 +165,14 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.startTimer("parameter_update");
       // Apply regularization and take a gradient step.
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
-      double regularizerObjectiveValue = regularizer.apply(gradient, initialParameters, currentStepSize);
+      regularizer.apply(gradient, initialParameters, currentStepSize);
 
       // System.out.println(initialParameters);
       log.stopTimer("parameter_update");
 
       log.startTimer("compute_statistics");
       gradientL2 = gradient.getL2Norm();
-      double objectiveValue = regularizerObjectiveValue + (gradientAccumulator.getObjectiveValue() / batchSize);
+      double objectiveValue = gradientAccumulator.getObjectiveValue() / batchSize;
       exponentiallyWeightedUpdateNorm = gradientL2 
           + (MOVING_AVG_DISCOUNT * exponentiallyWeightedUpdateNorm);
       exponentiallyWeightedObjectiveValue = objectiveValue
@@ -224,14 +224,14 @@ public class StochasticGradientTrainer implements GradientOptimizer {
      * Updates {@code currentParameters} with the result of taking a gradient
      * step in the direction of {@code gradient} and applying a regularization
      * penalty. May mutate {@code gradient}, and will mutate
-     * {@code currentParameters}. Returns the objective value for the regularizer.
+     * {@code currentParameters}.
      * 
      * @param gradient
      * @param currentParameters
      * @param currentStepSize
      * @return
      */
-    public double apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize);
   }
 
@@ -255,21 +255,15 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     }
 
     @Override
-    public double apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize) {
       double rand = Pseudorandom.get().nextDouble();
-      double objectiveValue = 0.0; 
       if (rand < frequency && l2Penalty != 0.0) {
-        objectiveValue -= l2Penalty * currentParameters.getL2Norm() / (2.0 * frequency);
-        gradient.increment(currentParameters, (-1 * l2Penalty) / frequency);
-
-        // System.out.println("Regularizing by: " +  (-1 * l2Penalty) / frequency);
-        // System.out.println(gradient.getL2Norm());
-      }
-      // System.out.println(currentParameters.getL2Norm());
+        // Objective value calculation:
+        // objectiveValue -= l2Penalty * currentParameters.getL2Norm() / (2.0 * frequency);
+        currentParameters.multiply(1.0 - (currentStepSize * l2Penalty) / frequency);
+      } 
       currentParameters.increment(gradient, currentStepSize);
-
-      return objectiveValue;
     }
   }
 
@@ -292,13 +286,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     }
 
     @Override
-    public double apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
         double currentStepSize) {
       currentParameters.increment(gradient, currentStepSize);
       currentParameters.softThreshold(currentStepSize * l1Penalty);
-      
-      // TODO: actually implement the objective value.
-      return 0.0;
     }
   }
 }

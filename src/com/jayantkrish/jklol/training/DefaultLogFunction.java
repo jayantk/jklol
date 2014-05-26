@@ -3,14 +3,13 @@ package com.jayantkrish.jklol.training;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Doubles;
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
@@ -24,7 +23,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
   private final int logInterval;
   private final boolean showExamples;
   
-  private final ListMultimap<String, Double> statistics;
+  private final Map<String, Double> statistics;
 
   private final int modelSerializationInterval;
   private final String modelSerializationDir;
@@ -38,7 +37,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.showExamples = true;
     this.printExecutor = Executors.newSingleThreadExecutor();
     
-    this.statistics = ArrayListMultimap.create();
+    this.statistics = Maps.newHashMap();
     
     this.modelSerializationInterval = -1;
     this.modelSerializationDir = null;
@@ -50,7 +49,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.showExamples = showExamples;
     this.printExecutor = Executors.newSingleThreadExecutor();
     
-    this.statistics = ArrayListMultimap.create();
+    this.statistics = Maps.newHashMap();
     
     this.modelSerializationInterval = -1;
     this.modelSerializationDir = null;
@@ -63,7 +62,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
     this.showExamples = showExamples;
     this.printExecutor = Executors.newSingleThreadExecutor();
 
-    this.statistics = ArrayListMultimap.create();
+    this.statistics = Maps.newHashMap();
 
     Preconditions.checkArgument(modelSerializationInterval <= 0 || modelSerializationDir != null);
     this.modelSerializationInterval = modelSerializationInterval;
@@ -133,11 +132,11 @@ public class DefaultLogFunction extends AbstractLogFunction {
     }
     statistics.put(statisticName, value);
   }
-  
-  public double[] getStatisticValues(String statisticName) {
-    return Doubles.toArray(statistics.get(statisticName));
+
+  public double getLastStatisticValue(String statisticName) {
+    return statistics.get(statisticName);
   }
-  
+
   public void printTimeStatistics() {
     print("Elapsed time statistics:");
 

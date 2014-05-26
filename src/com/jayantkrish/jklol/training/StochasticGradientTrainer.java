@@ -30,6 +30,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
   private final Regularizer regularizer;
 
   private final boolean returnAveragedParameters;
+  // private final boolean adaGrad;
   
   // Factor used to discount earlier observations in the moving average
   // estimates of the gradient norm and objective value. Smaller values
@@ -116,6 +117,13 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       // by tracking the sum of the parameters, then dividing.
       averagedParameters = oracle.initializeGradient();
     }
+    
+    /*
+    SufficientStatistics gradientSumSquares = null;
+    if (adaGrad) {
+      gradientSumSquares = oracle.initializeGradient();
+    }
+    */
 
     double gradientL2 = 0.0;
     GradientEvaluation gradientAccumulator = null;
@@ -151,6 +159,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       if (batchSize > 1) {
         gradient.multiply(1.0 / batchSize);
       }
+
       log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");

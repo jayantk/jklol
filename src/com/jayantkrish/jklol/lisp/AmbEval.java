@@ -54,11 +54,9 @@ public class AmbEval {
         primitiveValue = strippedQuotes;
       } else if (constantString.matches("^-?[0-9]+$")) {
         // Integer primitive type
-        int intValue = Integer.parseInt(constantString);
-        primitiveValue = intValue;
+        primitiveValue = Integer.parseInt(constantString);
       } else if (constantString.matches("^-?[0-9]+\\.[0-9]*$")) {
-        double doubleValue = Double.parseDouble(constantString);
-        primitiveValue = doubleValue;
+        primitiveValue = Double.parseDouble(constantString);
       } else if (constantString.equals("#t")) {
         primitiveValue = ConstantValue.TRUE;
       } else if (constantString.equals("#f")) {

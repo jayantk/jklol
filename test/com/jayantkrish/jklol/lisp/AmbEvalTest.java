@@ -315,10 +315,10 @@ public class AmbEvalTest extends TestCase {
     		"" +
     		"(define require (lambda (x) (add-weight (not x) 0.0)))" +
     		"" +
-    		"(define training-data (list (list (list) (lambda (label) (require (= label	#t))))" +
-    		"                             (list (list) (lambda (label) (require (= label #t))))" +
-        "                             (list (list) (lambda (label) (require (= label #t))))" +
-        "                             (list (list) (lambda (label) (require (= label #f))))))" +
+    		"(define training-data (list (list (list) #t)" +
+    		"                             (list (list) #t)" +
+        "                             (list (list) #t)" +
+        "                             (list (list) #f)))" +
         "" +
     		"(define best-params (opt discrete-family (make-indicator-classifier-parameters (list label-list)) training-data))" +
     		"(define factor (discrete-family best-params))" +

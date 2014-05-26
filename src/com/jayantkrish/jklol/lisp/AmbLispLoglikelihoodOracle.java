@@ -31,7 +31,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionValue, Example<List<Object>, AmbFunctionValue>> {
+public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionValue, Example<List<Object>, Object>> {
 
   private final AmbFunctionValue family;
   private final Environment environment;
@@ -63,7 +63,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
 
   @Override
   public double accumulateGradient(SufficientStatistics gradient, SufficientStatistics currentParameters,
-      AmbFunctionValue instantiatedModel, Example<List<Object>, AmbFunctionValue> example, LogFunction log) {
+      AmbFunctionValue instantiatedModel, Example<List<Object>, Object> example, LogFunction log) {
     // Evaluate the nondeterministic function on the current example to 
     // produce a factor graph for the distribution over outputs.
     log.startTimer("compute_gradient/input_eval");
@@ -90,25 +90,49 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     log.stopTimer("compute_gradient/input_marginals");
 
     // Apply the output filter.
-    log.startTimer("compute_gradient/output_eval");
-    log.startTimer("compute_gradient/output_eval/eval");
-    AmbFunctionValue outputCondition = example.getOutput();
-    outputCondition.apply(Arrays.asList(inputApplicationResult), environment, newBuilder);
-    log.stopTimer("compute_gradient/output_eval/eval");
-    
-    log.startTimer("compute_gradient/output_eval/fg");
-    pfg = newBuilder.buildNoBranching();
-    Assignment outputAssignment = newBuilder.getAssignment();
-    FactorGraph outputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
-        .conditional(DynamicAssignment.EMPTY).conditional(outputAssignment);
-    log.stopTimer("compute_gradient/output_eval/fg");
-    log.stopTimer("compute_gradient/output_eval");
+    Object outputValue = example.getOutput();
+    MarginalSet outputMarginals = null;
+    Assignment outputAssignment = null;
+    if (outputValue instanceof AmbFunctionValue) {
+      AmbFunctionValue outputCondition = (AmbFunctionValue) outputValue;
+      log.startTimer("compute_gradient/output_eval");
+      log.startTimer("compute_gradient/output_eval/eval");
 
-    // Compute the marginal distribution given the constraint on the
-    // output.
-    log.startTimer("compute_gradient/output_marginals");
-    MarginalSet outputMarginals = marginalCalculator.computeMarginals(outputFactorGraph);
-    log.stopTimer("compute_gradient/output_marginals");
+      outputCondition.apply(Arrays.asList(inputApplicationResult), environment, newBuilder);
+      log.stopTimer("compute_gradient/output_eval/eval");
+
+      log.startTimer("compute_gradient/output_eval/fg");
+      pfg = newBuilder.buildNoBranching();
+      outputAssignment = newBuilder.getAssignment();
+      FactorGraph outputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
+          .conditional(DynamicAssignment.EMPTY).conditional(outputAssignment);
+      log.stopTimer("compute_gradient/output_eval/fg");
+      log.stopTimer("compute_gradient/output_eval");
+      
+      // Compute the marginal distribution given the constraint on the
+      // output.
+      log.startTimer("compute_gradient/output_marginals");
+      outputMarginals = marginalCalculator.computeMarginals(outputFactorGraph);
+      log.stopTimer("compute_gradient/output_marginals");
+    } else {
+      log.startTimer("compute_gradient/output_fixed_value");
+      if (inputApplicationResult instanceof AmbValue) {
+        Assignment outputConditionAssignment = ((AmbValue) inputApplicationResult).getVar()
+            .outcomeArrayToAssignment(outputValue);
+        FactorGraph outputFactorGraph = inputFactorGraph.conditional(outputConditionAssignment);
+        outputAssignment = inputAssignment.union(outputConditionAssignment);
+        outputMarginals = marginalCalculator.computeMarginals(outputFactorGraph);
+      } else {
+        if (inputApplicationResult == outputValue) {
+          outputMarginals = inputMarginals;
+          outputAssignment = inputAssignment;
+        } else {
+          // Evaluating the model cannot produce the labeled value.
+          throw new ZeroProbabilityError();
+        }
+      }
+      log.stopTimer("compute_gradient/output_fixed_value");
+    }
 
     double inputLogPartitionFunction = inputMarginals.getLogPartitionFunction();
     double outputLogPartitionFunction = outputMarginals.getLogPartitionFunction();

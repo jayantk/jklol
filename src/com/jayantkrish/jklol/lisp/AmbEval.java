@@ -299,12 +299,12 @@ public class AmbEval {
           Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
           List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
               trainingDataValue, ConsValue.class);
-          List<Example<List<Object>, AmbFunctionValue>> trainingData = Lists.newArrayList();
+          List<Example<List<Object>, Object>> trainingData = Lists.newArrayList();
           for (ConsValue example : trainingExampleObjects) {
             List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
             Preconditions.checkArgument(inputOutput.size() == 2);
             trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
-                (AmbFunctionValue) inputOutput.get(1)));
+                inputOutput.get(1)));
           }
 
           AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, environment,

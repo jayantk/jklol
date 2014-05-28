@@ -8,8 +8,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -99,7 +99,9 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 	 * Get the index in the list of the specified item.
 	 */ 
 	public int getIndex(Object item) {
-	  Preconditions.checkArgument(itemIndex.containsKey(item), "No such item: %s", item);
+	  if (!itemIndex.containsKey(item)) {
+	    throw new NoSuchElementException("No such item: " + item);
+	  }
 		return itemIndex.get(item);
 	}
 

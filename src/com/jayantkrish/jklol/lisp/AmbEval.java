@@ -424,7 +424,7 @@ public class AmbEval {
       }
     }
 
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
+    StochasticGradientTrainer trainer = StochasticGradientTrainer.createAdagrad(
         trainingData.size() * epochs, 1, 1, true, false, l2Penalty, l2Frequency,
         new DefaultLogFunction(10000, false));
 

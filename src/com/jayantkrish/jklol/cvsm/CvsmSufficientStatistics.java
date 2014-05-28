@@ -254,6 +254,101 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   }
 
   @Override
+  public void incrementSquare(SufficientStatistics other, double multiplier) {
+    Preconditions.checkNotNull(other);
+    Preconditions.checkArgument(other instanceof CvsmSufficientStatistics);
+
+    CvsmSufficientStatistics otherStats = ((CvsmSufficientStatistics) other);
+    List<SufficientStatistics> otherList = otherStats.statistics;
+    int[] otherNonZeroInds = otherStats.nonzeroIndexes;
+    int otherNumNonZero = otherStats.numNonzeroIndexes;
+    Preconditions.checkArgument(otherList.size() == statistics.size());
+
+    for (int i = 0; i < otherNumNonZero; i++) {
+      int ind = otherNonZeroInds[i];
+      Preconditions.checkState(otherList.get(ind) != null);
+      ensureStatisticInstantiated(ind);
+      statistics.get(ind).incrementSquare(otherList.get(ind), multiplier);
+    }
+  }
+
+  @Override
+  public void incrementSquareAdagrad(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, double regularization) {
+    Preconditions.checkNotNull(gradient);
+    Preconditions.checkArgument(gradient instanceof CvsmSufficientStatistics);
+    Preconditions.checkNotNull(currentParameters);
+    Preconditions.checkArgument(currentParameters instanceof CvsmSufficientStatistics);
+    
+    CvsmSufficientStatistics gradientStats = ((CvsmSufficientStatistics) gradient);
+    List<SufficientStatistics> gradientList = gradientStats.statistics;
+    CvsmSufficientStatistics parameterStats = ((CvsmSufficientStatistics) currentParameters);
+    List<SufficientStatistics> parameterList = parameterStats.statistics;
+
+    for (int i = 0; i < statistics.size(); i++) {
+      SufficientStatistics gradientStat = gradientList.get(i);
+      SufficientStatistics parameterStat = parameterList.get(i);
+      
+      if (gradientStat != null && parameterStat != null) {
+        ensureStatisticInstantiated(i);
+        statistics.get(i).incrementSquareAdagrad(gradientStat, parameterStat, regularization);
+      } else if (gradientStat != null) {
+        ensureStatisticInstantiated(i);
+        statistics.get(i).incrementSquare(gradientStat, 1.0);
+      } else if (parameterStat != null) {
+        ensureStatisticInstantiated(i);
+        statistics.get(i).incrementSquare(parameterStat, regularization);
+      }
+    }    
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(SufficientStatistics sumSquares, double constant,
+      double multiplier) {
+    Preconditions.checkNotNull(sumSquares);
+    Preconditions.checkArgument(sumSquares instanceof CvsmSufficientStatistics);
+
+    CvsmSufficientStatistics otherStats = ((CvsmSufficientStatistics) sumSquares);
+    List<SufficientStatistics> otherList = otherStats.statistics;
+    Preconditions.checkArgument(otherList.size() == statistics.size());
+
+    for (int i = 0; i < numNonzeroIndexes; i++) {
+      int ind = nonzeroIndexes[i];
+      // The corresponding parameters in other cannot be null, because 
+      // then this operation is performing division by zero.
+      Preconditions.checkState(otherList.get(ind) != null);
+      ensureStatisticInstantiated(ind);
+      statistics.get(ind).multiplyInverseAdagrad(otherList.get(ind), constant, multiplier);
+    }
+  }
+
+  @Override
+  public void incrementAdagrad(SufficientStatistics gradient, SufficientStatistics sumSquares,
+      double multiplier) {
+    Preconditions.checkNotNull(gradient);
+    Preconditions.checkArgument(gradient instanceof CvsmSufficientStatistics);
+
+    CvsmSufficientStatistics gradientStats = ((CvsmSufficientStatistics) gradient);
+    List<SufficientStatistics> gradientList = gradientStats.statistics;
+    int[] gradientNonZeroInds = gradientStats.nonzeroIndexes;
+    int gradientNumNonZero = gradientStats.numNonzeroIndexes;
+    Preconditions.checkArgument(gradientList.size() == statistics.size());
+    
+    CvsmSufficientStatistics sumSquareStats = ((CvsmSufficientStatistics) sumSquares);
+    List<SufficientStatistics> sumSquareList = sumSquareStats.statistics;
+    Preconditions.checkArgument(sumSquareList.size() == statistics.size());
+
+    for (int i = 0; i < gradientNumNonZero; i++) {
+      int ind = gradientNonZeroInds[i];
+      Preconditions.checkState(gradientList.get(ind) != null);
+      Preconditions.checkState(sumSquareList.get(ind) != null);
+      ensureStatisticInstantiated(ind);
+      statistics.get(ind).incrementAdagrad(gradientList.get(ind), sumSquareList.get(ind),
+          multiplier);
+    }
+  }
+
+  @Override
   public String getDescription() {
     return statistics.toString();
   }

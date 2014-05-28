@@ -3,23 +3,29 @@ package com.jayantkrish.jklol.lisp;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 
 public class LambdaValue {
-  private final List<String> argumentNames;
+  private final List<SExpression> argumentExpressions;
+  private final int[] argumentNameIndexes;
   private final SExpression body;
   private final Environment parentEnvironment;
 
-  public LambdaValue(List<String> argumentNames, SExpression body, Environment parentEnvironment) {
-    this.argumentNames = ImmutableList.copyOf(argumentNames);
+  public LambdaValue(List<SExpression> argumentExpressions, int[] argumentNameIndexes,
+      SExpression body, Environment parentEnvironment) {
+    this.argumentExpressions = argumentExpressions;
+    this.argumentNameIndexes = argumentNameIndexes;
     this.body = Preconditions.checkNotNull(body);
     this.parentEnvironment = Preconditions.checkNotNull(parentEnvironment);
   }
   
-  public List<String> getArgumentNames() {
-    return argumentNames;
+  public List<SExpression> getArgumentExpressions() {
+    return argumentExpressions;
   }
-  
+
+  public int[] getArgumentNameIndexes() {
+    return argumentNameIndexes;
+  }
+
   public SExpression getBody() {
     return body;
   }

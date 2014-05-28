@@ -78,6 +78,18 @@ public class StochasticGradientTrainerTest extends TestCase {
 	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, false, 1, 0.1, new DefaultLogFunction()));
 	}
 	
+	public void testTrainAdagrad() {
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 0, 0, new DefaultLogFunction()));
+	}
+
+	public void testTrainAdagradL2() {
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 1, 1, new DefaultLogFunction()));
+	}
+
+	public void testTrainAdagradStochasticL2() {
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 1, 0.1, new DefaultLogFunction()));
+	}
+
 	public void testL2Sag() {
 	  runTest(new StochasticAverageGradientOptimizer(100, 0.01, new DefaultLogFunction()));
 	}

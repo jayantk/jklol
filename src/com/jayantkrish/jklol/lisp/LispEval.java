@@ -4,8 +4,19 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class LispEval {
+  
+  private final IndexedList<String> symbolTable;
+
+  public LispEval(IndexedList<String> symbolTable) {
+    this.symbolTable = Preconditions.checkNotNull(symbolTable);
+  }
+
+  public IndexedList<String> getSymbolTable() {
+    return symbolTable;
+  }
 
   public EvalResult eval(SExpression expression, Environment environment) {
     if (expression.isConstant()) {
@@ -19,7 +30,7 @@ public class LispEval {
         int intValue = Integer.parseInt(constantString);
         return new EvalResult(intValue);
       } else {
-        return new EvalResult(environment.getValue(constantString));
+        return new EvalResult(environment.getValue(constantString, symbolTable));
       }
     } else {
       List<SExpression> subexpressions = expression.getSubexpressions();
@@ -32,7 +43,7 @@ public class LispEval {
           // Binds a name to a value in the environment.
           String nameToBind = subexpressions.get(1).getConstant();
           Object valueToBind = eval(subexpressions.get(2), environment).getValue();
-          environment.bindName(nameToBind, valueToBind);
+          environment.bindName(nameToBind, valueToBind, symbolTable);
           return new EvalResult(ConstantValue.UNDEFINED);
         } else if (constantName.equals("begin")) {
           // Sequentially evaluates its subexpressions, chaining any 
@@ -46,15 +57,18 @@ public class LispEval {
           // Create and return a function value representing this function.
           Preconditions.checkArgument(subexpressions.size() == 3);
 
-          List<String> argumentNames = Lists.newArrayList();
           List<SExpression> argumentExpressions = subexpressions.get(1).getSubexpressions();
+          int[] argumentNameIndexes = new int[argumentExpressions.size()];
+          int ind = 0;
           for (SExpression argumentExpression : argumentExpressions) {
             Preconditions.checkArgument(argumentExpression.isConstant());
-            argumentNames.add(argumentExpression.getConstant());
+            argumentNameIndexes[ind] = argumentExpression.getConstantIndex();
+            ind++;
           }
 
           SExpression functionBody = subexpressions.get(2); 
-          return new EvalResult(new LambdaValue(argumentNames, functionBody, environment));
+          return new EvalResult(new LambdaValue(argumentExpressions, argumentNameIndexes,
+              functionBody, environment));
         } else if (constantName.equals("if")) {
           Preconditions.checkArgument(subexpressions.size() == 4);
           Object testCondition = eval(subexpressions.get(1), environment).getValue();
@@ -83,12 +97,13 @@ public class LispEval {
         LambdaValue functionToApply = (LambdaValue) values.get(0);
         List<Object> arguments = values.subList(1, values.size());
 
-        List<String> argumentNames = functionToApply.getArgumentNames(); 
-        Preconditions.checkArgument(argumentNames.size() == arguments.size(),
-            "Wrong number of arguments: expected %s, got %s", argumentNames, arguments);
+        int[] argumentNameIndexes = functionToApply.getArgumentNameIndexes(); 
+        Preconditions.checkArgument(argumentNameIndexes.length == arguments.size(),
+            "Wrong number of arguments: expected %s, got %s",
+            functionToApply.getArgumentExpressions(), arguments);
 
         Environment boundEnvironment = Environment.extend(functionToApply.getEnvironment());
-        boundEnvironment.bindNames(argumentNames, arguments);
+        boundEnvironment.bindNames(argumentNameIndexes, arguments);
 
         return new EvalResult(eval(functionToApply.getBody(), boundEnvironment).getValue());
       } else {
@@ -97,20 +112,24 @@ public class LispEval {
     }
   }
 
-  public static Environment getDefaultEnvironment() {
+  public static Environment getDefaultEnvironment(IndexedList<String> symbolTable) {
     Environment env = Environment.empty();
-    env.bindName("cons", new BuiltinFunctions.ConsFunction());
-    env.bindName("car", new BuiltinFunctions.CarFunction());
-    env.bindName("cdr", new BuiltinFunctions.CdrFunction());
-    env.bindName("list", new BuiltinFunctions.ListFunction());
-    env.bindName("nil?", new BuiltinFunctions.NilFunction());
-    env.bindName("+", new BuiltinFunctions.PlusFunction());
-    env.bindName("-", new BuiltinFunctions.MinusFunction());
-    env.bindName("=", new BuiltinFunctions.EqualsFunction());
-    env.bindName("not", new BuiltinFunctions.NotFunction());
-    env.bindName("and", new BuiltinFunctions.AndFunction());
-    env.bindName("or", new BuiltinFunctions.OrFunction());
+    env.bindName("cons", new BuiltinFunctions.ConsFunction(), symbolTable);
+    env.bindName("car", new BuiltinFunctions.CarFunction(), symbolTable);
+    env.bindName("cdr", new BuiltinFunctions.CdrFunction(), symbolTable);
+    env.bindName("list", new BuiltinFunctions.ListFunction(), symbolTable);
+    env.bindName("nil?", new BuiltinFunctions.NilFunction(), symbolTable);
+    env.bindName("+", new BuiltinFunctions.PlusFunction(), symbolTable);
+    env.bindName("-", new BuiltinFunctions.MinusFunction(), symbolTable);
+    env.bindName("=", new BuiltinFunctions.EqualsFunction(), symbolTable);
+    env.bindName("not", new BuiltinFunctions.NotFunction(), symbolTable);
+    env.bindName("and", new BuiltinFunctions.AndFunction(), symbolTable);
+    env.bindName("or", new BuiltinFunctions.OrFunction(), symbolTable);
     return env;
+  }
+  
+  public static IndexedList<String> getInitialSymbolTable() {
+    return IndexedList.create();
   }
 
   public static class EvalResult {

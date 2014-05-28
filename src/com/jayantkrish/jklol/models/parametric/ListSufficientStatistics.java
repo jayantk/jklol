@@ -191,6 +191,72 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
 
   @Override
+  public void incrementSquare(SufficientStatistics other, double multiplier) {
+    Preconditions.checkNotNull(other);
+    Preconditions.checkArgument(other instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics otherList = (ListSufficientStatistics) other;
+    Preconditions.checkArgument(otherList.statistics.size() == statistics.size());
+
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).incrementSquare(otherList.statistics.get(i), multiplier);
+    }
+  }
+
+  @Override
+  public void incrementSquareAdagrad(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, double regularization) {
+    Preconditions.checkNotNull(gradient);
+    Preconditions.checkArgument(gradient instanceof ListSufficientStatistics);
+    Preconditions.checkNotNull(currentParameters);
+    Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics gradientList = (ListSufficientStatistics) gradient;
+    Preconditions.checkArgument(gradientList.statistics.size() == statistics.size());
+    ListSufficientStatistics parametersList = (ListSufficientStatistics) currentParameters;
+    Preconditions.checkArgument(parametersList.statistics.size() == statistics.size());
+    
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).incrementSquareAdagrad(gradientList.statistics.get(i),
+          parametersList.statistics.get(i), regularization);
+    }
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(SufficientStatistics other, double constant,
+      double multiplier) {
+    Preconditions.checkNotNull(other);
+    Preconditions.checkArgument(other instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics otherList = (ListSufficientStatistics) other;
+    Preconditions.checkArgument(otherList.statistics.size() == statistics.size());
+
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).multiplyInverseAdagrad(otherList.statistics.get(i),
+          constant, multiplier);
+    }
+  }
+
+  @Override
+  public void incrementAdagrad(SufficientStatistics gradient, SufficientStatistics sumSquares,
+      double multiplier) {
+    Preconditions.checkNotNull(gradient);
+    Preconditions.checkArgument(gradient instanceof ListSufficientStatistics);
+    Preconditions.checkNotNull(sumSquares);
+    Preconditions.checkArgument(sumSquares instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics gradientList = (ListSufficientStatistics) gradient;
+    Preconditions.checkArgument(gradientList.statistics.size() == statistics.size());
+    ListSufficientStatistics squareList = (ListSufficientStatistics) sumSquares;
+    Preconditions.checkArgument(squareList.statistics.size() == statistics.size());
+
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).incrementAdagrad(gradientList.statistics.get(i),
+          squareList.statistics.get(i), multiplier);
+    }
+  }
+
+  @Override
   public String getDescription() {
     StringBuilder sb = new StringBuilder();
     for (SufficientStatistics statistic : statistics) {

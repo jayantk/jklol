@@ -30,8 +30,8 @@ public class StochasticGradientTrainer implements GradientOptimizer {
   private final Regularizer regularizer;
 
   private final boolean returnAveragedParameters;
-  // private final boolean adaGrad;
-  
+  private final boolean adaGrad;
+
   // Factor used to discount earlier observations in the moving average
   // estimates of the gradient norm and objective value. Smaller values
   // forget history faster.
@@ -55,6 +55,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     this.stepSize = stepSize;
     this.decayStepSize = decayStepSize;
     this.returnAveragedParameters = returnAveragedParameters;
+    this.adaGrad = false;
     this.regularizer = new StochasticL2Regularizer(0.0, 0.0);
   }
 
@@ -69,8 +70,8 @@ public class StochasticGradientTrainer implements GradientOptimizer {
    * @param log
    */
   public StochasticGradientTrainer(int numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, Regularizer regularizer,
-      LogFunction log) {
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, boolean adaGrad,
+      Regularizer regularizer, LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.log = (log != null) ? log : new NullLogFunction();
@@ -78,26 +79,34 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     this.stepSize = stepSize;
     this.decayStepSize = decayStepSize;
     this.returnAveragedParameters = returnAveragedParameters;
+    this.adaGrad = adaGrad;
     this.regularizer = regularizer;
   }
 
   public static StochasticGradientTrainer createWithL2Regularization(int numIterations, int batchSize,
       double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
-        returnAveragedParameters, new StochasticL2Regularizer(l2Penalty, 1.0), log);
+        returnAveragedParameters, false, new StochasticL2Regularizer(l2Penalty, 1.0), log);
   }
 
   public static StochasticGradientTrainer createWithStochasticL2Regularization(int numIterations,
       int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty,
       double regularizationFrequency, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
-        returnAveragedParameters, new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
+        returnAveragedParameters, false, new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
+  }
+
+  public static StochasticGradientTrainer createAdagrad(int numIterations,
+      int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters,
+      double l2Penalty, double regularizationFrequency, LogFunction log) {
+    return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
+        returnAveragedParameters, true, new AdagradL2Regularizer(l2Penalty, regularizationFrequency), log);
   }
 
   public static StochasticGradientTrainer createWithL1Regularization(int numIterations, int batchSize,
       double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l1Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
-        returnAveragedParameters, new L1Regularizer(l1Penalty), log);
+        returnAveragedParameters, false, new L1Regularizer(l1Penalty), log);
   }
 
   @Override
@@ -118,12 +127,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       averagedParameters = oracle.initializeGradient();
     }
     
-    /*
     SufficientStatistics gradientSumSquares = null;
     if (adaGrad) {
       gradientSumSquares = oracle.initializeGradient();
     }
-    */
 
     double gradientL2 = 0.0;
     GradientEvaluation gradientAccumulator = null;
@@ -165,7 +172,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.startTimer("parameter_update");
       // Apply regularization and take a gradient step.
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
-      regularizer.apply(gradient, initialParameters, currentStepSize);
+      regularizer.apply(gradient, initialParameters, gradientSumSquares, currentStepSize);
 
       // System.out.println(initialParameters);
       log.stopTimer("parameter_update");
@@ -228,11 +235,12 @@ public class StochasticGradientTrainer implements GradientOptimizer {
      * 
      * @param gradient
      * @param currentParameters
+     * @param gradientSumSquares
      * @param currentStepSize
      * @return
      */
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
-        double currentStepSize);
+        SufficientStatistics gradientSumSquares, double currentStepSize);
   }
 
   /**
@@ -256,7 +264,8 @@ public class StochasticGradientTrainer implements GradientOptimizer {
 
     @Override
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
-        double currentStepSize) {
+        SufficientStatistics gradientSumSquares, double currentStepSize) {
+      Preconditions.checkArgument(gradientSumSquares == null);
       double rand = Pseudorandom.get().nextDouble();
       if (rand < frequency && l2Penalty != 0.0) {
         // Objective value calculation:
@@ -264,6 +273,47 @@ public class StochasticGradientTrainer implements GradientOptimizer {
         currentParameters.multiply(1.0 - (currentStepSize * l2Penalty) / frequency);
       } 
       currentParameters.increment(gradient, currentStepSize);
+    }
+  }
+
+  /**
+   * The Adagrad stochastic gradient update with an L2 regularization
+   * penalty that is applied on random iterations.
+   *    
+   * @author jayantk
+   */
+  public static class AdagradL2Regularizer implements Regularizer {
+    private final double l2Penalty;
+    private final double frequency;
+
+    public AdagradL2Regularizer(double l2Penalty, double frequency) {
+      Preconditions.checkArgument(l2Penalty >= 0.0);
+      Preconditions.checkArgument(frequency >= 0.0 && frequency <= 1.0);
+      this.l2Penalty = l2Penalty;
+      this.frequency = frequency;
+    }
+
+    @Override
+    public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
+        SufficientStatistics gradientSumSquares, double currentStepSize) {
+      Preconditions.checkNotNull(gradientSumSquares);
+      double rand = Pseudorandom.get().nextDouble();
+      if (rand < frequency && l2Penalty != 0.0) {
+        // Objective value calculation:
+        // objectiveValue -= l2Penalty * currentParameters.getL2Norm() / (2.0 * frequency);
+        double curPenalty = l2Penalty / frequency;
+        gradientSumSquares.incrementSquareAdagrad(gradient, currentParameters, -1.0 * curPenalty);
+        currentParameters.multiplyInverseAdagrad(gradientSumSquares, 1.0, -1.0 * currentStepSize * curPenalty);
+
+        /*
+        gradient.increment(currentParameters, -1.0 * curPenalty);
+        gradientSumSquares.incrementSquare(gradient, 1.0);
+        */
+      } else {
+        gradientSumSquares.incrementSquare(gradient, 1.0);
+      }
+
+      currentParameters.incrementAdagrad(gradient, gradientSumSquares, currentStepSize);
     }
   }
 
@@ -287,7 +337,8 @@ public class StochasticGradientTrainer implements GradientOptimizer {
 
     @Override
     public void apply(SufficientStatistics gradient, SufficientStatistics currentParameters,
-        double currentStepSize) {
+        SufficientStatistics gradientSumSquares, double currentStepSize) {
+      Preconditions.checkArgument(gradientSumSquares == null);
       currentParameters.increment(gradient, currentStepSize);
       currentParameters.softThreshold(currentStepSize * l1Penalty);
     }

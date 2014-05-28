@@ -137,11 +137,60 @@ public interface SufficientStatistics extends Serializable {
    * faster to update, but slower to copy.
    */
   public void makeDense();
-  
+
   /**
    * Sets all elements of these sufficient statistics to 0.
    */
   public void zeroOut();
 
+  /**
+   * Increments each entry of this by {@code (multiplier * other)^2}.
+   * 
+   * @param other
+   */
+  public void incrementSquare(SufficientStatistics other, double multiplier);
+
+  /**
+   * The sum of squares update required for the Adagrad optimization
+   * algorithm. This function increments each element of this by
+   * {@code (gradient - regularization * currentParameters)^2}
+   * 
+   * @param gradient
+   * @param currentParameters
+   * @param regularization
+   */
+  public void incrementSquareAdagrad(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, double regularization);
+
+  /**
+   * The L2 regularization update required for the Adagrad optimization
+   * algorithm. This function multiplies each element of this by
+   * {@code (constant - (multiplier / sqrt(sumSquares)))}. 
+   *
+   * @param sumSquares
+   * @param constant
+   * @param multiplier
+   */
+  public void multiplyInverseAdagrad(SufficientStatistics sumSquares, double constant,
+      double multiplier);
+
+  /**
+   * The gradient addition update required for the Adagrad optimization
+   * algorithm. This function increments each element of this by 
+   * {@code (multiplier * gradient) / sqrt(sumSquares)}.
+   * 
+   * @param gradient
+   * @param sumSquares
+   * @param multiplier
+   */
+  public void incrementAdagrad(SufficientStatistics gradient, SufficientStatistics sumSquares,
+      double multiplier);
+
+  /**
+   * Gets a human-readable description of the parameter values in this
+   * object.
+   * 
+   * @return
+   */
   public String getDescription();
 }

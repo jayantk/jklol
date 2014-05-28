@@ -74,7 +74,7 @@ public class AmbLisp extends AbstractCli {
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
     SExpression programExpression = parser.parseSingleExpression(program);
     ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
-    Environment environment = createEnvironmentFromOptions(options);
+    Environment environment = createEnvironmentFromOptions(options, symbolTable);
     EvalResult result = eval.eval(programExpression, environment, fgBuilder);
 
     if (options.has(evalOpt)) {
@@ -115,17 +115,20 @@ public class AmbLisp extends AbstractCli {
     }
   }
 
-  private Environment createEnvironmentFromOptions(OptionSet options) {
-    Environment env = AmbEval.getDefaultEnvironment();
-    env.bindName(AmbEval.OPT_EPOCHS_VAR_NAME, options.valueOf(optEpochs));
-    env.bindName(AmbEval.OPT_L2_VAR_NAME, options.valueOf(optL2Regularization));
-    env.bindName(AmbEval.OPT_L2_FREQ_VAR_NAME, options.valueOf(optL2RegularizationFrequency));
+  private Environment createEnvironmentFromOptions(OptionSet options,
+      IndexedList<String> symbolTable) {
+    Environment env = AmbEval.getDefaultEnvironment(symbolTable);
+    env.bindName(AmbEval.OPT_EPOCHS_VAR_NAME, options.valueOf(optEpochs), symbolTable);
+    env.bindName(AmbEval.OPT_L2_VAR_NAME, options.valueOf(optL2Regularization), symbolTable);
+    env.bindName(AmbEval.OPT_L2_FREQ_VAR_NAME, options.valueOf(optL2RegularizationFrequency),
+        symbolTable);
 
     List<String> commandLineArgs = Lists.newArrayList();
     for (String arg : options.valuesOf(args)) {
       commandLineArgs.add(arg);
     }
-    env.bindName(AmbEval.CLI_ARGV_VAR_NAME, ConsValue.listToConsList(commandLineArgs));
+    env.bindName(AmbEval.CLI_ARGV_VAR_NAME, ConsValue.listToConsList(commandLineArgs),
+        symbolTable);
     return env;
   }
 

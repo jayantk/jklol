@@ -11,8 +11,8 @@ public class LispEvalTest extends TestCase {
   ExpressionParser<SExpression> parser;
 
   public void setUp() {
-    IndexedList<String> symbolTable = IndexedList.create();
-    eval = new LispEval();
+    IndexedList<String> symbolTable = LispEval.getInitialSymbolTable();
+    eval = new LispEval(symbolTable);
     parser = ExpressionParser.sExpression(symbolTable);
   }
 
@@ -67,7 +67,7 @@ public class LispEvalTest extends TestCase {
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
     return eval.eval(parser.parseSingleExpression(wrappedExpressionString),
-        LispEval.getDefaultEnvironment()).getValue();
+        LispEval.getDefaultEnvironment(eval.getSymbolTable())).getValue();
   }
 
   private String runTestString(String expressionString) {

@@ -16,31 +16,31 @@ import com.jayantkrish.jklol.util.IndexedList;
 public class CcgPatternUtils {
 
   public static List<CcgPattern> parseFrom(String patternString) {
-    IndexedList<String> symbolTable = IndexedList.create();
+    IndexedList<String> symbolTable = LispEval.getInitialSymbolTable();
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
     List<SExpression> expressions = parser.parse(patternString);
 
-    LispEval eval = new LispEval();
+    LispEval eval = new LispEval(symbolTable);
     Environment env = Environment.empty();
-    env.bindName("word", new WordPatternFunction());
-    env.bindName("syntax", new SyntaxPatternFunction());
-    env.bindName("lf-regex", new LogicalFormPatternFunction());
-    env.bindName("chain", new AndPatternFunction());
-    env.bindName("union", new OrPatternFunction());
-    env.bindName("subtree", new SubtreePatternFunction(false, false));
-    env.bindName("subtree-contains", new SubtreePatternFunction(false, true));
-    env.bindName("head-subtree", new SubtreePatternFunction(true, false));
-    env.bindName("head-subtree-contains", new SubtreePatternFunction(true, true));
-    env.bindName("combinator", new CombinatorPatternFunction());
-    env.bindName("smallest", new SmallestPatternFunction());
-    env.bindName("isTerminal", new CcgTerminalPattern(true));
-    env.bindName("isNonterminal", new CcgTerminalPattern(false));
-    env.bindName("replace-syntax", new ReplaceSyntaxPatternFunction());
-    env.bindName("propagate-features", new PropagateFeaturesPatternFunction());
-    env.bindName("recurse", new RecursivePatternFunction());
-    env.bindName("if-then", new IfPatternFunction());
-    env.bindName("not", new NotPatternFunction());
-    env.bindName("adjunct-to-argument", new CcgPrepositionFixingPattern());
+    env.bindName("word", new WordPatternFunction(), symbolTable);
+    env.bindName("syntax", new SyntaxPatternFunction(), symbolTable);
+    env.bindName("lf-regex", new LogicalFormPatternFunction(), symbolTable);
+    env.bindName("chain", new AndPatternFunction(), symbolTable);
+    env.bindName("union", new OrPatternFunction(), symbolTable);
+    env.bindName("subtree", new SubtreePatternFunction(false, false), symbolTable);
+    env.bindName("subtree-contains", new SubtreePatternFunction(false, true), symbolTable);
+    env.bindName("head-subtree", new SubtreePatternFunction(true, false), symbolTable);
+    env.bindName("head-subtree-contains", new SubtreePatternFunction(true, true), symbolTable);
+    env.bindName("combinator", new CombinatorPatternFunction(), symbolTable);
+    env.bindName("smallest", new SmallestPatternFunction(), symbolTable);
+    env.bindName("isTerminal", new CcgTerminalPattern(true), symbolTable);
+    env.bindName("isNonterminal", new CcgTerminalPattern(false), symbolTable);
+    env.bindName("replace-syntax", new ReplaceSyntaxPatternFunction(), symbolTable);
+    env.bindName("propagate-features", new PropagateFeaturesPatternFunction(), symbolTable);
+    env.bindName("recurse", new RecursivePatternFunction(), symbolTable);
+    env.bindName("if-then", new IfPatternFunction(), symbolTable);
+    env.bindName("not", new NotPatternFunction(), symbolTable);
+    env.bindName("adjunct-to-argument", new CcgPrepositionFixingPattern(), symbolTable);
 
     List<CcgPattern> patterns = Lists.newArrayList();
     for (SExpression patternExpression : expressions) {

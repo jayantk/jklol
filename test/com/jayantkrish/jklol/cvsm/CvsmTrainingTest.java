@@ -224,7 +224,7 @@ public class CvsmTrainingTest extends TestCase {
   }
 
   public void testCvsmAffineTraining() {
-    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily, new CvsmSquareLoss(), -1);
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily, new CvsmSquareLoss(), 5000);
   }
   
   public void testLowRankCvsmAffineTraining() {
@@ -232,7 +232,7 @@ public class CvsmTrainingTest extends TestCase {
   }
   
   public void testCvsmDiagTraining() {
-    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), cvsmFamily, new CvsmSquareLoss(), -1);
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), cvsmFamily, new CvsmSquareLoss(), 5000);
   }
 
   public void testLowRankCvsmDiagTraining() {
@@ -282,7 +282,7 @@ public class CvsmTrainingTest extends TestCase {
   
   public void testLowRankCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
-    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily, new CvsmSquareLoss(), 10000);
+    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily, new CvsmSquareLoss(), 15000);
   }
   
   public void testCvsmValueTraining() {
@@ -295,26 +295,30 @@ public class CvsmTrainingTest extends TestCase {
     if (iterations == -1) { iterations = 1000; } 
 
     CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, loss);
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        iterations, 1, 1.0, true, false, 0.0, new NullLogFunction());
 
-    SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
-    initializeParameters(cvsmFamily, initialParameters);
+    List<StochasticGradientTrainer> trainers = Arrays.asList(
+        StochasticGradientTrainer.createWithL2Regularization(iterations, 1, 1.0, true, false, 0.0, new NullLogFunction()),
+        StochasticGradientTrainer.createAdagrad(iterations, 1, 1.0, true, false, 0.0, 0.0, new NullLogFunction()));
 
-    SufficientStatistics parameters = trainer.train(oracle,
-        initialParameters, cvsmExamples);
+    for (StochasticGradientTrainer trainer : trainers) {
+      SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
+      initializeParameters(cvsmFamily, initialParameters);
 
-    System.out.println(cvsmFamily.getParameterDescription(parameters));
+      SufficientStatistics parameters = trainer.train(oracle,
+          initialParameters, cvsmExamples);
 
-    Cvsm cvsm = cvsmFamily.getModelFromParameters(parameters);
+      System.out.println(cvsmFamily.getParameterDescription(parameters));
 
-    for (CvsmExample example : cvsmExamples) {
-      CvsmTree tree = cvsm.getInterpretationTree(example.getLogicalForm());
-      CvsmTree augmentedTree = loss.augmentTreeWithLoss(tree, cvsm, example.getTargets());
+      Cvsm cvsm = cvsmFamily.getModelFromParameters(parameters);
 
-      double squareLoss = augmentedTree.getLoss();
-      System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
-      assertTrue(squareLoss <= 0.1);
+      for (CvsmExample example : cvsmExamples) {
+        CvsmTree tree = cvsm.getInterpretationTree(example.getLogicalForm());
+        CvsmTree augmentedTree = loss.augmentTreeWithLoss(tree, cvsm, example.getTargets());
+
+        double squareLoss = augmentedTree.getLoss();
+        System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
+        assertTrue(squareLoss <= 0.1);
+      }
     }
   }
 

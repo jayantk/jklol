@@ -89,6 +89,29 @@ public class RegressionTreeSufficientStatistics implements SufficientStatistics 
   public void zeroOut() {}
 
   @Override
+  public void incrementSquare(SufficientStatistics other, double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void incrementSquareAdagrad(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, double regularization) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(SufficientStatistics sumSquares, double constant,
+      double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void incrementAdagrad(SufficientStatistics gradient, SufficientStatistics sumSquares,
+      double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public String getDescription() {
     StringBuilder sb = new StringBuilder();
     for (RegressionTree tree : trees) {

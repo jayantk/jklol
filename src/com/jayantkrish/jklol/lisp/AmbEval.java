@@ -65,8 +65,12 @@ public class AmbEval {
     this.symbolTable = Preconditions.checkNotNull(symbolTable);
   }
 
+  public IndexedList<String> getSymbolTable() {
+    return symbolTable;
+  }
+
   public EvalResult eval(SExpression expression) {
-    return eval(expression, getDefaultEnvironment(), new ParametricBfgBuilder(true));
+    return eval(expression, getDefaultEnvironment(symbolTable), new ParametricBfgBuilder(true));
   }
 
   public EvalResult eval(SExpression expression, Environment environment,
@@ -79,7 +83,7 @@ public class AmbEval {
         return new EvalResult(primitiveValue);
       } else {
         // Variable name
-        return new EvalResult(environment.getValue(expression.getConstant()));
+        return new EvalResult(environment.getValue(expression.getConstantIndex(), symbolTable));
       }
     } else {
       List<SExpression> subexpressions = expression.getSubexpressions();
@@ -120,7 +124,6 @@ public class AmbEval {
         case GET_MARGINALS_SYMBOL_INDEX: return doGetMarginals(subexpressions, environment, builder);
         case ADD_WEIGHT_SYMBOL_INDEX: return doAddWeight(subexpressions, environment, builder);
         case OPT_SYMBOL_INDEX: return doOpt(subexpressions, environment, builder);
-
         case OPT_MM_SYMBOL_INDEX: return doOptMm(subexpressions, environment, builder);
         }
       }
@@ -131,14 +134,16 @@ public class AmbEval {
   private AmbLambdaValue makeLambda(SExpression arguments, List<SExpression> bodyExpressions,
       Environment environment) {
     Preconditions.checkArgument(arguments.getSubexpressions() != null,
-        "Illegal argument list in lambda: " + arguments);
+        "Illegal argument list in lambda: %s", arguments);
 
-    List<String> argumentNames = Lists.newArrayList();
     List<SExpression> argumentExpressions = arguments.getSubexpressions();
+    int[] argumentNameIndexes = new int[argumentExpressions.size()];
+    int ind = 0;
     for (SExpression argumentExpression : argumentExpressions) {
       Preconditions.checkArgument(argumentExpression.isConstant(),
-          argumentExpression + " is not a constant. Argument list: " + arguments);
-      argumentNames.add(argumentExpression.getConstant());
+          "%s is not a constant. Argument list: %s", argumentExpression, arguments);
+      argumentNameIndexes[ind] = argumentExpression.getConstantIndex();
+      ind++;
     }
 
     SExpression functionBody = null;
@@ -151,9 +156,9 @@ public class AmbEval {
       functionBody = SExpression.nested(functionBodyComponents);
     }
 
-    return new AmbLambdaValue(new LambdaValue(argumentNames, functionBody, environment), this);
+    return new AmbLambdaValue(new LambdaValue(argumentExpressions, argumentNameIndexes,
+        functionBody, environment), this);
   }
-
   
   /**
    * Evaluates the "define" special form.
@@ -165,7 +170,7 @@ public class AmbEval {
    */
   private final EvalResult doDefine(List<SExpression> subexpressions, Environment environment,
       ParametricBfgBuilder builder) {
-    String nameToBind = subexpressions.get(1).getConstant();
+    int nameToBind = subexpressions.get(1).getConstantIndex();
     if (subexpressions.size() == 3) {
       // (define name value-expression)
       // Binds a name to the value of value-expression
@@ -201,11 +206,11 @@ public class AmbEval {
     for (SExpression binding : bindings) {
       Preconditions.checkArgument(binding.getSubexpressions().size() == 2,
           "Illegal element in let bindings: %s", binding);
-      String name = binding.getSubexpressions().get(0).getConstant();
+      int nameIndex = binding.getSubexpressions().get(0).getConstantIndex();
       SExpression valueExpression = binding.getSubexpressions().get(1);
 
       Object value = eval(valueExpression, newEnv, builder).getValue();
-      newEnv.bindName(name, value);
+      newEnv.bindName(nameIndex, value);
     }
 
     EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
@@ -403,9 +408,9 @@ public class AmbEval {
         parameterSpec.getParameterSpec(), new JunctionTree());
 
     // 4th argument is an optional parameter for providing optimization parameters.
-    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
-    double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
-    double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
+    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME, symbolTable);
+    double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME, symbolTable);
+    double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME, symbolTable);
     if (subexpressions.size() >= 5) {
       Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
       Map<String, Object> optimizationParams = ConsValue.associationListToMap(
@@ -454,9 +459,9 @@ public class AmbEval {
         parameterSpec.getParameterSpec(), new JunctionTree());
 
     // 4th argument is an optional parameter for providing optimization parameters.
-    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME);
-    double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME);
-    double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME);
+    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME, symbolTable);
+    double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME, symbolTable);
+    double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME, symbolTable);
     if (subexpressions.size() >= 5) {
       Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
       Map<String, Object> optimizationParams = ConsValue.associationListToMap(
@@ -575,68 +580,68 @@ public class AmbEval {
     }
   }
 
-  public static Environment getDefaultEnvironment() {
+  public static Environment getDefaultEnvironment(IndexedList<String> symbolTable) {
     Environment env = Environment.empty();
-    env.bindName("cons", new RaisedBuiltinFunction(new BuiltinFunctions.ConsFunction()));
-    env.bindName("car", new RaisedBuiltinFunction(new BuiltinFunctions.CarFunction()));
-    env.bindName("cdr", new RaisedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
-    env.bindName("list", new RaisedBuiltinFunction(new BuiltinFunctions.ListFunction()));
+    env.bindName("cons", new RaisedBuiltinFunction(new BuiltinFunctions.ConsFunction()), symbolTable);
+    env.bindName("car", new RaisedBuiltinFunction(new BuiltinFunctions.CarFunction()), symbolTable);
+    env.bindName("cdr", new RaisedBuiltinFunction(new BuiltinFunctions.CdrFunction()), symbolTable);
+    env.bindName("list", new RaisedBuiltinFunction(new BuiltinFunctions.ListFunction()), symbolTable);
 
-    env.bindName("lifted-cons", new WrappedBuiltinFunction(new BuiltinFunctions.ConsFunction()));
-    env.bindName("lifted-car", new WrappedBuiltinFunction(new BuiltinFunctions.CarFunction()));
-    env.bindName("lifted-cdr", new WrappedBuiltinFunction(new BuiltinFunctions.CdrFunction()));
-    env.bindName("lifted-list", new WrappedBuiltinFunction(new BuiltinFunctions.ListFunction()));
+    env.bindName("lifted-cons", new WrappedBuiltinFunction(new BuiltinFunctions.ConsFunction()), symbolTable);
+    env.bindName("lifted-car", new WrappedBuiltinFunction(new BuiltinFunctions.CarFunction()), symbolTable);
+    env.bindName("lifted-cdr", new WrappedBuiltinFunction(new BuiltinFunctions.CdrFunction()), symbolTable);
+    env.bindName("lifted-list", new WrappedBuiltinFunction(new BuiltinFunctions.ListFunction()), symbolTable);
 
-    env.bindName("make-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDictionaryFunction()));
-    env.bindName("dictionary-lookup", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryLookupFunction()));
-    env.bindName("dictionary-contains", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryContainsFunction()));
-    env.bindName("dictionary-size", new RaisedBuiltinFunction(new BuiltinFunctions.DictionarySizeFunction()));
-    env.bindName("dictionary-to-array", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryToArrayFunction()));
-    env.bindName("dictionary-rand-elt", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryRandomElement()));
+    env.bindName("make-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDictionaryFunction()), symbolTable);
+    env.bindName("dictionary-lookup", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryLookupFunction()), symbolTable);
+    env.bindName("dictionary-contains", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryContainsFunction()), symbolTable);
+    env.bindName("dictionary-size", new RaisedBuiltinFunction(new BuiltinFunctions.DictionarySizeFunction()), symbolTable);
+    env.bindName("dictionary-to-array", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryToArrayFunction()), symbolTable);
+    env.bindName("dictionary-rand-elt", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryRandomElement()), symbolTable);
 
-    env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()));
-    env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement())); 
-    env.bindName("array-map", new ArrayMapFunction());
-    env.bindName("array-foldr", new ArrayFoldRightFunction());
-    env.bindName("array-zip", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayZipFunction()));
-    env.bindName("array-sort", new RaisedBuiltinFunction(new BuiltinFunctions.ArraySortFunction()));
-    env.bindName("array-merge-sets", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayMergeSets()));
+    env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()), symbolTable);
+    env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement()), symbolTable); 
+    env.bindName("array-map", new ArrayMapFunction(), symbolTable);
+    env.bindName("array-foldr", new ArrayFoldRightFunction(), symbolTable);
+    env.bindName("array-zip", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayZipFunction()), symbolTable);
+    env.bindName("array-sort", new RaisedBuiltinFunction(new BuiltinFunctions.ArraySortFunction()), symbolTable);
+    env.bindName("array-merge-sets", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayMergeSets()), symbolTable);
 
-    env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier());
-    env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters());
-    env.bindName("make-feature-factory", new WrappedBuiltinFunction(new ClassifierFunctions.MakeFeatureFactory()));
-    env.bindName("make-featurized-classifier", new ClassifierFunctions.MakeFeaturizedClassifier());
-    env.bindName("make-featurized-classifier-parameters", new ClassifierFunctions.MakeFeaturizedClassifierParameters());
-    env.bindName("make-vector-parameters", new ClassifierFunctions.MakeVectorParameters());
-    env.bindName("make-inner-product-classifier", new ClassifierFunctions.MakeInnerProductClassifier());
-    env.bindName("make-parameter-list", new ClassifierFunctions.MakeParameterList());
-    env.bindName("get-ith-parameter", new ClassifierFunctions.GetIthParameter());
-    env.bindName("perturb-parameters", new ClassifierFunctions.PerturbFunction());
-    env.bindName("serialize", new ClassifierFunctions.Serialize());
-    env.bindName("deserialize", new ClassifierFunctions.Deserialize());
+    env.bindName("make-indicator-classifier", new ClassifierFunctions.MakeIndicatorClassifier(), symbolTable);
+    env.bindName("make-indicator-classifier-parameters", new ClassifierFunctions.MakeIndicatorClassifierParameters(), symbolTable);
+    env.bindName("make-feature-factory", new WrappedBuiltinFunction(new ClassifierFunctions.MakeFeatureFactory()), symbolTable);
+    env.bindName("make-featurized-classifier", new ClassifierFunctions.MakeFeaturizedClassifier(), symbolTable);
+    env.bindName("make-featurized-classifier-parameters", new ClassifierFunctions.MakeFeaturizedClassifierParameters(), symbolTable);
+    env.bindName("make-vector-parameters", new ClassifierFunctions.MakeVectorParameters(), symbolTable);
+    env.bindName("make-inner-product-classifier", new ClassifierFunctions.MakeInnerProductClassifier(), symbolTable);
+    env.bindName("make-parameter-list", new ClassifierFunctions.MakeParameterList(), symbolTable);
+    env.bindName("get-ith-parameter", new ClassifierFunctions.GetIthParameter(), symbolTable);
+    env.bindName("perturb-parameters", new ClassifierFunctions.PerturbFunction(), symbolTable);
+    env.bindName("serialize", new ClassifierFunctions.Serialize(), symbolTable);
+    env.bindName("deserialize", new ClassifierFunctions.Deserialize(), symbolTable);
 
-    env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()));
-    env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()));
-    env.bindName("-", new RaisedBuiltinFunction(new BuiltinFunctions.MinusFunction()));
-    env.bindName("*", new RaisedBuiltinFunction(new BuiltinFunctions.MultiplyFunction()));
-    env.bindName("/", new RaisedBuiltinFunction(new BuiltinFunctions.DivideFunction()));
-    env.bindName("log", new RaisedBuiltinFunction(new BuiltinFunctions.LogFunction()));
-    env.bindName("exp", new RaisedBuiltinFunction(new BuiltinFunctions.ExpFunction()));
-    env.bindName("=", new RaisedBuiltinFunction(new BuiltinFunctions.EqualsFunction()));
-    env.bindName("<", new RaisedBuiltinFunction(new BuiltinFunctions.LessThanFunction()));
-    env.bindName(">", new RaisedBuiltinFunction(new BuiltinFunctions.GreaterThanFunction()));
-    env.bindName("not", new RaisedBuiltinFunction(new BuiltinFunctions.NotFunction()));
-    env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()));
-    env.bindName("or", new RaisedBuiltinFunction(new BuiltinFunctions.OrFunction()));
-    env.bindName("display", new WrappedBuiltinFunction(new BuiltinFunctions.DisplayFunction()));
+    env.bindName("nil?", new RaisedBuiltinFunction(new BuiltinFunctions.NilFunction()), symbolTable);
+    env.bindName("+", new RaisedBuiltinFunction(new BuiltinFunctions.PlusFunction()), symbolTable);
+    env.bindName("-", new RaisedBuiltinFunction(new BuiltinFunctions.MinusFunction()), symbolTable);
+    env.bindName("*", new RaisedBuiltinFunction(new BuiltinFunctions.MultiplyFunction()), symbolTable);
+    env.bindName("/", new RaisedBuiltinFunction(new BuiltinFunctions.DivideFunction()), symbolTable);
+    env.bindName("log", new RaisedBuiltinFunction(new BuiltinFunctions.LogFunction()), symbolTable);
+    env.bindName("exp", new RaisedBuiltinFunction(new BuiltinFunctions.ExpFunction()), symbolTable);
+    env.bindName("=", new RaisedBuiltinFunction(new BuiltinFunctions.EqualsFunction()), symbolTable);
+    env.bindName("<", new RaisedBuiltinFunction(new BuiltinFunctions.LessThanFunction()), symbolTable);
+    env.bindName(">", new RaisedBuiltinFunction(new BuiltinFunctions.GreaterThanFunction()), symbolTable);
+    env.bindName("not", new RaisedBuiltinFunction(new BuiltinFunctions.NotFunction()), symbolTable);
+    env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()), symbolTable);
+    env.bindName("or", new RaisedBuiltinFunction(new BuiltinFunctions.OrFunction()), symbolTable);
+    env.bindName("display", new WrappedBuiltinFunction(new BuiltinFunctions.DisplayFunction()), symbolTable);
     
     // Bind default environment parameters for opt and opt-mm.
-    env.bindName(OPT_EPOCHS_VAR_NAME, 50);
-    env.bindName(OPT_L2_VAR_NAME, 0.0);
-    env.bindName(OPT_L2_FREQ_VAR_NAME, 1.0);
-    
+    env.bindName(OPT_EPOCHS_VAR_NAME, 50, symbolTable);
+    env.bindName(OPT_L2_VAR_NAME, 0.0, symbolTable);
+    env.bindName(OPT_L2_FREQ_VAR_NAME, 1.0, symbolTable);
+
     // Bind default command line arguments
-    env.bindName(CLI_ARGV_VAR_NAME, ConstantValue.NIL);
+    env.bindName(CLI_ARGV_VAR_NAME, ConstantValue.NIL, symbolTable);
     return env;
   }
 
@@ -681,12 +686,13 @@ public class AmbEval {
 
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
-      List<String> argumentNames = lambdaValue.getArgumentNames(); 
-      Preconditions.checkArgument(argumentNames.size() == argumentValues.size(),
-          "Wrong number of arguments: expected %s, got %s to procedure: ", argumentNames, argumentValues, this);
+      int[] argumentNameIndexes = lambdaValue.getArgumentNameIndexes(); 
+      Preconditions.checkArgument(argumentNameIndexes.length == argumentValues.size(),
+          "Wrong number of arguments: expected %s, got %s to procedure: %s",
+          lambdaValue.getArgumentExpressions(), argumentValues, this);
 
       Environment boundEnvironment = Environment.extend(lambdaValue.getEnvironment());
-      boundEnvironment.bindNames(argumentNames, argumentValues);
+      boundEnvironment.bindNames(argumentNameIndexes, argumentValues);
 
       return eval.eval(lambdaValue.getBody(), boundEnvironment, gfgBuilder).getValue();
     }

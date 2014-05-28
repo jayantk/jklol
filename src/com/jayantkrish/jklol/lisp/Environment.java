@@ -5,14 +5,15 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class Environment {
 
-  private final Map<String, Object> boundVariables;
+  private final Map<Integer, Object> bindings;
   private final Environment parentEnvironment;
 
-  public Environment(Map<String, Object> bindings, Environment parentEnvironment) {
-    this.boundVariables = Preconditions.checkNotNull(bindings);
+  public Environment(Map<Integer, Object> bindings, Environment parentEnvironment) {
+    this.bindings = Preconditions.checkNotNull(bindings);
     this.parentEnvironment = parentEnvironment;
   }
 
@@ -21,28 +22,49 @@ public class Environment {
   }
 
   public static Environment extend(Environment parentEnvironment) {
-    return new Environment(Maps.<String, Object> newHashMap(), parentEnvironment);
+    return new Environment(Maps.<Integer, Object> newHashMap(), parentEnvironment);
   }
 
-  public void bindName(String name, Object value) {
-    boundVariables.put(name, value);
+  public void bindName(String name, Object value, IndexedList<String> symbolTable) {
+    if (!symbolTable.contains(name)) {
+      symbolTable.add(name);
+    }
+    int index = symbolTable.getIndex(name);
+    bindings.put(index, value);
   }
 
-  public void bindNames(List<String> names, List<Object> values) {
+  public void bindName(int nameIndex, Object value) {
+    bindings.put(nameIndex, value);
+  }
+
+  public void bindNames(List<String> names, List<Object> values,
+      IndexedList<String> symbolTable) {
     Preconditions.checkArgument(names.size() == values.size());
     for (int i = 0; i < names.size(); i++) {
-      boundVariables.put(names.get(i), values.get(i));
+      bindName(names.get(i), values.get(i), symbolTable);
     }
   }
 
-  public Object getValue(String name) {
-    if (boundVariables.containsKey(name)) {
-      return boundVariables.get(name);
+  public void bindNames(int[] nameIndexes, List<Object> values) {
+    Preconditions.checkArgument(nameIndexes.length == values.size());
+    for (int i = 0; i < nameIndexes.length; i++) {
+      bindings.put(nameIndexes[i], values.get(i));
+    }
+  }
+
+  public Object getValue(String name, IndexedList<String> symbolTable) {
+    int index = symbolTable.getIndex(name);
+    return getValue(index, symbolTable);
+  }
+
+  public Object getValue(int symbolIndex, IndexedList<String> symbolTable) {
+    if (bindings.containsKey(symbolIndex)) {
+      return bindings.get(symbolIndex);
     }
 
     Preconditions.checkState(parentEnvironment != null,
-        "Tried accessing unbound variable: %s", name);
-    Object value = parentEnvironment.getValue(name);
+        "Tried accessing unbound variable: %s", symbolTable.get(symbolIndex));
+    Object value = parentEnvironment.getValue(symbolIndex, symbolTable);
     return value;
   }
 }

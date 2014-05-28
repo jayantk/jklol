@@ -333,6 +333,75 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
+  public void incrementSquare(SufficientStatistics other, double multiplier) {
+    Preconditions.checkArgument(other instanceof TensorSufficientStatistics);
+    Tensor otherStatistics = ((TensorSufficientStatistics) other).get()
+        .elementwiseProduct(multiplier);
+    Tensor square = otherStatistics.elementwiseProduct(otherStatistics);
+    if (isDense) {
+      statistics.increment(square);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseAddition(square);
+    }
+  }
+
+  @Override
+  public void incrementSquareAdagrad(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, double multiplier) {
+    Preconditions.checkArgument(gradient instanceof TensorSufficientStatistics);
+    Tensor gradientTensor = ((TensorSufficientStatistics) gradient).get();
+    Preconditions.checkArgument(currentParameters instanceof TensorSufficientStatistics);
+    Tensor parameterTensor = ((TensorSufficientStatistics) currentParameters).get();
+    Tensor increment = gradientTensor.elementwiseAddition(parameterTensor.elementwiseProduct(multiplier));
+    increment = increment.elementwiseProduct(increment);
+    if (isDense) {
+      statistics.increment(increment);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseAddition(increment);
+    }
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(SufficientStatistics sumSquares, double constant,
+      double multiplier) {
+    Preconditions.checkArgument(sumSquares instanceof TensorSufficientStatistics);
+    Tensor sumSquaresTensor = ((TensorSufficientStatistics) sumSquares).get();
+
+    /*
+    System.out.println(sumSquaresTensor.elementwiseSqrt().elementwiseInverse());
+    System.out.println(statistics);
+    System.out.println(constant  + " " + multiplier);
+    */
+    Tensor multiplierTensor = sumSquaresTensor.elementwiseSqrt().elementwiseInverse()
+        .elementwiseProduct(multiplier).elementwiseAddition(constant);
+    
+    // System.out.println(multiplierTensor);
+
+    if (isDense) {
+      statistics.multiply(multiplierTensor);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseProduct(multiplierTensor);
+    }
+  }
+
+  @Override
+  public void incrementAdagrad(SufficientStatistics gradient, SufficientStatistics sumSquares,
+      double multiplier) {
+    Preconditions.checkArgument(gradient instanceof TensorSufficientStatistics);
+    Tensor gradientTensor = ((TensorSufficientStatistics) gradient).get();
+    Preconditions.checkArgument(sumSquares instanceof TensorSufficientStatistics);
+    Tensor squareTensor = ((TensorSufficientStatistics) sumSquares).get();
+    
+    Tensor increment = gradientTensor.elementwiseProduct(squareTensor
+        .elementwiseInverse().elementwiseSqrt()).elementwiseProduct(multiplier);
+    if (isDense) {
+      statistics.increment(increment);
+    } else {
+      statisticsTensor = statisticsTensor.elementwiseAddition(increment);
+    }
+  }
+
+  @Override
   public String getDescription() {
     return getFactor().getParameterDescription();
   }

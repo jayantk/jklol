@@ -277,7 +277,7 @@ public abstract class AbstractCli {
           "Get the average of the parameter iterates of stochastic gradient descent.");
       sgdL2Regularization = parser.accepts("l2Regularization",
           "Regularization parameter for the L2 norm of the parameter vector.")
-          .withRequiredArg().ofType(Double.class).defaultsTo(0.1);
+          .withRequiredArg().ofType(Double.class).defaultsTo(0.0);
       sgdRegularizationFrequency = parser.accepts("regularizationFrequency",
           "Fraction of iterations on which to apply regularization. Must be between 0 and 1")
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);

@@ -82,7 +82,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 
 	@Override
-	public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {
+	public void log(long iteration, int exampleNum, Assignment example, FactorGraph graph) {
 	  if (showExamples) {
 	    if (iteration % logInterval == 0) {
 	      String prob = "";
@@ -100,7 +100,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 	
 	@Override
-	public void logParameters(int iteration, SufficientStatistics parameters) {
+	public void logParameters(long iteration, SufficientStatistics parameters) {
 	  if (modelSerializationInterval > 0 && iteration % modelSerializationInterval == 0) {
 	    String parametersFilename = modelSerializationDir + File.separator + "parameters_"
 	        + iteration + ".ser";
@@ -109,7 +109,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 
 	@Override
-	public void notifyIterationStart(int iteration) {
+	public void notifyIterationStart(long iteration) {
 	  if (iteration % logInterval == 0) {
 	    print("*** ITERATION " + iteration + " ***");
 	  }
@@ -117,7 +117,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 
 	@Override
-	public void notifyIterationEnd(int iteration) {
+	public void notifyIterationEnd(long iteration) {
 	  double elapsedTime = stopTimer("iteration");
 	  if (iteration % logInterval == 0) {
 	    print(iteration + " done. Elapsed: " + elapsedTime + " ms");
@@ -126,7 +126,7 @@ public class DefaultLogFunction extends AbstractLogFunction {
 	}
 
   @Override
-  public void logStatistic(int iteration, String statisticName, double value) {
+  public void logStatistic(long iteration, String statisticName, double value) {
     if (iteration % logInterval == 0) {
       print(iteration + ": " + statisticName + "=" + value);
     }

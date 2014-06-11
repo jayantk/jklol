@@ -17,22 +17,22 @@ public class NullLogFunction implements LogFunction {
   public void log(Assignment example, FactorGraph graph) {}
 
   @Override
-  public void log(int iteration, int exampleNum, Assignment example, FactorGraph graph) {}
+  public void log(long iteration, int exampleNum, Assignment example, FactorGraph graph) {}
   
   @Override
   public void logMessage(Object message) {};
   
   @Override
-  public void logParameters(int iteration, SufficientStatistics parameters) {}
+  public void logParameters(long iteration, SufficientStatistics parameters) {}
 
   @Override
-  public void logStatistic(int iteration, String statisticName, double value) {}
+  public void logStatistic(long iteration, String statisticName, double value) {}
 
   @Override
-  public void notifyIterationStart(int iteration) {}
+  public void notifyIterationStart(long iteration) {}
 
   @Override
-  public void notifyIterationEnd(int iteration) {}
+  public void notifyIterationEnd(long iteration) {}
 
   @Override
   public void startTimer(String timerName) {}

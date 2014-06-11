@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.util.Pseudorandom;
  */
 public class StochasticGradientTrainer implements GradientOptimizer {
 
-  private final int numIterations;
+  private final long numIterations;
   private final int batchSize;
   private final LogFunction log;
 
@@ -46,7 +46,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
    * @param decayStepSize
    * @param log
    */
-  public StochasticGradientTrainer(int numIterations, int batchSize,
+  public StochasticGradientTrainer(long numIterations, int batchSize,
       double stepSize, boolean decayStepSize, boolean returnAveragedParameters, LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
@@ -69,7 +69,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
    * @param regularizer
    * @param log
    */
-  public StochasticGradientTrainer(int numIterations, int batchSize,
+  public StochasticGradientTrainer(long numIterations, int batchSize,
       double stepSize, boolean decayStepSize, boolean returnAveragedParameters, boolean adaGrad,
       Regularizer regularizer, LogFunction log) {
     this.numIterations = numIterations;
@@ -83,27 +83,27 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     this.regularizer = regularizer;
   }
 
-  public static StochasticGradientTrainer createWithL2Regularization(int numIterations, int batchSize,
+  public static StochasticGradientTrainer createWithL2Regularization(long numIterations, int batchSize,
       double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
         returnAveragedParameters, false, new StochasticL2Regularizer(l2Penalty, 1.0), log);
   }
 
-  public static StochasticGradientTrainer createWithStochasticL2Regularization(int numIterations,
+  public static StochasticGradientTrainer createWithStochasticL2Regularization(long numIterations,
       int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty,
       double regularizationFrequency, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
         returnAveragedParameters, false, new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
   }
 
-  public static StochasticGradientTrainer createAdagrad(int numIterations,
+  public static StochasticGradientTrainer createAdagrad(long numIterations,
       int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters,
       double l2Penalty, double regularizationFrequency, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
         returnAveragedParameters, true, new AdagradL2Regularizer(l2Penalty, regularizationFrequency), log);
   }
 
-  public static StochasticGradientTrainer createWithL1Regularization(int numIterations, int batchSize,
+  public static StochasticGradientTrainer createWithL1Regularization(long numIterations, int batchSize,
       double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l1Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
         returnAveragedParameters, false, new L1Regularizer(l1Penalty), log);
@@ -139,7 +139,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     double exponentiallyWeightedUpdateNorm = stepSize;
     double exponentiallyWeightedObjectiveValue = 0.0;
     double exponentiallyWeightedDenom = 0.0;
-    for (int i = 0; i < numIterations; i++) {
+    for (long i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
       log.startTimer("serialize_parameters");
       log.logParameters(i, initialParameters);

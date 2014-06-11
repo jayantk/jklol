@@ -103,7 +103,7 @@ public abstract class AbstractCli {
   protected OptionSpec<Void> noPrintOptions;
 
   // Stochastic gradient options.
-  protected OptionSpec<Integer> sgdIterations;
+  protected OptionSpec<Long> sgdIterations;
   protected OptionSpec<Integer> sgdBatchSize;
   protected OptionSpec<Double> sgdInitialStep;
   protected OptionSpec<Void> sgdNoDecayStepSize;
@@ -264,7 +264,7 @@ public abstract class AbstractCli {
     if (opts.contains(CommonOptions.STOCHASTIC_GRADIENT)) {
       sgdIterations = parser.accepts("iterations",
           "Number of iterations (passes over the data) for stochastic gradient descent.").
-          withRequiredArg().ofType(Integer.class).defaultsTo(10);
+          withRequiredArg().ofType(Long.class).defaultsTo(10L);
       sgdBatchSize = parser.accepts("batchSize",
           "Minibatch size, i.e., the number of examples processed per gradient computation. If unspecified, defaults to using the entire data set (gradient descent).")
           .withRequiredArg().ofType(Integer.class);
@@ -403,12 +403,12 @@ public abstract class AbstractCli {
   private StochasticGradientTrainer createStochasticGradientTrainer(int numExamples) {
     Preconditions.checkState(opts.contains(CommonOptions.STOCHASTIC_GRADIENT));
 
-    int iterationsOption = parsedOptions.valueOf(sgdIterations);
+    long iterationsOption = parsedOptions.valueOf(sgdIterations);
     int batchSize = numExamples;
     if (parsedOptions.has(sgdBatchSize)) {
       batchSize = parsedOptions.valueOf(sgdBatchSize);
     }
-    int numIterations = (int) Math.ceil(iterationsOption * numExamples / ((double) batchSize));
+    long numIterations = (int) Math.ceil(iterationsOption * numExamples / ((double) batchSize));
     double initialStepSize = parsedOptions.valueOf(sgdInitialStep);
     double l2Regularization = parsedOptions.valueOf(sgdL2Regularization);
 

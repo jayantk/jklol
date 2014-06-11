@@ -408,7 +408,7 @@ public class AmbEval {
         parameterSpec.getParameterSpec(), new JunctionTree());
 
     // 4th argument is an optional parameter for providing optimization parameters.
-    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME, symbolTable);
+    long epochs = (Long) environment.getValue(OPT_EPOCHS_VAR_NAME, symbolTable);
     double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME, symbolTable);
     double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME, symbolTable);
     if (subexpressions.size() >= 5) {
@@ -417,7 +417,7 @@ public class AmbEval {
           optimizationParamsAlist, String.class, Object.class);
 
       if (optimizationParams.containsKey("epochs")) {
-        epochs = (Integer) optimizationParams.get("epochs");
+        epochs = (Long) optimizationParams.get("epochs");
       }
       if (optimizationParams.containsKey("l2-regularization")) {
         l2Penalty = (Double) optimizationParams.get("l2-regularization");
@@ -459,7 +459,7 @@ public class AmbEval {
         parameterSpec.getParameterSpec(), new JunctionTree());
 
     // 4th argument is an optional parameter for providing optimization parameters.
-    int epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME, symbolTable);
+    long epochs = (Integer) environment.getValue(OPT_EPOCHS_VAR_NAME, symbolTable);
     double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME, symbolTable);
     double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME, symbolTable);
     if (subexpressions.size() >= 5) {
@@ -468,7 +468,7 @@ public class AmbEval {
           optimizationParamsAlist, String.class, Object.class);
 
       if (optimizationParams.containsKey("epochs")) {
-        epochs = (Integer) optimizationParams.get("epochs");
+        epochs = (Long) optimizationParams.get("epochs");
       }
       if (optimizationParams.containsKey("l2-regularization")) {
         l2Penalty = (Double) optimizationParams.get("l2-regularization");

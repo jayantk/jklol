@@ -8,6 +8,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.util.Histogram;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.Pseudorandom;
 
@@ -396,6 +397,43 @@ public class BuiltinFunctions {
       }
 
       return newArray;
+    }
+  }
+
+  public static class MakeHistogramFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      List<Object> keys = Lists.newArrayListWithCapacity(argumentValues.size());
+      int[] sumCounts = new int[argumentValues.size()];
+      int sumCount = 0;
+      int i = 0;
+      // Each argument value is a list pairing an object (first element)
+      // with an integer count (second element).
+      for (Object argumentValue : argumentValues) {
+        List<Object> pair = ConsValue.consListToList(argumentValue, Object.class);
+        sumCount += (Integer) pair.get(1);
+        keys.add(pair.get(0));
+        sumCounts[i] = sumCount;
+        i++;
+      }
+
+      return new Histogram<Object>(keys, sumCounts); 
+    }
+  }
+
+  public static class SampleHistogramFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return ((Histogram<?>) argumentValues.get(0)).sample();
+    }
+  }
+
+  public static class HistogramToDictionaryFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return IndexedList.create(((Histogram<?>) argumentValues.get(0)).getItems());
     }
   }
 }

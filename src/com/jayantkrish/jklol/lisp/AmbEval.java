@@ -599,6 +599,10 @@ public class AmbEval {
     env.bindName("dictionary-to-array", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryToArrayFunction()), symbolTable);
     env.bindName("dictionary-rand-elt", new RaisedBuiltinFunction(new BuiltinFunctions.DictionaryRandomElement()), symbolTable);
 
+    env.bindName("make-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.MakeHistogramFunction()), symbolTable);
+    env.bindName("sample-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.SampleHistogramFunction()), symbolTable);
+    env.bindName("histogram-to-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.HistogramToDictionaryFunction()), symbolTable);
+
     env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()), symbolTable);
     env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement()), symbolTable); 
     env.bindName("array-map", new ArrayMapFunction(), symbolTable);

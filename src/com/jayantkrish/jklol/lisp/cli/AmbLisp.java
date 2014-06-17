@@ -27,8 +27,8 @@ public class AmbLisp extends AbstractCli {
   private OptionSpec<Void> printFactorGraph;
   private OptionSpec<Void> interactive;
   private OptionSpec<String> evalOpt;
-  
-  private OptionSpec<Integer> optEpochs;
+
+  private OptionSpec<Long> optEpochs;
   private OptionSpec<Double> optL2Regularization;
   private OptionSpec<Double> optL2RegularizationFrequency;
   private OptionSpec<String> args;
@@ -40,7 +40,7 @@ public class AmbLisp extends AbstractCli {
     evalOpt = parser.accepts("eval").withRequiredArg().ofType(String.class);
     
     // Options for controlling the optimization procedure
-    optEpochs = parser.accepts("optEpochs").withRequiredArg().ofType(Integer.class).defaultsTo(50);
+    optEpochs = parser.accepts("optEpochs").withRequiredArg().ofType(Long.class).defaultsTo(50L);
     optL2Regularization = parser.accepts("optL2Regularization").withRequiredArg()
         .ofType(Double.class).defaultsTo(0.0);
     optL2RegularizationFrequency  = parser.accepts("optL2RegularizationFrequency").withRequiredArg()

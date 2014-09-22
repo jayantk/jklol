@@ -193,6 +193,14 @@ public class Combinator implements Serializable {
     return binaryRule;
   }
 
+  public Combinator applicationToComposition(int depth) {
+    return new Combinator(syntax, syntaxUniqueVars, syntaxHeadVar, leftVariableRelabeling,
+        leftInverseRelabeling, rightVariableRelabeling, rightInverseRelabeling, resultOriginalVars,
+        resultVariableRelabeling, resultInverseRelabeling, unifiedVariables, subjects,
+        subjectSyntacticCategories, argumentNumbers, objects, isArgumentOnLeft, argumentReturnDepth + depth,
+        binaryRule, type);
+  }
+
   @Override
   public String toString() {
     if (binaryRule != null) {

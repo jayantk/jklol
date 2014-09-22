@@ -335,12 +335,11 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   @Override
   public void incrementSquare(SufficientStatistics other, double multiplier) {
     Preconditions.checkArgument(other instanceof TensorSufficientStatistics);
-    Tensor otherStatistics = ((TensorSufficientStatistics) other).get()
-        .elementwiseProduct(multiplier);
-    Tensor square = otherStatistics.elementwiseProduct(otherStatistics);
+    Tensor otherStatistics = ((TensorSufficientStatistics) other).get();
     if (isDense) {
-      statistics.increment(square);
+      statistics.incrementSquare(otherStatistics, multiplier);
     } else {
+      Tensor square = otherStatistics.elementwiseProduct(otherStatistics.elementwiseProduct(multiplier));
       statisticsTensor = statisticsTensor.elementwiseAddition(square);
     }
   }

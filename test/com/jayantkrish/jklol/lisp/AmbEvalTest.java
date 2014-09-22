@@ -443,6 +443,38 @@ public class AmbEvalTest extends TestCase {
 
     assertEquals(expected, value);
   }
+  
+  public void testOpt5() {
+    String program = "(define entities (make-dictionary \"params\" \"A\" \"B\" \"C\" \"D\"))" +
+        "(define labels (list #t #f))" +
+        "" +
+        "(define inner-prod-family (params) " +
+        "  (lambda (entity1 entity2 entity3) " +
+        "    (let ((var (amb labels))) " +
+        "      (make-ranking-inner-product-classifier var #t " +
+        "        (get-ith-parameter params (dictionary-lookup entity1 entities)) " +
+        "        (get-ith-parameter params (dictionary-lookup entity2 entities))" +
+        "        (get-ith-parameter params (dictionary-lookup entity3 entities))) " +
+        "     var)))"  +
+        "" +
+        "(define require1 (lambda (x) (add-weight (not x) 0.0)))" +
+        "" +
+        "(define training-data (list (list (list \"params\" \"A\" \"D\") (lambda (x) (require1 (= x #t)))) " +
+        "                            (list (list \"params\" \"A\" \"B\") (lambda (x) (require1 (= x #t)))) " +
+        "                            (list (list \"params\" \"A\" \"C\") (lambda (x) (require1 (= x #f)))) " +
+        "                            (list (list \"params\" \"B\" \"C\") (lambda (x) (require1 (= x #t)))) " +
+        " ))" +
+        "(define parameters (make-parameter-list (array-map (lambda (x) (make-vector-parameters 2)) (dictionary-to-array entities))))" +
+        "(perturb-parameters parameters 1.0)" +
+        "(define best-params (opt inner-prod-family parameters training-data))" + 
+        "(define output (inner-prod-family best-params))" + 
+        "(get-best-value (lifted-list (output \"params\" \"A\" \"B\") (output \"params\" \"B\" \"D\") (output \"params\" \"C\" \"A\")))" ;
+        
+    Object value = runTest(program);
+    Object expected = runTest("(lifted-list #t #t #f)");
+
+    assertEquals(expected, value);
+  }
 
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";

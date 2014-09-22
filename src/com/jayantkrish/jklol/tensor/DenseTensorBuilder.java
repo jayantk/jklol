@@ -99,6 +99,21 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     }
   }
 
+  @Override
+  public void incrementSquare(TensorBase other, double multiplier) {
+    if (other instanceof DenseTensorBase) {
+      double square = multiplier * multiplier;
+      double[] otherTensorValues = ((DenseTensorBase) other).values;
+      Preconditions.checkArgument(otherTensorValues.length == values.length);
+      int length = values.length;
+      for (int i = 0; i < length; i++) {
+        values[i] += otherTensorValues[i] * otherTensorValues[i] * square;
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
   /**
    * Increment algorithm for the case where both tensors have the same set of
    * dimensions.

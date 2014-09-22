@@ -61,7 +61,7 @@ public class CcgPrepositionFixingPattern implements CcgPattern {
         parse.getSpanStart(), parse.getSpanEnd()));
   }
 
-  private CcgParse addVerbArgument(CcgParse parse, HeadedSyntacticCategory catReplacement,
+  public static CcgParse addVerbArgument(CcgParse parse, HeadedSyntacticCategory catReplacement,
       int depth) {
 
     HeadedSyntacticCategory oldRoot = parse.getHeadedSyntacticCategory();
@@ -72,21 +72,28 @@ public class CcgPrepositionFixingPattern implements CcgPattern {
       Set<IndexedPredicate> currentHeads = parse.getSemanticHeads();
       CcgParse left = parse.getLeft();
       CcgParse right = parse.getRight();
+      Combinator combinator = parse.getCombinator();
       if (Sets.intersection(parse.getLeft().getSemanticHeads(), currentHeads).size() > 0) {
         if (parse.getLeft().getHeadedSyntacticCategory().getSyntax().getArgumentList().size()
             > oldRoot.getSyntax().getArgumentList().size()) {
+          // Left category (head) was applied to the right category.
           left = addVerbArgument(parse.getLeft(), catReplacement, depth + 1);
         } else {
+          // Right category is a modifier for the left category
           left = addVerbArgument(parse.getLeft(), catReplacement, depth);
+          combinator = combinator.applicationToComposition(depth);
         }
       }
 
       if (Sets.intersection(parse.getRight().getSemanticHeads(), currentHeads).size() > 0) {
         if (parse.getRight().getHeadedSyntacticCategory().getSyntax().getArgumentList().size()
             > oldRoot.getSyntax().getArgumentList().size()) {
+          // Right category (head) was applied to the left category.
           right = addVerbArgument(parse.getRight(), catReplacement, depth + 1);
         } else {
+          // Left category is a modifier for the right category
           right = addVerbArgument(parse.getRight(), catReplacement, depth);
+          combinator = combinator.applicationToComposition(depth);
         }
       }
 
@@ -100,7 +107,7 @@ public class CcgPrepositionFixingPattern implements CcgPattern {
       }
 
       return CcgParse.forNonterminal(newRoot, parse.getSemanticHeads(), deps,
-          parse.getNodeProbability(), left, right, parse.getCombinator(), parse.getUnaryRule(),
+          parse.getNodeProbability(), left, right, combinator, parse.getUnaryRule(),
           parse.getSpanStart(), parse.getSpanEnd());
     } else {
       CcgCategory oldCategory = parse.getLexiconEntry();

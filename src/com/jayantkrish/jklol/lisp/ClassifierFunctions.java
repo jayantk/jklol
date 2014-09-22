@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
@@ -277,6 +278,49 @@ public class ClassifierFunctions {
     }
   }
   
+  public static class MakeRankingInnerProductClassifier implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      // Argument spec: 1st arg is the variable to add weight to
+      // 2nd arg is the value of that variable to weight
+      // 3rd arg is the parameter vector.
+      // 4th and 5th args are the parameter vectors whose difference is
+      // multiplied by the 3rd arg to determine the weight. 4th is positive, 5th is negative.
+      Preconditions.checkArgument(argumentValues.size() == 5);
+      Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue);
+      Preconditions.checkArgument(argumentValues.get(2) instanceof SpecAndParameters,
+          "Third argument to make-inner-product-classifier must be a parameter vector");
+      Preconditions.checkArgument(argumentValues.get(3) instanceof SpecAndParameters,
+          "Fourth argument to make-inner-product-classifier must be a parameter vector");
+      Preconditions.checkArgument(argumentValues.get(4) instanceof SpecAndParameters,
+          "Fifth argument to make-inner-product-classifier must be a parameter vector");
+
+      SpecAndParameters parameters1 = (SpecAndParameters) argumentValues.get(2);
+      SpecAndParameters parameters2 = (SpecAndParameters) argumentValues.get(3);
+      SpecAndParameters parameters3 = (SpecAndParameters) argumentValues.get(4);
+
+      AmbValue ambValue = (AmbValue) argumentValues.get(0);
+      VariableNumMap factorVars = ambValue.getVar();
+      VariableRelabeling relabeling = VariableRelabeling.createFromVariables(
+          factorVars, factorVars.relabelVariableNums(new int[] {0}));
+      VariableNumMap relabeledVars = relabeling.apply(factorVars);
+      Assignment assignment = relabeledVars.outcomeArrayToAssignment(argumentValues.get(1));
+
+      ParametricFactor pf = new RankingInnerProductParametricFactor(relabeledVars, assignment, -1);
+
+      ListSufficientStatistics combinedParameters = new ListSufficientStatistics(Arrays.asList("0", "1", "2"),
+          Arrays.asList(parameters1.getParameters(), parameters2.getParameters(), parameters3.getParameters()));
+      Factor factor = pf.getModelFromParameters(combinedParameters).relabelVariables(
+          relabeling.inverse());
+
+      builder.addConstantFactor("classifier-" + factorVars.getVariableNums(), factor);
+      builder.addMark(factorVars, pf, relabeling, new int[] {parameters1.getParameterSpec().getId(),
+          parameters2.getParameterSpec().getId(), parameters3.getParameterSpec().getId()});
+
+      return ConstantValue.UNDEFINED;
+    }
+  }
+  
   public static class MakeVectorParameters implements AmbFunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
@@ -358,6 +402,29 @@ public class ClassifierFunctions {
       Preconditions.checkArgument(argumentValues.size() == 1);
       String filename = (String) argumentValues.get(0);
       return IoUtils.readSerializedObject(filename, Object.class);
+    }
+  }
+  
+  public static class ParametersToString implements AmbFunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      Preconditions.checkArgument(argumentValues.get(0) instanceof SpecAndParameters);
+      
+      TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) ((SpecAndParameters)
+          argumentValues.get(0)).getParameters();
+      
+      Tensor tensor = tensorStats.get();
+      StringBuilder sb = new StringBuilder();
+      for (long keyNum = 0; keyNum < tensor.getMaxKeyNum(); keyNum++) {
+        sb.append(tensor.get(keyNum));
+        
+        if (keyNum < tensor.getMaxKeyNum() - 1) {
+          sb.append(" ");
+        }
+      }
+
+      return sb.toString();
     }
   }
 }

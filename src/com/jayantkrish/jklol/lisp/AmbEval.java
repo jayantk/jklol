@@ -618,9 +618,11 @@ public class AmbEval {
     env.bindName("make-featurized-classifier-parameters", new ClassifierFunctions.MakeFeaturizedClassifierParameters(), symbolTable);
     env.bindName("make-vector-parameters", new ClassifierFunctions.MakeVectorParameters(), symbolTable);
     env.bindName("make-inner-product-classifier", new ClassifierFunctions.MakeInnerProductClassifier(), symbolTable);
+    env.bindName("make-ranking-inner-product-classifier", new ClassifierFunctions.MakeRankingInnerProductClassifier(), symbolTable);
     env.bindName("make-parameter-list", new ClassifierFunctions.MakeParameterList(), symbolTable);
     env.bindName("get-ith-parameter", new ClassifierFunctions.GetIthParameter(), symbolTable);
     env.bindName("perturb-parameters", new ClassifierFunctions.PerturbFunction(), symbolTable);
+    env.bindName("parameters-to-string", new ClassifierFunctions.ParametersToString(), symbolTable);
     env.bindName("serialize", new ClassifierFunctions.Serialize(), symbolTable);
     env.bindName("deserialize", new ClassifierFunctions.Deserialize(), symbolTable);
 
@@ -640,7 +642,7 @@ public class AmbEval {
     env.bindName("display", new WrappedBuiltinFunction(new BuiltinFunctions.DisplayFunction()), symbolTable);
     
     // Bind default environment parameters for opt and opt-mm.
-    env.bindName(OPT_EPOCHS_VAR_NAME, 50, symbolTable);
+    env.bindName(OPT_EPOCHS_VAR_NAME, 50L, symbolTable);
     env.bindName(OPT_L2_VAR_NAME, 0.0, symbolTable);
     env.bindName(OPT_L2_FREQ_VAR_NAME, 1.0, symbolTable);
 

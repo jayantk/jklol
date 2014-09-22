@@ -24,14 +24,18 @@ public class CcgParseAugmenter {
   private final List<BinaryRulePattern> binaryRulePatterns;
   private final List<UnaryRulePattern> unaryRulePatterns;
   
+  private final boolean replaceExisting;
+  
   public CcgParseAugmenter(List<CategoryPattern> patterns, 
-      List<BinaryRulePattern> binaryRulePatterns, List<UnaryRulePattern> unaryRulePatterns) {
+      List<BinaryRulePattern> binaryRulePatterns, List<UnaryRulePattern> unaryRulePatterns,
+      boolean replaceExisting) {
     this.patterns = ImmutableList.copyOf(patterns);
     this.binaryRulePatterns = ImmutableList.copyOf(binaryRulePatterns); 
     this.unaryRulePatterns = ImmutableList.copyOf(unaryRulePatterns);
+    this.replaceExisting = replaceExisting;
   }
 
-  public static CcgParseAugmenter parseFrom(List<String> lines) {
+  public static CcgParseAugmenter parseFrom(List<String> lines, boolean replaceExisting) {
     int i = 0;
     while (!lines.get(i).trim().equals("LEXICON")) {
       i++;
@@ -58,7 +62,7 @@ public class CcgParseAugmenter {
       i++;
     }
 
-    return new CcgParseAugmenter(patterns, binaryRulePatterns, unaryRulePatterns);
+    return new CcgParseAugmenter(patterns, binaryRulePatterns, unaryRulePatterns, replaceExisting);
   }
   
   public CcgParse addLogicalForms(CcgParse input) {
@@ -70,13 +74,17 @@ public class CcgParseAugmenter {
     if (input.isTerminal()) {
       CcgCategory currentEntry = input.getLexiconEntry();
       HeadedSyntacticCategory cat = currentEntry.getSyntax();
-      Expression logicalForm = null;
+      
+      Expression logicalForm = currentEntry.getLogicalForm();
       Collection<DependencyStructure> deps = wholeParse
           .getDependenciesWithHeadInSpan(input.getSpanStart(), input.getSpanEnd());
-      for (CategoryPattern pattern : patterns) {
-        if (pattern.matches(input.getWords(), cat.getSyntax(), deps)) {
-          logicalForm = pattern.getLogicalForm(input.getWords(), cat.getSyntax(), deps);
-          break;
+
+      if (logicalForm == null || replaceExisting) {
+        for (CategoryPattern pattern : patterns) {
+          if (pattern.matches(input.getWords(), cat.getSyntax(), deps)) {
+            logicalForm = pattern.getLogicalForm(input.getWords(), cat.getSyntax(), deps);
+            break;
+          }
         }
       }
 
@@ -101,7 +109,7 @@ public class CcgParseAugmenter {
       Combinator combinator = result.getCombinator();
       CcgBinaryRule rule = combinator.getBinaryRule();
 
-      LambdaExpression newLogicalForm = null;
+      LambdaExpression newLogicalForm = rule.getLogicalForm();
       for (BinaryRulePattern pattern : binaryRulePatterns) {
         if (pattern.matches(rule)) {
           newLogicalForm = pattern.getLogicalForm(rule);
@@ -129,9 +137,9 @@ public class CcgParseAugmenter {
 
     // Handle unary rules
     if (result.hasUnaryRule()) {
-      LambdaExpression logicalForm = null;
       UnaryCombinator combinator = result.getUnaryRule();
       CcgUnaryRule rule = combinator.getUnaryRule();
+      LambdaExpression logicalForm = rule.getLogicalForm();
       for (UnaryRulePattern pattern : unaryRulePatterns) {
         if (pattern.matches(rule)) {
           logicalForm = pattern.getLogicalForm(rule);
@@ -145,8 +153,6 @@ public class CcgParseAugmenter {
           combinator.getVariableRelabeling(), combinator.getInverseRelabeling(), newRule);
       result = result.addUnaryRule(newCombinator, result.getHeadedSyntacticCategory());
     }
-    
-    
 
     return result;
   }

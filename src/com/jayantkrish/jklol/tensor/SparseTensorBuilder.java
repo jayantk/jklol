@@ -232,6 +232,11 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   }
   
   @Override
+  public void incrementSquare(TensorBase other, double multiplier) {
+    throw new UnsupportedOperationException("not yet implemented.");
+  }
+
+  @Override
   public void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
       double multiplier) {
     incrementWithMultiplier(leftTensor.outerProduct(rightTensor), multiplier);

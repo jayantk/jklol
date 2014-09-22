@@ -106,8 +106,31 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       double[] otherTensorValues = ((DenseTensorBase) other).values;
       Preconditions.checkArgument(otherTensorValues.length == values.length);
       int length = values.length;
+      double otherVal = 0;
       for (int i = 0; i < length; i++) {
-        values[i] += otherTensorValues[i] * otherTensorValues[i] * square;
+        otherVal = otherTensorValues[i];
+        values[i] += otherVal * otherVal * square;
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  @Override
+  public void incrementAdagrad(TensorBase other, TensorBase squareTensor, double multiplier) {
+    if (other instanceof DenseTensorBase && squareTensor instanceof DenseTensorBase) {
+      double square = multiplier * multiplier;
+      double[] otherTensorValues = ((DenseTensorBase) other).values;
+      double[] squareTensorValues = ((DenseTensorBase) squareTensor).values;
+      Preconditions.checkArgument(otherTensorValues.length == values.length);
+      Preconditions.checkArgument(squareTensorValues.length == values.length);
+      int length = values.length;
+      double otherVal = 0;
+      double squareVal = 0;
+      for (int i = 0; i < length; i++) {
+        otherVal = otherTensorValues[i];
+        squareVal = squareTensorValues[i];
+        values[i] += otherVal * square / Math.sqrt(squareVal);
       }
     } else {
       throw new UnsupportedOperationException();

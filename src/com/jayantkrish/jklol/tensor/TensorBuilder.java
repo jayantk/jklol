@@ -37,6 +37,8 @@ public interface TensorBuilder extends TensorBase, Serializable {
    * @param other
    */
   void incrementSquare(TensorBase other, double multiplier);
+  
+  void incrementAdagrad(TensorBase other, TensorBase squareTensor, double multiplier);
 
   void incrementEntry(double amount, int... key);
   

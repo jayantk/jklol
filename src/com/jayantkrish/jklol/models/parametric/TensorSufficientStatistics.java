@@ -390,12 +390,12 @@ public class TensorSufficientStatistics implements SufficientStatistics {
     Tensor gradientTensor = ((TensorSufficientStatistics) gradient).get();
     Preconditions.checkArgument(sumSquares instanceof TensorSufficientStatistics);
     Tensor squareTensor = ((TensorSufficientStatistics) sumSquares).get();
-    
-    Tensor increment = gradientTensor.elementwiseProduct(squareTensor
-        .elementwiseInverse().elementwiseSqrt()).elementwiseProduct(multiplier);
+
     if (isDense) {
-      statistics.increment(increment);
+      statistics.incrementAdagrad(gradientTensor, squareTensor, multiplier);
     } else {
+      Tensor increment = gradientTensor.elementwiseProduct(squareTensor
+        .elementwiseInverse().elementwiseSqrt()).elementwiseProduct(multiplier);
       statisticsTensor = statisticsTensor.elementwiseAddition(increment);
     }
   }

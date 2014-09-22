@@ -242,6 +242,16 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   }
 
   @Override
+  public void multiplyInverseAdagrad(TensorBase squareTensor, double constant, double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public void incrementSquareAdagrad(TensorBase gradient, TensorBase parameters, double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
       double multiplier) {
     incrementWithMultiplier(leftTensor.outerProduct(rightTensor), multiplier);

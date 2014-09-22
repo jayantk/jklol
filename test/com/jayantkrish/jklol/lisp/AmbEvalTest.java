@@ -461,15 +461,15 @@ public class AmbEvalTest extends TestCase {
         "" +
         "(define training-data (list (list (list \"params\" \"A\" \"D\") (lambda (x) (require1 (= x #t)))) " +
         "                            (list (list \"params\" \"A\" \"B\") (lambda (x) (require1 (= x #t)))) " +
-        "                            (list (list \"params\" \"A\" \"C\") (lambda (x) (require1 (= x #f)))) " +
+        "                            (list (list \"params\" \"A\" \"C\") (lambda (x) (require1 (= x #t)))) " +
         "                            (list (list \"params\" \"B\" \"C\") (lambda (x) (require1 (= x #t)))) " +
         " ))" +
         "(define parameters (make-parameter-list (array-map (lambda (x) (make-vector-parameters 2)) (dictionary-to-array entities))))" +
-        "(perturb-parameters parameters 1.0)" +
+        "(perturb-parameters parameters 0.1)" +
         "(define best-params (opt inner-prod-family parameters training-data))" + 
-        "(define output (inner-prod-family best-params))" + 
+        "(define output (inner-prod-family best-params))" +
         "(get-best-value (lifted-list (output \"params\" \"A\" \"B\") (output \"params\" \"B\" \"D\") (output \"params\" \"C\" \"A\")))" ;
-        
+
     Object value = runTest(program);
     Object expected = runTest("(lifted-list #t #t #f)");
 

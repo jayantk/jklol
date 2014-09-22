@@ -40,6 +40,10 @@ public interface TensorBuilder extends TensorBase, Serializable {
   
   void incrementAdagrad(TensorBase other, TensorBase squareTensor, double multiplier);
 
+  void multiplyInverseAdagrad(TensorBase squareTensor, double constant, double multiplier);
+  
+  void incrementSquareAdagrad(TensorBase gradient, TensorBase parameters, double multiplier);
+
   void incrementEntry(double amount, int... key);
   
   void incrementEntryByKeyNum(double amount, long keyNum);

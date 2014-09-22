@@ -351,11 +351,12 @@ public class TensorSufficientStatistics implements SufficientStatistics {
     Tensor gradientTensor = ((TensorSufficientStatistics) gradient).get();
     Preconditions.checkArgument(currentParameters instanceof TensorSufficientStatistics);
     Tensor parameterTensor = ((TensorSufficientStatistics) currentParameters).get();
-    Tensor increment = gradientTensor.elementwiseAddition(parameterTensor.elementwiseProduct(multiplier));
-    increment = increment.elementwiseProduct(increment);
+    
     if (isDense) {
-      statistics.increment(increment);
+      statistics.incrementSquareAdagrad(gradientTensor, parameterTensor, multiplier);
     } else {
+      Tensor increment = gradientTensor.elementwiseAddition(parameterTensor.elementwiseProduct(multiplier));
+      increment = increment.elementwiseProduct(increment);
       statisticsTensor = statisticsTensor.elementwiseAddition(increment);
     }
   }
@@ -365,20 +366,12 @@ public class TensorSufficientStatistics implements SufficientStatistics {
       double multiplier) {
     Preconditions.checkArgument(sumSquares instanceof TensorSufficientStatistics);
     Tensor sumSquaresTensor = ((TensorSufficientStatistics) sumSquares).get();
-
-    /*
-    System.out.println(sumSquaresTensor.elementwiseSqrt().elementwiseInverse());
-    System.out.println(statistics);
-    System.out.println(constant  + " " + multiplier);
-    */
-    Tensor multiplierTensor = sumSquaresTensor.elementwiseSqrt().elementwiseInverse()
-        .elementwiseProduct(multiplier).elementwiseAddition(constant);
     
-    // System.out.println(multiplierTensor);
-
     if (isDense) {
-      statistics.multiply(multiplierTensor);
+      statistics.multiplyInverseAdagrad(sumSquaresTensor, constant, multiplier);
     } else {
+      Tensor multiplierTensor = sumSquaresTensor.elementwiseSqrt().elementwiseInverse()
+          .elementwiseProduct(multiplier).elementwiseAddition(constant);
       statisticsTensor = statisticsTensor.elementwiseProduct(multiplierTensor);
     }
   }

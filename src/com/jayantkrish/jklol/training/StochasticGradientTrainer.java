@@ -299,16 +299,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       Preconditions.checkNotNull(gradientSumSquares);
       double rand = Pseudorandom.get().nextDouble();
       if (rand < frequency && l2Penalty != 0.0) {
-        // Objective value calculation:
-        // objectiveValue -= l2Penalty * currentParameters.getL2Norm() / (2.0 * frequency);
         double curPenalty = l2Penalty / frequency;
         gradientSumSquares.incrementSquareAdagrad(gradient, currentParameters, -1.0 * curPenalty);
         currentParameters.multiplyInverseAdagrad(gradientSumSquares, 1.0, -1.0 * currentStepSize * curPenalty);
 
-        /*
-        gradient.increment(currentParameters, -1.0 * curPenalty);
-        gradientSumSquares.incrementSquare(gradient, 1.0);
-        */
       } else {
         gradientSumSquares.incrementSquare(gradient, 1.0);
       }

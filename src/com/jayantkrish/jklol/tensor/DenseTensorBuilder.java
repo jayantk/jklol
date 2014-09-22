@@ -119,7 +119,6 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   @Override
   public void incrementAdagrad(TensorBase other, TensorBase squareTensor, double multiplier) {
     if (other instanceof DenseTensorBase && squareTensor instanceof DenseTensorBase) {
-      double square = multiplier * multiplier;
       double[] otherTensorValues = ((DenseTensorBase) other).values;
       double[] squareTensorValues = ((DenseTensorBase) squareTensor).values;
       Preconditions.checkArgument(otherTensorValues.length == values.length);
@@ -130,7 +129,48 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       for (int i = 0; i < length; i++) {
         otherVal = otherTensorValues[i];
         squareVal = squareTensorValues[i];
-        values[i] += otherVal * square / Math.sqrt(squareVal);
+        if (squareVal != 0.0) {
+          values[i] += otherVal * multiplier / Math.sqrt(squareVal);
+        }
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(TensorBase squareTensor, double constant, double multiplier) {
+    if (squareTensor instanceof DenseTensorBase) {
+      double[] squareTensorValues = ((DenseTensorBase) squareTensor).values;
+      Preconditions.checkArgument(squareTensorValues.length == values.length);
+      int length = values.length;
+      double squareVal = 0;
+      for (int i = 0; i < length; i++) {
+        squareVal = squareTensorValues[i];
+        if (squareVal != 0.0) {
+          squareVal = 1 / squareVal;
+        }
+        values[i] *= (constant + (multiplier * Math.sqrt(squareVal)));
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+  
+  @Override
+  public void incrementSquareAdagrad(TensorBase gradient, TensorBase parameters, double multiplier) {
+    if (gradient instanceof DenseTensorBase && parameters instanceof DenseTensorBase) {
+      double[] gradientTensorValues = ((DenseTensorBase) gradient).values;
+      Preconditions.checkArgument(gradientTensorValues.length == values.length);
+      
+      double[] parameterTensorValues = ((DenseTensorBase) parameters).values;
+      Preconditions.checkArgument(parameterTensorValues.length == values.length);
+      
+      int length = values.length;
+      double val = 0;
+      for (int i = 0; i < length; i++) {
+        val = gradientTensorValues[i] + (multiplier * parameterTensorValues[i]);
+        values[i] += val * val;
       }
     } else {
       throw new UnsupportedOperationException();

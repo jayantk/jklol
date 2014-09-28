@@ -113,7 +113,7 @@ public class AmbEval {
 
         case APPLY_SYMBOL_INDEX:
           Preconditions.checkArgument(subexpressions.size() == 3, "Invalid apply expression: " + subexpressions);
-          AmbLambdaValue lambdaValue = (AmbLambdaValue) eval(subexpressions.get(1), environment, builder).getValue();
+          AmbFunctionValue lambdaValue = (AmbFunctionValue) eval(subexpressions.get(1), environment, builder).getValue();
           List<Object> argumentValues = ConsValue.consListToList(
               eval(subexpressions.get(2), environment, builder).getValue(), Object.class);
           return new EvalResult(lambdaValue.apply(argumentValues, environment, builder));
@@ -222,7 +222,7 @@ public class AmbEval {
   
   private final EvalResult doIf(List<SExpression> subexpressions, Environment environment,
       ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() == 4); 
+    Preconditions.checkArgument(subexpressions.size() == 4, "Illegal if statement: %s", subexpressions);
     Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
 
     if (!(testCondition instanceof AmbValue)) {
@@ -601,8 +601,13 @@ public class AmbEval {
 
     env.bindName("make-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.MakeHistogramFunction()), symbolTable);
     env.bindName("sample-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.SampleHistogramFunction()), symbolTable);
+    env.bindName("sample-histogram-conditional", new RaisedBuiltinFunction(new BuiltinFunctions.SampleHistogramConditionalFunction()), symbolTable);
     env.bindName("histogram-to-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.HistogramToDictionaryFunction()), symbolTable);
 
+    env.bindName("make-dset", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDset()), symbolTable);
+    env.bindName("dset-empty?", new RaisedBuiltinFunction(new BuiltinFunctions.DsetEmpty()), symbolTable);
+    env.bindName("dset-intersect", new RaisedBuiltinFunction(new BuiltinFunctions.DsetIntersect()), symbolTable);
+    
     env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()), symbolTable);
     env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement()), symbolTable); 
     env.bindName("array-map", new ArrayMapFunction(), symbolTable);

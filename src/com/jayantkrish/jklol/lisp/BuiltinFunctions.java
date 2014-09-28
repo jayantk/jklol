@@ -8,6 +8,8 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Histogram;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.Pseudorandom;
@@ -429,11 +431,76 @@ public class BuiltinFunctions {
     }
   }
 
+  public static class SampleHistogramConditionalFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      Histogram<?> histogram = (Histogram<?>) argumentValues.get(0);
+      return histogram.sampleConditional((Tensor) argumentValues.get(1));
+    }
+  }
+
   public static class HistogramToDictionaryFunction implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return IndexedList.create(((Histogram<?>) argumentValues.get(0)).getItems());
+    }
+  }
+
+  public static class MakeDset implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      IndexedList<?> dictionary = (IndexedList<?>) argumentValues.get(0);
+      List<?> items = ConsValue.consListOrArrayToList(argumentValues.get(1), Object.class);
+
+      long[] indexes = new long[items.size()];
+      for (int i = 0; i < items.size(); i++) {
+        indexes[i] = dictionary.getIndex(items.get(i));
+      }
+
+      double[] values = new double[items.size()];
+      Arrays.fill(values, 1.0);
+
+      return SparseTensor.fromUnorderedKeyValues(new int[] {0},
+          new int[] {dictionary.size()}, indexes, values);
+    }
+  }
+
+  public static class DsetIntersect implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      List<Tensor> tensorArgs = Lists.newArrayList();
+      for (int i = 0; i < argumentValues.size(); i++) {
+        Object value = argumentValues.get(i);
+        if (value instanceof Tensor) {
+          tensorArgs.add((Tensor) value);
+        } else {
+          Preconditions.checkArgument(value == ConstantValue.NIL,
+              "Illegal argument to dset-intersect: %s", value);
+        }
+      }
+
+      if (tensorArgs.size() == 0) {
+        return ConstantValue.NIL;
+      }
+
+      Tensor result = (Tensor) tensorArgs.get(0); 
+      for (int i = 1; i < tensorArgs.size(); i++) {
+        result = result.elementwiseProduct((Tensor) tensorArgs.get(i));
+      }
+      return result;
+    }
+  }
+
+  public static class DsetEmpty implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      Tensor arg = (Tensor) argumentValues.get(0);
+      double sum = arg.getTrace();
+      return sum == 0.0 ? ConstantValue.TRUE : ConstantValue.FALSE;
     }
   }
 }

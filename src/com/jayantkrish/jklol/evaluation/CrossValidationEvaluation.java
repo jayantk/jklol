@@ -13,8 +13,8 @@ import com.google.common.collect.Lists;
  * The cross validation splits are re-used across multiple runs of this evaluation
  * to better compare algorithms (i.e., this enables using a paired t-test).
  * 
- * @param <I> input type of the predictor being evaluated.
- * @param <O> output type of the predictor being evaluated. 
+ * @param <I> inputVar type of the predictor being evaluated.
+ * @param <O> outputVar type of the predictor being evaluated. 
  */
 public class CrossValidationEvaluation<I, O> extends AbstractEvaluation<I, O> {
 

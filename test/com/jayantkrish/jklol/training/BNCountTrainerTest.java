@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.training;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -10,39 +9,43 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.util.Assignment;
 
 public class BNCountTrainerTest extends TestCase {
 
 	ParametricFactorGraph bn;
 	BNCountTrainer t;
-	List<Assignment> trainingData;
+	List<DynamicAssignment> trainingData;
 
 	public void setUp() {
-		BayesNetBuilder builder = new BayesNetBuilder();
+		ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
 
 		DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
 				Arrays.asList(new String[] {"T", "F"}));
 
-		builder.addDiscreteVariable("Var0", tfVar);
-		builder.addDiscreteVariable("Var1", tfVar);
-		builder.addDiscreteVariable("Var2", tfVar);
+		builder.addVariable("Var0", tfVar);
+		builder.addVariable("Var1", tfVar);
+		builder.addVariable("Var2", tfVar);
 
-		List<String> emptyStringList = Collections.emptyList();
-		builder.addCptFactorWithNewCpt(emptyStringList, Arrays.asList(new String[] {"Var0"}));
-		builder.addCptFactorWithNewCpt(emptyStringList, Arrays.asList(new String[] {"Var1"}));
-		builder.addCptFactorWithNewCpt(Arrays.asList(new String[] {"Var0", "Var1"}), 
-				Arrays.asList(new String[] {"Var2"}));
+		VariableNumMap var0 = builder.getVariables().getVariablesByName("Var0");
+		VariableNumMap var1 = builder.getVariables().getVariablesByName("Var1");
+		VariableNumMap var2 = builder.getVariables().getVariablesByName("Var2");
+		
+		builder.addUnreplicatedFactor("root-0", new CptTableFactor(VariableNumMap.EMPTY, var0));
+		builder.addUnreplicatedFactor("root-1", new CptTableFactor(VariableNumMap.EMPTY, var1));
+		builder.addUnreplicatedFactor("01->2", new CptTableFactor(var1.union(var0), var2));
 
 		bn = builder.build();
 
-		trainingData = new ArrayList<Assignment>();
-		Assignment a1 = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T", "T"));
-		Assignment a2 = bn.getVariables().outcomeToAssignment(Arrays.asList("T", "T", "F"));
-		Assignment a3 = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F", "F"));
+		trainingData = new ArrayList<DynamicAssignment>();
+		DynamicAssignment a1 = bn.getVariables().outcomeToAssignment("F", "T", "T");
+		DynamicAssignment a2 = bn.getVariables().outcomeToAssignment("T", "T", "F");
+		DynamicAssignment a3 = bn.getVariables().outcomeToAssignment("F", "F", "F");
 		for (int i = 0; i < 3; i++) {
 			trainingData.add(a1);
 			trainingData.add(a2);
@@ -55,7 +58,7 @@ public class BNCountTrainerTest extends TestCase {
 		SufficientStatistics parameters = t.train(bn, trainingData);
 		parameters.increment(1.0);
 		
-		FactorGraph factorGraph = bn.getFactorGraphFromParameters(parameters);
+		FactorGraph factorGraph = bn.getModelFromParameters(parameters).getFactorGraph(DynamicAssignment.EMPTY);
 		
 		// TODO(jayantk): This test depends on the bayes net preserving the order
 		// of the factors when constructing the factor graph.

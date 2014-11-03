@@ -1,0 +1,11 @@
+# Data generated using template: 
+# (op:softmax (op:matvecmul (op:matvecmul t4:<arg0> t2:<arg1>) t1:<arg2>))
+
+"(op:softmax (op:matvecmul (op:matvecmul t4:very t2:big) t1:elephant))","1,0"
+"(op:softmax (op:matvecmul (op:matvecmul t4:not t2:big) t1:elephant))","0.9,0.1"
+"(op:softmax (op:matvecmul (op:matvecmul t4:not t2:small) t1:elephant))","0.8,0.2"
+"(op:softmax (op:matvecmul (op:matvecmul t4:very t2:small) t1:elephant))","0.7,0.3"
+"(op:softmax (op:matvecmul (op:matvecmul t4:very t2:big) t1:mouse))","0.3,0.7"
+"(op:softmax (op:matvecmul (op:matvecmul t4:not t2:big) t1:mouse))","0.2,0.8"
+"(op:softmax (op:matvecmul (op:matvecmul t4:not t2:small) t1:mouse))","0.1,0.9"
+"(op:softmax (op:matvecmul (op:matvecmul t4:very t2:small) t1:mouse))","0,1"

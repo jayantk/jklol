@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -23,6 +23,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * be defined for certain subsets of the variables (which are the valid
  * separator sets for the factor). Limitations on these methods should be
  * clearly documented when they exist.
+ * <p>
+ * All {@code Factor}s are immutable.
  * 
  * @author jayant
  */
@@ -41,6 +43,9 @@ public interface Factor {
    * variables in this {@code Factor}. If {@code assignment} contains a superset
    * of the variables in the factor, this method ignores the values of variables
    * which are not part of this factor.
+   * 
+   * {@link #getUnnormalizedLogProbability} should be preferred over this method
+   * whenever possible.
    * 
    * @param assignment
    * @return
@@ -64,6 +69,33 @@ public interface Factor {
   public double getUnnormalizedProbability(Object... outcome);
 
   /**
+   * Gets the unnormalized log probability of a particular assignment to the
+   * variables in this factor. This method may not incur the same loss of range
+   * entailed by {@code Math.log(getUnnormalizedProbability(assignment)}, and is
+   * preferred over {@link #getUnnormalizedProbability(Assignment)} wherever
+   * possible.
+   * 
+   * @param assignment
+   * @return
+   */
+  public double getUnnormalizedLogProbability(Assignment assignment);
+
+  public double getUnnormalizedLogProbability(Object... outcome);
+
+  public double getUnnormalizedLogProbability(List<? extends Object> outcome);
+
+  /**
+   * Gets the total amount of unnormalized probability mass assigned by this
+   * factor to any assignment. This is the integral of this factor's
+   * unnormalized probability density over all assignments.
+   * 
+   * @return
+   */
+  public double getTotalUnnormalizedProbability();
+  
+  public double getTotalUnnormalizedLogProbability();
+
+  /**
    * Gets the set of possible outbound messages which can be computed when this
    * {@code Factor} has received {@code inboundMessages} from other factors. The
    * keys of {@code inboundMessages} are all of the separator sets connecting
@@ -82,13 +114,24 @@ public interface Factor {
   public Set<SeparatorSet> getComputableOutboundMessages(Map<SeparatorSet, Factor> inboundMessages);
 
   /**
+   * Returns a new {@code Factor} with relabeled variable names and indices.
+   * {@code relabeling} is applied to each variable index and name in this to
+   * determine replacement name and index of each variable. The type of each
+   * variable is preserved.
+   * 
+   * Requires {@code relabeling.isInDomain(this.getVars()) == true}.
+   * 
+   * @param newVariableNums
+   * @return
+   */
+  public Factor relabelVariables(VariableRelabeling relabeling);
+
+  /**
    * Gets a new factor which conditions on the variables in {@code assignment}.
-   * The returned factor is defined over the same variables as the original, but
-   * assigns zero probability to assignments which are not supersets of
-   * {@code assignment}. That is, the returned {@code Factor} returns the same
-   * probability as this factor for assignments which contain the same
-   * variable/value assignments as {@code assignment}, and 0 for all other
-   * assignments.
+   * The returned factor is defined over the difference between
+   * {@code this.getVars()} and {@code varNumsToEliminate}. The probability of
+   * assignment {@code a} in the returned factor is equal to the
+   * {@code this.getUnnormalizedProbability(a.jointAssignment(assignment))}.
    */
   public Factor conditional(Assignment assignment);
 
@@ -102,13 +145,21 @@ public interface Factor {
 
   /**
    * Returns a factor with the specified variables marginalized out by
-   * summing/integrating. The returned {@code Factor} is defined over the the
+   * summing/integrating. The returned {@code Factor} is defined over the
    * difference between {@code this.getVars()} and {@code varNumsToEliminate}.
    * The probability that it returns for an assignment is the sum/integral over
    * all supersets of the assignment (that is, it sums/integrates over the
    * variables in {@code varNumsToEliminate}).
    */
   public Factor marginalize(Collection<Integer> varNumsToEliminate);
+
+  /**
+   * Same as {@link #marginalize(Collection)} using the variable indices of
+   * {@code variables}.
+   * 
+   * @param variablesToEliminate
+   */
+  public Factor marginalize(VariableNumMap variablesToEliminate);
 
   /**
    * Same as {@link #maxMarginalize(Collection)}.
@@ -127,6 +178,14 @@ public interface Factor {
    * {@code varNumsToEliminate}).
    */
   public Factor maxMarginalize(Collection<Integer> varNumsToEliminate);
+
+  /**
+   * Same as {@link #maxMarginalize(Collection)} using the variable indices of
+   * {@code variables}.
+   * 
+   * @param variablesToEliminate
+   */
+  public Factor maxMarginalize(VariableNumMap variablesToEliminate);
 
   // TODO(jayant): Update the signature of maxMarginalize to this version in
   // the future. This
@@ -193,12 +252,22 @@ public interface Factor {
   public Factor product(List<Factor> others);
 
   /**
+   * Same as {@link #product(List)}, using an array.
+   * 
+   * @param others
+   * @return
+   */
+  public Factor product(Factor... others);
+
+  /**
    * Multiplies this factor by a constant weight.
    * 
    * @param constant
    * @return
    */
   public Factor product(double constant);
+  
+  public Factor outerProduct(Factor other);
 
   /**
    * Returns the inverse of this factor, that is a factor f such that
@@ -235,6 +304,13 @@ public interface Factor {
    * likely {@code Assignment}, but all factors support retrieving one
    * assignment. For example, factors with continuous probability distributions
    * only support retrieving a single maximum probability assignment.
+   * <p>
+   * All returned assignments have positive probability. If an insufficient
+   * number of positive-probability assignments exist, then the returned list
+   * may contain fewer than {@code numAssignments} assignments.
+   * <p>
+   * If {@code numAssignments} is negative, the factor returns as many
+   * assignments as possible.
    * 
    * @param numAssignments
    * @return
@@ -242,12 +318,12 @@ public interface Factor {
   public List<Assignment> getMostLikelyAssignments(int numAssignments);
 
   /**
-   * Computes the unnormalized expected value of a feature function (defined
-   * over the same set of variables as this factor). The unnormalized
-   * expectation is the integral of the value of {@code feature} multiplied by
-   * the unnormalized probability.
+   * Gets a detailed human-readable description of this factor. This description
+   * should contain all parameters of this factor, each on its own line.
+   * 
+   * @return
    */
-  public double computeExpectation(FeatureFunction feature);
+  public String getParameterDescription();
 
   // Coercion methods
 
@@ -258,4 +334,12 @@ public interface Factor {
    * {@link DiscreteFactor}.
    */
   public DiscreteFactor coerceToDiscrete();
+
+  /**
+   * Attempts to convert {@code this} into a {@link DiscreteObjectFactor}.
+   * 
+   * @throws CoercionError if {@code this} cannot be converted into a
+   * {@code DiscreteFactor}.
+   */
+  public DiscreteObjectFactor coerceToDiscreteObject();
 }

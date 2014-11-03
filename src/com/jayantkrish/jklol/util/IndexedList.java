@@ -1,22 +1,28 @@
 package com.jayantkrish.jklol.util;
 
-import java.util.Iterator;
-import java.util.List;
+import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * An indexed list is a way of maintaining an ordered set of elements
  * where each element has a unique numerical index and element lookups
  * can be performed in expected constant time.
  */ 
-public class IndexedList<T> implements Iterable<T> {
+public class IndexedList<T> implements Iterable<T>, Serializable {
 
-	private List<T> items;
+  private static final long serialVersionUID = -6977660130834159257L;
+  
+  private List<T> items;
 	private Map<T, Integer> itemIndex;
 
 	public IndexedList() {
@@ -25,8 +31,9 @@ public class IndexedList<T> implements Iterable<T> {
 	}
 
 	public IndexedList(Collection<? extends T> toInsert) {
-		items = new ArrayList<T>();
-		itemIndex = new HashMap<T, Integer>();
+	  int size = Iterables.size(toInsert);
+		items = new ArrayList<T>(size);
+		itemIndex = new HashMap<T, Integer>(size);
 
 		for (T item : toInsert) {
 			this.add(item);
@@ -41,24 +48,34 @@ public class IndexedList<T> implements Iterable<T> {
 		this.items = new ArrayList<T>(other.items);
 		this.itemIndex = new HashMap<T, Integer>(other.itemIndex);
 	}
+	
+	public static <T> IndexedList<T> create() {
+	  return new IndexedList<T>();
+	}
+	
+	public static <T> IndexedList<T> create(Iterable<? extends T> items) {
+	  return new IndexedList<T>(Lists.newArrayList(items));
+	}
 
 	/**
 	 * Add a new element to this set. Note that there can only be a single
-	 * copy of any given item in the list.
+	 * copy of any given item in the list. Returns the index of the added item.
 	 */
-	public void add(T item) {
+	public int add(T item) {
 		if (itemIndex.containsKey(item)) {
 			// Items can only be added once
-			return;
+			return itemIndex.get(item);
 		}
-		itemIndex.put(item, items.size());
+		int index = items.size();
+		itemIndex.put(item, index);
 		items.add(item);
+		return index;
 	}
 
 	/**
 	 * Add each element of a set of elements to this list.
-	 */ 
-	public void addAll(Collection<T> items) {
+	 */
+	public void addAll(Iterable<T> items) {
 		for (T item : items) {
 			add(item);
 		}
@@ -82,9 +99,9 @@ public class IndexedList<T> implements Iterable<T> {
 	 * Get the index in the list of the specified item.
 	 */ 
 	public int getIndex(Object item) {
-		if (!itemIndex.containsKey(item)) {
-			throw new NoSuchElementException();
-		}
+	  if (!itemIndex.containsKey(item)) {
+	    throw new NoSuchElementException("No such item: " + item);
+	  }
 		return itemIndex.get(item);
 	}
 
@@ -93,7 +110,7 @@ public class IndexedList<T> implements Iterable<T> {
 	 */ 
 	public T get(int index) {
 		if (index >= items.size() || index < 0) {
-			throw new IndexOutOfBoundsException();
+			throw new IndexOutOfBoundsException("size: " + items.size() + " index: " + index);
 		}
 		return items.get(index);
 	}

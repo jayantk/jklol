@@ -87,14 +87,14 @@ public class LossFunctionsTest extends TestCase {
 	private void accumulateLoss(LossFunction<String, Boolean> loss, 
 			Predictor<String, Boolean> predictor) {
 		for (Map.Entry<String, Boolean> example : examples.entrySet()) {
-			loss.accumulateLoss(predictor, example.getKey(), example.getValue());
+			loss.accumulateLoss(predictor.getBestPredictions(example.getKey(), example.getValue(), 10));
 		}
 	}
 
 	/*
 	 * Memorizes a true or false prediction for each data point.
 	 */
-	private class TestPredictor<I> implements Predictor<I, Boolean> {
+	private class TestPredictor<I> extends AbstractPredictor<I, Boolean> {
 
 		private Map<I, Boolean> predictions;
 		private double probability;
@@ -103,25 +103,19 @@ public class LossFunctionsTest extends TestCase {
 			this.predictions = predictions;
 			this.probability = probability;
 		}
-
+		
 		@Override
-		public Boolean getBestPrediction(I input) {
-			return predictions.get(input);
+		public Prediction<I, Boolean> getBestPredictions(I input, Boolean output, int numPredictions) {
+		  List<Boolean> labels = Lists.newArrayList(predictions.get(input), !predictions.get(input));
+		  double[] scores = new double[] {Math.log(probability), Math.log(1.0 - probability)};
+		  
+		  double outputScore = Double.NEGATIVE_INFINITY;
+		  if (output != null) {
+		    double outputProb = predictions.get(input).equals(output) ? probability : 1.0 - probability;
+		    outputScore = Math.log(outputProb);
+		  }
+		  
+		  return Prediction.create(input, output, outputScore, scores, labels);
 		}
-
-		@Override
-		public double getProbability(I input, Boolean output) {
-			if (predictions.get(input).equals(output)) {
-				return probability;
-			}
-			return 1.0 - probability;
-		}
-
-		@Override
-		public List<Boolean> getBestPredictions(I input, int numBest) {
-			return Lists.newArrayList(predictions.get(input), !predictions.get(input));
-		}
-
 	}
-
 }

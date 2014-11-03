@@ -1,14 +1,17 @@
 package com.jayantkrish.jklol.evaluation;
 
+import com.jayantkrish.jklol.evaluation.Predictor.Prediction;
+
 /**
  * A LossFunction measures the quality of a Predictor's predictions.
  *
- * @param I the type of the input that the prediction is based on.
- * @param O - the type of the predicted object.
+ * @param I type of the inputVar that the prediction is based on.
+ * @param O type of the predicted object.
  */
 public interface LossFunction<I, O> {
 
-    public void accumulateLoss(Predictor<I, O> predictor, I input, O actual);
-
+  // LossFunction<I, O> emptyCopy();
+  
+  void accumulateLoss(Prediction<I, O> prediction);
 }
 

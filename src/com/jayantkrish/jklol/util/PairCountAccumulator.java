@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.util;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +16,8 @@ import com.google.common.collect.SetMultimap;
  * 
  * @author jayantk
  */
-public class PairCountAccumulator<A, B> {
+public class PairCountAccumulator<A, B> implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final Map<A, Map<B, Double>> counts;
   private final DefaultHashMap<A, Double> conditionalCounts;

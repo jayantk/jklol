@@ -2,194 +2,264 @@ package com.jayantkrish.jklol.cfg;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-
-import com.google.common.collect.Maps;
 
 import junit.framework.TestCase;
 
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+
 public class CfgParserTest extends TestCase {
 
-	BasicGrammar g;
-	TerminalProduction multi;
+  DiscreteFactor binary;
+  DiscreteFactor terminal;
 	CfgParser p;
-	CptProductionDistribution dist;
-
-	private Production prod(String s) {
-		return Production.getProduction(s);
-	}
-
-	private TerminalProduction term(String p, String c) {
-		return new TerminalProduction(prod(p), prod(c));
-	}
-
-	private BinaryProduction bp(String p, String l, String r) {
-		return new BinaryProduction(prod(p), prod(l), prod(r));
-	}
+	
+	VariableNumMap parentVar, leftVar, rightVar, termVar, ruleVar;
 
 	public void setUp() {
+	  DiscreteVariable nonterm = new DiscreteVariable("nonterminals", Arrays.asList(
+	      "N", "V", "S", "S2", "NP", "VP", "foo", "R", "bar", "barP", "A"));
+	  DiscreteVariable terms = new DiscreteVariable("terminals", listifyWords(Arrays.asList(
+	      "gretzky", "plays", "ice", "hockey", "ice hockey", "baz", "bbb", 
+	      "baz bbb", "a", "b", "c")));
+	  DiscreteVariable ruleTypes = new DiscreteVariable("rules", Arrays.asList("rule1", "rule2"));
 
-		g = new BasicGrammar();
+	  leftVar = new VariableNumMap(Ints.asList(0), Arrays.asList("v0"), Arrays.asList(nonterm));
+	  rightVar = new VariableNumMap(Ints.asList(1), Arrays.asList("v1"), Arrays.asList(nonterm));
+	  termVar = new VariableNumMap(Ints.asList(2), Arrays.asList("v2"), Arrays.asList(terms));
+	  parentVar = new VariableNumMap(Ints.asList(3), Arrays.asList("v3"), Arrays.asList(nonterm));	  
+	  ruleVar = new VariableNumMap(Ints.asList(4), Arrays.asList("v4"), Arrays.asList(ruleTypes));
+	  
+	  VariableNumMap binaryFactorVars = VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleVar);
+	  TableFactorBuilder binaryBuilder = new TableFactorBuilder(binaryFactorVars, SparseTensorBuilder.getFactory());
+	  VariableNumMap terminalFactorVars = VariableNumMap.unionAll(parentVar, termVar, ruleVar);
+	  TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalFactorVars, SparseTensorBuilder.getFactory());
+	    
+		addTerminal(terminalBuilder, "N", "gretzky", "rule1", 0.25);
+		addTerminal(terminalBuilder, "N", "ice hockey", "rule1", 0.25);
+		addTerminal(terminalBuilder, "N", "ice", "rule1", 0.25);
+		addTerminal(terminalBuilder, "N", "hockey", "rule1", 0.25);
+		addTerminal(terminalBuilder, "V", "plays", "rule1", 1.0);
 
-		g.addTerminal(term("N", "gretzky"));
-		g.addTerminal(term("V", "plays"));
-		multi = new TerminalProduction(prod("N"), 
-				Arrays.asList(new Production[] {prod("ice"), prod("hockey")}));
-		g.addTerminal(multi);
-		g.addTerminal(term("N", "ice"));
-		g.addTerminal(term("N", "hockey"));
+		addBinary(binaryBuilder, "S", "N", "VP", "rule1", 1.0);
+		addBinary(binaryBuilder, "S2", "N", "VP", "rule1", 1.0);
+		addBinary(binaryBuilder, "VP", "V", "N", "rule2", 1.0);
+		addBinary(binaryBuilder, "NP", "N", "N", "rule1", 1.0);
+		addBinary(binaryBuilder, "foo", "N", "N", "rule1", 0.5);
+		addBinary(binaryBuilder, "foo", "R", "S", "rule1", 0.5);
 
-		g.addProductionRule(bp("S2", "N", "VP"));
-		g.addProductionRule(bp("S", "N", "VP"));
-		g.addProductionRule(bp("VP", "V", "N"));
-		g.addProductionRule(bp("NP", "N", "N"));
-		g.addProductionRule(bp("foo", "N", "N"));
-		g.addProductionRule(bp("foo", "R", "S"));
+		addTerminal(terminalBuilder, "bar", "baz", "rule1", 0.5);
+		addTerminal(terminalBuilder, "bar", "bbb", "rule1", 0.5);
+		addTerminal(terminalBuilder, "barP", "baz bbb", "rule1", 0.5);
+		addBinary(binaryBuilder, "barP", "bar", "bar", "rule1", 0.5);
+		addBinary(binaryBuilder, "barP", "bar", "bar", "rule2", 0.25);
 
+		addBinary(binaryBuilder, "A", "A", "A", "rule1", 0.25);
+		addTerminal(terminalBuilder, "A", "a", "rule1", 0.25);
+		addTerminal(terminalBuilder, "A", "b", "rule1", 0.25);
+		addTerminal(terminalBuilder, "A", "c", "rule1", 0.25);
 
-		g.addTerminal(term("bar", "baz"));
-		g.addTerminal(term("bar", "bbb"));
-		g.addTerminal(new TerminalProduction(prod("barP"), 
-				Arrays.asList(new Production[] {prod("baz"), prod("bbb")})));
-
-		g.addProductionRule(bp("barP", "bar", "bar"));
-
-		g.addProductionRule(bp("A", "A", "A"));
-		g.addTerminal(term("A", "a"));
-		g.addTerminal(term("A", "b"));
-		g.addTerminal(term("A", "c"));
-
-		dist = new CptTableProductionDistribution(g);
-		dist.increment(1.0);
-		p = new CfgParser(g, dist);
+		binary = binaryBuilder.build();
+		terminal = terminalBuilder.build();
+		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
+		    binary, terminal, 10, false);
 	}
-
+	
+	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
+	    String term, String ruleType, double weight) {
+	  List<String> terminalValue = Arrays.asList(term.split(" "));
+	  terminalBuilder.incrementWeight(terminalBuilder.getVars()
+	      .outcomeArrayToAssignment(terminalValue, nonterm, ruleType), weight);
+	}
+	
+	private void addBinary(TableFactorBuilder binaryBuilder, String parent, String left, 
+	    String right, String ruleType, double weight) {
+	  binaryBuilder.incrementWeight(binaryBuilder.getVars()
+	      .outcomeArrayToAssignment(left, right, parent, ruleType), weight);
+	}
+	
+	/**
+	 * Splits each string in the inputVar into component words and adds the result
+	 * to the returned array.
+	 * @return
+	 */
+	private List<List<String>> listifyWords(List<String> strings) {
+	  List<List<String>> wordSequences = Lists.newArrayList();
+	  for (String string : strings) {
+	    wordSequences.add(Arrays.asList(string.split(" ")));
+	  }
+	  return wordSequences;
+	}
+	
 	public void testParseInsideMarginal() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList(new Production[] 
-		                                                                  {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), true);
+		ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
 
-		Map<Production, Double> rootProductions = c.getInsideEntries(0, 3);
-		assertEquals(2, rootProductions.size());
-		assertEquals(0.25 * .25, rootProductions.get(prod("S")));
-		assertEquals(0.25 * .25, rootProductions.get(prod("S2")));
+		Factor rootProductions = c.getInsideEntries(0, 3);
+		assertEquals(2.0, rootProductions.size());
+		assertEquals(0.25 * .25, rootProductions.getUnnormalizedProbability("S"));
+		assertEquals(0.25 * .25, rootProductions.getUnnormalizedProbability("S2"));
 
-		Map<Production, Double> nounProductions = c.getInsideEntries(2, 3);
-		assertEquals(3, nounProductions.size());
-		assertEquals(.25, nounProductions.get(prod("N")));
-		assertEquals(.25 * .25, nounProductions.get(prod("NP")));
-		assertEquals(.5 * .25 * .25, nounProductions.get(prod("foo")));
+		Factor nounProductions = c.getInsideEntries(2, 3);
+		assertEquals(3.0, nounProductions.size());
+		assertEquals(.25, nounProductions.getUnnormalizedProbability("N"));
+		assertEquals(.25 * .25, nounProductions.getUnnormalizedProbability("NP"));
+		assertEquals(.5 * .25 * .25, nounProductions.getUnnormalizedProbability("foo"));
 	}
 
 	public void testParseOutsideMarginal() {
-		ParseChart c = p.parseMarginal(Arrays.asList(new Production[] 
-		                                                            {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}),
-		                                                            prod("S"));
+		ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
-		Map<Production, Double> rootProductions = c.getOutsideEntries(0, 3);
-		assertEquals(1, rootProductions.size());
-		assertEquals(1.0, rootProductions.get(prod("S")));
+		Factor rootProductions = c.getOutsideEntries(0, 3);
+		assertEquals(1.0, rootProductions.size());
+		assertEquals(1.0, rootProductions.getUnnormalizedProbability("S"));
 
-		Map<Production, Double> vpProductions = c.getOutsideEntries(1, 3);
-		assertEquals(.25, vpProductions.get(prod("VP")));
+		Factor vpProductions = c.getOutsideEntries(1, 3);
+		assertEquals(.25, vpProductions.getUnnormalizedProbability("VP"));
 	}
 
 	public void testParseMarginal() {
-		ParseChart c = p.parseMarginal(Arrays.asList(new Production[] 
-		                                                            {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}),
-		                                                            prod("S"));
+	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
-		Map<Production, Double> rootProductions = c.getMarginalEntries(0, 3);
-		assertEquals(1, rootProductions.size());
-		assertEquals(1.0, rootProductions.get(prod("S")) / c.getPartitionFunction());
+		Factor rootProductions = c.getMarginalEntries(0, 3);
+		assertEquals(1.0, rootProductions.size());
+		assertEquals(1.0, rootProductions.getUnnormalizedProbability("S") / c.getPartitionFunction());
 
-		Map<Production, Double> nProductions = c.getMarginalEntries(2, 3);
-		assertEquals(1.0, nProductions.get(prod("N")) / c.getPartitionFunction());
+		Factor nProductions = c.getMarginalEntries(2, 3);
+		assertEquals(1.0, nProductions.getUnnormalizedProbability("N") / c.getPartitionFunction());
 	}
 
 	public void testRuleCounts() {
-		ParseChart c = p.parseMarginal(Arrays.asList(new Production[] 
-		                                                            {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}),
-		                                                            prod("S"));
+	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
-		Map<BinaryProduction, Double> ruleCounts = c.getBinaryRuleExpectations();
-		assertEquals(null, ruleCounts.get(bp("S2", "N", "VP")));
-		assertEquals(1.0, ruleCounts.get(bp("S", "N", "VP")) / c.getPartitionFunction());
-		assertEquals(null, ruleCounts.get(bp("NP", "N", "N")));
-		assertEquals(1.0, ruleCounts.get(bp("VP", "V", "N")) / c.getPartitionFunction());
+		Factor ruleCounts = c.getBinaryRuleExpectations();
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S2", "rule1"));
+		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S", "rule1") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "N", "NP", "rule1"));
+		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("V", "N", "VP", "rule2") / c.getPartitionFunction());
+		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("V", "N", "VP", "rule1") / c.getPartitionFunction());
 
-		Map<TerminalProduction, Double> termCounts = c.getTerminalRuleExpectations();
-		assertEquals(1.0, termCounts.get(term("N", "gretzky")) / c.getPartitionFunction());
-		assertEquals(null, termCounts.get(term("N", "hockey")));
+		Factor termCounts = c.getTerminalRuleExpectations();
+		assertEquals(1.0, termCounts.getUnnormalizedProbability(Arrays.asList("gretzky"), "N", "rule1") / c.getPartitionFunction());
+		assertEquals(0.0, termCounts.getUnnormalizedProbability(Arrays.asList("hockey"), "N", "rule1"));
 	}
 
 	public void testAmbiguous() {
-		ParseChart c = p.parseMarginal(Arrays.asList(new Production[] 
-		                                                            {prod("a"), prod("b"), prod("c")}), prod("A"));
+	  ParseChart c = p.parseMarginal(Arrays.asList("a", "b", "c"), "A", true);
 
-		Map<Production, Double> leftProds = c.getMarginalEntries(0, 1);
-		assertEquals(0.5, leftProds.get(prod("A")) / c.getPartitionFunction());
+		Factor leftProds = c.getMarginalEntries(0, 1);
+		assertEquals(0.5, leftProds.getUnnormalizedProbability("A") / c.getPartitionFunction());
 
 		leftProds = c.getMarginalEntries(0, 0);
-		assertEquals(1.0, leftProds.get(prod("A")) / c.getPartitionFunction());
+		assertEquals(1.0, leftProds.getUnnormalizedProbability("A") / c.getPartitionFunction());
 
-		Map<BinaryProduction, Double> ruleCounts = c.getBinaryRuleExpectations();
-		assertEquals(2.0, ruleCounts.get(bp("A", "A", "A")) / c.getPartitionFunction());
+		Factor ruleCounts = c.getBinaryRuleExpectations();
+		assertEquals(2.0, ruleCounts.getUnnormalizedProbability("A", "A", "A", "rule1") / c.getPartitionFunction());
 
-		Map<TerminalProduction, Double> termCounts = c.getTerminalRuleExpectations();
-		assertEquals(1.0, termCounts.get(term("A", "b")) / c.getPartitionFunction());	
+		Factor termCounts = c.getTerminalRuleExpectations();
+		assertEquals(1.0, termCounts.getUnnormalizedProbability(Arrays.asList("b"), "A", "rule1") / c.getPartitionFunction());	
 	}
 
 	public void testParseMaxMarginal() {
-		ParseChart c = p.parseMaxMarginal(Arrays.asList(new Production[] 
-		                                                               {prod("baz"), prod("bbb")}), prod("barP"));
-		Map<Production, Double> prods = c.getInsideEntries(0, 1);
-		assertEquals(1, prods.size());
-		assertEquals(.5, prods.get(prod("barP")));	
+		ParseChart c = p.parseMarginal(Arrays.asList("baz", "bbb"), "barP", false);
+		Factor prods = c.getInsideEntries(0, 1);
+		assertEquals(1.0, prods.size());
+		assertEquals(.5, prods.getUnnormalizedProbability("barP"));	
 	}
 
+	// These methods are no longer implemented.
+	/*
 	public void testParseMaxMarginalTree() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList(new Production[] 
-		    {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), false);
-		ParseTree t = c.getBestParseTrees(prod("S"), 1).get(0);
-		assertEquals(prod("S"), t.getRoot());
-		assertEquals(prod("N"), t.getLeft().getRoot());
-		assertEquals(prod("VP"), t.getRight().getRoot());
-		assertEquals(prod("V"), t.getRight().getLeft().getRoot());
+		ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false); 
+		    
+		ParseTree t = c.getBestParseTrees("S", 1).get(0);
+		assertEquals("S", t.getRoot());
+		assertEquals("N", t.getLeft().getRoot());
+		assertEquals("VP", t.getRight().getRoot());
+		assertEquals("V", t.getRight().getLeft().getRoot());
 	}
 	
 	public void testParseMaxMarginalTreeDist() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList(new Production[] 
-		    {prod("gretzky"), prod("plays"), prod("ice"), prod("hockey")}), false);
+	  ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false);
 		
-		Map<Production, Double> rootProbabilities = Maps.newHashMap();
-		rootProbabilities.put(prod("S"), 0.5);
-		rootProbabilities.put(prod("S2"), 1.0);
+		Factor rootProbabilities = TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S")).product(0.5)
+		    .add(TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S2")));
 		
 		List<ParseTree> trees = c.getBestParseTrees(rootProbabilities, 2);
 		ParseTree best = trees.get(0);
-		assertEquals(prod("S2"), best.getRoot());
-		assertEquals(prod("N"), best.getLeft().getRoot());
-		assertEquals(prod("VP"), best.getRight().getRoot());
-		assertEquals(prod("V"), best.getRight().getLeft().getRoot());
+		assertEquals("S2", best.getRoot());
+		assertEquals("N", best.getLeft().getRoot());
+		assertEquals("VP", best.getRight().getRoot());
+		assertEquals("V", best.getRight().getLeft().getRoot());
 		
 		ParseTree second = trees.get(1);
-		assertEquals(prod("S"), second.getRoot());
-		assertEquals(prod("N"), second.getLeft().getRoot());
-		assertEquals(prod("VP"), second.getRight().getRoot());
-		assertEquals(prod("V"), second.getRight().getLeft().getRoot());
+		assertEquals("S", second.getRoot());
+		assertEquals("N", second.getLeft().getRoot());
+		assertEquals("VP", second.getRight().getRoot());
+		assertEquals("V", second.getRight().getLeft().getRoot());
 	}
 
-
 	public void testMostLikelyProductions() {
-		ParseChart c = p.mostLikelyProductions(prod("barP"), 2, 2);
+		ParseChart c = p.mostLikelyProductions("barP", 2, 2);
 
-		List<ParseTree> trees = c.getBestParseTrees(prod("barP"), 2);
+		List<ParseTree> trees = c.getBestParseTrees("barP", 2);
 		assertEquals(0.5, trees.get(0).getProbability());
 		assertTrue(trees.get(0).isTerminal());
-		assertEquals(Arrays.asList(new Production[] {prod("baz"), prod("bbb")}),
+		assertEquals(Arrays.asList("baz", "bbb"),
 				trees.get(0).getTerminalProductions());
 		assertEquals(0.125, trees.get(1).getProbability());
-		assertEquals(prod("bar"), trees.get(1).getLeft().getRoot());
-		assertEquals(prod("bar"), trees.get(1).getRight().getRoot());
+		assertEquals("bar", trees.get(1).getLeft().getRoot());
+		assertEquals("bar", trees.get(1).getRight().getRoot());
+	}
+	*/
+	
+	public void testBeamSearch() {
+	  List<ParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
+	  assertEquals(3, trees.size());
+	  
+	  ParseTree bestTree = trees.get(0);
+	  assertEquals("barP", bestTree.getRoot());
+	  assertEquals("rule1", bestTree.getRuleType());
+	  assertTrue(bestTree.isTerminal());
+	  assertEquals(0.5, bestTree.getProbability());
+	  
+	  ParseTree secondBestTree = trees.get(1);
+	  assertEquals("barP", secondBestTree.getRoot());
+	  assertEquals("rule1", secondBestTree.getRuleType());
+	  assertFalse(secondBestTree.isTerminal());
+	  assertEquals(0.125, secondBestTree.getProbability());
+	  
+	  ParseTree thirdBestTree = trees.get(2);
+	  assertEquals("barP", thirdBestTree.getRoot());
+	  assertEquals("rule2", thirdBestTree.getRuleType());
+	  assertFalse(thirdBestTree.isTerminal());
+	  assertEquals(0.125 / 2.0, thirdBestTree.getProbability());
+
+	  
+	  // Make sure that the beam truncates the less probable tree.
+	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary, terminal, 1, false);
+	  trees = newParser.beamSearch(Arrays.asList("baz", "bbb"));
+	  assertEquals(1, trees.size());
+	  bestTree = trees.get(0);
+	  assertEquals("barP", bestTree.getRoot());
+	  assertTrue(bestTree.isTerminal());
+	  assertEquals(0.5, bestTree.getProbability());
+	}
+	
+	public void testBeamSearch2() {
+	  List<ParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"));
+	  assertEquals(5, trees.size());
+	  
+	  for (ParseTree tree : trees) {
+	    assertEquals("A", tree.getRoot());
+	    assertEquals("rule1", tree.getRuleType());
+	    assertFalse(tree.isTerminal());
+	    assertEquals(1.0 / Math.pow(4, 7), tree.getProbability());
+	  }
 	}
 }

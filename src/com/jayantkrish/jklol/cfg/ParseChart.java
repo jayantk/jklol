@@ -1,15 +1,15 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
-import com.jayantkrish.jklol.util.DefaultHashMap;
+import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
  * The "chart" of a CKY-style parser which enables efficient computations of
@@ -21,19 +21,22 @@ import com.jayantkrish.jklol.util.DefaultHashMap;
 public class ParseChart {
 
   // Storage for the various probability distributions.
-  private DefaultHashMap<Production, Double>[][] insideChart;
-  private DefaultHashMap<Production, Double>[][] outsideChart;
-  private DefaultHashMap<Production, Double>[][] marginalChart;
+  private Factor[][] insideChart;
+  private Factor[][] outsideChart;
+  private Factor[][] marginalChart;
 
-  private Map<Production, PriorityQueue<Backpointer>>[][] backpointers;
+  private VariableNumMap parentVar;
+  private VariableNumMap leftVar;
+  private VariableNumMap rightVar;
+  private VariableNumMap terminalVar;
+  private VariableNumMap ruleTypeVar;
 
-  private DefaultHashMap<BinaryProduction, Double> binaryRuleExpectations;
-  private DefaultHashMap<TerminalProduction, Double> terminalRuleExpectations;
+  private Factor binaryRuleExpectations;
+  private Factor terminalRuleExpectations;
 
-  private Map<List<Production>, Double> terminalDist;;
+  private List<?> terminals;
 
   private int numTerminals;
-  private int beamWidth;
   private boolean sumProduct;
   private boolean insideCalculated;
   private boolean outsideCalculated;
@@ -46,26 +49,37 @@ public class ParseChart {
    * ParseChart computes marginals). Otherwise, updates use the maximum
    * probability, meaning ParseChart computes max-marginals.
    */
-  @SuppressWarnings({ "unchecked" })
-  public ParseChart(int numTerminals, boolean sumProduct) {
-    insideChart = (DefaultHashMap<Production, Double>[][]) Array.newInstance(new DefaultHashMap<Production, Double>(0.0).getClass(), new int[] { numTerminals, numTerminals });
-    outsideChart = (DefaultHashMap<Production, Double>[][]) Array.newInstance(new DefaultHashMap<Production, Double>(0.0).getClass(), new int[] { numTerminals, numTerminals });
-    marginalChart = (DefaultHashMap<Production, Double>[][]) Array.newInstance(new DefaultHashMap<Production, Double>(0.0).getClass(), new int[] { numTerminals, numTerminals });
-    binaryRuleExpectations = new DefaultHashMap<BinaryProduction, Double>(0.0);
-    terminalRuleExpectations = new DefaultHashMap<TerminalProduction, Double>(0.0);
+  public ParseChart(List<?> terminals, VariableNumMap parent, VariableNumMap left, 
+      VariableNumMap right, VariableNumMap terminal, VariableNumMap ruleTypeVar, 
+      boolean sumProduct) {
+    this.terminals = terminals;
+    this.parentVar = parent;
+    this.leftVar = left;
+    this.rightVar = right;
+    this.ruleTypeVar = ruleTypeVar;
 
-    terminalDist = null;
-
+    this.terminalVar = terminal;
     this.sumProduct = sumProduct;
-    this.numTerminals = numTerminals;
+    
+    this.numTerminals = terminals.size();
+
+    insideChart = new Factor[numTerminals][numTerminals];
+    outsideChart = new Factor[numTerminals][numTerminals];
+    marginalChart = new Factor[numTerminals][numTerminals];
+    binaryRuleExpectations = TableFactor.zero(VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleTypeVar));
+    terminalRuleExpectations = TableFactor.zero(VariableNumMap.unionAll(parentVar, terminalVar, ruleTypeVar));
+
     insideCalculated = false;
     outsideCalculated = false;
     partitionFunction = 0.0;
 
+    // TODO: backpointers
+    /*
     if (!sumProduct) {
-      backpointers = (Map<Production, PriorityQueue<Backpointer>>[][]) Array.newInstance(new HashMap<Production, PriorityQueue<Backpointer>>().getClass(), new int[] { numTerminals, numTerminals });
+      backpointers = (Map<Object, PriorityQueue<Backpointer>>[][]) Array.newInstance(new HashMap<Object, PriorityQueue<Backpointer>>().getClass(), new int[] { numTerminals, numTerminals });
       beamWidth = 1;
     }
+    */
   }
 
   /**
@@ -76,34 +90,41 @@ public class ParseChart {
   }
 
   /**
-   * If the chart represents the computation of max-marginals, set the width of
-   * the beam used in the beam search for best parses.
-   */
-  public void setBeamWidth(int width) {
-    assert !sumProduct;
-    beamWidth = width;
-  }
-
-  /**
    * Update an entry of the inside chart with a new production. Depending on the
    * type of the chart, this performs either a sum or max over productions of
    * the same type in the same entry.
    */
   public void updateInsideEntry(int spanStart, int spanEnd, int splitInd,
-      BinaryProduction rule, Production p, double prob, double ruleProb) {
+      Factor binaryRuleProbabilities) {
+    Preconditions.checkArgument(binaryRuleProbabilities.getVars().size() == 4);
 
+    // The first entry initializes the chart at this span.
     if (insideChart[spanStart][spanEnd] == null) {
-      insideChart[spanStart][spanEnd] = new DefaultHashMap<Production, Double>(0.0);
-      if (!sumProduct) {
-        backpointers[spanStart][spanEnd] = new HashMap<Production, PriorityQueue<Backpointer>>();
+      if (sumProduct) { 
+        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.marginalize(
+            VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)); 
+      } else {
+        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.maxMarginalize(
+            VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar));
+        // TODO: backpointers
+        /*
+        backpointers[spanStart][spanEnd] = new HashMap<Object, PriorityQueue<Backpointer>>();
+        */
       }
+      return;
     }
 
     if (sumProduct) {
-      insideChart[spanStart][spanEnd].put(p, insideChart[spanStart][spanEnd].get(p) + prob);
+      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(
+          binaryRuleProbabilities.marginalize(
+              VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)));
     } else {
-      insideChart[spanStart][spanEnd].put(p, Math.max(prob, insideChart[spanStart][spanEnd].get(p)));
+      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].maximum(
+          binaryRuleProbabilities.maxMarginalize(
+              VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)));
 
+      // TODO: backpointers
+      /*
       if (!backpointers[spanStart][spanEnd].containsKey(p)) {
         backpointers[spanStart][spanEnd].put(p, new PriorityQueue<Backpointer>());
       }
@@ -112,6 +133,7 @@ public class ParseChart {
       if (backpointers[spanStart][spanEnd].get(p).size() > beamWidth) {
         backpointers[spanStart][spanEnd].get(p).poll();
       }
+      */
     }
   }
 
@@ -120,29 +142,38 @@ public class ParseChart {
    * type of the chart, this performs either a sum or max over productions of
    * the same type in the same entry.
    */
-  public void updateInsideEntryTerminal(int spanStart, int spanEnd,
-      TerminalProduction rule, Production p, double prob, double ruleProb) {
-
+  public void updateInsideEntryTerminal(int spanStart, int spanEnd, Factor factor) {
+    Preconditions.checkArgument(factor.getVars().size() == 1);
+    // The first entry initializes the chart at this span.
     if (insideChart[spanStart][spanEnd] == null) {
-      insideChart[spanStart][spanEnd] = new DefaultHashMap<Production, Double>(0.0);
-      if (!sumProduct) {
-        backpointers[spanStart][spanEnd] = new HashMap<Production, PriorityQueue<Backpointer>>();
+      if (sumProduct) {
+        insideChart[spanStart][spanEnd] = factor;
+      } else {
+        insideChart[spanStart][spanEnd] = factor;
+        // TODO: backpointers
+        /*
+        backpointers[spanStart][spanEnd] = new HashMap<Object, PriorityQueue<Backpointer>>();
+        */
       }
+      return;
     }
 
     if (sumProduct) {
-      insideChart[spanStart][spanEnd].put(p, insideChart[spanStart][spanEnd].get(p) + prob);
+      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(factor);
     } else {
-      insideChart[spanStart][spanEnd].put(p, Math.max(prob, insideChart[spanStart][spanEnd].get(p)));
+      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].maximum(factor);
 
+      // TODO: backpointers
+      /*
       if (!backpointers[spanStart][spanEnd].containsKey(p)) {
         backpointers[spanStart][spanEnd].put(p, new PriorityQueue<Backpointer>());
       }
-      backpointers[spanStart][spanEnd].get(p).offer(new Backpointer(rule, prob, ruleProb));
+      backpointers[spanStart][spanEnd].get(p).offer(new Backpointer(splitInd, rule, prob, ruleProb));
 
       if (backpointers[spanStart][spanEnd].get(p).size() > beamWidth) {
         backpointers[spanStart][spanEnd].get(p).poll();
       }
+      */
     }
   }
 
@@ -151,15 +182,17 @@ public class ParseChart {
    * the type of the chart, this performs either a sum or max over productions
    * of the same type in the same entry.
    */
-  public void updateOutsideEntry(int spanStart, int spanEnd, Production p, double prob) {
+  public void updateOutsideEntry(int spanStart, int spanEnd, Factor factor) {
+    Preconditions.checkArgument(factor.getVars().size() == 1);
     if (outsideChart[spanStart][spanEnd] == null) {
-      outsideChart[spanStart][spanEnd] = new DefaultHashMap<Production, Double>(0.0);
+      outsideChart[spanStart][spanEnd] = factor;
+      return;
     }
 
     if (sumProduct) {
-      outsideChart[spanStart][spanEnd].put(p, outsideChart[spanStart][spanEnd].get(p) + prob);
+      outsideChart[spanStart][spanEnd] = outsideChart[spanStart][spanEnd].add(factor);
     } else {
-      outsideChart[spanStart][spanEnd].put(p, Math.max(outsideChart[spanStart][spanEnd].get(p), prob));
+      outsideChart[spanStart][spanEnd] = outsideChart[spanStart][spanEnd].maximum(factor);
     }
   }
 
@@ -168,33 +201,27 @@ public class ParseChart {
    * the type of the chart, this performs either a sum or max over productions
    * of the same type in the same entry.
    */
-  public void updateMarginalEntry(int spanStart, int spanEnd, Production p, double prob) {
+  public void updateMarginalEntry(int spanStart, int spanEnd, Factor marginal) {
+    Preconditions.checkArgument(marginal.getVars().size() == 1);
     if (marginalChart[spanStart][spanEnd] == null) {
-      marginalChart[spanStart][spanEnd] = new DefaultHashMap<Production, Double>(0.0);
+      marginalChart[spanStart][spanEnd] = marginal;
+      return;
     }
 
     if (sumProduct) {
-      marginalChart[spanStart][spanEnd].put(p, marginalChart[spanStart][spanEnd].get(p) + prob);
+      marginalChart[spanStart][spanEnd] = marginalChart[spanStart][spanEnd].add(marginal);
     } else {
-      marginalChart[spanStart][spanEnd].put(p, Math.max(marginalChart[spanStart][spanEnd].get(p), prob));
+      marginalChart[spanStart][spanEnd] = marginalChart[spanStart][spanEnd].maximum(marginal);
     }
   }
 
   /**
-   * Set the distribution over terminals that was used to initialize this chart.
-   */
-  public void setTerminalDist(Map<List<Production>, Double> terminalDist) {
-    this.terminalDist = terminalDist;
-  }
-
-  /**
-   * Gets the distribution over terminals that was used to initialize this
-   * chart.
+   * Gets the terminals being parsed in this chart.
    * 
    * @return
    */
-  public Map<List<Production>, Double> getTerminalDist() {
-    return terminalDist;
+  public List<?> getTerminals() {
+    return terminals;
   }
 
   /**
@@ -229,43 +256,53 @@ public class ParseChart {
   }
 
   /**
+   * Returns {@code true} if this chart is computing marginals (as opposed to
+   * max-marginals).
+   * 
+   * @return
+   */
+  public boolean getSumProduct() {
+    return sumProduct;
+  }
+
+  /**
    * Get the inside unnormalized probabilities over productions at a particular
    * span in the tree.
    */
-  public Map<Production, Double> getInsideEntries(int spanStart, int spanEnd) {
+  public Factor getInsideEntries(int spanStart, int spanEnd) {
     if (insideChart[spanStart][spanEnd] == null) {
-      return Collections.emptyMap();
+      return TableFactor.zero(parentVar);
     }
-    return insideChart[spanStart][spanEnd].getBaseMap();
+    return insideChart[spanStart][spanEnd];
   }
 
   /**
    * Get the outside unnormalized probabilities over productions at a particular
    * span in the tree.
    */
-  public Map<Production, Double> getOutsideEntries(int spanStart, int spanEnd) {
+  public Factor getOutsideEntries(int spanStart, int spanEnd) {
     if (outsideChart[spanStart][spanEnd] == null) {
-      return Collections.emptyMap();
+      return TableFactor.zero(parentVar);
     }
-    return outsideChart[spanStart][spanEnd].getBaseMap();
+    return outsideChart[spanStart][spanEnd];
   }
 
   /**
    * Get the marginal unnormalized probabilities over productions at a
    * particular node in the tree.
    */
-  public Map<Production, Double> getMarginalEntries(int spanStart, int spanEnd) {
+  public Factor getMarginalEntries(int spanStart, int spanEnd) {
     if (marginalChart[spanStart][spanEnd] == null) {
-      return Collections.emptyMap();
+      return TableFactor.zero(parentVar);
     }
 
-    return marginalChart[spanStart][spanEnd].getBaseMap();
+    return marginalChart[spanStart][spanEnd];
   }
 
   /**
    * Get the inside distribution over the productions at the root of the tree.
    */
-  public Map<Production, Double> getRootDistribution() {
+  public Factor getRootDistribution() {
     return getInsideEntries(0, chartSize() - 1);
   }
 
@@ -277,9 +314,9 @@ public class ParseChart {
    * @param numTrees
    * @return
    */
-  public List<ParseTree> getBestParseTrees(Map<Production, Double> rootDistribution, int numTrees) {
+  public List<ParseTree> getBestParseTrees(Map<Object, Double> rootDistribution, int numTrees) {
     PriorityQueue<ParseTree> bestTrees = new PriorityQueue<ParseTree>();
-    for (Production root : rootDistribution.keySet()) {
+    for (Object root : rootDistribution.keySet()) {
       for (ParseTree parseTree : getBestParseTrees(root, numTrees)) {
         bestTrees.offer(parseTree.multiplyProbability(rootDistribution.get(root)));
 
@@ -298,7 +335,7 @@ public class ParseChart {
   /**
    * Get the best parse trees spanning the entire sentence.
    */
-  public List<ParseTree> getBestParseTrees(Production root, int numTrees) {
+  public List<ParseTree> getBestParseTrees(Object root, int numTrees) {
     return getBestParseTreesWithSpan(root, 0, chartSize() - 1, numTrees);
   }
 
@@ -306,12 +343,13 @@ public class ParseChart {
    * If this tree contains max-marginals, recover the best parse subtree for a
    * given symbol with the specified span.
    */
-  public List<ParseTree> getBestParseTreesWithSpan(Production root, int spanStart,
+  public List<ParseTree> getBestParseTreesWithSpan(Object root, int spanStart,
       int spanEnd, int numTrees) {
+    /*
     assert !sumProduct;
     assert numTrees <= beamWidth;
 
-    if (backpointers[spanStart][spanEnd] == null || 
+    if (backpointers[spanStart][spanEnd] == null ||
         !backpointers[spanStart][spanEnd].containsKey(root)) {
       return Collections.emptyList();
     }
@@ -348,36 +386,38 @@ public class ParseChart {
     Collections.sort(bestTreeList);
     Collections.reverse(bestTreeList);
     return bestTreeList;
+    */
+    return null;
   }
 
   /**
    * Update the expected number of times that a binary production rule is used
    * in a parse. (This method assumes sum-product)
    */
-  public void updateBinaryRuleExpectation(BinaryProduction bp, double prob) {
-    binaryRuleExpectations.put(bp, binaryRuleExpectations.get(bp) + prob);
+  public void updateBinaryRuleExpectations(Factor binaryRuleMarginal) {
+    binaryRuleExpectations = binaryRuleExpectations.add(binaryRuleMarginal);
   }
 
   /**
    * Compute the expected *unnormalized* probability of every rule.
    */
-  public Map<BinaryProduction, Double> getBinaryRuleExpectations() {
-    return binaryRuleExpectations.getBaseMap();
+  public Factor getBinaryRuleExpectations() {
+    return binaryRuleExpectations;
   }
 
   /**
    * Update the expected number of times that a terminal production rule is used
    * in the parse.
    */
-  public void updateTerminalRuleExpectation(TerminalProduction tp, double prob) {
-    terminalRuleExpectations.put(tp, terminalRuleExpectations.get(tp) + prob);
+  public void updateTerminalRuleExpectations(Factor terminalRuleMarginal) {
+    terminalRuleExpectations = terminalRuleExpectations.add(terminalRuleMarginal);
   }
 
   /**
    * Compute the expected *unnormalized* probability of every terminal rule.
    */
-  public Map<TerminalProduction, Double> getTerminalRuleExpectations() {
-    return terminalRuleExpectations.getBaseMap();
+  public Factor getTerminalRuleExpectations() {
+    return terminalRuleExpectations;
   }
 
   /**
@@ -406,7 +446,7 @@ public class ParseChart {
           sb.append(",");
           sb.append(j);
           sb.append(") ");
-          sb.append(insideChart[i][j].getBaseMap().toString());
+          sb.append(insideChart[i][j]);
           sb.append("\n");
         }
       }
@@ -421,7 +461,7 @@ public class ParseChart {
           sb.append(",");
           sb.append(j);
           sb.append(") ");
-          sb.append(outsideChart[i][j].getBaseMap().toString());
+          sb.append(outsideChart[i][j]);
           sb.append("\n");
         }
       }
@@ -436,7 +476,7 @@ public class ParseChart {
           sb.append(",");
           sb.append(j);
           sb.append(") ");
-          sb.append(marginalChart[i][j].getBaseMap().toString());
+          sb.append(marginalChart[i][j]);
           sb.append("\n");
         }
       }

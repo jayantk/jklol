@@ -1,0 +1,13 @@
+1,_ is a city,1.0
+1,_ is a place,1.0
+1,_ is a town,1.0
+1,mayor of _,1.0
+1,_ the city,1.0
+2,_ is a city,1.0
+2,_ is a place,1.0
+2,mayor of _,1.0
+2,_ the city,1.0
+2,_ in town,1.0
+3,_ is a place,1.0
+3,president of _,1.0
+3,_ the state,1.0

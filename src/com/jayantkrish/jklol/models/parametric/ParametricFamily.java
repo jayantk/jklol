@@ -1,89 +1,62 @@
 package com.jayantkrish.jklol.models.parametric;
 
-import java.util.Collection;
-
-import com.jayantkrish.jklol.inference.MarginalSet;
-import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.util.Assignment;
+import java.io.Serializable;
 
 /**
- * A family of graphical models indexed by parameters of type {@code T}. This
- * interface supports retrieving a graphical model given a set of parameters.
- * {@code ParametricFamily} is a central part of parameter estimation in this
- * library. Training algorithms (see {@link com.jayantkrish.jklol.training})
- * start with a parameterized family of models and search for parameters which
- * optimize some objective.
+ * A parametric family of models, such as distributions.
  * 
- * Note that this interface makes no guarantees about uniqueness; there may be
- * multiple distinct parameters which result in the same {@code FactorGraph}.
- * 
- * @param <T> type of expected parameters
  * @author jayantk
  */
-public interface ParametricFamily<T> {
+public interface ParametricFamily<T> extends Serializable {
 
   /**
-   * Gets the variables over which the distributions in this family are defined.
-   * All {@code FactorGraph}s returned by
-   * {@link #getFactorGraphFromParameters(Object)} are defined over the same
-   * variables.
+   * Gets a new all-zero vector of parameters for {@code this}. The
+   * returned vector can be an argument to methods of this instance
+   * which take parameters as an argument, e.g.,
+   * {@link #getFactorFromParameters()}.
    * 
    * @return
    */
-  public VariableNumMap getVariables();
+  public SufficientStatistics getNewSufficientStatistics();
 
   /**
-   * Gets the variables in {@code this} with the given {@code names}.
-   * 
-   * @param names
-   * @return
-   */
-  public VariableNumMap lookupVariables(Collection<String> names);
-
-  /**
-   * Gets a {@code FactorGraph} which is the member of this family indexed by
-   * {@code parameters}. Note that multiple values of {@code parameters} may
-   * result in the same {@code FactorGraph}.
+   * Instantiates this model from the parameter vector
+   * {@code parameters}. {@code parameters} must be of appropriate
+   * dimensionality, etc. in order for this method to be applicable --
+   * typically, the passed-in parameters should be initialized using
+   * {@link #getNewSufficientStatistics()}, then updated by addition,
+   * etc.
    * 
    * @param parameters
    * @return
    */
-  public FactorGraph getFactorGraphFromParameters(T parameters);
+  public T getModelFromParameters(SufficientStatistics parameters);
 
   /**
-   * Gets a new parameter vector for {@code this} with a reasonable default
-   * value. Typically, the default value is the all-zero vector.
+   * Gets a human-interpretable string describing {@code parameters}.
+   * This method returns one line per parameter, containing a
+   * description of the parameter and its value. Equivalent to
+   * {@link #getParameterDescription(SufficientStatistics, int)} with
+   * a negative {@code numFeatures} value.
    * 
+   * @param parameters
    * @return
    */
-  public T getNewSufficientStatistics();
+  public String getParameterDescription(SufficientStatistics parameters);
 
   /**
-   * Accumulates sufficient statistics (in {@code statistics}) for estimating a
-   * model from {@code this} family based on a point distribution at
-   * {@code assignment}. {@code count} is the number of times that
-   * {@code assignment} has been observed in the training data, and acts as a
-   * multiplier for the computed statistics {@code assignment} must contain a
-   * value for all of the variables in {@code this.getVariables()}.
+   * Gets a human-interpretable string describing {@code parameters}.
+   * This method returns one line per parameter, containing a
+   * description of the parameter and its value.
+   * <p>
+   * If {@code numFeatures >= 0}, this method returns a string
+   * describing the {@code numFeatures} features with the largest
+   * weights. If {@code numFeatures} is negative, all features are
+   * included.
    * 
-   * @param statistics
-   * @param assignment
-   * @param count
+   * @param parameters
+   * @param numFeatures
+   * @return
    */
-  public void incrementSufficientStatistics(SufficientStatistics statistics,
-      Assignment assignment, double count);
-
-  /**
-   * Computes a vector of sufficient statistics for {@code this} based on a
-   * marginal distribution {@code marginals} over an factor graph in this family
-   * and accumulates them in {@code statistics}. {@code count} is the number of
-   * times {@code marginals} has been observed in the training data.
-   * 
-   * @param statistics
-   * @param marginals
-   * @param count
-   */
-  public void incrementSufficientStatistics(SufficientStatistics statistics,
-      MarginalSet marginals, double count);
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures);
 }

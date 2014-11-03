@@ -4,7 +4,9 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
+import com.google.common.base.Predicate;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
 
 public class LocalMapReduceExecutorTest extends TestCase {
@@ -29,6 +31,29 @@ public class LocalMapReduceExecutorTest extends TestCase {
     assertEquals(10, value);
     value = executor.mapReduce(longItems, new RoundMapper(), new SumReducer());
     assertEquals(45, value);
+  }
+
+  public void testMap() {
+    List<Integer> result = executor.map(shortItems, new RoundMapper());
+    assertEquals(Ints.asList(1, 2, 3, 4), result);
+
+    result = executor.map(longItems, new RoundMapper());
+    assertEquals(Ints.asList(1, 2, 3, 4, 5, 6, 7, 8, 9), result);
+  }
+
+  public void testFilter() {
+    Predicate<Double> predicate = new Predicate<Double>() {
+      @Override
+      public boolean apply(Double value) {
+        return value > 3; 
+      }
+    };
+
+    List<Double> result = executor.filter(shortItems, predicate);
+    assertEquals(Doubles.asList(3.3, 3.9), result);
+    
+    result = executor.filter(longItems, predicate);
+    assertEquals(Doubles.asList(3.3, 3.9, 5.1, 6.1, 7.2, 8.3, 9.4), result);
   }
 
   private static class RoundMapper extends Mapper<Double, Integer> {

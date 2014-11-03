@@ -37,7 +37,7 @@ public class Baselines {
   }
 
   /**
-   * Gets a predictor trainer which predicts the output labels according to
+   * Gets a predictor trainer which predicts the outputVar labels according to
    * their empirical frequency in the training set. Hence, the best prediction
    * for all inputs is the most frequent label in the training set.
    * 
@@ -73,7 +73,7 @@ public class Baselines {
 
   /**
    * Trains a predictor which predicts the most frequent label in the training
-   * data, and estimates label probabilities independently of the input data
+   * data, and estimates label probabilities independently of the inputVar data
    * point.
    * 
    * @author jayant

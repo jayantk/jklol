@@ -1,20 +1,23 @@
 package com.jayantkrish.jklol.util;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 /**
- * Counts (fractional) occurrences of objects of type {@code T}. This class is
- * similar to {@link Multimap}, except that occurrence counts can be fractional.
- * A common use of this class is to estimate a multinomial distribution over an
- * unknown set of objects.
+ * Counts (fractional) occurrences of objects of type {@code T}. This
+ * class is similar to {@link Multimap}, except that occurrence counts
+ * can be fractional. A common use of this class is to estimate a
+ * multinomial distribution over an unknown set of objects.
  * 
  * @author jayantk
  */
-public class CountAccumulator<T> {
+public class CountAccumulator<T> implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final DefaultHashMap<T, Double> counts;
   private double totalCount;
@@ -28,8 +31,8 @@ public class CountAccumulator<T> {
   }
 
   /**
-   * Creates an accumulator with a count of 0 for all T, without requiring a
-   * type argument.
+   * Creates an accumulator with a count of 0 for all T, without
+   * requiring a type argument.
    * 
    * @return
    */
@@ -38,7 +41,8 @@ public class CountAccumulator<T> {
   }
 
   /**
-   * Increments the occurrence count for {@code item} by {@code amount}.
+   * Increments the occurrence count for {@code item} by
+   * {@code amount}.
    * 
    * @param item
    * @param amount
@@ -49,13 +53,13 @@ public class CountAccumulator<T> {
   }
 
   /**
-   * Increments the occurrence count of each key in {@code amounts} by its
-   * corresponding value.
+   * Increments the occurrence count of each key in {@code amounts} by
+   * its corresponding value.
    * 
    * @param amounts
    */
-  public void increment(Map<T, Double> amounts) {
-    for (Map.Entry<T, Double> entry : amounts.entrySet()) {
+  public void increment(Map<? extends T, Double> amounts) {
+    for (Map.Entry<? extends T, Double> entry : amounts.entrySet()) {
       increment(entry.getKey(), entry.getValue());
     }
   }
@@ -66,10 +70,14 @@ public class CountAccumulator<T> {
    * 
    * @param amounts
    */
-  public void increment(CountAccumulator<T> amounts) {
-    for (T item : amounts.keySet()) {
-      increment(item, amounts.getCount(item));
-    }
+  public void increment(CountAccumulator<? extends T> amounts) {
+    increment(amounts.getCountMap());
+  }
+
+  public void multiply(T item, double amount) {
+    double originalCount = counts.get(item);
+    counts.put(item, originalCount * amount);
+    totalCount += (originalCount * amount) - originalCount;
   }
 
   /**
@@ -112,9 +120,26 @@ public class CountAccumulator<T> {
   }
 
   /**
-   * Gets the counts in {@code this} as a {@code Map}. Each observed item is a
-   * key in the returned map, and its occurrence count is the corresponding
-   * value.
+   * Returns the set of keys in this whose total count is strictly
+   * greater than {@code threshold}.
+   * 
+   * @param threshold
+   * @return
+   */
+  public Set<T> getKeysAboveCountThreshold(double threshold) {
+    Set<T> keys = Sets.newHashSet();
+    for (T key : counts.keySet()) {
+      if (counts.get(key) > threshold) {
+        keys.add(key);
+      }
+    }
+    return keys;
+  }
+
+  /**
+   * Gets the counts in {@code this} as a {@code Map}. Each observed
+   * item is a key in the returned map, and its occurrence count is
+   * the corresponding value.
    * 
    * @return
    */
@@ -123,17 +148,48 @@ public class CountAccumulator<T> {
   }
 
   /**
-   * Gets the probabilities of the items in {@code this} as a {@code Map}. Each
-   * observed item is a key in the returned map, and its probability is the
-   * corresponding value.
+   * Gets the probabilities of the items in {@code this} as a
+   * {@code Map}. Each observed item is a key in the returned map, and
+   * its probability is the corresponding value.
    * 
    * @return
    */
   public Map<T, Double> getProbabilityMap() {
     Map<T, Double> probabilityMap = Maps.newHashMap();
     for (T item : counts.keySet()) {
-      probabilityMap.put(item, getProbability(item));      
+      probabilityMap.put(item, getProbability(item));
     }
     return probabilityMap;
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((counts == null) ? 0 : counts.hashCode());
+    long temp;
+    temp = Double.doubleToLongBits(totalCount);
+    result = prime * result + (int) (temp ^ (temp >>> 32));
+    return result;
+  }
+
+  @SuppressWarnings("rawtypes")
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    CountAccumulator other = (CountAccumulator) obj;
+    if (counts == null) {
+      if (other.counts != null)
+        return false;
+    } else if (!counts.equals(other.counts))
+      return false;
+    if (Double.doubleToLongBits(totalCount) != Double.doubleToLongBits(other.totalCount))
+      return false;
+    return true;
   }
 }

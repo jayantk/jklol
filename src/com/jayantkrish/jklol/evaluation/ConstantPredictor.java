@@ -8,17 +8,18 @@ import java.util.TreeMap;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Doubles;
 
 /**
- * A predictor which makes the same prediction for every input.
+ * A predictor which makes the same prediction for every inputVar.
  */
-public class ConstantPredictor<I, O> implements Predictor<I, O> {
+public class ConstantPredictor<I, O> extends AbstractPredictor<I, O> {
 
   private Map<O, Double> baseMap;
 	private TreeMap<O, Double> outputProbabilities;
 
 	/**
-	 * Creates a predictor which predicts each output with the specified probability.
+	 * Creates a predictor which predicts each outputVar with the specified probability.
 	 * The provided probabilities must sum to 1.
 	 */
 	public ConstantPredictor(Map<O, Double> outputProbabilities) {
@@ -33,27 +34,23 @@ public class ConstantPredictor<I, O> implements Predictor<I, O> {
 		this.outputProbabilities = new TreeMap<O, Double>(valueComparator);
 		this.outputProbabilities.putAll(outputProbabilities);
 	}
-
+	
 	@Override
-	public O getBestPrediction(I input) {
-		return outputProbabilities.lastKey();
-	}
-
-	@Override
-	public List<O> getBestPredictions(I input, int numBest) {
-		List<O> predictions = Lists.newArrayList();
-		O currentKey = outputProbabilities.lastKey();
-		for (int i = 0; i < numBest && currentKey != null; i++) {
-			predictions.add(currentKey);
-			currentKey = outputProbabilities.lowerKey(currentKey);
-		}
-		return predictions;
-	}
-
-	@Override
-	public double getProbability(I input, O output) {
-		return baseMap.containsKey(output) ? 
-				outputProbabilities.get(output) : 0.0;
+	public Prediction<I, O> getBestPredictions(I input, O output, int numPredictions) {
+	  List<O> predictions = Lists.newArrayList();
+	  List<Double> scores = Lists.newArrayList(); 
+	  O currentKey = outputProbabilities.lastKey();
+	  for (int i = 0; i < numPredictions && currentKey != null; i++) {
+	    predictions.add(currentKey);
+	    scores.add(Math.log(outputProbabilities.get(currentKey)));
+	    currentKey = outputProbabilities.lowerKey(currentKey);
+	  }
+	  
+	  double outputScore = Double.NEGATIVE_INFINITY;
+	  if (output != null && baseMap.containsKey(output)) {
+	    outputScore = Math.log(outputProbabilities.get(output));
+	  }
+	  return Prediction.create(input, output, outputScore, Doubles.toArray(scores), predictions);
 	}
 	
 	@Override

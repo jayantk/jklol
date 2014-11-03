@@ -1,22 +1,32 @@
 package com.jayantkrish.jklol.util;
 
+import java.io.Serializable;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Maps;
 
 /**
  * DefaultHashMap is a HashMap with a default value for
  * keys not found in it. Mostly useful for accumulation.
  */
-public class DefaultHashMap<K, V> {
+public class DefaultHashMap<K, V> implements Serializable {
+  private static final long serialVersionUID = 1L;
 
-	private V defaultValue;
+  private Supplier<V> defaultValue;
 	private Map<K, V> map;
 
 	public DefaultHashMap(V defaultValue) {
-		this.defaultValue = defaultValue;
-		map = new HashMap<K, V>();
+		this.defaultValue = Suppliers.ofInstance(defaultValue); 
+		map = Maps.newHashMap();
+	}
+	
+	public DefaultHashMap(Supplier<V> defaultSupplier) {
+	  this.defaultValue = defaultSupplier;
+	  this.map = Maps.newHashMap();
 	}
 
 	public void clear() {
@@ -39,14 +49,12 @@ public class DefaultHashMap<K, V> {
 		if (map.containsKey(key)) {
 			return map.get(key);
 		}
-		return defaultValue;
+		return defaultValue.get();
 	}
-
 
 	public boolean isEmpty() {
 		return map.isEmpty();
 	}
-
 
 	public Set<K> keySet() {
 		return map.keySet();

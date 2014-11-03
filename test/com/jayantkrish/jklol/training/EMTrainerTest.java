@@ -1,159 +1,138 @@
 package com.jayantkrish.jklol.training;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import junit.framework.TestCase;
 
+import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.bayesnet.BayesNetBuilder;
+import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class EMTrainerTest extends TestCase {
 
-	ParametricFactorGraph bn;
-	IncrementalEMTrainer t;
-	List<Assignment> trainingData;
-	
-	CptTableFactor f0;
-	CptTableFactor f1;
+  ParametricFactorGraph bn;
+  List<Example<Assignment, Assignment>> trainingData;
 
-	Assignment a1,a2,a3,a4,testAssignment1,testAssignment2;
-	List<String> allVarNames;
+  CptTableFactor f0;
+  CptTableFactor f1;
 
-	StepwiseEMTrainer s;
-	EMTrainer e;
+  Assignment a1,a2,a3,a4,testAssignment1,testAssignment2, zeroProbAssignment;
+  VariableNumMap allVars;
 
-	public void setUp() {
-		BayesNetBuilder builder = new BayesNetBuilder();
+  Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> t, s, e;
 
-		DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
-				Arrays.asList(new String[] {"T", "F"}));
+  public void setUp() {
+    ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
 
-		builder.addDiscreteVariable("Var0", tfVar);
-		builder.addDiscreteVariable("Var1", tfVar);
+    DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
+        Arrays.asList(new String[] {"T", "F"}));
 
-		f0 = builder.addCptFactorWithNewCpt(Collections.<String>emptyList(), Arrays.asList("Var0"));
-		f1 = builder.addCptFactorWithNewCpt(Arrays.asList("Var0"), Arrays.asList("Var1"));
+    builder.addVariable("Var0", tfVar);
+    builder.addVariable("Var1", tfVar);
 
-		allVarNames = Arrays.asList(new String[] {"Var0", "Var1"});
-		List<String> observedVarNames = Arrays.asList(new String[] {"Var1"});
+    VariableNumMap var0 = builder.getVariables().getVariablesByName("Var0");
+    VariableNumMap var1 = builder.getVariables().getVariablesByName("Var1");
+    allVars = var0.union(var1);
+    
+    f0 = new CptTableFactor(VariableNumMap.EMPTY, var0);
+    builder.addUnreplicatedFactor("f0", f0);
+    f1 = new CptTableFactor(var0, var1);
+    builder.addUnreplicatedFactor("f1", f1);
 
-		bn = builder.build();		
-		trainingData = new ArrayList<Assignment>();
-		a1 = bn.lookupVariables(observedVarNames).outcomeToAssignment(
-				Arrays.asList(new String[] {"F"}));
-		a2 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
-		a3 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));
-		a4 = bn.lookupVariables(Arrays.asList("Var1")).outcomeToAssignment(Arrays.asList("T"));
+    bn = builder.build();		
+    trainingData = Lists.newArrayList();
+    a1 = var1.outcomeArrayToAssignment("F");
+    a2 = allVars.outcomeArrayToAssignment("T", "T");
+    a3 = allVars.outcomeArrayToAssignment("F", "F");
+    a4 = var1.outcomeArrayToAssignment("T");
 
-		for (int i = 0; i < 3; i++) {
-			trainingData.add(a1);
-		}
-		trainingData.add(a4);
-		trainingData.add(a2);
-		trainingData.add(a3);
-		
-		t = new IncrementalEMTrainer(10, new JunctionTree());
-		s = new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), null);
-		e = new EMTrainer(20, new JunctionTree(), null);
-		
-		testAssignment1 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("T", "T"));
-		testAssignment2 = bn.lookupVariables(allVarNames).outcomeToAssignment(Arrays.asList("F", "F"));
-	}
+    for (int i = 0; i < 3; i++) {
+      trainingData.add(Example.create(Assignment.EMPTY, a1));
+    }
+    trainingData.add(Example.create(Assignment.EMPTY, a4));
+    trainingData.add(Example.create(Assignment.EMPTY, a2));
+    trainingData.add(Example.create(Assignment.EMPTY, a3));
 
-	public void testIncrementalEM() {
-	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
-	  initialParameters.increment(1.0);
-		SufficientStatistics trainedParameters = t.train(bn, initialParameters, trainingData);
-		
-    // Numbers here calculated from running 1 iteration of EM on paper.
-		FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
-		Factor factor = factorGraph.getFactors().get(1);
-		assertEquals(8.0 / 14.0, factor.getUnnormalizedProbability(testAssignment1), 0.05);
-		assertEquals(12.0 / 16.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
-	}
+    t = TrainerAdapter.createAssignmentAdapter(new IncrementalEMTrainer(10, new JunctionTree()));
+    s = TrainerAdapter.createAssignmentAdapter(new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), null));
+    e = TrainerAdapter.createAssignmentAdapter(new EMTrainer(20, new JunctionTree(), null));
 
-	public void testStepwiseEM() {
-	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
-	  initialParameters.increment(1.0);
-		SufficientStatistics trainedParameters = s.train(bn, initialParameters, trainingData);
-		
-		FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
-		Factor factor = factorGraph.getFactors().get(1);
-		// Numbers calculated from 1 iteration of EM, assuming smoothing disappears. The T->T number is fudged a bit.
-		// Stepwise EM loses the smoothing factor, hence the different expected value for this test.
-		assertEquals(7.0 / 10.0, factor.getUnnormalizedProbability(testAssignment1), 0.1);
-		assertEquals(9.0 / 10.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
-	}
-	
-	public void testEM() {
-	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
-	  initialParameters.increment(1.0);
-		SufficientStatistics trainedParameters = e.train(bn, initialParameters, trainingData);
-		
-		FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);		
-		Factor factor = factorGraph.getFactors().get(1);
-		assertEquals(8.0 / 14.0, factor.getUnnormalizedProbability(testAssignment1), 0.05);
-		assertEquals(12.0 / 16.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
-	}
-	
-	public void testRetainSparsityIncrementalEM() {
-	  // If parameters are initialized sparsely, the sparsity should be retained throughout both algorithms.
-	  Assignment zeroProbAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T"));
-	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
-	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
-	  initialParameters.increment(1.0);
-	  bn.incrementSufficientStatistics(initialParameters, zeroProbAssignment, -1.0);
-	  bn.incrementSufficientStatistics(initialParameters, probAssignment, 1.0);
+    testAssignment1 = allVars.outcomeArrayToAssignment("T", "T");
+    testAssignment2 = allVars.outcomeArrayToAssignment("F", "F");
+    zeroProbAssignment = allVars.outcomeArrayToAssignment("F", "T");
+  }
 
-	  SufficientStatistics trainedParameters = t.train(bn, initialParameters, trainingData);
-	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
-		Factor factor = factorGraph.getFactors().get(1);
-		
-		assertEquals(0.0, factor.getUnnormalizedProbability(zeroProbAssignment), 0.01);
-	  assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
-	}
-	
-	public void testRetainSparsityStepwiseEM() {
-	  // If parameters are initialized sparsely, the sparsity should be retained throughout both algorithms.
-	  Assignment zeroProbAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T"));
-	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
-	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
-	  initialParameters.increment(1.0);
-	  bn.incrementSufficientStatistics(initialParameters, zeroProbAssignment, -1.0);
-	  bn.incrementSufficientStatistics(initialParameters, probAssignment, 1.0);
+  public void testIncrementalEM() {
+    Factor factor = trainBayesNet(t);
+    assertEquals(8.0 / 14.0, factor.getUnnormalizedProbability(testAssignment1), 0.05);
+    assertEquals(12.0 / 16.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
+  }
 
-	  SufficientStatistics trainedParameters = s.train(bn, initialParameters, trainingData);
-	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
-		Factor factor = factorGraph.getFactors().get(1);
-		
-		assertEquals(0.0, factor.getUnnormalizedProbability(zeroProbAssignment), 0.01);
-	  assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
-	}
-	
-	public void testRetainSparsityEM() {
-	  // If parameters are initialized sparsely, the sparsity should be retained throughout.
-	  Assignment zeroProbAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "T"));
-	  Assignment probAssignment = bn.getVariables().outcomeToAssignment(Arrays.asList("F", "F"));
-	  SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
-	  initialParameters.increment(1.0);
-	  bn.incrementSufficientStatistics(initialParameters, zeroProbAssignment, -1.0);
-	  bn.incrementSufficientStatistics(initialParameters, probAssignment, 1.0);
+  public void testStepwiseEM() {
+    Factor factor = trainBayesNet(s);
+    // Numbers calculated from 1 iteration of EM, assuming smoothing disappears. The T->T number is fudged a bit.
+    // Stepwise EM loses the smoothing factor, hence the different expected value for this test.
+    assertEquals(7.0 / 10.0, factor.getUnnormalizedProbability(testAssignment1), 0.1);
+    assertEquals(9.0 / 10.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
+  }
 
-	  SufficientStatistics trainedParameters = e.train(bn, initialParameters, trainingData);
-	  FactorGraph factorGraph = bn.getFactorGraphFromParameters(trainedParameters);
-		Factor factor = factorGraph.getFactors().get(1);
-		
-		assertEquals(0.0, factor.getUnnormalizedProbability(zeroProbAssignment), 0.01);
-	  assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
-	}
+  public void testEM() {		
+    Factor factor = trainBayesNet(e);
+    assertEquals(8.0 / 14.0, factor.getUnnormalizedProbability(testAssignment1), 0.05);
+    assertEquals(12.0 / 16.0, factor.getUnnormalizedProbability(testAssignment2), 0.05);
+  }
+  
+  private Factor trainBayesNet(
+      Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> trainer) {
+    SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
+    initialParameters.increment(1.0);
+    SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
+
+    FactorGraph factorGraph = bn.getModelFromParameters(trainedParameters)
+        .getFactorGraph(DynamicAssignment.EMPTY);		
+    return factorGraph.getFactors().get(1);
+  }
+
+  public void testRetainSparsityIncrementalEM() {
+    Factor factor = trainBayesNetSparse(t);
+    assertEquals(0.0, factor.getUnnormalizedProbability(zeroProbAssignment), 0.01);
+    assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
+  }
+
+  public void testRetainSparsityStepwiseEM() {
+    Factor factor = trainBayesNetSparse(s);
+    assertEquals(0.0, factor.getUnnormalizedProbability(zeroProbAssignment), 0.01);
+    assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
+  }
+
+  public void testRetainSparsityEM() {
+    Factor factor = trainBayesNetSparse(e);
+    assertEquals(0.0, factor.getUnnormalizedProbability(zeroProbAssignment), 0.01);
+    assertEquals(1.0, factor.getUnnormalizedProbability(testAssignment2), 0.01);
+  }
+      
+  private Factor trainBayesNetSparse(Trainer<ParametricFactorGraph, Example<Assignment, Assignment>> trainer) {
+    //  If parameters are initialized sparsely, the sparsity should be retained throughout all algorithms.
+    Assignment probAssignment = allVars.outcomeArrayToAssignment("F", "F");
+    SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
+    initialParameters.increment(1.0);
+    bn.incrementSufficientStatistics(initialParameters, initialParameters, allVars, zeroProbAssignment, -1.0);
+    bn.incrementSufficientStatistics(initialParameters, initialParameters, allVars, probAssignment, 1.0);
+
+    SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
+    FactorGraph factorGraph = bn.getModelFromParameters(trainedParameters)
+        .getFactorGraph(DynamicAssignment.EMPTY);
+    return factorGraph.getFactors().get(1);
+  }
 }

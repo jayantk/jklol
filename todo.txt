@@ -1,10 +1,6 @@
-- Change to allow non-categorical variable types (or combinatorially large types, like parse trees)
-- Nonparameteric Bayesian stuff (Dirichlet processes)
-  - Gibbs sampling
-  - Variational inference
-
-
-Thoughts:
-Does adding more complex variable types make it easier to handle the nonparametrics? 
-I think so. We can represent the draw from the dirichlet process as a single variable, then
-resample it appropriately?
+Renamings:
+- Rename parametric factors to "families"
+- Rename SufficientStatistics to something like "parametervector"
+  - eliminate the list of tensors in this class.
+  - refactor the "getParameterDescription()" methods into SufficientStatistics
+- Rename getParameterDescriptionXML to getParameterDescriptionXml

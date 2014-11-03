@@ -6,7 +6,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**
- * Static utility methods for manipulating {@link Converter}s.
+ * Static utility methods for manipulating {@link Converter} instances.
  * 
  * @author jayantk
  */
@@ -35,7 +35,7 @@ public class Converters {
   }
 
   /**
-   * Wraps {@code converter} such that its input is of type {@code V}. The
+   * Wraps {@code converter} such that its inputVar is of type {@code V}. The
    * result of invert on the returned converter is also cast to {@code V} before
    * being returned.
    * 
@@ -77,12 +77,14 @@ public class Converters {
 
     @Override
     public T apply(List<T> item) {
+      if (item == null) { return null; }
       Preconditions.checkArgument(item.size() == 1);
       return item.get(0);
     }
 
     @Override
     public List<T> invert(T item) {
+      if (item == null) { return null; }
       List<T> items = Lists.newArrayList();
       items.add(item);
       return items;

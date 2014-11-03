@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Random;
 
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Predictor.Prediction;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 /**
  * TestSetEvaluation evaluates a predictor by training on one data set and
@@ -39,8 +41,9 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
    */
   public void evaluateLoss(Predictor<I, O> predictor, List<LossFunction<I, O>> lossFunctions) {
     for (Example<I, O> testDatum : testData) {
+      Prediction<I, O> prediction = predictor.getBestPrediction(testDatum);
       for (LossFunction<I, O> lossFunction : lossFunctions) {
-        lossFunction.accumulateLoss(predictor, testDatum.getInput(), testDatum.getOutput());
+        lossFunction.accumulateLoss(prediction);
       }
     }
   }
@@ -92,7 +95,8 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
    * and pass it to {@link #evaluateLoss(Predictor, List)}.
    */
   @Override
-  public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, List<LossFunction<I, O>> lossFunctions) {
+  public void evaluateLoss(PredictorTrainer<I, O> predictorTrainer, 
+      List<LossFunction<I, O>> lossFunctions) {
     Predictor<I, O> predictor = predictorTrainer.train(trainingData);
     evaluateLoss(predictor, lossFunctions);
   }
@@ -125,7 +129,7 @@ public class TestSetEvaluation<I, O> extends AbstractEvaluation<I, O> {
     List<Example<I, O>> testData = Lists.newArrayList();
     // Use a seeded random number generator to ensure that the partition is
     // deterministic.
-    Random random = new Random(0);
+    Random random = Pseudorandom.get();
     for (Example<I, O> datum : data) {
       double draw = random.nextDouble();
       if (draw < testFraction) {

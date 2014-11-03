@@ -1,11 +1,10 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.Variable;
@@ -13,10 +12,11 @@ import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * An implementation of Gibbs sampling for computing approximate marginals.
- * 
+ * <p>
  * Does not work on FactorGraphs with 0 probability outcomes! 
  */
-public class GibbsSampler extends AbstractMarginalCalculator {
+public class GibbsSampler implements MarginalCalculator {
+  private static final long serialVersionUID = 1L;
 
 	private int burnInSamples;
 	private int numDrawsInMarginal;
@@ -29,8 +29,7 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	}
 
 	@Override
-	public MarginalSet computeMarginals(FactorGraph factorGraph, Assignment assignment) {
-	  // TODO(jayantk): Handle conditioning on an assignment
+	public MarginalSet computeMarginals(FactorGraph factorGraph) {
 	  Assignment curAssignment = initializeAssignment(factorGraph);
 
 		// Burn in the sampler
@@ -44,16 +43,18 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 			for (int i = 0; i < samplesBetweenDraws; i++) {
 				curAssignment = doSamplingRound(factorGraph, curAssignment);
 			}
+			curAssignment = doSamplingRound(factorGraph, curAssignment);
 			samples.add(curAssignment);
 		}
-		return new SampleMarginalSet(factorGraph.getVariableNumMap(), samples);
+		return new SampleMarginalSet(factorGraph.getVariables(), samples, 
+		    factorGraph.getConditionedVariables(), factorGraph.getConditionedValues());
 	}
 
 	/**
 	 * GibbsSampler cannot compute max marginals. Throws a runtime exception if called.
 	 */
 	@Override
-	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph, Assignment assignment) {
+	public MaxMarginalSet computeMaxMarginals(FactorGraph factorGraph) {
 		throw new UnsupportedOperationException("Max marginals are not supported by Gibbs sampling");
 	}
 
@@ -61,15 +62,16 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	 * Set the assignment variable to an arbitrary initial value.
 	 */
 	private Assignment initializeAssignment(FactorGraph factorGraph) {
-		// Select the initial assignment.
-		List<Variable> variables = factorGraph.getVariables();
-		List<Integer> varNums = Lists.newArrayList();
-		List<Object> values = Lists.newArrayList();
-		for (int i = 0; i < variables.size(); i++) {
-			varNums.add(i);
-			values.add(variables.get(i).getArbitraryValue());
+		// Select the initial assignment. 
+	  // TODO: Perform a search to find an outcome with nonzero probability.
+	  
+		Variable[] variables = factorGraph.getVariables().getVariablesArray();
+		int[] varNums = factorGraph.getVariables().getVariableNumsArray();
+		Object[] values = new Object[variables.length];
+		for (int i = 0; i < variables.length; i++) {
+			values[i] = variables[i].getArbitraryValue();
 		}
-		return new Assignment(varNums, values);
+		return Assignment.fromSortedArrays(varNums, values);
 	}
 
 	/*
@@ -77,8 +79,9 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	 */
 	private Assignment doSamplingRound(FactorGraph factorGraph, Assignment curAssignment) {
 	  Assignment assignment = curAssignment;
-		for (int i = 0; i < factorGraph.getVariables().size(); i++) {
-			assignment = doSample(factorGraph, assignment, i);
+	  int[] variableNums = factorGraph.getVariables().getVariableNumsArray();
+		for (int i = 0; i < variableNums.length; i++) {
+			assignment = doSample(factorGraph, assignment, variableNums[i]);
 		}
 		return assignment;
 	}
@@ -88,22 +91,23 @@ public class GibbsSampler extends AbstractMarginalCalculator {
 	 */
 	private Assignment doSample(FactorGraph factorGraph, Assignment curAssignment, int varNum) {
 		// Retain the assignments to all other variables.
-		Assignment otherVarAssignment = curAssignment.removeAll(
-				Collections.singletonList(varNum));
+		Assignment otherVarAssignment = curAssignment.removeAll(varNum);
 
 		// Multiply together all of the factors which define a probability distribution over 
 		// variable varNum, conditioned on all other variables.
 		Set<Integer> factorNums = factorGraph.getFactorsWithVariable(varNum);
+
+		Preconditions.checkState(factorNums.size() > 0, "Variable not in factor: " + varNum + " " + factorNums);
 		List<Factor> factorsToCombine = new ArrayList<Factor>();
 		for (Integer factorNum : factorNums) {
 			Factor conditional = factorGraph.getFactor(factorNum)
 				.conditional(otherVarAssignment);
-			factorsToCombine.add(conditional.marginalize(otherVarAssignment.getVarNumsSorted()));
+			factorsToCombine.add(conditional.marginalize(otherVarAssignment.getVariableNums()));
 		}
 		Factor toSampleFrom = factorsToCombine.get(0).product(factorsToCombine.subList(1, factorsToCombine.size()));
 		// Draw the sample and update the sampler's current assignment. 
 		Assignment subsetValues = toSampleFrom.sample();
 		
-		return otherVarAssignment.jointAssignment(subsetValues);
+		return otherVarAssignment.union(subsetValues);
 	}
 }

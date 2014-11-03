@@ -1,7 +1,9 @@
 package com.jayantkrish.jklol.training;
 
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
+import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.parallel.Reducer;
 
 /**
@@ -14,9 +16,12 @@ import com.jayantkrish.jklol.parallel.Reducer;
 public class SufficientStatisticsReducer implements Reducer<MarginalSet, SufficientStatisticsBatch> {
 
   private final ParametricFactorGraph parametricFactorGraph;
+  private final SufficientStatistics currentParameters;
 
-  public SufficientStatisticsReducer(ParametricFactorGraph parametricFactorGraph) {
-    this.parametricFactorGraph = parametricFactorGraph;
+  public SufficientStatisticsReducer(ParametricFactorGraph parametricFactorGraph,
+      SufficientStatistics currentParameters) {
+    this.parametricFactorGraph = Preconditions.checkNotNull(parametricFactorGraph);
+    this.currentParameters = Preconditions.checkNotNull(currentParameters);
   }
 
   @Override
@@ -26,8 +31,9 @@ public class SufficientStatisticsReducer implements Reducer<MarginalSet, Suffici
 
   @Override
   public SufficientStatisticsBatch reduce(MarginalSet item, SufficientStatisticsBatch accumulator) {
-    parametricFactorGraph.incrementSufficientStatistics(accumulator.getStatistics(), item, 1.0);
-    accumulator.incrementLogLikelihood(Math.log(item.getPartitionFunction()));
+    parametricFactorGraph.incrementSufficientStatistics(accumulator.getStatistics(),
+        currentParameters, item, 1.0);
+    accumulator.incrementLogLikelihood(item.getLogPartitionFunction());
     accumulator.incrementNumExamples(1);
     return accumulator;
   }

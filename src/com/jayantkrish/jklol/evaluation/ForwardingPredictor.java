@@ -2,7 +2,7 @@ package com.jayantkrish.jklol.evaluation;
 
 import java.util.List;
 
-import com.google.common.collect.Collections2;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.Converter;
 
@@ -11,15 +11,15 @@ import com.jayantkrish.jklol.util.Converter;
  * format, then forwards them to an underlying predictor.
  * 
  * @author jayantk
- * @param <I1> input type of this predictor
- * @param <O1> output type of this predictor
- * @param <I2> input type of underlying predictor
- * @param <O2> output type of underlying predictor
+ * @param <I1> inputVar type of this predictor
+ * @param <O1> outputVar type of this predictor
+ * @param <I2> inputVar type of underlying predictor
+ * @param <O2> outputVar type of underlying predictor
  */
-public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
+public class ForwardingPredictor<I1, O1, I2, O2> extends AbstractPredictor<I1, O1> {
 
   private final Predictor<I2, O2> predictor;
-  private final Converter<I1, I2> inputConverter;
+  private final Function<I1, I2> inputConverter;
   private final Converter<O1, O2> outputConverter;
 
   /**
@@ -30,29 +30,30 @@ public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
    * @param inputConverter
    * @param outputConverter
    */
-  public ForwardingPredictor(Predictor<I2, O2> predictor, Converter<I1, I2> inputConverter,
+  public ForwardingPredictor(Predictor<I2, O2> predictor, Function<I1, I2> inputConverter, 
       Converter<O1, O2> outputConverter) {
     this.predictor = predictor;
     this.inputConverter = inputConverter;
     this.outputConverter = outputConverter;
   }
-
-  @Override
-  public O1 getBestPrediction(I1 input) {
-    return outputConverter.invert(
-        predictor.getBestPrediction(inputConverter.apply(input)));
+  
+  public static <I1, O1, I2, O2> ForwardingPredictor<I1, O1, I2, O2> create(
+      Predictor<I2, O2> predictor, Function<I1, I2> inputConverter, 
+      Converter<O1, O2> outputConverter) {
+    return new ForwardingPredictor<I1, O1, I2, O2>(predictor, inputConverter, outputConverter);
   }
-
-  @Override
-  public List<O1> getBestPredictions(I1 input, int numBest) {
-    List<O2> predictions = predictor.getBestPredictions(inputConverter.apply(input), numBest);
-    return Lists.newArrayList(Collections2.transform(predictions, outputConverter.inverse()));
-  }
-
-  @Override
-  public double getProbability(I1 input, O1 output) {
-    return predictor.getProbability(inputConverter.apply(input),
-        outputConverter.apply(output));
+  
+  public Prediction<I1, O1> getBestPredictions(I1 input, O1 output, int numPredictions) {
+    Prediction<I2, O2> prediction = predictor.getBestPredictions(inputConverter.apply(input), 
+        outputConverter.apply(output), numPredictions);
+    
+    List<O1> convertedPredictions = Lists.newArrayList();
+    for (O2 outputPrediction : prediction.getPredictions()) {
+      convertedPredictions.add(outputConverter.invert(outputPrediction));
+    }
+    
+    return Prediction.create(input, output, prediction.getOutputScore(), 
+        prediction.getScores(), convertedPredictions);
   }
 
   /**
@@ -65,7 +66,7 @@ public class ForwardingPredictor<I1, O1, I2, O2> implements Predictor<I1, O1> {
     return predictor;
   }
   
-  public Converter<I1, I2> getInputConverter() {
+  public Function<I1, I2> getInputConverter() {
     return inputConverter;
   }
   

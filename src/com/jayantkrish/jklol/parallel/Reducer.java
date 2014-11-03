@@ -1,10 +1,13 @@
 package com.jayantkrish.jklol.parallel;
 
 /**
+ * Second half of a map-reduce pipeline that compiles the output of the {@code
+ * Mapper}s into a return value.
  * 
  * @author jayantk
- * @param <B>
- * @param <C>
+ * @param <B> input type, which is the output type of the {@code Mapper} in the
+ * first half of the pipeline
+ * @param <C> output type of the reducer.
  */
 public interface Reducer<B, C> {
 
@@ -19,7 +22,7 @@ public interface Reducer<B, C> {
   public C getInitialValue();
 
   /**
-   * Returns the result of accumulating @{code item} and {@code accumulated}.
+   * Returns the result of accumulating {@code item} and {@code accumulated}.
    * This method may mutate and return {@code accumulated}, which may be more
    * efficient than allocating and returning a new object.
    * 

@@ -1,0 +1,8 @@
+(op:softmax (op:matvecmul t2:softmax_weights (op:logistic 
+ (op:add (op:matvecmul t2:socher_W1 
+                       (op:add (op:matvecmul t2:socher_M1 (op:matvecmul t2:<arg2> t1:<arg0>))
+                               (op:matvecmul t2:socher_M2 (op:matvecmul t2:<arg1> t1:<arg0>))))
+         (op:matvecmul t2:socher_W2 
+                       (op:matvecmul t2:<arg0> 
+                                     (op:logistic (op:add (op:matvecmul t2:socher_W1 (op:matvecmul t2:<arg1> t1:<arg2>)) 
+                                                          (op:matvecmul t2:socher_W2 (op:matvecmul t2:<arg2> t1:<arg1>))))))))))

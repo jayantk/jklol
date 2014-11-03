@@ -1,0 +1,15 @@
+false,false,and # 0,1
+false,true,and # 0,1
+true,false,and # 0,1
+true,true,and # 1,0
+
+false,false,or # 0,1
+false,true,or # 1,0
+true,false,or # 1,0
+true,true,or # 1,0
+
+false,false,xor # 0,1
+false,true,xor # 1,0
+true,false,xor # 1,0
+true,true,xor # 0,1
+

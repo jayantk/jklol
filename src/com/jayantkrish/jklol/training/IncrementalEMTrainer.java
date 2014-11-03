@@ -1,11 +1,13 @@
 package com.jayantkrish.jklol.training;
 
-import java.util.Collections;
 import java.util.List;
 
+import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
+import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
@@ -14,7 +16,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * Train the weights of a factor graph using incremental EM. (Incremental EM is
  * an online variant of EM.)
  */
-public class IncrementalEMTrainer {
+public class IncrementalEMTrainer extends AbstractTrainer
+<ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private MarginalCalculator inferenceEngine;
   private int numIterations;
@@ -50,11 +53,14 @@ public class IncrementalEMTrainer {
    * @param initialParameters
    * @param trainingData
    */
+  @Override
   public SufficientStatistics train(ParametricFactorGraph bn,
-      SufficientStatistics initialParameters, List<Assignment> trainingData) {
+      SufficientStatistics initialParameters, 
+      Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingDataExamples) {
+
+    List<DynamicAssignment> trainingData = getOutputAssignments(trainingDataExamples, true);
     SufficientStatistics[] previousIterationStatistics = new SufficientStatistics[trainingData.size()];
 
-    Collections.shuffle(trainingData);
     for (int i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
       for (int j = 0; j < trainingData.size(); j++) {
@@ -65,14 +71,20 @@ public class IncrementalEMTrainer {
 
         // Get the current training data point and the most recent factor graph
         // based on the current iteration.
-        Assignment trainingExample = trainingData.get(j);
-        FactorGraph currentFactorGraph = bn.getFactorGraphFromParameters(initialParameters);
+        DynamicAssignment dynamicExample = trainingData.get(j);
+        DynamicFactorGraph dynamicFactorGraph = bn.getModelFromParameters(initialParameters);
+        FactorGraph currentFactorGraph = dynamicFactorGraph.getFactorGraph(dynamicExample);
+        Assignment trainingExample = dynamicFactorGraph.getVariables().toAssignment(dynamicExample);
         log.log(i, j, trainingExample, currentFactorGraph);
 
+        // Compute the marginal distribution of currentFactorGraph conditioned on
+        // the current training example.
+        FactorGraph conditionalFactorGraph = currentFactorGraph.conditional(trainingExample);
+        MarginalSet marginals = inferenceEngine.computeMarginals(conditionalFactorGraph);
+            
         // Update new sufficient statistics
-        MarginalSet marginals = inferenceEngine.computeMarginals(currentFactorGraph, trainingExample);
         SufficientStatistics exampleStatistics = bn.getNewSufficientStatistics(); 
-        bn.incrementSufficientStatistics(exampleStatistics, marginals, 1.0);
+        bn.incrementSufficientStatistics(exampleStatistics, initialParameters, marginals, 1.0);
         previousIterationStatistics[j] = exampleStatistics;
         initialParameters.increment(exampleStatistics, 1.0);
       }

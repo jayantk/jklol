@@ -2,13 +2,11 @@ package com.jayantkrish.jklol.training;
 
 import java.util.List;
 
-import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
-import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Estimates the parameters of a {@link ParametricFactorGraph} using expectation
@@ -16,7 +14,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class EMTrainer {
+public class EMTrainer extends AbstractTrainer
+    <ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private final int numIterations;
   private final MarginalCalculator marginalCalculator;
@@ -45,36 +44,29 @@ public class EMTrainer {
     }
   }
 
+  @Override
   public SufficientStatistics train(ParametricFactorGraph bn,
-      SufficientStatistics initialParameters, Iterable<Assignment> trainingData) {
-    List<Assignment> trainingDataList = Lists.newArrayList(trainingData);
+      SufficientStatistics initialParameters,
+      Iterable<Example<DynamicAssignment, DynamicAssignment>> trainingData) {
+    return train(bn, initialParameters, getOutputAssignments(trainingData, true));
+  }
 
-    SufficientStatistics oldStatistics = null;
-    for (int i = 0; i < numIterations; i++) {
-      log.notifyIterationStart(i);
-      // E-step: compute the expected values of the hidden variables given the
-      // current set of parameters.
-      FactorGraph factorGraph = bn.getFactorGraphFromParameters(initialParameters);
-      SufficientStatisticsBatch batchStatistics = MapReduceConfiguration.getMapReduceExecutor()
-          .mapReduce(trainingDataList,
-          new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
-          new SufficientStatisticsReducer(bn));
-      SufficientStatistics statistics = batchStatistics.getStatistics();
-      log.logStatistic(i, "average loglikelihood",
-          Double.toString(batchStatistics.getLoglikelihood() / batchStatistics.getNumExamples()));
-
-      // M-step: maximize the parameters.
-      // Due to a poor design decision I made in an experiment using this class,
-      // initialParameters must always contain the current parameters of the
-      // model.
-      if (oldStatistics != null) {
-        initialParameters.increment(oldStatistics, -1.0);
-      }
-      initialParameters.increment(statistics, 1.0);
-      oldStatistics = statistics;
-
-      log.notifyIterationEnd(i);
-    }
-    return initialParameters;
+  /**
+   * Trains {@code bn} by maximizing the marginal loglikelihood of
+   * {@code trainingData}. Equivalent to calling {@code train} with examples
+   * that only contain outputs.
+   * 
+   * @param bn
+   * @param initialParameters
+   * @param trainingData
+   * @return
+   */
+  public SufficientStatistics train(ParametricFactorGraph bn,
+      SufficientStatistics initialParameters, List<DynamicAssignment> trainingData) {
+    
+    ExpectationMaximization em = new ExpectationMaximization(numIterations, log);
+    
+    EmFactorGraphOracle oracle = new EmFactorGraphOracle(bn, marginalCalculator, initialParameters);
+    return em.train(oracle, initialParameters, trainingData);
   }
 }

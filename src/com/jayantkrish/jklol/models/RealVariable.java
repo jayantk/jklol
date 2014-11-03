@@ -1,7 +1,7 @@
 package com.jayantkrish.jklol.models;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.util.SparseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 
 /**
  * RealVariable represents a real-valued vector variable in a graphical model. 
@@ -21,16 +21,21 @@ public class RealVariable implements Variable {
 	public int numDimensions() {
 		return numDimensions;
 	}
+	
+	@Override
+	public String getName() {
+	  return "real";
+	}
 
 	@Override
 	public Object getArbitraryValue() {
-		SparseTensor value = SparseTensor.empty(new int[]{0});
+		SparseTensor value = SparseTensor.empty(new int[]{0}, new int[] {numDimensions});
 		return value;
 	}
 	
 	@Override
 	public boolean canTakeValue(Object o) {
 		return o instanceof SparseTensor && 
-		((SparseTensor) o).getDimensionNumbers().length == 1;
+		    ((SparseTensor) o).getDimensionNumbers().length == 1;
 	}
 }

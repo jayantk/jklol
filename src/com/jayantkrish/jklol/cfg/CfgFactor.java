@@ -1,28 +1,28 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.AbstractFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.FactorUtils;
+import com.jayantkrish.jklol.models.Factors;
 import com.jayantkrish.jklol.models.SeparatorSet;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.FeatureFunction;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -34,8 +34,14 @@ import com.jayantkrish.jklol.util.Assignment;
  */
 public class CfgFactor extends AbstractFactor {
 
+  private static final long serialVersionUID = 2274031154557548175L;
+  
+  // Information about the parent (root of the parse tree) variable.
+  private final VariableNumMap parent;
   private final int parentVarNum;
   private final DiscreteVariable parentVar;
+  // Information about the child (terminals of the parse tree) variable.
+  private final VariableNumMap child;
   private final int childVarNum;
   private final DiscreteVariable childVar;
 
@@ -54,15 +60,17 @@ public class CfgFactor extends AbstractFactor {
    * distribution over Lists of Productions. Sadly, the Java type system makes
    * enforcing this requirement difficult.
    */
-  public CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
-      int parentVarNum, int childVarNum, CfgParser parser) {
-    super(new VariableNumMap(Arrays.asList(new Integer[] { parentVarNum, childVarNum }),
-        Arrays.asList(new DiscreteVariable[] { parentVar, childVar })));
+  public CfgFactor(VariableNumMap parent, VariableNumMap child, CfgParser parser) {
+    super(parent.union(child));
+    Preconditions.checkArgument(parent.size() == 1);
+    Preconditions.checkArgument(child.size() == 1);
 
-    this.parentVarNum = parentVarNum;
-    this.parentVar = parentVar;
-    this.childVarNum = childVarNum;
-    this.childVar = childVar;
+    this.parent = parent;
+    this.parentVarNum = parent.getOnlyVariableNum();
+    this.parentVar = parent.getDiscreteVariables().get(0);
+    this.child = child;
+    this.childVarNum = child.getOnlyVariableNum();
+    this.childVar = child.getDiscreteVariables().get(0);
 
     this.parser = parser;
 
@@ -74,16 +82,18 @@ public class CfgFactor extends AbstractFactor {
   /*
    * For implementing products of factors.
    */
-  private CfgFactor(DiscreteVariable parentVar, DiscreteVariable childVar,
-      int parentVarNum, int childVarNum, CfgParser parser, 
+  private CfgFactor(VariableNumMap parent, VariableNumMap child, CfgParser parser, 
       DiscreteFactor parentInboundMessage, DiscreteFactor childInboundMessage) {
-    super(new VariableNumMap(Arrays.asList(new Integer[] { parentVarNum, childVarNum }),
-        Arrays.asList(new DiscreteVariable[] { parentVar, childVar })));
+    super(parent.union(child));
+    Preconditions.checkArgument(parent.size() == 1);
+    Preconditions.checkArgument(child.size() == 1);
 
-    this.parentVarNum = parentVarNum;
-    this.parentVar = parentVar;
-    this.childVarNum = childVarNum;
-    this.childVar = childVar;
+    this.parent = parent;
+    this.parentVarNum = parent.getOnlyVariableNum();
+    this.parentVar = parent.getDiscreteVariables().get(0);
+    this.child = child;
+    this.childVarNum = child.getOnlyVariableNum();
+    this.childVar = child.getDiscreteVariables().get(0);
 
     this.parser = parser;
 
@@ -102,8 +112,8 @@ public class CfgFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    List<Production> childVarValue = (List<Production>) a.getVarValue(childVarNum);
-    ParseChart c = parser.parseMarginal(childVarValue, (Production) a.getVarValue(parentVarNum));
+    List<?> childVarValue = (List<?>) a.getValue(childVarNum);
+    ParseChart c = parser.parseMarginal(childVarValue, a.getValue(parentVarNum), true);
     double probability = c.getPartitionFunction();
     if (parentInboundMessage != null) {
       probability *= parentInboundMessage.getUnnormalizedProbability(a);
@@ -113,9 +123,10 @@ public class CfgFactor extends AbstractFactor {
     }
     return probability;
   }
-
-  public ProductionDistribution getProductionDistribution() {
-    return parser.getDistribution();
+  
+  @Override
+  public double getUnnormalizedLogProbability(Assignment assignment) {
+    return Math.log(getUnnormalizedProbability(assignment));
   }
 
   // ///////////////////////////////////////////////////////////
@@ -149,14 +160,13 @@ public class CfgFactor extends AbstractFactor {
     DiscreteFactor newParentMessage = null;
     DiscreteFactor newChildMessage = null;
     if (parentFactors.size() > 0) {
-      newParentMessage = FactorUtils.product(parentFactors).coerceToDiscrete();
+      newParentMessage = Factors.product(parentFactors).coerceToDiscrete();
     }
     if (childFactors.size() > 0) {
-      newChildMessage = FactorUtils.product(childFactors).coerceToDiscrete();
+      newChildMessage = Factors.product(childFactors).coerceToDiscrete();
     }
 
-    return new CfgFactor(parentVar, childVar, parentVarNum, childVarNum,
-        parser, newParentMessage, newChildMessage);
+    return new CfgFactor(parent, child, parser, newParentMessage, newChildMessage);
   }
 
   @Override
@@ -172,24 +182,23 @@ public class CfgFactor extends AbstractFactor {
 
   @Override
   public Factor conditional(Assignment a) {
-    // Get the conditional probabilty by multiplying the parent/child
+    // Get the conditional probability by multiplying the parent/child
     // variables by a point distribution.
     List<Factor> factorsToMultiply = Lists.newArrayList();
-    if (a.containsVar(parentVarNum)) {
-      List<Integer> parentVarNumList = Arrays.asList(new Integer[] { parentVarNum });
+    if (a.contains(parentVarNum)) {
       TableFactor newParentFactor = TableFactor.pointDistribution(
-          getVars().intersection(parentVarNumList), a.subAssignment(parentVarNumList));
+          getVars().intersection(parentVarNum), a.intersection(parentVarNum));
       factorsToMultiply.add(newParentFactor);
     }
 
-    if (a.containsVar(childVarNum)) {
-      List<Integer> childVarNumList = Arrays.asList(new Integer[] { childVarNum });
+    if (a.contains(childVarNum)) {
       TableFactor newChildFactor = TableFactor.pointDistribution(
-          getVars().intersection(childVarNumList), a.subAssignment(childVarNumList));
+          getVars().intersection(childVarNum), a.intersection(childVarNum));
       factorsToMultiply.add(newChildFactor);
     }
 
-    return this.product(factorsToMultiply);
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNumsArray());
+    return this.product(factorsToMultiply).marginalize(varsToEliminate.getVariableNums());
   }
 
   @Override
@@ -246,6 +255,11 @@ public class CfgFactor extends AbstractFactor {
   }
 
   @Override
+  public Factor outerProduct(Factor other) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public Assignment sample() {
     throw new UnsupportedOperationException("Cannot sample from CfgFactors");
   }
@@ -253,11 +267,6 @@ public class CfgFactor extends AbstractFactor {
   @Override
   public List<Assignment> getMostLikelyAssignments(int numAssignments) {
     throw new UnsupportedOperationException("Cannot get likely assignments of CfgFactors");
-  }
-
-  @Override
-  public double computeExpectation(FeatureFunction feature) {
-    throw new UnsupportedOperationException("Cannot compute expectations of CfgFactors");
   }
 
   // ////////////////////////////////////////
@@ -291,36 +300,28 @@ public class CfgFactor extends AbstractFactor {
     if (varsToRetain.contains(parentVarNum)) {
       ParseChart chart = getInsideChart(useSumProduct);
       // Only retaining the parent variable, since the number of variables to
-      // retain
-      // is less than 2.
-      TableFactorBuilder builder = new TableFactorBuilder(new VariableNumMap(
-          Arrays.asList(new Integer[] { parentVarNum }),
-          Arrays.asList(new DiscreteVariable[] { parentVar })));
-      Map<Production, Double> rootEntries = chart.getInsideEntries(0, chart.chartSize() - 1);
-      List<Production> value = new ArrayList<Production>();
-      value.add(null);
-      for (Production p : rootEntries.keySet()) {
-        value.set(0, p);
-        builder.setWeightList(value, rootEntries.get(p));
-      }
+      // retain is less than 2.
+      Factor root = chart.getInsideEntries(0, chart.chartSize() - 1).relabelVariables(
+          VariableRelabeling.createFromVariables(parser.getParentVariable(), parent));
 
       if (parentInboundMessage != null) {
-        return parentInboundMessage.product(builder.build());
+        return parentInboundMessage.product(root);
       } else {
-        return builder.build();
+        return root;
       }
     }
 
     // Both variables eliminated, so simply return the partition function.
     ParseChart chart = getMarginalChart(useSumProduct);
-    TableFactorBuilder builder = new TableFactorBuilder(VariableNumMap.emptyMap());
+    TableFactorBuilder builder = new TableFactorBuilder(VariableNumMap.EMPTY,
+        SparseTensorBuilder.getFactory());
     builder.setWeight(Assignment.EMPTY, chart.getPartitionFunction());
     return builder.build();
   }
 
   /**
    * Runs the inside portion of CFG parsing, using the distribution over the
-   * child variable as the input to the parser. Returns the resulting chart.
+   * child variable as the inputVar to the parser. Returns the resulting chart.
    * 
    * @param useSumProduct
    * @return
@@ -331,21 +332,16 @@ public class CfgFactor extends AbstractFactor {
     }
     // First, try to marginalize out the child variable.
     Preconditions.checkState(childInboundMessage != null);
-    Map<List<Production>, Double> childDist = Maps.newHashMap();
-    Iterator<Assignment> childIter = childInboundMessage.outcomeIterator();
-    while (childIter.hasNext()) {
-      Assignment a = childIter.next();
-      List<Production> val = (List<Production>) a.getVarValuesInKeyOrder().get(0);
-      childDist.put(val, childInboundMessage.getUnnormalizedProbability(a));
-    }
+    Outcome childOutcome = Iterators.getOnlyElement(childInboundMessage.outcomeIterator());
+    List<?> childValue = (List<?>) childOutcome.getAssignment().getValues().get(0);
 
-    cachedCharts.put(useSumProduct, parser.parseInsideMarginal(childDist, useSumProduct));
+    cachedCharts.put(useSumProduct, parser.parseInsideMarginal(childValue, useSumProduct));
     return cachedCharts.get(useSumProduct);
   }
 
   /**
    * Runs both the inside and outside portions of CFG parsing, using the
-   * distribution over the child/parent variable as the input to the parser.
+   * distribution over the child/parent variable as the inputVar to the parser.
    * Returns the resulting chart.
    * 
    * @param useSumProduct
@@ -353,21 +349,18 @@ public class CfgFactor extends AbstractFactor {
    */
   public ParseChart getMarginalChart(boolean useSumProduct) {
     Preconditions.checkState(parentInboundMessage != null);
-
     getInsideChart(useSumProduct);
     if (cachedCharts.get(useSumProduct).getOutsideCalculated()) {
       return cachedCharts.get(useSumProduct);
     }
 
-    // Convert from factors to a distribution that the CFG parser understands.
-    Map<Production, Double> parentDist = Maps.newHashMap();
-    Iterator<Assignment> parentIter = parentInboundMessage.outcomeIterator();
-    while (parentIter.hasNext()) {
-      Assignment a = parentIter.next();
-      Production val = (Production) a.getVarValuesInKeyOrder().get(0);
-      parentDist.put(val, parentInboundMessage.getUnnormalizedProbability(a));
-    }
-    parser.parseOutsideMarginal(cachedCharts.get(useSumProduct), parentDist);
+    parser.parseOutsideMarginal(cachedCharts.get(useSumProduct), parentInboundMessage.relabelVariables(
+        VariableRelabeling.createFromVariables(parentInboundMessage.getVars(), parser.getParentVariable())));
     return cachedCharts.get(useSumProduct);
+  }
+
+  @Override
+  public Factor relabelVariables(VariableRelabeling relabeling) {
+    throw new UnsupportedOperationException("Not implemented.");
   }
 }

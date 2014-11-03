@@ -12,9 +12,7 @@ import com.jayantkrish.jklol.lisp.ParametricBfgBuilder.MarkedVars;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -64,11 +62,7 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
     ParametricBfgBuilder inputBuilder = new ParametricBfgBuilder(true);
     Object inputApplicationResult = instantiatedModel.apply(input, environment, inputBuilder);
     costFunction.apply(Arrays.asList(inputApplicationResult), environment, inputBuilder);
-    ParametricFactorGraph pfg = inputBuilder.buildNoBranching();
-
-    Assignment inputAssignment = inputBuilder.getAssignment();
-    FactorGraph inputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
-        .conditional(DynamicAssignment.EMPTY).conditional(inputAssignment);
+    FactorGraph inputFactorGraph = inputBuilder.buildNoBranching();
 
     MaxMarginalSet inputMaxMarginals = marginalCalculator.computeMaxMarginals(inputFactorGraph);
     Assignment costConditionalAssignment = inputMaxMarginals.getNthBestAssignment(0);
@@ -80,11 +74,7 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
     ParametricBfgBuilder outputBuilder = new ParametricBfgBuilder(true);
     inputApplicationResult = instantiatedModel.apply(input, environment, outputBuilder);
     outputFunction.apply(Arrays.asList(inputApplicationResult), environment, outputBuilder);
-    pfg = outputBuilder.buildNoBranching();
-
-    Assignment outputAssignment = outputBuilder.getAssignment();
-    FactorGraph outputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
-        .conditional(DynamicAssignment.EMPTY).conditional(outputAssignment);
+    FactorGraph outputFactorGraph = outputBuilder.buildNoBranching();
 
     MaxMarginalSet outputMaxMarginals = marginalCalculator.computeMaxMarginals(outputFactorGraph);
     Assignment outputConditionalAssignment = outputMaxMarginals.getNthBestAssignment(0);

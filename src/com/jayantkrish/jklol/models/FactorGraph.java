@@ -599,10 +599,18 @@ public class FactorGraph implements Serializable {
    * @return
    */
   public FactorGraph getConnectedComponent(VariableNumMap vars) {
+    return FactorGraph.getConnectedComponent(vars, variableFactorMap, factorVariableMap, variables,
+        Arrays.asList(factors), Arrays.asList(factorNames), conditionedVariables,
+        conditionedValues, inferenceHint);
+  }
+
+  public static FactorGraph getConnectedComponent(VariableNumMap compVars, Multimap<Integer, Integer> variableFactorMap,
+      Multimap<Integer, Integer> factorVariableMap, VariableNumMap variables, List<Factor> factors, List<String> factorNames,
+      VariableNumMap conditionedVariables, Assignment conditionedValues, InferenceHint inferenceHint) {
     // Do a breadth-first search over the bipartite 
     // variable and factor graph to identify the
     // relevant subset of the factor graph.
-    Queue<Integer> varsToTraverse = new LinkedList<Integer>(vars.getVariableNums());
+    Queue<Integer> varsToTraverse = new LinkedList<Integer>(compVars.getVariableNums());
     Queue<Integer> factorsToTraverse = new LinkedList<Integer>();
 
     Set<Integer> traversedVars = Sets.newHashSet();
@@ -636,12 +644,12 @@ public class FactorGraph implements Serializable {
     Factor[] componentFactors = new Factor[traversedFactorIndexArray.length];
     String[] componentFactorNames = new String[traversedFactorIndexArray.length];
     for (int i = 0; i < traversedFactorIndexArray.length; i++) {
-      componentFactors[i] = factors[traversedFactorIndexArray[i]];
-      componentFactorNames[i] = factorNames[traversedFactorIndexArray[i]];
+      componentFactors[i] = factors.get(traversedFactorIndexArray[i]);
+      componentFactorNames[i] = factorNames.get(traversedFactorIndexArray[i]);
     }
 
     return new FactorGraph(componentVars, componentFactors, componentFactorNames,
-        conditionedVariables, conditionedValues, inferenceHint);
+        conditionedVariables, conditionedValues, inferenceHint);    
   }
 
   /**

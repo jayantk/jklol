@@ -166,6 +166,11 @@ public class AmbEvalTest extends TestCase {
     assertEquals(6, value);
   }
 
+  public void testNewFgScope() {
+    String value = runTestString("(new-fg-scope (get-best-value (amb (list \"a\" \"b\" \"c\") (list 1 2 1))))");
+    assertEquals("b", value);
+  }
+
   public void testSquareLoss() {
     Object value = runTest(
         "(define sum-outcomes (lambda (o p) (if (nil? o) 0.0 (+ (* (car o) (car p)) (sum-outcomes (cdr o) (cdr p))))))" +

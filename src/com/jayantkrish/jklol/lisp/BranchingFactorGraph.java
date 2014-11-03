@@ -23,7 +23,7 @@ public class BranchingFactorGraph {
     this.children = Preconditions.checkNotNull(children);
   }
 
-  private FactorGraph getFactorGraph() {
+  public FactorGraph getFactorGraph() {
     return factorGraph;
   }
   

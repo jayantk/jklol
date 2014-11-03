@@ -14,9 +14,7 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -76,10 +74,8 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     log.stopTimer("compute_gradient/input_eval/eval");
 
     log.startTimer("compute_gradient/input_eval/fg");
-    ParametricFactorGraph pfg = newBuilder.buildNoBranching();
+    FactorGraph inputFactorGraph = newBuilder.buildNoBranching();
     Assignment inputAssignment = newBuilder.getAssignment();
-    FactorGraph inputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
-        .conditional(DynamicAssignment.EMPTY).conditional(inputAssignment);
     log.stopTimer("compute_gradient/input_eval/fg");
     log.stopTimer("compute_gradient/input_eval");
 
@@ -102,10 +98,8 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
       log.stopTimer("compute_gradient/output_eval/eval");
 
       log.startTimer("compute_gradient/output_eval/fg");
-      pfg = newBuilder.buildNoBranching();
+      FactorGraph outputFactorGraph = newBuilder.buildNoBranching();
       outputAssignment = newBuilder.getAssignment();
-      FactorGraph outputFactorGraph = pfg.getModelFromParameters(pfg.getNewSufficientStatistics())
-          .conditional(DynamicAssignment.EMPTY).conditional(outputAssignment);
       log.stopTimer("compute_gradient/output_eval/fg");
       log.stopTimer("compute_gradient/output_eval");
       

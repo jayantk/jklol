@@ -58,6 +58,7 @@ public class AmbEval {
   private static final int ADD_WEIGHT_SYMBOL_INDEX = 11;
   private static final int OPT_SYMBOL_INDEX = 12;
   private static final int OPT_MM_SYMBOL_INDEX = 13;
+  private static final int NEW_FG_SCOPE_INDEX = 14;
   
   private final IndexedList<String> symbolTable;
 
@@ -125,6 +126,7 @@ public class AmbEval {
         case ADD_WEIGHT_SYMBOL_INDEX: return doAddWeight(subexpressions, environment, builder);
         case OPT_SYMBOL_INDEX: return doOpt(subexpressions, environment, builder);
         case OPT_MM_SYMBOL_INDEX: return doOptMm(subexpressions, environment, builder);
+        case NEW_FG_SCOPE_INDEX: return doNewFgScope(subexpressions, environment, builder);
         }
       }
       return doFunctionApplication(subexpressions, environment, builder);
@@ -335,14 +337,13 @@ public class AmbEval {
     Object value = eval(subexpressions.get(1), environment, builder).getValue();
 
     if (value instanceof AmbValue) {
-      BranchingFactorGraph fg = builder.build();
-      // System.out.println("factor graph: " + fg.getParameterDescription());
-
       VariableNumMap targetVar = ((AmbValue) value).getVar();
+      BranchingFactorGraph fg = builder.buildConnectedComponent(targetVar);
+
       MarginalSet marginals = fg.getMarginals(targetVar);
       DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
           .coerceToDiscrete();
-
+      
       Iterator<Outcome> iter = varMarginal.outcomeIterator();
       List<Object> outcomes = Lists.newArrayList();
       List<Double> weights = Lists.newArrayList();
@@ -484,6 +485,18 @@ public class AmbEval {
     // System.out.println(parameters.getDescription());
 
     return new EvalResult(new SpecAndParameters(parameterSpec.getParameterSpec(), parameters));
+  }
+
+  public EvalResult doNewFgScope(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder gfgBuilder) {
+    // Sequentially evaluates its subexpressions, chaining any  
+    // environment changes, in the context of a new builder.
+    ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
+    EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
+    for (int i = 1; i < subexpressions.size(); i++) {
+      result = eval(subexpressions.get(i), environment, newBuilder);
+    }
+    return result;
   }
 
   public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment,
@@ -677,6 +690,7 @@ public class AmbEval {
     symbolTable.add("add-weight");
     symbolTable.add("opt");
     symbolTable.add("opt-mm");
+    symbolTable.add("new-fg-scope");
 
     return symbolTable;
   }

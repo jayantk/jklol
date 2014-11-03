@@ -12,8 +12,8 @@ VECTOR_SUFF=_vector.txt
 JKLOL_RUN=./scripts/run.sh
 
 RUN_ID=$1
-OUT_DIR=$BASE_DIR/output/svo7/no_subexpressions_100dim_tensor_regdelta_rand2/$RUN_ID/
-OUT_TEMP_DIR=$BASE_DIR/output/svo7/no_subexpressions_100dim_tensor_regdelta_rand2/$RUN_ID/temp
+OUT_DIR=$BASE_DIR/output/svo7/no_subexpressions_50dim_tensor_regdelta_rand2/$RUN_ID/
+OUT_TEMP_DIR=$BASE_DIR/output/svo7/no_subexpressions_50dim_tensor_regdelta_rand2/$RUN_ID/temp
 LOGNAME=_log.txt
 TRAINNAME=_train_err.txt
 TRAIN_SEM=_train_sem.txt
@@ -51,7 +51,7 @@ do
 
     echo "Running $FILENAME..."
     ### $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --batchSize 1 --iterations $ITERATIONS --l2Regularization $L2REG --initialVectors $VECTOR_IN --regularizationFrequency 0.1 --initialStepSize 0.1 $@ > $LOG_OUT
-    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --training $TRAIN_IN --output $MODEL_OUT --initializeTensorsToIdentity --lbfgsMinibatchSize 1000 --lbfgsMinibatchIterations 20 --lbfgsIterations $ITERATIONS --lbfgs --lbfgsL2Regularization $L2REG --initialVectors $VECTOR_IN --regularizeDeltas $@ > $LOG_OUT
+    $JKLOL_RUN com.jayantkrish.jklol.cvsm.TrainCvsm --klLoss --training $TRAIN_IN --output $MODEL_OUT --initializeTensorsToIdentity --lbfgsMinibatchSize 1000 --lbfgsMinibatchIterations 20 --lbfgsIterations $ITERATIONS --lbfgs --lbfgsL2Regularization $L2REG --initialVectors $VECTOR_IN --regularizeDeltas $@ > $LOG_OUT
     # --regularizeVectorDeltas
 
     $JKLOL_RUN com.jayantkrish.jklol.cvsm.TestCvsm  --model $MODEL_OUT --relationDictionary $REL_DICT --testFilename $TRAIN_IN > $TRAIN_ERR_OUT

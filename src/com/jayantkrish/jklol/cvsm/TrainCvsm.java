@@ -56,6 +56,7 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<String> initialVectors;
   private OptionSpec<Double> initialGaussianVariance;
 
+  private OptionSpec<Double> gaussianVariance;
   private OptionSpec<Void> fixInitializedVectors;
   private OptionSpec<Void> regularizeDeltas;
   private OptionSpec<Void> regularizeVectorDeltas;
@@ -79,6 +80,7 @@ public class TrainCvsm extends AbstractCli {
     initialGaussianVariance = parser.accepts("initialGaussianVariance").withRequiredArg()
 	.ofType(Double.class).defaultsTo(0.01);
 
+    gaussianVariance = parser.accepts("gaussianVariance").withRequiredArg().ofType(Double.class).defaultsTo(-1.0);
     fixInitializedVectors = parser.accepts("fixInitializedVectors");
     regularizeDeltas = parser.accepts("regularizeDeltas");
     regularizeVectorDeltas = parser.accepts("regularizeVectorDeltas");
@@ -100,7 +102,8 @@ public class TrainCvsm extends AbstractCli {
     CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
 
     SufficientStatistics trainedParameters = estimateParameters(family,
-        examples, vectors, options.has(squareLoss), options.has(klLoss),
+								examples, vectors, options.valueOf(gaussianVariance),
+								options.has(squareLoss), options.has(klLoss),
         options.has(initializeTensorsToIdentity),
         options.has(fixInitializedVectors), options.has(regularizeDeltas),
         options.has(regularizeVectorDeltas), options.valueOf(initialGaussianVariance));
@@ -179,7 +182,11 @@ public class TrainCvsm extends AbstractCli {
       }
     }
 
+<<<<<<< HEAD
+    if (gaussianVariance > 0) {
+=======
     if (gaussianVariance > 0.0) {
+>>>>>>> 8436663b834a00940c58bff0533b31f5450a3794
 	initialParameters.perturb(gaussianVariance);
     }
 

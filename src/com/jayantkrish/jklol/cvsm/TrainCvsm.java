@@ -54,7 +54,6 @@ public class TrainCvsm extends AbstractCli {
   private OptionSpec<String> trainingFilename;
   private OptionSpec<String> modelOutput;
   private OptionSpec<String> initialVectors;
-  private OptionSpec<Double> initialGaussianVariance;
 
   private OptionSpec<Double> gaussianVariance;
   private OptionSpec<Void> fixInitializedVectors;
@@ -77,8 +76,6 @@ public class TrainCvsm extends AbstractCli {
         .ofType(String.class).required();
     initialVectors = parser.accepts("initialVectors").withRequiredArg()
         .ofType(String.class).required();
-    initialGaussianVariance = parser.accepts("initialGaussianVariance").withRequiredArg()
-	.ofType(Double.class).defaultsTo(0.01);
 
     gaussianVariance = parser.accepts("gaussianVariance").withRequiredArg().ofType(Double.class).defaultsTo(-1.0);
     fixInitializedVectors = parser.accepts("fixInitializedVectors");
@@ -102,11 +99,10 @@ public class TrainCvsm extends AbstractCli {
     CvsmFamily family = buildCvsmModel(vectors, options.has(fixInitializedVectors));
 
     SufficientStatistics trainedParameters = estimateParameters(family,
-								examples, vectors, options.valueOf(gaussianVariance),
-								options.has(squareLoss), options.has(klLoss),
-        options.has(initializeTensorsToIdentity),
-        options.has(fixInitializedVectors), options.has(regularizeDeltas),
-        options.has(regularizeVectorDeltas), options.valueOf(initialGaussianVariance));
+								examples, vectors, options.has(squareLoss), options.has(klLoss),
+								options.has(initializeTensorsToIdentity),
+								options.has(fixInitializedVectors), options.has(regularizeDeltas),
+								options.has(regularizeVectorDeltas), options.valueOf(gaussianVariance));
     Cvsm trainedModel = family.getModelFromParameters(trainedParameters);
 
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
@@ -182,12 +178,8 @@ public class TrainCvsm extends AbstractCli {
       }
     }
 
-<<<<<<< HEAD
-    if (gaussianVariance > 0) {
-=======
     if (gaussianVariance > 0.0) {
->>>>>>> 8436663b834a00940c58bff0533b31f5450a3794
-	initialParameters.perturb(gaussianVariance);
+      initialParameters.perturb(gaussianVariance);
     }
 
     GradientOptimizer trainer = createGradientOptimizer(examples.size());

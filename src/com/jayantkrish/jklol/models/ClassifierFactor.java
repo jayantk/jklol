@@ -1,11 +1,11 @@
 package com.jayantkrish.jklol.models;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -50,13 +50,13 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
   
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
     return Math.exp(getUnnormalizedLogProbability(assignment));
   }
 
   @Override
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
     Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
     int[] outputIndexes = outputVars.assignmentToIntArray(assignment);
     
@@ -66,26 +66,30 @@ public abstract class ClassifierFactor extends AbstractConditionalFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("classifier_conditional");
     int inputVarNum = inputVar.getOnlyVariableNum();
-    List<Integer> outputVarNums = outputVars.getVariableNums();
-    // We can only condition on outputVars if we also condition on
-    // inputVar.
-    Preconditions.checkArgument(!assignment.containsAny(outputVarNums)
-        || assignment.contains(inputVarNum));
+    int[] outputVarNums = outputVars.getVariableNumsArray();
 
     if (!assignment.contains(inputVarNum)) {
+      // We can only condition on outputVars if we also condition on
+      // inputVar.
+      Preconditions.checkArgument(!assignment.containsAny(outputVarNums));
+      log.stopTimer("classifier_conditional");
       return this;
     }
 
     // Build a TableFactor over the outputVars based on the inputVar feature
     // vector.
-    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVar.getOnlyVariableNum());
+    Tensor inputFeatureVector = (Tensor) assignment.getValue(inputVarNum);
     Tensor logProbs = getOutputLogProbTensor(inputFeatureVector);
     TableFactor outputFactor = new TableFactor(outputVars,
         new LogSpaceTensorAdapter(DenseTensor.copyOf(logProbs)));
     
     // Note that the assignment may contain more than just the input variable, hence
     // the additional call to condition.
-    return outputFactor.conditional(assignment);
+    Factor result = outputFactor.conditional(assignment);
+    log.stopTimer("classifier_conditional");
+    return result;
   }
 }

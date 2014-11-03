@@ -97,6 +97,11 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
   public Tensor softThreshold(double threshold) {
     throw new UnsupportedOperationException("Not implemented.");
   }
+  
+  @Override
+  public Tensor getEntriesLargerThan(double threshold) {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
 
   @Override
   public Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
@@ -140,22 +145,18 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public int size() {
-    return logWeights.size();
-  }
-  
-  @Override
-  public double getByDimKey(int... key) {
-    return Math.exp(logWeights.getByDimKey(key));
+    // The size of the tensor is the number of nonzero values in the tensor.
+    // However, this tensor may potentially have more than Integer.MAX_VALUE
+    // nonzero values due to the log space representation. Returning
+    // Integer.MAX_VALUE shouldn't be a problem, given that the values in 
+    // this tensor cannot be retrieved using indexes.
+    long maxKeyNum = logWeights.getMaxKeyNum();
+    return (maxKeyNum > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) maxKeyNum;
   }
 
   @Override
   public double get(long keyNum) {
     return Math.exp(logWeights.get(keyNum));
-  }
-
-  @Override
-  public double getLogByDimKey(int... key) {
-    return logWeights.getByDimKey(key);
   }
 
   @Override

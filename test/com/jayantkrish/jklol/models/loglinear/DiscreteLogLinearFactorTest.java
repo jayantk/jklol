@@ -9,9 +9,9 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
-import com.jayantkrish.jklol.models.parametric.NormalizedFactor;
+import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricNormalizingFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -30,7 +30,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
   SufficientStatistics parameters;
   
   DiscreteLogLinearFactor g;
-  NormalizedFactor normed;
+  ParametricNormalizingFactor normed;
   
   public void setUp() {
     DiscreteVariable v = new DiscreteVariable("Two values",
@@ -41,16 +41,18 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     initialWeights.setWeight(0.0, "F", "F");
     f = DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights);
     // f = new IndicatorLogLinearFactor(vars, initialWeights.build());
-    normed = new NormalizedFactor(DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights), 
-        vars.getVariablesByName("v3"));
     
+    ParametricFactor normalizedFactor = DiscreteLogLinearFactor.createIndicatorFactor(vars, initialWeights);
+    normed = new ParametricNormalizingFactor(VariableNumMap.EMPTY, vars.getVariablesByName("v2"),
+        vars.getVariablesByName("v3"), Arrays.asList(normalizedFactor));
+
     parameters = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "F"),
-        1.0);
-    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "T"),
-        0.5);
-    f.incrementSufficientStatisticsFromAssignment(parameters, vars.outcomeArrayToAssignment("T", "T"),
-        0.5);
+    f.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("T", "F"), 1.0);
+    f.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("T", "T"), 0.5);
+    f.incrementSufficientStatisticsFromAssignment(parameters, parameters,
+        vars.outcomeArrayToAssignment("T", "T"), 0.5);
     
     DiscreteVariable featureVar1 = new DiscreteVariable("features1", Arrays.asList("f1", "f2", "f3"));
     DiscreteVariable featureVar2 = new DiscreteVariable("features2", Arrays.asList("g1", "g2"));
@@ -67,7 +69,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
 
     g = new DiscreteLogLinearFactor(vars, featureVars, featureBuilder.build());
   }
-  
+
   public void testGetFactorFromParameters() {
     TableFactor factor = (TableFactor) f.getModelFromParameters(parameters);
     assertEquals(Math.E, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T")), .00001);
@@ -75,19 +77,20 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
     assertEquals(0.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F")), .00001);
   }
-  
+
   public void testGetFactorFromParametersNormed() {
-    TableFactor factor = (TableFactor) normed.getModelFromParameters(parameters);
+    SufficientStatistics normedParameters = new ListSufficientStatistics(Arrays.asList("1"), Arrays.asList(parameters));
+    TableFactor factor = (TableFactor) normed.getModelFromParameters(normedParameters);
     assertEquals(0.5, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T")), .00001);
     assertEquals(0.5, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "F")), .00001);
     assertEquals(1.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "T")), .00001);
     assertEquals(0.0, factor.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F")), .00001);
   }
-    
+
   public void testGetSufficientStatisticsFromAssignment() {
     Assignment tf = vars.outcomeArrayToAssignment("T", "F"); 
     SufficientStatistics s = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
+    f.incrementSufficientStatisticsFromAssignment(s, s, tf, 1.0);
     
     TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
@@ -102,7 +105,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
         Arrays.asList("foo", "bar")));
     Assignment tf = moreVars.outcomeArrayToAssignment("T", "F", "bar"); 
     SufficientStatistics s = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromAssignment(s, tf, 1.0);
+    f.incrementSufficientStatisticsFromAssignment(s, s, tf, 1.0);
     
     TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
@@ -116,7 +119,7 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     TableFactor factor = (TableFactor) f.getModelFromParameters(parameters);
     double partitionFunction = 1.0 + (2 * Math.E);
     SufficientStatistics s = f.getNewSufficientStatistics();
-    f.incrementSufficientStatisticsFromMarginal(s, factor, Assignment.EMPTY, 1.0, partitionFunction);
+    f.incrementSufficientStatisticsFromMarginal(s, s, factor, Assignment.EMPTY, 1.0, partitionFunction);
     
     TensorBase weights = ((TensorSufficientStatistics) s).get();
     assertEquals(1, weights.getDimensionNumbers().length);
@@ -130,8 +133,8 @@ public class DiscreteLogLinearFactorTest extends TestCase {
     TensorSufficientStatistics gParams = g.getNewSufficientStatistics();
     assertEquals(6, gParams.get().size());
     
-    g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("T", "T"), 1.0);
-    g.incrementSufficientStatisticsFromAssignment(gParams, vars.outcomeArrayToAssignment("F", "F"), 1.0);
+    g.incrementSufficientStatisticsFromAssignment(gParams, gParams, vars.outcomeArrayToAssignment("T", "T"), 1.0);
+    g.incrementSufficientStatisticsFromAssignment(gParams, gParams, vars.outcomeArrayToAssignment("F", "F"), 1.0);
     DiscreteFactor d = g.getModelFromParameters(gParams);
     assertEquals(1.0, d.getUnnormalizedLogProbability("T", "T"), 0.00001);
     assertEquals(24.0, d.getUnnormalizedLogProbability("T", "F"), 0.00001);

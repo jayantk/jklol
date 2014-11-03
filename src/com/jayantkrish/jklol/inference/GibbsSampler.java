@@ -1,12 +1,10 @@
 package com.jayantkrish.jklol.inference;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.Variable;
@@ -18,6 +16,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * Does not work on FactorGraphs with 0 probability outcomes! 
  */
 public class GibbsSampler implements MarginalCalculator {
+  private static final long serialVersionUID = 1L;
 
 	private int burnInSamples;
 	private int numDrawsInMarginal;
@@ -65,14 +64,14 @@ public class GibbsSampler implements MarginalCalculator {
 	private Assignment initializeAssignment(FactorGraph factorGraph) {
 		// Select the initial assignment. 
 	  // TODO: Perform a search to find an outcome with nonzero probability.
-		List<Variable> variables = factorGraph.getVariables().getVariables();
-		List<Integer> varNums = Lists.newArrayList();
-		List<Object> values = Lists.newArrayList();
-		for (int i = 0; i < variables.size(); i++) {
-			varNums.add(i);
-			values.add(variables.get(i).getArbitraryValue());
+	  
+		Variable[] variables = factorGraph.getVariables().getVariablesArray();
+		int[] varNums = factorGraph.getVariables().getVariableNumsArray();
+		Object[] values = new Object[variables.length];
+		for (int i = 0; i < variables.length; i++) {
+			values[i] = variables[i].getArbitraryValue();
 		}
-		return new Assignment(varNums, values);
+		return Assignment.fromSortedArrays(varNums, values);
 	}
 
 	/*
@@ -92,8 +91,7 @@ public class GibbsSampler implements MarginalCalculator {
 	 */
 	private Assignment doSample(FactorGraph factorGraph, Assignment curAssignment, int varNum) {
 		// Retain the assignments to all other variables.
-		Assignment otherVarAssignment = curAssignment.removeAll(
-				Collections.singletonList(varNum));
+		Assignment otherVarAssignment = curAssignment.removeAll(varNum);
 
 		// Multiply together all of the factors which define a probability distribution over 
 		// variable varNum, conditioned on all other variables.

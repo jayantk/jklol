@@ -9,7 +9,7 @@ import com.google.common.collect.Sets;
 
 public class ExpressionTest extends TestCase {
 
-  ExpressionParser parser;
+  ExpressionParser<Expression> parser;
   
   ApplicationExpression application;
   CommutativeOperator op;
@@ -17,7 +17,7 @@ public class ExpressionTest extends TestCase {
   QuantifierExpression exists;
   
   public void setUp() {
-    parser = new ExpressionParser();
+    parser = ExpressionParser.lambdaCalculus();
     application = (ApplicationExpression) parser.parseSingleExpression("(foo (a b) (c a))");
     op = (CommutativeOperator) parser.parseSingleExpression("(and (a b) (c a) ((foo) d))");
     lf = (LambdaExpression) parser.parseSingleExpression("(lambda a c (foo (a b) (c a)))");
@@ -159,22 +159,11 @@ public class ExpressionTest extends TestCase {
     assertTrue(expected.functionallyEquals(expression.simplify()));
   }
   
-  /*
-  public void testSimplifyConjunction2() {
-    Expression expression = parser.parseSingleExpression("(forall (a (b)) (and (forall (c (d)) (a (e)) (and c (lambda x x) a e c b)) b a))");
-    Expression expected = parser.parseSingleExpression("(forall (a (b)) (c (d)) (new_a (e)) (and c (lambda x x) new_a e c b b a))");
-
-    System.out.println(expression.simplify());
-    
-    assertTrue(expected.functionallyEquals(expression.simplify()));
-  }
-  */
-  
   public void testExpandForAll() {
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression("(forall (b (set d e)) (exists g c (and (b c))))");
     Expression expected = parser.parseSingleExpression("(and (exists g c (and (d c))) (exists g c (and (e c))))");
     
-    assertEquals(expected, expression.expandQuantifier());
+    assertTrue(expected.functionallyEquals(expression.expandQuantifier()));
   }
   
   public void testExpandForAll2() {
@@ -201,6 +190,70 @@ public class ExpressionTest extends TestCase {
     assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
   }
   
+  public void testExpandForAll5() {
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(
+        "(forall (b (set d (lambda a (forall (x (set p q)) (x a))))) (exists d (b d)))");    
+    Expression expected = parser.parseSingleExpression("(exists x y z (and (d x) (p y) (q z)))");
+    assertTrue(expected.functionallyEquals(expression.expandQuantifier().simplify()));
+  }
+  
+  public void testExpandForAll6() {
+    // The goal of this test is to ensure that the quantifiers in
+    // this expression expand without crashing or producing an
+    // exponential blow-up (causing the program to hang).
+    String expressionString = "(forall (b (set (lambda f (forall (b (set (lambda e (mention e \"chad hurley\" concept:person)) (lambda e (mention e \"steve chen\" concept:person)))) (b f))) (lambda e (mention e \"jawed karim\" concept:person)))) (exists h c d g a (and (mention a \"youtube\" concept:company) (concept:company d) (equals c d) (mention g \"google\" concept:company) (concept:acquired g c) (equals d a) (b h) (concept:organizationhiredperson a h))))";
+    ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression(expressionString);
+    expression.simplify();
+  }
+
+  /**
+   * Verify that forall quantifier expansion doesn't cause an
+   * exponential blow-up in expression size.
+   */
+  public void testExpandForAll7() {
+    String expressionString = "(exists var246019 (forall (pred (set (lambda var970051 (forall (pred (set (lambda var932563 (forall (pred (set (lambda var872754 (forall (pred (set unknown unknown)) (pred var872754))) unknown)) (pred var932563))) (lambda x (mention x \"spain\" concept:musicartist)))) (pred var970051))) (lambda var586411 (forall (pred (set (lambda var784596 (forall (pred (set (lambda x (mention x \"italy\" concept:city)) unknown)) (pred var784596))) unknown)) (pred var586411))))) (pred var246019)))";
+
+    Expression expression = parser.parseSingleExpression(expressionString).simplify();
+    expression = expression.simplify();
+
+    if (expression instanceof ForAllExpression) {
+      expression = ((ForAllExpression) expression).expandQuantifier().simplify();
+    }
+    
+    String expectedString = "(exists var126514 var294420 var437854 var507881 var810806 var87387 var999153 (and (unknown var294420) (unknown var437854) (unknown var810806) (mention var999153 \"spain\" concept:musicartist) (mention var507881 \"italy\" concept:city) (unknown var87387) (unknown var126514)))";
+    Expression expected = parser.parseSingleExpression(expectedString).simplify();
+
+    assertTrue(expected.functionallyEquals(expression));
+  }
+  
+  public void testExpandForAll8() {
+    // The goal of this test is to ensure that the quantifiers in
+    // this expression expand without crashing or producing an
+    // exponential blow-up (causing the program to hang).
+    String expressionString = "(exists var404023 var611108 (forall (var233536 (set (lambda var560038 (mention var560038 \"austria\" concept:country)) (lambda var560038 (mention var560038 \"switzerland\" concept:country)))) (var492872 (set (lambda var411041 (forall (var492872 (set (lambda var657553 (forall (var492872 (set (lambda var475227 (mention var475227 \"european union\" concept:location)) (lambda var397358 (forall (var492872 (set (lambda var475227 (mention var475227 \"herzegovina\" concept:location)) (lambda var475227 (mention var475227 \"bosnia\" concept:location)))) (var492872 var397358))))) (var492872 var657553))) (lambda var475227 (mention var475227 \"belgium\" concept:city)))) (var492872 var411041))) (lambda var475227 (mention var475227 \"germany\" concept:city)))) (exists var826985 y (and (var233536 y) (var492872 var826985) (var404023 var611108) (concept:locationlocatedwithinlocation var826985 var611108) (concept:eventatlocation var611108 y)))))";
+
+    Expression expression = parser.parseSingleExpression(expressionString).simplify();
+    expression = expression.simplify();
+    
+    if (expression instanceof ForAllExpression) {
+      expression = ((ForAllExpression) expression).expandQuantifier().simplify();
+    }
+  }
+  
+  public void testExpandForAll9() {
+    String expressionString = "(exists a b ((lambda input ((lambda predicate (lambda x (forall (var2323 (set (lambda var560038 (mention var560038 \"austria\" concept:country)) (lambda var560038 (mention var560038 \"germany\" concept:country))))  (exists y (and (predicate x) (citylocatedincountry x y) (var2323 y)))))) ((lambda predicate2 (lambda x  (exists y (forall (var2323 (set (lambda var560038 (mention var560038 \"foo\" concept:country)) (lambda var560038 (mention var560038 \"bar\" concept:country))))  (and (predicate2 x) (headquarteredin x y) (var2323 y)))))) input))) a b))";
+
+    Expression expression = parser.parseSingleExpression(expressionString).simplify();
+    expression = expression.simplify();
+
+    System.out.println(expression);
+    if (expression instanceof ForAllExpression) {
+      expression = ((ForAllExpression) expression).expandQuantifier().simplify();
+    }
+    
+    System.out.println(expression);
+  }
+
   public void testFunctionallyEquals() {
     assertTrue(application.functionallyEquals(application));
   }

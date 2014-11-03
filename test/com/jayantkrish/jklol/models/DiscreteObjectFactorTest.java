@@ -7,13 +7,13 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 /**
  * Unit tests for {@link DiscreteObjectFactor}.
@@ -115,22 +115,21 @@ public class DiscreteObjectFactorTest extends TestCase {
   }
   
   public void testRelabelVariables() {
-    BiMap<Integer, Integer> integerRelabeling = HashBiMap.create();
-    integerRelabeling.put(0, 1);
-    integerRelabeling.put(1, 2);
-
-    BiMap<String, String> stringRelabeling = HashBiMap.create();
-    stringRelabeling.put("0", "x");
-    stringRelabeling.put("1", "y");
-    
-    VariableRelabeling relabeling = new VariableRelabeling(integerRelabeling, stringRelabeling);
+    VariableNumMap inputVars = new VariableNumMap(Ints.asList(0, 1),
+        Arrays.asList("0", "1"), Arrays.<Variable>asList(null, null));
+    VariableNumMap outputVars = new VariableNumMap(Ints.asList(1, 2),
+        Arrays.asList("x", "y"), Arrays.<Variable>asList(null, null));
+    int[] keys = new int[] {0, 1};
+    int[] values = new int[] {1, 2};
+    IntBiMap map = IntBiMap.fromUnsortedKeyValues(keys, values);
+    VariableRelabeling relabeling = new VariableRelabeling(inputVars, outputVars, map);
     DiscreteObjectFactor relabeled = f.relabelVariables(relabeling);
     
     assertEquals(new VariableNumMap(Arrays.asList(1, 2), Arrays.asList("x", "y"), Arrays.asList(var0, var1)),
         relabeled.getVars());
     assertEquals(4, Iterables.size(relabeled.assignments()));
   }
-  
+
   public void testCoerceToDiscrete() {
     DiscreteFactor discrete = h.coerceToDiscrete();
     assertEquals(5.0, discrete.getUnnormalizedProbability("a"));

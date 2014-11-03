@@ -123,7 +123,7 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
 
     return new DimensionSpec(resultDims, resultSizes);
   }
-  
+
   /**
    * Gets a mapping from dimensions in {@code firstDimensionNums} to their
    * index in {@code secondDimensionNums}. Entries in the alignment are
@@ -143,22 +143,22 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
   }
 
   @Override
-  public int[] getDimensionNumbers() {
+  public final int[] getDimensionNumbers() {
     return dimensions;
   }
 
   @Override
-  public int[] getDimensionSizes() {
+  public final int[] getDimensionSizes() {
     return sizes;
   }
 
   @Override
-  public long[] getDimensionOffsets() {
+  public final long[] getDimensionOffsets() {
     return indexOffsets;
   }
 
   @Override
-  public int numDimensions() {
+  public final int numDimensions() {
     return dimensions.length;
   }
 
@@ -169,7 +169,7 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
    * @return
    */
   @Override
-  public long getMaxKeyNum() {
+  public final long getMaxKeyNum() {
     return indexOffsets.length == 0 ? 1 : indexOffsets[0] * sizes[0];
   }
 
@@ -213,21 +213,19 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
   }
 
   @Override
-  public double getByDimKey(int... key) {
-    return getByIndex(keyNumToIndex(dimKeyToKeyNum(key)));
+  public final double getByDimKey(int... key) {
+    return get(dimKeyToKeyNum(key));
   }
 
-  @Override
   public double get(long keyNum) {
     return getByIndex(keyNumToIndex(keyNum));
   }
 
   @Override
-  public double getLogByDimKey(int... key) {
-    return getLogByIndex(keyNumToIndex(dimKeyToKeyNum(key)));
+  public final double getLogByDimKey(int... key) {
+    return getLog(dimKeyToKeyNum(key));
   }
 
-  @Override
   public double getLog(long keyNum) {
     return getLogByIndex(keyNumToIndex(keyNum));
   }

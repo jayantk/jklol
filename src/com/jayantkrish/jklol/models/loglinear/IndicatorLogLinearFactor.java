@@ -69,6 +69,12 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
   // ///////////////////////////////////////////////////////////
 
   @Override
+  public TensorSufficientStatistics getNewSufficientStatistics() {
+    return new TensorSufficientStatistics(featureVars, new DenseTensorBuilder(new int[] { 0 },
+        new int[] { initialWeights.getWeights().getValues().length }));
+  }
+
+  @Override
   public TableFactor getModelFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters);
 
@@ -92,60 +98,47 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
         .getMostLikelyAssignments(numFeatures);
     return featureValues.describeAssignments(biggestAssignments);
   }
-  
-  @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    Tensor featureWeights = getFeatureWeights(parameters);
-    
-    TableFactor featureValues = new TableFactor(initialWeights.getVars(), 
-        initialWeights.getWeights().replaceValues(featureWeights.getValues()));
-    return featureValues.getParameterDescriptionXML();
-  }
 
   @Override
-  public TensorSufficientStatistics getNewSufficientStatistics() {
-    return new TensorSufficientStatistics(featureVars, new DenseTensorBuilder(new int[] { 0 },
-            new int[] { initialWeights.getWeights().getValues().length }));
-  }
-
-  @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
-    Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
+    Assignment subAssignment = assignment.intersection(getVars().getVariableNumsArray());
 
     long keyNum = initialWeights.getWeights().dimKeyToKeyNum(
         initialWeights.getVars().assignmentToIntArray(subAssignment));
     int index = initialWeights.getWeights().keyNumToIndex(keyNum);
 
-    ((TensorSufficientStatistics) statistics).incrementFeatureByIndex(count, index);
+    ((TensorSufficientStatistics) gradient).incrementFeatureByIndex(count, index);
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-      if (conditionalAssignment.containsAll(getVars().getVariableNums())) {
-	  // Short-circuit the slow computation below if possible.
-	  double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
-	  incrementSufficientStatisticsFromAssignment(statistics, conditionalAssignment, multiplier);
-      } else {
-	  VariableNumMap conditionedVars = initialWeights.getVars().intersection(
-	      conditionalAssignment.getVariableNums());
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
+    if (conditionalAssignment.containsAll(getVars().getVariableNumsArray())) {
+      // Short-circuit the slow computation below if possible.
+      double multiplier = marginal.getTotalUnnormalizedProbability() * count / partitionFunction;
+      incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
+          conditionalAssignment, multiplier);
+    } else {
+      VariableNumMap conditionedVars = initialWeights.getVars().intersection(
+          conditionalAssignment.getVariableNumsArray());
 
-	  TableFactor productFactor = (TableFactor) initialWeights.product(
-	      TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
-	      .product(marginal);
+      TableFactor productFactor = (TableFactor) initialWeights.product(
+          TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
+          .product(marginal);
 
-	  Tensor productFactorWeights = productFactor.getWeights();
-	  double[] productFactorValues = productFactorWeights.getValues();
-	  int tensorSize = productFactorWeights.size();
-	  double multiplier = count / partitionFunction;
-	  TensorSufficientStatistics stats = (TensorSufficientStatistics) statistics;
-	  for (int i = 0; i < tensorSize; i++) {
-	      int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
-	      stats.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
-	  }
+      Tensor productFactorWeights = productFactor.getWeights();
+      double[] productFactorValues = productFactorWeights.getValues();
+      int tensorSize = productFactorWeights.size();
+      double multiplier = count / partitionFunction;
+      TensorSufficientStatistics tensorGradient = (TensorSufficientStatistics) gradient;
+      for (int i = 0; i < tensorSize; i++) {
+        int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
+        tensorGradient.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
       }
+    }
   }
   
   private Tensor getFeatureWeights(SufficientStatistics parameters) {

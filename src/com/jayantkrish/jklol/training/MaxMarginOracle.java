@@ -1,24 +1,19 @@
 package com.jayantkrish.jklol.training;
 
-import java.util.Iterator;
-import java.util.List;
-
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.FactorMarginalSet;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
-import com.jayantkrish.jklol.models.TableFactorBuilder;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
-import com.jayantkrish.jklol.util.AllAssignmentIterator;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
@@ -46,7 +41,8 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics subgradient, DynamicFactorGraph currentDynamicModel,
+  public double accumulateGradient(SufficientStatistics subgradient,
+      SufficientStatistics currentParameters, DynamicFactorGraph currentDynamicModel,
       Example<DynamicAssignment, DynamicAssignment> example, LogFunction log) {
 
     log.startTimer("dynamic_instantiation");
@@ -59,11 +55,11 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
     log.stopTimer("dynamic_instantiation");
 
     // Get the cost-augmented best prediction based on the current input.
-    Assignment outputAssignment = observed.removeAll(input.getVariableNums());
+    Assignment outputAssignment = observed.removeAll(input.getVariableNumsArray());
 
     log.startTimer("update_subgradient/cost_augment");
     FactorGraph costAugmentedModel = costFunction.augmentWithCosts(currentModel,
-        currentModel.getVariables().intersection(outputAssignment.getVariableNums()),
+        currentModel.getVariables().intersection(outputAssignment.getVariableNumsArray()),
         outputAssignment);
     log.stopTimer("update_subgradient/cost_augment");
 
@@ -104,11 +100,13 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
       log.startTimer("update_subgradient/increment_subgradient");
       // Convert the assignments into marginal (point) distributions in order to
       // update the parameter vector.
-      MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(conditionalOutputModel.getAllVariables(), actual, 1.0);
-      MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(conditionalCostAugmentedModel.getAllVariables(), prediction, 1.0);
+      MarginalSet actualMarginal = FactorMarginalSet.fromAssignment(
+          conditionalOutputModel.getAllVariables(), actual, 1.0);
+      MarginalSet predictedMarginal = FactorMarginalSet.fromAssignment(
+          conditionalCostAugmentedModel.getAllVariables(), prediction, 1.0);
       // Update the parameter vector
-      family.incrementSufficientStatistics(subgradient, actualMarginal, 1.0);
-      family.incrementSufficientStatistics(subgradient, predictedMarginal, -1.0);
+      family.incrementSufficientStatistics(subgradient, currentParameters, actualMarginal, 1.0);
+      family.incrementSufficientStatistics(subgradient, currentParameters, predictedMarginal, -1.0);
 
       log.stopTimer("update_subgradient/increment_subgradient");
     }
@@ -160,19 +158,15 @@ public class MaxMarginOracle implements GradientOracle<DynamicFactorGraph,
   public static class HammingCost implements CostFunction {
     public FactorGraph augmentWithCosts(FactorGraph factorGraph, VariableNumMap outputVariables, Assignment trueLabel) {
       FactorGraph augmentedGraph = factorGraph;
-      for (Integer varNum : outputVariables.getVariableNums()) {
-        List<Integer> varNumList = Ints.asList(varNum);
-        TableFactorBuilder builder = new TableFactorBuilder(outputVariables.intersection(varNumList),
-            SparseTensorBuilder.getFactory());
+      for (int varNum : outputVariables.getVariableNumsArray()) {
+        VariableNumMap curOutputVar = outputVariables.intersection(varNum);
+        Assignment curTrueAssignment = trueLabel.intersection(varNum);
+        DenseTensorBuilder costWeightsBuilder = new DenseTensorBuilder(curOutputVar.getVariableNumsArray(), curOutputVar.getVariableSizes(), Math.E);
+        costWeightsBuilder.put(curOutputVar.assignmentToIntArray(curTrueAssignment), 1.0);
 
-        Iterator<Assignment> varAssignments = new AllAssignmentIterator(outputVariables.intersection(varNumList));
-        while (varAssignments.hasNext()) {
-          builder.incrementWeight(varAssignments.next(), Math.E);
-        }
-        // Set the cost of the true label to 0. (It was multiplied by e in the loop.)
-        builder.multiplyWeight(trueLabel.intersection(varNumList), Math.exp(-1.0));
+        TableFactor costFactor = new TableFactor(curOutputVar, costWeightsBuilder.buildNoCopy());
 
-        augmentedGraph = augmentedGraph.addFactor("hamming_cost_factor-" + varNum, builder.build());
+        augmentedGraph = augmentedGraph.addFactor("hamming_cost_factor-" + varNum, costFactor);
       }
       return augmentedGraph;
     }

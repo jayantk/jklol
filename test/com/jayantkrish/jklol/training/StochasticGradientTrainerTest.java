@@ -46,7 +46,7 @@ public class StochasticGradientTrainerTest extends TestCase {
 		clique1Names = Arrays.asList("Var0", "Var1", "Var2");
 		builder.addUnreplicatedFactor("f0", DiscreteLogLinearFactor
 		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique1Names)));
-		
+
 		clique2Names = Arrays.asList("Var2", "Var3");
 		builder.addUnreplicatedFactor("f1", DiscreteLogLinearFactor
 		    .createIndicatorFactor(builder.getVariables().getVariablesByName(clique2Names)));
@@ -67,22 +67,50 @@ public class StochasticGradientTrainerTest extends TestCase {
 	}
 	
 	public void testTrainUnregularized() {
-	  runTest(new StochasticGradientTrainer(100, 9, 1.0, true, new DefaultLogFunction()));
+	  runTest(new StochasticGradientTrainer(100, 9, 1.0, true, false, new DefaultLogFunction()));
 	}
 
 	public void testTrainL2() {
-	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 0.01, true, 1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 1, true, false, 1, new DefaultLogFunction()));
 	}
 	
 	public void testTrainStochasticL2() {
-	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, 1, 0.1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, false, 1, 0.1, new DefaultLogFunction()));
+	}
+	
+	public void testTrainAdagrad() {
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 0, 0, new DefaultLogFunction()));
+	}
+
+	public void testTrainAdagradL2() {
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 1, 1, new DefaultLogFunction()));
+	}
+
+	public void testTrainAdagradStochasticL2() {
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 1, 0.1, new DefaultLogFunction()));
+	}
+
+	public void testL2Sag() {
+	  runTest(new StochasticAverageGradientOptimizer(100, 0.01, new DefaultLogFunction()));
 	}
 
 	public void testTrainL1() {
-	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, 0.1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, false, 0.1, new DefaultLogFunction()));
 	}
 	
-	private void runTest(StochasticGradientTrainer trainer) {
+	public void testTrainL2Averaged() {
+	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 0.01, true, true, 1, new DefaultLogFunction()));
+	}
+	
+	public void testTrainStochasticL2Averaged() {
+	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, true, 1, 0.1, new DefaultLogFunction()));
+	}
+
+	public void testTrainL1Averaged() {
+	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, true, 0.1, new DefaultLogFunction()));
+	}
+
+	private void runTest(GradientOptimizer trainer) {
 	  		// These assignments should have positive weight for clique 1
 		Set<Assignment> clique1PositiveAssignments = new HashSet<Assignment>();
 		clique1PositiveAssignments.add(allVariables.getVariablesByName(clique1Names)

@@ -89,6 +89,7 @@ public class Lbfgs implements GradientOptimizer {
     GradientEvaluation gradientEvaluation = null;
     for (int i = 0; i < maxIterations || maxIterations < 0; i++) {
       log.notifyIterationStart(i);
+      log.logParameters(i, initialParameters);
 
       if (gradientEvaluation == null) {
         gradientEvaluation = evaluateGradient(currentParameters, dataList,
@@ -117,8 +118,16 @@ public class Lbfgs implements GradientOptimizer {
         gradientDeltas.add(gradientDelta);
 
         scalings.add(1.0 / (pointDelta.innerProduct(gradientDelta)));
+        
+        int firstUnusedIndex = i - (numVectorsInApproximation + 1);
+        if (firstUnusedIndex >= 0) {
+          // Free up memory used by portions of the inverse Hessian
+          // approximation which are no longer used.
+          pointDeltas.set(firstUnusedIndex, null);
+          gradientDeltas.set(firstUnusedIndex, null);
+        }
       }
-      
+
       previousParameters = currentParameters.duplicate();
       previousGradient = gradient.duplicate();
 
@@ -133,6 +142,7 @@ public class Lbfgs implements GradientOptimizer {
         direction.increment(gradientDeltas.get(index), -1.0 * weight);
         weights[hessianVectorCount - (j + 1)] = weight;
       }
+
       // The assumption here is that the initial Hessian estimate is
       // the identity. Multiply direction by the Hessian estimate here
       // to pick another value.
@@ -229,7 +239,7 @@ public class Lbfgs implements GradientOptimizer {
     // regularization term.
     log.startTimer("compute_gradient_(serial)");
     GradientEvaluation evaluation = executor.mapReduce(dataList,
-        Mappers.<T>identity(), new GradientReducer<M, T>(nextModel, oracle, log));
+        Mappers.<T>identity(), new GradientReducer<M, T>(nextModel, parameters, oracle, log));
     log.stopTimer("compute_gradient_(serial)");
 
     // Normalize the objective term, then apply regularization

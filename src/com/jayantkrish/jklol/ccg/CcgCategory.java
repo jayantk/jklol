@@ -75,6 +75,10 @@ public class CcgCategory implements Serializable {
   public CcgCategory(HeadedSyntacticCategory syntax, Expression logicalForm, List<String> subjects,
       List<Integer> argumentNumbers, List<Integer> objects, List<Set<String>> variableAssignments) {
     this.syntax = Preconditions.checkNotNull(syntax);
+    // TODO: is this check really necessary? Seems useful, but could be 
+    // weird edge cases where we don't want this.
+    Preconditions.checkArgument(syntax.isCanonicalForm(),
+        "Syntactic category must be in canonical form. Got: %s", syntax);
     this.logicalForm = logicalForm;
 
     this.subjects = ImmutableList.copyOf(subjects);
@@ -82,6 +86,8 @@ public class CcgCategory implements Serializable {
     this.objects = ImmutableList.copyOf(objects);
 
     this.variableAssignments = Preconditions.checkNotNull(variableAssignments);
+    Preconditions.checkArgument(syntax.getUniqueVariables().length == variableAssignments.size(),
+        "Invalid number of assignments for syntactic category %s", syntax);
   }
 
   /**
@@ -109,8 +115,8 @@ public class CcgCategory implements Serializable {
    * @return
    */
   public static CcgCategory parseFrom(String categoryString) {
-    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE,
-        CsvParser.NULL_ESCAPE).parseLine(categoryString);
+    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(
+        categoryString);
     Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
         categoryString);
     return parseFrom(parts);
@@ -124,7 +130,7 @@ public class CcgCategory implements Serializable {
 
     Expression logicalForm = null;
     if (categoryParts[1].trim().length() > 0) {
-      logicalForm = (new ExpressionParser()).parseSingleExpression(categoryParts[1]);
+      logicalForm = ExpressionParser.lambdaCalculus().parseSingleExpression(categoryParts[1]);
     }
 
     // Create an empty assignment to each variable in the syntactic
@@ -185,12 +191,12 @@ public class CcgCategory implements Serializable {
     while (!syntax.isAtomic()) {
       HeadedSyntacticCategory argument = syntax.getArgumentType();
       argumentCats.add(argument);
-      argumentRoots.add(argument.getRootVariable());
-      argumentVariables.add(varMap.get(argument.getRootVariable()));
+      argumentRoots.add(argument.getHeadVariable());
+      argumentVariables.add(varMap.get(argument.getHeadVariable()));
       syntax = syntax.getReturnType();
       
       if (argument.getSyntax().getWithoutFeatures().isUnifiableWith(syntax.getSyntax().getWithoutFeatures())) {
-        heuristicRootVariable = argument.getRootVariable();
+        heuristicRootVariable = argument.getHeadVariable();
       }
     }
     Set<Integer> argumentRootSet = Sets.newHashSet(argumentRoots);
@@ -206,7 +212,7 @@ public class CcgCategory implements Serializable {
     }
 
     Expression body = null;
-    int argumentIndex = argumentRoots.indexOf(syntax.getRootVariable());
+    int argumentIndex = argumentRoots.indexOf(syntax.getHeadVariable());
     if (argumentIndex == -1) {
       // The head of the returned category is not one of the argument variables.
       // Try guessing a head based on syntactic unifiability.
@@ -223,7 +229,7 @@ public class CcgCategory implements Serializable {
         body = argumentVariables.get(argumentIndex);
       } else {
         while (!argument.isAtomic()) {
-          int argumentArgumentRoot = argument.getArgumentType().getRootVariable();
+          int argumentArgumentRoot = argument.getArgumentType().getHeadVariable();
           usedVariables.add(argumentArgumentRoot);
           argumentArguments.add(varMap.get(argumentArgumentRoot));
           argument = argument.getReturnType();
@@ -319,7 +325,7 @@ public class CcgCategory implements Serializable {
    * @return
    */
   public List<String> getSemanticHeads() {
-    int headSemanticVariable = syntax.getRootVariable();
+    int headSemanticVariable = syntax.getHeadVariable();
     int[] allSemanticVariables = getSemanticVariables();
     for (int i = 0; i < allSemanticVariables.length; i++) {
       if (allSemanticVariables[i] == headSemanticVariable) {
@@ -359,12 +365,11 @@ public class CcgCategory implements Serializable {
     List<UnfilledDependency> unfilledDependencies = Lists.newArrayListWithCapacity(subjects.size());
     for (int i = 0; i < subjects.size(); i++) {
       IndexedPredicate subject = new IndexedPredicate(subjects.get(i), wordIndex);
-      UnfilledDependency dep = new UnfilledDependency(subject, -1, argumentNumbers.get(i),
+      UnfilledDependency dep = new UnfilledDependency(subject, syntax, -1, argumentNumbers.get(i),
           null, objects.get(i));
 
       // Technically, this is unnecessary since removing the
-      // possibility of pre-filled dependencies. TODO: add back
-      // pre-filled dependencies.
+      // possibility of pre-filled dependencies.
       if (dep.isFilledDependency()) {
         filledDependencies.add(dep);
       } else {
@@ -376,7 +381,8 @@ public class CcgCategory implements Serializable {
 
   @Override
   public String toString() {
-    return getSemanticHeads() + ":" + syntax.toString();
+    return getSemanticHeads() + ":" + syntax.toString() + " " + 
+        (logicalForm != null ? logicalForm : "");
   }
 
   @Override

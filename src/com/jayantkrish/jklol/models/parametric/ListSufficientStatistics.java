@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.models.parametric;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -15,14 +14,14 @@ import com.jayantkrish.jklol.util.IndexedList;
  */
 public class ListSufficientStatistics implements SufficientStatistics {
 
-  private static final long serialVersionUID = -2707053902775908672L;
+  private static final long serialVersionUID = -2L;
 
   // Names for the statistics.
   private final IndexedList<String> names;
 
-  // Note that the statistics in the list are mutable, but elements
-  // cannot be added or removed from the list.
-  private final ImmutableList<SufficientStatistics> statistics;
+  // Note that the statistics in the list are mutable, but
+  // the size of the list cannot change.
+  private final List<SufficientStatistics> statistics;
 
   /**
    * Creates a collection of sufficient statistics containing all of the
@@ -36,7 +35,13 @@ public class ListSufficientStatistics implements SufficientStatistics {
     Preconditions.checkNotNull(statistics);
     Preconditions.checkArgument(names.size() == statistics.size());
     this.names = IndexedList.create(names);
-    this.statistics = ImmutableList.copyOf(statistics);
+    this.statistics = Lists.newArrayList(statistics);
+  }
+
+  public ListSufficientStatistics(IndexedList<String> names, List<SufficientStatistics> statistics) {
+    Preconditions.checkArgument(names.size() == statistics.size());
+    this.names = names;
+    this.statistics = Lists.newArrayList(statistics);
   }
 
   /**
@@ -121,9 +126,16 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
   
   @Override
-  public void softThreshold(double regularizer) {
+  public void softThreshold(double threshold) {
     for (int i = 0; i < statistics.size(); i++) {
-      statistics.get(i).softThreshold(regularizer);
+      statistics.get(i).softThreshold(threshold);
+    }
+  }
+  
+  @Override
+  public void findEntriesLargerThan(double threshold) {
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).findEntriesLargerThan(threshold);
     }
   }
   
@@ -149,7 +161,7 @@ public class ListSufficientStatistics implements SufficientStatistics {
     }
     return value;
   }
-  
+
   @Override
   public double getL2Norm() {
     double norm = 0.0;
@@ -170,7 +182,80 @@ public class ListSufficientStatistics implements SufficientStatistics {
       statistic.makeDense();
     }
   }
-  
+
+  @Override
+  public void zeroOut() {
+    for (SufficientStatistics statistic : statistics) {
+      statistic.zeroOut();
+    }
+  }
+
+  @Override
+  public void incrementSquare(SufficientStatistics other, double multiplier) {
+    Preconditions.checkNotNull(other);
+    Preconditions.checkArgument(other instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics otherList = (ListSufficientStatistics) other;
+    Preconditions.checkArgument(otherList.statistics.size() == statistics.size());
+
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).incrementSquare(otherList.statistics.get(i), multiplier);
+    }
+  }
+
+  @Override
+  public void incrementSquareAdagrad(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, double regularization) {
+    Preconditions.checkNotNull(gradient);
+    Preconditions.checkArgument(gradient instanceof ListSufficientStatistics);
+    Preconditions.checkNotNull(currentParameters);
+    Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics gradientList = (ListSufficientStatistics) gradient;
+    Preconditions.checkArgument(gradientList.statistics.size() == statistics.size());
+    ListSufficientStatistics parametersList = (ListSufficientStatistics) currentParameters;
+    Preconditions.checkArgument(parametersList.statistics.size() == statistics.size());
+    
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).incrementSquareAdagrad(gradientList.statistics.get(i),
+          parametersList.statistics.get(i), regularization);
+    }
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(SufficientStatistics other, double constant,
+      double multiplier) {
+    Preconditions.checkNotNull(other);
+    Preconditions.checkArgument(other instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics otherList = (ListSufficientStatistics) other;
+    Preconditions.checkArgument(otherList.statistics.size() == statistics.size());
+
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).multiplyInverseAdagrad(otherList.statistics.get(i),
+          constant, multiplier);
+    }
+  }
+
+  @Override
+  public void incrementAdagrad(SufficientStatistics gradient, SufficientStatistics sumSquares,
+      double multiplier) {
+    Preconditions.checkNotNull(gradient);
+    Preconditions.checkArgument(gradient instanceof ListSufficientStatistics);
+    Preconditions.checkNotNull(sumSquares);
+    Preconditions.checkArgument(sumSquares instanceof ListSufficientStatistics);
+
+    ListSufficientStatistics gradientList = (ListSufficientStatistics) gradient;
+    Preconditions.checkArgument(gradientList.statistics.size() == statistics.size());
+    ListSufficientStatistics squareList = (ListSufficientStatistics) sumSquares;
+    Preconditions.checkArgument(squareList.statistics.size() == statistics.size());
+
+    for (int i = 0; i < statistics.size(); i++) {
+      statistics.get(i).incrementAdagrad(gradientList.statistics.get(i),
+          squareList.statistics.get(i), multiplier);
+    }
+  }
+
   @Override
   public String getDescription() {
     StringBuilder sb = new StringBuilder();

@@ -15,6 +15,8 @@ import com.google.common.base.Preconditions;
 public class CcgSearchMove implements Serializable {
   private static final long serialVersionUID = 1L;
 
+  // The operations which this search move combines into
+  // a single operation.
   private final Combinator binaryCombinator;
   private final UnaryCombinator leftUnary;
   private final UnaryCombinator rightUnary;
@@ -24,11 +26,18 @@ public class CcgSearchMove implements Serializable {
   private final long rightUnaryKeyNum;
 
   private final int[] leftRelabeling;
+  private final int[] leftInverseRelabeling;
+  private final int[] leftToReturnInverseRelabeling;
+  private final int[] leftDepRelabeling;
   private final int[] rightRelabeling;
-
+  private final int[] rightInverseRelabeling;
+  private final int[] rightToReturnInverseRelabeling;
+  private final int[] rightDepRelabeling;
+  
   public CcgSearchMove(Combinator binaryCombinator, UnaryCombinator leftUnary, UnaryCombinator rightUnary,
       long binaryCombinatorKeyNum, long leftUnaryKeyNum, long rightUnaryKeyNum, int[] leftRelabeling,
-      int[] rightRelabeling) {
+      int[] leftInverseRelabeling, int[] leftToReturnInverseRelabeling, int[] leftDepRelabeling, int[] rightRelabeling,
+      int[] rightInverseRelabeling, int[] rightToReturnInverseRelabeling, int[] rightDepRelabeling) {
     this.binaryCombinator = Preconditions.checkNotNull(binaryCombinator);
     this.leftUnary = leftUnary;
     this.rightUnary = rightUnary;
@@ -37,42 +46,73 @@ public class CcgSearchMove implements Serializable {
     this.rightUnaryKeyNum = rightUnaryKeyNum;
 
     this.leftRelabeling = Preconditions.checkNotNull(leftRelabeling);
+    this.leftInverseRelabeling = Preconditions.checkNotNull(leftInverseRelabeling);
+    this.leftToReturnInverseRelabeling = Preconditions.checkNotNull(leftToReturnInverseRelabeling);
+    this.leftDepRelabeling = Preconditions.checkNotNull(leftDepRelabeling);
     this.rightRelabeling = Preconditions.checkNotNull(rightRelabeling);
+    this.rightInverseRelabeling = Preconditions.checkNotNull(rightInverseRelabeling);
+    this.rightToReturnInverseRelabeling = Preconditions.checkNotNull(rightToReturnInverseRelabeling);
+    this.rightDepRelabeling = Preconditions.checkNotNull(rightDepRelabeling);
 
+    Preconditions.checkArgument(leftInverseRelabeling.length == rightInverseRelabeling.length);
     Preconditions.checkArgument(leftUnary != null || leftUnaryKeyNum == -1);
     Preconditions.checkArgument(rightUnary != null || rightUnaryKeyNum == -1);
   }
 
-  public Combinator getBinaryCombinator() {
+  public final Combinator getBinaryCombinator() {
     return binaryCombinator;
   }
 
-  public UnaryCombinator getLeftUnary() {
+  public final UnaryCombinator getLeftUnary() {
     return leftUnary;
   }
 
-  public UnaryCombinator getRightUnary() {
+  public final UnaryCombinator getRightUnary() {
     return rightUnary;
   }
 
-  public long getBinaryCombinatorKeyNum() {
+  public final long getBinaryCombinatorKeyNum() {
     return binaryCombinatorKeyNum;
   }
 
-  public long getLeftUnaryKeyNum() {
+  public final long getLeftUnaryKeyNum() {
     return leftUnaryKeyNum;
   }
 
-  public long getRightUnaryKeyNum() {
+  public final long getRightUnaryKeyNum() {
     return rightUnaryKeyNum;
   }
 
-  public int[] getLeftRelabeling() {
+  public final int[] getLeftRelabeling() {
     return leftRelabeling;
   }
+  
+  public final int[] getLeftInverseRelabeling() {
+    return leftInverseRelabeling;
+  }
+  
+  public final int[] getLeftToReturnInverseRelabeling() {
+    return leftToReturnInverseRelabeling;
+  }
+  
+  public final int[] getLeftDepRelabeling() {
+    return leftDepRelabeling;
+  }
 
-  public int[] getRightRelabeling() {
+  public final int[] getRightRelabeling() {
     return rightRelabeling;
+  }
+
+  public final int[] getRightInverseRelabeling() {
+    return rightInverseRelabeling;
+  }
+  
+  public final int[] getRightToReturnInverseRelabeling() {
+    return rightToReturnInverseRelabeling;
+  }
+  
+  public final int[] getRightDepRelabeling() {
+    return rightDepRelabeling;
   }
 
   @Override

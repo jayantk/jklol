@@ -35,8 +35,8 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     VariableNumMap vars = f.getVariables().getVariablesByName(Arrays.asList("Var0", "Var1"));
     TableFactorBuilder tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < numValues; i++) {
-      Assignment a = new Assignment(vars.getVariableNums(), 
-          Arrays.asList(new Integer[] {i, (numValues - 1) - i}));
+      Assignment a = Assignment.fromSortedArrays(vars.getVariableNumsArray(),
+          new Integer[] {i, (numValues - 1) - i}); 
       tfBuilder.setWeight(a, 1.0);
     }
     factor1 = tfBuilder.build();
@@ -45,8 +45,7 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1", "Var2"));
     tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < numValues; i++) {
-      Assignment a = new Assignment(vars.getVariableNums(), 
-          Arrays.asList(new Integer[] {i, i}));
+      Assignment a = Assignment.fromSortedArrays(vars.getVariableNumsArray(), new Integer[] {i, i});
       tfBuilder.setWeight(a, 1.0);
     }
     factor2 = tfBuilder.build();
@@ -55,8 +54,8 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var2"));
     tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < 1000; i++) {
-      Assignment a = new Assignment(vars.getVariableNums(), 
-          Arrays.asList(new Integer[] {i}));
+      Assignment a = Assignment.fromSortedArrays(vars.getVariableNumsArray(),
+          new Integer[] {i});
       tfBuilder.setWeight(a, 1.0);
     }
     factor3 = tfBuilder.build();
@@ -65,8 +64,8 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1"));
     tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < 10; i++) {
-      Assignment a = new Assignment(vars.getVariableNums(), 
-          Arrays.asList(new Integer[] {i * 100}));
+      Assignment a = Assignment.fromSortedArrays(vars.getVariableNumsArray(), 
+          new Integer[] {i * 100});
       tfBuilder.setWeight(a, 1.0);
     }
     factor4 = tfBuilder.build();
@@ -74,8 +73,8 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
     vars = f.getVariables().getVariablesByName(Arrays.asList("Var1", "Var2"));
     tfBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < 500000; i++) {
-      Assignment a = new Assignment(vars.getVariableNums(), 
-          Arrays.asList(new Integer[] {i / 50, i % 50}));
+      Assignment a = Assignment.fromSortedArrays(vars.getVariableNumsArray(), 
+          new Integer[] {i / 50, i % 50});
       tfBuilder.setWeight(a, 1.0);
     }
     factor5 = tfBuilder.build();
@@ -159,8 +158,8 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
   @PerformanceTest
   public void testConditionalMarginals() {
     try {
-      FactorGraph c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0}),
-          Arrays.asList(new Object[] {0})));
+      FactorGraph c = f.conditional(Assignment.fromSortedArrays(new int[] {0},
+          new Object[] {0}));
       t.computeMarginals(c);
     } catch (ZeroProbabilityError e) {
       // This exception should be thrown.
@@ -179,12 +178,13 @@ public class JunctionTreePerformanceTest extends PerformanceTestCase {
   
   @PerformanceTest(1)
   public void testSingleFactorCliqueTree() {
-    new JunctionTree.CliqueTree(FactorGraph.createFromFactors(Arrays.<Factor>asList(factor1)));
+    JunctionTree.CliqueTree.fromHeuristicVariableElimination(FactorGraph.createFromFactors(
+        Arrays.<Factor>asList(factor1)));
   }
 
   @PerformanceTest
   public void testConditional() {
-    factor2.conditional(new Assignment(Arrays.asList(0), Arrays.asList(0)));
+    factor2.conditional(new Assignment(0, 0));
   }	
 
   public static void main(String[] args) {

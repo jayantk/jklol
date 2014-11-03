@@ -148,12 +148,12 @@ public abstract class WeightedRelationFactor extends AbstractFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
-    if (!getVars().containsAny(assignment.getVariableNums())) {
+    if (!getVars().containsAny(assignment.getVariableNumsArray())) {
       return this;
     }
 
     Factor toReturn = this;
-    VariableNumMap toEliminate = getVars().intersection(assignment.getVariableNums());
+    VariableNumMap toEliminate = getVars().intersection(assignment.getVariableNumsArray());
     if (toEliminate.containsAny(domainVariable)) {
       toReturn = toReturn.product(DiscreteObjectFactor.pointDistribution(domainVariable,
           assignment.intersection(domainVariable)));

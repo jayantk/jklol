@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.sequence;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 
 /**
@@ -14,7 +15,9 @@ import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 public interface SequenceTagger<I, O> {
 
   FeatureVectorGenerator<LocalContext<I>> getFeatureGenerator();
-  
+
+  Function<? super LocalContext<I>, ? extends Object> getInputGenerator();
+
   TaggedSequence<I, O> tag(List<I> input);
   
   /**

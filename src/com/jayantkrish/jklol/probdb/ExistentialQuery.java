@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.probdb;
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.ArrayUtils;
@@ -28,7 +27,7 @@ public class ExistentialQuery extends AbstractQuery {
   public TableAssignment evaluate(DbAssignment db) {
     TableAssignment subAssignment = subQuery.evaluate(db);
     
-    VariableNumMap resultVars = subAssignment.getVariables().removeAll(Ints.asList(varsToEliminate));
+    VariableNumMap resultVars = subAssignment.getVariables().removeAll(varsToEliminate);
     Tensor resultIndicators = subAssignment.getIndicators().maxOutDimensions(varsToEliminate);
     return new TableAssignment(resultVars, resultIndicators);
   }  

@@ -6,8 +6,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A LISP-style S-expression.
- * 
+ * A LISP-style S-expression representing a lambda calculus
+ * statement for a second-order logic. The logic includes
+ * both existential and universal quantifiers, and lambda
+ * expressions for defining functions. 
+ *  
  * @author jayantk
  */
 public interface Expression extends Serializable {
@@ -21,6 +24,13 @@ public interface Expression extends Serializable {
    */
   Set<ConstantExpression> getFreeVariables();
 
+  /**
+   * Gets the set of unbound variables in this expression and 
+   * adds them to {@code accumulator}. Also see
+   * {@link #getFreeVariables()}.
+   *  
+   * @param accumulator
+   */
   void getFreeVariables(Set<ConstantExpression> accumulator);
 
   /**
@@ -44,8 +54,25 @@ public interface Expression extends Serializable {
    */
   List<ConstantExpression> getLocallyBoundVariables();
 
+  /**
+   * Creates a new expression by replacing every occurrence of
+   * {@code variable} in this expression with {@code replacement}. 
+   * 
+   * @param variable
+   * @param replacement
+   * @return
+   */
   Expression renameVariable(ConstantExpression variable, ConstantExpression replacement);
 
+  /**
+   * Creates a new expression by replacing every variable from
+   * {@code variables} in this expression with the variable at
+   * the corresponding index in {@code replacements}. 
+   * 
+   * @param variable
+   * @param replacement
+   * @return
+   */
   Expression renameVariables(List<ConstantExpression> variables, List<ConstantExpression> replacements);
   
   /**
@@ -89,6 +116,16 @@ public interface Expression extends Serializable {
    * @return
    */
   boolean functionallyEquals(Expression expression);
+
+  /**
+   * Returns the type specification of this expression. Returns
+   * {@code null} if this expression is not well-typed, or the
+   * expression is untyped.
+   * 
+   * @param context
+   * @return
+   */
+  Type getType(TypeContext context);
 
   @Override
   int hashCode();

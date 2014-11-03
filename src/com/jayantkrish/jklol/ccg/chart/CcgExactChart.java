@@ -1,11 +1,12 @@
 package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.Arrays;
-import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * CCG chart for performing exact inference.
@@ -17,15 +18,14 @@ public class CcgExactChart extends AbstractCcgChart {
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
   private final int[][] chartSizes;
-
-  private final ChartFilter entryFilter;
+  
+  private int totalChartSize;
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 100;
 
-  public CcgExactChart(List<String> terminals, List<String> posTags,
-      int[] wordDistances, int[] puncDistances, int[] verbDistances, ChartFilter entryFilter) {
-    super(terminals, posTags, wordDistances, puncDistances, verbDistances, entryFilter);
-    int numTerminals = terminals.size();
+  public CcgExactChart(SupertaggedSentence input, int maxChartSize) {
+    super(input, maxChartSize);
+    int numTerminals = input.size();
     this.chart = new ChartEntry[numTerminals][numTerminals][];
     this.probabilities = new double[numTerminals][numTerminals][];
     this.chartSizes = new int[numTerminals][numTerminals];
@@ -38,8 +38,7 @@ public class CcgExactChart extends AbstractCcgChart {
         chartSizes[spanStart][spanEnd] = 0;
       }
     }
-
-    this.entryFilter = entryFilter;
+    totalChartSize = 0;
   }
 
   /**
@@ -49,11 +48,9 @@ public class CcgExactChart extends AbstractCcgChart {
    * @param spanStart
    * @param spanEnd
    * @param parser
-   * @param syntaxVarType
    * @return
    */
-  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd,
-      CcgParser parser, DiscreteVariable syntaxVarType) {
+  public CcgParse decodeBestParseForSpan(int spanStart, int spanEnd, CcgParser parser) {
     double maxProb = -1;
     int maxEntryIndex = -1;
     double[] probs = getChartEntryProbsForSpan(spanStart, spanEnd);
@@ -68,8 +65,13 @@ public class CcgExactChart extends AbstractCcgChart {
       // No parses.
       return null;
     } else {
-      return decodeParseFromSpan(spanStart, spanEnd, maxEntryIndex, parser, syntaxVarType);
+      return decodeParseFromSpan(spanStart, spanEnd, maxEntryIndex, parser);
     }
+  }
+
+  @Override
+  public CcgParse decodeBestParse(CcgParser parser) {
+    return decodeBestParseForSpan(0, size() - 1, parser);
   }
 
   @Override
@@ -86,19 +88,36 @@ public class CcgExactChart extends AbstractCcgChart {
   public int getNumChartEntriesForSpan(int spanStart, int spanEnd) {
     return chartSizes[spanStart][spanEnd];
   }
+  
+  @Override
+  public IntMultimap getChartEntriesBySyntacticCategoryForSpan(int spanStart, int spanEnd) {
+    return aggregateBySyntacticType(chart[spanStart][spanEnd], getNumChartEntriesForSpan(spanStart, spanEnd));
+  }
+
+  @Override
+  public int getTotalNumChartEntries() {
+    return totalChartSize;
+  }
 
   @Override
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
-    if (probability != 0.0 && (entryFilter == null || entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType))) {
+    if (entryFilter != null) {
+      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType));
+    }
+
+    if (probability != 0.0) {
       int entryHeadedSyntax = entry.getHeadedSyntax();
+      long entryHashCode = entry.getSyntaxHeadHashCode();
 
       int spanSize = chartSizes[spanStart][spanEnd];
       ChartEntry[] spanChart = chart[spanStart][spanEnd];
       double[] spanProbs = probabilities[spanStart][spanEnd];
       for (int i = 0; i < spanSize; i++) {
         ChartEntry other = spanChart[i];
-        if (other.getHeadedSyntax() == entryHeadedSyntax && longMultisetsEqual(entry.getUnfilledDependencies(), other.getUnfilledDependencies())
+        if (other.getSyntaxHeadHashCode() == entryHashCode 
+            && other.getHeadedSyntax() == entryHeadedSyntax
+            && longMultisetsEqual(entry.getUnfilledDependencies(), other.getUnfilledDependencies())
             && longMultisetsEqual(entry.getAssignments(), other.getAssignments())) {
           // Both entries have the same syntactic category and
           // semantics. Retain the entry with the highest probability.
@@ -106,13 +125,8 @@ public class CcgExactChart extends AbstractCcgChart {
             // New entry better than old entry. Replace it.
             spanChart[i] = entry;
             spanProbs[i] = probability;
-          } else {
-            // The chart contains at most one entry with each
-            // syntactic category and semantics. Hence, this entry
-            // cannot be added since the chart already has a better
-            // entry.
-            return;
-          }
+          } 
+          return;
         }
       }
 
@@ -126,15 +140,22 @@ public class CcgExactChart extends AbstractCcgChart {
 
       chart[spanStart][spanEnd][spanSize] = entry;
       probabilities[spanStart][spanEnd][spanSize] = probability;
-      chartSizes[spanStart][spanEnd] = spanSize + 1;
+      chartSizes[spanStart][spanEnd] += 1;
+      totalChartSize += 1;
     }
   }
 
   @Override
   public void clearChartEntriesForSpan(int spanStart, int spanEnd) {
+    totalChartSize -= chartSizes[spanStart][spanEnd];
     chartSizes[spanStart][spanEnd] = 0;
     // This second part is unnecessary, but makes debugging easier.
     Arrays.fill(chart[spanStart][spanEnd], null);
+  }
+
+  @Override
+  public void doneAddingChartEntriesForSpan(int spanStart, int spanEnd) {
+    // No work needs to be done.
   }
 
   /**

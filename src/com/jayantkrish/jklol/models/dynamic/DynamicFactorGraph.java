@@ -3,12 +3,13 @@ package com.jayantkrish.jklol.models.dynamic;
 import java.io.Serializable;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -43,6 +44,14 @@ public class DynamicFactorGraph implements Serializable {
   public DynamicVariableSet getVariables() {
     return variables;
   }
+  
+  public List<PlateFactor> getPlateFactors() {
+    return plateFactors;
+  }
+
+  public List<String> getFactorNames() {
+    return factorNames;
+  }
 
   public static DynamicFactorGraph fromFactorGraph(FactorGraph factorGraph) {
     DynamicVariableSet variables = DynamicVariableSet.fromVariables(factorGraph.getVariables());
@@ -61,8 +70,13 @@ public class DynamicFactorGraph implements Serializable {
   }
 
   public FactorGraph getFactorGraph(DynamicAssignment assignment) {
+    LogFunction log = LogFunctions.getLogFunction();
+    
+    log.startTimer("instantiate_variables");
     VariableNumMap factorGraphVariables = variables.instantiateVariables(assignment);
+    log.stopTimer("instantiate_variables");
 
+    log.startTimer("instantiate_factors");
     // Instantiate factors.
     List<Factor> factors = Lists.newArrayList();
     List<String> instantiatedNames = Lists.newArrayList();
@@ -75,9 +89,13 @@ public class DynamicFactorGraph implements Serializable {
         instantiatedNames.add(factorNames.get(i) + "-" + j);
       }
     }
+    log.stopTimer("instantiate_factors");
 
-    return new FactorGraph(factorGraphVariables, factors, instantiatedNames,
-        VariableNumMap.emptyMap(), Assignment.EMPTY);
+    log.startTimer("create_factor_graph");
+    FactorGraph factorGraph = new FactorGraph(factorGraphVariables, factors.toArray(new Factor[0]),
+        instantiatedNames.toArray(new String[0]), VariableNumMap.EMPTY, Assignment.EMPTY, null);
+    log.stopTimer("create_factor_graph");
+    return factorGraph; 
   }
 
   public DynamicFactorGraph addPlateFactors(List<PlateFactor> factors, List<String> newFactorNames) {
@@ -87,10 +105,20 @@ public class DynamicFactorGraph implements Serializable {
     allNames.addAll(newFactorNames);
     return new DynamicFactorGraph(getVariables(), allFactors, allNames);
   }
-  
+
+  /**
+   * Gets the factor in this factor graph with the given {@code name}.
+   * Returns {@code null} if no factor is called {@code name}.
+   *  
+   * @param name
+   * @return
+   */
   public PlateFactor getFactorByName(String name) {
     int index = factorNames.indexOf(name);
-    Preconditions.checkArgument(index != -1);
-    return plateFactors.get(index);
+    if (index == -1) {
+      return null;
+    } else {
+      return plateFactors.get(index);
+    }
   }
 }

@@ -48,14 +48,14 @@ public class LinearClassifierFactorTest extends TestCase {
   }
   
   public void testGetUnnormalizedProbability() {
-    Assignment a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "A"));
+    Assignment a = Assignment.fromSortedArrays(new int[] {1, 2}, new Object[] {input, "A"});
     assertEquals(8.0, Math.log(factor.getUnnormalizedProbability(a)), 0.001);
-    a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "C"));
+    a = Assignment.fromSortedArrays(new int[] {1, 2}, new Object[] {input, "C"});
     assertEquals(14.0, Math.log(factor.getUnnormalizedProbability(a)), 0.001);
   }
   
   public void testGetUnnormalizedProbabilityInvalid() {
-    Assignment a = new Assignment(Ints.asList(2), Arrays.asList("A"));
+    Assignment a = Assignment.fromSortedArrays(new int[] {2}, new Object[] {"A"});
     try {
       factor.getUnnormalizedProbability(a);
     } catch (IllegalArgumentException e) {
@@ -65,33 +65,35 @@ public class LinearClassifierFactorTest extends TestCase {
   }
   
   public void testConditional() {
-    Assignment a = new Assignment(Ints.asList(1), Arrays.asList(input));
+    Assignment a = Assignment.fromSortedArrays(new int[] {1}, new Object[] {input});
     Factor output = factor.conditional(a);
     assertEquals(8.0, Math.log(output.getUnnormalizedProbability("A")), 0.001);
     assertEquals(11.0, Math.log(output.getUnnormalizedProbability("B")), 0.001);
     assertEquals(14.0, Math.log(output.getUnnormalizedProbability("C")), 0.001);
     assertEquals(17.0, Math.log(output.getUnnormalizedProbability("D")), 0.001);
-        
-    a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "A"));
+
+    a = Assignment.fromSortedArrays(new int[] {1, 2}, new Object[] {input, "A"});
+    assertEquals(8.0, Math.log(factor.getUnnormalizedProbability(a)), 0.001);
     output = factor.conditional(a);
     assertEquals(0, output.getVars().size());
     assertEquals(8.0, Math.log(output.getUnnormalizedProbability(Assignment.EMPTY)), 0.001);
   }
   
   public void testConditionalNormed() {
-    Assignment a = new Assignment(Ints.asList(1), Arrays.asList(input));
+    Assignment a = Assignment.fromSortedArrays(new int[] {1}, new Object[] {input});
     Factor output = normedFactor.conditional(a);
     assertEquals(-0.051, Math.log(output.getUnnormalizedProbability("D")), 0.001);
     assertEquals(1.0, output.getTotalUnnormalizedProbability(), .001);
         
-    a = new Assignment(Ints.asList(1, 2), Arrays.asList(input, "D"));
+    a = Assignment.fromSortedArrays(new int[] {1, 2}, new Object[] {input, "D"});
+    assertEquals(-0.051, Math.log(normedFactor.getUnnormalizedProbability(a)), 0.001);
     output = normedFactor.conditional(a);
     assertEquals(0, output.getVars().size());
     assertEquals(-0.051, Math.log(output.getUnnormalizedProbability(Assignment.EMPTY)), 0.001);
   }
   
   public void testConditionalInvalid() {
-    Assignment a = new Assignment(Ints.asList(2), Arrays.asList("A"));
+    Assignment a = Assignment.fromSortedArrays(new int[] {2}, new Object[] {"A"});
     try {
       factor.conditional(a);
     } catch (IllegalArgumentException e) {

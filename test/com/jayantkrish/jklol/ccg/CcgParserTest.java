@@ -14,16 +14,18 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.NullOutputStream;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.chart.CcgChart;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.chart.ChartFilter;
-import com.jayantkrish.jklol.ccg.chart.SyntacticChartFilter.DefaultCompatibilityFunction;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartFilter;
+import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
+import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -36,14 +38,15 @@ import com.jayantkrish.jklol.util.Assignment;
 
 public class CcgParserTest extends TestCase {
 
-  CcgParser parser, parserWithComposition, parserWithUnary,
-      parserWithUnaryAndComposition, parserWordSkip;
+  CcgParser parser, parserWithComposition, parserWithCompositionNormalForm,
+  parserWithUnary,parserWithUnaryAndComposition, parserWordSkip;
 
-  ExpressionParser exp;
+  ExpressionParser<Expression> exp;
 
   private static final String[] lexicon = { "i,N{0},i,0 i",
       "people,N{0},people,0 people",
       "berries,N{0},berries,0 berries",
+      "apple,N{0},apple,0 apple",
       "houses,N{0},houses,0 houses",
       "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2",
       "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
@@ -57,7 +60,8 @@ public class CcgParserTest extends TestCase {
       "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},,0 almost,almost 1 2",
       "is,((S[b]{0}\\N{1}){0}/N{2}){0},,0 is,is 1 1, is 2 2",
       "directed,((S[b]{0}\\N{1}){0}/N{2}){0},,0 directed,directed 1 2,directed 2 1",
-      ";,;{0},;,0 ;", "or,conj{0},word:or,0 or",
+      ";,;{0},;,0 ;",
+      "or,conj{0},word:or,0 or",
       "about,(NP{0}/(S[1]{1}\\N{2}){1}){0},,0 about,about 1 1",
       "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},,0 eat,eat 1 1,eat 2 2",
       "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},,0 rapidly,rapidly 1 1",
@@ -69,9 +73,14 @@ public class CcgParserTest extends TestCase {
       "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0",
       "blue,N{0},blue,0 blue",
       "blue,(N{0}/N{0}){1},blue,0 blue",
-      "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1" };
+      "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
+      "a,(NP{1}/N{1}){0},,0 a,a 1 1",
+      "unk-nn,N{0},,0 unk-nn",
+      "#,#{0},#,0 #"};
+  
+  private static final String DEFAULT_POS = ParametricCcgParser.DEFAULT_POS_TAG;
 
-  private static final double[] weights = { 0.5, 1.0, 1.0, 1.0,
+  private static final double[] weights = { 0.5, 1.0, 1.0, 1.0, 1.0,
       0.3, 1.0, 1.0,
       1.0, 1.0,
       1.0, 1.0,
@@ -80,26 +89,42 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
+      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 3.0, 1.0};
 
   private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
-      "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x)))))",
-      "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2}",
-      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"special:compound 1 0\",\"special:compound 2 1\"" };
+      "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x))))),CONJUNCTION",
+      "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2},,CONJUNCTION",
+      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"OTHER\",\"special:compound 1 0\",\"special:compound 2 1\"",
+      "#{5} N{1} (N{0}\\N{0}){1},(lambda $C $R (lambda $L (lambda x (exists y (and ($L x) ($R y) (compound y x)))))),OTHER,special:compound 1 0,special:compound 2 1"
+  };
 
   private static final String[] unaryRuleArray = { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
-      "N{0} (N{1}/N{1}){0}", "((S[0]{0}\\N{1}){0}/N{2}){0} ((S[0]{0}/NP{1}){0}/NP{2}){0}" };
+      "N{0} (N{1}/N{1}){0}", "((S[0]{0}\\N{1}){0}/N{2}){0} ((S[0]{0}/NP{1}){0}/NP{2}){0}",
+      "(S[ng]{0}\\N{1}){0} (N{2}\\N{2}){0}"};
 
   // Syntactic CCG weights to set. All unlisted combinations get
-  // weight 1.0, all
-  // listed combinations get weight 1.0 + given weight
+  // weight 1.0, all listed combinations get weight 1.0 + given weight
   private static final String[][] syntacticCombinations = {
       { "(N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0}", "(S[b]{2}\\N{1}){2}" },
       { "(NP{0}/(S[1]{1}\\N{2}){1}){0}", "((S[ng]{0}\\N{1}){0}/N{2}){0}" },
   };
   private static final double[] syntacticCombinationWeights = {
       2.0, -0.75
+  };
+  
+  private static final String[][] dependencyCombinations = {
+    {"eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", "2", "berries", DEFAULT_POS, DEFAULT_POS},
+    {"eat", "((S[ng]{0}\\N{1}){0}/N{2}){0}", "2", "berries", DEFAULT_POS, DEFAULT_POS},
+    {"quickly", "(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0}", "1", "eat", DEFAULT_POS, DEFAULT_POS},
+    {"in", "((N{1}\\N{1}){0}/N{2}){0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
+    {"special:compound", "N{0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
+    {"green_(N{0}/N{0}){1}", "(N{1}/N{1}){0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
+    {"tasty", "(N{1}/N{1}){0}", "1", "berries", "JJ", "NN"}
+  };
+
+  private static final double[] dependencyWeightIncrements = {
+    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0
   };
 
   private VariableNumMap terminalVar;
@@ -108,27 +133,69 @@ public class CcgParserTest extends TestCase {
   private VariableNumMap posTagVar;
   private VariableNumMap terminalSyntaxVar;
 
-  private VariableNumMap semanticHeadVar;
-  private VariableNumMap semanticArgNumVar;
-  private VariableNumMap semanticArgVar;
+  private VariableNumMap semanticHeadVar, semanticSyntaxVar, semanticArgNumVar,
+  semanticArgVar, semanticHeadPosVar, semanticArgPosVar;
 
   public void setUp() {
-    parser = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, false);
-    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false);
-    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false, false);
+    parser = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, false, false);
+    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false, false);
+    parserWithCompositionNormalForm = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false, true);
+    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false, false, false);
     parserWithUnaryAndComposition = parseLexicon(lexicon, binaryRuleArray,
-        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, true, false);
+        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, true, false, false);
 
-    parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true);
+    parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true, false);
 
-    exp = new ExpressionParser();
+    exp = ExpressionParser.lambdaCalculus();
+  }
+  
+  public void testLexiconPosBackoff() {
+    // test that backoff occurs for out-of-lexicon words.
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("NOT_IN_LEXICON"), Arrays.asList("NN"), 10);
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    assertEquals(6.0, parse.getSubtreeProbability());
+    assertEquals("N", parse.getSyntacticCategory().getValue());
+    assertEquals(Arrays.asList("unk-nn"), parse.getLexiconTriggerWords());
+    assertEquals(Arrays.asList("unk-nn"), parse.getSpannedLexiconEntries().get(0).getWords());
+    
+    // No backoff should happen if the word is in the lexicon.
+    parses = beamSearch(parser, Arrays.asList("a"), Arrays.asList("NN"), 10);
+    assertEquals(1, parses.size());
+    parse = parses.get(0);
+    assertEquals(1.0, parse.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
+    assertEquals(Arrays.asList("a"), parse.getLexiconTriggerWords());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getWords());
+
+    // Capitalization doesn't affect whether the word is in the lexicon or not.
+    parses = beamSearch(parser, Arrays.asList("A"), Arrays.asList("NN"), 10);
+    assertEquals(1, parses.size());
+    parse = parses.get(0);
+    assertEquals(1.0, parse.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
+    assertEquals(Arrays.asList("a"), parse.getLexiconTriggerWords());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getWords());
+  }
+
+  public void testSyntacticCategoryBackoff() {
+    // Test that word / syntactic category weights work.
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("blue"), 10);
+    assertEquals(2, parses.size());
+    CcgParse best = parses.get(0);
+    assertEquals(3.0, best.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("N"), best.getSyntacticCategory());
+    
+    CcgParse second = parses.get(1);
+    assertEquals(1.0, second.getSubtreeProbability());
+    assertEquals(SyntacticCategory.parseFrom("N/N"), second.getSyntacticCategory());
   }
 
   public void testBeamSearch() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
-    // CcgParse parse = parser.parse(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
+    // CcgParse parse = parse(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
     
     System.out.println(parse.getAllDependencies());
 
@@ -156,7 +223,7 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testExactParse() {
-    CcgParse parse = parser.parse(Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
+    CcgParse parse = parse(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
 
     System.out.println(parse.getAllDependencies());
 
@@ -184,7 +251,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBeamSearch2() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 10);
 
     for (CcgParse parse : parses) {
@@ -229,7 +296,7 @@ public class CcgParserTest extends TestCase {
   }
   
   public void testExactParse2() {
-    CcgParse parse = parser.parse(
+    CcgParse parse = parse(parser, 
         Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"));
 
     // The parse where "in" attaches to "people" should have higher
@@ -242,20 +309,19 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBeamSearch3() {
-    List<CcgParse> parses = parser.beamSearch(
-        Arrays.asList("green", "people"), 10);
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("green", "people"), 10);
 
     assertEquals(1, parses.size());
-    assertEquals(2.0, parses.get(0).getSubtreeProbability());
+    assertEquals(2.0 * 0.75, parses.get(0).getSubtreeProbability());
   }
   
   public void testExactParse3() {
-    CcgParse parse = parser.parse(Arrays.asList("green", "people"));
-    assertEquals(2.0, parse.getSubtreeProbability());
+    CcgParse parse = parse(parser, Arrays.asList("green", "people"));
+    assertEquals(2.0 * 0.75, parse.getSubtreeProbability());
   }
 
   public void testParseLogicalFormApplication() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList(
         "i", "quickly", "eat", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -275,7 +341,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormApplication2() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList(
         "i", "that", "eat", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -290,9 +356,9 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormComposition() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "the", "colorful", "tasty"), 10);
-    assertEquals(8, parses.size());
+    assertEquals(2, parses.size());
 
     Expression expectedLf = exp.parseSingleExpression("(lambda $1 (lambda e (and (colorful e) (tasty e) ($1 e))))")
         .simplify();
@@ -305,14 +371,14 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormBinaryRule() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         ";", "berries"), 10);
     assertEquals(1, parses.size());
     assertEquals(null, parses.get(0).getLogicalForm());
   }
 
   public void testParseLogicalFormBinaryRule2() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "berries", ";"), 10);
     assertEquals(1, parses.size());
     Expression expectedLf = exp.parseSingleExpression("berries");
@@ -320,7 +386,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormBinaryRule3() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "people", "berries"), 10);
     assertEquals(1, parses.size());
     Expression expectedLf = exp.parseSingleExpression("(lambda j (exists k (and (people k) (berries j) (special:compound k j))))");
@@ -328,7 +394,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormConjunction() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList(
         "i", "eat", "people", "or", "berries"), 10);
     assertEquals(1, parses.size());
     System.out.println(parses.get(0));
@@ -337,7 +403,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseLogicalFormUnary() {
-    List<CcgParse> parses = parserWithUnaryAndComposition.beamSearch(Arrays.asList(
+    List<CcgParse> parses = beamSearch(parserWithUnaryAndComposition, Arrays.asList(
         "berries", "that", "i", "eat"), 10);
 
     assertEquals(2, parses.size());
@@ -357,17 +423,18 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition() {
-    assertEquals(0, parser.beamSearch(Arrays.asList("rapidly", "eat"), 10).size());
+    assertEquals(0, beamSearch(parser, Arrays.asList("rapidly", "eat"), 10).size());
 
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("rapidly", "eat"), 10);
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("rapidly", "eat"), 10);
 
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
     System.out.println(parse);
+    System.out.println(parse.getAllDependencies());
 
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("rapidly", 0, "eat", 1, 1));
+        parseDependency("rapidly", "((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0}", 0, "eat", 1, 1));
     assertEquals(expectedDeps, deps);
 
     SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S[b]\\N)/N");
@@ -375,16 +442,16 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition2() {
-    assertEquals(0, parser.beamSearch(Arrays.asList("eat", "amazingly", "tasty"), 10).size());
+    assertEquals(0, beamSearch(parser, Arrays.asList("eat", "amazingly", "tasty"), 10).size());
 
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("eat", "amazingly", "tasty"), 10);
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("eat", "amazingly", "tasty"), 10);
 
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
 
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("amazingly", 1, "tasty", 2, 1));
+        parseDependency("amazingly", "((N{1}/N{1}){2}/(N{1}/N{1}){2}){0}", 1, "tasty", 2, 1));
     assertEquals(expectedDeps, deps);
 
     SyntacticCategory expectedSyntax = SyntacticCategory.parseFrom("(S[b]\\N)/N");
@@ -397,9 +464,9 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition3() {
-    assertEquals(1, parser.beamSearch(Arrays.asList("about", "eating", "berries"), 10).size());
+    assertEquals(1, beamSearch(parser, Arrays.asList("about", "eating", "berries"), 10).size());
 
-    List<CcgParse> parses = parserWithComposition.beamSearch(Arrays.asList("about", "eating", "berries"), 10);
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("about", "eating", "berries"), 10);
 
     for (CcgParse parse : parses) {
       System.out.println(parse);
@@ -410,8 +477,8 @@ public class CcgParserTest extends TestCase {
     for (CcgParse parse : parses) {
       Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
       Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-          new DependencyStructure("about", 0, "eat", 1, 1),
-          new DependencyStructure("eat", 1, "berries", 2, 2));
+          parseDependency("about", "(NP{0}/(S[1]{1}\\N{2}){1}){0}", 0, "eat", 1, 1),
+          parseDependency("eat", "((S[ng]{0}\\N{1}){0}/N{2}){0}", 1, "berries", 2, 2));
       assertEquals(expectedDeps, deps);
 
       HeadedSyntacticCategory expectedSyntax = HeadedSyntacticCategory.parseFrom("NP{0}");
@@ -422,21 +489,21 @@ public class CcgParserTest extends TestCase {
       assertEquals("about", Iterables.getOnlyElement(heads).getHead());
     }
 
-    assertEquals(2.0 * 4, parses.get(0).getSubtreeProbability());
-    assertEquals(0.5 * 4, parses.get(1).getSubtreeProbability());
+    assertEquals(2.0 * 1, parses.get(0).getSubtreeProbability());
+    assertEquals(0.5 * 1, parses.get(1).getSubtreeProbability());
   }
 
   public void testParseComposition4() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithComposition, 
         Arrays.asList("i", "quickly", "eat", "amazingly", "tasty", "berries"), 20);
     assertEquals(3, parses.size());
 
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("eat", 2, "i", 0, 1),
-        new DependencyStructure("eat", 2, "berries", 5, 2),
-        new DependencyStructure("quickly", 1, "eat", 2, 1),
-        new DependencyStructure("amazingly", 3, "tasty", 4, 1),
-        new DependencyStructure("tasty", 4, "berries", 5, 1));
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 2, "i", 0, 1),
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 2, "berries", 5, 2),
+        parseDependency("quickly", "(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0}", 1, "eat", 2, 1),
+        parseDependency("amazingly", "((N{1}/N{1}){2}/(N{1}/N{1}){2}){0}", 3, "tasty", 4, 1),
+        parseDependency("tasty", "(N{1}/N{1}){0}", 4, "berries", 5, 1));
 
     for (CcgParse parse : parses) {
       assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
@@ -444,16 +511,80 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseComposition5() {
-    List<CcgParse> parses = parserWithComposition.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithComposition, 
         Arrays.asList("exactly", "eat"), 10);
     assertEquals(1, parses.size());
 
     assertEquals(HeadedSyntacticCategory.parseFrom("((S[b]{0}\\N{1}){0}/N{2}){0}"),
         parses.get(0).getHeadedSyntacticCategory());
   }
+  
+  public void testParseCompositionNormalForm() {
+    List<CcgParse> parses = beamSearch(parserWithComposition, Arrays.asList("green", "green", "berries"), 10);
+    // The parser with composition permits 2 derivations, one using
+    // composition of the greens, and one only using application.
+    assertEquals(2, parses.size());
+
+    // The normal form parser only permits the application-only derivation
+    parses = beamSearch(parserWithCompositionNormalForm, Arrays.asList("green", "green", "berries"), 10);
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+
+    assertTrue(parse.getLeft().isTerminal());
+    assertFalse(parse.getRight().isTerminal());
+    assertEquals("N", parse.getRight().getSyntacticCategory().getValue());
+
+    // The same property should generalize to much longer sentences.
+    parses = beamSearch(parserWithCompositionNormalForm, Arrays.asList("green", "green", "green", "green",
+        "green", "green", "green", "green", "green", "berries"), 1000);
+    assertEquals(1, parses.size());
+  }
+
+  public void testParseWordSkip() {
+    List<String> words = Arrays.asList("green", "green", "i");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
+
+    double[] probs = new double[parses.size()];
+    for (int i = 0; i < parses.size(); i++) {
+      CcgParse parse = parses.get(i);
+      probs[i] = parse.getSubtreeProbability();
+    }
+
+    assertEquals(6, parses.size());
+    assertTrue(Ordering.natural().reverse().isOrdered(Doubles.asList(probs)));
+    
+    for (CcgParse parse : parses) {
+      assertEquals(words, parse.getSentenceWords());
+    }
+  }
+
+  public void testParseWordSkipExact() {
+    List<String> words = Arrays.asList("green", "green", "i");
+    CcgParse bestParse = parse(parserWordSkip, words);
+    
+    assertEquals(2, bestParse.getSpanStart());
+    assertEquals(2, bestParse.getSpanEnd());
+    assertEquals(1.5, bestParse.getSubtreeProbability());
+    assertEquals(words, bestParse.getSentenceWords());
+  }
+
+  public void testParseHeadedSyntaxWeights() {
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("tasty", "apple"), 10);
+    assertEquals(1, parses.size());
+    assertEquals(4.0, parses.get(0).getSubtreeProbability(), 0.0001);
+    
+    parses = beamSearch(parser, Arrays.asList("tasty", "apple", "or", "berries"), 
+        Arrays.asList(DEFAULT_POS, DEFAULT_POS, DEFAULT_POS, "JJ"), 10);
+    assertEquals(2, parses.size());
+    
+    CcgParse parse = parses.get(0);
+    assertEquals(HeadedSyntacticCategory.parseFrom("(N{0}/N{0}){1}").getCanonicalForm(),
+        parse.getLeft().getHeadedSyntacticCategory());
+    assertEquals(6.0, parse.getSubtreeProbability(), 0.00001);
+  }
 
   public void testParseHeadUnification() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "and", "houses", "eat", "berries", "and", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -479,7 +610,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testPrepositionalModifier() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "almost", "in", "houses"), 10);
 
     assertEquals(1, parses.size());
@@ -489,7 +620,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testSubjectPatterns() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "that", "directed", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -511,21 +642,51 @@ public class CcgParserTest extends TestCase {
     }
   }
 
+  public void testLexiconPosParameters() {
+    List<CcgParse> nnParses = beamSearch(parser, 
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList(DEFAULT_POS, "NN"), 10);
+    
+    List<CcgParse> basicParses = beamSearch(parser, 
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList(DEFAULT_POS, DEFAULT_POS), 10);
+    
+    assertEquals(1, nnParses.size());
+    assertEquals(1, basicParses.size());
+    assertEquals(2 * basicParses.get(0).getSubtreeProbability(), nnParses.get(0).getSubtreeProbability());
+  }
+  
+  public void testDependencyPosParameters() {
+    List<CcgParse> nnParses = beamSearch(parser, 
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList("JJ", "NN"), 10);
+    
+    List<CcgParse> basicParses = beamSearch(parser, 
+        Arrays.asList("tasty", "berries"), 
+        Arrays.asList(DEFAULT_POS, "NN"), 10);
+    
+    assertEquals(1, nnParses.size());
+    assertEquals(1, basicParses.size());
+    // The tasty JJ dependency is 4x as likely as the DEFAULT_POS one,
+    // and the word distance weights contribute a factor of 2. 
+    assertEquals(4 * 2 * basicParses.get(0).getSubtreeProbability(), nnParses.get(0).getSubtreeProbability());
+  }
+
   public void testParseUnfilledDep() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("about", "eating", "berries"), 10);
 
     assertEquals(1, parses.size());
 
     CcgParse parse = parses.get(0);
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("about", 0, "eat", 1, 1),
-        new DependencyStructure("eat", 1, "berries", 2, 2));
+        parseDependency("about", "(NP{0}/(S[1]{1}\\N{2}){1}){0}", 0, "eat", 1, 1),
+        parseDependency("eat", "((S[ng]{0}\\N{1}){0}/N{2}){0}", 1, "berries", 2, 2));
     assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
   }
 
   public void testBinaryRules1() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("berries", ";"), 10);
 
     assertEquals(1, parses.size());
@@ -538,7 +699,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRules2() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "eat", "berries", ";"), 10);
 
     assertEquals(1, parses.size());
@@ -550,7 +711,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRules3() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", ";", "eat", "berries", ";"), 10);
 
     assertEquals(3, parses.size());
@@ -571,7 +732,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesConj() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "or", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -586,7 +747,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesConj2() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("or", "directed", "houses"), 10);
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
@@ -595,7 +756,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesConj3() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
 
     assertEquals(1, parses.size());
@@ -611,17 +772,17 @@ public class CcgParserTest extends TestCase {
 
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("eat", 1, "people", 0, 1),
-        new DependencyStructure("eat", 1, "berries", 2, 2),
-        new DependencyStructure("directed", 4, "people", 0, 2),
-        new DependencyStructure("directed", 4, "houses", 5, 1));
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 1, "people", 0, 1),
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 1, "berries", 2, 2),
+        parseDependency("directed", "((S[b]{0}\\N{1}){0}/N{2}){0}", 4, "people", 0, 2),
+        parseDependency("directed", "((S[b]{0}\\N{1}){0}/N{2}){0}", 4, "houses", 5, 1));
     assertEquals(expectedDeps, deps);
 
     assertEquals(SyntacticCategory.parseFrom("S[b]"), parse.getSyntacticCategory());
   }
 
   public void testBinaryRulesNounCompound() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "berries"), 10);
 
     assertEquals(1, parses.size());
@@ -631,13 +792,15 @@ public class CcgParserTest extends TestCase {
 
     Set<DependencyStructure> observedDeps = Sets.newHashSet(parse.getAllDependencies());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("special:compound", 1, "berries", 1, 2),
-        new DependencyStructure("special:compound", 1, "people", 0, 1));
+        parseDependency("special:compound", "N{0}", 1, "berries", 1, 2),
+        parseDependency("special:compound", "N{0}", 1, "people", 0, 1));
     assertEquals(expectedDeps, observedDeps);
+
+    assertEquals("berries", Iterables.getOnlyElement(parse.getSemanticHeads()).getHead());
   }
 
   public void testBinaryRulesNounCompoundHeadIndex() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "berries", "backward"), 10);
     assertEquals(2, parses.size());
 
@@ -651,7 +814,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testBinaryRulesNounCompoundHeadIndexConjunction() {
-    List<CcgParse> parses = parser.beamSearch(
+    List<CcgParse> parses = beamSearch(parser, 
         Arrays.asList("people", "berries", "and", "people"), 10);
 
     assertEquals(2, parses.size());
@@ -659,25 +822,70 @@ public class CcgParserTest extends TestCase {
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
 
     Set<DependencyStructure> expected = Sets.newHashSet(
-        new DependencyStructure("special:compound", 3, "people", 3, 2),
-        new DependencyStructure("special:compound", 3, "berries", 1, 2),
-        new DependencyStructure("special:compound", 3, "people", 0, 1));
+        parseDependency("special:compound", "N{0}", 3, "people", 3, 2),
+        parseDependency("special:compound", "N{0}", 3, "berries", 1, 2),
+        parseDependency("special:compound", "N{0}", 3, "people", 0, 1));
 
     assertEquals(expected, deps);
   }
+  
+  public void testBinaryRuleUnfilledDependencies() {
+    List<CcgParse> parses = beamSearch(parser, 
+        Arrays.asList("people", "#", "berries"), 10);
+
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+
+    Set<DependencyStructure> expected = Sets.newHashSet(
+        parseDependency("special:compound", "N{0}", 2, "people", 0, 1),
+        parseDependency("special:compound", "N{0}", 2, "berries", 2, 2));
+
+    assertEquals(expected, Sets.newHashSet(parse.getAllDependencies()));
+  }
+
+  // This test exists purely to test parsing speed with large conjunctions.
+  public void testLargeConjunction() {
+    List<CcgParse> parses = beamSearch(parserWithCompositionNormalForm, 
+        Arrays.asList("people", "or", "berries", "or", "people", "or", "people", "or", "people",
+            "or", "people"), 100);
+    // "eat", "berries", "or", "eat", "people"
+    
+    System.out.println(parses.size());
+    
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
+    
+    assertEquals(1, parses.size());
+  }
+  
+  public void testLargeConjunction2() {
+    List<CcgParse> parses = beamSearch(parserWithCompositionNormalForm, 
+        Arrays.asList("people", "in", "berries", "or", "people", "in", "people", "or", "people",
+            "in", "people", "or", "people", "in", "berries"), 1000);
+
+    System.out.println(parses.size());
+
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+    }
+  }
+
 
   public void testParseTimeout() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), -1);
+    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
+        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
     assertTrue(parses.size() > 0);
     
-    parses = parser.beamSearch(Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, ParametricCcgParser.DEFAULT_POS_TAG), 100, null, new NullLogFunction(), 1);
+    parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
+        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE, 1);
     assertEquals(0, parses.size());
   }
 
   public void testParseUnaryRules1() {
-    List<CcgParse> parses = parserWithUnary.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithUnary,
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);
 
     for (CcgParse parse : parses) {
@@ -686,10 +894,10 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(2, parses.size());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("eat", 1, "people", 0, 1),
-        new DependencyStructure("eat", 1, "berries", 2, 2),
-        new DependencyStructure("directed", 4, "people", 0, 2),
-        new DependencyStructure("directed", 4, "houses", 5, 1));
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 1, "people", 0, 1),
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 1, "berries", 2, 2),
+        parseDependency("directed", "((S[b]{0}\\N{1}){0}/N{2}){0}", 4, "people", 0, 2),
+        parseDependency("directed", "((S[b]{0}\\N{1}){0}/N{2}){0}", 4, "houses", 5, 1));
 
     for (CcgParse parse : parses) {
       assertEquals(expectedDeps, Sets.newHashSet(parse.getAllDependencies()));
@@ -697,13 +905,13 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseUnaryRules2() {
-    List<CcgParse> parses = parserWithUnary.beamSearch(
+    List<CcgParse> parses = beamSearch(parserWithUnary, 
         Arrays.asList("people", "eat", "people", "berries"), 10);
 
     assertEquals(4, parses.size());
     Set<DependencyStructure> expectedDeps = Sets.newHashSet(
-        new DependencyStructure("eat", 1, "people", 0, 1),
-        new DependencyStructure("eat", 1, "berries", 3, 2));
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 1, "people", 0, 1),
+        parseDependency("eat", "((S[b]{0}\\N{1}){0}/N{2}){0}", 1, "berries", 3, 2));
 
     for (CcgParse parse : parses) {
       Set<DependencyStructure> trueDeps = Sets.newHashSet(parse.getAllDependencies());
@@ -712,8 +920,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testParseUnaryRules3() {
-    List<CcgParse> parses = parserWithUnary.beamSearch(
-        Arrays.asList("eat"), 10);
+    List<CcgParse> parses = beamSearch(parserWithUnary, Arrays.asList("eat"), 10);
 
     System.out.println(parses);
     assertEquals(2, parses.size());
@@ -726,11 +933,22 @@ public class CcgParserTest extends TestCase {
     }
     assertEquals(expectedCats, actualCats);
   }
+  
+  public void testParseUnaryRulesDropArgument() {
+    List<CcgParse> parses = beamSearch(parserWithUnary, Arrays.asList("a", "people", "eating", "berries"), 10);
+    
+    assertEquals(1, parses.size());
+    CcgParse parse = parses.get(0);
+    assertEquals("NP", parse.getHeadedSyntacticCategory().getSyntax().getValue());
+    assertEquals(2, parse.getAllDependencies().size());
+    assertEquals(Sets.newHashSet(1), parse.getHeadWordIndexes());
+  }
 
   public void testChartFilterApply() {
-    ChartFilter filter = new TestChartFilter();
-    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
-        Collections.nCopies(6, ParametricCcgParser.DEFAULT_POS_TAG), 10, filter, new NullLogFunction(), -1);
+    ChartCost filter = new TestChartFilter();
+    List<CcgParse> parses = parserWithUnary.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
+        Collections.nCopies(6, DEFAULT_POS)), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
 
     // The filter disallows the verb modifier syntactic category for
     // "in"
@@ -738,46 +956,26 @@ public class CcgParserTest extends TestCase {
     for (CcgParse parse : parses) {
       assertEquals(expected, parse.getLexiconEntryForWordIndex(3).getSyntax().getSyntax());
     }
-  }
-
-  public void testChartFilterApplyToTerminals() {
-    ChartFilter filter = new TestChartFilter();
-    List<CcgParse> parses = parserWithUnary.beamSearch(Arrays.asList("berries", "in", "people", "houses"),
-        Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG), 10, filter, new NullLogFunction(), -1);
-
-    for (CcgParse parse : parses) {
-      assertNoNounCompound(parse);
-    }
+    
+    System.out.println(parses.get(0).toHtmlString());
   }
 
   public void testSupertagChartFilter() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("blue", "berries"),
-        Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10, new NullLogFunction());
+    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)),
+        10, new NullLogFunction());
     assertEquals(2, parses.size());
 
-    List<List<SyntacticCategory>> supertags = Lists.newArrayList();
-    supertags.add(Lists.newArrayList(SyntacticCategory.parseFrom("N")));
-    supertags.add(Lists.newArrayList(SyntacticCategory.parseFrom("N")));
+    List<List<HeadedSyntacticCategory>> supertags = Lists.newArrayList();
+    supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
+    supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
 
-    ChartFilter supertagChartFilter = new SupertagChartFilter(supertags, new DefaultCompatibilityFunction());
+    ChartCost supertagChartFilter = new SupertagChartCost(supertags);
 
-    parses = parser.beamSearch(Arrays.asList("blue", "berries"),
-        Collections.nCopies(2, ParametricCcgParser.DEFAULT_POS_TAG), 10,
-        supertagChartFilter, new NullLogFunction(), -1);
+    parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)), 10,
+        supertagChartFilter, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
     assertEquals(1, parses.size());
-  }
-
-  private void assertNoNounCompound(CcgParse parse) {
-    SyntacticCategory noun = SyntacticCategory.parseFrom("N");
-
-    if (!parse.isTerminal()) {
-      assertFalse(parse.getLeft().getHeadedSyntacticCategory().getSyntax().equals(noun) &&
-          parse.getRight().getHeadedSyntacticCategory().getSyntax().equals(noun) &&
-          !parse.getLeft().hasUnaryRule() && !parse.getRight().hasUnaryRule());
-
-      assertNoNounCompound(parse.getLeft());
-      assertNoNounCompound(parse.getRight());
-    }
   }
 
   public void testSerialization() throws IOException {
@@ -786,8 +984,32 @@ public class CcgParserTest extends TestCase {
     oos.close();
   }
 
-  private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray,
-      String[] unaryRuleArray, double[] weights, boolean allowComposition, boolean allowWordSkipping) {
+  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
+      int beamSize) {
+    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+        Collections.nCopies(words.size(), DEFAULT_POS)), beamSize, null, new NullLogFunction(),
+        -1, Integer.MAX_VALUE, 16);
+  }
+
+  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
+      List<String> posTags, int beamSize) {
+    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
+        posTags), beamSize, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 16);
+  }
+
+  private CcgParse parse(CcgParser parser, List<String> words) {
+    return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+        Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE, 16);
+  }
+
+  private DependencyStructure parseDependency(String subject, String syntacticCategory, int subjIndex, 
+      String object, int objectIndex, int argNum) {
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(syntacticCategory).getCanonicalForm();
+    return new DependencyStructure(subject, subjIndex, cat, object, objectIndex, argNum);
+  }
+
+  private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray, String[] unaryRuleArray,
+      double[] weights, boolean allowComposition, boolean allowWordSkipping, boolean normalFormOnly) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
     Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
@@ -830,7 +1052,7 @@ public class CcgParserTest extends TestCase {
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories);
     DiscreteVariable wordType = new DiscreteVariable("words", words);
     DiscreteVariable posType = new DiscreteVariable("pos",
-        Lists.newArrayList(ParametricCcgParser.DEFAULT_POS_TAG));
+        Lists.newArrayList(DEFAULT_POS, "NN", "JJ"));
 
     terminalVar = VariableNumMap.singleton(0, "words", wordType);
     ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
@@ -843,31 +1065,13 @@ public class CcgParserTest extends TestCase {
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, category), weights[i]);
     }
 
-    // Build the dependency distribution.
-    DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates);
-    DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(0, 1, 2, 3));
-
-    semanticHeadVar = VariableNumMap.singleton(0, "semanticHead", semanticPredicateType);
-    semanticArgNumVar = VariableNumMap.singleton(1, "semanticArgNum", argumentNums);
-    semanticArgVar = VariableNumMap.singleton(2, "semanticArg", semanticPredicateType);
-    vars = VariableNumMap.unionAll(semanticHeadVar, semanticArgNumVar, semanticArgVar);
-
-    TableFactorBuilder dependencyFactorBuilder = TableFactorBuilder.ones(vars);
-
-    dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("eat", 2, "berries"), 1.0);
-    dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("quickly", 1, "eat"), 3.0);
-    dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("in", 1, "people"), 1.0);
-    dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("special:compound", 1, "people"), 1.0);
-    dependencyFactorBuilder.incrementWeight(vars.outcomeArrayToAssignment("green_(N{0}/N{0}){1}", 1, "people"), 1.0);
-
+    // Distribution over CCG combinators, i.e., binary combination rules.
     DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
     DiscreteFactor syntaxDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
     VariableNumMap leftSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
     VariableNumMap inputSyntaxVars = leftSyntaxVar.union(rightSyntaxVar);
     VariableNumMap parentSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.PARENT_SYNTAX_VAR_NAME);
-
-    // System.out.println(terminalBuilder.build().getParameterDescription());
 
     Preconditions.checkState(syntacticCombinations.length == syntacticCombinationWeights.length);
     for (int i = 0; i < syntacticCombinations.length; i++) {
@@ -878,6 +1082,29 @@ public class CcgParserTest extends TestCase {
 
       syntaxDistribution = syntaxDistribution.add(syntaxDistribution.product(combinationFactor));
     }
+    
+    // Build the dependency distribution.
+    DiscreteVariable semanticPredicateType = new DiscreteVariable("semanticPredicates", semanticPredicates);
+    DiscreteVariable argumentNums = new DiscreteVariable("argNums", Ints.asList(0, 1, 2, 3));
+    semanticHeadVar = VariableNumMap.singleton(0, "semanticHead", semanticPredicateType);
+    semanticSyntaxVar = VariableNumMap.singleton(1, "semanticSyntax", syntaxType);
+    semanticArgNumVar = VariableNumMap.singleton(2, "semanticArgNum", argumentNums);
+    semanticArgVar = VariableNumMap.singleton(3, "semanticArg", semanticPredicateType);
+    semanticHeadPosVar = VariableNumMap.singleton(4, "semanticHeadPos", posType);
+    semanticArgPosVar = VariableNumMap.singleton(5, "semanticArgPos", posType);
+    vars = VariableNumMap.unionAll(semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticArgVar,
+        semanticHeadPosVar, semanticArgPosVar);
+
+    TableFactorBuilder dependencyFactorBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+    Preconditions.checkState(dependencyCombinations.length == dependencyWeightIncrements.length);
+    for (int i = 0; i < dependencyCombinations.length; i++) {
+      HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(dependencyCombinations[i][1]).getCanonicalForm();
+      int argNum = Integer.parseInt(dependencyCombinations[i][2]);
+      dependencyFactorBuilder.setWeight(vars.outcomeArrayToAssignment(
+          dependencyCombinations[i][0], cat, argNum, dependencyCombinations[i][3],
+          dependencyCombinations[i][4], dependencyCombinations[i][5]), Math.log(1 + dependencyWeightIncrements[i]));
+    }
+    TableFactor dependencyFactor = dependencyFactorBuilder.buildSparseInLogSpace();
 
     // Distribution over unary rules.
     DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules,
@@ -896,12 +1123,23 @@ public class CcgParserTest extends TestCase {
     rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
     assignment = leftSyntaxVar.outcomeArrayToAssignment(HeadedSyntacticCategory.parseFrom("S[ng]{0}"));
     rootDistribution = rootDistribution.add(TableFactor.pointDistribution(leftSyntaxVar, assignment));
+    
+    VariableNumMap headedRootPredicateVar = VariableNumMap.singleton(3, "headedRootSemanticPredicate", semanticPredicateType);
+    VariableNumMap headedRootPosVar = VariableNumMap.singleton(4, "headedRootPos", posType);
+    VariableNumMap headedRootVars = VariableNumMap.unionAll(leftSyntaxVar, headedRootPredicateVar, headedRootPosVar);
+    TableFactorBuilder headedRootBuilder = new TableFactorBuilder(headedRootVars, SparseTensorBuilder.getFactory());
+    headedRootBuilder.setWeight(Math.log(2.0), HeadedSyntacticCategory.parseFrom("N{0}"), "apple", DEFAULT_POS);
+    DiscreteFactor headedRootDistribution = headedRootBuilder.buildSparseInLogSpace();
 
     // Distribution over pos tags and terminal syntactic types,
     // for smoothing sparse word counts.
     posTagVar = VariableNumMap.singleton(0, "posTag", posType);
     terminalSyntaxVar = VariableNumMap.singleton(1, "terminalSyntax", leftSyntaxVar.getDiscreteVariables().get(0));
-    DiscreteFactor posDistribution = TableFactor.unity(posTagVar.union(terminalSyntaxVar));
+    VariableNumMap terminalPosVars = posTagVar.union(terminalSyntaxVar);
+    DiscreteFactor posDistribution = TableFactor.unity(terminalPosVars);
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("N{0}");
+    posDistribution = posDistribution.add(TableFactor.pointDistribution(terminalPosVars, 
+        terminalPosVars.outcomeArrayToAssignment("NN", cat)));
 
     // Distribution over syntactic categories assigned to each word.
     VariableNumMap terminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
@@ -909,72 +1147,76 @@ public class CcgParserTest extends TestCase {
     terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
         terminalSyntaxVars, terminalSyntaxVars.outcomeArrayToAssignment(Arrays.asList("i"),
             HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
+    terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
+        terminalSyntaxVars, terminalSyntaxVars.outcomeArrayToAssignment(Arrays.asList("blue"),
+            HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
 
     // Distribution over predicate-argument distances.
-    VariableNumMap distancePredicateVars = semanticHeadVar.union(semanticArgNumVar);
-    VariableNumMap wordDistanceVar = VariableNumMap.singleton(2, "wordDistance", CcgParser.wordDistanceVarType);
-    VariableNumMap puncDistanceVar = VariableNumMap.singleton(2, "puncDistance", CcgParser.puncDistanceVarType);
-    VariableNumMap verbDistanceVar = VariableNumMap.singleton(2, "verbDistance", CcgParser.verbDistanceVarType);
-    DiscreteFactor wordDistanceFactor = TableFactor.unity(distancePredicateVars.union(wordDistanceVar));
-    DiscreteFactor puncDistanceFactor = TableFactor.unity(distancePredicateVars.union(puncDistanceVar));
-    DiscreteFactor verbDistanceFactor = TableFactor.unity(distancePredicateVars.union(verbDistanceVar));
+    VariableNumMap distancePredicateVars = VariableNumMap.unionAll(semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticHeadPosVar);
+    VariableNumMap wordDistanceVar = VariableNumMap.singleton(6, "wordDistance", CcgParser.wordDistanceVarType);
+    VariableNumMap puncDistanceVar = VariableNumMap.singleton(6, "puncDistance", CcgParser.puncDistanceVarType);
+    VariableNumMap verbDistanceVar = VariableNumMap.singleton(6, "verbDistance", CcgParser.verbDistanceVarType);
+    DiscreteFactor puncDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(puncDistanceVar));
+    DiscreteFactor verbDistanceFactor = TableFactor.logUnity(distancePredicateVars.union(verbDistanceVar));
     Set<String> puncTagSet = ParametricCcgParser.DEFAULT_PUNC_TAGS;
     Set<String> verbTagSet = ParametricCcgParser.DEFAULT_VERB_TAGS;
 
-    VariableNumMap wordDistanceVars = wordDistanceFactor.getVars();
-    TableFactorBuilder wordFactorBuilder = TableFactorBuilder.fromFactor(wordDistanceFactor);
-    wordFactorBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", 2, 0), 3.0);
-    wordFactorBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", 2, 1), 2.0);
-    wordFactorBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", 2, 2), 1.0);
-    wordDistanceFactor = wordFactorBuilder.build();
+    VariableNumMap wordDistanceVars = distancePredicateVars.union(wordDistanceVar);
+    TableFactorBuilder wordFactorIncrementBuilder = new TableFactorBuilder(wordDistanceVars, SparseTensorBuilder.getFactory());
+    HeadedSyntacticCategory eatCategory = HeadedSyntacticCategory.parseFrom("((S[b]{0}\\N{1}){0}/N{2}){0}").getCanonicalForm();
+    HeadedSyntacticCategory tastyCategory = HeadedSyntacticCategory.parseFrom("(N{1}/N{1}){0}").getCanonicalForm();
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 0), Math.log(4.0));
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 1), Math.log(3.0));
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("eat", eatCategory, 2, DEFAULT_POS, 2), Math.log(2.0));
+    wordFactorIncrementBuilder.incrementWeight(wordDistanceVars.outcomeArrayToAssignment("tasty", tastyCategory, 1, "JJ", 0), Math.log(2.0));
+    DiscreteFactor wordDistanceFactor = wordFactorIncrementBuilder.buildSparseInLogSpace();
 
-    return new CcgParser(terminalVar, ccgCategoryVar, terminalBuilder.build(),
-        posTagVar, terminalSyntaxVar, posDistribution, terminalSyntaxDistribution,
-        semanticHeadVar, semanticArgNumVar, semanticArgVar, dependencyFactorBuilder.build(),
+    // Create a distribution over headed binary rules.
+    int maxVarNum = Ints.max(syntaxDistribution.getVars().getVariableNumsArray());
+    VariableNumMap headedBinaryRulePredicateVar = VariableNumMap.singleton(maxVarNum + 1, 
+        "headedBinaryRulePredicate", semanticPredicateType); 
+    VariableNumMap headedBinaryRulePosVar = VariableNumMap.singleton(maxVarNum + 2, 
+        "headedBinaryRulePos", posType);
+    VariableNumMap syntaxVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar);
+    VariableNumMap binaryHeadVars = VariableNumMap.unionAll(headedBinaryRulePredicateVar, headedBinaryRulePosVar);
+    VariableNumMap headedBinaryVars = VariableNumMap.unionAll(leftSyntaxVar, rightSyntaxVar,
+        parentSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar);
+    TableFactorBuilder headedBinaryFactorBuilder = new TableFactorBuilder(headedBinaryVars, SparseTensorBuilder.getFactory());
+    HeadedSyntacticCategory nounCategory = HeadedSyntacticCategory.parseFrom("N{0}").getCanonicalForm();
+    Assignment tastyAssignment = syntaxVars.outcomeArrayToAssignment(tastyCategory, nounCategory);
+    Iterator<Outcome> possibleRuleIter = syntaxDistribution.conditional(tastyAssignment).outcomeIterator();
+    while (possibleRuleIter.hasNext()) {
+      Assignment ruleAssignment = possibleRuleIter.next().getAssignment().union(tastyAssignment);
+      Assignment predicateAssignmentDefault = binaryHeadVars.outcomeArrayToAssignment("apple", DEFAULT_POS);
+      Assignment predicateAssignmentJj = binaryHeadVars.outcomeArrayToAssignment("berries", "JJ");
+      headedBinaryFactorBuilder.incrementWeight(ruleAssignment.union(predicateAssignmentDefault), Math.log(2.0));
+      headedBinaryFactorBuilder.incrementWeight(ruleAssignment.union(predicateAssignmentJj), Math.log(3.0));
+    }
+    DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
+    
+    TableLexicon tableLexicon = new TableLexicon(terminalVar, ccgCategoryVar,
+        terminalBuilder.build(), posTagVar, terminalSyntaxVar, posDistribution,
+        terminalSyntaxDistribution);
+
+    return new CcgParser(tableLexicon, semanticHeadVar, semanticSyntaxVar,
+        semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
-        unaryRuleVar, unaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
-        leftSyntaxVar, rootDistribution, allowWordSkipping);
+        unaryRuleVar, unaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
+        headedBinaryRuleFactor, searchMoveVar, compiledSyntaxDistribution, leftSyntaxVar,
+        headedRootPredicateVar, headedRootPosVar, rootDistribution, headedRootDistribution, allowWordSkipping, normalFormOnly);
   }
 
-  private static class TestChartFilter implements ChartFilter {
+  private static class TestChartFilter implements ChartCost {
 
     @Override
-    public boolean apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
+    public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
       if (spanStart == 3 && spanEnd == 5) {
         HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
-        return syntax.getSyntax().equals(SyntacticCategory.parseFrom("N\\N"));
+        return syntax.getSyntax().equals(SyntacticCategory.parseFrom("N\\N")) ? 0.0 : Double.NEGATIVE_INFINITY;
       }
-      return true;
-    }
-
-    @Override
-    public void applyToTerminals(CcgChart chart) {
-      DiscreteFactor syntaxDistribution = chart.getSyntaxDistribution();
-      VariableNumMap vars = syntaxDistribution.getVars();
-      TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
-
-      Iterator<Outcome> syntaxIter = syntaxDistribution.outcomeIterator();
-      while (syntaxIter.hasNext()) {
-        Outcome outcome = syntaxIter.next();
-        CcgSearchMove move = (CcgSearchMove) outcome.getAssignment().getValues().get(2);
-
-        CcgBinaryRule rule = move.getBinaryCombinator().getBinaryRule();
-        if (rule != null) {
-          String[] subjects = rule.getSubjects();
-          for (int i = 0; i < subjects.length; i++) {
-            if (subjects[i].equals("special:compound")) {
-              builder.setWeight(outcome.getAssignment(), -1.0);
-            }
-          }
-        }
-      }
-      DiscreteFactor syntaxDelta = builder.build();
-      System.out.println(syntaxDelta.getParameterDescription());
-
-      DiscreteFactor updatedSyntaxDistribution = syntaxDistribution.add(syntaxDelta);
-      chart.setSyntaxDistribution(updatedSyntaxDistribution);
+      return 0.0;
     }
   }
 }

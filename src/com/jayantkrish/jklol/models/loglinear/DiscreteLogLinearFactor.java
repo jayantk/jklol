@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -9,7 +8,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -107,7 +105,7 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   public DiscreteFactor getModelFromParameters(SufficientStatistics parameters) {
     Tensor featureWeights = getFeatureWeights(parameters);
     Tensor logProbs = featureValues.getWeights().elementwiseProduct(featureWeights)
-        .sumOutDimensions(featureVariables.getVariableNums());
+        .sumOutDimensions(featureVariables.getVariableNumsArray());
 
     return exponentiateLogProbs(logProbs); 
   }
@@ -157,44 +155,33 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    Tensor weights = getFeatureWeights(parameters);
-    TableFactor weightFactor = new TableFactor(featureVariables, weights);
-    Iterator<Outcome> outcomeIter = weightFactor.outcomeIterator();
-    StringBuilder sb = new StringBuilder();
-    while (outcomeIter.hasNext()) {
-      sb.append("<outcome>\n"+outcomeIter.next().toXML() + "</outcome>\n");
-    }
-    return sb.toString();
-  }
-
-  @Override
   public TensorSufficientStatistics getNewSufficientStatistics() {
     return new TensorSufficientStatistics(featureVariables, 
-        new DenseTensorBuilder(Ints.toArray(featureVariables.getVariableNums()),
+        new DenseTensorBuilder(featureVariables.getVariableNumsArray(),
             featureVariables.getVariableSizes()));
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
-    Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
+    Assignment subAssignment = assignment.intersection(getVars().getVariableNumsArray());
 
     // Get a factor containing only the feature variable.
     Tensor assignmentFeatures = featureValues.conditional(subAssignment).getWeights();
-    ((TensorSufficientStatistics) statistics).increment(assignmentFeatures, count);
+    ((TensorSufficientStatistics) gradient).increment(assignmentFeatures, count);
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     // Compute expected feature counts based on the input marginal distribution.
     DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
         .innerProduct(marginal);
     Preconditions.checkState(expectedFeatureCounts.getVars().equals(featureVariables));
 
-    ((TensorSufficientStatistics) statistics).increment(expectedFeatureCounts.getWeights(), 
+    ((TensorSufficientStatistics) gradient).increment(expectedFeatureCounts.getWeights(), 
         count / partitionFunction);
   }
 
@@ -251,10 +238,10 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
       TableFactorBuilder initialWeights) {
     Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
 
-    int featureVarNum = Collections.max(vars.getVariableNums()) + 1;
+    int featureVarNum = Ints.max(vars.getVariableNumsArray()) + 1;
 
     DiscreteFactor featureValues = createIndicatorFeatureTensor(vars, featureVarNum, initialWeights);
-    VariableNumMap featureVarMap = featureValues.getVars().intersection(Arrays.asList(featureVarNum));
+    VariableNumMap featureVarMap = featureValues.getVars().intersection(featureVarNum);
 
     TableFactor initialWeightFactor = (initialWeights != null) ? initialWeights.build() : null;
     return new DiscreteLogLinearFactor(vars, featureVarMap, featureValues, initialWeightFactor);

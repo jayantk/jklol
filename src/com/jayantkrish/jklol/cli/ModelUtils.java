@@ -36,8 +36,8 @@ public class ModelUtils {
    * @param featureDelimiter
    * @return
    */
-    public static ParametricFactorGraph buildSequenceModel(Iterable<String> emissionFeatureLines,
-							   String featureDelimiter) {
+  public static ParametricFactorGraph buildSequenceModel(Iterable<String> emissionFeatureLines,
+      String featureDelimiter) {
     // Read in the possible values of each variable.
     List<String> words = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 0, featureDelimiter);
     List<String> labels = StringUtils.readColumnFromDelimitedLines(emissionFeatureLines, 1, featureDelimiter);
@@ -72,13 +72,13 @@ public class ModelUtils {
     DiscreteLogLinearFactor emissionFactor = new DiscreteLogLinearFactor(x.union(y), emissionFeatureVar,
         emissionFeatureFactor);
     builder.addFactor(WORD_LABEL_FACTOR, emissionFactor,
-        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.EMPTY));
 
     // Create a factor connecting adjacent labels
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1),
         Arrays.asList(outputPattern, nextOutputPattern), Arrays.asList(labelType, labelType));
     builder.addFactor(TRANSITION_FACTOR, DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY));
 
     return builder.build();
   }
@@ -107,7 +107,7 @@ public class ModelUtils {
         .toDynamicAssignment(bestAssignment, fg.getAllVariables());
     List<String> labels = Lists.newArrayList();
     for (Assignment plateAssignment : prediction
-             .getPlateFixedAssignments(PLATE_NAME)) {
+        .getPlateFixedAssignments(PLATE_NAME)) {
       List<Object> values = plateAssignment.getValues();
       labels.add((String) values.get(1));
     }

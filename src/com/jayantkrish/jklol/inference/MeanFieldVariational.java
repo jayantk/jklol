@@ -27,6 +27,7 @@ import com.jayantkrish.jklol.util.IndexedList;
  * @author jayantk
  */
 public class MeanFieldVariational implements MarginalCalculator {
+  private static final long serialVersionUID = 1L;
 
   private static final double CONVERGENCE_DELTA = 0.00000001; 
   // private static final double CONVERGENCE_DELTA = 0.01;

@@ -15,7 +15,7 @@ public class CvsmUtils {
   public static List<CvsmExample> readTrainingData(String filename) {
     List<CvsmExample> examples = Lists.newArrayList();
     CsvParser csv = new CsvParser(',', '"', CsvParser.NULL_ESCAPE);
-    ExpressionParser exp = new ExpressionParser();
+    ExpressionParser<Expression> exp = ExpressionParser.lambdaCalculus();
     List<String> lines = IoUtils.readLines(filename);
     for (String line : lines) {
       if (line.trim().startsWith("#")) {

@@ -230,6 +230,32 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
       incrementEntry(keyValue.getValue() * multiplier, keyValue.getKey());
     }
   }
+  
+  @Override
+  public void incrementSquare(TensorBase other, double multiplier) {
+    throw new UnsupportedOperationException("not yet implemented.");
+  }
+
+  @Override
+  public void incrementAdagrad(TensorBase other, TensorBase squareTensor, double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(TensorBase squareTensor, double constant, double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public void incrementSquareAdagrad(TensorBase gradient, TensorBase parameters, double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier) {
+    incrementWithMultiplier(leftTensor.outerProduct(rightTensor), multiplier);
+  }
 
   @Override
   public void incrementEntry(double amount, int... key) {
@@ -288,7 +314,20 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
       outcomes.put(keyNum, value);
     }
   }
-  
+
+  @Override
+  public void findEntriesLargerThan(double threshold) {
+    for (long keyNum : outcomes.keySet()) {
+      double value = outcomes.get(keyNum);
+      if (value >= threshold) {
+        value = 1.0;
+      } else {
+        value = 0.0;
+      }
+      outcomes.put(keyNum, value);
+    }
+  }
+
   @Override
   public void exp() {
     for (long keyNum = 0; keyNum < getMaxKeyNum(); keyNum++) {
@@ -308,14 +347,16 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
     double[] tableValues = new double[outcomes.size()];
     int index = 0;
     for (Map.Entry<Long, Double> entry : outcomes.entrySet()) {
-      tableKeyNums[index] = entry.getKey();
-      tableValues[index] = entry.getValue();
-      index++;
+      if (entry.getValue() != 0.0) {
+        tableKeyNums[index] = entry.getKey();
+        tableValues[index] = entry.getValue();
+        index++;
+      }
     } 
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(),
         tableKeyNums, tableValues);
   }
-  
+
   @Override
   public SparseTensor buildNoCopy() {
     return build();

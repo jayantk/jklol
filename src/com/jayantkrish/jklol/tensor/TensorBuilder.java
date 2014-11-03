@@ -27,6 +27,22 @@ public interface TensorBuilder extends TensorBase, Serializable {
   void increment(double amount);
 
   void incrementWithMultiplier(TensorBase other, double multiplier);
+  
+  void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier);
+
+  /**
+   * Increments each value in {@code this} by other squared.
+   *  
+   * @param other
+   */
+  void incrementSquare(TensorBase other, double multiplier);
+  
+  void incrementAdagrad(TensorBase other, TensorBase squareTensor, double multiplier);
+
+  void multiplyInverseAdagrad(TensorBase squareTensor, double constant, double multiplier);
+  
+  void incrementSquareAdagrad(TensorBase gradient, TensorBase parameters, double multiplier);
 
   void incrementEntry(double amount, int... key);
   
@@ -55,6 +71,15 @@ public interface TensorBuilder extends TensorBase, Serializable {
    * @param threshold
    */
   void softThreshold(double threshold);
+
+  /**
+   * Finds keys in this whose value is {@code >= threshold}. The value of each
+   * such key is set to 1, and the value for all other keys is set to 0.
+   *
+   * @param threshold
+   * @return
+   */
+  void findEntriesLargerThan(double threshold);
 
   /**
    * Gets the sum of the elementwise product of {@code this} and {@code other}.

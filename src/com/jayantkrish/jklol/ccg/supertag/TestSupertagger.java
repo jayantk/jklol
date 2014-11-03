@@ -7,8 +7,11 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.SyntacticCategory;
+import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.cli.TrainCcg;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.inference.BeamPruningStrategy;
+import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.sequence.TaggedSequence;
 import com.jayantkrish.jklol.sequence.TaggerUtils;
 import com.jayantkrish.jklol.sequence.TaggerUtils.SequenceTaggerError;
@@ -19,7 +22,9 @@ public class TestSupertagger extends AbstractCli {
   private OptionSpec<String> model;
   private OptionSpec<String> testFilename;
   
+  private OptionSpec<String> syntaxMap;
   private OptionSpec<Double> multitagThreshold;
+  private OptionSpec<Double> beamPruningThreshold;
   
   public TestSupertagger() {
     super(CommonOptions.MAP_REDUCE);
@@ -29,8 +34,10 @@ public class TestSupertagger extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
     testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
-
+    
+    syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
     multitagThreshold = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class);
+    beamPruningThreshold = parser.accepts("beamPruningThreshold").withRequiredArg().ofType(Double.class);
   }
 
   @Override
@@ -38,12 +45,22 @@ public class TestSupertagger extends AbstractCli {
     // Read in the serialized model and print its parameters
     Supertagger trainedModel = IoUtils.readSerializedObject(options.valueOf(model), Supertagger.class);
 
+    if (options.has(beamPruningThreshold)) {
+      FactorGraphSupertagger fgTagger = (FactorGraphSupertagger) trainedModel;
+      trainedModel = new FactorGraphSupertagger(fgTagger.getModelFamily(),
+          fgTagger.getParameters(), fgTagger.getInstantiatedModel(), fgTagger.getFeatureGenerator(),
+          fgTagger.getInputGenerator(), fgTagger.getMaxMarginalCalculator(),
+          new JunctionTree(true, new BeamPruningStrategy(options.valueOf(beamPruningThreshold))),
+          fgTagger.getStartInput(), fgTagger.getStartLabel());
+    }
+
     if (options.has(testFilename)) {
-      List<CcgExample> ccgExamples = CcgExample.readExamplesFromFile(
-          options.valueOf(testFilename), true, true);
-      List<TaggedSequence<WordAndPos, SyntacticCategory>> testData = 
-          TrainSupertagger.reformatTrainingExamples(ccgExamples);
-      
+      List<CcgExample> ccgExamples = TrainCcg.readTrainingData(
+          options.valueOf(testFilename), true, true, options.valueOf(syntaxMap));
+
+      List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> testData = 
+          TrainSupertagger.reformatTrainingExamples(ccgExamples, false);
+
       SequenceTaggerError error = null;
       if (!options.has(multitagThreshold)) {
         error = TaggerUtils.evaluateTagger(trainedModel, testData);

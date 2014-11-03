@@ -95,7 +95,7 @@ public class StepwiseEMTrainer extends AbstractTrainer
         SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()
             .mapReduce(batch,
                 new SufficientStatisticsMapper(factorGraph, marginalCalculator, log),
-                new SufficientStatisticsReducer(bn));
+                new SufficientStatisticsReducer(bn, initialParameters));
         SufficientStatistics batchStatistics = result.getStatistics();
         log.logStatistic(i, "average loglikelihood",
             result.getLoglikelihood() / result.getNumExamples());

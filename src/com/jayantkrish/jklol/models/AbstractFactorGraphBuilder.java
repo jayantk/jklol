@@ -54,22 +54,16 @@ public abstract class AbstractFactorGraphBuilder<T> {
     return variables;
   }
 
-  /**
-   * Get the factor graph being constructed with this builder.
-   * 
-   * @return
-   */
-  /*
-   * public ParametricFactorGraph build() { return new
-   * ParametricFactorGraph(new DynamicFactorGraph(variables,
-   * constantFactors, constantFactorNames), parametricFactors,
-   * factorPatterns, parametricFactorNames); }
-   */
-
   public void addVariable(String name, Variable variable) {
     variables = variables.addFixedVariable(name, variable);
   }
 
+  /**
+   * Adds {@code newVariables} to the variables in the factor
+   * graph.
+   * 
+   * @param newVariables
+   */
   public void addVariables(VariableNumMap newVariables) {
     variables = variables.addFixedVariables(newVariables);
   }

@@ -25,7 +25,7 @@ public abstract class AbstractParametricFactor implements ParametricFactor {
   public VariableNumMap getVars() {
     return variables;
   }
-  
+
   @Override
   public String getParameterDescription(SufficientStatistics statistics) {
     return getParameterDescription(statistics, -1);
@@ -33,11 +33,13 @@ public abstract class AbstractParametricFactor implements ParametricFactor {
 
   @Override
   public void incrementSufficientStatisticsFromPartialAssignment(
-      SufficientStatistics statistics, Assignment a, double count) {
-    VariableNumMap notInAssignment = getVars().removeAll(a.getVariableNums());
+      SufficientStatistics gradient, SufficientStatistics currentParameters, Assignment a,
+      double count) {
+    VariableNumMap notInAssignment = getVars().removeAll(a.getVariableNumsArray());
     Iterator<Assignment> iter = new AllAssignmentIterator(notInAssignment);
     while (iter.hasNext()) {
-      incrementSufficientStatisticsFromAssignment(statistics, iter.next().union(a), count);
+      incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
+          iter.next().union(a), count);
     }
   }
 }

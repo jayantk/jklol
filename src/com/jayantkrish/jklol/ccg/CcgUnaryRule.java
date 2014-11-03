@@ -3,10 +3,8 @@ package com.jayantkrish.jklol.ccg;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
@@ -31,12 +29,6 @@ public class CcgUnaryRule implements Serializable {
         "Illegal logical form for unary rule: " + logicalForm);
 
     Preconditions.checkArgument(returnSyntax.isCanonicalForm());
-
-    // Ensure that the return type has all of the variables in
-    // inputSyntax.
-    Set<Integer> returnVars = Sets.newHashSet(Ints.asList(returnSyntax.getUniqueVariables()));
-    Preconditions.checkState(returnVars.containsAll(
-        Ints.asList(inputSyntax.getUniqueVariables())));
   }
 
   /**
@@ -87,7 +79,7 @@ public class CcgUnaryRule implements Serializable {
 
     LambdaExpression logicalForm = null;
     if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
-      logicalForm = (LambdaExpression) (new ExpressionParser()).parseSingleExpression(chunks[1]);
+      logicalForm = (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(chunks[1]);
     }
 
     if (chunks.length >= 3) {

@@ -8,12 +8,12 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 /**
  * This also tests many of the methods in Factor and the
@@ -80,8 +80,8 @@ public class TableFactorTest extends TestCase {
 	}
 	
 	public void testGetProbability() {
-		Assignment a = new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 5}),
-				Arrays.asList(new String[] {"T", "F", "T", "F", "T"}));
+		Assignment a = Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 5},
+				new String[] {"T", "F", "T", "F", "T"});
 		assertEquals(3.0, f.getUnnormalizedProbability(a));
 	}
 
@@ -157,8 +157,8 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testConditionalNone() {
-		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {6, 8}),
-				Arrays.asList(new Object[] {"F", "F"})));
+		Factor c = f.conditional(Assignment.fromSortedArrays(new int[] {6, 8},
+				new Object[] {"F", "F"}));
 		// Nothing should change.
 		assertEquals(1.0,
 				c.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T", "T", "T"})));
@@ -167,15 +167,15 @@ public class TableFactorTest extends TestCase {
 	}
 
 	public void testConditionalAll() {
-		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 2, 3, 5}),
-				Arrays.asList(new String[] {"T", "T", "F", "T"})));
+		Factor c = f.conditional(Assignment.fromSortedArrays(new int[] {0, 2, 3, 5},
+				new String[] {"T", "T", "F", "T"}));
 
 		assertEquals(3.0, c.getUnnormalizedProbability(Assignment.EMPTY));
 	}
 
 	public void testConditionalPartial() {
-		Factor c = f.conditional(new Assignment(Arrays.asList(new Integer[] {0, 3}),
-				Arrays.asList(new String[] {"T", "F"})));
+		Factor c = f.conditional(Assignment.fromSortedArrays(new int[] {0, 3},
+		    new String[] {"T", "F"}));
 
 		assertEquals(3.0,
 				c.getUnnormalizedProbability(Arrays.asList(new String[] {"T", "T"})));
@@ -282,16 +282,16 @@ public class TableFactorTest extends TestCase {
 	}
 	
 	public void testRelabelVariables() {
-	  BiMap<Integer, Integer> relabeling = HashBiMap.create();
-	  relabeling.put(0, 2);
-	  relabeling.put(3, 1);
-	  relabeling.put(1, 0);
-	  BiMap<String, String> nameRelabeling = HashBiMap.create();
-	  nameRelabeling.put("v0", "v2");
-	  nameRelabeling.put("v3", "v1");
-	  nameRelabeling.put("v1", "v0");
+	  VariableNumMap inputVars = new VariableNumMap(Ints.asList(0, 1, 3),
+	      Arrays.asList("v0", "v1", "v3"), Arrays.<Variable>asList(null, null, null));
+	  VariableNumMap outputVars = new VariableNumMap(Ints.asList(0, 1, 2),
+	      Arrays.asList("v0", "v1", "v2"), Arrays.<Variable>asList(null, null, null));
+	  int[] keys = new int[] {0, 3, 1};
+	  int[] values = new int[] {2, 1, 0};
+	  IntBiMap map = IntBiMap.fromUnsortedKeyValues(keys, values);
+	  VariableRelabeling relabeling = new VariableRelabeling(inputVars, outputVars, map);
 	  
-	  TableFactor r = g.relabelVariables(new VariableRelabeling(relabeling, nameRelabeling));
+	  TableFactor r = g.relabelVariables(relabeling);
 	  assertEquals(3, r.getVars().size());
 	  assertTrue(r.getVars().containsAll(Arrays.asList(0, 1, 2)));
 	  assertEquals(7.0, r.getUnnormalizedProbability(r.getVars().outcomeArrayToAssignment("U", "F", "T")));
@@ -315,7 +315,7 @@ public class TableFactorTest extends TestCase {
 	}
 	
 	public void testIterationEmpty() {
-	  TableFactor emptyFactor = TableFactorBuilder.ones(VariableNumMap.emptyMap()).build();
+	  TableFactor emptyFactor = TableFactorBuilder.ones(VariableNumMap.EMPTY).build();
 	  Iterator<Outcome> iter = emptyFactor.outcomeIterator();
 	  assertTrue(iter.hasNext());
 	  assertEquals(Assignment.EMPTY, iter.next().getAssignment());

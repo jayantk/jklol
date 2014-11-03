@@ -12,8 +12,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.regexp.shared.MatchResult;
+import com.google.gwt.regexp.shared.RegExp;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -67,7 +67,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
   public static VariableNamePattern fromTemplateVariables(VariableNumMap templateVariables,
       VariableNumMap fixedVariables) {
     List<VariableNameMatcher> matchers = Lists.newArrayList();
-    for (String variableName : templateVariables.getVariableNames()) {
+    for (String variableName : templateVariables.getVariableNamesArray()) {
       int varIndex = variableName.indexOf("?(");
       String variableNamePrefix = variableName.substring(0, varIndex);
       String variableNameSuffix = variableName.substring(varIndex + 1);
@@ -93,7 +93,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
   public static VariablePattern fromPlate(String plateName, VariableNumMap plateVariables,
       VariableNumMap fixedVariables) {
     List<VariableNameMatcher> matchers = Lists.newArrayList();
-    for (String variableName : plateVariables.getVariableNames()) {
+    for (String variableName : plateVariables.getVariableNamesArray()) {
       matchers.add(new VariableNameMatcher(plateName + "/", "/" + variableName, 0));
     }
     return new VariableNamePattern(matchers, plateVariables, fixedVariables);
@@ -126,24 +126,23 @@ public class VariableNamePattern extends AbstractVariablePattern {
     // Special case: if there aren't any templates, then only the fixed
     // variables should be returned.
     if (templateVariableMatchers.size() == 0) {
-      return Arrays.asList(new VariableMatch(fixedVariables));
+      return Arrays.asList(VariableMatch.identity(fixedVariables));
     }
 
     // Find all variables which begin with a prefix in variableNamePrefixes,
     // identify their replication index, and aggregate the matches by
     // replication index.
-    SortedMap<Integer, VariableMatch> variableMatches = Maps.newTreeMap();
+    SortedMap<Integer, VariableMatchBuilder> variableMatches = Maps.newTreeMap();
     for (int i = 0; i < templateVariableMatchers.size(); i++) {
-      int templateVariableIndex = templateVariables.getVariableNums().get(i);
+      int templateVariableIndex = templateVariables.getVariableNumsArray()[i];
 
-      for (String variableName : inputVariables.getVariableNames()) {
+      for (String variableName : inputVariables.getVariableNamesArray()) {
         for (Integer replicationIndex : templateVariableMatchers.get(i).getMatchedIndices(variableName)) {
           if (!variableMatches.containsKey(replicationIndex)) {
-            variableMatches.put(replicationIndex, new VariableMatch(fixedVariables));
+            variableMatches.put(replicationIndex, new VariableMatchBuilder(templateVariables.getVariableNumsArray()));
           }
-          variableMatches.get(replicationIndex).addMatch(
-              templateVariables.intersection(Ints.asList(templateVariableIndex)),
-              inputVariables.getVariablesByName(variableName));
+          variableMatches.get(replicationIndex).addMatch(templateVariableIndex,
+              inputVariables.getVariableByName(variableName));
         }
       }
     }
@@ -151,10 +150,9 @@ public class VariableNamePattern extends AbstractVariablePattern {
     // Eliminate any partial matches which do not contain a match for every
     // variable prefix.
     List<VariableMatch> validMatches = Lists.newArrayList();
-    VariableNumMap allMatchVariables = templateVariables.union(fixedVariables);
-    for (VariableMatch match : variableMatches.values()) {
-      if (match.getMatchedVariables().size() == allMatchVariables.size()) {
-        validMatches.add(match);
+    for (VariableMatchBuilder matchBuilder : variableMatches.values()) {
+      if (matchBuilder.isComplete()) {
+        validMatches.add(matchBuilder.build(fixedVariables, templateVariables, inputVariables));
       }
     }
     return validMatches;
@@ -168,7 +166,7 @@ public class VariableNamePattern extends AbstractVariablePattern {
 
     public VariableNameMatcher(String variableNamePrefix, String variableNameSuffix, int indexOffset) {
       this.indexOffset = indexOffset;
-      this.pattern = variableNamePrefix + "(\\d+)" + variableNameSuffix;
+      this.pattern = "^" + variableNamePrefix + "(\\d+)" + variableNameSuffix + "$";
     }
     
     public VariableNameMatcher(String pattern, int indexOffset) {

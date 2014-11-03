@@ -51,9 +51,9 @@ public class CombiningParametricFactorTest extends TestCase {
         Arrays.asList("indicators", "falses", "var1indicator"), Arrays.asList(f, g, h), true);
     
     stats = factor.getNewSufficientStatistics().coerceToList();
-    factor.incrementSufficientStatisticsFromAssignment(stats, 
+    factor.incrementSufficientStatisticsFromAssignment(stats, stats,
         vars.outcomeArrayToAssignment("F", "T"), 1.0);
-    factor.incrementSufficientStatisticsFromAssignment(stats, 
+    factor.incrementSufficientStatisticsFromAssignment(stats, stats,
         vars.outcomeArrayToAssignment("T", "T"), 2.0);
   }
   
@@ -80,7 +80,7 @@ public class CombiningParametricFactorTest extends TestCase {
     List<String> marginalList = Arrays.asList("F,F,0", "F,T,0", "T,F,1", "T,T,1");
     Factor marginal = TableFactor.fromDelimitedFile(vars, marginalList, ",", false);
 
-    factor.incrementSufficientStatisticsFromMarginal(stats, marginal, Assignment.EMPTY,
+    factor.incrementSufficientStatisticsFromMarginal(stats, stats, marginal, Assignment.EMPTY,
         1, 2);
 
     System.out.println("foo");

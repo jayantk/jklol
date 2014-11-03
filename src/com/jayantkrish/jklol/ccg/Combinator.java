@@ -2,8 +2,10 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * A combinator combines a pair of syntactic categories into a result
@@ -12,19 +14,29 @@ import com.google.common.base.Preconditions;
  * @author jayantk
  */
 public class Combinator implements Serializable {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
+
+  public static enum Type {
+    FORWARD_APPLICATION, BACKWARD_APPLICATION, FORWARD_COMPOSITION, BACKWARD_COMPOSITION, OTHER,
+    CONJUNCTION
+  };
 
   private final int syntax;
   private final int[] syntaxUniqueVars;
+  private final int syntaxHeadVar;
 
   private final int[] leftVariableRelabeling;
+  private final int[] leftInverseRelabeling;
   private final int[] rightVariableRelabeling;
+  private final int[] rightInverseRelabeling;
   private final int[] resultOriginalVars;
   private final int[] resultVariableRelabeling;
+  private final int[] resultInverseRelabeling;
   private final int[] unifiedVariables;
 
   // Unfilled dependencies created by this operation.
   private final String[] subjects;
+  private final HeadedSyntacticCategory[] subjectSyntacticCategories;
   private final int[] argumentNumbers;
   // The variables each dependency accepts.
   private final int[] objects;
@@ -32,88 +44,137 @@ public class Combinator implements Serializable {
   // Backpointer information for the combinator, describing
   // the CCG operation which created it.
   private final boolean isArgumentOnLeft;
-  private int argumentReturnDepth;
+  private final int argumentReturnDepth;
   // May be null, in which case the combinator did not originate
   // from a binary rule.
-  private CcgBinaryRule binaryRule;
+  private final CcgBinaryRule binaryRule;
 
-  public Combinator(int syntax, int[] syntaxUniqueVars, int[] leftVariableRelabeling,
-      int[] rightVariableRelabeling, int[] resultOriginalVars, int[] resultVariableRelabeling,
-      int[] unifiedVariables, String[] subjects, int[] argumentNumbers, int[] objects,
-      boolean isArgumentOnLeft, int argumentReturnDepth, CcgBinaryRule binaryRule) {
+  // The type of this combinator (e.g., forward application)
+  private final Type type;
+
+  public Combinator(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, int[] leftVariableRelabeling,
+      int[] leftInverseRelabeling, int[] rightVariableRelabeling, int[] rightInverseRelabeling,
+      int[] resultOriginalVars, int[] resultVariableRelabeling, int[] resultInverseRelabeling,
+      int[] unifiedVariables, String[] subjects, HeadedSyntacticCategory[] subjectSyntacticCategories, 
+      int[] argumentNumbers, int[] objects, boolean isArgumentOnLeft, int argumentReturnDepth,
+      CcgBinaryRule binaryRule, Type type) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
+    this.syntaxHeadVar = syntaxHeadVar;
 
     this.leftVariableRelabeling = leftVariableRelabeling;
+    this.leftInverseRelabeling = leftInverseRelabeling;
     this.rightVariableRelabeling = rightVariableRelabeling;
+    this.rightInverseRelabeling = rightInverseRelabeling;
     this.resultOriginalVars = resultOriginalVars;
     this.resultVariableRelabeling = resultVariableRelabeling;
+    this.resultInverseRelabeling = resultInverseRelabeling;
     this.unifiedVariables = unifiedVariables;
 
+    Preconditions.checkArgument(leftInverseRelabeling.length == rightInverseRelabeling.length);
     Preconditions.checkArgument(subjects.length == objects.length);
+    Preconditions.checkArgument(subjects.length == subjectSyntacticCategories.length);
     Preconditions.checkArgument(subjects.length == argumentNumbers.length);
+    for (int i = 0; i < subjectSyntacticCategories.length; i++) {
+      Preconditions.checkArgument(subjectSyntacticCategories[i].isCanonicalForm());
+    }
+    
     this.subjects = subjects;
+    this.subjectSyntacticCategories = subjectSyntacticCategories;
     this.argumentNumbers = argumentNumbers;
     this.objects = objects;
 
     this.isArgumentOnLeft = isArgumentOnLeft;
     this.argumentReturnDepth = argumentReturnDepth;
     this.binaryRule = binaryRule;
+    
+    this.type = Preconditions.checkNotNull(type);
   }
 
-  public int getSyntax() {
+  public final int getSyntax() {
     return syntax;
   }
 
-  public int[] getSyntaxUniqueVars() {
+  public final int[] getSyntaxUniqueVars() {
     return syntaxUniqueVars;
   }
+  
+  public final int getSyntaxHeadVar() {
+    return syntaxHeadVar;
+  }
 
-  public int[] getLeftVariableRelabeling() {
+  public final int[] getLeftVariableRelabeling() {
     return leftVariableRelabeling;
   }
-
-  public int[] getRightVariableRelabeling() {
-    return rightVariableRelabeling;
+  
+  public final int[] getLeftInverseRelabeling() {
+    return leftInverseRelabeling;
   }
 
-  public int[] getResultOriginalVars() {
+  public final int[] getRightVariableRelabeling() {
+    return rightVariableRelabeling;
+  }
+  
+  public final int[] getRightInverseRelabeling() {
+    return rightInverseRelabeling;
+  }
+
+  public final int[] getResultOriginalVars() {
     return resultOriginalVars;
   }
 
-  public int[] getResultVariableRelabeling() {
+  public final int[] getResultVariableRelabeling() {
     return resultVariableRelabeling;
   }
 
-  public int[] getUnifiedVariables() {
+  public final int[] getResultInverseRelabeling() {
+    return resultInverseRelabeling;
+  }
+
+  public final int[] getUnifiedVariables() {
     return unifiedVariables;
   }
 
-  public String[] getSubjects() {
+  public final String[] getSubjects() {
     return subjects;
   }
   
-  public boolean hasUnfilledDependencies() {
+  public final HeadedSyntacticCategory[] getSubjectSyntacticCategories() {
+    return subjectSyntacticCategories;
+  }
+
+  public final int[] getArgumentNumbers() {
+    return argumentNumbers;
+  }
+
+  public final int[] getObjects() {
+    return objects;
+  }
+
+  public final boolean hasUnfilledDependencies() {
     return subjects.length > 0;
   }
-
-  public int getUnfilledDependencies(CcgParser parser, int headWordIndex, long[] depAccumulator, int accumulatorStartIndex) {
-    if (depAccumulator.length < accumulatorStartIndex + subjects.length) {
-      // The accumulator does not have enough space to store the dependencies
-      // in this combinator.
-      return -1;
-    }
-    
+  
+  public final List<UnfilledDependency> getUnfilledDependencies(int headWordIndex) {
+    List<UnfilledDependency> deps = Lists.newArrayList();
     for (int i = 0; i < subjects.length; i++) {
-      UnfilledDependency dep = UnfilledDependency.createWithKnownSubject(subjects[i],
-          headWordIndex, argumentNumbers[i], objects[i]);
-      depAccumulator[i + accumulatorStartIndex] = parser.unfilledDependencyToLong(dep);
+      deps.add(UnfilledDependency.createWithKnownSubject(subjects[i],
+          subjectSyntacticCategories[i], headWordIndex, argumentNumbers[i], objects[i]));
     }
-    return accumulatorStartIndex + subjects.length;
+    return deps;
   }
 
-  public boolean isArgumentOnLeft() {
+  public final boolean isArgumentOnLeft() {
     return isArgumentOnLeft;
+  }
+
+  /**
+   * Gets the type of this combinator, e.g., forward application.
+   * 
+   * @return
+   */
+  public final Type getType() {
+    return type;
   }
 
   /**
@@ -124,12 +185,20 @@ public class Combinator implements Serializable {
    * 
    * @return
    */
-  public int getArgumentReturnDepth() {
+  public final int getArgumentReturnDepth() {
     return argumentReturnDepth;
   }
 
-  public CcgBinaryRule getBinaryRule() {
+  public final CcgBinaryRule getBinaryRule() {
     return binaryRule;
+  }
+
+  public Combinator applicationToComposition(int depth) {
+    return new Combinator(syntax, syntaxUniqueVars, syntaxHeadVar, leftVariableRelabeling,
+        leftInverseRelabeling, rightVariableRelabeling, rightInverseRelabeling, resultOriginalVars,
+        resultVariableRelabeling, resultInverseRelabeling, unifiedVariables, subjects,
+        subjectSyntacticCategories, argumentNumbers, objects, isArgumentOnLeft, argumentReturnDepth + depth,
+        binaryRule, type);
   }
 
   @Override
@@ -154,6 +223,7 @@ public class Combinator implements Serializable {
     result = prime * result + Arrays.hashCode(resultOriginalVars);
     result = prime * result + Arrays.hashCode(resultVariableRelabeling);
     result = prime * result + Arrays.hashCode(rightVariableRelabeling);
+    result = prime * result + Arrays.hashCode(subjectSyntacticCategories);
     result = prime * result + Arrays.hashCode(subjects);
     result = prime * result + syntax;
     result = prime * result + Arrays.hashCode(syntaxUniqueVars);
@@ -190,6 +260,8 @@ public class Combinator implements Serializable {
     if (!Arrays.equals(resultVariableRelabeling, other.resultVariableRelabeling))
       return false;
     if (!Arrays.equals(rightVariableRelabeling, other.rightVariableRelabeling))
+      return false;
+    if (!Arrays.equals(subjectSyntacticCategories, other.subjectSyntacticCategories))
       return false;
     if (!Arrays.equals(subjects, other.subjects))
       return false;

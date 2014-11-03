@@ -1,29 +1,28 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.util.CsvParser;
-import com.jayantkrish.jklol.util.IoUtils;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 
 /**
- * A training example for {@code CcgLoglikelihoodOracle}. Stores an
- * input word sequence and its expected set of dependencies. May
- * optionally contain the expected syntactic structure.
+ * A training example for training a CCG parser. The input
+ * portion of the training example is a part-of-speech tagged 
+ * (and tokenized) sentence, and optionally a collection of supertags to use.
+ * The output portion optionally contains the correct syntactic parse of
+ * the sentence, its predicate-argument dependencies, and its logical form.
+ * If any output field is unspecified, it is presumed to be unobserved.
  * 
  * @author jayant
  */
 public class CcgExample {
 
-  private final List<String> words;
-  private final List<String> posTags;
+  // The sentence to parse, along with part-of-speech tags for each word
+  // and optional supertags (syntactic categories to consider for each word).
+  private final SupertaggedSentence sentence;
 
   // May be null, in which case the true dependencies are
   // unobserved.
@@ -38,9 +37,7 @@ public class CcgExample {
   /**
    * Create a new training example for a CCG parser.
    * 
-   * @param words The input language to CCG parse.
-   * @param posTags Part-of-speech tags for the input language. May be
-   * {@code null}.
+   * @param sentence The sentence to be parsed with optional supertags.
    * @param dependencies The dependencies in the correct CCG parse of
    * {@code words}. May be {@code null}, in which case the
    * dependencies are unobserved.
@@ -51,95 +48,19 @@ public class CcgExample {
    * {@code words}. May be {@code null}, in which case the correct
    * value is treated as unobserved.
    */
-  public CcgExample(List<String> words, List<String> posTags, Set<DependencyStructure> dependencies,
+  public CcgExample(SupertaggedSentence sentence, Set<DependencyStructure> dependencies,
       CcgSyntaxTree syntacticParse, Expression logicalForm) {
-    this.words = Preconditions.checkNotNull(words);
-    this.posTags = Preconditions.checkNotNull(posTags);
-    Preconditions.checkArgument(words.size() == posTags.size());
+    this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
     this.logicalForm = logicalForm;
 
     if (syntacticParse != null) {
       List<String> syntaxWords = syntacticParse.getAllSpannedWords();
-      Preconditions.checkArgument(syntaxWords.equals(words),
+      Preconditions.checkArgument(syntaxWords.equals(sentence.getWords()),
           "CCG syntax tree and example must agree on words: \"%s\" vs \"%s\" %s", syntaxWords,
-          words, syntacticParse);
+          sentence.getWords(), syntacticParse);
     }
-  }
-
-  /**
-   * Expected format is (space-separated words)###(,-separated
-   * dependency structures)###(@@@-separated lexicon entries
-   * (optional)).
-   * 
-   * @param exampleString
-   * @return
-   */
-  public static CcgExample parseFromString(String exampleString, boolean syntaxInCcgBankFormat) {
-    String[] parts = exampleString.split("###");
-    List<String> words = Arrays.asList(parts[0].split("\\s+"));
-
-    Set<DependencyStructure> dependencies = Sets.newHashSet();
-    String[] dependencyParts = new CsvParser(CsvParser.DEFAULT_SEPARATOR,
-        CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(parts[1]);
-    for (int i = 0; i < dependencyParts.length; i++) {
-      if (dependencyParts[i].trim().length() == 0) {
-        continue;
-      }
-      String[] dep = dependencyParts[i].split("\\s+");
-      Preconditions.checkState(dep.length >= 5, "Illegal dependency string: " + dependencyParts[i]);
-
-      dependencies.add(new DependencyStructure(dep[0], Integer.parseInt(dep[1]), dep[3],
-          Integer.parseInt(dep[4]), Integer.parseInt(dep[2])));
-    }
-
-    // Parse out a CCG syntactic tree, if one is provided.
-    CcgSyntaxTree tree = null;
-    List<String> posTags = null;
-    if (parts.length >= 3 && parts[2].length() > 0) {
-      if (syntaxInCcgBankFormat) {
-        tree = CcgSyntaxTree.parseFromCcgBankString(parts[2]);
-      } else {
-        tree = CcgSyntaxTree.parseFromString(parts[2]);
-      }
-      posTags = tree.getAllSpannedPosTags();
-    } else {
-      posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    }
-
-    // Parse out a logical form, if one is provided.
-    Expression logicalForm = null;
-    if (parts.length >= 4 && parts[3].length() > 0) {
-      logicalForm = (new ExpressionParser()).parseSingleExpression(parts[3]);
-    }
-
-    return new CcgExample(words, posTags, dependencies, tree, logicalForm);
-  }
-
-  /**
-   * Reads in a collection of examples stored one per line in
-   * {@code filename}.
-   * 
-   * @param filename
-   * @param useCcgBankFormat
-   * @param ignoreSemantics If {@code true}, annotated dependency
-   * structures are removed from the examples.
-   * @return
-   */
-  public static List<CcgExample> readExamplesFromFile(String filename, boolean useCcgBankFormat,
-      boolean ignoreSemantics) {
-    List<CcgExample> examples = Lists.newArrayList();
-    for (String line : IoUtils.readLines(filename)) {
-      CcgExample example = CcgExample.parseFromString(line, useCcgBankFormat);
-      if (!ignoreSemantics) {
-        examples.add(example);
-      } else {
-        examples.add(new CcgExample(example.getWords(), example.getPosTags(), null,
-            example.getSyntacticParse(), example.getLogicalForm()));
-      }
-    }
-    return examples;
   }
 
   /**
@@ -152,17 +73,13 @@ public class CcgExample {
   public static Set<String> getPosTagVocabulary(Iterable<? extends CcgExample> examples) {
     Set<String> posTagVocabulary = Sets.newHashSet();
     for (CcgExample example : examples) {
-      posTagVocabulary.addAll(example.getPosTags());
+      posTagVocabulary.addAll(example.getSentence().getPosTags());
     }
     return posTagVocabulary;
   }
 
-  public List<String> getWords() {
-    return words;
-  }
-
-  public List<String> getPosTags() {
-    return posTags;
+  public SupertaggedSentence getSentence() {
+    return sentence;
   }
 
   /**
@@ -197,6 +114,6 @@ public class CcgExample {
 
   @Override
   public String toString() {
-    return words + " " + dependencies + " " + syntacticParse;
+    return sentence + " " + dependencies + " " + syntacticParse + " " + logicalForm;
   }
 }

@@ -33,14 +33,6 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    * @return
    */
   public VariableNumMap getVars();
-  
-  /**
-   * Gets a human-interpretable XML description {@code parameters}.
-   * 
-   * @param parameters
-   * @return
-   */
-  public String getParameterDescriptionXML(SufficientStatistics parameters);
 
   /**
    * Gets a {@code Factor} from a set of {@code parameters}. This method returns
@@ -56,19 +48,20 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
   /**
    * Computes sufficient statistics for {@code this} factor based on an assumed
    * point distribution at {@code assignment}, and increments
-   * {@code sufficientStatistics} with the statistics. {@count} is the number of
+   * {@code statistics} with the statistics. {@count} is the number of
    * times that {@code assignment} has been observed.
    * <p>
    * {@code assignment} must contain all of the variables in this factor,
    * and may contain additional assignments.
    * 
    * @param statistics
+   * @param currentParameters
    * @param assignment
    * @param count
    * @return
    */
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count);
+      SufficientStatistics currentParameters, Assignment assignment, double count);
 
   /**
    * Increments {@code statistics} by {@code count} for each assignment to {@code this} that is a
@@ -77,13 +70,14 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    * #incrementSufficientStatisticsFromAssignment}.
    * 
    * @param statistics
+   * @param currentParameters
    * @param partialAssignment
    * @param count
    * @return
-   */  
+   */
   public void incrementSufficientStatisticsFromPartialAssignment(SufficientStatistics statistics, 
-      Assignment partialAssignment, double count);
-
+      SufficientStatistics currentParameters, Assignment partialAssignment, double count);
+  
   /**
    * Computes sufficient statistics for {@code this} factor from the marginal
    * distribution {@code marginal} and accumulates them in {@code statistics}.
@@ -98,6 +92,7 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    * {@code partitionFunction} is the normalizing constant for {@code marginal}.
    * 
    * @param statistics
+   * @param currentParameters
    * @param marginal
    * @param conditionalAssignment
    * @param count
@@ -105,5 +100,6 @@ public interface ParametricFactor extends ParametricFamily<Factor> {
    * @return
    */
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction);
+       SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+       double count, double partitionFunction);
 }

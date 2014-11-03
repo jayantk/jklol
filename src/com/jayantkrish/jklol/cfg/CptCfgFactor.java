@@ -66,11 +66,6 @@ public class CptCfgFactor extends AbstractParametricFactor {
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     throw new UnsupportedOperationException();
   }
-  
-  @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    throw new UnsupportedOperationException("Not implemented");
-  }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
@@ -82,13 +77,14 @@ public class CptCfgFactor extends AbstractParametricFactor {
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
     throw new UnsupportedOperationException("Cannot compute statistics from an assignment.");
   }
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment assignment, double count, double partitionFunction) {
+      SufficientStatistics currentParameters, Factor marginal, Assignment assignment,
+      double count, double partitionFunction) {
     Preconditions.checkArgument(marginal instanceof CfgFactor);
     ParseChart chart = ((CfgFactor) marginal).getMarginalChart(true);
     Factor nonterminalMarginal = chart.getBinaryRuleExpectations();
@@ -100,10 +96,16 @@ public class CptCfgFactor extends AbstractParametricFactor {
     SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
     
+    Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
+    ListSufficientStatistics parameterList = (ListSufficientStatistics) currentParameters;
+    Preconditions.checkArgument(parameterList.getStatistics().size() == 2);
+    SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(0);
+    SufficientStatistics terminalParameters = parameterList.getStatistics().get(1);
+
     // Update binary/terminal rule counts
     nonterminalFactor.incrementSufficientStatisticsFromMarginal(nonterminalStatistics, 
-        nonterminalMarginal, Assignment.EMPTY, count, partitionFunction);
+        nonterminalParameters, nonterminalMarginal, Assignment.EMPTY, count, partitionFunction);
     terminalFactor.incrementSufficientStatisticsFromMarginal(terminalStatistics, 
-        terminalMarginal, Assignment.EMPTY, count, partitionFunction);
+        terminalParameters, terminalMarginal, Assignment.EMPTY, count, partitionFunction);
   }
 }

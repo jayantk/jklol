@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -533,7 +532,7 @@ public class CfgParser implements Serializable {
    * Fill in the initial chart entries implied by the given set of terminals.
    */
   private void initializeChart(ParseChart chart, List<?> terminals) {
-    Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
+    Variable terminalListValue = terminalVar.getOnlyVariable();
 
     for (int i = 0; i < terminals.size(); i++) {
       for (int j = i; j < terminals.size(); j++) {
@@ -552,7 +551,7 @@ public class CfgParser implements Serializable {
   }
 
   private void updateTerminalRuleCounts(ParseChart chart) {
-    Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
+    Variable terminalListValue = terminalVar.getOnlyVariable();
     List<?> terminals = chart.getTerminals();
 
     for (int i = 0; i < terminals.size(); i++) {
@@ -579,7 +578,7 @@ public class CfgParser implements Serializable {
    */
   private void initializeBeamSearchChart(List<Object> terminals, BeamSearchParseChart chart,
       long[] treeEncodingOffsets) {
-    Variable terminalListValue = Iterables.getOnlyElement(terminalVar.getVariables());
+    Variable terminalListValue = terminalVar.getOnlyVariable();
 
     // Adding this to a tree key indicates that the tree is a terminal.
     long terminalSignal = ((long) chart.chartSize()) * (treeEncodingOffsets[3] + treeEncodingOffsets[2]);

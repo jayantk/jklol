@@ -42,7 +42,7 @@ public class FunctionFactor extends WeightedRelationFactor {
    */
   public FunctionFactor(VariableNumMap domainVariable, VariableNumMap rangeVariable,
       Function<Object, Object> function, Factor domainFactor, Factor rangeFactor) {
-    super(domainVariable, rangeVariable, VariableNumMap.emptyMap(), domainFactor, rangeFactor);
+    super(domainVariable, rangeVariable, VariableNumMap.EMPTY, domainFactor, rangeFactor);
     this.domainVariable = domainVariable;
     this.rangeVariable = rangeVariable;
     this.function = Preconditions.checkNotNull(function);

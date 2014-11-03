@@ -85,7 +85,7 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public Tensor slice(int[] dimensionNumbers, int[] keys) {
     return new LogSpaceTensorAdapter(logWeights.slice(dimensionNumbers, keys));
   }
-  
+
   @Override
   public Tensor retainKeys(Tensor indicatorTensor) {
     return new LogSpaceTensorAdapter(logWeights.retainKeys(indicatorTensor));
@@ -168,6 +168,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public Tensor softThreshold(double threshold) {
     throw new UnsupportedOperationException("Not yet implemented.");
   }
+  
+  @Override
+  public Tensor getEntriesLargerThan(double threshold) {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
 
   @Override
   public Tensor sumOutDimensions(Collection<Integer> dimensionsToEliminate) {
@@ -209,7 +214,7 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public double[] getValues() {
-    throw new UnsupportedOperationException("Not implemented.");
+    return logWeights.elementwiseExp().getValues();
   }
 
   @Override

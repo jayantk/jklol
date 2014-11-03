@@ -67,31 +67,31 @@ public class DenseTensorBase extends AbstractTensorBase {
   }
 
   @Override
-  public int size() {
+  public final int size() {
     return values.length;
   }
 
   @Override
-  public double getByIndex(int index) {
+  public final double getByIndex(int index) {
     return values[index];
   }
 
   @Override
-  public double getLogByIndex(int index) {
+  public final double getLogByIndex(int index) {
     return Math.log(values[index]);
   }
 
   @Override
-  public long indexToKeyNum(int index) {
+  public final long indexToKeyNum(int index) {
     return (long) index;
   }
 
   @Override
-  public int keyNumToIndex(long keyNum) {
+  public final int keyNumToIndex(long keyNum) {
     return (int) keyNum;
   }
 
-  public int dimKeyToIndex(int[] dimKey) {
+  public final int dimKeyToIndex(int[] dimKey) {
     return (int) dimKeyToKeyNum(dimKey);
   }
 

@@ -2,6 +2,9 @@ package com.jayantkrish.jklol.pos;
 
 import java.util.List;
 
+import com.google.common.base.Function;
+import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -15,8 +18,11 @@ public class TrainedPosTagger extends FactorGraphSequenceTagger<String, String> 
 
   public TrainedPosTagger(ParametricFactorGraph modelFamily,
       SufficientStatistics parameters, DynamicFactorGraph instantiatedModel,
-      FeatureVectorGenerator<LocalContext<String>> featureGenerator) {
-    super(modelFamily, parameters, instantiatedModel, featureGenerator, String.class);
+      FeatureVectorGenerator<LocalContext<String>> featureGenerator,
+      Function<? super LocalContext<String>, ? extends Object> inputGenerator,
+      MarginalCalculator maxMarginalCalculator, JunctionTree marginalCalculator) {
+    super(modelFamily, parameters, instantiatedModel, featureGenerator, inputGenerator,
+        String.class, maxMarginalCalculator, marginalCalculator, null, null);
   }
 
   @Override

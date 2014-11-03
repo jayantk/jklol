@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -54,7 +53,7 @@ public class CptTableFactor extends AbstractParametricFactor {
   public DiscreteFactor getModelFromParameters(SufficientStatistics parameters) {
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) parameters;
     Tensor allTensor = tensorStats.get();
-    Tensor parentTensor = allTensor.sumOutDimensions(childVars.getVariableNums());
+    Tensor parentTensor = allTensor.sumOutDimensions(childVars.getVariableNumsArray());
     
     return new TableFactor(getVars(), allTensor.elementwiseProduct(parentTensor.elementwiseInverse()));
   }
@@ -67,11 +66,6 @@ public class CptTableFactor extends AbstractParametricFactor {
     } else {
       return factor.getParameterDescription();
     }
-  }
-  
-  @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
@@ -88,7 +82,7 @@ public class CptTableFactor extends AbstractParametricFactor {
    */
   private static TensorBuilder getTensorFromVariables(VariableNumMap variables) {
     // Get the dimensions and dimension sizes for the tensor.
-    int[] dimensions = Ints.toArray(variables.getVariableNums());
+    int[] dimensions = variables.getVariableNumsArray();
     int[] sizes = new int[dimensions.length];
     List<DiscreteVariable> varTypes = variables.getDiscreteVariables();
     for (int i = 0; i < varTypes.size(); i++) {
@@ -96,18 +90,23 @@ public class CptTableFactor extends AbstractParametricFactor {
     }
     return new SparseTensorBuilder(dimensions, sizes);
   }
+  
+  public CptTableFactor rescaleFeatures(SufficientStatistics relabeling) {
+    throw new UnsupportedOperationException("Rescaling features in CptTableFactor is not supported");
+  }
 
   @Override
   public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment a, double count) {
-    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
+      SufficientStatistics currentParameters, Assignment a, double count) {
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;
     tensorStats.incrementFeature(a, count);
   }
 
   @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
     Assignment conditionalSubAssignment = conditionalAssignment.intersection(getVars());
 
     TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) statistics;

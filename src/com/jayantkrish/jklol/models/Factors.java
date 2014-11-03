@@ -37,23 +37,35 @@ public final class Factors {
    * @return
    */
   public static Factor product(List<Factor> factors) {
+    return product(factors.toArray(new Factor[factors.size()]));
+  }
+  
+  public static Factor product(Factor[] factors) {
     Preconditions.checkNotNull(factors);
-    Preconditions.checkArgument(!factors.isEmpty());
+    Preconditions.checkArgument(factors.length > 0);
     // The specification of .product requires that the variables in the inputVar factors are
     // a subset of the variables in the outer factor. Hence, we must identify the factor
     // containing the most variables.
-    Factor biggestFactor = multiplicativeIdentity();
-    int biggestFactorIndex = -1;
-    for (int i = 0; i < factors.size(); i++) {
-      Factor factor = factors.get(i);
-      if (factor.getVars().size() >= biggestFactor.getVars().size()) {
+    Factor biggestFactor = factors[0];
+    int biggestFactorIndex = 0;
+    int numFactors = factors.length;
+    for (int i = 1; i < numFactors; i++) {
+      Factor factor = factors[i];
+      if (factor.getVars().size() > biggestFactor.getVars().size()) {
         biggestFactor = factor;
         biggestFactorIndex = i;
       }
     }
-    List<Factor> otherFactors = Lists.newArrayList(factors.subList(0, biggestFactorIndex));
-    otherFactors.addAll(factors.subList(biggestFactorIndex + 1, factors.size()));
-    return biggestFactor.product(otherFactors);
+    
+    // Multiply the factors together.
+    Factor result = biggestFactor;
+    for (int i = 0; i < biggestFactorIndex; i++) {
+      result = result.product(factors[i]);
+    }
+    for (int i = biggestFactorIndex + 1; i < numFactors; i++) {
+      result = result.product(factors[i]);
+    }
+    return result;
   }
 
   /**
@@ -78,6 +90,6 @@ public final class Factors {
    * @return
    */
   public static Factor multiplicativeIdentity() {
-    return TableFactor.unity(VariableNumMap.emptyMap());
+    return TableFactor.unity(VariableNumMap.EMPTY);
   }
 }

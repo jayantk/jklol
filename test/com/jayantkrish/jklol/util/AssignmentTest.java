@@ -4,8 +4,6 @@ import java.util.Arrays;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.util.Assignment;
-
 public class AssignmentTest extends TestCase {
 
 	private Assignment a;
@@ -13,12 +11,12 @@ public class AssignmentTest extends TestCase {
 	private Assignment c;
 
 	public void setUp() {
-		a = new Assignment(Arrays.asList(new Integer[] {5, 1, 3, 0}),
-				Arrays.asList(new Object[] {6, 2, 4, 1}));
-		b = new Assignment(Arrays.asList(new Integer[] {3, 7, 29}),
-				Arrays.asList(new Object[] {2, 4, 6}));
-		c = new Assignment(Arrays.asList(new Integer[] {2, 4, 6}),
-				Arrays.asList(new Object[] {3, 5, 7}));
+		a = Assignment.fromUnsortedArrays(new int[] {5, 1, 3, 0},
+				new Object[] {6, 2, 4, 1});
+		b = Assignment.fromSortedArrays(new int[] {3, 7, 29},
+				new Object[] {2, 4, 6});
+		c = Assignment.fromUnsortedArrays(new int[] {2, 4, 6},
+				new Object[] {3, 5, 7});
 	}
 
 	public void testVarNumsSorted() {
@@ -30,7 +28,7 @@ public class AssignmentTest extends TestCase {
 	}
 
 	public void testSubAssignment() {
-		Assignment s = a.intersection(Arrays.asList(new Integer[] {5, 1}));
+		Assignment s = a.intersection(new int[] {5, 1});
 		assertEquals(Arrays.asList(new Integer[] {1, 5}),
 				s.getVariableNums());
 
@@ -39,7 +37,7 @@ public class AssignmentTest extends TestCase {
 	}
 
 	public void testSubAssignment2() {
-	  Assignment s = a.intersection(Arrays.asList(new Integer[] {5, 1, 179839}));
+	  Assignment s = a.intersection(new int[] {5, 1, 179839});
 	  assertEquals(Arrays.asList(new Integer[] {1, 5}),
 	      s.getVariableNums());
 	  
@@ -47,7 +45,7 @@ public class AssignmentTest extends TestCase {
 				s.getValues());
 	}
 
-	public void testJointAssignment() {
+	public void testUnion() {
 		Assignment j = a.union(c);
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 2, 3, 4, 5, 6}),
 				j.getVariableNums());
@@ -56,7 +54,7 @@ public class AssignmentTest extends TestCase {
 				j.getValues());
 	}
 
-	public void testJointAssignmentError() {
+	public void testUnionError() {
 		try {
 			a.union(b);
 		} catch (RuntimeException e) {
@@ -65,7 +63,7 @@ public class AssignmentTest extends TestCase {
 		fail("Expected RuntimeException.");
 	}
 
-	public void testJointAssignmentEmpty() {
+	public void testUnionEmpty() {
 		Assignment j = a.union(Assignment.EMPTY);
 
 		assertEquals(Arrays.asList(new Integer[] {0, 1, 3, 5}),
@@ -77,13 +75,12 @@ public class AssignmentTest extends TestCase {
 	}
 
 	public void testRemoveAll() {
-		Assignment result = a.removeAll(Arrays.asList(new Integer[] {1,3,4}));
+		Assignment result = a.removeAll(new int[] {1,3,4});
 		assertEquals(Arrays.asList(new Integer[] {0,5}),
 				result.getVariableNums());
 
-		result = a.removeAll(Arrays.asList(new Integer[] {}));
+		result = a.removeAll(new int[] {});
 		assertEquals(Arrays.asList(new Integer[] {0,1,3,5}),
 				result.getVariableNums());
 	}
-
 }

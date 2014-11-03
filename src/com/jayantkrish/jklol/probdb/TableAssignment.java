@@ -14,15 +14,15 @@ import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.CsvParser;
 
-public class TableAssignment {
+public class TableAssignment { 
   
   private final VariableNumMap vars;
   private final Tensor indicators;
   
   public static final TableAssignment SATISFIABLE = new TableAssignment(
-      VariableNumMap.emptyMap(), SparseTensor.getScalarConstant(1.0));
+      VariableNumMap.EMPTY, SparseTensor.getScalarConstant(1.0));
   public static final TableAssignment UNSATISFIABLE = new TableAssignment(
-      VariableNumMap.emptyMap(), SparseTensor.getScalarConstant(0.0));
+      VariableNumMap.EMPTY, SparseTensor.getScalarConstant(0.0));
   
   public TableAssignment(VariableNumMap vars, Tensor indicators) {
     this.vars = Preconditions.checkNotNull(vars);

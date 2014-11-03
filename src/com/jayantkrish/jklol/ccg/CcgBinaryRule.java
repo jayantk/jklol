@@ -14,9 +14,9 @@ import com.jayantkrish.jklol.util.CsvParser;
 /**
  * A binary combination rule applicable to two adjacent CCG
  * categories. These rules represent operations like type-changing,
- * which can be applied in addition to the standard CCG
- * application/combination rules. For example, {@code CcgBinaryRule}
- * can be used to absorb punctuation marks.
+ * in addition to the standard CCG application/combination rules.
+ * For example, {@code CcgBinaryRule} can be used to absorb
+ * punctuation marks.
  * <p>
  * Each combination rule matches a pair of adjacent
  * {@code SyntacticCategory}s, and returns a new category for their
@@ -42,13 +42,17 @@ public class CcgBinaryRule implements Serializable {
 
   // Unfilled dependencies created by this rule.
   private final String[] subjects;
+  private final HeadedSyntacticCategory[] subjectSyntacticCategories;
   private final int[] argumentNumbers;
   // The variables each dependency accepts.
   private final int[] objects;
+  
+  private final Combinator.Type type;
 
   public CcgBinaryRule(HeadedSyntacticCategory leftSyntax, HeadedSyntacticCategory rightSyntax,
       HeadedSyntacticCategory returnSyntax, LambdaExpression logicalForm, List<String> subjects,
-      List<Integer> argumentNumbers, List<Integer> objects) {
+      List<HeadedSyntacticCategory> subjectSyntaxes, List<Integer> argumentNumbers,
+      List<Integer> objects, Combinator.Type type) {
     this.leftSyntax = leftSyntax;
     this.rightSyntax = rightSyntax;
     this.parentSyntax = returnSyntax;
@@ -56,8 +60,11 @@ public class CcgBinaryRule implements Serializable {
     this.logicalForm = logicalForm;
 
     this.subjects = subjects.toArray(new String[0]);
+    this.subjectSyntacticCategories = subjectSyntaxes.toArray(new HeadedSyntacticCategory[0]);
     this.argumentNumbers = Ints.toArray(argumentNumbers);
     this.objects = Ints.toArray(objects);
+    
+    this.type = Preconditions.checkNotNull(type);
   }
 
   /**
@@ -93,26 +100,35 @@ public class CcgBinaryRule implements Serializable {
 
     LambdaExpression logicalForm = null;
     if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
-      logicalForm = (LambdaExpression) (new ExpressionParser()).parseSingleExpression(chunks[1]);
+      logicalForm = (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(chunks[1]);
       Preconditions.checkArgument(logicalForm.getArguments().size() == 2, 
           "Illegal logical form for binary rule: " + logicalForm);
     }
 
+    // Parse the type of combinator, if one is given.
+    Combinator.Type type = Combinator.Type.OTHER;
+    if (chunks.length >= 3) {
+      type = Combinator.Type.valueOf(chunks[2]);
+    }
+
+    // Parse any dependencies, if given.
     List<String> subjects = Lists.newArrayList();
+    List<HeadedSyntacticCategory> subjectSyntacticCategories = Lists.newArrayList();
     List<Integer> argNums = Lists.newArrayList();
     List<Integer> objects = Lists.newArrayList();
-    if (chunks.length >= 3) {
-      for (int i = 2; i < chunks.length; i++) {
+    if (chunks.length >= 4) {  
+      for (int i = 3; i < chunks.length; i++) {
         String[] newDeps = chunks[i].split(" ");
         Preconditions.checkArgument(newDeps.length == 3);
         subjects.add(newDeps[0]);
+        subjectSyntacticCategories.add(rightSyntax.getCanonicalForm());
         argNums.add(Integer.parseInt(newDeps[1]));
         objects.add(Integer.parseInt(newDeps[2]));
       }
     }
 
     return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, logicalForm,
-        subjects, argNums, objects);
+        subjects, subjectSyntacticCategories, argNums, objects, type);
   }
 
   /**
@@ -167,6 +183,10 @@ public class CcgBinaryRule implements Serializable {
   public String[] getSubjects() {
     return subjects;
   }
+  
+  public HeadedSyntacticCategory[] getSubjectSyntacticCategories() {
+    return subjectSyntacticCategories;
+  }
 
   /**
    * Gets the list of argument numbers of the dependencies
@@ -186,6 +206,22 @@ public class CcgBinaryRule implements Serializable {
    */
   public int[] getObjects() {
     return objects;
+  }
+
+  /**
+   * Gets the type of combinator represented by this rule.
+   * 
+   * @return
+   */
+  public Combinator.Type getCombinatorType() {
+    if (type == null) {
+      // This check is included for backward compatibility with
+      // serialized BinaryCombinators that do not include the
+      // type field.
+      return Combinator.Type.OTHER;
+    } else {
+      return type;
+    }
   }
 
   @Override

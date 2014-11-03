@@ -2,10 +2,12 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -106,26 +108,58 @@ public class HeadedSyntacticCategory implements Serializable {
 
     int lastLeftBraceIndex = typeString.lastIndexOf('{');
     int lastRightBraceIndex = typeString.lastIndexOf('}');
-    int lastParenIndex = typeString.lastIndexOf(')');
 
-    Preconditions.checkArgument(lastLeftBraceIndex > lastParenIndex,
-        "Illegal headed syntactic category: %s", typeString);
-    semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
-        lastLeftBraceIndex + 1, lastRightBraceIndex));
-    
-    if (!category.isAtomic()) {
+    if (category.isAtomic()) {
+      if (lastLeftBraceIndex != -1) {
+        semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
+            lastLeftBraceIndex + 1, lastRightBraceIndex));
+      } else {
+        semanticVariables[curIndex] = 0;
+      }
+    } else {
       int splitIndex = SyntacticCategory.findSlashIndex(typeString);
+      int lastParenIndex = -1;
+      // Determine if this category is wrapped in parentheses:
+      String argumentString = typeString.substring(splitIndex + 1);
+      int leftParenCount = 0;
+      int rightParenCount = 0;
+      for (int i = 0; i < argumentString.length(); i++) {
+        if (argumentString.charAt(i) == '(') {
+          leftParenCount++;
+        } else if (argumentString.charAt(i) == ')') {
+          rightParenCount++;
+        }
+      }
+      if (rightParenCount > leftParenCount) {
+        lastParenIndex = typeString.lastIndexOf(')');
+      }
 
       if (lastParenIndex != -1) {
+        if (lastLeftBraceIndex != -1 && lastLeftBraceIndex > lastParenIndex) {
+          semanticVariables[curIndex] = Integer.parseInt(typeString.substring(
+              lastLeftBraceIndex + 1, lastRightBraceIndex));
+        } else {
+          semanticVariables[curIndex] = 0;
+        }
+
         parseSemanticVariables(category.getArgument(), typeString.substring(splitIndex + 1, lastParenIndex),
             semanticVariables, curIndex + 1);
       } else {
+        semanticVariables[curIndex] = 0;
         parseSemanticVariables(category.getArgument(), typeString.substring(splitIndex + 1),
             semanticVariables, curIndex + 1);
       }
       parseSemanticVariables(category.getReturn(), typeString.substring(0, splitIndex),
           semanticVariables, firstFillableIndex);
     }
+  }
+
+  public static List<SyntacticCategory> convertToCcgbank(List<HeadedSyntacticCategory> headedCats) {
+    List<SyntacticCategory> cats = Lists.newArrayList();
+    for (HeadedSyntacticCategory headedCat : headedCats) {
+      cats.add(headedCat.getSyntax().discardFeaturePassingMarkup());
+    }
+    return cats;
   }
 
   /**
@@ -251,12 +285,11 @@ public class HeadedSyntacticCategory implements Serializable {
   }
 
   /**
-   * Gets the variable assigned to the root node of {@code this}
-   * category.
+   * Gets the variable representing the semantic head of this category.
    * 
    * @return
    */
-  public int getRootVariable() {
+  public int getHeadVariable() {
     return semanticVariables[rootIndex];
   }
   
@@ -369,6 +402,11 @@ public class HeadedSyntacticCategory implements Serializable {
       Map<Integer, Integer> relabeledFeatures) {
     return new HeadedSyntacticCategory(syntacticCategory.assignFeatures(
         assignedFeatures, relabeledFeatures), semanticVariables, rootIndex);
+  }
+
+  public HeadedSyntacticCategory assignAllFeatures(String value) {
+    return new HeadedSyntacticCategory(syntacticCategory.assignAllFeatures(value),
+        semanticVariables, rootIndex);
   }
 
   /**

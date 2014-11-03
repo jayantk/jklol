@@ -45,7 +45,7 @@ public class EMTrainerTest extends TestCase {
     VariableNumMap var1 = builder.getVariables().getVariablesByName("Var1");
     allVars = var0.union(var1);
     
-    f0 = new CptTableFactor(VariableNumMap.emptyMap(), var0);
+    f0 = new CptTableFactor(VariableNumMap.EMPTY, var0);
     builder.addUnreplicatedFactor("f0", f0);
     f1 = new CptTableFactor(var0, var1);
     builder.addUnreplicatedFactor("f1", f1);
@@ -127,8 +127,8 @@ public class EMTrainerTest extends TestCase {
     Assignment probAssignment = allVars.outcomeArrayToAssignment("F", "F");
     SufficientStatistics initialParameters = bn.getNewSufficientStatistics();
     initialParameters.increment(1.0);
-    bn.incrementSufficientStatistics(initialParameters, allVars, zeroProbAssignment, -1.0);
-    bn.incrementSufficientStatistics(initialParameters, allVars, probAssignment, 1.0);
+    bn.incrementSufficientStatistics(initialParameters, initialParameters, allVars, zeroProbAssignment, -1.0);
+    bn.incrementSufficientStatistics(initialParameters, initialParameters, allVars, probAssignment, 1.0);
 
     SufficientStatistics trainedParameters = trainer.train(bn, initialParameters, trainingData);
     FactorGraph factorGraph = bn.getModelFromParameters(trainedParameters)

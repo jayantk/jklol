@@ -10,18 +10,22 @@ public class UnaryCombinator implements Serializable {
   
   private final int syntax;
   private final int[] syntaxUniqueVars;
+  private final int syntaxHeadVar;
 
   private final int[] variableRelabeling;
+  private final int[] inverseRelabeling;
   
   private final CcgUnaryRule unaryRule;
   private final HeadedSyntacticCategory inputType;
   
   public UnaryCombinator(HeadedSyntacticCategory inputType, int syntax, int[] syntaxUniqueVars,
-      int[] variableRelabeling, CcgUnaryRule unaryRule) {
+      int syntaxHeadVar, int[] variableRelabeling, int[] inverseRelabeling, CcgUnaryRule unaryRule) {
     this.inputType = Preconditions.checkNotNull(inputType);
     this.syntax = syntax;
     this.syntaxUniqueVars = Preconditions.checkNotNull(syntaxUniqueVars);
+    this.syntaxHeadVar = syntaxHeadVar;
     this.variableRelabeling = Preconditions.checkNotNull(variableRelabeling);
+    this.inverseRelabeling = Preconditions.checkNotNull(inverseRelabeling);
     this.unaryRule = Preconditions.checkNotNull(unaryRule);
   }
   
@@ -37,10 +41,18 @@ public class UnaryCombinator implements Serializable {
     return syntaxUniqueVars;
   }
 
+  public int getSyntaxHeadVar() {
+    return syntaxHeadVar;
+  }
+
   public int[] getVariableRelabeling() {
     return variableRelabeling;
   }
-  
+
+  public int[] getInverseRelabeling() {
+    return inverseRelabeling;
+  }
+
   public CcgUnaryRule getUnaryRule() {
     return unaryRule;
   }

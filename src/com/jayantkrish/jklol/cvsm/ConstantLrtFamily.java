@@ -20,11 +20,11 @@ public class ConstantLrtFamily implements LrtFamily {
   private final VariableNumMap vars;
   private final LowRankTensor tensor;
 
-    public ConstantLrtFamily(VariableNumMap vars, LowRankTensor tensor) {
+  public ConstantLrtFamily(VariableNumMap vars, LowRankTensor tensor) {
     this.vars = Preconditions.checkNotNull(vars);
     this.tensor = Preconditions.checkNotNull(tensor);
   }
-  
+
   @Override
   public int[] getDimensionNumbers() {
     return vars.getVariableNumsArray();

@@ -110,9 +110,9 @@ public class InferenceTestCases {
   public static MaxMarginalTestCase testBasicMaxMarginals() {
     FactorGraph f = basicFactorGraph();
     MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, Assignment.EMPTY, 
-        new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 4}), 
-            Arrays.asList(new Object[] {"T", "foo", "T", "T", "F"})),
-            f.getVariables().intersection(Arrays.asList(0, 2)));
+        Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 4}, 
+            new Object[] {"T", "foo", "T", "T", "F"}),
+            f.getVariables().intersection(0, 2));
     testCase.addTest(new String[] {"T", "T"}, 9.0);
     testCase.addTest(new String[] {"T", "F"}, 4.0);
     testCase.addTest(new String[] {"U", "F"}, 8.0);
@@ -129,11 +129,10 @@ public class InferenceTestCases {
   public static MaxMarginalTestCase testConditionalMaxMarginals() {
     FactorGraph f = basicFactorGraph();
     MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, 
-        new Assignment(Arrays.asList(new Integer[] {2}), 
-            Arrays.asList(new Object[] {"F"})), 
-        new Assignment(Arrays.asList(new Integer[] {0, 1, 2, 3, 4}), 
-            Arrays.asList(new Object[] {"U", "foo", "F", "F", "U"})),
-            f.getVariables().intersection(Arrays.asList(3, 4)));
+        Assignment.fromSortedArrays(new int[] {2}, new Object[] {"F"}), 
+        Assignment.fromSortedArrays(new int[] {0, 1, 2, 3, 4}, 
+            new Object[] {"U", "foo", "F", "F", "U"}),
+            f.getVariables().intersection(3, 4));
     
     // The graph becomes disjoint, so the max marginal here is somewhat unclear.
     // testCase.addTest(new String[] {"F", "U"}, 8.0);
@@ -280,6 +279,72 @@ public class InferenceTestCases {
     return testCase;
   }
   
+  public static FactorGraph triangleFactorGraph() {
+    FactorGraph fg = new FactorGraph();
+
+    fg = fg.addVariable("Var0", trueFalseVar);
+    fg = fg.addVariable("Var1", trueFalseVar);
+    fg = fg.addVariable("Var2", trueFalseVar);
+
+    TableFactorBuilder tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var0", "Var1"})),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "T", "T" }), 2.0);
+    tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 1.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 1.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F", "F" }), 2.0);
+    fg = fg.addFactor("tf0", tf.build());
+    
+    tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var1", "Var2"})),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "T", "T" }), 3.0);
+    tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 1.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 1.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F", "F" }), 2.0);
+    fg = fg.addFactor("tf1", tf.build());
+
+    tf = new TableFactorBuilder(fg
+        .getVariables().getVariablesByName(Arrays.asList(new String[] { "Var2", "Var0"})),
+        SparseTensorBuilder.getFactory());
+    tf.setWeightList(Arrays.asList(new String[] { "T", "T" }), 2.0);
+    tf.setWeightList(Arrays.asList(new String[] { "T", "F" }), 1.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F", "T" }), 1.0);
+    tf.setWeightList(Arrays.asList(new String[] { "F", "F" }), 2.0);
+    fg = fg.addFactor("tf2", tf.build());
+    
+    // Probability table:
+    // 0 1 2 <- var nums
+    // F F F 8
+    // F F T 2
+    // F T F 2
+    // F T T 3 
+    // T F F 2
+    // T F T 2
+    // T T F 2
+    // T T T 12
+    // total 33
+    return fg;
+  }
+
+  public static MaxMarginalTestCase testTriangleFactorGraphMaxMarginals() {
+    FactorGraph f = triangleFactorGraph();
+    MaxMarginalTestCase testCase = new MaxMarginalTestCase(f, Assignment.EMPTY, 
+        f.getAllVariables().outcomeArrayToAssignment("T", "T", "T"), f.getAllVariables());
+    return testCase;
+  }
+  
+  public static MarginalTestCase testTriangleFactorGraphMarginals() {
+    MarginalTestCase testCase = new MarginalTestCase(triangleFactorGraph(), Assignment.EMPTY);
+    testCase.addTest(18.0 / 33.0, new String[] { "Var0" }, "T");
+    testCase.addTest(15.0 / 33.0, new String[] { "Var0" }, "F");
+
+    testCase.addTest(4.0 / 33.0, new String[] { "Var0", "Var1" }, "T", "F");
+    testCase.addTest(14.0 / 33.0, new String[] { "Var0", "Var1" }, "T", "T");
+
+    return testCase;
+  }
+
   private static TableFactorBuilder softAndFactor(VariableNumMap inputs, VariableNumMap output,
       double violationLogWeight) {
     TableFactorBuilder tf = new TableFactorBuilder(inputs.union(output),

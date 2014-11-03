@@ -42,7 +42,7 @@ public class BNCountTrainer {
     SufficientStatisticsBatch result = MapReduceConfiguration.getMapReduceExecutor()
         .mapReduce(trainingData,
             new SufficientStatisticsMapper(factorGraph, new AssignmentMarginalCalculator(), new NullLogFunction()),
-            new SufficientStatisticsReducer(bn));
+            new SufficientStatisticsReducer(bn, parameters));
     return result.getStatistics();
   }
   
@@ -54,7 +54,8 @@ public class BNCountTrainer {
    * @author jayant
    */
   private static class AssignmentMarginalCalculator implements MarginalCalculator {
-    
+    private static final long serialVersionUID = 1L;
+
     @Override
     public MarginalSet computeMarginals(FactorGraph factorGraph) {
       Preconditions.checkArgument(factorGraph.getVariables().size() == 0);

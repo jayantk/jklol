@@ -86,6 +86,12 @@ public class ArrayUtils {
     return newArray;
   }
 
+  public static void copy(int[] src, int srcStartIndex, int[] dst, int dstStartIndex, int numToCopy) {
+    for (int i = 0; i < numToCopy; i++) {
+      dst[dstStartIndex + i] = src[srcStartIndex + i];
+    }
+  }
+
   public static boolean subarrayEquals(int[] array, int[] subarray, int startIndex) {
     for (int i = 0; i < subarray.length; i++) {
       if (array[i + startIndex] != subarray[i]) {
@@ -150,10 +156,10 @@ public class ArrayUtils {
    * @param startInd
    * @param endInd
    */
-  public static void sortKeyValuePairs(long[] keys, double[] values,
+  public static final void sortKeyValuePairs(long[] keys, double[] values,
       int startInd, int endInd) {
     // Base case.
-    if (startInd == endInd) {
+    if (endInd - startInd <= 1) {
       return;
     }
 
@@ -187,7 +193,7 @@ public class ArrayUtils {
    * @param i
    * @param j
    */
-  private static void swap(long[] keys, double[] values, int i, int j) {
+  private static final void swap(long[] keys, double[] values, int i, int j) {
     long keySwap = keys[i];
     keys[i] = keys[j];
     keys[j] = keySwap;
@@ -212,10 +218,10 @@ public class ArrayUtils {
    * @param startInd
    * @param endInd
    */
-  public static void sortKeyValuePairs(int[] keys, int[] values,
+  public static final void sortKeyValuePairs(int[] keys, int[] values,
       int startInd, int endInd) {
     // Base case.
-    if (startInd == endInd) {
+    if (endInd - startInd <= 1) {
       return;
     }
 
@@ -249,7 +255,7 @@ public class ArrayUtils {
    * @param i
    * @param j
    */
-  private static void swap(int[] keys, int[] values, int i, int j) {
+  private static final void swap(int[] keys, int[] values, int i, int j) {
     int keySwap = keys[i];
     keys[i] = keys[j];
     keys[j] = keySwap;
@@ -257,6 +263,199 @@ public class ArrayUtils {
     int swapValue = values[i];
     values[i] = values[j];
     values[j] = swapValue;
+  }
+  
+  /**
+   * Sorts a portion of the given key/value pairs by key. This method
+   * sorts the section of {@code keys} from {@code startInd}
+   * (inclusive) to {@code endInd} (not inclusive), simultaneously
+   * swapping the corresponding entries of {@code values}.
+   * <p>
+   * {@code values} are treated like secondary keys during the sort.
+   * If multiple entries in {@code keys} have the same value, these
+   * keys are sorted by their values.
+   * 
+   * @param keys
+   * @param values
+   * @param startInd
+   * @param endInd
+   */
+  public static final <T> void sortKeyValuePairs(int[] keys, T[] values,
+      int startInd, int endInd) {
+    // Base case.
+    if (endInd - startInd <= 1) {
+      return;
+    }
+
+    // Choose pivot.
+    int pivotInd = (int) (Math.random() * (endInd - startInd)) + startInd;
+
+    // Perform swaps to partition array around the pivot.
+    swap(keys, values, startInd, pivotInd);
+    pivotInd = startInd;
+
+    for (int i = startInd + 1; i < endInd; i++) {
+      if (keys[i] < keys[pivotInd]) {
+        swap(keys, values, pivotInd, pivotInd + 1);
+        if (i != pivotInd + 1) {
+          swap(keys, values, pivotInd, i);
+        }
+        pivotInd++;
+      }
+    }
+
+    // Recursively sort the subcomponents of the arrays.
+    sortKeyValuePairs(keys, values, startInd, pivotInd);
+    sortKeyValuePairs(keys, values, pivotInd + 1, endInd);
+  }
+
+  /**
+   * Swaps the keys and values at {@code i} with those at {@code j}
+   * 
+   * @param keys
+   * @param values
+   * @param i
+   * @param j
+   */
+  private static final <T> void swap(int[] keys, T[] values, int i, int j) {
+    int keySwap = keys[i];
+    keys[i] = keys[j];
+    keys[j] = keySwap;
+
+    T swapValue = values[i];
+    values[i] = values[j];
+    values[j] = swapValue;
+  }
+  
+  /**
+   * Sorts a portion of the given key/value pairs by key. This method
+   * sorts the section of {@code keys} from {@code startInd}
+   * (inclusive) to {@code endInd} (not inclusive), simultaneously
+   * swapping the corresponding entries of {@code values}. Every element in 
+   * each array in {@code values} is swapped.
+   * 
+   * @param keys
+   * @param values
+   * @param startInd
+   * @param endInd
+   */
+  public static final void sortKeyValuePairs(int[] keys, Object[][] values,
+      int startInd, int endInd) {
+    // Base case.
+    if (endInd - startInd <= 1) {
+      return;
+    }
+
+    // Choose pivot.
+    int pivotInd = (int) (Math.random() * (endInd - startInd)) + startInd;
+
+    // Perform swaps to partition array around the pivot.
+    swap(keys, values, startInd, pivotInd);
+    pivotInd = startInd;
+
+    for (int i = startInd + 1; i < endInd; i++) {
+      if (keys[i] < keys[pivotInd]) {
+        swap(keys, values, pivotInd, pivotInd + 1);
+        if (i != pivotInd + 1) {
+          swap(keys, values, pivotInd, i);
+        }
+        pivotInd++;
+      }
+    }
+
+    // Recursively sort the subcomponents of the arrays.
+    sortKeyValuePairs(keys, values, startInd, pivotInd);
+    sortKeyValuePairs(keys, values, pivotInd + 1, endInd);
+  }
+
+  /**
+   * Swaps the keys and values at {@code i} with those at {@code j}
+   * 
+   * @param keys
+   * @param values
+   * @param i
+   * @param j
+   */
+  private static final void swap(int[] keys, Object[][] values, int i, int j) {
+    int keySwap = keys[i];
+    keys[i] = keys[j];
+    keys[j] = keySwap;
+
+    Object swapValue;
+    for (int k = 0; k < values.length; k++) {
+      swapValue = values[k][i];
+      values[k][i] = values[k][j];
+      values[k][j] = swapValue;
+    }
+  }
+
+  /**
+   * Sorts a portion of the given key/value pairs by key. This method
+   * sorts the section of {@code keys} from {@code startInd}
+   * (inclusive) to {@code endInd} (not inclusive), simultaneously
+   * swapping the corresponding entries of {@code values}.
+   * <p>
+   * {@code probs} are treated like secondary keys during the sort.
+   * If multiple entries in {@code keys} have the same value, these
+   * keys are sorted by their probs.
+   * 
+   * @param keys
+   * @param values
+   * @param probs
+   * @param startInd
+   * @param endInd
+   */
+  public static final <T> void sortKeyValuePairs(long[] keys, T[] values,
+      double[] probs, int startInd, int endInd) {
+    // Base case.
+    if (endInd - startInd <= 1) {
+      return;
+    }
+
+    // Choose pivot.
+    int pivotInd = (int) (Math.random() * (endInd - startInd)) + startInd;
+
+    // Perform swaps to partition array around the pivot.
+    swap(keys, values, probs, startInd, pivotInd);
+    pivotInd = startInd;
+
+    for (int i = startInd + 1; i < endInd; i++) {
+      if (keys[i] < keys[pivotInd]
+          || (keys[i] == keys[pivotInd] && probs[i] < probs[pivotInd])
+          || (keys[i] == keys[pivotInd] && probs[i] == probs[pivotInd] && Math.random() < 0.5)) {
+        swap(keys, values, probs, pivotInd, pivotInd + 1);
+        if (i != pivotInd + 1) {
+          swap(keys, values, probs, pivotInd, i);
+        }
+        pivotInd++;
+      }
+    }
+
+    // Recursively sort the subcomponents of the arrays.
+    sortKeyValuePairs(keys, values, probs, startInd, pivotInd);
+    sortKeyValuePairs(keys, values, probs, pivotInd + 1, endInd);
+  }
+
+  /**
+   * Swaps the keys and values at {@code i} with those at {@code j}
+   * 
+   * @param keys
+   * @param values
+   * @param i
+   * @param j
+   */
+  private static final <T> void swap(long[] keys, T[] values, double[] probs, int i, int j) {
+    long keySwap = keys[i];
+    keys[i] = keys[j];
+    keys[j] = keySwap;
+
+    T swapValue = values[i];
+    values[i] = values[j];
+    values[j] = swapValue;
+    
+    double swapProb = probs[i];
+    probs[i] = probs[j];
+    probs[j] = swapProb;
   }
 
   private ArrayUtils() {

@@ -10,6 +10,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 /**
  * Tests for VariableNumMap.
@@ -60,17 +61,6 @@ public class VariableNumMapTest extends TestCase {
 	  assertTrue(b.equals(b));
 	  assertFalse(c.equals(b));
 	  assertFalse(d.equals(b));
-	}
-	
-	public void testUniqueNames() {
-		try {
-		  new VariableNumMap(Arrays.asList(new Integer[] {0, 1, 3}), 
-		    Arrays.asList("v0", "v1", "v0"),
-				Arrays.asList(new DiscreteVariable[] {v1, v2, v1}));
-		} catch (IllegalArgumentException e) {
-			return;
-		}
-		fail("Expected IllegalArgumentException");
 	}
 
 	public void testGetVariableNums() {
@@ -161,7 +151,17 @@ public class VariableNumMapTest extends TestCase {
 	  nameReplacements.put("v2", "v3");
 	  nameReplacements.put("v3", "v4");
 	  
-	  VariableRelabeling relabeling = new VariableRelabeling(indexReplacements, nameReplacements);
+	  VariableNumMap inputVars = new VariableNumMap(Ints.asList(0, 1, 2, 3),
+	      Arrays.asList("v0", "v1", "v2", "v3"), Arrays.<Variable>asList(null, null, null, null));
+	  
+	  VariableNumMap outputVars = new VariableNumMap(Ints.asList(1, 2, 3, 4),
+	      Arrays.asList("v1", "v2", "v3", "v4"), Arrays.<Variable>asList(null, null, null, null));
+	  
+	  int[] keys = new int[] {0, 1, 2, 3};
+	  int[] values = new int[] {1, 2, 3, 4};
+	  IntBiMap map = IntBiMap.fromSortedKeyValues(keys, values);
+	  
+	  VariableRelabeling relabeling = new VariableRelabeling(inputVars, outputVars, map);
 	  assertFalse(relabeling.isInDomain(d));
 	  assertTrue(relabeling.isInDomain(a));
 	  assertFalse(relabeling.isInRange(d));
@@ -184,14 +184,14 @@ public class VariableNumMapTest extends TestCase {
 	}
 	
 	public void testAssignmentToIntArray() {
-	  int[] actual = a.assignmentToIntArray(new Assignment(Arrays.asList(0, 1, 3), 
-	      Arrays.<Object>asList("T", "U", "F")));
+	  int[] actual = a.assignmentToIntArray(Assignment.fromSortedArrays(new int[] {0, 1, 3}, 
+	      new Object[] {"T", "U", "F"}));
 	  assertTrue(Arrays.equals(actual, new int[] {0, 2, 1}));
 	}
 	
 	public void testIntArrayToAssignment() {
-	  Assignment expected = new Assignment(Arrays.asList(0, 1, 3), 
-	      Arrays.<Object>asList("T", "U", "F"));
+	  Assignment expected = Assignment.fromSortedArrays(new int[] {0, 1, 3}, 
+	      new Object[] {"T", "U", "F"});
 	  Assignment actual = a.intArrayToAssignment(new int[] {0, 2, 1});
 	  assertEquals(expected, actual);
 	}

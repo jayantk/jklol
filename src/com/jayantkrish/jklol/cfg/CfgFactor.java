@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -67,10 +66,10 @@ public class CfgFactor extends AbstractFactor {
     Preconditions.checkArgument(child.size() == 1);
 
     this.parent = parent;
-    this.parentVarNum = parent.getVariableNums().get(0);
+    this.parentVarNum = parent.getOnlyVariableNum();
     this.parentVar = parent.getDiscreteVariables().get(0);
     this.child = child;
-    this.childVarNum = child.getVariableNums().get(0);
+    this.childVarNum = child.getOnlyVariableNum();
     this.childVar = child.getDiscreteVariables().get(0);
 
     this.parser = parser;
@@ -90,10 +89,10 @@ public class CfgFactor extends AbstractFactor {
     Preconditions.checkArgument(child.size() == 1);
 
     this.parent = parent;
-    this.parentVarNum = parent.getVariableNums().get(0);
+    this.parentVarNum = parent.getOnlyVariableNum();
     this.parentVar = parent.getDiscreteVariables().get(0);
     this.child = child;
-    this.childVarNum = child.getVariableNums().get(0);
+    this.childVarNum = child.getOnlyVariableNum();
     this.childVar = child.getDiscreteVariables().get(0);
 
     this.parser = parser;
@@ -187,20 +186,18 @@ public class CfgFactor extends AbstractFactor {
     // variables by a point distribution.
     List<Factor> factorsToMultiply = Lists.newArrayList();
     if (a.contains(parentVarNum)) {
-      List<Integer> parentVarNumList = Arrays.asList(new Integer[] { parentVarNum });
       TableFactor newParentFactor = TableFactor.pointDistribution(
-          getVars().intersection(parentVarNumList), a.intersection(parentVarNumList));
+          getVars().intersection(parentVarNum), a.intersection(parentVarNum));
       factorsToMultiply.add(newParentFactor);
     }
 
     if (a.contains(childVarNum)) {
-      List<Integer> childVarNumList = Arrays.asList(new Integer[] { childVarNum });
       TableFactor newChildFactor = TableFactor.pointDistribution(
-          getVars().intersection(childVarNumList), a.intersection(childVarNumList));
+          getVars().intersection(childVarNum), a.intersection(childVarNum));
       factorsToMultiply.add(newChildFactor);
     }
 
-    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNums());
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNumsArray());
     return this.product(factorsToMultiply).marginalize(varsToEliminate.getVariableNums());
   }
 
@@ -316,7 +313,7 @@ public class CfgFactor extends AbstractFactor {
 
     // Both variables eliminated, so simply return the partition function.
     ParseChart chart = getMarginalChart(useSumProduct);
-    TableFactorBuilder builder = new TableFactorBuilder(VariableNumMap.emptyMap(), 
+    TableFactorBuilder builder = new TableFactorBuilder(VariableNumMap.EMPTY,
         SparseTensorBuilder.getFactory());
     builder.setWeight(Assignment.EMPTY, chart.getPartitionFunction());
     return builder.build();

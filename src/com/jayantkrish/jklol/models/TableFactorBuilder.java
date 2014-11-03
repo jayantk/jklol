@@ -13,6 +13,8 @@ import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
+import com.jayantkrish.jklol.tensor.SparseLogSpaceTensorAdapter;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
 import com.jayantkrish.jklol.tensor.TensorBuilder;
@@ -67,7 +69,7 @@ public class TableFactorBuilder {
     Preconditions.checkArgument(variables.size() == variables.getDiscreteVariables().size(),
         "Not all variables are discrete: "+ variables);
     this.vars = variables;
-    this.weightBuilder = tensorFactory.getBuilder(Ints.toArray(vars.getVariableNums()),
+    this.weightBuilder = tensorFactory.getBuilder(vars.getVariableNumsArray(),
         vars.getVariableSizes());
   }
 
@@ -158,7 +160,7 @@ public class TableFactorBuilder {
    * {@code weight} is 0.0, {@code a} is deleted from this builder.
    */
   public void setWeight(Assignment a, double weight) {
-    Preconditions.checkArgument(a.containsAll(vars.getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(vars.getVariableNumsArray()));
     weightBuilder.put(vars.assignmentToIntArray(a), weight);
   }
 
@@ -280,5 +282,10 @@ public class TableFactorBuilder {
   public TableFactor buildInLogSpace() {
     return new TableFactor(vars, new LogSpaceTensorAdapter(
         DenseTensor.copyOf(weightBuilder.build())));
+  }
+
+  public TableFactor buildSparseInLogSpace() {
+    return new TableFactor(vars, new SparseLogSpaceTensorAdapter(
+        SparseTensor.copyOf(weightBuilder.build())));
   }
 }

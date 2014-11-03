@@ -26,7 +26,7 @@ public class TypeChangePattern {
     
     SyntacticCategory input = SyntacticCategory.parseFrom(parts[1]);
     SyntacticCategory output= SyntacticCategory.parseFrom(parts[2]);
-    Expression expression = (new ExpressionParser()).parseSingleExpression(parts[3]);
+    Expression expression = ExpressionParser.lambdaCalculus().parseSingleExpression(parts[3]);
     
     return new TypeChangePattern(input, output, expression);
   }

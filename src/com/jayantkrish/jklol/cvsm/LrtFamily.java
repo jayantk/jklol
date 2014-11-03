@@ -6,7 +6,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public interface LrtFamily extends ParametricFamily<LowRankTensor> {
-
+  
   public int[] getDimensionNumbers();
 
   public int[] getDimensionSizes();

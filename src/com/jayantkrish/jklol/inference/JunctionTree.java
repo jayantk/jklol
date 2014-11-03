@@ -21,6 +21,7 @@ import com.google.common.collect.TreeMultimap;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.SeparatorSet;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.LogFunctions;
@@ -40,9 +41,39 @@ import com.jayantkrish.jklol.util.Assignment;
  * simplified, the marginal computation will throw an exception.
  */
 public class JunctionTree implements MarginalCalculator {
+  private static final long serialVersionUID = 1L;
+
+  private final boolean renormalize;
+  private final PruningStrategy pruningStrategy;
+
+  /**
+   * Creates a new junction tree without renormalization.
+   */
+  public JunctionTree() {
+    this.renormalize = false;
+    this.pruningStrategy = null;
+  }
+
+  /**
+   * Creates a new junction tree.
+   * 
+   * @param renormalize If {@code true}, renormalize marginals to probability
+   * distributions throughout the message passing process. Renormalization will
+   * prevent numerical issues (overflow) and preserve the original probability
+   * distribution, but will not preserve the unnormalized weights of assignments.
+   */
+  public JunctionTree(boolean renormalize) {
+    this.renormalize = renormalize;
+    this.pruningStrategy = null;
+  }
+
+  public JunctionTree(boolean renormalize, PruningStrategy pruningStrategy) {
+    this.renormalize = renormalize;
+    this.pruningStrategy = pruningStrategy;
+  }
 
   @Override
-  public MarginalSet computeMarginals(FactorGraph factorGraph) {
+  public FactorMarginalSet computeMarginals(FactorGraph factorGraph) {
     // Efficiency overrides.
     if (factorGraph.getVariables().size() == 0) {
       // All variables in the factor graph have assigned values.
@@ -59,7 +90,7 @@ public class JunctionTree implements MarginalCalculator {
     }
 
     // long time = System.nanoTime();
-    CliqueTree cliqueTree = new CliqueTree(factorGraph);
+    CliqueTree cliqueTree = CliqueTree.fromHeuristicVariableElimination(factorGraph);
     // long delta = (System.nanoTime() - time) / 1000;
     // System.out.println("building clique tree: " + delta);
     
@@ -69,7 +100,7 @@ public class JunctionTree implements MarginalCalculator {
     // System.out.println("Running message passing: " + delta);
 
     // time = System.nanoTime();
-    MarginalSet marginals = cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
+    FactorMarginalSet marginals = cliqueTreeToMarginalSet(cliqueTree, rootFactorNums, factorGraph);
     // delta = (System.nanoTime() - time) / 1000;
     // System.out.println("marginals: " + delta);
 
@@ -81,13 +112,14 @@ public class JunctionTree implements MarginalCalculator {
     // Efficiency override -- all variables in the factor graph have assigned
     // values.
     if (factorGraph.getVariables().size() == 0) {
-      return new FactorMaxMarginalSet(new FactorGraph(), factorGraph.getConditionedValues());
+      return new FactorMaxMarginalSet(CliqueTree.fromHeuristicVariableElimination(new FactorGraph()),
+          factorGraph.getConditionedValues());
     }
 
     LogFunction log = LogFunctions.getLogFunction();
 
     log.startTimer("inference/build_clique_tree");
-    CliqueTree cliqueTree = new CliqueTree(factorGraph);
+    CliqueTree cliqueTree = CliqueTree.fromHeuristicVariableElimination(factorGraph);
     log.stopTimer("inference/build_clique_tree");
 
     log.startTimer("inference/message_passing");
@@ -179,6 +211,22 @@ public class JunctionTree implements MarginalCalculator {
 
     // Update the marginal distribution of startFactor in the clique tree.
     Factor updatedMarginal = cliqueTree.getMarginal(startFactor).product(factorsToCombine);
+    if (cliqueTree.getOutboundFactors(startFactor).size() == 0) {
+      // If this factor has yet to send any outbound messages, we can 
+      // use it to renormalize the probability distribution to avoid
+      // possible numerical overflow issues. Updating the marginal
+      // at this point is equivalent to multiplying the original factor
+      // by some constant value, which doesn't affect the probability
+      // distribution.
+      if (renormalize) {
+        updatedMarginal = updatedMarginal.product(1.0 / updatedMarginal.getTotalUnnormalizedProbability());
+      }
+      
+      // Can also prune this marginal if a pruning strategy was provided.
+      if (pruningStrategy != null) {
+        updatedMarginal = pruningStrategy.apply(updatedMarginal);
+      }
+    }
     cliqueTree.setMarginal(startFactor, updatedMarginal);
     cliqueTree.addFactorsToMarginal(startFactor, factorIndicesToCombine);
 
@@ -196,6 +244,7 @@ public class JunctionTree implements MarginalCalculator {
     if (cliqueTree.getFactorsInMarginal(startFactor).contains(destFactor)) {
       messageFactor = messageFactor.product(cliqueTree.getMessage(destFactor, startFactor).inverse());
     }
+
     cliqueTree.addMessage(startFactor, destFactor, messageFactor);
   }
 
@@ -212,7 +261,6 @@ public class JunctionTree implements MarginalCalculator {
    * @return
    */
   private static Factor computeMarginal(CliqueTree cliqueTree, int factorNum, boolean useSumProduct) {
-
     Set<Integer> factorNumsToCombine = Sets.newHashSet(cliqueTree.getNeighboringFactors(factorNum));
     factorNumsToCombine.removeAll(cliqueTree.getFactorsInMarginal(factorNum));
 
@@ -231,7 +279,7 @@ public class JunctionTree implements MarginalCalculator {
     return newMarginal;
   }
 
-  private static MarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree,
+  private static FactorMarginalSet cliqueTreeToMarginalSet(CliqueTree cliqueTree,
       Set<Integer> rootFactorNums, FactorGraph originalFactorGraph) {
     List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
@@ -264,12 +312,10 @@ public class JunctionTree implements MarginalCalculator {
    */
   private static MaxMarginalSet cliqueTreeToMaxMarginalSet(CliqueTree cliqueTree,
       FactorGraph originalFactorGraph) {
-    List<Factor> marginalFactors = Lists.newArrayList();
     for (int i = 0; i < cliqueTree.numFactors(); i++) {
-      marginalFactors.add(computeMarginal(cliqueTree, i, false));
+      computeMarginal(cliqueTree, i, false);
     }
-    return new FactorMaxMarginalSet(FactorGraph.createFromFactors(marginalFactors),
-        originalFactorGraph.getConditionedValues());
+    return new FactorMaxMarginalSet(cliqueTree, originalFactorGraph.getConditionedValues());
   }
   
   /**
@@ -295,12 +341,38 @@ public class JunctionTree implements MarginalCalculator {
 
     private List<Integer> cliqueEliminationOrder;
 
-    public CliqueTree(FactorGraph factorGraph) {
+    private CliqueTree(List<Factor> cliqueFactors, HashMultimap<Integer, Integer> factorEdges,
+        List<Integer> cliqueEliminationOrder) {
+      this.cliqueFactors = Preconditions.checkNotNull(cliqueFactors);
+      this.factorEdges = Preconditions.checkNotNull(factorEdges);
+
+      this.cliqueEliminationOrder = Preconditions.checkNotNull(cliqueEliminationOrder);
+
+      // Initialize messages and separator sets along the
+      // edges of the clique tree.
+      this.separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
+      this.messages = new ArrayList<Map<Integer, Factor>>();
+      for (int i = 0; i < cliqueFactors.size(); i++) {
+        separatorSets.add(Maps.<Integer, SeparatorSet> newHashMap());
+        messages.add(Maps.<Integer, Factor> newHashMap());
+
+        for (Integer adjacentFactor : factorEdges.get(i)) {
+          separatorSets.get(i).put(adjacentFactor, new SeparatorSet(i, adjacentFactor,
+              cliqueFactors.get(i).getVars().intersection(cliqueFactors.get(adjacentFactor).getVars())));
+        }
+      }
+
+      marginals = Lists.newArrayList(cliqueFactors);
+      factorsInMarginals = Lists.newArrayList();
+      for (int i = 0; i < marginals.size(); i++) {
+        factorsInMarginals.add(Sets.<Integer> newHashSet());
+      }
+    }
+
+    public static CliqueTree fromHeuristicVariableElimination(FactorGraph factorGraph) {
       // Initialize cliqueFactors with minimal cliques from the factor graph.
-      cliqueFactors = new ArrayList<Factor>(factorGraph.getMinimalFactors());
-      factorEdges = HashMultimap.create();
-      separatorSets = new ArrayList<Map<Integer, SeparatorSet>>();
-      messages = new ArrayList<Map<Integer, Factor>>();
+      List<Factor> cliqueFactors = new ArrayList<Factor>(factorGraph.getMinimalFactors());
+      HashMultimap<Integer, Integer> factorEdges = HashMultimap.create();
 
       // Store factors which contain each variable so that we can
       // perform variable elimination.
@@ -308,7 +380,7 @@ public class JunctionTree implements MarginalCalculator {
       Map<Factor, Integer> factorIndexMap = Maps.newHashMap();
       int index = 0;
       for (Factor f : cliqueFactors) {
-        for (Integer varNum : f.getVars().getVariableNums()) {
+        for (int varNum : f.getVars().getVariableNumsArray()) {
           varFactorMap.put(varNum, f);
         }
         factorIndexMap.put(f, index);
@@ -321,9 +393,9 @@ public class JunctionTree implements MarginalCalculator {
       for (Integer varNum : varFactorMap.keySet()) {
         countsOfVars.put(varFactorMap.get(varNum).size(), varNum);
       }
-      
+
       Set<Factor> remainingFactors = Sets.newHashSet(cliqueFactors);
-      SortedMap<Integer, Factor> possibleEliminationOrder = Maps.newTreeMap();
+      SortedMap<Integer, Integer> possibleEliminationOrder = Maps.newTreeMap();
       int eliminationIndex = 0;
       while (remainingFactors.size() > 1) {
         // Each iteration eliminates one factor from the factor graph.
@@ -332,68 +404,104 @@ public class JunctionTree implements MarginalCalculator {
         for (Integer varNum : countsOfVars.get(1)) {
           Preconditions.checkState(varFactorMap.get(varNum).size() == 1);
           justEliminated = tryEliminateFactor(Iterables.getOnlyElement(varFactorMap.get(varNum)),
-              varFactorMap, factorIndexMap, countsOfVars);
+              varFactorMap, factorIndexMap, countsOfVars, factorEdges);
 
           if (justEliminated != null) {
-            possibleEliminationOrder.put(eliminationIndex, justEliminated);
+            remainingFactors.remove(justEliminated);
+            possibleEliminationOrder.put(eliminationIndex, factorIndexMap.get(justEliminated));
             eliminationIndex++;
             break;
           }
         }
 
-        Preconditions.checkState(justEliminated != null, "Could not convert %s into a clique tree.", factorGraph);
-        remainingFactors.remove(justEliminated);
+        if (justEliminated == null) {
+          // Heuristic of eliminating only variables in a single factor
+          // has failed. Pick a variable (that only occurs in a few factors)
+          // eliminate it, potentially creating large factors in the
+          // clique tree.
+          Integer minCount = countsOfVars.keySet().first();
+          int varToEliminate = Iterables.getFirst(countsOfVars.get(minCount), null);
+
+          List<Factor> factorsContainingVar = Lists.newArrayList(varFactorMap.get(varToEliminate));
+          VariableNumMap allVars = VariableNumMap.EMPTY;
+          for (Factor factor : factorsContainingVar) {
+            allVars = allVars.union(factor.getVars());
+          }
+          
+          Preconditions.checkState(factorsContainingVar.size() != 0);
+          
+          Factor factorToMergeWith = null;
+          if (minCount == 1) {
+            // If there's only a single factor containing this variable, 
+            // simply sum out this variable to create a smaller factor.
+            allVars = allVars.removeAll(varToEliminate);
+          }
+
+          if (factorToMergeWith == null) {
+            // Create a new factor containing all neighboring variables
+            // and add it to the variable elimination data structures.
+            factorToMergeWith = TableFactor.unity(allVars);
+            int newFactorIndex = cliqueFactors.size();
+            cliqueFactors.add(factorToMergeWith);
+            remainingFactors.add(factorToMergeWith);
+            factorIndexMap.put(factorToMergeWith, newFactorIndex);
+
+            for (int varNum : factorToMergeWith.getVars().getVariableNumsArray()) {
+              int oldCount = varFactorMap.get(varNum).size();
+              countsOfVars.remove(oldCount, varNum);
+              countsOfVars.put(oldCount + 1, varNum);
+              varFactorMap.put(varNum, factorToMergeWith);
+            }
+          }
+
+          // Eliminate every factor containing the variable.
+          for (Factor factor : factorsContainingVar) {
+            // Remove the factor from the map containing variable counts.
+            for (int variableNum : factor.getVars().getVariableNumsArray()) {
+              // First decrement the occurrence count of this variable.
+              int count = varFactorMap.get(variableNum).size();
+              countsOfVars.remove(count, variableNum);
+              if (count > 1) {
+                countsOfVars.put(count - 1, variableNum);
+              }
+              varFactorMap.remove(variableNum, factor);
+            }
+            
+            int curFactorIndex = factorIndexMap.get(factor);
+            int destFactorIndex = factorIndexMap.get(factorToMergeWith);
+            factorEdges.put(curFactorIndex, destFactorIndex);
+            factorEdges.put(destFactorIndex, curFactorIndex);
+
+            justEliminated = factor;
+            remainingFactors.remove(justEliminated);
+            possibleEliminationOrder.put(eliminationIndex, curFactorIndex);
+            eliminationIndex++;
+          }
+        }
+        Preconditions.checkState(justEliminated != null,
+            "Could not convert %s into a clique tree.", factorGraph);
       }
-      possibleEliminationOrder.put(eliminationIndex, Iterables.getOnlyElement(remainingFactors));
+      if (remainingFactors.size() > 0) {
+        possibleEliminationOrder.put(eliminationIndex, factorIndexMap.get(Iterables.getOnlyElement(remainingFactors)));
+      }
       
-      for (int i = 0; i < cliqueFactors.size(); i++) {
-        separatorSets.add(Maps.<Integer, SeparatorSet> newHashMap());
-        messages.add(Maps.<Integer, Factor> newHashMap());
-
-        for (Integer adjacentFactor : factorEdges.get(i)) {
-          separatorSets.get(i).put(adjacentFactor, new SeparatorSet(i, adjacentFactor,
-              cliqueFactors.get(i).getVars().intersection(cliqueFactors.get(adjacentFactor).getVars())));
-        }
-      }
-
-      // Select an elimination order.
-      SortedMap<Integer, Factor> bestEliminationOrder = Maps.newTreeMap();
-      if (factorGraph.getInferenceHint() != null) {
-        for (int i = 0; i < cliqueFactors.size(); i++) {
-          bestEliminationOrder.put(factorGraph.getInferenceHint().getFactorEliminationOrder()[i],
-              cliqueFactors.get(i));
-        }
-      } else {
-        for (int i = 0; i < cliqueFactors.size(); i++) {
-          // Eliminate factors in the same order that they were eliminated to build
-          // this clique tree.
-          bestEliminationOrder = possibleEliminationOrder;
-
-          // TODO: Use a heuristic to select a good order.
-          // bestEliminationOrder.put(i, cliqueFactors.get(i));
-        }
-      }
-
-      cliqueEliminationOrder = new ArrayList<Integer>();
+      List<Integer> cliqueEliminationOrder = new ArrayList<Integer>();
       // System.out.println("Elimination Order:");
-      for (Integer position : bestEliminationOrder.keySet()) {
-        cliqueEliminationOrder.add(factorIndexMap.get(bestEliminationOrder.get(position)));
+      for (int i = 0; i < cliqueFactors.size(); i++) {
+        cliqueEliminationOrder.add(possibleEliminationOrder.get(i));
         // System.out.println("  " + cliqueEliminationOrder.size() + " " +
         // cliqueFactors.get(bestEliminationOrder.get(position)).getVars());
       }
-
-      marginals = Lists.newArrayList(cliqueFactors);
-      factorsInMarginals = Lists.newArrayList();
-      for (int i = 0; i < marginals.size(); i++) {
-        factorsInMarginals.add(Sets.<Integer> newHashSet());
-      }
+      
+      return new CliqueTree(cliqueFactors, factorEdges, cliqueEliminationOrder);
     }
 
     /*
      * Helper method for constructing the clique tree by eliminating a single factor from the input.
      */
-    private Factor tryEliminateFactor(Factor f, Multimap<Integer, Factor> varFactorMap,
-        Map<Factor, Integer> factorIndexMap, TreeMultimap<Integer, Integer> countsOfVars) {
+    private static Factor tryEliminateFactor(Factor f, Multimap<Integer, Factor> varFactorMap,
+        Map<Factor, Integer> factorIndexMap, TreeMultimap<Integer, Integer> countsOfVars,
+        HashMultimap<Integer, Integer> factorEdges) {
       Set<Integer> variablesToEliminate = Sets.newHashSet();
       Collection<Integer> factorVariables = f.getVars().getVariableNums();
       Set<Factor> mergeableFactors = new HashSet<Factor>();
@@ -405,10 +513,10 @@ public class JunctionTree implements MarginalCalculator {
         }
         mergeableFactors.addAll(varFactorMap.get(variableNum));
       }
-      
+
       Set<Integer> variablesToRetain = Sets.newHashSet(factorVariables);
       variablesToRetain.removeAll(variablesToEliminate);
-      
+
       // Merge f with a factor containing all of the variables
       // which are not being eliminated.
       mergeableFactors.remove(f);
@@ -438,23 +546,22 @@ public class JunctionTree implements MarginalCalculator {
       }
 
       // Remove the factor from the map containing variable counts.
-      for (Integer variableNum : f.getVars().getVariableNums()) {
+      for (int variableNum : f.getVars().getVariableNumsArray()) {
         // First decrement the occurrence count of this variable.
         int count = varFactorMap.get(variableNum).size();
         countsOfVars.remove(count, variableNum);
         if (count > 1) {
           countsOfVars.put(count - 1, variableNum);
         }
-
         varFactorMap.remove(variableNum, f);
       }
-      
+
       // Add an undirected edge in the clique tree from f to superset.
       if (superset != null) {
-	  int curFactorIndex = factorIndexMap.get(f);
-	  int destFactorIndex = factorIndexMap.get(superset);
-	  factorEdges.put(curFactorIndex, destFactorIndex);
-	  factorEdges.put(destFactorIndex, curFactorIndex);
+        int curFactorIndex = factorIndexMap.get(f);
+        int destFactorIndex = factorIndexMap.get(superset);
+        factorEdges.put(curFactorIndex, destFactorIndex);
+        factorEdges.put(destFactorIndex, curFactorIndex);
       }
 
       return f;
@@ -503,6 +610,10 @@ public class JunctionTree implements MarginalCalculator {
 
     public Factor getMarginal(int factorNum) {
       return marginals.get(factorNum);
+    }
+    
+    public List<Factor> getMarginals() {
+      return marginals;
     }
 
     public void setMarginal(int factorNum, Factor marginal) {

@@ -10,7 +10,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
@@ -42,9 +41,12 @@ public class TableFactor extends DiscreteFactor {
    */
   public TableFactor(VariableNumMap vars, Tensor weights) {
     super(vars);
-    Preconditions.checkArgument(vars.size() == vars.getDiscreteVariables().size());
+    // This check is correct, but slow.
+    /*
     Preconditions.checkArgument(vars.getVariableNums().equals(
-        Ints.asList(weights.getDimensionNumbers())));
+        Ints.asList(weights.getDimensionNumbers())), "Dimension numbers do not match. Variables %s, tensor %s",
+        vars.getVariableNums(), Ints.asList(weights.getDimensionNumbers()));
+     */
     this.weights = weights;
   }
 
@@ -64,12 +66,17 @@ public class TableFactor extends DiscreteFactor {
       builder.setWeight(assignments[i], 1.0);
     }
     // TODO: support for implicit repmat of the assignments.
-    
+
     return builder.build();
   }
-  
+
   public static TableFactor vector(VariableNumMap vars, Assignment[] assignments, double[] values) {
-    throw new UnsupportedOperationException("Not yet implemented");
+    Preconditions.checkArgument(assignments.length == values.length);
+    TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
+    for (int i = 0; i < assignments.length; i++) {
+      builder.setWeight(assignments[i], values[i]);
+    }
+    return builder.build();
   }
 
   /**
@@ -83,7 +90,7 @@ public class TableFactor extends DiscreteFactor {
    * @return
    */
   public static TableFactor logPointDistribution(VariableNumMap vars, Assignment assignment) {
-    DenseTensorBuilder builder = new DenseTensorBuilder(Ints.toArray(vars.getVariableNums()),
+    DenseTensorBuilder builder = new DenseTensorBuilder(vars.getVariableNumsArray(),
         vars.getVariableSizes(), Double.NEGATIVE_INFINITY);
     builder.put(vars.assignmentToIntArray(assignment), 0.0);
     return new TableFactor(vars, new LogSpaceTensorAdapter(builder.build()));
@@ -110,7 +117,7 @@ public class TableFactor extends DiscreteFactor {
    */
   public static TableFactor logUnity(VariableNumMap vars) {
     TableFactorBuilder builder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
-    return builder.buildInLogSpace();
+    return builder.buildSparseInLogSpace();
   }
 
   /**
@@ -194,7 +201,7 @@ public class TableFactor extends DiscreteFactor {
       List<? extends Function<String, ?>> inputConverters, Iterable<String> lines,
       String delimiter, boolean ignoreInvalidAssignments) {
     List<VariableNumMap> varList = Lists.newArrayList();
-    for (Integer varNum : vars.getVariableNums()) {
+    for (int varNum : vars.getVariableNumsArray()) {
       varList.add(vars.intersection(varNum));
     }
     return fromDelimitedFile(varList, inputConverters, lines, delimiter, ignoreInvalidAssignments);    
@@ -203,7 +210,7 @@ public class TableFactor extends DiscreteFactor {
   public static TableFactor fromDelimitedFile(VariableNumMap vars, Iterable<String> lines,
       String delimiter, boolean ignoreInvalidAssignments) {
     List<VariableNumMap> varList = Lists.newArrayList();
-    for (Integer varNum : vars.getVariableNums()) {
+    for (int varNum : vars.getVariableNumsArray()) {
       varList.add(vars.intersection(varNum));
     }
     return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments);
@@ -257,13 +264,13 @@ public class TableFactor extends DiscreteFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
     return weights.getByDimKey(getVars().assignmentToIntArray(a));
   }
 
   @Override
   public double getUnnormalizedLogProbability(Assignment a) {
-    Preconditions.checkArgument(a.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
     return weights.getLogByDimKey(getVars().assignmentToIntArray(a));
   }
 

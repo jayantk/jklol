@@ -26,9 +26,13 @@ public class ApplicationExpression extends AbstractExpression {
   public Expression getFunction() {
     return subexpressions.get(0);
   }
-  
+
   public List<Expression> getArguments() {
     return subexpressions.subList(1, subexpressions.size());
+  }
+
+  public List<Expression> getSubexpressions() {
+    return subexpressions;
   }
 
   @Override
@@ -90,29 +94,6 @@ public class ApplicationExpression extends AbstractExpression {
     }
   }
 
-  /*
-  @Override
-  public Expression expandUniversalQuantifiers() {
-    // First simplify all arguments
-    List<Expression> simplifiedArguments = Lists.newArrayList();
-    List<Expression> arguments = getArguments();
-
-    for (Expression argument : arguments) {
-      simplifiedArguments.add(argument.expandUniversalQuantifiers()); 
-    }
-
-    Expression function = getFunction().simplify();
-    if (function instanceof LambdaExpression) {
-      LambdaExpression lambdaFunction = (LambdaExpression) function;
-      return lambdaFunction.reduce(simplifiedArguments).simplify();
-    } else {
-      List<Expression> subexpressions = Lists.newArrayList(function);
-      subexpressions.addAll(simplifiedArguments);
-      return new ApplicationExpression(subexpressions);
-    }
-  }
-  */
-
   @Override
   public boolean functionallyEquals(Expression expression) {
     if (expression instanceof ApplicationExpression) {
@@ -128,6 +109,32 @@ public class ApplicationExpression extends AbstractExpression {
       }
     }
     return false;
+  }
+
+  @Override
+  public Type getType(TypeContext context) {
+    Expression function = subexpressions.get(0);
+    Type type = function.getType(context);
+
+    for (int i = 1; i < subexpressions.size(); i++) {
+      if (type == null || !type.isFunctional()) {
+        return null;
+      }
+
+      if (context.unify(type.getArgumentType(), subexpressions.get(i).getType(context)) != null) {
+        if (!type.acceptsRepeatedArguments()) {
+          type = type.getReturnType();
+        }
+      } else {
+        return null;
+      }
+    }
+
+    if (type.acceptsRepeatedArguments()) {
+      type = type.getReturnType();
+    }
+
+    return type;
   }
 
   @Override

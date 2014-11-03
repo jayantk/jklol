@@ -55,16 +55,16 @@ public class SequenceModelTest extends TestCase {
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.emptyMap(), 
+    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.EMPTY, 
         DiscreteVariable.sequence("foo", 4));
     builder.addFactor("classifier", f, VariableNumPattern.fromTemplateVariables(all,
-        VariableNumMap.emptyMap(), builder.getDynamicVariableSet()));
+        VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
     builder.addFactor("adjacent", DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap(), 
+        VariableNumPattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY, 
             builder.getDynamicVariableSet())); 
     sequenceModel = builder.build();
         
@@ -122,14 +122,14 @@ public class SequenceModelTest extends TestCase {
       parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     } else {
       StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-          100, 1, 1.0, true, 0.1, new DefaultLogFunction());
+          100, 1, 1.0, true, false, 0.1, new DefaultLogFunction());
       parameters = trainer.train(oracle, sequenceModel.getNewSufficientStatistics(), trainingData);
     }
     DynamicFactorGraph trainedModel = sequenceModel.getModelFromParameters(parameters);
     
     // Should be able to get 0 training error.
     FactorGraphPredictor predictor = new FactorGraphPredictor(trainedModel, 
-        VariableNamePattern.fromTemplateVariables(y, VariableNumMap.emptyMap()), new JunctionTree());
+        VariableNamePattern.fromTemplateVariables(y, VariableNumMap.EMPTY), new JunctionTree());
     for (Example<DynamicAssignment, DynamicAssignment> trainingDatum : trainingData) {
       DynamicAssignment prediction = predictor.getBestPrediction(trainingDatum.getInput()).getBestPrediction();
       assertEquals(trainingDatum.getOutput(), prediction);

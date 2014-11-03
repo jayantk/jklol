@@ -43,7 +43,7 @@ public class ListTaggedSequence<I, O> implements TaggedSequence<I, O> {
   public List<LocalContext<I>> getLocalContexts() {
     List<LocalContext<I>> contexts = Lists.newArrayList();
     for (int i = 0; i < items.size(); i++) {
-      contexts.add(new LocalContext<I>(items, i));
+      contexts.add(new ListLocalContext<I>(items, i));
     }
     return contexts;
   }

@@ -66,16 +66,18 @@ public class IntMultimapTest extends TestCase {
     values = Sets.newHashSet(map.get(2));
     expectedValues = Sets.newHashSet(3);
     assertEquals(expectedValues, values);
+    assertEquals(expectedValues, Sets.newHashSet(Ints.asList(map.getArray(2))));
 
     values = Sets.newHashSet(map.get(8));
     expectedValues = Sets.newHashSet();
     assertEquals(expectedValues, values);
+    assertEquals(expectedValues, Sets.newHashSet(Ints.asList(map.getArray(8))));
 
     assertEquals(map.size(), 7);
     
     map.put(6, 2);
     map.putAll(9, Ints.asList(6, 7));
-    
+
     assertEquals(map.size(), 10);
 
     assertTrue(map.containsEntry(6, 2));
@@ -86,10 +88,18 @@ public class IntMultimapTest extends TestCase {
     values = Sets.newHashSet(map.get(6));
     expectedValues = Sets.newHashSet(2);
     assertEquals(expectedValues, values);
+    assertEquals(expectedValues, Sets.newHashSet(Ints.asList(map.getArray(6))));
     
     values = Sets.newHashSet(map.get(9));
     expectedValues = Sets.newHashSet(6, 7);
     assertEquals(expectedValues, values);
+    assertEquals(expectedValues, Sets.newHashSet(Ints.asList(map.getArray(9))));
+  }
+  
+  public void testKeySet() {
+    Set<Integer> expectedKeys = Sets.newHashSet(0, 2, 7);
+    assertEquals(expectedKeys, map.keySet());
+    assertEquals(expectedKeys, Sets.newHashSet(Ints.asList(map.keySetArray())));
   }
   
   public void testInvertFrom() {

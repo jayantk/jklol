@@ -1,13 +1,14 @@
 package com.jayantkrish.jklol.models.dynamic;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.util.IntBiMap;
 
 /**
  * A pattern of variables which serves the role of {@link VariableNumMap}s for
@@ -34,7 +35,7 @@ public interface VariablePattern extends Serializable {
    * along with the role served by each variable in the match. Matches are
    * returned in order of the matched replication index.
    * 
-   * @param allVariables
+   * @param matchedVariables
    * @return
    */
   List<VariableMatch> matchVariables(VariableNumMap inputVariables);
@@ -56,25 +57,23 @@ public interface VariablePattern extends Serializable {
    * @author jayant
    */
   public static class VariableMatch {
-
     // Variables which match replications of template variables.
-    private VariableNumMap allVariables;
-
+    private final VariableNumMap matchedVariables;
+    private final VariableNumMap templateVariables;
+    
     // Mapping from names/indices of matched variables to the names/indices of
     // the corresponding template variables.
-    private BiMap<Integer, Integer> variableIndexMap;
-    private BiMap<String, String> variableNameMap;
+    private final VariableRelabeling relabeling;
 
-    public VariableMatch(VariableNumMap fixedVariables) {
-      this.allVariables = fixedVariables;
-
-      variableIndexMap = HashBiMap.create();
-      variableNameMap = HashBiMap.create();
-      for (int varNum : fixedVariables.getVariableNums()) {
-        variableIndexMap.put(varNum, varNum);
-        variableNameMap.put(fixedVariables.getVariableNameFromIndex(varNum),
-            fixedVariables.getVariableNameFromIndex(varNum));
-      }
+    public VariableMatch(VariableNumMap matchedVariables, VariableNumMap templateVariables, 
+        VariableRelabeling relabeling) {
+      this.matchedVariables = Preconditions.checkNotNull(matchedVariables);
+      this.templateVariables = Preconditions.checkNotNull(templateVariables);
+      this.relabeling = Preconditions.checkNotNull(relabeling);
+    }
+    
+    public static final VariableMatch identity(VariableNumMap vars) {
+      return new VariableMatch(vars, vars, VariableRelabeling.identity(vars));
     }
 
     /**
@@ -85,7 +84,11 @@ public interface VariablePattern extends Serializable {
      * @return
      */
     public VariableNumMap getMatchedVariables() {
-      return allVariables;
+      return matchedVariables;
+    }
+    
+    public VariableNumMap getTemplateVariables() {
+      return templateVariables;
     }
 
     /**
@@ -95,12 +98,23 @@ public interface VariablePattern extends Serializable {
      * @return
      */
     public VariableRelabeling getMappingToTemplate() {
-      return new VariableRelabeling(variableIndexMap, variableNameMap);
+      return relabeling;
     }
     
     public VariableNumMap getMatchedVariablesFromTemplateVariables(VariableNumMap templateVariables) {
-      VariableRelabeling relabeling = new VariableRelabeling(variableIndexMap.inverse(), variableNameMap.inverse());
-      return relabeling.apply(templateVariables).intersection(allVariables);
+      VariableRelabeling inverseRelabeling = getMappingToTemplate().inverse(); 
+      return inverseRelabeling.apply(templateVariables).intersection(matchedVariables);
+    }
+  }
+
+  public static class VariableMatchBuilder {
+    private final int[] templateVariableNums;
+    private final int[] matchedVariableNums;
+    
+    public VariableMatchBuilder(int[] templateVariableNums) {
+      this.templateVariableNums = templateVariableNums;
+      this.matchedVariableNums = new int[templateVariableNums.length];
+      Arrays.fill(matchedVariableNums, -1);
     }
 
     /**
@@ -109,36 +123,35 @@ public interface VariablePattern extends Serializable {
      * @param templateVariable
      * @param matchedVariable
      */
-    public void addMatch(VariableNumMap templateVariable, VariableNumMap matchedVariable) {
-      Preconditions.checkArgument(templateVariable.size() == 1);
-      Preconditions.checkArgument(matchedVariable.size() == 1);
-      variableIndexMap.put(matchedVariable.getVariableNums().get(0),
-          templateVariable.getVariableNums().get(0));
-      variableNameMap.put(matchedVariable.getVariableNames().get(0),
-          templateVariable.getVariableNames().get(0));
-      allVariables = allVariables.union(matchedVariable);
+    public void addMatch(int templateVariableNum, int matchedVariableNum) {
+      int index = Arrays.binarySearch(templateVariableNums, templateVariableNum);
+      matchedVariableNums[index] = matchedVariableNum;
+    }
+    
+    /**
+     * Returns {@code true} if all of the template variables have been
+     * matched to an input variable.
+     * 
+     * @return
+     */
+    public boolean isComplete() {
+      return Ints.indexOf(matchedVariableNums, -1) == -1;
     }
 
-    @Override
-    public int hashCode() {
-      return allVariables.hashCode() * variableNameMap.hashCode() * variableIndexMap.hashCode();
-    }
+    public VariableMatch build(VariableNumMap fixedVariables, VariableNumMap templateVariables,
+        VariableNumMap variablesToMatch) {
+      VariableNumMap matchedVariables = variablesToMatch.intersection(matchedVariableNums);
+      
+      VariableRelabeling fixedVariableRelabeling = VariableRelabeling.identity(fixedVariables);
 
-    @Override
-    public boolean equals(Object other) {
-      if (other instanceof VariableMatch) {
-        VariableMatch m = (VariableMatch) other;
+      int[] templateCopy = Arrays.copyOf(templateVariableNums, templateVariableNums.length);
+      int[] matchedCopy = Arrays.copyOf(matchedVariableNums, matchedVariableNums.length);
 
-        return allVariables.equals(m.allVariables) && variableIndexMap.equals(m.variableIndexMap)
-            && variableNameMap.equals(m.variableNameMap);
-      }
-      return false;
-    }
-
-    @Override
-    public String toString() {
-      return allVariables.toString() + " " + variableIndexMap.toString()
-          + " " + variableNameMap.toString();
+      IntBiMap mapping = IntBiMap.fromUnsortedKeyValues(matchedCopy, templateCopy);
+      VariableRelabeling matchedRelabeling = new VariableRelabeling(matchedVariables,
+          templateVariables, mapping);
+      return new VariableMatch(matchedVariables.union(fixedVariables),
+          templateVariables.union(fixedVariables), fixedVariableRelabeling.union(matchedRelabeling));
     }
   }
 }

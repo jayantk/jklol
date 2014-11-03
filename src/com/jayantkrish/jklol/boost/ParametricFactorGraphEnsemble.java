@@ -166,7 +166,7 @@ public class ParametricFactorGraphEnsemble implements Serializable {
     if (outerProductVars.size() > 0) {
       factorMarginal = factorMarginal.outerProduct(TableFactor.pointDistribution(outerProductVars,
           assignment.intersection(outerProductVars)));
-      assignment = assignment.removeAll(outerProductVars.getVariableNums());
+      assignment = assignment.removeAll(outerProductVars.getVariableNumsArray());
     }
 
     return Pair.of(factorMarginal, assignment);

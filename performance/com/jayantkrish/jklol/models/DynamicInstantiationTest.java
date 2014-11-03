@@ -57,21 +57,21 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.emptyMap(), 
+    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.EMPTY, 
         DiscreteVariable.sequence("foo", 4)); 
-    builder.addFactor("f1", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
-    platePattern = VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap());
+    builder.addFactor("f1", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY));
+    platePattern = VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY);
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
     builder.addFactor("f2", DiscreteLogLinearFactor.createIndicatorFactor(adjacentVars),
-        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY));
 
     sequenceModel = builder.build();
     dynamicFactorGraph = sequenceModel.getModelFromParameters(sequenceModel.getNewSufficientStatistics());
     replicatedFactor = new ReplicatedFactor(f.getModelFromParameters(f.getNewSufficientStatistics()), 
-        VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY));
     
     // Construct some training data.
     List<Assignment> inputAssignments = Lists.newArrayList();

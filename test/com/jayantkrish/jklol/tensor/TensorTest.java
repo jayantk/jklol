@@ -30,7 +30,7 @@ public abstract class TensorTest extends TestCase {
   
   protected int[] varNums, varSizes;
   protected Tensor table, vector, emptyInputTable;
-  
+
   protected List<Tensor> smallTables, missingMiddles, missingFirsts,
     missingLasts, emptyTables, addTables, disjointTables, vectors, matrixInnerProductFirsts,
     matrixInnerProductMiddles, matrixInnerProductLasts;
@@ -88,7 +88,7 @@ public abstract class TensorTest extends TestCase {
     builder = tensorFactory.getBuilder(new int[] {}, new int[] {});
     builder.put(new int[] {}, 5.0);
     emptyInputTable = builder.build();
-    
+
     TensorBuilder vectorBuilder = tensorFactory.getBuilder(new int[] {1}, new int[] {5});
     vectorBuilder.putByKeyNum(1, 1.0);
     vectorBuilder.putByKeyNum(4, 2.0);
@@ -613,6 +613,15 @@ public abstract class TensorTest extends TestCase {
     assertEquals(3.0, actual.getByDimKey(3, 4, 3));
   }
   
+  public void testGetEntriesLargerThan() {
+    Tensor actual = table.getEntriesLargerThan(5.0);
+    assertEquals(0.0, actual.getByDimKey(0, 0, 0));
+    assertEquals(0.0, actual.getByDimKey(0, 0, 3));
+    assertEquals(1.0, actual.getByDimKey(1, 0, 3));
+    assertEquals(0.0, actual.getByDimKey(1, 3, 0));
+    assertEquals(1.0, actual.getByDimKey(3, 4, 3));
+  }
+
   public void testReduceDimensionsNone() {
     runReduceTest(table, Sets.<Integer>newHashSet());
   }
@@ -685,7 +694,7 @@ public abstract class TensorTest extends TestCase {
     assertEquals(5.0, table.get(largestKeys[1]));
     assertEquals(5.0, table.get(largestKeys[2]));
   }
-  
+
   /**
    * This is a simple version of the elementwise multiply algorithm which looks
    * at all pairs of keys in {@code first} and {@code second}.

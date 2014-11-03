@@ -8,9 +8,11 @@ import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
  * Common implementations of CCG parse chart methods.
@@ -18,18 +20,23 @@ import com.jayantkrish.jklol.tensor.Tensor;
  * @author jayantk
  */
 public abstract class AbstractCcgChart implements CcgChart {
-  
+
   // The words and pos tags of the sentence being parsed.
+  private final SupertaggedSentence input;
   private final List<String> terminals;
   private final List<String> posTags;
+  private int[] posTagsInt;
+  
+  // Maximum number of chart entries.
+  private final int maxChartSize;
 
   // Various kinds of distances between words in the sentence.
-  private final int[] wordDistances;
-  private final int[] puncDistances;
-  private final int[] verbDistances;
-  
-  private final ChartFilter entryFilter;
-  
+  private int[] wordDistances;
+  private int[] puncDistances;
+  private int[] verbDistances;
+
+  protected ChartCost entryFilter;
+
   // The parser weights which might be used in this sentence.
   // This is a subset of all parser weights, which is precomputed
   // to make lookups more efficient during parsing.
@@ -41,26 +48,25 @@ public abstract class AbstractCcgChart implements CcgChart {
   // The syntactic category combinations that will be considered
   // while parsing this sentence.
   private DiscreteFactor syntaxDistribution;
-  
-  public AbstractCcgChart(List<String> terminals, List<String> posTags, int[] wordDistances,
-      int[] puncDistances, int[] verbDistances, ChartFilter entryFilter) {
-    this.terminals = ImmutableList.copyOf(terminals);
-    this.posTags = ImmutableList.copyOf(posTags);
-    
-    this.wordDistances = Preconditions.checkNotNull(wordDistances);
-    this.puncDistances = Preconditions.checkNotNull(puncDistances);
-    this.verbDistances = Preconditions.checkNotNull(verbDistances);
-    
-    int n = terminals.size();
-    Preconditions.checkArgument(posTags.size() == n);
-    Preconditions.checkArgument(wordDistances.length == n * n);
-    Preconditions.checkArgument(puncDistances.length == n * n);
-    Preconditions.checkArgument(verbDistances.length == n * n);
-    
-    this.entryFilter = entryFilter;
 
-    // dependencyTensor, the distance tensors, and syntax distribution are
+  private int[] assignmentVarIndexAccumulator;
+  private long[] assignmentAccumulator;
+  private long[] filledDepAccumulator;
+  private int[] unfilledDepVarIndexAccumulator;
+  private long[] unfilledDepAccumulator;
+
+  private boolean finishedParsing;
+
+  public AbstractCcgChart(SupertaggedSentence input, int maxChartSize) {
+    this.input = input;
+    this.terminals = ImmutableList.copyOf(input.getWords());
+    this.posTags = ImmutableList.copyOf(input.getPosTags());
+    this.maxChartSize = maxChartSize;
+
+    // dependencyTensor, the distance arrays / tensors, and syntax distribution are
     // left null, and must be manually set.
+
+    this.finishedParsing = false;
   }
 
   @Override
@@ -69,13 +75,57 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
   
   @Override
+  public SupertaggedSentence getInput() {
+    return input;
+  }
+
+  @Override
   public List<String> getWords() {
     return terminals;
   }
-  
+
   @Override
   public List<String> getPosTags() {
     return posTags;
+  }
+  
+  @Override
+  public int getMaxChartEntries() {
+    return maxChartSize;
+  }
+
+  @Override
+  public void setPosTagsInt(int[] posTagsInt) {
+    Preconditions.checkArgument(posTagsInt.length == size());
+    this.posTagsInt = posTagsInt;
+  }
+
+  @Override
+  public void setWordDistances(int[] wordDistances) {
+    Preconditions.checkArgument(wordDistances.length == size() * size());
+    this.wordDistances = wordDistances;
+  }
+
+  @Override
+  public void setPuncDistances(int[] puncDistances) {
+    Preconditions.checkArgument(puncDistances.length == size() * size());
+    this.puncDistances = puncDistances;
+  }
+
+  @Override
+  public void setVerbDistances(int[] verbDistances) {
+    Preconditions.checkArgument(verbDistances.length == size() * size());
+    this.verbDistances = verbDistances;
+  }
+
+  @Override
+  public void setChartCost(ChartCost entryFilter) {
+    this.entryFilter = entryFilter;
+  }
+
+  @Override
+  public int[] getPosTagsInt() {
+    return posTagsInt;
   }
 
   @Override
@@ -119,6 +169,31 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
 
   @Override
+  public void setAssignmentVarIndexAccumulator(int[] assignmentVarIndexAccumulator) {
+    this.assignmentVarIndexAccumulator = assignmentVarIndexAccumulator;
+  }
+
+  @Override
+  public void setAssignmentAccumulator(long[] assignmentAccumulator) {
+    this.assignmentAccumulator = assignmentAccumulator;
+  }
+
+  @Override
+  public void setFilledDepAccumulator(long[] filledDepAccumulator) {
+    this.filledDepAccumulator = filledDepAccumulator;
+  }
+
+  @Override
+  public void setUnfilledDepVarIndexAccumulator(int[] unfilledDepVarIndexAccumulator) {
+    this.unfilledDepVarIndexAccumulator = unfilledDepVarIndexAccumulator;
+  }
+
+  @Override
+  public void setUnfilledDepAccumulator(long[] unfilledDepAccumulator) {
+    this.unfilledDepAccumulator = unfilledDepAccumulator;
+  }
+
+  @Override
   public Tensor getDependencyTensor() {
     return dependencyTensor;
   }
@@ -142,14 +217,42 @@ public abstract class AbstractCcgChart implements CcgChart {
   public DiscreteFactor getSyntaxDistribution() {
     return syntaxDistribution;
   }
-  
+
   @Override
-  public void applyChartFilterToTerminals() {
-    if (entryFilter != null) {
-      entryFilter.applyToTerminals(this);
-    }
+  public int[] getAssignmentVarIndexAccumulator() {
+    return assignmentVarIndexAccumulator;
   }
   
+  @Override
+  public long[] getAssignmentAccumulator() {
+    return assignmentAccumulator;
+  }
+  
+  @Override
+  public long[] getFilledDepAccumulator() {
+    return filledDepAccumulator;
+  }
+  
+  @Override
+  public int[] getUnfilledDepVarIndexAccumulator() {
+    return unfilledDepVarIndexAccumulator;
+  }
+  
+  @Override
+  public long[] getUnfilledDepAccumulator() {
+    return unfilledDepAccumulator;
+  }
+
+  @Override
+  public boolean isFinishedParsing() {
+    return finishedParsing;
+  }
+
+  @Override
+  public void setFinishedParsing(boolean finished) {
+    this.finishedParsing = finished;
+  }
+
   /**
    * Decodes the CCG parse which is the {@code beamIndex}'th parse in
    * the beam for the given span.
@@ -159,10 +262,9 @@ public abstract class AbstractCcgChart implements CcgChart {
    * @param beamIndex
    * @return
    */
-  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex,
-      CcgParser parser, DiscreteVariable syntaxVarType) {
+  protected CcgParse decodeParseFromSpan(int spanStart, int spanEnd, int beamIndex, CcgParser parser) {
+    DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
     ChartEntry entry = getChartEntriesForSpan(spanStart, spanEnd)[beamIndex];
-
     HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(
         entry.getHeadedSyntax());
 
@@ -170,15 +272,15 @@ public abstract class AbstractCcgChart implements CcgChart {
       List<String> terminals = getWords();
       List<String> posTags = getPosTags();
       return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTriggerWords(), posTags.subList(spanStart, spanEnd + 1),
-          parser.variableToIndexedPredicateArray(syntax.getRootVariable(), entry.getAssignments()),
-              Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
-              terminals.subList(spanStart, spanEnd + 1), getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],
-              entry.getRootUnaryRule(), spanStart, spanEnd);
+          parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
+          terminals.subList(spanStart, spanEnd + 1), getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],
+          entry.getRootUnaryRule(), spanStart, spanEnd);
     } else {
       CcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
-          entry.getLeftChartIndex(), parser, syntaxVarType);
+          entry.getLeftChartIndex(), parser);
       CcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
-          entry.getRightChartIndex(), parser, syntaxVarType);
+          entry.getRightChartIndex(), parser);
 
       if (entry.getLeftUnaryRule() != null) {
         left = left.addUnaryRule(entry.getLeftUnaryRule(), (HeadedSyntacticCategory)
@@ -193,9 +295,19 @@ public abstract class AbstractCcgChart implements CcgChart {
           (left.getSubtreeProbability() * right.getSubtreeProbability());
 
       return CcgParse.forNonterminal(syntax,
-          parser.variableToIndexedPredicateArray(syntax.getRootVariable(), entry.getAssignments()),
-              Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb, left, right,
-              entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
+          parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
+          Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb,
+          left, right, entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd);
     }
+  }
+
+  protected  IntMultimap aggregateBySyntacticType(ChartEntry[] entries, int numEntries) {
+    int[] keys = new int[numEntries];
+    int[] values = new int[numEntries];
+    for (int i = 0; i < numEntries; i++) {
+      keys[i] = entries[i].getHeadedSyntax();
+      values[i] = i;
+    }
+    return IntMultimap.createFromUnsortedArrays(keys, values, 0);
   }
 }

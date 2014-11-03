@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -8,6 +9,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.util.IntegerArrayIterator;
 
 /**
  * Universal quantifier, where each bound variable takes on a
@@ -42,19 +44,37 @@ public class ForAllExpression extends AbstractExpression {
     // Generate unique names for the bound variables to avoid
     // accidental substitutions. 
     List<ConstantExpression> newBoundVariables = ConstantExpression.generateUniqueVariables(boundVariables.size());
-    Expression baseClause = body.renameVariables(boundVariables, newBoundVariables);
-    for (int i = 0; i < newBoundVariables.size(); i++) {
-      ConstantExpression boundVar = newBoundVariables.get(i);
+    Expression baseClause = body.renameVariables(boundVariables, newBoundVariables).freshenVariables(body.getBoundVariables());
+    int[] bindingSizes = new int[boundVariables.size()];
+    for (int i = 0; i < boundVariables.size(); i++) {
       CommutativeOperator set = (CommutativeOperator) restrictions.get(i);
+      bindingSizes[i] = set.getArguments().size();
+    }
+    
+    // Systematically substitute every possible value for every
+    // bound variable to create a collection of clauses. This expression
+    // is equivalent to the conjunction of these clauses.
+    Iterator<int[]> bindingIter = new IntegerArrayIterator(bindingSizes, new int[0]);
+    List<Expression> boundClauses = Lists.newArrayList();
+    while (bindingIter.hasNext()) {
+      int[] bindingIndexes = bindingIter.next();
       
-      List<Expression> clauses = Lists.newArrayList();
-      for (Expression arg : set.getArguments()) {
-        clauses.add(baseClause.substitute(boundVar, arg));
+      Expression result = baseClause;
+      for (int j = 0; j < bindingIndexes.length; j++) {
+        ConstantExpression boundVar = newBoundVariables.get(j);
+        CommutativeOperator set = (CommutativeOperator) restrictions.get(j);
+        
+        result = result.substitute(boundVar, set.getArguments().get(bindingIndexes[j])).simplify();
+        if (result instanceof ForAllExpression) {
+          result = ((ForAllExpression) result).expandQuantifier().simplify();
+        }
       }
-      baseClause = new CommutativeOperator(new ConstantExpression("and"), clauses);
+      boundClauses.add(result.simplify());
     }
 
-    return baseClause;
+    Expression clauseConjunction = (new CommutativeOperator(new ConstantExpression("and"), boundClauses));
+    Preconditions.checkState(!(clauseConjunction.simplify() instanceof ForAllExpression));
+    return clauseConjunction;
   }
 
   @Override
@@ -117,7 +137,7 @@ public class ForAllExpression extends AbstractExpression {
     for (int i = 0; i < restrictions.size(); i++) {
       simplifiedRestrictions.add(restrictions.get(i).simplify());
     }
-    
+
     Expression simplifiedBody = body.simplify();
     if (simplifiedBody instanceof ForAllExpression) {
       ForAllExpression forall = (ForAllExpression) simplifiedBody;
@@ -163,6 +183,11 @@ public class ForAllExpression extends AbstractExpression {
       return false;
     }
     return false;
+  }
+
+  @Override
+  public Type getType(TypeContext context) {
+    return null;
   }
 
   @Override

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.cvsm;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -10,8 +11,11 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmValueLoss;
@@ -172,7 +176,7 @@ public class CvsmTrainingTest extends TestCase {
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(rules),
-        null, null, true, null, false);
+        new DefaultCcgFeatureFactory(null, true), null, true, null, false, false);
     parser = family.getModelFromParameters(family.getNewSufficientStatistics());
 
     DiscreteVariable dimType = DiscreteVariable.sequence("seq", NUM_DIMS);
@@ -213,13 +217,14 @@ public class CvsmTrainingTest extends TestCase {
   }
 
   public void testParse() {
-    List<CcgParse> parses = parser.beamSearch(Arrays.asList("red", "block", "on", "table"), 10);
+    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+        Arrays.asList("red", "block", "on", "table"), Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG)), 10);
 
     System.out.println(parses.get(0).getLogicalForm().simplify());
   }
 
   public void testCvsmAffineTraining() {
-    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily, new CvsmSquareLoss(), -1);
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), cvsmFamily, new CvsmSquareLoss(), 5000);
   }
   
   public void testLowRankCvsmAffineTraining() {
@@ -227,7 +232,7 @@ public class CvsmTrainingTest extends TestCase {
   }
   
   public void testCvsmDiagTraining() {
-    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), cvsmFamily, new CvsmSquareLoss(), -1);
+    runCvsmTrainingTest(parseExamples(diagExamples, diagTargets), cvsmFamily, new CvsmSquareLoss(), 5000);
   }
 
   public void testLowRankCvsmDiagTraining() {
@@ -277,7 +282,7 @@ public class CvsmTrainingTest extends TestCase {
   
   public void testLowRankCvsmTensorTraining() {
     List<CvsmExample> cvsmTensorExamples = parseExamples(tprodExamples, tprodTargets);
-    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily, new CvsmSquareLoss(), 10000);
+    runCvsmTrainingTest(cvsmTensorExamples, lowRankCvsmFamily, new CvsmSquareLoss(), 15000);
   }
   
   public void testCvsmValueTraining() {
@@ -290,26 +295,30 @@ public class CvsmTrainingTest extends TestCase {
     if (iterations == -1) { iterations = 1000; } 
 
     CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, loss);
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(
-        iterations, 1, 1.0, true, 0.0, new NullLogFunction());
 
-    SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
-    initializeParameters(cvsmFamily, initialParameters);
+    List<StochasticGradientTrainer> trainers = Arrays.asList(
+        StochasticGradientTrainer.createWithL2Regularization(iterations, 1, 1.0, true, false, 0.0, new NullLogFunction()),
+        StochasticGradientTrainer.createAdagrad(iterations, 1, 1.0, true, false, 0.0, 0.0, new NullLogFunction()));
 
-    SufficientStatistics parameters = trainer.train(oracle,
-        initialParameters, cvsmExamples);
+    for (StochasticGradientTrainer trainer : trainers) {
+      SufficientStatistics initialParameters = cvsmFamily.getNewSufficientStatistics();
+      initializeParameters(cvsmFamily, initialParameters);
 
-    System.out.println(cvsmFamily.getParameterDescription(parameters));
+      SufficientStatistics parameters = trainer.train(oracle,
+          initialParameters, cvsmExamples);
 
-    Cvsm cvsm = cvsmFamily.getModelFromParameters(parameters);
+      System.out.println(cvsmFamily.getParameterDescription(parameters));
 
-    for (CvsmExample example : cvsmExamples) {
-      CvsmTree tree = cvsm.getInterpretationTree(example.getLogicalForm());
-      CvsmTree augmentedTree = loss.augmentTreeWithLoss(tree, cvsm, example.getTargets());
+      Cvsm cvsm = cvsmFamily.getModelFromParameters(parameters);
 
-      double squareLoss = augmentedTree.getLoss();
-      System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
-      assertTrue(squareLoss <= 0.1);
+      for (CvsmExample example : cvsmExamples) {
+        CvsmTree tree = cvsm.getInterpretationTree(example.getLogicalForm());
+        CvsmTree augmentedTree = loss.augmentTreeWithLoss(tree, cvsm, example.getTargets());
+
+        double squareLoss = augmentedTree.getLoss();
+        System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
+        assertTrue(squareLoss <= 0.1);
+      }
     }
   }
 
@@ -322,7 +331,7 @@ public class CvsmTrainingTest extends TestCase {
 
   private static List<CvsmExample> parseExamples(String[] examples, double[][] targets) {
     Preconditions.checkArgument(examples.length == targets.length);
-    ExpressionParser exp = new ExpressionParser();
+    ExpressionParser<Expression> exp = ExpressionParser.lambdaCalculus();
 
     List<CvsmExample> cvsmExamples = Lists.newArrayList();
     for (int i = 0; i < examples.length; i++) {

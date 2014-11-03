@@ -2,7 +2,7 @@
 
 TRAINING_DATA=~/data/ptb_pos/pos_00-18.txt
 VALIDATION_DATA=~/data/ptb_pos/pos_19-21.txt
-OUTPUT_DIR=pos_output/speed_test3/
+OUTPUT_DIR=pos_output/speed_test4/
 
 ITERATIONS=10
 BATCH_SIZE=1

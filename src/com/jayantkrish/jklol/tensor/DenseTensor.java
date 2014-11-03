@@ -142,7 +142,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     builder.multiply(this);
     return builder.build();
   }
-  
+
   @Override
   public DenseTensor innerProduct(Tensor other) {
     int[] otherDims = other.getDimensionNumbers();
@@ -177,7 +177,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
             Ints.asList(otherSizes));
       }
 
-      return fastInnerProduct(other, maxKeyNum, keyNumIncrement, 1, newDims, newSizes);
+      return fastInnerProductRightAligned(other, maxKeyNum, keyNumIncrement, newDims, newSizes);
     } else if (areDimensionsLeftAligned(otherDims)) {
       int minDimIndex = otherDims.length;
       int[] newDims = ArrayUtils.copyOfRange(myDims, minDimIndex, myDims.length);
@@ -190,7 +190,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
             Ints.asList(otherSizes));
       }
 
-      return fastInnerProduct(other, maxKeyNum, 1, maxKeyNum, newDims, newSizes);
+      return fastInnerProductLeftAligned(other, maxKeyNum, newDims, newSizes);
     } else {
       // Slow, default inner product.
       return elementwiseProduct(other).sumOutDimensions(otherDims);
@@ -230,24 +230,48 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
    * @param other
    * @return
    */
-  private DenseTensor fastInnerProduct(Tensor other, long maxKeyNum, long keyNumIncrement, 
-      long otherKeyNumMultiplier, int[] newDims, int[] newSizes) {        
+  private DenseTensor fastInnerProductRightAligned(Tensor other, long maxKeyNum, long keyNumIncrement, 
+      int[] newDims, int[] newSizes) {        
     DenseTensorBuilder resultBuilder = new DenseTensorBuilder(newDims, newSizes);
     int otherSize = other.size();
+    double[] otherValues = other.getValues();
     // Iterate over the keys of this, then (hopefully sparsely) iterate over the 
-    // keys of {@code other},  
-    for (long myKeyNum = 0; myKeyNum < maxKeyNum; myKeyNum += keyNumIncrement) {
-      double innerProd = 0.0;
-      for (int otherIndex = 0; otherIndex < otherSize; otherIndex++) {
+    // keys of {@code other},
+    double innerProd;
+    int otherIndex;
+    int finalIndex = (int) (maxKeyNum / keyNumIncrement);
+    long myKeyNum;
+    for (int i = 0; i < finalIndex; i++) {
+      myKeyNum = i * keyNumIncrement;
+      innerProd = 0.0;
+      for (otherIndex = 0; otherIndex < otherSize; otherIndex++) {
         long otherKeyNum = other.indexToKeyNum(otherIndex);
-        double otherValue = other.getByIndex(otherIndex);
-        
-        innerProd += get(myKeyNum + (otherKeyNum * otherKeyNumMultiplier)) * otherValue;
+        double otherValue = otherValues[otherIndex];
+        innerProd += values[(int) (myKeyNum + otherKeyNum)] * otherValue;
       }
-      resultBuilder.putByKeyNum(myKeyNum / keyNumIncrement, innerProd);
+      resultBuilder.putByKeyNum(i, innerProd);
     }
-    
-    return resultBuilder.build();
+    return resultBuilder.buildNoCopy();
+  }
+
+  private DenseTensor fastInnerProductLeftAligned(Tensor other, long maxKeyNum,
+      int[] newDims, int[] newSizes) {
+    DenseTensorBuilder resultBuilder = new DenseTensorBuilder(newDims, newSizes);
+    int otherSize = other.size();
+    double[] otherValues = other.getValues();
+    // Iterate over the keys of this tensor in the inner loop for
+    // better cache locality.
+    double otherValue;
+    int finalIndex = (int) maxKeyNum;
+    int otherKeyNum;
+    for (int otherIndex = 0; otherIndex < otherSize; otherIndex++) {
+      otherKeyNum = (int) (other.indexToKeyNum(otherIndex) * maxKeyNum);
+      otherValue = otherValues[otherIndex];
+      for (int i = 0; i < finalIndex; i++) {
+        resultBuilder.incrementEntryByKeyNum(values[i + otherKeyNum] * otherValue, i);
+      }
+    }
+    return resultBuilder.buildNoCopy();
   }
 
   @Override
@@ -355,6 +379,13 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public DenseTensor softThreshold(double threshold) {
     DenseTensorBuilder builder = DenseTensorBuilder.copyOf(this);
     builder.softThreshold(threshold);
+    return builder.build();
+  }
+
+  @Override
+  public DenseTensor getEntriesLargerThan(double threshold) {
+    DenseTensorBuilder builder = DenseTensorBuilder.copyOf(this);
+    builder.findEntriesLargerThan(threshold);
     return builder.build();
   }
 

@@ -33,6 +33,8 @@ public class IntMultimap implements Multimap<Integer, Integer> {
   private int[] sortedKeys;
   private int[] sortedValues;
 
+  private int[] keySet;
+  
   private int numUnsortedItems;
   private int[] unsortedKeys;
   private int[] unsortedValues;
@@ -48,11 +50,29 @@ public class IntMultimap implements Multimap<Integer, Integer> {
   private IntMultimap(int[] keys, int[] values) {
     this.sortedKeys = Preconditions.checkNotNull(keys);
     this.sortedValues = Preconditions.checkNotNull(values);
+    
+    this.keySet = null;
 
     this.numUnsortedItems = 0;
     this.unsortedKeys = new int[INITIAL_UNSORTED_BUFFER_SIZE];
     this.unsortedValues = new int[INITIAL_UNSORTED_BUFFER_SIZE];
+    
+    rebuildKeySet();
   }
+  
+  private IntMultimap(int[] keys, int[] values, int unsortedCapacity) {
+    this.sortedKeys = Preconditions.checkNotNull(keys);
+    this.sortedValues = Preconditions.checkNotNull(values);
+    
+    this.keySet = null;
+
+    this.numUnsortedItems = 0;
+    this.unsortedKeys = new int[unsortedCapacity];
+    this.unsortedValues = new int[unsortedCapacity];
+    
+    rebuildKeySet();
+  }
+
 
   /**
    * Creates and returns an empty multimap.
@@ -61,6 +81,24 @@ public class IntMultimap implements Multimap<Integer, Integer> {
    */
   public static IntMultimap create() {
     return new IntMultimap(new int[0], new int[0]);
+  }
+  
+  public static IntMultimap createWithInitialCapacity(int capacity) {
+    return new IntMultimap(new int[0], new int[0], capacity);
+  }
+
+  /**
+   * This method does not copy {@code keys} or {@code values}.
+   *  
+   * @param keys
+   * @param values
+   * @param unsortedCapacity
+   * @return
+   */
+  public static IntMultimap createFromUnsortedArrays(int[] keys, int[] values, int unsortedCapacity) {
+    Preconditions.checkArgument(keys.length == values.length);
+    ArrayUtils.sortKeyValuePairs(keys, values, 0, keys.length);
+    return new IntMultimap(keys, values, unsortedCapacity);
   }
 
   /**
@@ -116,12 +154,13 @@ public class IntMultimap implements Multimap<Integer, Integer> {
         newSortedValues[i + oldLength] = unsortedValues[i];
       }
 
-      // TODO: re-sort the key/value pairs.
       ArrayUtils.sortKeyValuePairs(newSortedKeys, newSortedValues, 0, newSortedKeys.length);
 
       sortedKeys = newSortedKeys;
       sortedValues = newSortedValues;
       numUnsortedItems = 0;
+      
+      rebuildKeySet();
     }
   }
 
@@ -136,6 +175,30 @@ public class IntMultimap implements Multimap<Integer, Integer> {
 
     unsortedKeys = newUnsortedKeys;
     unsortedValues = newUnsortedValues;
+  }
+
+  private void rebuildKeySet() {
+    int curKey = -1;
+    int numUniqueKeys = 0;
+    for (int i = 0; i < sortedKeys.length; i++) {
+      if (i == 0 || sortedKeys[i] != curKey) {
+        numUniqueKeys++;
+        curKey = sortedKeys[i];
+      }
+    }
+
+    int[] keySetArray = new int[numUniqueKeys];
+    int curKeyIndex = 0;
+    for (int i = 0; i < sortedKeys.length; i++) {
+      if (i == 0 || sortedKeys[i] != curKey) {
+        keySetArray[curKeyIndex] = sortedKeys[i];
+        curKeyIndex++;
+        curKey = sortedKeys[i];
+      }
+    }
+
+    Preconditions.checkState(curKeyIndex == numUniqueKeys);
+    keySet = keySetArray;
   }
 
   /**
@@ -185,10 +248,18 @@ public class IntMultimap implements Multimap<Integer, Integer> {
 
   @Override
   public boolean containsKey(Object keyObj) {
+    reindexItems();
+
     if (keyObj instanceof Integer) {
-      return getKeyIndex((Integer) keyObj) >= 0;
+      return containsKey((int) ((Integer) keyObj));
     }
     return false;
+  }
+
+  public final boolean containsKey(int intKey) {
+    reindexItems();
+    int index = Arrays.binarySearch(keySet, intKey);
+    return index >= 0;
   }
 
   /**
@@ -197,6 +268,8 @@ public class IntMultimap implements Multimap<Integer, Integer> {
    */
   @Override
   public boolean containsValue(Object valObj) {
+    reindexItems();
+
     if (valObj instanceof Integer) {
       int val = (Integer) valObj;
       for (int i = 0; i < sortedValues.length; i++) {
@@ -235,18 +308,38 @@ public class IntMultimap implements Multimap<Integer, Integer> {
     return values;
   }
 
+  public final int[] getArray(int key) {
+    int firstIndex = getKeyIndex(key);
+    if (firstIndex < 0) {
+      return new int[0];
+    }
+    
+    int lastIndex = firstIndex;
+    while (lastIndex < sortedKeys.length && sortedKeys[lastIndex] == key) {
+      lastIndex++;
+    }
+    return Arrays.copyOfRange(sortedValues, firstIndex, lastIndex);
+  }
+
   @Override
   public boolean isEmpty() {
     return numUnsortedItems == 0 && sortedKeys.length == 0;
   }
-
+  
   @Override
   public Set<Integer> keySet() {
+    reindexItems();
     return Sets.newHashSet(Ints.asList(sortedKeys));
+  }
+  
+  public final int[] keySetArray() {
+    reindexItems();
+    return keySet;
   }
 
   @Override
   public Multiset<Integer> keys() {
+    reindexItems();
     return HashMultiset.create(Ints.asList(sortedKeys));
   }
 

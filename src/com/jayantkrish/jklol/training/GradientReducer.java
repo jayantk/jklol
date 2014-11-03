@@ -13,17 +13,19 @@ import com.jayantkrish.jklol.parallel.Reducer;
 public class GradientReducer<M, E> implements Reducer<E, GradientEvaluation> {
 
   private final M instantiatedModel;
+  private final SufficientStatistics instantiatedModelParameters;
   private final GradientOracle<M, ? super E> oracle;
 
   private final LogFunction log;
 
-  public GradientReducer(M instantiatedModel, GradientOracle<M, ? super E> oracle,
-      LogFunction log) {
+  public GradientReducer(M instantiatedModel, SufficientStatistics instantiatedModelParameters,
+      GradientOracle<M, ? super E> oracle, LogFunction log) {
     this.instantiatedModel = Preconditions.checkNotNull(instantiatedModel);
+    this.instantiatedModelParameters = Preconditions.checkNotNull(instantiatedModelParameters);
     this.oracle = Preconditions.checkNotNull(oracle);
     this.log = log;
   }
-  
+
   @Override
   public GradientEvaluation getInitialValue() {
     log.startTimer("mr_gradient_initialize");
@@ -39,7 +41,7 @@ public class GradientReducer<M, E> implements Reducer<E, GradientEvaluation> {
     int searchErrors = 0;
     try {
       objective += oracle.accumulateGradient(accumulated.getGradient(), 
-          instantiatedModel, item, log);
+          instantiatedModelParameters, instantiatedModel, item, log);
     } catch (ZeroProbabilityError e) {
       // Ignore the example, returning the zero vector.
       searchErrors = 1;

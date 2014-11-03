@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.supertag;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -10,8 +11,9 @@ import com.google.common.collect.Lists;
  * 
  * @author jayantk
  */
-public class WordAndPos {
-  
+public class WordAndPos implements Serializable {
+  private static final long serialVersionUID = 1L;
+
   private final String word;
   private final String pos;
   

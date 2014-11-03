@@ -64,8 +64,8 @@ public class OrConstraintFactor extends AbstractFactor {
   public static OrConstraintFactor createWithoutDistributions(VariableNumMap inputVars,
       VariableNumMap orVars, Map<String, Object> orValues) {
     List<Factor> inputFactors = Lists.newArrayList();
-    for (int varNum : inputVars.getVariableNums()) {
-      inputFactors.add(TableFactor.logUnity(inputVars.intersection(Ints.asList(varNum))));
+    for (int varNum : inputVars.getVariableNumsArray()) {
+      inputFactors.add(TableFactor.logUnity(inputVars.intersection(varNum)));
     }
     
     return new OrConstraintFactor(inputVars, orVars, orValues, inputFactors);
@@ -93,7 +93,7 @@ public class OrConstraintFactor extends AbstractFactor {
   
   @Override
   public double getUnnormalizedLogProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()));
 
     Set<Object> requiredValues = Sets.newHashSet();
     Set<Object> impossibleValues = Sets.newHashSet();
@@ -106,16 +106,16 @@ public class OrConstraintFactor extends AbstractFactor {
 
   @Override
   public Factor conditional(Assignment assignment) {
-    if (!getVars().containsAny(assignment.getVariableNums())) {
+    if (!getVars().containsAny(assignment.getVariableNumsArray())) {
       return this;
     }
-    Preconditions.checkArgument(assignment.containsAll(orVars.getVariableNums()));
+    Preconditions.checkArgument(assignment.containsAll(orVars.getVariableNumsArray()));
     
     Set<Object> requiredValues = Sets.newHashSet();
     Set<Object> impossibleValues = Sets.newHashSet();
     getRequiredAndImpossibleValues(assignment, requiredValues, impossibleValues);
   
-    Assignment inputAssignment = assignment.intersection(inputVars.getVariableNums());
+    Assignment inputAssignment = assignment.intersection(inputVars.getVariableNumsArray());
     return new SetCoverFactor(inputVars, requiredValues, 
         Predicates.not(Predicates.in(impossibleValues)), inputVarFactors).conditional(inputAssignment);
   }
@@ -131,8 +131,8 @@ public class OrConstraintFactor extends AbstractFactor {
    */
   private void getRequiredAndImpossibleValues(Assignment assignment,
       Set<Object> requiredValues, Set<Object> impossibleValues) {
-    Assignment truthValues = assignment.intersection(orVars.getVariableNums());
-    for (String variableName : orVars.getVariableNames()) {
+    Assignment truthValues = assignment.intersection(orVars.getVariableNumsArray());
+    for (String variableName : orVars.getVariableNamesArray()) {
       int variableNum = orVars.getVariableByName(variableName);
 
       // Each orVar acts as a deterministic indicator function. If true,
@@ -172,7 +172,7 @@ public class OrConstraintFactor extends AbstractFactor {
     Preconditions.checkArgument(uneliminatedVars.size() == 1);
     Preconditions.checkArgument(uneliminatedVars.containsAny(inputVars));
 
-    int variableIndex = uneliminatedVars.getVariableNums().get(0);
+    int variableIndex = uneliminatedVars.getVariableNumsArray()[0];
     int listIndex = inputVars.getVariableNums().indexOf(variableIndex);
 
     Preconditions.checkArgument(inputVarFactors.get(listIndex) != null);

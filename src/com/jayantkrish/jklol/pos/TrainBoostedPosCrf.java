@@ -104,14 +104,14 @@ public class TrainBoostedPosCrf extends AbstractCli {
 
     // Estimate parameters.
     List<Example<DynamicAssignment, DynamicAssignment>> examples = TaggerUtils
-        .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables());
+        .reformatTrainingData(trainingData, featureGen, sequenceModelFamily.getVariables(), null, null);
     SufficientStatisticsEnsemble parameters = estimateParameters(sequenceModelFamily, examples);
 
     // Save model to disk.
     System.out.println("Serializing trained model...");    
     DynamicFactorGraph factorGraph = sequenceModelFamily.getModelFromParameters(parameters);
     TrainedBoostedPosTagger trainedModel = new TrainedBoostedPosTagger(sequenceModelFamily, parameters, 
-        factorGraph, featureGen);
+        factorGraph, featureGen, TaggerUtils.getDefaultInputGenerator());
     IoUtils.serializeObjectToFile(trainedModel, options.valueOf(modelOutput));
   }
 
@@ -124,9 +124,9 @@ public class TrainBoostedPosCrf extends AbstractCli {
     // the input/output variables.
     ParametricFactorGraphEnsembleBuilder builder = new ParametricFactorGraphEnsembleBuilder();
     builder.addPlate(TaggerUtils.PLATE_NAME, new VariableNumMap(Ints.asList(1, 2), 
-        Arrays.asList(TaggerUtils.INPUT_NAME, TaggerUtils.OUTPUT_NAME),
+        Arrays.asList(TaggerUtils.INPUT_FEATURES_NAME, TaggerUtils.OUTPUT_NAME),
         Arrays.<Variable>asList(wordVectorType, posType)), 10000);
-    String inputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_NAME;
+    String inputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.INPUT_FEATURES_NAME;
     String outputPattern = TaggerUtils.PLATE_NAME + "/?(0)/" + TaggerUtils.OUTPUT_NAME;
     String nextOutputPattern = TaggerUtils.PLATE_NAME + "/?(1)/" + TaggerUtils.OUTPUT_NAME;
 
@@ -143,7 +143,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
       Preconditions.checkState(wordClassifier.getVariables().equals(baseClassifier.getVars()));
     }
     builder.addFactor(TaggerUtils.WORD_LABEL_FACTOR, wordClassifier, baseClassifier,
-        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.emptyMap()));
+        VariableNamePattern.fromTemplateVariables(plateVars, VariableNumMap.EMPTY));
     
     // Add a factor connecting adjacent labels.
     if (!noTransitions) {
@@ -156,7 +156,7 @@ public class TrainBoostedPosCrf extends AbstractCli {
         Preconditions.checkState(transitionFamily.getVariables().equals(baseTransitionFactor.getVars()));
       }
       builder.addFactor(TaggerUtils.TRANSITION_FACTOR, transitionFamily, baseTransitionFactor,
-          VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));
+          VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY));
     }
 
     return builder.build();

@@ -107,7 +107,7 @@ public class Cvsm implements Serializable {
         CvsmTree subtree = getInterpretationTree(args.get(0));
         return new CvsmTanhTree(subtree);
       } else if (functionName.equals("op:add")) {
-        Preconditions.checkArgument(args.size() > 1);
+        Preconditions.checkArgument(args.size() > 1, "Addition requires more than 1 argument.");
         CvsmTree value = getInterpretationTree(args.get(0));
         for (int i = 1; i < args.size(); i++) {
           value = new CvsmAdditionTree(value, getInterpretationTree(args.get(i)));

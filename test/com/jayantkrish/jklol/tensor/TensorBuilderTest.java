@@ -131,7 +131,24 @@ public abstract class TensorBuilderTest extends TestCase {
       assertEquals(8.0 * (i + 1), builder.get(builder.dimKeyToKeyNum(KEY3)));
     }
   }
-  
+    
+  public void testIncrementOuterProduct() {
+    Tensor left = SparseTensor.vector(0, 4, new double[]  {1, 1, 0, 2});
+    DenseTensorBuilder rightBuilder = new DenseTensorBuilder(new int[] {2, 3}, new int[] {3, 5});
+    rightBuilder.put(new int[] {0, 0}, 1.0);
+    rightBuilder.put(new int[] {1, 2}, 2.0);
+    rightBuilder.put(new int[] {2, 4}, 3.0);
+    Tensor right = rightBuilder.build();
+
+    builder.incrementOuterProductWithMultiplier(left, right, 4.0);
+    
+    assertEquals(4.0, builder.getByDimKey(1, 0, 0));
+    assertEquals(1.0 + 8.0, builder.getByDimKey(0, 1, 2));
+    assertEquals(0.0, builder.getByDimKey(2, 1, 2));
+    assertEquals(2.0, builder.getByDimKey(1, 2, 0));
+    assertEquals(16.0, builder.getByDimKey(3, 1, 2));
+  }
+
   public void testIncrementInvalid() {
     for (TensorBuilder wrongDimensionBuilder : wrongDimensionBuilders) {
       try {
@@ -210,6 +227,16 @@ public abstract class TensorBuilderTest extends TestCase {
     assertEquals(0.0, builder.getByDimKey(KEY4));
   }
   
+  public void testFindEntriesLargerThan() {
+    builder.put(KEY0, -1.0);
+    builder.findEntriesLargerThan(2.0);
+
+    assertEquals(0.0, builder.getByDimKey(KEY0));
+    assertEquals(0.0, builder.getByDimKey(KEY1));
+    assertEquals(1.0, builder.getByDimKey(KEY2));
+    assertEquals(0.0, builder.getByDimKey(KEY3));
+  }
+
   public void testInnerProduct() {
     for (int i = 0; i < otherBuilders.size(); i++) {
       assertEquals(3.0, builder.innerProduct(otherBuilders.get(i)));

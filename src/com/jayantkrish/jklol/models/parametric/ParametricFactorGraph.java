@@ -90,6 +90,7 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
    * @param parameters
    * @return
    */
+  @Override
   public DynamicFactorGraph getModelFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
@@ -148,13 +149,15 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
    * variables in {@code this.getVariables()}.
    * 
    * @param statistics
+   * @param currentParameters
    * @param assignment
    * @param count
    */
   public void incrementSufficientStatistics(SufficientStatistics statistics,
-      VariableNumMap variables, Assignment assignment, double count) {
-    incrementSufficientStatistics(statistics, FactorMarginalSet.fromAssignment(
-        variables, assignment, 1.0), count);
+      SufficientStatistics currentParameters, VariableNumMap variables,
+      Assignment assignment, double count) {
+    incrementSufficientStatistics(statistics, currentParameters,
+        FactorMarginalSet.fromAssignment(variables, assignment, 1.0), count);
   }
 
   /**
@@ -165,40 +168,53 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
    * {@code marginals} has been observed in the training data.
    * 
    * @param statistics
+   * @param currentParameters
    * @param marginals
    * @param count
    */
   public void incrementSufficientStatistics(SufficientStatistics statistics,
-      MarginalSet marginals, double count) {
+      SufficientStatistics currentParameters, MarginalSet marginals, double count) {
+    // LogFunction log = LogFunctions.getLogFunction();
+    // log.startTimer("parametric_factor_graph_increment");
     List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
+    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
     Preconditions.checkArgument(statisticsList.size() == parametricFactors.size());
+    Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     
-    List<Integer> conditionedVariableNums = marginals.getConditionedValues().getVariableNums();
+    int[] conditionedVariableNums = marginals.getConditionedValues().getVariableNumsArray();
     for (int i = 0; i < statisticsList.size(); i++) {
+      // log.startTimer("parametric_factor_graph_match");
       VariablePattern pattern = factorPatterns.get(i);
       List<VariableMatch> matches = pattern.matchVariables(marginals.getVariables());
+      // log.stopTimer("parametric_factor_graph_match");
       for (VariableMatch match : matches) {
+        // log.startTimer("parametric_factor_graph_factor_stuff");
         VariableNumMap matchVars = match.getMatchedVariables();
         // These calls take ~ 4 microseconds
         VariableNumMap fixedVars = matchVars.intersection(conditionedVariableNums);
         VariableNumMap marginalVars = matchVars.removeAll(conditionedVariableNums);
 
         // to here: 6 microsecs
-        Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNums());
+        // log.startTimer("parametric_factor_graph_marginal");
+        Factor factorMarginal = marginals.getMarginal(marginalVars.getVariableNumsArray());
         Assignment factorAssignment = marginals.getConditionedValues().intersection(fixedVars);
+        // log.stopTimer("parametric_factor_graph_marginal");
 
         // to here: 13 microsecs
         Factor relabeledMarginal = factorMarginal.relabelVariables(match.getMappingToTemplate());
         Assignment relabeledAssignment = factorAssignment.mapVariables(match.getMappingToTemplate()
             .getVariableIndexReplacementMap());
-
+        // log.stopTimer("parametric_factor_graph_factor_stuff");
         // to here: 18 microsecs
+        
+        // log.startTimer("parametric_factor_graph_increment/increment");
         parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(statisticsList.get(i),
-            relabeledMarginal, relabeledAssignment,
-            count, 1.0);
+            parameterList.get(i), relabeledMarginal, relabeledAssignment, count, 1.0);
         // to here: 27 microsecs
+        // log.stopTimer("parametric_factor_graph_increment/increment");
       }
     }
+    // log.stopTimer("parametric_factor_graph_increment");
   }
 
   /**

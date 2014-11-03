@@ -18,34 +18,34 @@ import com.jayantkrish.jklol.tensor.Tensor;
  */
 public class TensorLrtFamily implements LrtFamily {
   private static final long serialVersionUID = 1L;
-  
+
   private final VariableNumMap vars;
-  
+
   // This tensor, if non-null, is added to the parameter values,
   // effectively changing regularization to apply to the deviation
   // away from this tensor.
   private Tensor initialTensor;
-  
+
   public TensorLrtFamily(VariableNumMap vars) {
     this.vars = Preconditions.checkNotNull(vars);
     this.initialTensor = null;
   }
-  
+
   @Override
   public int[] getDimensionNumbers() {
     return vars.getVariableNumsArray();
   }
 
-    @Override
-    public int[] getDimensionSizes() {
-	return vars.getVariableSizes();
-    }
+  @Override
+  public int[] getDimensionSizes() {
+    return vars.getVariableSizes();
+  }
 
-    @Override
-    public void setInitialTensor(Tensor tensor) {
-	Preconditions.checkArgument(Arrays.equals(tensor.getDimensionNumbers(), getDimensionNumbers()));
-	this.initialTensor = tensor;
-    }
+  @Override
+  public void setInitialTensor(Tensor tensor) {
+    Preconditions.checkArgument(Arrays.equals(tensor.getDimensionNumbers(), getDimensionNumbers()));
+    this.initialTensor = tensor;
+  }
 
 
   @Override
@@ -55,23 +55,23 @@ public class TensorLrtFamily implements LrtFamily {
     return TensorSufficientStatistics.createDense(vars, builder);
   }
 
-    private Tensor getTensorFromParameters(SufficientStatistics parameters) {
-      Tensor tensor = ((TensorSufficientStatistics) parameters).get();
-      if (initialTensor != null) {
-	  tensor = tensor.elementwiseAddition(initialTensor);
-      } 
-      return tensor;
-    }
+  private Tensor getTensorFromParameters(SufficientStatistics parameters) {
+    Tensor tensor = ((TensorSufficientStatistics) parameters).get();
+    if (initialTensor != null) {
+      tensor = tensor.elementwiseAddition(initialTensor);
+    } 
+    return tensor;
+  }
 
   @Override
   public LowRankTensor getModelFromParameters(SufficientStatistics parameters) {
-      return new TensorLowRankTensor(getTensorFromParameters(parameters));
+    return new TensorLowRankTensor(getTensorFromParameters(parameters));
   }
-  
+
   @Override
   public void increment(SufficientStatistics gradient, LowRankTensor value, 
       LowRankTensor increment, double multiplier) {
-      ((TensorSufficientStatistics) gradient).increment(increment.getTensor(), multiplier);
+    ((TensorSufficientStatistics) gradient).increment(increment.getTensor(), multiplier);
   }
 
   @Override

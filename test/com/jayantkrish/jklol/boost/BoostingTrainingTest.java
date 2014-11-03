@@ -65,15 +65,15 @@ public class BoostingTrainingTest extends TestCase {
         featureVar, TableFactor.unity(y).getWeights());
     RegressionTreeBoostingFamily f2 = new RegressionTreeBoostingFamily(x, y, new RegressionTreeTrainer(2), 
         featureVar, TableFactor.unity(y).getWeights());
-    sequenceModelBuilder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
-    classifierModelBuilder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
-    classifierModel2Builder.addFactor("classifier", f2, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.emptyMap()));
+    sequenceModelBuilder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY));
+    classifierModelBuilder.addFactor("classifier", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY));
+    classifierModel2Builder.addFactor("classifier", f2, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY));
 
     // Factor connecting adjacent y's
     VariableNumMap adjacentVars = new VariableNumMap(Ints.asList(0, 1), 
         Arrays.asList("plateVar/?(0)/y", "plateVar/?(1)/y"), Arrays.asList(outputVar, outputVar));
     sequenceModelBuilder.addFactor("adjacent", new AveragingBoostingFamily(adjacentVars),
-        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.emptyMap()));    
+        VariableNamePattern.fromTemplateVariables(adjacentVars, VariableNumMap.EMPTY));    
 
     sequenceModel = sequenceModelBuilder.build();
     classifierModel = classifierModelBuilder.build();
@@ -157,7 +157,7 @@ public class BoostingTrainingTest extends TestCase {
     for (Example<DynamicAssignment, DynamicAssignment> example : classifierTestData) {
       Assignment predicted = jt.computeMaxMarginals(fg.conditional(example.getInput())).getNthBestAssignment(0);
       Assignment trueOutput = fg.getVariables().toAssignment(example.getOutput());
-      assertEquals(trueOutput, predicted.intersection(trueOutput.getVariableNums()));
+      assertEquals(trueOutput, predicted.intersection(trueOutput.getVariableNumsArray()));
     }
     
     // Verify the probability distribution
@@ -186,7 +186,7 @@ public class BoostingTrainingTest extends TestCase {
     for (Example<DynamicAssignment, DynamicAssignment> example : sequenceTestData) {
       Assignment predicted = jt.computeMaxMarginals(fg.conditional(example.getInput())).getNthBestAssignment(0);
       Assignment trueOutput = fg.getVariables().toAssignment(example.getOutput());
-      assertEquals(trueOutput, predicted.intersection(trueOutput.getVariableNums()));
+      assertEquals(trueOutput, predicted.intersection(trueOutput.getVariableNumsArray()));
     }
 
     /*

@@ -44,16 +44,22 @@ Example<DynamicAssignment, DynamicAssignment>> {
   }
 
   @Override
-  public double accumulateGradient(SufficientStatistics gradient, DynamicFactorGraph dynamicFactorGraph,
+  public double accumulateGradient(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, DynamicFactorGraph dynamicFactorGraph,
       Example<DynamicAssignment, DynamicAssignment> dynamicExample, LogFunction log) {
     // Instantiate any replicated factors, etc.
-    log.startTimer("update_gradient/get_factor_graph_from_parameters");
+    log.startTimer("update_gradient/get_factor_graph_from_assignment");
+    log.startTimer("update_gradient/get_factor_graph");
     FactorGraph factorGraph = dynamicFactorGraph.getFactorGraph(dynamicExample.getInput());
+    log.stopTimer("update_gradient/get_factor_graph");
+
+    log.startTimer("update_gradient/get_factor_graph_to_assignment");
     Assignment input = dynamicFactorGraph.getVariables().toAssignment(dynamicExample.getInput());
     Assignment observed = dynamicFactorGraph.getVariables().toAssignment(
         dynamicExample.getOutput().union(dynamicExample.getInput()));
+    log.stopTimer("update_gradient/get_factor_graph_to_assignment");
 
-    log.stopTimer("update_gradient/get_factor_graph_from_parameters");
+    log.stopTimer("update_gradient/get_factor_graph_from_assignment");
     log.log(input, factorGraph);
     log.log(observed, factorGraph);
 
@@ -84,6 +90,8 @@ Example<DynamicAssignment, DynamicAssignment>> {
         || Double.isInfinite(outputLogPartitionFunction) || Double.isNaN(outputLogPartitionFunction)) {
       // Search error from numerical issues.
       System.out.println("This search error: " + inputLogPartitionFunction + " " + outputLogPartitionFunction);
+      System.out.println("input: " + input);
+      System.out.println("output: " + observed);
       throw new ZeroProbabilityError();
     }
 
@@ -91,12 +99,12 @@ Example<DynamicAssignment, DynamicAssignment>> {
     // calculations, since the marginal calculations may throw ZeroProbabilityErrors
     // (if inference in the graphical model fails.)
     log.startTimer("update_gradient/increment");
-    family.incrementSufficientStatistics(gradient, inputMarginals, -1.0);
+    family.incrementSufficientStatistics(gradient, currentParameters, inputMarginals, -1.0);
     // System.out.println("=== input marginals ===");
     // System.out.println(inputMarginals);
     // System.out.println(family.getParameterDescription(gradient));
 
-    family.incrementSufficientStatistics(gradient, outputMarginals, 1.0);
+    family.incrementSufficientStatistics(gradient, currentParameters, outputMarginals, 1.0);
     // System.out.println("=== output marginals ===");
     // System.out.println(outputMarginals);
     // System.out.println(gradient);

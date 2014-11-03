@@ -1,10 +1,12 @@
 package com.jayantkrish.jklol.cvsm;
 
-import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cvsm.Cvsm.CvsmParameters;
+import com.jayantkrish.jklol.cvsm.CvsmSufficientStatistics.ParametricFamilySupplier;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -15,21 +17,25 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class CvsmFamily implements ParametricFamily<Cvsm> {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
   
   private final IndexedList<String> valueNames;
   private final List<LrtFamily> families;
+  private final List<Supplier<SufficientStatistics>> suppliers;
   
   public CvsmFamily(IndexedList<String> valueNames, List<LrtFamily> families) {
     this.valueNames = Preconditions.checkNotNull(valueNames);
     this.families = Preconditions.checkNotNull(families);
+    this.suppliers = Lists.newArrayList();
+    for (LrtFamily family : families) {
+      suppliers.add(new ParametricFamilySupplier(family));
+    }
     Preconditions.checkArgument(valueNames.size() == families.size());
   }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    List<SufficientStatistics> parameters = Collections.<SufficientStatistics>nCopies(families.size(), null);
-    return new CvsmSufficientStatistics(valueNames, families, parameters);
+    return CvsmSufficientStatistics.zero(valueNames, suppliers);
   }
 
   /**

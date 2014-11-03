@@ -67,7 +67,7 @@ public class SubgradientSvmTrainerTest extends TestCase {
     trainingData.add(makeExample("T", "T", "F"));
 
     o = new MaxMarginOracle(model, new MaxMarginOracle.HammingCost(), new JunctionTree());
-    t = StochasticGradientTrainer.createWithL2Regularization(100, 4, 1.0, true, 1.0, new DefaultLogFunction());
+    t = StochasticGradientTrainer.createWithL2Regularization(100, 4, 1.0, true, false, 1.0, new DefaultLogFunction());
   }
 
   public void testTrain() {

@@ -58,6 +58,11 @@ public class RegressionTreeSufficientStatistics implements SufficientStatistics 
   }
 
   @Override
+  public void findEntriesLargerThan(double threshold) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public SufficientStatistics duplicate() {
     return new RegressionTreeSufficientStatistics(Arrays.copyOf(trees, trees.length));
   }
@@ -80,6 +85,32 @@ public class RegressionTreeSufficientStatistics implements SufficientStatistics 
   @Override
   public void makeDense() {}
   
+  @Override
+  public void zeroOut() {}
+
+  @Override
+  public void incrementSquare(SufficientStatistics other, double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void incrementSquareAdagrad(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, double regularization) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(SufficientStatistics sumSquares, double constant,
+      double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void incrementAdagrad(SufficientStatistics gradient, SufficientStatistics sumSquares,
+      double multiplier) {
+    throw new UnsupportedOperationException();
+  }
+
   @Override
   public String getDescription() {
     StringBuilder sb = new StringBuilder();

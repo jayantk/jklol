@@ -48,7 +48,7 @@ public class LexiconEntry {
    */
   public static LexiconEntry parseLexiconEntry(String lexiconLine) {
     String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, 
-        '_').parseLine(lexiconLine);
+        '~').parseLine(lexiconLine);
 
     // Add the lexicon word sequence to the lexicon.
     String wordPart = parts[0];

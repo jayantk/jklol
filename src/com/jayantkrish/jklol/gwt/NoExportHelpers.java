@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.probdb.DbAssignment;
@@ -43,15 +44,17 @@ public class NoExportHelpers {
     String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
 
     ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
-        Arrays.asList(lexicon), Arrays.asList(rules), null, null, false, null, false);
-    CcgParser parser = ccgFamily.getModelFromParameters(ccgFamily.getNewSufficientStatistics());
-    
+        Arrays.asList(lexicon), Arrays.asList(rules), null, null, false, null, false, false);
+    CcgParser parser = ccgFamily.getModelFromParameters(
+        ccgFamily.getNewSufficientStatistics());
+
     List<String> words = Arrays.asList(input.split(" "));
     List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    List<CcgParse> parses = parser.beamSearch(words, posTags, 10);
+    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+        words, posTags), 10);
     return parses.get(0);
   }
-  
+
   public static int[] runDatabaseQuery(Query query, int[] entities, String[] tableNames, JsArrayMixed tables) {
     String[] entityStrings = new String[entities.length];
     for (int i = 0; i < entities.length; i++) {
@@ -93,7 +96,6 @@ public class NoExportHelpers {
       
       List<DependencyStructure> nodeDeps = parse.getNodeDependencies();
       Preconditions.checkState(nodeDeps.size() == 1);
-      DependencyStructure dep = nodeDeps.get(0);
       
       Query headQuery = leftQuery;
       Query childQuery = rightQuery;

@@ -179,7 +179,7 @@ public class TrainLinearClassifier extends AbstractCli {
     // (yes, the name is terrible). Just copy this definition, replacing x, y
     // and featureVar with whatever you called those things.
     builder.addUnreplicatedFactor("classifier", new ConditionalLogLinearFactor(x, y,
-        VariableNumMap.emptyMap(), featureVar));
+        VariableNumMap.EMPTY, featureVar));
     // Builds the actual trainable model.
     return builder.build();
   }

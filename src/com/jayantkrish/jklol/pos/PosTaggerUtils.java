@@ -40,7 +40,7 @@ public class PosTaggerUtils {
     }    
     Set<String> commonWords = Sets.newHashSet(wordCounts.getKeysAboveCountThreshold(
         commonWordThreshold));
-    
+
     if (noUnknownWordFeatures) {
       WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator(new int[] {-1, 0, 1},
           commonWords);
@@ -48,7 +48,7 @@ public class PosTaggerUtils {
     } else {
       WordContextFeatureGenerator wordGen = new WordContextFeatureGenerator(new int[] {-1, 0, 1},
           commonWords);
-      WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(4, 4, commonWords);
+      WordPrefixSuffixFeatureGenerator prefixGen = new WordPrefixSuffixFeatureGenerator(1, 5, 1, 5, commonWords);
       @SuppressWarnings("unchecked")
       FeatureGenerator<LocalContext<String>, String> featureGen = FeatureGenerators
           .combinedFeatureGenerator(wordGen, prefixGen);

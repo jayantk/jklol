@@ -48,7 +48,7 @@ public class ConstantExpression extends AbstractExpression implements Comparable
   public List<ConstantExpression> getLocallyBoundVariables() {
     return Collections.emptyList();
   }
-  
+
   @Override
   public ConstantExpression renameVariable(ConstantExpression variable, ConstantExpression replacement) {
     if (this.equals(variable)) {
@@ -78,6 +78,11 @@ public class ConstantExpression extends AbstractExpression implements Comparable
       return ((ConstantExpression) other).name.equals(name);
     }
     return false;
+  }
+
+  @Override
+  public Type getType(TypeContext context) {
+    return context.getTypeForName(name);
   }
 
   @Override

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
@@ -63,8 +64,35 @@ public class Reducers {
 
     @Override
     public C combine(C other, C accumulated) {
-      other.addAll(accumulated);
-      return other;
+      accumulated.addAll(other);
+      return accumulated;
+    }
+  }
+  
+  public static class FilterReducer<T> implements Reducer<T, List<T>> {
+    private final Predicate<T> predicate;
+    
+    public FilterReducer(Predicate<T> predicate) {
+      this.predicate = Preconditions.checkNotNull(predicate);
+    }
+    
+    @Override
+    public List<T> getInitialValue() {
+      return Lists.newArrayList();
+    }
+
+    @Override
+    public List<T> reduce(T item, List<T> accumulated) {
+      if (predicate.apply(item)) {
+        accumulated.add(item);
+      }
+      return accumulated;
+    }
+
+    @Override
+    public List<T> combine(List<T> other, List<T> accumulated) {
+      accumulated.addAll(other);
+      return accumulated;
     }
   }
 }

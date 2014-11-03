@@ -16,11 +16,12 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.collect.SortedSetMultimap;
 import com.google.common.collect.TreeMultimap;
-import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;
@@ -114,18 +115,22 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor conditional(Assignment a) {
-    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNums());
+    LogFunction log = LogFunctions.getLogFunction();
+    log.startTimer("discrete_factor_conditional");
+    VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNumsArray());
 
     // Efficiency improvement: only create a new factor if necessary.
     if (varsToEliminate.size() == 0) {
+      log.stopTimer("discrete_factor_conditional");
       return this;
     }
 
-    Assignment subAssignment = a.intersection(varsToEliminate);
-    int[] key = varsToEliminate.assignmentToIntArray(subAssignment);
-    int[] eliminatedDimensions = Ints.toArray(varsToEliminate.getVariableNums());
-    return new TableFactor(getVars().removeAll(varsToEliminate),
+    int[] key = varsToEliminate.assignmentToIntArray(a);
+    int[] eliminatedDimensions = varsToEliminate.getVariableNumsArray();
+    TableFactor result = new TableFactor(getVars().removeAll(varsToEliminate),
         getWeights().slice(eliminatedDimensions, key));
+    log.stopTimer("discrete_factor_conditional");
+    return result; 
   }
 
   @Override
@@ -183,6 +188,9 @@ public abstract class DiscreteFactor extends AbstractFactor {
   @Override
   public DiscreteFactor product(List<Factor> factors) {
     List<DiscreteFactor> discreteFactors = Factors.coerceToDiscrete(factors);
+
+    // TODO: multiply together factors defined over a subset of
+    // the variables of this factor, to reduce computation time.
 
     // Multiply the factors in order from smallest to largest to keep
     // the intermediate results as sparse as possible.
@@ -382,33 +390,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     return sb.toString();
   }
 
-  @Override
-  public String getParameterDescriptionXML() {
-    StringBuilder sb = new StringBuilder();
-    Iterator<Outcome> iter = outcomeIterator();
-    while (iter.hasNext()) {
-      Outcome outcome = iter.next();
-      sb.append("<outcome>\n" + outcome.toXML() + "</outcome>\n");
-    }
-    return sb.toString();
-  }
-
-  @Override
-  public int hashCode() {
-    return getVars().hashCode();
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    if (other == this) {
-      return true;
-    } else if (other instanceof DiscreteFactor) {
-      DiscreteFactor factor = (DiscreteFactor) other;
-      return factor.getVars().equals(getVars()) && factor.getWeights().equals(getWeights());
-    }
-    return false;
-  }
-
   /**
    * Get the partition function = denominator = total sum probability of all
    * assignments.
@@ -466,10 +447,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
     public String toCsv() {
       return Joiner.on(",").join(assignment.getValues()) + "," + probability;
-    }
-
-    public String toXML() {
-      return assignment.toXML() + "<probability>" + probability + "</probability>\n";
     }
   }
 }

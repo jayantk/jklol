@@ -51,12 +51,12 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
-  public void put(int[] key, double value) {
+  public final void put(int[] key, double value) {
     values[dimKeyToIndex(key)] = value;
   }
 
   @Override
-  public void putByKeyNum(long keyNum, double value) {
+  public final void putByKeyNum(long keyNum, double value) {
     values[(int) keyNum] = value;
   }
 
@@ -73,13 +73,13 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
-  public void incrementEntry(double amount, int... key) {
+  public final void incrementEntry(double amount, int... key) {
     values[dimKeyToIndex(key)] += amount;
   }
   
   @Override
-  public void incrementEntryByKeyNum(double amount, long keyNum) {
-    values[keyNumToIndex(keyNum)] += amount;
+  public final void incrementEntryByKeyNum(double amount, long keyNum) {
+    values[(int) keyNum] += amount;
   }
 
   /**
@@ -96,6 +96,84 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       simpleIncrement(other, multiplier);
     } else {
       repmatIncrement(other, multiplier);
+    }
+  }
+
+  @Override
+  public void incrementSquare(TensorBase other, double multiplier) {
+    if (other instanceof DenseTensorBase) {
+      double square = multiplier * multiplier;
+      double[] otherTensorValues = ((DenseTensorBase) other).values;
+      Preconditions.checkArgument(otherTensorValues.length == values.length);
+      int length = values.length;
+      double otherVal = 0;
+      for (int i = 0; i < length; i++) {
+        otherVal = otherTensorValues[i];
+        values[i] += otherVal * otherVal * square;
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  @Override
+  public void incrementAdagrad(TensorBase other, TensorBase squareTensor, double multiplier) {
+    if (other instanceof DenseTensorBase && squareTensor instanceof DenseTensorBase) {
+      double[] otherTensorValues = ((DenseTensorBase) other).values;
+      double[] squareTensorValues = ((DenseTensorBase) squareTensor).values;
+      Preconditions.checkArgument(otherTensorValues.length == values.length);
+      Preconditions.checkArgument(squareTensorValues.length == values.length);
+      int length = values.length;
+      double otherVal = 0;
+      double squareVal = 0;
+      for (int i = 0; i < length; i++) {
+        otherVal = otherTensorValues[i];
+        squareVal = squareTensorValues[i];
+        if (squareVal != 0.0) {
+          values[i] += otherVal * multiplier / Math.sqrt(squareVal);
+        }
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  @Override
+  public void multiplyInverseAdagrad(TensorBase squareTensor, double constant, double multiplier) {
+    if (squareTensor instanceof DenseTensorBase) {
+      double[] squareTensorValues = ((DenseTensorBase) squareTensor).values;
+      Preconditions.checkArgument(squareTensorValues.length == values.length);
+      int length = values.length;
+      double squareVal = 0;
+      for (int i = 0; i < length; i++) {
+        squareVal = squareTensorValues[i];
+        if (squareVal != 0.0) {
+          squareVal = 1 / squareVal;
+        }
+        values[i] *= (constant + (multiplier * Math.sqrt(squareVal)));
+      }
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+  
+  @Override
+  public void incrementSquareAdagrad(TensorBase gradient, TensorBase parameters, double multiplier) {
+    if (gradient instanceof DenseTensorBase && parameters instanceof DenseTensorBase) {
+      double[] gradientTensorValues = ((DenseTensorBase) gradient).values;
+      Preconditions.checkArgument(gradientTensorValues.length == values.length);
+      
+      double[] parameterTensorValues = ((DenseTensorBase) parameters).values;
+      Preconditions.checkArgument(parameterTensorValues.length == values.length);
+      
+      int length = values.length;
+      double val = 0;
+      for (int i = 0; i < length; i++) {
+        val = gradientTensorValues[i] + (multiplier * parameterTensorValues[i]);
+        values[i] += val * val;
+      }
+    } else {
+      throw new UnsupportedOperationException();
     }
   }
 
@@ -170,6 +248,41 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
+  public void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier) {
+    int[] leftDimensionNums = leftTensor.getDimensionNumbers();
+    int[] rightDimensionNums = rightTensor.getDimensionNumbers();
+    if (leftDimensionNums.length == 0) {
+      incrementWithMultiplier(rightTensor, multiplier * leftTensor.getByDimKey());
+      return;
+    } else if (rightDimensionNums.length == 0) {
+      incrementWithMultiplier(leftTensor, multiplier * rightTensor.getByDimKey());
+      return;
+    }
+
+    Preconditions.checkArgument(leftDimensionNums[leftDimensionNums.length - 1] < rightDimensionNums[0]);
+  
+    long leftKeyNumMultiplier = rightTensor.getMaxKeyNum();
+    int leftSize = leftTensor.size();
+    int rightSize = rightTensor.size();
+    long leftKeyNumOffset, rightKeyNum;
+    double leftValue, rightValue;
+    double[] leftValues = leftTensor.getValues();
+    double[] rightValues = rightTensor.getValues();
+    for (int i = 0; i < leftSize; i++) {
+      leftKeyNumOffset = leftTensor.indexToKeyNum(i) * leftKeyNumMultiplier;
+      leftValue = leftValues[i] * multiplier;
+      for (int j = 0; j < rightSize; j++) {
+        rightValue = rightValues[j];
+        if (rightValue != 0.0) {
+          rightKeyNum = rightTensor.indexToKeyNum(j);
+          values[(int) (leftKeyNumOffset + rightKeyNum)] += leftValue * rightValue;
+        }
+      }
+    }
+  }
+
+  @Override
   public void multiply(TensorBase other) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
     if (other instanceof DenseTensorBase) {
@@ -200,7 +313,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
   
   @Override
-  public void multiplyEntryByKeyNum(double amount, long keyNum) {
+  public final void multiplyEntryByKeyNum(double amount, long keyNum) {
     values[keyNumToIndex(keyNum)] *= amount;
   }
 
@@ -212,6 +325,17 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
         values[i] -= threshold;
       } else if (values[i] < negativeThreshold) {
         values[i] += threshold;
+      } else {
+        values[i] = 0.0;
+      }
+    }
+  }
+  
+  @Override
+  public void findEntriesLargerThan(double threshold) {
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] >= threshold) {
+        values[i] = 1.0;
       } else {
         values[i] = 0.0;
       }

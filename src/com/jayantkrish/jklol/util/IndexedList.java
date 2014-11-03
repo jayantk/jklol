@@ -99,9 +99,9 @@ public class IndexedList<T> implements Iterable<T>, Serializable {
 	 * Get the index in the list of the specified item.
 	 */ 
 	public int getIndex(Object item) {
-		if (!itemIndex.containsKey(item)) {
-			throw new NoSuchElementException();
-		}
+	  if (!itemIndex.containsKey(item)) {
+	    throw new NoSuchElementException("No such item: " + item);
+	  }
 		return itemIndex.get(item);
 	}
 

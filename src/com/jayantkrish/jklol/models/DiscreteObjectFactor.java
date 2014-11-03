@@ -53,7 +53,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
   public static DiscreteObjectFactor pointDistribution(VariableNumMap vars, Assignment... assignments) {
     Map<Assignment, Double> probabilities = Maps.newHashMap();
     for (int i = 0; i < assignments.length; i++) {
-      Preconditions.checkArgument(assignments[i].containsAll(vars.getVariableNums()));
+      Preconditions.checkArgument(assignments[i].containsAll(vars.getVariableNumsArray()));
       probabilities.put(assignments[i], 1.0);
     }
     return new DiscreteObjectFactor(vars, probabilities);
@@ -79,9 +79,9 @@ public class DiscreteObjectFactor extends AbstractFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment assignment) {
-    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNums()), 
+    Preconditions.checkArgument(assignment.containsAll(getVars().getVariableNumsArray()), 
         "Cannot get probability of %s . Factor variables %s", assignment, getVars());
-    Assignment subAssignment = assignment.intersection(getVars().getVariableNums());
+    Assignment subAssignment = assignment.intersection(getVars().getVariableNumsArray());
     if (probabilities.containsKey(subAssignment)) {
       return probabilities.get(subAssignment);
     }
@@ -126,7 +126,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
   @Override
   public Factor conditional(Assignment assignment) {
     Assignment subAssignment = assignment.intersection(getVars());
-    VariableNumMap conditionedVars = getVars().intersection(assignment.getVariableNums());
+    VariableNumMap conditionedVars = getVars().intersection(assignment.getVariableNumsArray());
 
     if (subAssignment.size() == 0) {
       return this;
@@ -227,7 +227,7 @@ public class DiscreteObjectFactor extends AbstractFactor {
         Ordering.from(new PairComparator<Double, Assignment>()).compound(Ordering.arbitrary())); 
 
     for (Assignment a : assignments()) {
-      pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), new Assignment(a)));
+      pq.offer(new Pair<Double, Assignment>(getUnnormalizedProbability(a), a));
       if (pq.size() > numAssignments) {
         pq.poll();
       }

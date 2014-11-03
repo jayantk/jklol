@@ -111,16 +111,16 @@ public abstract class AbstractFactor implements Factor, Serializable {
 
   @Override
   public Factor product(List<Factor> others) {
+    return product(others.toArray(new Factor[others.size()]));
+  }
+
+  @Override
+  public Factor product(Factor... others) {
     Factor current = this;
     for (Factor other : others) {
       current = current.product(other);
     }
     return current;
-  }
-
-  @Override
-  public Factor product(Factor... others) {
-    return product(Arrays.asList(others));
   }
 
   /**
@@ -151,13 +151,5 @@ public abstract class AbstractFactor implements Factor, Serializable {
     // Subclasses should override this method with a
     // correct implementation.
     return toString();
-  }
-  
-  @Override
-  public String getParameterDescriptionXML() {
-    // This implementation will probably not be detailed enough.
-    // Subclasses should override this method with a
-    // correct implementation.
-    return "<parameter>"+toString()+"</parameter>";
   }
 }

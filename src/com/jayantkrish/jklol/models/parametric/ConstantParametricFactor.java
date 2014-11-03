@@ -27,22 +27,18 @@ public class ConstantParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    return "constant\n";
-  }
-
-  @Override
   public Factor getModelFromParameters(SufficientStatistics parameters) {
     return factor;
   }
+  
+  @Override
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {}
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {}
-
-  @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics, 
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {}
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient, 
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {}
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {

@@ -35,7 +35,7 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
       List<? extends ParametricFactor> parametricFactors, boolean returnFactoredTensor) { 
     super(variables);
     Preconditions.checkArgument(parametricFactors.size() == factorNames.size());
-    VariableNumMap factorVars = VariableNumMap.emptyMap();
+    VariableNumMap factorVars = VariableNumMap.EMPTY;
     for (ParametricFactor factor : parametricFactors) {
       Preconditions.checkArgument(variables.containsAll(factor.getVars()));
       factorVars = factorVars.union(factor.getVars());
@@ -60,13 +60,14 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
     if (!returnFactoredTensor) {
       return Factors.product(factors);
     } else {
-      VariableNumMap allVars = VariableNumMap.emptyMap();
-      List<Tensor> tensors = Lists.newArrayList();
-      for (Factor factor : factors) {
+      VariableNumMap allVars = VariableNumMap.EMPTY;
+      Tensor[] tensors = new Tensor[factors.size()];
+      for (int i = 0; i < factors.size(); i++) {
+        Factor factor = factors.get(i);
         allVars = allVars.union(factor.getVars());
-        tensors.add(factor.coerceToDiscrete().getWeights());
+        tensors[i] = factor.coerceToDiscrete().getWeights();
       }
-      
+
       return new TableFactor(allVars, new FactoredTensor(allVars.getVariableNumsArray(), 
           allVars.getVariableSizes(), tensors));
     }
@@ -84,17 +85,6 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public String getParameterDescriptionXML(SufficientStatistics parameters) {
-    List<SufficientStatistics> parameterList = getParameterList(parameters);
-
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < parametricFactors.size(); i++) {
-      sb.append(parametricFactors.get(i).getParameterDescriptionXML(parameterList.get(i)));
-    }
-    return sb.toString();
-  }
-
-  @Override
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> parameterList = Lists.newArrayList();
     for (int i = 0; i < parametricFactors.size(); i++) {
@@ -104,24 +94,27 @@ public class CombiningParametricFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      Assignment assignment, double count) {
-    List<SufficientStatistics> parameterList = getParameterList(statistics);
+  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Assignment assignment, double count) {
+    List<SufficientStatistics> gradientList = getParameterList(gradient);
+    List<SufficientStatistics> parameterList = getParameterList(currentParameters);
     for (int i = 0; i < parametricFactors.size(); i++) {
-      parametricFactors.get(i).incrementSufficientStatisticsFromAssignment(parameterList.get(i),
-          assignment, count);
+      parametricFactors.get(i).incrementSufficientStatisticsFromAssignment(gradientList.get(i),
+          parameterList.get(i), assignment, count);
     }
   }
 
   @Override
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      Factor marginal, Assignment conditionalAssignment, double count, double partitionFunction) {
-    List<SufficientStatistics> parameterList = getParameterList(statistics);
+  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
+      double count, double partitionFunction) {
+    List<SufficientStatistics> gradientList = getParameterList(gradient);
+    List<SufficientStatistics> parameterList = getParameterList(currentParameters);
     for (int i = 0; i < parametricFactors.size(); i++) {
       Factor componentMarginal = marginal.marginalize(getVars().removeAll(
           parametricFactors.get(i).getVars()));
-      parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(parameterList.get(i),
-          componentMarginal, conditionalAssignment, count, partitionFunction);
+      parametricFactors.get(i).incrementSufficientStatisticsFromMarginal(gradientList.get(i),
+          parameterList.get(i), componentMarginal, conditionalAssignment, count, partitionFunction);
     }
   }
 

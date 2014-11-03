@@ -146,7 +146,7 @@ public class FactorGraphPredictor extends AbstractPredictor<DynamicAssignment, D
     // Identify which variables in the factor graph should be output as
     // predictions.
     List<VariableMatch> matches = outputPattern.matchVariables(conditionalFactorGraph.getAllVariables());
-    VariableNumMap outputVariables = VariableNumMap.emptyMap();
+    VariableNumMap outputVariables = VariableNumMap.EMPTY;
     for (VariableMatch match : matches) {
       outputVariables = outputVariables.union(match.getMatchedVariables());
     }

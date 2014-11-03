@@ -1,0 +1,21 @@
+t1:false 2 -1 0,1
+t1:true 2 -1 1,0
+t2:false 2,2 -1 1,0,0,1
+t2:true 2,2 -1 1,0,0,1
+t2:W1 2,2 -1
+t2:W2 2,2 -1
+t1:and 2 -1 
+t1:or 2 -1 
+t1:xor 2 -1 
+t2:softmax_weights 2,2 -1
+t2:socher_W1 2,2 -1
+t2:socher_W2 2,2 -1
+t2:socher_M1 2,2 -1
+t2:socher_M2 2,2 -1
+t2:and 2,2 -1
+t2:or 2,2 -1
+t2:xor 2,2 -1
+t3:and 2,2,2 -1
+t3:or 2,2,2 -1
+t3:xor 2,2,2 -1
+t2:weights 2,2 -1

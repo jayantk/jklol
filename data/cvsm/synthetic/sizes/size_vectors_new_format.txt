@@ -1,0 +1,21 @@
+t1:elephant  2  -1
+t1:mouse  2  -1
+t2:big  2,2  -1
+t2:small  2,2  -1
+t4:very  2,2,2,2  -1
+t4:not  2,2,2,2  -1
+t2:socher_W1 2,2 -1
+t2:W1 2,2 -1
+t2:W2 2,2 -1
+t2:socher_W2 2,2 -1
+t2:socher_M1 2,2 -1
+t2:socher_M2 2,2 -1
+t2:very 2,2 -1
+t2:not 2,2 -1
+t2:elephant 2,2 -1
+t2:mouse 2,2 -1
+t1:big 2 -1
+t1:small 2 -1
+t1:very 2 -1
+t1:not 2 -1
+

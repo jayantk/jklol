@@ -718,6 +718,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     return builder.buildNoCopy();
   }
 
+  @Override
   public Tensor elementwiseTanh() {
     // The tanh of 0 is 0, so this operation preserves sparsity.
     double[] newValues = new double[size()];
@@ -725,6 +726,33 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       newValues[i] = Math.tanh(values[i]);
     }
 
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
+  }
+  
+  @Override
+  public Tensor elementwiseAbs() {
+    // The tanh of 0 is 0, so this operation preserves sparsity.
+    double[] newValues = new double[size()];
+    for (int i = 0; i < size(); i++) {
+      newValues[i] = Math.abs(values[i]);
+    }
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
+  }
+
+  @Override
+  public Tensor elementwiseLaplaceSigmoid(double smoothness) {
+    // The laplace sigmoid of 0 is 0, so this operation preserves sparsity.
+    double[] newValues = new double[size()];
+    for (int i = 0; i < size(); i++) {
+      double value = values[i];
+      if (value > 0) {
+        newValues[i] = 1 - Math.exp(-1 * smoothness * value);
+      } else if (value < 0) {
+        newValues[i] = -1 + Math.exp(smoothness * value);
+      } else {
+        newValues[i] = 0;
+      }
+    }
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 

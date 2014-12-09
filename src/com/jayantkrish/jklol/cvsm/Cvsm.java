@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.cvsm.tree.CvsmAdditionTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmConstantTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmInnerProductTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmLaplaceSigmoidTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLogTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLogisticTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmRelabelDimsTree;
@@ -106,6 +107,11 @@ public class Cvsm implements Serializable {
 
         CvsmTree subtree = getInterpretationTree(args.get(0));
         return new CvsmTanhTree(subtree);
+      } else if (functionName.equals("op:laplace")) {
+        Preconditions.checkArgument(args.size() == 1);
+
+        CvsmTree subtree = getInterpretationTree(args.get(0));
+        return new CvsmLaplaceSigmoidTree(subtree, 2);
       } else if (functionName.equals("op:add")) {
         Preconditions.checkArgument(args.size() > 1, "Addition requires more than 1 argument.");
         CvsmTree value = getInterpretationTree(args.get(0));

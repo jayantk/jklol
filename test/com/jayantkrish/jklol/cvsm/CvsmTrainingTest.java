@@ -130,6 +130,14 @@ public class CvsmTrainingTest extends TestCase {
       { 1.0, 0.0, -0.5 },
   };
   
+  private static final String[] laplaceExamples = {
+      "(op:laplace vec:logistic)"
+  };
+
+  private static final double[][] laplaceTargets = {
+      { 1.0, 0.0, -0.5 },
+  };
+
   private static final String[] logExamples = {
     "(op:log (op:logistic vec:log))"
   };
@@ -220,7 +228,7 @@ public class CvsmTrainingTest extends TestCase {
     List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("red", "block", "on", "table"), Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG)), 10);
 
-    System.out.println(parses.get(0).getLogicalForm().simplify());
+    System.out.println(parses.get(0).getLogicalForm(false).simplify());
   }
 
   public void testCvsmAffineTraining() {
@@ -266,7 +274,11 @@ public class CvsmTrainingTest extends TestCase {
   public void testLowRankCvsmTanhTraining() {
     runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), lowRankCvsmFamily, new CvsmSquareLoss(), -1);
   }
-  
+
+  public void testCvsmLaplaceTraining() {
+    runCvsmTrainingTest(parseExamples(laplaceExamples, laplaceTargets), cvsmFamily, new CvsmSquareLoss(), -1);
+  }
+
   public void testCvsmLogTraining() {
     runCvsmTrainingTest(parseExamples(logExamples, logTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }

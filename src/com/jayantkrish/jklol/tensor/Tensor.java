@@ -212,6 +212,26 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor elementwiseTanh();
+  
+  /**
+   * Gets the elementwise absolute value of this tensor.
+   * @return
+   */
+  Tensor elementwiseAbs();
+
+  /**
+   * Gets the elementwise laplace sigmoid of this tensor. The laplace
+   * sigmoid is the function {@code f(x, s)}:
+   * {@code
+   * f(x) = 1  - e^(-sx) if x > 0
+   *      = -1 + e^(sx)  o.w.
+   * }
+   * where {@code s} is the {@code smoothness} parameter.
+   * 
+   * @param smoothness
+   * @return
+   */
+  Tensor elementwiseLaplaceSigmoid(double smoothness);
 
   /**
    * Applies the soft threshold operator to each element in this. The

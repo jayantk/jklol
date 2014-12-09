@@ -94,6 +94,16 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
   }
 
   @Override
+  public Tensor elementwiseAbs() {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+
+  @Override
+  public Tensor elementwiseLaplaceSigmoid(double smoothness) {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+
+  @Override
   public Tensor softThreshold(double threshold) {
     throw new UnsupportedOperationException("Not implemented.");
   }

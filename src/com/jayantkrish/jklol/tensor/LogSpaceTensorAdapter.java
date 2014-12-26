@@ -165,6 +165,16 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   }
 
   @Override
+  public Tensor elementwiseAbs() {
+    return logWeights.elementwiseExp().elementwiseAbs();
+  }
+  
+  @Override
+  public Tensor elementwiseLaplaceSigmoid(double smoothness) {
+    return logWeights.elementwiseExp().elementwiseLaplaceSigmoid(smoothness);
+  }
+
+  @Override
   public Tensor softThreshold(double threshold) {
     throw new UnsupportedOperationException("Not yet implemented.");
   }

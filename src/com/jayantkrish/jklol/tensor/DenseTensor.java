@@ -371,13 +371,40 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     */
     return outputBuilder.buildNoCopy();
   }
-  
+
   @Override
   public DenseTensor elementwiseTanh() {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
     for (int i = 0; i < values.length; i++) {
       outputBuilder.values[i] = Math.tanh(values[i]);
+    }
+    return outputBuilder.buildNoCopy();
+  }
+  
+  @Override
+  public DenseTensor elementwiseAbs() {
+    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    for (int i = 0; i < values.length; i++) {
+      outputBuilder.values[i] = Math.abs(values[i]);
+    }
+    return outputBuilder.buildNoCopy();
+  }
+
+  @Override
+  public DenseTensor elementwiseLaplaceSigmoid(double smoothness) {
+    DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
+        getDimensionSizes());
+    for (int i = 0; i < values.length; i++) {
+      double value = values[i];
+      if (value > 0) {
+        outputBuilder.values[i] = 1 - Math.exp(-1 * smoothness * value);
+      } else if (value < 0) {
+        outputBuilder.values[i] = -1 + Math.exp(smoothness * value);
+      } else {
+        outputBuilder.values[i] = 0;
+      }
     }
     return outputBuilder.buildNoCopy();
   }

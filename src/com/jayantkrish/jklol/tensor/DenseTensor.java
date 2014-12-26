@@ -342,6 +342,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     for (int i = 0; i < values.length; i++) {
       outputBuilder.values[i] = Math.sqrt(values[i]);
     }
+
     return outputBuilder.buildNoCopy();
   }
 
@@ -349,9 +350,12 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public DenseTensor elementwiseLog() {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
+    info.yeppp.Math.Log_V64f_V64f(values, 0, outputBuilder.values, 0, values.length);
+    /*
     for (int i = 0; i < values.length; i++) {
       outputBuilder.values[i] = Math.log(values[i]);
     }
+    */
     return outputBuilder.buildNoCopy();
   }
 
@@ -359,9 +363,12 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public DenseTensor elementwiseExp() {
     DenseTensorBuilder outputBuilder = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
+    info.yeppp.Math.Exp_V64f_V64f(values, 0, outputBuilder.values, 0, values.length);
+    /*
     for (int i = 0; i < values.length; i++) {
       outputBuilder.values[i] = Math.exp(values[i]);
     }
+    */
     return outputBuilder.buildNoCopy();
   }
   

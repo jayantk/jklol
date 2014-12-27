@@ -23,7 +23,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   double[] firstTestArray,secondTestArray;
   long[] firstArrayKeys,secondArrayKeys;
   
-  Tensor table012, table01, table12;
+  Tensor table012, table01, table12, table012Copy;
   int[] varNums;
   
   public TensorPerformanceTest(TensorFactory tensorFactory) {
@@ -38,6 +38,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
       builder.put(new int[] {(i / 10000), (i / 100) % 100, i % 100}, 1.0);
     }
     table012 = builder.build();
+    table012Copy = builder.build();
     
     builder = tensorFactory.getBuilder(new int[] {0, 1}, new int[] {100, 100});
     for (int i = 0; i < 10000; i++) {
@@ -65,7 +66,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   
   @PerformanceTest(3)
   public void testProductSelf() {
-    table012.elementwiseProduct(table012);
+    table012.elementwiseProduct(table012Copy);
   }
 
   @PerformanceTest(3)
@@ -85,12 +86,12 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   
   @PerformanceTest(3)
   public void testInnerProduct() {
-    table012.innerProduct(table012);
+    table012.innerProduct(table012Copy);
   }
 
   @PerformanceTest(3)
   public void testElementwiseAdditionSelf() {
-    table012.elementwiseAddition(table012);
+    table012.elementwiseAddition(table012Copy);
   }
   
   @PerformanceTest(3)

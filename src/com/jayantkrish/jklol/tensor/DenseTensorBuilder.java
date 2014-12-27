@@ -67,9 +67,12 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
 
   @Override
   public void increment(double amount) {
+    info.yeppp.Core.Add_IV64fS64f_IV64f(values, 0, amount, values.length);
+    /*
     for (int i = 0; i < values.length; i++) {
       values[i] += amount;
     }
+    */
   }
 
   @Override
@@ -102,15 +105,23 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   @Override
   public void incrementSquare(TensorBase other, double multiplier) {
     if (other instanceof DenseTensorBase) {
+      // TODO: optimize
       double square = multiplier * multiplier;
       double[] otherTensorValues = ((DenseTensorBase) other).values;
       Preconditions.checkArgument(otherTensorValues.length == values.length);
+
+      double[] squaredOtherValues = Arrays.copyOf(otherTensorValues, otherTensorValues.length);
+      info.yeppp.Core.Multiply_IV64fV64f_IV64f(squaredOtherValues, 0, squaredOtherValues, 0, squaredOtherValues.length);
+      info.yeppp.Core.Multiply_IV64fS64f_IV64f(squaredOtherValues, 0, square, squaredOtherValues.length);
+      info.yeppp.Core.Add_IV64fV64f_IV64f(values, 0, squaredOtherValues, 0, squaredOtherValues.length);
+      /*
       int length = values.length;
       double otherVal = 0;
       for (int i = 0; i < length; i++) {
         otherVal = otherTensorValues[i];
         values[i] += otherVal * otherVal * square;
       }
+      */
     } else {
       throw new UnsupportedOperationException();
     }
@@ -288,9 +299,13 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     if (other instanceof DenseTensorBase) {
       DenseTensorBase otherTensor = (DenseTensorBase) other;
       Preconditions.checkArgument(otherTensor.values.length == values.length);
+      info.yeppp.Core.Multiply_IV64fV64f_IV64f(values, 0, otherTensor.values, 0, values.length);
+
+      /*
       for (int i = 0; i < values.length; i++) {
         values[i] *= otherTensor.values[i];
       }
+      */
     } else {
       Iterator<KeyValue> keyValueIter = keyValueIterator();
       while (keyValueIter.hasNext()) {
@@ -302,9 +317,12 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
 
   @Override
   public void multiply(double amount) {
+    info.yeppp.Core.Multiply_V64fS64f_V64f(values, 0, amount, values, 0, values.length);
+    /*
     for (int i = 0; i < values.length; i++) {
       values[i] *= amount;
     }
+    */
   }
 
   @Override

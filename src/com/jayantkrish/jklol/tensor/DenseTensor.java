@@ -137,10 +137,18 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
 
   @Override
   public DenseTensor elementwiseProduct(double constant) {
+    double[] newValues = Arrays.copyOf(values, values.length);
+    for (int i = 0; i < values.length; i++) {
+      newValues[i] *= constant;
+    }
+
+    return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), newValues);
+    /*
     DenseTensorBuilder builder = new DenseTensorBuilder(getDimensionNumbers(), getDimensionSizes());
     builder.increment(constant);
     builder.multiply(this);
     return builder.build();
+    */
   }
 
   @Override

@@ -40,8 +40,8 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
     table012 = builder.build();
     table012Copy = builder.build();
     
-    builder = tensorFactory.getBuilder(new int[] {0, 1}, new int[] {100, 100});
-    for (int i = 0; i < 10000; i++) {
+    builder = tensorFactory.getBuilder(new int[] {0, 1}, new int[] {1000, 100});
+    for (int i = 0; i < 100000; i++) {
       builder.put(new int[] {i / 100, i % 100}, 1.0);
     }
     table01 = builder.build();

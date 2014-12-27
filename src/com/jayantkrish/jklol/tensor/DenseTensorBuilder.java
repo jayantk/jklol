@@ -300,13 +300,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     if (other instanceof DenseTensorBase) {
       DenseTensorBase otherTensor = (DenseTensorBase) other;
       Preconditions.checkArgument(otherTensor.values.length == values.length);
-      info.yeppp.Core.Multiply_IV64fV64f_IV64f(values, 0, otherTensor.values, 0, values.length);
+      // info.yeppp.Core.Multiply_IV64fV64f_IV64f(values, 0, otherTensor.values, 0, values.length);
 
-      /*
       for (int i = 0; i < values.length; i++) {
         values[i] *= otherTensor.values[i];
       }
-      */
     } else {
       Iterator<KeyValue> keyValueIter = keyValueIterator();
       while (keyValueIter.hasNext()) {

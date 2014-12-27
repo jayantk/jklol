@@ -79,6 +79,21 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
   }
   
   @PerformanceTest(3)
+  public void testProductConstant() {
+    table012.elementwiseProduct(3.0);
+  }
+  
+  @PerformanceTest(3)
+  public void testInnerProduct() {
+    table012.innerProduct(table012);
+  }
+
+  @PerformanceTest(3)
+  public void testElementwiseAdditionSelf() {
+    table012.elementwiseAddition(table012);
+  }
+  
+  @PerformanceTest(3)
   public void testSumRightAligned() {
     table012.sumOutDimensions(Ints.asList(2));
   }

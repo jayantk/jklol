@@ -26,6 +26,7 @@
     <pathelement location="lib/jackson-core-2.2.3.jar" />
     <pathelement location="lib/jackson-databind-2.2.3.jar" />
     <pathelement location="lib/opencsv-2.3.jar" />
+    <pathelement location="lib/yeppp-bundle.jar" />
     <pathelement location="lib/gwtexporter-2.4.0.jar" />
   </path>
   <path id="classpath.test">
@@ -103,12 +104,9 @@
   </target>
 
   <target name="perf" depends="compile-test">
-    <junit fork="no">
+    <java classname="com.jayantkrish.jklol.util.DenseTensorPerformanceTest" >
       <classpath refid="classpath.test" />
-      <formatter type="brief" usefile="false" />
-      <test name="com.jayantkrish.jklol.util.SparseOutcomeTablePerformanceTest" />
-      <!-- <test name="com.jayantkrish.jklol.inference.JunctionTreePerformanceTest" /> -->
-    </junit>
+    </java>
   </target>
 
   <!-- documentation -->

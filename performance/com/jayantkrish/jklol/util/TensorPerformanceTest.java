@@ -64,57 +64,57 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
     }
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testProductSelf() {
     table012.elementwiseProduct(table012Copy);
   }
 
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testProductLeftAligned() {
     table012.elementwiseProduct(table01);
   }
 
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testProductRightAligned() {
     table012.elementwiseProduct(table12);
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testProductConstant() {
     table012.elementwiseProduct(3.0);
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testInnerProduct() {
     table012.innerProduct(table012Copy);
   }
 
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testElementwiseAdditionSelf() {
     table012.elementwiseAddition(table012Copy);
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testSumRightAligned() {
     table012.sumOutDimensions(Ints.asList(2));
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testElementwiseExp() {
     table012.elementwiseExp();
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testElementwiseInverse() {
     table012.elementwiseInverse();
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testElementwiseLog() {
     table012.elementwiseLog();
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testSparseProductLowerBound() {
     double[] output = new double[firstTestArray.length];
     long[] outputKeys = new long[firstTestArray.length];
@@ -124,7 +124,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
     }
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testMarginalLowerBound() {
     double[] output = new double[100];
     for (int i = 0; i < firstTestArray.length; i++) {
@@ -132,7 +132,7 @@ public abstract class TensorPerformanceTest extends PerformanceTestCase {
     }
   }
   
-  @PerformanceTest(3)
+  @PerformanceTest(10)
   public void testIterationLowerBound() {
     double foo[] = new double[firstTestArray.length];
     for (int i = 0; i < foo.length; i++) {

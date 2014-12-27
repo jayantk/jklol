@@ -67,12 +67,10 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
 
   @Override
   public void increment(double amount) {
-    info.yeppp.Core.Add_IV64fS64f_IV64f(values, 0, amount, values.length);
-    /*
+    // info.yeppp.Core.Add_IV64fS64f_IV64f(values, 0, amount, values.length);
     for (int i = 0; i < values.length; i++) {
       values[i] += amount;
     }
-    */
   }
 
   @Override
@@ -301,13 +299,11 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       DenseTensorBase otherTensor = (DenseTensorBase) other;
       Preconditions.checkArgument(otherTensor.values.length == values.length);
 
-      info.yeppp.Core.Multiply_V64fV64f_V64f(values, 0, otherTensor.values, 0, values, 0, values.length);
+      // info.yeppp.Core.Multiply_V64fV64f_V64f(values, 0, otherTensor.values, 0, values, 0, values.length);
 
-      /*
       for (int i = 0; i < values.length; i++) {
         values[i] *= otherTensor.values[i];
       }
-      */
     } else {
       Iterator<KeyValue> keyValueIter = keyValueIterator();
       while (keyValueIter.hasNext()) {
@@ -320,12 +316,10 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   @Override
   public void multiply(double amount) {
     // Not optimized.
-    info.yeppp.Core.Multiply_V64fS64f_V64f(values, 0, amount, values, 0, values.length);
-    /*
+    // info.yeppp.Core.Multiply_V64fS64f_V64f(values, 0, amount, values, 0, values.length);
     for (int i = 0; i < values.length; i++) {
       values[i] *= amount;
     }
-    */
   }
 
   @Override

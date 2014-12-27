@@ -110,18 +110,19 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
       double[] otherTensorValues = ((DenseTensorBase) other).values;
       Preconditions.checkArgument(otherTensorValues.length == values.length);
 
+      /*
       double[] squaredOtherValues = Arrays.copyOf(otherTensorValues, otherTensorValues.length);
       info.yeppp.Core.Multiply_IV64fV64f_IV64f(squaredOtherValues, 0, squaredOtherValues, 0, squaredOtherValues.length);
       info.yeppp.Core.Multiply_IV64fS64f_IV64f(squaredOtherValues, 0, square, squaredOtherValues.length);
       info.yeppp.Core.Add_IV64fV64f_IV64f(values, 0, squaredOtherValues, 0, squaredOtherValues.length);
-      /*
+      */
+
       int length = values.length;
       double otherVal = 0;
       for (int i = 0; i < length; i++) {
         otherVal = otherTensorValues[i];
         values[i] += otherVal * otherVal * square;
       }
-      */
     } else {
       throw new UnsupportedOperationException();
     }

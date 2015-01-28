@@ -1,0 +1,25 @@
+Open Source Attribution Notice for jklol
+
+This document lists the open source attributions for jklol.
+Jklol contains the following open source software:
+
+Guava
+https://github.com/google/guava
+
+Guava is distributed under the Apache License, version 2.0. A copy of this license is available at http://www.apache.org/licenses/LICENSE-2.0
+
+Google Web Toolkit
+http://www.gwtproject.org/
+
+Google Web Toolkit is distributed under the Apache License, version 2.0. A copy of this license is available at http://www.apache.org/licenses/LICENSE-2.0
+
+Jackson
+http://jackson.codehaus.org/
+
+Jackson is distributed under the Apache License, version 2.0. A copy of this license is available at http://www.apache.org/licenses/LICENSE-2.0
+
+jOpt Simple
+http://pholser.github.io/jopt-simple/index.html
+
+jOpt Simple is distributed under the MIT license. A copy of this license is available at http://www.opensource.org/licenses/mit-license.php
+

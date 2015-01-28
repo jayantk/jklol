@@ -3,4 +3,8 @@ Renamings:
 - Rename SufficientStatistics to something like "parametervector"
   - eliminate the list of tensors in this class.
   - refactor the "getParameterDescription()" methods into SufficientStatistics
-- Rename getParameterDescriptionXML to getParameterDescriptionXml
+
+
+Dependencies:
+- get rid of GWT / Jackson
+- Add BLAS for faster math

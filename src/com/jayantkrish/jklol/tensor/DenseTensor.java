@@ -137,18 +137,17 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
 
   @Override
   public DenseTensor elementwiseProduct(double constant) {
+    /*
     double[] newValues = Arrays.copyOf(values, values.length);
     for (int i = 0; i < values.length; i++) {
       newValues[i] *= constant;
     }
+    */
+
+    double[] newValues = new double[values.length];
+    info.yeppp.Core.Multiply_V64fS64f_V64f(values, 0, constant, newValues, 0, values.length);
 
     return new DenseTensor(getDimensionNumbers(), getDimensionSizes(), newValues);
-    /*
-    DenseTensorBuilder builder = new DenseTensorBuilder(getDimensionNumbers(), getDimensionSizes());
-    builder.increment(constant);
-    builder.multiply(this);
-    return builder.build();
-    */
   }
 
   @Override
@@ -223,11 +222,15 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     double[] otherValues = other.values;
     int length = values.length;
     Preconditions.checkArgument(otherValues.length == length);
+    
+    return info.yeppp.Core.DotProduct_V64fV64f_S64f(values, 0, otherValues, 0, length);
+    /*
     double innerProduct = 0.0;
     for (int i = 0; i < length; i++) {
       innerProduct += values[i] * otherValues[i];
     }
     return innerProduct;
+    */
   }
 
   /**

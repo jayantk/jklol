@@ -132,7 +132,7 @@ public class ExpressionTest extends TestCase {
     Expression expression = parser.parseSingleExpression("(exists a b (and (exists c b (b c)) b))");
     Expression simplified = expression.simplify();
     
-    Expression expected = parser.parseSingleExpression("(exists a b c d (and (d c) b))");
+    Expression expected = parser.parseSingleExpression("(exists b c d (and (d c) b))");
     assertTrue(expected.functionallyEquals(simplified));
   }
   
@@ -148,20 +148,54 @@ public class ExpressionTest extends TestCase {
     Expression expression = parser.parseSingleExpression("(exists b c (forall (b (set d e)) (and (b c))))");
     Expression simplified = expression.simplify();
 
-    Expression expected = parser.parseSingleExpression("(forall (new_b (set d e)) (exists b c (and (new_b c))))");
+    Expression expected = parser.parseSingleExpression("(forall (new_b (set d e)) (exists c (new_b c)))");
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+  
+  public void testSimplifyForAllExists2() {
+    Expression expression = parser.parseSingleExpression("(exists b c (exists f (forall (b (set d e)) (and (b c)))))");
+    Expression simplified = expression.simplify();
+
+    Expression expected = parser.parseSingleExpression("(forall (new_b (set d e)) (exists c (new_b c)))");
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+  
+  public void testSimplifyForAllExists3() {
+    Expression expression = parser.parseSingleExpression("(exists f (forall (b (set d e)) (and (b c))))");
+    Expression simplified = expression.simplify();
+
+    Expression expected = parser.parseSingleExpression("(forall (b (set d e)) (b c))");
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+  
+  public void testSimplifyForAllLambda1() {
+    Expression expression = parser.parseSingleExpression("(forall (b (set d e)) (lambda f (and (b c))))");
+    Expression simplified = expression.simplify();
+
+    Expression expected = parser.parseSingleExpression("(lambda f (forall (b (set d e)) (b c)))");
+    assertTrue(expected.functionallyEquals(simplified));
+  }
+  
+  public void testSimplifyForAllLambda2() {
+    Expression expression = parser.parseSingleExpression("(forall (b (set d e)) (lambda e (and (e b))))");
+    Expression simplified = expression.simplify();
+
+    System.out.println(simplified);
+    
+    Expression expected = parser.parseSingleExpression("(lambda f (forall (b (set d e)) (f b)))");
     assertTrue(expected.functionallyEquals(simplified));
   }
 
   public void testSimplifyConjunction() {
     Expression expression = parser.parseSingleExpression("(exists a b (and (exists c (and c (lambda x x))) b))");
-    Expression expected = parser.parseSingleExpression("(exists a b c (and c (lambda x x) b))");
-    
+    Expression expected = parser.parseSingleExpression("(exists b c (and c (lambda x x) b))");
+
     assertTrue(expected.functionallyEquals(expression.simplify()));
   }
   
   public void testExpandForAll() {
     ForAllExpression expression = (ForAllExpression) parser.parseSingleExpression("(forall (b (set d e)) (exists g c (and (b c))))");
-    Expression expected = parser.parseSingleExpression("(and (exists g c (and (d c))) (exists g c (and (e c))))");
+    Expression expected = parser.parseSingleExpression("(and (exists c (d c)) (exists c (e c)))");
     
     assertTrue(expected.functionallyEquals(expression.expandQuantifier()));
   }

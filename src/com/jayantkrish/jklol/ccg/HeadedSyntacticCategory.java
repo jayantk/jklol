@@ -250,6 +250,23 @@ public class HeadedSyntacticCategory implements Serializable {
     int argumentRoot = argumentSyntax.getNumReturnSubcategories();
     return new HeadedSyntacticCategory(argumentSyntax, argumentSemantics, argumentRoot);
   }
+  
+  /**
+   * Returns a list of all arguments to this category until
+   * an atomic return category is reached. The first element of
+   * the returned list is the argument that must be given first, etc.
+   * 
+   * @return
+   */
+  public List<HeadedSyntacticCategory> getArgumentTypes() { 
+    List<HeadedSyntacticCategory> arguments = Lists.newArrayList();
+    HeadedSyntacticCategory cat = this;
+    while (!cat.isAtomic()) {
+      arguments.add(cat.getArgumentType());
+      cat = cat.getReturnType();
+    }
+    return arguments;
+  }
 
   /**
    * Gets the syntactic type and semantic variable assignments to the
@@ -262,6 +279,20 @@ public class HeadedSyntacticCategory implements Serializable {
     int[] returnSemantics = ArrayUtils.copyOf(semanticVariables, rootIndex);
     int returnRoot = returnSyntax.getNumReturnSubcategories();
     return new HeadedSyntacticCategory(returnSyntax, returnSemantics, returnRoot);
+  }
+  
+  /**
+   * Gets the atomic category that is reached by iterating 
+   * getReturnType() until the category is no longer functional.
+   * 
+   * @return
+   */
+  public HeadedSyntacticCategory getFinalReturnType() {
+    HeadedSyntacticCategory cat = this;
+    while (!cat.isAtomic()) {
+      cat = cat.getReturnType();
+    }
+    return cat;
   }
 
   /**

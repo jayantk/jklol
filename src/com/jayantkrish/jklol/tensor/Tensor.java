@@ -29,6 +29,7 @@ import java.util.Map;
  * @author jayant
  */
 public interface Tensor extends TensorBase, Serializable {
+  public static final long serialVersionUID = -7178059086919487625L;
 
   /**
    * Selects a lower-dimensional subset of {@code this} by fixing the

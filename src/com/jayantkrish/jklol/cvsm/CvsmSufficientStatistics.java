@@ -76,6 +76,12 @@ public class CvsmSufficientStatistics implements SufficientStatistics {
   private final void ensureStatisticInstantiated(int index) {
     if (statistics.get(index) == null) {
       statistics.set(index, families.get(index).get());
+
+      if (numNonzeroIndexes >= nonzeroIndexes.length) {
+        Arrays.sort(nonzeroIndexes);
+        System.out.println(Arrays.toString(nonzeroIndexes));
+      }
+
       nonzeroIndexes[numNonzeroIndexes] = index;
       numNonzeroIndexes++;
     }

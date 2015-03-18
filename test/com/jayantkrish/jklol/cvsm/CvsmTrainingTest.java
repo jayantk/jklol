@@ -16,6 +16,7 @@ import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
+import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmKlElementwiseLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmValueLoss;
@@ -119,7 +120,11 @@ public class CvsmTrainingTest extends TestCase {
   };
 
   private static final double[][] logisticTargets = {
-      { 1.0, 0.75, 0.2 },
+      { 0.8, 0.75, 0.2 },
+  };
+  
+  private static final double[][] logisticKlTargets = {
+      { 1.0, 0.0, 0.0 },
   };
   
   private static final String[] tanhExamples = {
@@ -267,6 +272,14 @@ public class CvsmTrainingTest extends TestCase {
     runCvsmTrainingTest(parseExamples(logisticExamples, logisticTargets), lowRankCvsmFamily, new CvsmSquareLoss(), -1);
   }
   
+  public void testCvsmLogisticKlTraining() {
+    runCvsmTrainingTest(parseExamples(logisticExamples, logisticKlTargets), cvsmFamily, new CvsmKlElementwiseLoss(), -1);
+  }
+
+  public void testLowRankCvsmLogisticKlTraining() {
+    runCvsmTrainingTest(parseExamples(logisticExamples, logisticKlTargets), lowRankCvsmFamily, new CvsmKlElementwiseLoss(), -1);
+  }
+
   public void testCvsmTanhTraining() {
     runCvsmTrainingTest(parseExamples(tanhExamples, tanhTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
@@ -319,7 +332,7 @@ public class CvsmTrainingTest extends TestCase {
       SufficientStatistics parameters = trainer.train(oracle,
           initialParameters, cvsmExamples);
 
-      System.out.println(cvsmFamily.getParameterDescription(parameters));
+      // System.out.println(cvsmFamily.getParameterDescription(parameters));
 
       Cvsm cvsm = cvsmFamily.getModelFromParameters(parameters);
 

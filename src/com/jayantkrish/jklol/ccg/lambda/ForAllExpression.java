@@ -139,6 +139,17 @@ public class ForAllExpression extends AbstractExpression {
     }
 
     Expression simplifiedBody = body.simplify();
+    if (simplifiedBody instanceof LambdaExpression) {
+      // Forall quantifiers get pushed inside of lambdas
+      LambdaExpression lambdaBody = (LambdaExpression) simplifiedBody;
+      lambdaBody = (LambdaExpression) lambdaBody.freshenVariables(lambdaBody.getBoundVariables());
+      
+      Expression newBody = new ForAllExpression(boundVariables, restrictions,
+          lambdaBody.getBody()).simplify();
+
+      return new LambdaExpression(lambdaBody.getArguments(), newBody);
+    }
+    
     if (simplifiedBody instanceof ForAllExpression) {
       ForAllExpression forall = (ForAllExpression) simplifiedBody;
       ForAllExpression relabeled = (ForAllExpression) forall.freshenVariables(boundVariables);
@@ -152,7 +163,7 @@ public class ForAllExpression extends AbstractExpression {
       return new ForAllExpression(newBoundVariables, newRestrictions, relabeled.getBody());
     }
 
-    return new ForAllExpression(boundVariables, simplifiedRestrictions, body.simplify());
+    return new ForAllExpression(boundVariables, simplifiedRestrictions, simplifiedBody);
   }
 
   @Override

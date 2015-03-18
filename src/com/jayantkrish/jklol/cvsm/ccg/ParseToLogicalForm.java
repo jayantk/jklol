@@ -79,7 +79,7 @@ public class ParseToLogicalForm extends AbstractCli {
         tagger, tagThresholds);
 
     // Read the logical form templates.
-    CcgParseAugmenter augmenter = CcgParseAugmenter.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)), true);
+    CcgParseAugmenter augmenter = TemplateCcgParseAugmenter.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)), true);
 
     for (String line : IoUtils.readLines(options.valueOf(inputFile))) {
       List<String> words = Lists.newArrayList();

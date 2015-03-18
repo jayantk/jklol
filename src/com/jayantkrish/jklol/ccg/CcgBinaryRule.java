@@ -130,6 +130,29 @@ public class CcgBinaryRule implements Serializable {
     return new CcgBinaryRule(leftSyntax, rightSyntax, returnSyntax, logicalForm,
         subjects, subjectSyntacticCategories, argNums, objects, type);
   }
+  
+  
+  /**
+   * Reads in a collection of unary and binary rules, adding the rules
+   * to {@code binaryRules} and {@code unaryRules}, respectively.
+   * 
+   * @param unfilteredRuleLines
+   * @param binaryRules
+   * @param unaryRules
+   */
+  public static void parseBinaryAndUnaryRules(Iterable<String> unfilteredRuleLines, 
+      List<CcgBinaryRule> binaryRules, List<CcgUnaryRule> unaryRules) {
+    for (String line : unfilteredRuleLines) {
+      // System.out.println(line);
+      if (!line.startsWith("#")) {
+        try {
+          binaryRules.add(CcgBinaryRule.parseFrom(line));
+        } catch (IllegalArgumentException e) {
+          unaryRules.add(CcgUnaryRule.parseFrom(line));
+        }
+      }
+    }
+  }
 
   /**
    * Gets the expected syntactic type that should occur on the left

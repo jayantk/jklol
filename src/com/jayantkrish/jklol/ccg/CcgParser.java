@@ -1145,6 +1145,18 @@ public class CcgParser implements Serializable {
     }
   }
 
+  /**
+   * 
+   * @param input sentence to parse.
+   * @param beamFilter May be {@code null}, in which case no chart entries are pruned.
+   * @param log May be {@code null} to suppress logging output.
+   * @param maxParseTimeMillis maximum parsing time, in milliseconds. If parsing
+   * exceeds this time, it is cancelled and null is returned.
+   * @param maxChartSize maximum number of entries allowed in the parse chart. If the
+   * chart exceeds this size, parsing is cancelled and null is returned.
+   * @param numThreads number of threads to use for parsing.
+   * @return
+   */
   public CcgParse parse(SupertaggedSentence input, ChartCost beamFilter, LogFunction log,
       long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgExactHashTableChart chart = new CcgExactHashTableChart(input, maxChartSize);

@@ -78,34 +78,38 @@ public class QuantifierExpression extends AbstractExpression {
   @Override
   public Expression simplify() {
     Expression simplifiedBody = body.simplify();
+    
+    // Only free variables in the body need to be quantified.
+    // The other variables aren't referenced and so can be deleted.
+    List<ConstantExpression> simplifiedBoundVariables = Lists.newArrayList(boundVariables);
+    simplifiedBoundVariables.retainAll(simplifiedBody.getFreeVariables());
+
+    // No quantified variables means this expression is redundant.
+    if (simplifiedBoundVariables.size() == 0) {
+      return simplifiedBody;
+    }
 
     if (simplifiedBody instanceof QuantifierExpression) {
       QuantifierExpression quant = (QuantifierExpression) simplifiedBody;
       if (quant.getQuantifierName().equals(quantifierName)) {
         // Group like quantifiers.
-        QuantifierExpression relabeled = (QuantifierExpression) quant.freshenVariables(boundVariables);
+        QuantifierExpression relabeled = (QuantifierExpression) quant.freshenVariables(simplifiedBoundVariables);
         
         List<ConstantExpression> newBoundVariables = Lists.newArrayList(relabeled.getLocallyBoundVariables());
-        newBoundVariables.addAll(boundVariables);
+        newBoundVariables.addAll(simplifiedBoundVariables);
         return new QuantifierExpression(quantifierName, newBoundVariables, relabeled.getBody());
       }
     } else if (simplifiedBody instanceof ForAllExpression) {
       ForAllExpression forall = (ForAllExpression) simplifiedBody;
-      forall = (ForAllExpression) forall.freshenVariables(boundVariables);
-      
-      Expression newBody = new QuantifierExpression(quantifierName, boundVariables, forall.getBody());
+      forall = (ForAllExpression) forall.freshenVariables(simplifiedBoundVariables);
+
+      Expression newBody = new QuantifierExpression(quantifierName, simplifiedBoundVariables, forall.getBody());
+      newBody = newBody.simplify();
       return new ForAllExpression(forall.getLocallyBoundVariables(), forall.getRestrictions(), newBody);
     } 
-      
-    return new QuantifierExpression(quantifierName, boundVariables, simplifiedBody);
-  }
 
-  /*
-  @Override
-  public Expression rescopeUniversalQuantifiers() {
-    body.rescopeUniversalQuantifiers()
+    return new QuantifierExpression(quantifierName, simplifiedBoundVariables, simplifiedBody);
   }
-  */
 
   @Override
   public boolean functionallyEquals(Expression expression) {

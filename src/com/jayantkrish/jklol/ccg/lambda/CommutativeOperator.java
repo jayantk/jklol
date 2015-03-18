@@ -113,7 +113,12 @@ public class CommutativeOperator extends AbstractExpression {
       }
     }
 
-    Expression result = new CommutativeOperator(operatorName, resultClauses);
+    Expression result = null;
+    if (resultClauses.size() == 1) {
+      result = resultClauses.get(0);
+    } else {
+      result = new CommutativeOperator(operatorName, resultClauses);
+    }
     // Wrap the result with the appropriate quantifiers.
     
     for (QuantifierExpression quantifier : wrappingQuantifiers) {

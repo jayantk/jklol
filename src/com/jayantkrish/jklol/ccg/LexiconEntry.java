@@ -61,6 +61,23 @@ public class LexiconEntry {
     CcgCategory category = CcgCategory.parseFrom(ArrayUtils.copyOfRange(parts, 1, parts.length));
     return new LexiconEntry(words, category);
   }
+  
+  public static List<LexiconEntry> parseLexiconEntries(Iterable<String> unfilteredLexiconLines) {
+    // Remove comments, which are lines that begin with "#".
+    List<String> lexiconLines = Lists.newArrayList();
+    for (String line : unfilteredLexiconLines) {
+      if (!line.startsWith("#")) {
+        lexiconLines.add(line);
+      }
+    }
+
+    List<LexiconEntry> lexiconEntries = Lists.newArrayList(); 
+    for (String lexiconLine : lexiconLines) {
+      // Create the CCG category.
+      lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLine));
+    }
+    return lexiconEntries;
+  }
 
   /**
    * Gets the words which can invoke this lexicon entry.

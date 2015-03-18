@@ -348,19 +348,21 @@ public class CcgParse {
         // defined in order to produce the logical form for the phrase.
         LambdaExpression combinatorExpression = combinator.getBinaryRule().getLogicalForm();
         if (combinatorExpression != null) {
+          // Technically, we should just be able to apply the logical form for the
+          // binary rule to the logical form for the left and right arguments.
+          // However, there's an additional hack: If the body of the rule is missing either argument,
+          // we can assign an arbitrary value to the argument and still get the
+          // correct logical form. for the entire phrase.
           List<ConstantExpression> argumentVars = combinatorExpression.getArguments().subList(0, 2);
-          Expression body = combinatorExpression.getBody();
           List<Expression> argValues = Lists.newArrayList(leftLogicalForm, rightLogicalForm);
-          // If the body is missing either argument, we can assign an arbitrary
-          // value to the argument and still get the correct logical form.
-          // for the entire phrase.
+          Expression body = combinatorExpression.getBody();
           if (!body.getFreeVariables().contains(argumentVars.get(0))) {
             argValues.set(0, new ConstantExpression("**null**"));
           }
           if (!body.getFreeVariables().contains(argumentVars.get(1))) {
             argValues.set(1, new ConstantExpression("**null**"));
           }
-          
+
           if (argValues.get(0) != null && argValues.get(1) != null) {
             result = combinatorExpression.reduce(argValues);
           }
@@ -724,6 +726,8 @@ public class CcgParse {
     }
     return filteredDeps;
   }
+  
+  
 
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
     return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 

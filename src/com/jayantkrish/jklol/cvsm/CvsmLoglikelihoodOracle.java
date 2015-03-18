@@ -6,6 +6,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
+import com.jayantkrish.jklol.cvsm.tree.CvsmKlElementwiseLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
@@ -79,6 +80,12 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
     }
   }
   
+  /**
+   * KL divergence loss function where the output targets
+   * represent a multinomial distribution over output.
+   * 
+   * @author jayantk
+   */
   public static class CvsmKlLoss implements CvsmLoss {
     @Override
     public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
@@ -90,6 +97,13 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
     @Override
     public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
       return new CvsmValueLossTree(tree);
+    }
+  }
+
+  public static class CvsmKlElementwiseLoss implements CvsmLoss {
+    @Override
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
+      return new CvsmKlElementwiseLossTree(targets, tree);
     }
   }
 

@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.lrt;
 
 import java.util.Arrays;
 import java.util.List;
@@ -6,11 +6,6 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
-import com.jayantkrish.jklol.cvsm.lrt.LowRankTensors;
-import com.jayantkrish.jklol.cvsm.lrt.OuterProductLowRankTensor;
-import com.jayantkrish.jklol.cvsm.lrt.SumLowRankTensor;
-import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;

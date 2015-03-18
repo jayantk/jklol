@@ -1,9 +1,8 @@
-package com.jayantkrish.jklol.testing;
+package com.jayantkrish.jklol.evaluation;
 
 import java.util.List;
 
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.evaluation.Example;
 
 /**
  * Static methods for instantiating lists of {@link Example}s.

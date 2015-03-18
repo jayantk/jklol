@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cli;
+package com.jayantkrish.jklol.sequence.cli;
 
 import java.util.List;
 
@@ -8,6 +8,9 @@ import joptsimple.OptionSpec;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.cli.TrainedModelSet;
+import com.jayantkrish.jklol.cli.AbstractCli.CommonOptions;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -16,6 +19,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.sequence.SequenceModelUtils;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LoglikelihoodOracle;
@@ -66,7 +70,7 @@ public class TrainSequenceModel extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     // Construct the sequence model
-    ParametricFactorGraph sequenceModel = ModelUtils.buildSequenceModel(
+    ParametricFactorGraph sequenceModel = SequenceModelUtils.buildSequenceModel(
         IoUtils.readLines(options.valueOf(emissionFeatures)),
         options.valueOf(emissionFeaturesDelimiter));
 

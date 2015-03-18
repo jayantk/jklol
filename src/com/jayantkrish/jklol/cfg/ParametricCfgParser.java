@@ -3,12 +3,9 @@ package com.jayantkrish.jklol.cfg;
 import java.util.Arrays;
 import java.util.List;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -27,15 +24,8 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
   private final VariableNumMap terminalVar;
   private final VariableNumMap ruleTypeVar;
 
-  // These variables are present in the factor graph.
-  private final VariableNumMap treeVar;
-  private final VariableNumMap inputVar;
-    
   private final ParametricFactor nonterminalFactor;
   private final ParametricFactor terminalFactor;
-  
-  private final Function<Object, List<Object>> terminalFunction;
-  private final Predicate<? super ParseTree> validTreeFilter;
 
   private final int beamSize;
   private final boolean canSkipTerminals;
@@ -44,34 +34,18 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
 
   public ParametricCfgParser(VariableNumMap parentVar, VariableNumMap leftVar,
       VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
-      VariableNumMap treeVar, VariableNumMap inputVar,
       ParametricFactor nonterminalFactor, ParametricFactor terminalFactor,
-      Function<Object, List<Object>> terminalFunction, Predicate<? super ParseTree> validTreeFilter,
       int beamSize, boolean canSkipTerminals) {
-    super(treeVar.union(inputVar));
     this.parentVar = parentVar;
     this.leftVar = leftVar;
     this.rightVar = rightVar;
     this.terminalVar = terminalVar;
     this.ruleTypeVar = ruleTypeVar;
 
-    this.treeVar = treeVar;
-    this.inputVar = inputVar;
-
     this.nonterminalFactor = nonterminalFactor;
     this.terminalFactor = terminalFactor;
     this.beamSize = beamSize;
     this.canSkipTerminals = canSkipTerminals;
-    this.terminalFunction = terminalFunction;
-    this.validTreeFilter = validTreeFilter;
-  }
-  
-  public VariableNumMap getInputVar() {
-    return inputVar;
-  }
-  
-  public VariableNumMap getTreeVar() {
-    return treeVar;
   }
 
   @Override
@@ -113,44 +87,20 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
   }
 
   public void incrementSufficientStatisticsFromParseTree(SufficientStatistics statistics,
-      SufficientStatistics currentParameters, ParseTree parse, double count) {
-      accumulateSufficientStatistics(parse, nonterminalStatistics, terminalStatistics, 
-          nonterminalParameters, terminalParameters, count);
-  }
-
-  public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
-      SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
-      double count, double partitionFunction) {
-    Preconditions.checkArgument(conditionalAssignment.containsAll(inputVar.getVariableNumsArray()));
-    
+      SufficientStatistics currentParameters, CfgParseTree parse, double count) {
     Preconditions.checkArgument(statistics instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) statistics;
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
     SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
     SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
-    
+
     Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
     ListSufficientStatistics parameterList = (ListSufficientStatistics) currentParameters;
     Preconditions.checkArgument(parameterList.getStatistics().size() == 2);
     SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(0);
     SufficientStatistics terminalParameters = parameterList.getStatistics().get(1);
-
-    if (conditionalAssignment.containsAll(treeVar.getVariableNumsArray())) {
-      ParseTree tree = (ParseTree) conditionalAssignment.getValue(treeVar.getOnlyVariableNum());
-      
-      accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, 
-          nonterminalParameters, terminalParameters, count);
-    } else {
-      DiscreteObjectFactor objectMarginal = (DiscreteObjectFactor) marginal;
-      
-      for (Assignment assignment : objectMarginal.assignments()) {
-        ParseTree tree = (ParseTree) assignment.getValue(treeVar.getOnlyVariableNum());
-        
-        accumulateSufficientStatistics(tree, nonterminalStatistics, terminalStatistics, 
-            nonterminalParameters, terminalParameters,
-            count * objectMarginal.getUnnormalizedProbability(assignment) / partitionFunction);
-      }
-    }
+    accumulateSufficientStatistics(parse, nonterminalStatistics, terminalStatistics, 
+        nonterminalParameters, terminalParameters, count);
   }
 
   /**
@@ -165,11 +115,11 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
    * @param terminalParameters
    * @param weight
    */
-  private void accumulateSufficientStatistics(ParseTree tree,
+  private void accumulateSufficientStatistics(CfgParseTree tree,
       SufficientStatistics nonterminalStatistics, SufficientStatistics terminalStatistics,
       SufficientStatistics nonterminalParameters, SufficientStatistics terminalParameters,
       double weight) {
-    if (tree == ParseTree.EMPTY) {
+    if (tree == CfgParseTree.EMPTY) {
       return;
     }
 

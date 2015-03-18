@@ -8,6 +8,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.cvsm.Cvsm.CvsmParameters;
 import com.jayantkrish.jklol.cvsm.CvsmSufficientStatistics.ParametricFamilySupplier;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.lrt.LrtFamily;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;

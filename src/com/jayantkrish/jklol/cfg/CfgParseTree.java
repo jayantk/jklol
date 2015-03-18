@@ -6,25 +6,25 @@ import java.util.List;
 /**
  * A CFG parse tree.
  */
-public class ParseTree implements Comparable<ParseTree> { 
+public class CfgParseTree implements Comparable<CfgParseTree> { 
 
   private final Object root;
   // Field for extra information associated with the current parse tree rule.
   private final Object ruleType;
   private final List<Object> terminal;
 
-  private final ParseTree left;
-  private final ParseTree right;
+  private final CfgParseTree left;
+  private final CfgParseTree right;
 
   private final double prob;
   
-  public static final ParseTree EMPTY = new ParseTree(null, null, null, null, 1.0);
+  public static final CfgParseTree EMPTY = new CfgParseTree(null, null, null, null, 1.0);
 
   /**
    * Create a new parse tree by composing two subtrees with the production rule
    * {@code ruleType}, resulting in a tree rooted at {@code root}.
    */
-  public ParseTree(Object root, Object ruleType, ParseTree left, ParseTree right, double prob) {
+  public CfgParseTree(Object root, Object ruleType, CfgParseTree left, CfgParseTree right, double prob) {
     this.root = root;
     this.ruleType = ruleType;
     this.left = left;
@@ -36,7 +36,7 @@ public class ParseTree implements Comparable<ParseTree> {
   /**
    * Create a new terminal parse tree with a terminal production rule.
    */
-  public ParseTree(Object root, Object ruleType, List<Object> terminal, double prob) {
+  public CfgParseTree(Object root, Object ruleType, List<Object> terminal, double prob) {
     this.root = root;
     this.ruleType = ruleType;
     this.left = null;
@@ -49,7 +49,7 @@ public class ParseTree implements Comparable<ParseTree> {
     return prob;
   }
 
-  public int compareTo(ParseTree other) {
+  public int compareTo(CfgParseTree other) {
     return Double.compare(this.prob, other.prob);
   }
 
@@ -71,7 +71,7 @@ public class ParseTree implements Comparable<ParseTree> {
   /**
    * Get the left subtree. Requires the tree to be non-terminal.
    */
-  public ParseTree getLeft() {
+  public CfgParseTree getLeft() {
     assert !isTerminal();
     return left;
   }
@@ -79,7 +79,7 @@ public class ParseTree implements Comparable<ParseTree> {
   /**
    * Get the right subtree. Requires the tree to be non-terminal.
    */
-  public ParseTree getRight() {
+  public CfgParseTree getRight() {
     assert !isTerminal();
     return right;
   }
@@ -95,11 +95,11 @@ public class ParseTree implements Comparable<ParseTree> {
    * @param amount
    * @return
    */
-  public ParseTree multiplyProbability(double amount) {
+  public CfgParseTree multiplyProbability(double amount) {
     if (isTerminal()) {
-      return new ParseTree(root, ruleType, terminal, getProbability() * amount);
+      return new CfgParseTree(root, ruleType, terminal, getProbability() * amount);
     } else {
-      return new ParseTree(root, ruleType, left, right, getProbability() * amount);
+      return new CfgParseTree(root, ruleType, left, right, getProbability() * amount);
     }
   }
 
@@ -120,7 +120,7 @@ public class ParseTree implements Comparable<ParseTree> {
 
   @Override
   public String toString() {
-    if (this == ParseTree.EMPTY) {
+    if (this == CfgParseTree.EMPTY) {
       return "ParseTree.EMPTY";
     } else if (!isTerminal()) {
       return "(" + root + " --" + ruleType + "--> " + left.toString() + " " + right.toString() + ")";
@@ -151,7 +151,7 @@ public class ParseTree implements Comparable<ParseTree> {
       return false;
     if (getClass() != obj.getClass())
       return false;
-    ParseTree other = (ParseTree) obj;
+    CfgParseTree other = (CfgParseTree) obj;
     if (left == null) {
       if (other.left != null)
         return false;

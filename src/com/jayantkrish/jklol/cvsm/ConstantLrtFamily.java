@@ -4,6 +4,7 @@ import java.util.Collections;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
+import com.jayantkrish.jklol.cvsm.lrt.LrtFamily;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;

@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.jayantkrish.jklol.util.HeapUtils;
 
-public class BeamSearchParseChart {
+public class BeamSearchCfgParseChart {
 
   private final List<Object> terminals;
   private final int beamSize;
@@ -18,7 +18,7 @@ public class BeamSearchParseChart {
   private final double[][][] chartProbabilities;
   private final int[] chartSizes;
 
-  public BeamSearchParseChart(List<Object> terminals, int beamSize) {
+  public BeamSearchCfgParseChart(List<Object> terminals, int beamSize) {
     this.terminals = terminals;
     this.beamSize = beamSize;
 

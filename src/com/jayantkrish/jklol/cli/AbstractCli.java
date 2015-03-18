@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.dtree.RegressionTreeTrainer;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.sequence.cli.TrainSequenceModel;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;

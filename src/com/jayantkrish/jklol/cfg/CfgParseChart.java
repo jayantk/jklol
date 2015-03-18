@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
  * ParseChart also enables the computation of both marginals and max-marginals
  * with a single inside-outside algorithm.
  */
-public class ParseChart {
+public class CfgParseChart {
 
   // Storage for the various probability distributions.
   private Factor[][] insideChart;
@@ -49,7 +49,7 @@ public class ParseChart {
    * ParseChart computes marginals). Otherwise, updates use the maximum
    * probability, meaning ParseChart computes max-marginals.
    */
-  public ParseChart(List<?> terminals, VariableNumMap parent, VariableNumMap left, 
+  public CfgParseChart(List<?> terminals, VariableNumMap parent, VariableNumMap left, 
       VariableNumMap right, VariableNumMap terminal, VariableNumMap ruleTypeVar, 
       boolean sumProduct) {
     this.terminals = terminals;
@@ -314,10 +314,10 @@ public class ParseChart {
    * @param numTrees
    * @return
    */
-  public List<ParseTree> getBestParseTrees(Map<Object, Double> rootDistribution, int numTrees) {
-    PriorityQueue<ParseTree> bestTrees = new PriorityQueue<ParseTree>();
+  public List<CfgParseTree> getBestParseTrees(Map<Object, Double> rootDistribution, int numTrees) {
+    PriorityQueue<CfgParseTree> bestTrees = new PriorityQueue<CfgParseTree>();
     for (Object root : rootDistribution.keySet()) {
-      for (ParseTree parseTree : getBestParseTrees(root, numTrees)) {
+      for (CfgParseTree parseTree : getBestParseTrees(root, numTrees)) {
         bestTrees.offer(parseTree.multiplyProbability(rootDistribution.get(root)));
 
         if (bestTrees.size() > numTrees) {
@@ -326,7 +326,7 @@ public class ParseChart {
       }
     }
 
-    List<ParseTree> bestTreeList = new ArrayList<ParseTree>(bestTrees);
+    List<CfgParseTree> bestTreeList = new ArrayList<CfgParseTree>(bestTrees);
     Collections.sort(bestTreeList);
     Collections.reverse(bestTreeList);
     return bestTreeList;
@@ -335,7 +335,7 @@ public class ParseChart {
   /**
    * Get the best parse trees spanning the entire sentence.
    */
-  public List<ParseTree> getBestParseTrees(Object root, int numTrees) {
+  public List<CfgParseTree> getBestParseTrees(Object root, int numTrees) {
     return getBestParseTreesWithSpan(root, 0, chartSize() - 1, numTrees);
   }
 
@@ -343,7 +343,7 @@ public class ParseChart {
    * If this tree contains max-marginals, recover the best parse subtree for a
    * given symbol with the specified span.
    */
-  public List<ParseTree> getBestParseTreesWithSpan(Object root, int spanStart,
+  public List<CfgParseTree> getBestParseTreesWithSpan(Object root, int spanStart,
       int spanEnd, int numTrees) {
     /*
     assert !sumProduct;

@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cli;
+package com.jayantkrish.jklol.sequence;
 
 import java.util.Arrays;
 import java.util.List;
@@ -20,7 +20,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.StringUtils;
 
-public class ModelUtils {
+public class SequenceModelUtils {
 
   public static final String PLATE_NAME = "plate";
   public static final String INPUT_NAME = "x";

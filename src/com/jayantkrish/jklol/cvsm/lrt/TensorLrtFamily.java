@@ -1,10 +1,8 @@
-package com.jayantkrish.jklol.cvsm;
+package com.jayantkrish.jklol.cvsm.lrt;
 
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
-import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;

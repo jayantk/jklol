@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cli;
+package com.jayantkrish.jklol.sequence.cli;
 
 import java.util.List;
 
@@ -6,7 +6,10 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.cli.TrainedModelSet;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
+import com.jayantkrish.jklol.sequence.SequenceModelUtils;
 import com.jayantkrish.jklol.util.IoUtils;
 
 /**
@@ -37,7 +40,7 @@ public class TestSequenceModel extends AbstractCli {
 
     // Read in the words to tag.
     List<String> wordsToTag = options.nonOptionArguments();
-    List<String> labels = ModelUtils.testSequenceModel(wordsToTag, sequenceModel);
+    List<String> labels = SequenceModelUtils.testSequenceModel(wordsToTag, sequenceModel);
 
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < wordsToTag.size(); i++) {

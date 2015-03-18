@@ -2,10 +2,14 @@ package com.jayantkrish.jklol.cvsm.ccg;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgBinaryRule;
 import com.jayantkrish.jklol.ccg.CcgCategory;
@@ -139,7 +143,6 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       
       // This code assumes that the left category instantiates the conj,
       // and the right category is the category being conjuncted.
-      
       ConstantExpression leftVar = new ConstantExpression("$L");
       ConstantExpression rightVar = new ConstantExpression("$R");
       ConstantExpression argVar = new ConstantExpression("$1");
@@ -182,28 +185,59 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
     Arrays.fill(isEntityVar, false);
     markEntityVars(cat, uniqueVars, isEntityVar);
     
-    List<String> entityVars = Lists.newArrayList();
+    Set<Integer> entityVarNums = Sets.newHashSet();
     for (int i = 0; i < uniqueVars.length; i++) {
       if (isEntityVar[i]) {
-        entityVars.add("e" + uniqueVars[i]); 
+        entityVarNums.add(uniqueVars[i]);
       }
+    }
+
+    // Decide which entity variables to bind in this expression.
+    Set<Integer> varsToBind = Sets.newHashSet();
+    boolean generateAllArgs = true;
+    if (word == null) {
+      Map<Integer, HeadedSyntacticCategory> observedArgumentHeads = Maps.newHashMap();
+      HeadedSyntacticCategory tempCat = cat;
+      while (!tempCat.isAtomic() &&
+          (!observedArgumentHeads.containsKey(tempCat.getHeadVariable()) || !observedArgumentHeads.get(tempCat.getHeadVariable()).equals(tempCat))
+          && !tempCat.getArgumentType().equals(tempCat.getReturnType())) {
+        HeadedSyntacticCategory argumentCat = tempCat.getArgumentType();
+        int[] argVars = argumentCat.getUniqueVariables();
+        for (int i = 0; i < argVars.length; i++) {
+          if (entityVarNums.contains(argVars[i])) {
+            varsToBind.add(argVars[i]);
+          }
+        }
+
+        observedArgumentHeads.put(argumentCat.getHeadVariable(), argumentCat);
+        tempCat = tempCat.getReturnType();
+      }
+      generateAllArgs = false;
+    } else {
+      varsToBind.addAll(entityVarNums);
+      generateAllArgs = true;
+    }
+
+    List<String> boundEntityVars = Lists.newArrayList();
+    for (int boundVarNum : varsToBind) {
+      boundEntityVars.add("e" + boundVarNum);
     }
 
     List<String> bodyTerms = Lists.newArrayList();
     if (word != null) {
-      bodyTerms.add("(" + word + " " + Joiner.on(" ").join(entityVars) + ")");
+      bodyTerms.add("(" + word + " " + Joiner.on(" ").join(boundEntityVars) + ")");
     }
-    buildBodySpec(cat, bodyTerms);
+    buildBodySpec(cat, bodyTerms, varsToBind, generateAllArgs);
 
     String body = "(and " + Joiner.on(" ").join(bodyTerms) + ")";
 
     List<HeadedSyntacticCategory> args = cat.getArgumentTypes();
     HeadedSyntacticCategory result = cat.getFinalReturnType();
     
-    entityVars.remove("e" + result.getHeadVariable());
+    boundEntityVars.remove("e" + result.getHeadVariable());
     String expr = null;
-    if (entityVars.size() > 0) {
-      expr = "(lambda e" + result.getHeadVariable() + "(exists " + Joiner.on(" ").join(entityVars) + " " + body + "))";
+    if (boundEntityVars.size() > 0) {
+      expr = "(lambda e" + result.getHeadVariable() + "(exists " + Joiner.on(" ").join(boundEntityVars) + " " + body + "))";
     } else {
       expr = "(lambda e" + result.getHeadVariable() + " " + body + ")";
     }
@@ -232,10 +266,13 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
     }
   }
   
-  private static void buildBodySpec(HeadedSyntacticCategory cat, List<String> bodyTerms) {
+  private static void buildBodySpec(HeadedSyntacticCategory cat, List<String> bodyTerms,
+      Set<Integer> boundEntityVars, boolean generateAllArgs) {
+    Map<Integer, HeadedSyntacticCategory> observedArgHeads = Maps.newHashMap();
     if (!cat.isAtomic()) {
       HeadedSyntacticCategory arg = cat.getArgumentType();
-      int argHeadVar = arg.getHeadVariable(); 
+      int argHeadVar = arg.getHeadVariable();
+      observedArgHeads.put(argHeadVar, arg);
 
       StringBuilder bodyTermBuilder = new StringBuilder("(");
       bodyTermBuilder.append(argHeadVar);
@@ -247,20 +284,29 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
         argArgumentNums.add(argArgument.getHeadVariable());
       }
 
-      bodyTerms.add(buildApplicationTerm(arg, "f" + argHeadVar));
-      
-      buildBodySpec(cat.getReturnType(), bodyTerms);
+      bodyTerms.add(buildApplicationTerm(arg, "f" + argHeadVar, boundEntityVars));
+
+      if (generateAllArgs || (!observedArgHeads.containsKey(cat.getReturnType().getHeadVariable()) || 
+          !observedArgHeads.get(cat.getReturnType().getHeadVariable()).equals(cat.getReturnType()))) {
+        buildBodySpec(cat.getReturnType(), bodyTerms, boundEntityVars, generateAllArgs);
+      }
     }
   }
 
-  private static String buildApplicationTerm(HeadedSyntacticCategory arg, String baseFunc) {
+  private static String buildApplicationTerm(HeadedSyntacticCategory arg, String baseFunc,
+      Set<Integer> boundEntityVars) {
     if (arg.isAtomic()) {
       return "(" + baseFunc + " e" + arg.getHeadVariable() + ")"; 
     } else {
-      String argFunc = "(lambda x (= x e" + arg.getArgumentType().getHeadVariable() + "))"; 
+      String argFunc = null;
+      if (arg.getArgumentType().isAtomic() && boundEntityVars.contains(arg.getArgumentType().getHeadVariable())) {
+        argFunc = "(lambda x (= x e" + arg.getArgumentType().getHeadVariable() + "))";
+      } else { 
+        argFunc = "f" + arg.getArgumentType().getHeadVariable();
+      }
 
       String newBaseFunc = "(" + baseFunc + " " + argFunc + ")"; 
-      return buildApplicationTerm(arg.getReturnType(), newBaseFunc);
+      return buildApplicationTerm(arg.getReturnType(), newBaseFunc, boundEntityVars);
     }
   }
 }

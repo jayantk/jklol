@@ -102,8 +102,9 @@ public class QuantifierExpression extends AbstractExpression {
     } else if (simplifiedBody instanceof ForAllExpression) {
       ForAllExpression forall = (ForAllExpression) simplifiedBody;
       forall = (ForAllExpression) forall.freshenVariables(simplifiedBoundVariables);
-      
+
       Expression newBody = new QuantifierExpression(quantifierName, simplifiedBoundVariables, forall.getBody());
+      newBody = newBody.simplify();
       return new ForAllExpression(forall.getLocallyBoundVariables(), forall.getRestrictions(), newBody);
     } 
 

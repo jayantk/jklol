@@ -218,30 +218,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     // System.out.println("Reading lexicon and rules...");
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
-    for (String line : unfilteredRuleLines) {
-      // System.out.println(line);
-      if (!line.startsWith("#")) {
-        try {
-          binaryRules.add(CcgBinaryRule.parseFrom(line));
-        } catch (IllegalArgumentException e) {
-          unaryRules.add(CcgUnaryRule.parseFrom(line));
-        }
-      }
-    }
+    CcgBinaryRule.parseBinaryAndUnaryRules(unfilteredRuleLines, binaryRules, unaryRules);
 
-    // Remove comments, which are lines that begin with "#".
-    List<String> lexiconLines = Lists.newArrayList();
-    for (String line : unfilteredLexiconLines) {
-      if (!line.startsWith("#")) {
-        lexiconLines.add(line);
-      }
-    }
-
-    List<LexiconEntry> lexiconEntries = Lists.newArrayList(); 
-    for (String lexiconLine : lexiconLines) {
-      // Create the CCG category.
-      lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLine));
-    }
+    List<LexiconEntry> lexiconEntries = LexiconEntry.parseLexiconEntries(unfilteredLexiconLines);
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, binaryRules, unaryRules,
         featureFactory, posTagSet, allowComposition, allowedCombinationRules, allowWordSkipping,
         normalFormOnly);

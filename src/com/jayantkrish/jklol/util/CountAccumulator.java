@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.util;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -72,6 +73,17 @@ public class CountAccumulator<T> implements Serializable {
    */
   public void increment(CountAccumulator<? extends T> amounts) {
     increment(amounts.getCountMap());
+  }
+  
+  /**
+   * Increments by 1 the count of each item in {@code items}.
+   *  
+   * @param items
+   */
+  public void incrementByOne(Collection<? extends T> items) {
+    for (T item : items) {
+      increment(item, 1.0);
+    }
   }
 
   public void multiply(T item, double amount) {

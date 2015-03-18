@@ -228,7 +228,7 @@ public class TrainCcg extends AbstractCli {
       this.includeGoldSupertags = includeGoldSupertags;
     }
 
-    @Override @SuppressWarnings("unchecked")
+    @Override
     public CcgExample map(CcgExample item) {
       SupertaggedSentence taggedSentence = supertagger.multitag(
           item.getSentence().getWordsAndPosTags(), multitagThreshold);

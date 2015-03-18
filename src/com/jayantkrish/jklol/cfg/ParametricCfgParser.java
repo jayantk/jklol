@@ -8,18 +8,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteObjectFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
+import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class ParametricCfgFactor extends AbstractParametricFactor {
-
-  private static final long serialVersionUID = 3097649352185648543L;
+public class ParametricCfgParser implements ParametricFamily<CfgParser> {
+  private static final long serialVersionUID = 1L;
   
   // These are the variables contained in the two parametric factors for each
   // distribution in the cfg parser.
@@ -44,7 +42,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
 
   private static final List<String> STATISTIC_NAMES = Arrays.asList("nonterminals", "terminals");
 
-  public ParametricCfgFactor(VariableNumMap parentVar, VariableNumMap leftVar,
+  public ParametricCfgParser(VariableNumMap parentVar, VariableNumMap leftVar,
       VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
       VariableNumMap treeVar, VariableNumMap inputVar,
       ParametricFactor nonterminalFactor, ParametricFactor terminalFactor,
@@ -77,7 +75,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public BeamSearchCfgFactor getModelFromParameters(SufficientStatistics parameters) {
+  public CfgParser getModelFromParameters(SufficientStatistics parameters) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
     Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
@@ -87,7 +85,7 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
         (DiscreteFactor) nonterminalFactor.getModelFromParameters(nonterminalStatistics),
         (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics), beamSize, canSkipTerminals);
-    return new BeamSearchCfgFactor(treeVar, inputVar, parser, terminalFunction, validTreeFilter);
+    return parser;
   }
 
   @Override
@@ -114,13 +112,12 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
     return new ListSufficientStatistics(STATISTIC_NAMES, statisticsList);
   }
 
-  @Override
-  public void incrementSufficientStatisticsFromAssignment(SufficientStatistics statistics,
-      SufficientStatistics currentParameters, Assignment assignment, double count) {
-    incrementSufficientStatisticsFromMarginal(statistics, currentParameters, null, assignment, count, 1.0);
+  public void incrementSufficientStatisticsFromParseTree(SufficientStatistics statistics,
+      SufficientStatistics currentParameters, ParseTree parse, double count) {
+      accumulateSufficientStatistics(parse, nonterminalStatistics, terminalStatistics, 
+          nonterminalParameters, terminalParameters, count);
   }
 
-  @Override
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics statistics,
       SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
       double count, double partitionFunction) {
@@ -196,5 +193,10 @@ public class ParametricCfgFactor extends AbstractParametricFactor {
       accumulateSufficientStatistics(tree.getRight(), nonterminalStatistics, terminalStatistics,
           nonterminalParameters, terminalParameters, weight);
     }
+  }
+
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) {
+    throw new UnsupportedOperationException("not implemented.");
   }
 }

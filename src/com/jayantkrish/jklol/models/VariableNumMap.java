@@ -305,21 +305,6 @@ public class VariableNumMap implements Serializable {
     return objectVars;
   }
 
-  /**
-   * Gets any boolean-valued variables in {@code this}.
-   * 
-   * @return
-   */
-  public final List<BooleanVariable> getBooleanVariables() {
-    List<BooleanVariable> booleanVars = new ArrayList<BooleanVariable>();
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] instanceof BooleanVariable) {
-        booleanVars.add((BooleanVariable) vars[i]);
-      }
-    }
-    return booleanVars;
-  }
-  
   private final int getVariableIndex(int varNum) {
     return Arrays.binarySearch(nums, varNum);
   }

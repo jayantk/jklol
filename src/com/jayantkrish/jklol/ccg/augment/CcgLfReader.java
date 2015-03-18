@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm.ccg;
+package com.jayantkrish.jklol.ccg.augment;
 
 import java.util.Arrays;
 import java.util.List;
@@ -10,12 +10,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
+import com.jayantkrish.jklol.ccg.augment.ConvertCncToCvsm.Span;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
-import com.jayantkrish.jklol.cvsm.ccg.ConvertCncToCvsm.Span;
 import com.jayantkrish.jklol.util.CsvParser;
 import com.jayantkrish.jklol.util.Pair;
 

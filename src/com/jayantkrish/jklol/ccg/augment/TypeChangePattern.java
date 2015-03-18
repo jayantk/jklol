@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm.ccg;
+package com.jayantkrish.jklol.ccg.augment;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;

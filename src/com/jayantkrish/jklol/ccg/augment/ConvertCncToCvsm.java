@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm.ccg;
+package com.jayantkrish.jklol.ccg.augment;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,12 +14,12 @@ import joptsimple.OptionSpec;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.io.NullOutputStream;
+import com.jayantkrish.jklol.ccg.augment.CcgLfReader.LogicalFormConversionError;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.cvsm.ccg.CcgLfReader.LogicalFormConversionError;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 import com.jayantkrish.jklol.util.Pair;

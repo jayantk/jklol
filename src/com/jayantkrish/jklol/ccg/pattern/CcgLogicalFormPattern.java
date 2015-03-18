@@ -18,7 +18,7 @@ public class CcgLogicalFormPattern implements CcgPattern {
 
   @Override
   public List<CcgParse> match(CcgParse parse) {
-    Expression lf = parse.getLogicalForm(false);
+    Expression lf = parse.getLogicalForm();
     if (lf != null && Pattern.matches(lfRegex, lf.toString())) {
       return Arrays.asList(parse);
     } else {

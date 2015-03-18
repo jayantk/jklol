@@ -233,7 +233,7 @@ public class CvsmTrainingTest extends TestCase {
     List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("red", "block", "on", "table"), Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG)), 10);
 
-    System.out.println(parses.get(0).getLogicalForm(false).simplify());
+    System.out.println(parses.get(0).getLogicalForm().simplify());
   }
 
   public void testCvsmAffineTraining() {

@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cli;
+package com.jayantkrish.jklol.ccg.cli;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -32,11 +32,11 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
-import com.jayantkrish.jklol.ccg.cli.TrainCcg;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
+import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;

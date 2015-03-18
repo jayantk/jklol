@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm.ccg;
+package com.jayantkrish.jklol.ccg.augment;
 
 import java.io.Serializable;
 import java.util.Collection;

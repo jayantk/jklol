@@ -1,13 +1,13 @@
-package com.jayantkrish.jklol.ccg.pattern;
+package com.jayantkrish.jklol.ccg.augment;
 
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.augment.DavidsonianCcgParseAugmenter;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
-import com.jayantkrish.jklol.cvsm.ccg.DavidsonianCcgParseAugmenter;
 
 public class DavidsonianCcgParseAugmenterTest extends TestCase {
   

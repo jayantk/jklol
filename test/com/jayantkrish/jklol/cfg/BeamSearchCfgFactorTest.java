@@ -98,7 +98,7 @@ public class BeamSearchCfgFactorTest extends TestCase {
     y = builder.getVariables().getVariablesByName("y");
 
     OovMapper oovMapper = new OovMapper("<OOV>", Sets.newHashSet(Arrays.asList(TERMINALS)));
-    ParametricCfgFactor cfgFactor = new ParametricCfgFactor(parent, left, right, terminal, ruleType, 
+    ParametricCfgParser cfgFactor = new ParametricCfgParser(parent, left, right, terminal, ruleType, 
         y, x, nonterminalFactor, terminalFactor, oovMapper, Predicates.alwaysTrue(), 10, false);
     builder.addFactor("cfg", cfgFactor, new WrapperVariablePattern(x.union(y)));
     cfgModel = builder.build();

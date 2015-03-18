@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.cvsm.ccg;
+package com.jayantkrish.jklol.ccg.augment;
 
 import java.util.Arrays;
 import java.util.List;
@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
+import com.jayantkrish.jklol.ccg.cli.ParseCcg;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.CommutativeOperator;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
@@ -27,7 +28,6 @@ import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.cli.ParseCcg;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class ParseToLogicalForm extends AbstractCli {

@@ -25,7 +25,7 @@ dependency filling. These variables can be assigned values in the
 lexicon, and unfilled dependency structures can be annotated on
 them. For example, consider the following lexicon entry:
 
-city := N{0} : (lambda e (pred:city e)) 
+**syntax/semantics:** city := N{0} : (lambda e (pred:city e)) 
 
 **assignment:** 0 pred:city
 
@@ -37,7 +37,7 @@ furthermore that its head, given by the variable {0}, is
 by the word; however, the head can generally be an arbitrary
 string. As a more complex example, consider:
 
-big := (N{1}/N{1}){0} : (lambda f e (and (pred:major e) (f e)))
+**syntax/semantics:** big := (N{1}/N{1}){0} : (lambda f e (and (pred:major e) (f e)))
 
 **assignment:** 0 pred:major
 
@@ -51,7 +51,7 @@ argument, the head of the returned category is equal to the head of
 the argument. Using this grammar, we would obtain the following parse
 of "big city":
 
-big city := N{1} : (lambda e (and (pred:major e) (pred:city e)))
+**syntax/semantics:** big city := N{1} : (lambda e (and (pred:major e) (pred:city e)))
 
 **assignment:** 1 pred:city
 
@@ -66,9 +66,9 @@ depended on the variable {1} gets filled by its value.
 ### Training
 
 The semantic parser requires three input files for training: a
-lexicon, a collection of rules, and training data. See
-experiments/geoquery/scripts/train.sh for an example of semantic
-parser training.
+lexicon, a collection of rules, and training data. A full example
+experiment for training a semantic parser on GeoQuery is provided in
+the experiments/geoquery directory.
 
 The lexicon is a listing of the CCG lexicon entries used for
 training. This is a comma-separated values file of the following
@@ -77,18 +77,22 @@ format:
 (word),(syntax),(logical form),(assignment),(unfilled dependency),(unfilled dependency),...
 
 The assignment and unfilled dependency entries can be repeated 0 or
-more times. Example:
+more times. For example:
 
-"city","N{0}","(lambda e (city:<c,t> e))","0 city:<c,t>"
-"big","(N{1}/N{1}){0}","(lambda f e (and (major:<c,t> e) (f e)))","0 major:<c,t>","major:<c,t> 1 1"
-"in","((N{1}\N{1})/N{2}){0}","(lambda x f e (and:<t*,t> (f e) (in:<lo,<lo,t>> e x)))","0 in:<lo,<lo,t>>","in:<lo,<lo,t>> 1 1","in:<lo,<lo,t>> 2 2"
+```
+"city","N{0}","(lambda e (pred:city e))","0 pred:city"
+"big","(N{1}/N{1}){0}","(lambda f e (and (pred:major e) (f e)))","0 pred:major","pred:major 1 1"
+"in","((N{1}\N{1})/N{2}){0}","(lambda x f e (and (f e) (pred:in e x)))","0 pred:in","pred:in 1 1","pred:in 2 2"
+```
 
 The rules are a collection of unary and binary rules to use, in
 addition to the standard application and composition
-combinators. Example:
+combinators. For example:
 
+```
 "N{0} NP{0}","(lambda $1 $1)"
 ",{0] NP{1} NP{1}","(lambda $L $R $R)"
+```
 
 The first line specifies a unary rule that applies to a N and
 type-changes it to an NP. The shared variable {0} means that the head
@@ -103,11 +107,13 @@ right entries to produce the logical form of the output.
 The training data is a collection of text with annotated logical
 forms, separated by newlines:
 
+```
 city in alaska
 (lambda x (and<t*,t> (city<c,t> x) (in:<lo,<lo,t>> x alaska:s)))
 
 city in texas
 ...
+```
 
 Given these inputs, the semantic parser can be trained using the
 following command:

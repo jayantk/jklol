@@ -1,13 +1,7 @@
-Backward Compatibility-Breaking changes:
-1. Remove "induceLogicalForms" parameter from CcgParse
-2. Delete DiscreteObjectFactor, 
-
-
 Renamings:
 - Rename parametric factors to "families"
 - Rename SufficientStatistics to something like "parametervector"
   - eliminate the list of tensors in this class.
-  - refactor the "getParameterDescription()" methods into SufficientStatistics
 
 
 Dependencies:

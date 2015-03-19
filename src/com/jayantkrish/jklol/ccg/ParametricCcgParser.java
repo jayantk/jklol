@@ -260,6 +260,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       addSubjectsToPredicateList(Arrays.asList(rule.getSubjects()), Ints.asList(rule.getArgumentNumbers()),
           semanticPredicates, maxNumArgs);
     }
+
+    Preconditions.checkArgument(unaryRules.size() > 0, "You must specify at least one unary rule. Create a dummy rule with made-up syntactic categories if necessary.");
     for (CcgUnaryRule rule : unaryRules) {
       syntacticCategories.add(rule.getInputSyntacticCategory().getCanonicalForm());
       syntacticCategories.add(rule.getResultSyntacticCategory().getCanonicalForm());
@@ -359,10 +361,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     ParametricFactor wordDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, wordDistanceVar);
     VariableNumMap puncDistanceVar = VariableNumMap.singleton(6, "puncDistance", CcgParser.puncDistanceVarType);
-    ParametricFactor puncDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
+    ParametricFactor puncDistanceFactor = featureFactory.getDependencyPuncDistanceFeatures(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, puncDistanceVar);
     VariableNumMap verbDistanceVar = VariableNumMap.singleton(6, "verbDistance", CcgParser.verbDistanceVarType);
-    ParametricFactor verbDistanceFactor = featureFactory.getDependencyWordDistanceFeatures(
+    ParametricFactor verbDistanceFactor = featureFactory.getDependencyVerbDistanceFeatures(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyHeadPosVar, verbDistanceVar);
 
     // Create features over dependency structures.
@@ -709,9 +711,11 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     ListSufficientStatistics parameterList = parameters.coerceToList();
 
     StringBuilder sb = new StringBuilder();
+    sb.append("lexicon:\n");
     sb.append(lexiconFamily.getParameterDescription(
         parameterList.getStatisticByName(LEXICON_PARAMETERS), numFeatures));
 
+    sb.append("syntax:\n");
     sb.append(syntaxFamily.getParameterDescription(
         parameterList.getStatisticByName(SYNTAX_PARAMETERS), numFeatures));
     sb.append(unaryRuleFamily.getParameterDescription(
@@ -723,9 +727,11 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     sb.append(headedRootSyntaxFamily.getParameterDescription(
         parameterList.getStatisticByName(HEADED_ROOT_SYNTAX_PARAMETERS), numFeatures));
 
+    sb.append("dependencies:\n");
     sb.append(dependencyFamily.getParameterDescription(
         parameterList.getStatisticByName(DEPENDENCY_PARAMETERS), numFeatures));
 
+    sb.append("dependency distances:\n");
     sb.append(wordDistanceFamily.getParameterDescription(
         parameterList.getStatisticByName(WORD_DISTANCE_PARAMETERS), numFeatures));
     sb.append(puncDistanceFamily.getParameterDescription(

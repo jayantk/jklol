@@ -50,7 +50,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     CcgParse bestPredictedParse = inferenceAlgorithm.getBestParse(instantiatedParser, example.getSentence(),
         maxMarginCost, log);
     if (bestPredictedParse == null) {
-      System.out.println("Search error (Predicted): " + example.getSentence());
+      // System.out.println("Search error (Predicted): " + example.getSentence());
       log.stopTimer("update_gradient/unconditional_max_marginal");
       throw new ZeroProbabilityError();
     }
@@ -64,8 +64,8 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
         example.getDependencies(), example.getLogicalForm());
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
-      System.out.println("Search error (Correct): " + example.getSentence());
-      System.out.println("Expected tree: " + example.getSyntacticParse());
+      // System.out.println("Search error (Correct): " + example.getSentence());
+      // System.out.println("Expected tree: " + example.getSyntacticParse());
       // System.out.println("Search error cause: " + conditionalChartFilter.analyzeParseFailure());
       log.stopTimer("update_gradient/conditional_max_marginal");
       throw new ZeroProbabilityError();

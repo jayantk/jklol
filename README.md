@@ -13,7 +13,7 @@ user-specified unary and binary combinators. Logical forms are
 specified in lambda calculus, using LISP-like notation. The parser can
 be trained to either maximize loglikelihood or margin-based objectives
 using various forms of supervision. In both cases, the parser has a
-rich collection of features (similar to the C&C syntactic parser).
+rich collection of features similar to the C&C parser.
 
 
 ### Grammar 
@@ -25,34 +25,41 @@ dependency filling. These variables can be assigned values in the
 lexicon, and unfilled dependency structures can be annotated on
 them. For example, consider the following lexicon entry:
 
-city := N{0} : (lambda e (city:<c,t> e)) 
-assignment: 0 city:<c,t>
-unfilled dependencies: (none)
+city := N{0} : (lambda e (pred:city e)) 
+
+**assignment:** 0 pred:city
+
+**unfilled dependencies:** (none)
 
 This entry states that "city" has the syntactic category N, and
 furthermore that its head, given by the variable {0}, is
-"city:<c,t>". In this example, the head is the predicate referred to
+"pred:city". In this example, the head is the predicate referred to
 by the word; however, the head can generally be an arbitrary
 string. As a more complex example, consider:
 
-big := (N{1}/N{1}){0} : (lambda f e (and (major:<c,t> e) (f e)))
-assignment: 0 major:<c,t>
-unfilled dependencies: major:<c,t> 1 1
+big := (N{1}/N{1}){0} : (lambda f e (and (pred:major e) (f e)))
+
+**assignment:** 0 pred:major
+
+**unfilled dependencies:** pred:major 1 1
 
 This entry states that "big" has syntactic category N/N and that its
-head is "major:<c,t>". This entry also has an unfilled dependency that
+head is "pred:major". This entry also has an unfilled dependency that
 depends on the value of the variable {1}. Furthermore, the coindexing
 of the N categories means that, when this category is applied to an
 argument, the head of the returned category is equal to the head of
 the argument. Using this grammar, we would obtain the following parse
 of "big city":
 
-big city := N{1} : (lambda e (and (major:<c,t> e) (city:<c,t> e)))
-assignment: 1 city:<c,t>
-unfilled dependencies: (none)
-filled dependencies: major:<c,t> 1 city:<c,t>
+big city := N{1} : (lambda e (and (pred:major e) (pred:city e)))
 
-As shown above, the head of the parse is "city:<c,t>", given by the
+**assignment:** 1 pred:city
+
+**unfilled dependencies:** (none)
+
+**filled dependencies:** pred:major 1 pred:city
+
+As shown above, the head of the parse is "pred:city", given by the
 variable {1}. Furthermore, the dependency projected by "major" that
 depended on the variable {1} gets filled by its value.
 

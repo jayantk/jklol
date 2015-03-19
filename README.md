@@ -66,13 +66,9 @@ depended on the variable {1} gets filled by its value.
 ### Training
 
 The semantic parser requires three input files for training: a
-lexicon, a collection of rules, and training data. A full example
-experiment for training a semantic parser on GeoQuery is provided in
-the experiments/geoquery directory.
-
-The lexicon is a listing of the CCG lexicon entries used for
-training. This is a comma-separated values file of the following
-format:
+lexicon, a collection of rules, and training data. The lexicon is a
+listing of the CCG lexicon entries used for training. This is a
+comma-separated values file of the following format:
 
 (word),(syntax),(logical form),(assignment),(unfilled dependency),(unfilled dependency),...
 
@@ -109,7 +105,7 @@ forms, separated by newlines:
 
 ```
 city in alaska
-(lambda x (and<t*,t> (city<c,t> x) (in:<lo,<lo,t>> x alaska:s)))
+(lambda x (and (pred:city x) (pred:in x alaska)))
 
 city in texas
 ...
@@ -118,7 +114,14 @@ city in texas
 Given these inputs, the semantic parser can be trained using the
 following command:
 
+```
 ./scripts/run.sh com.jayantkrish.jklol.ccg.cli.TrainSemanticParser --trainingData (training data) --lexicon (lexicon) --rules (rules) --output (location to save the trained parser)
+```
 
 This program has many additional configuration options, visible using
 the --help flag.
+
+A full example experiment for training a semantic parser on the
+GeoQuery data set is provided in the experiments/geoquery
+directory. See the experiments/geoquery/README for more information.
+

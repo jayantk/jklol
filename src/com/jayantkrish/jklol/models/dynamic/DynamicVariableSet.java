@@ -185,6 +185,32 @@ public class DynamicVariableSet implements Serializable {
     Preconditions.checkState(varNames.size() == variables.size());
     return new VariableNumMap(variableInds, varNames, variables);
   }
+  
+  public VariableNumMap instantiatePlateFixedVars(String plateName, int replicationNum,
+      int[] plateVarNums) {
+    int plateIndex = plateNames.indexOf(plateName);
+    DynamicVariableSet plate = plates.get(plateIndex);
+    int varStartIndex = getPlateStartIndex(plateIndex);
+    varStartIndex += replicationNum * plate.getMaximumPlateSize();
+    
+    VariableNumMap plateVars = plate.getFixedVariables();
+    if (plateVarNums != null) {
+      plateVars = plateVars.intersection(plateVarNums);
+    }
+    List<String> names = plateVars.getVariableNames();
+    List<Integer> nums = plateVars.getVariableNums();
+    List<Variable> vars = plateVars.getVariables();
+    
+    String namespace = appendPlateToNamespace("", plateName, replicationNum);
+    List<String> newNames = Lists.newArrayList();
+    List<Integer> newNums = Lists.newArrayList();
+    for (int i = 0; i < names.size(); i++) {
+      newNames.add(namespace + names.get(i));
+      newNums.add(varStartIndex + nums.get(i));
+    }
+
+    return new VariableNumMap(newNums, newNames, vars);
+  }
 
   private void instantiateVariablesHelper(DynamicAssignment assignment,
       List<String> variableNames, List<Variable> variables,

@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
+import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -36,7 +37,13 @@ public class AlignmentEmOracle implements EmOracle<AlignmentModel, AlignmentExam
     log.stopTimer("e_step/getFactorGraph");
 
     log.startTimer("e_step/marginals");
-    MarginalSet marginals = marginalCalculator.computeMarginals(fg);
+    MarginalSet marginals = null;
+    try {
+      marginals = marginalCalculator.computeMarginals(fg);
+    } catch (ZeroProbabilityError e) {
+      System.out.println("zero probability: " + example.getTree().getExpression());
+      throw e;
+    }
     log.stopTimer("e_step/marginals");
 
     log.startTimer("e_step/compute_expectations");

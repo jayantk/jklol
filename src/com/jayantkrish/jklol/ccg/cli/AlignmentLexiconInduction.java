@@ -21,29 +21,35 @@ import com.jayantkrish.jklol.training.ExpectationMaximization;
 public class AlignmentLexiconInduction extends AbstractCli {
   
   private OptionSpec<String> trainingData;
+  
+  private OptionSpec<Void> noTreeConstraint;
 
   @Override
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
     trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
+    
+    // Optional arguments
+    noTreeConstraint = parser.accepts("noTreeConstraint");
   }
 
   @Override
   public void run(OptionSet options) {
     List<AlignmentExample> examples = readTrainingData(options.valueOf(trainingData));
     
-    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples);
+    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(
+        examples, !options.has(noTreeConstraint));
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);
     
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
-    
+
     ExpectationMaximization em = new ExpectationMaximization(10, new DefaultLogFunction());
-    SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing),
+    SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(true), smoothing),
         initial, examples);
 
-    System.out.println(pam.getParameterDescription(trainedParameters));
+    System.out.println(pam.getParameterDescription(trainedParameters, 300));
   }
   
   private static List<AlignmentExample> readTrainingData(String trainingDataFile) {

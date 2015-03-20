@@ -675,7 +675,8 @@ public class VariableNumMap implements Serializable {
       } else {
         // Equal. Both maps must have the same values for this variable
         Preconditions.checkArgument(names[i].equals(otherNames[j]));
-        Preconditions.checkArgument(vars[i].getName().equals(otherVars[j].getName()));            checkCompatibility(other);
+        Preconditions.checkArgument(vars[i].getName().equals(otherVars[j].getName()));
+        checkCompatibility(other);
 
         newNums[numFilled] = nums[i];
         newNames[numFilled] = names[i];

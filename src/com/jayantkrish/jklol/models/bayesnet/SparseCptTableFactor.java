@@ -3,11 +3,13 @@ package com.jayantkrish.jklol.models.bayesnet;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
@@ -28,19 +30,25 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
   
   // These are the parent and child variables in the CPT.
   private final VariableNumMap childVars;
+  private final VariableNumMap parentVars;
 
   private final DiscreteFactor sparsityPattern;
+  private final DiscreteFactor constantPattern;
   private final VariableNumMap outcomeVar;
   
   public SparseCptTableFactor(VariableNumMap parentVars, VariableNumMap childVars,
-      DiscreteFactor sparsityPattern) {
+      DiscreteFactor sparsityPattern, DiscreteFactor constantPattern) {
     super(parentVars.union(childVars));
     Preconditions.checkArgument(parentVars.getDiscreteVariables().size() == parentVars.size());
     Preconditions.checkArgument(childVars.getDiscreteVariables().size() == childVars.size());
+    this.parentVars = parentVars;
     this.childVars = childVars;
+    Preconditions.checkArgument(childVars.size() == 1);
 
     this.sparsityPattern = Preconditions.checkNotNull(sparsityPattern);
+    this.constantPattern = Preconditions.checkNotNull(constantPattern);
     Preconditions.checkArgument(sparsityPattern.getVars().equals(parentVars.union(childVars)));
+    Preconditions.checkArgument(constantPattern.getVars().equals(parentVars.union(childVars)));
     
     List<Assignment> assignments = sparsityPattern.getNonzeroAssignments();
     DiscreteVariable featureNameDictionary = new DiscreteVariable("indicator features", assignments);
@@ -48,13 +56,15 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public TableFactor getModelFromParameters(SufficientStatistics parameters) {
+  public DiscreteFactor getModelFromParameters(SufficientStatistics parameters) {
     Tensor outcomeWeights = getOutcomeWeights(parameters);
     Tensor assignmentCounts = sparsityPattern.getWeights()
         .replaceValues(outcomeWeights.getValues());
 
     Tensor parentCounts = assignmentCounts.sumOutDimensions(childVars.getVariableNumsArray());
-    return new TableFactor(getVars(), assignmentCounts.elementwiseProduct(parentCounts.elementwiseInverse()));
+    TableFactor learnedDistribution = new TableFactor(getVars(),
+        assignmentCounts.elementwiseProduct(parentCounts.elementwiseInverse()));
+    return learnedDistribution.add(constantPattern);
   }
 
   @Override
@@ -109,7 +119,13 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    DiscreteFactor factor = getModelFromParameters(parameters);
+    DiscreteFactor factor = getModelFromParameters(parameters).product(sparsityPattern);
+    
+    VariableRelabeling parentIdentity = VariableRelabeling.identity(parentVars);
+    int nextVarNum = Ints.max(parentVars.getVariableNumsArray()) + 1;
+    VariableRelabeling childToEnd = VariableRelabeling.createFromVariables(childVars, 
+        childVars.relabelVariableNums(new int[] {nextVarNum}));
+    factor = (DiscreteFactor) factor.relabelVariables(parentIdentity.union(childToEnd));
     if (numFeatures >= 0) {
       return factor.describeAssignments(factor.getMostLikelyAssignments(numFeatures));
     } else {

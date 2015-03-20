@@ -110,6 +110,17 @@ public class DynamicFactorGraph implements Serializable {
     allNames.addAll(newFactorNames);
     return new DynamicFactorGraph(getVariables(), allFactors, allNames);
   }
+  
+  /**
+   * Constructs a {@code DynamicFactorGraphBuilder} containing the
+   * same factor graph as this. This method is useful for efficiently
+   * making a large number of additions to this factor graph.
+   * 
+   * @return
+   */
+  public DynamicFactorGraphBuilder toBuilder() {
+    return new DynamicFactorGraphBuilder(variables, plateFactors, factorNames);
+  }
 
   /**
    * Gets the factor in this factor graph with the given {@code name}.

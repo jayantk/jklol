@@ -19,7 +19,7 @@ public class ExpressionTree {
   
   private final List<ExpressionTree> lefts;
   private final List<ExpressionTree> rights;
-  
+
   public ExpressionTree(Expression rootExpression, List<ExpressionTree> lefts,
       List<ExpressionTree> rights) {
     // Canonicalize variable names.
@@ -98,6 +98,22 @@ public class ExpressionTree {
       }
     }
     return new ExpressionTree(expression, lefts, rights);
+  }
+
+  public Expression getExpression() {
+    return rootExpression;
+  }
+
+  public boolean hasChildren() {
+    return lefts.size() > 0;
+  }
+
+  public List<ExpressionTree> getLeftChildren() {
+    return lefts;
+  }
+
+  public List<ExpressionTree> getRightChildren() {
+    return rights;
   }
 
   /**

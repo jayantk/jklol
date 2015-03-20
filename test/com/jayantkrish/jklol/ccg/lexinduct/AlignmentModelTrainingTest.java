@@ -15,8 +15,9 @@ import com.jayantkrish.jklol.training.ExpectationMaximization;
 
 public class AlignmentModelTrainingTest extends TestCase {
 
-  String[][] dataSet1 = new String[][] {{"a b", "(a b)"},
-      {"a c", "(a c)"}};
+  String[][] dataSet1 = new String[][] {{"plano in texas", "(in plano texas)"},
+      {"in texas", "(lambda x (in x texas))"},
+      {"in plano", "(lambda x (in x plano))"}};
 
   VariableNumMap wordVarPattern, expressionVarPattern;
   
@@ -32,10 +33,10 @@ public class AlignmentModelTrainingTest extends TestCase {
     }
     return examples;
   }
-  
+
   public void testTrainingSimple() {
     List<AlignmentExample> examples = parseData(dataSet1);
-    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples);
+    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, false);
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);
@@ -43,11 +44,23 @@ public class AlignmentModelTrainingTest extends TestCase {
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
     
-    ExpectationMaximization em = new ExpectationMaximization(10, new DefaultLogFunction());
+    // MapReduceConfiguration.setMapReduceExecutor(new LocalMapReduceExecutor(1, 1));
+    ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
     SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing),
         initial, examples);
 
     // TODO: put in an actual test here.
-    System.out.println(pam.getParameterDescription(trainedParameters));
+    System.out.println(pam.getParameterDescription(trainedParameters, 30));
+
+    pam = pam.updateUseTreeConstraint(true);
+    SufficientStatistics trainedParameters2 = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing),
+        trainedParameters, examples);
+    
+    // TODO: put in an actual test here.
+    System.out.println(pam.getParameterDescription(trainedParameters2, 30));
+    AlignmentModel model = pam.getModelFromParameters(trainedParameters2);
+    for (AlignmentExample example : examples) {
+      model.getBestAlignment(example);
+    }
   }
 }

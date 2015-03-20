@@ -3,6 +3,12 @@ Renamings:
 - Rename SufficientStatistics to something like "parametervector"
   - eliminate the list of tensors in this class.
 
+Fixes:
+- test case for CFG parser
+- test case for indicatorloglinearfactor
+- fix the expectation maximization algorithms
+  - use EmOracle for stepwise em and incremental em
+  - wtf is abstract trainer for?
 
 Dependencies:
 - get rid of GWT / Jackson

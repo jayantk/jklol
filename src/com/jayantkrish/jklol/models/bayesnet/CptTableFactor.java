@@ -23,6 +23,12 @@ import com.jayantkrish.jklol.util.Assignment;
  * A conditional probability table representing a probability distribution over
  * a child variable given its parents. This is the typical kind of factor you
  * expect to find in a Bayesian Network.
+ * 
+ * Sparse distributions can be encoded using {@code CptTableFactor} by
+ * initializing the model parameters with zeros. If the sparsity structure is
+ * a property of the model, however, it is more convenient to use
+ * {@code SparseCptTableFactor}, which preserves sparsity with the standard
+ * parameter vector operations. 
  */
 public class CptTableFactor extends AbstractParametricFactor {
 

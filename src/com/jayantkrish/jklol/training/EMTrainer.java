@@ -14,7 +14,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
  * 
  * @author jayantk
  */
-public class EMTrainer extends AbstractTrainer
+public class EmTrainer extends AbstractTrainer
     <ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private final int numIterations;
@@ -32,7 +32,7 @@ public class EMTrainer extends AbstractTrainer
    * @param statisticsCalculator
    * @param log
    */
-  public EMTrainer(int numIterations, MarginalCalculator marginalCalculator,
+  public EmTrainer(int numIterations, MarginalCalculator marginalCalculator,
       LogFunction log) {
     this.numIterations = numIterations;
     this.marginalCalculator = marginalCalculator;

@@ -16,20 +16,20 @@ import com.jayantkrish.jklol.util.Assignment;
  * Train the weights of a factor graph using incremental EM. (Incremental EM is
  * an online variant of EM.)
  */
-public class IncrementalEMTrainer extends AbstractTrainer
+public class IncrementalEmTrainer extends AbstractTrainer
 <ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private MarginalCalculator inferenceEngine;
   private int numIterations;
   private LogFunction log;
 
-  public IncrementalEMTrainer(int numIterations, MarginalCalculator inferenceEngine) {
+  public IncrementalEmTrainer(int numIterations, MarginalCalculator inferenceEngine) {
     this.numIterations = numIterations;
     this.inferenceEngine = inferenceEngine;
     this.log = new NullLogFunction();
   }
 
-  public IncrementalEMTrainer(int numIterations, MarginalCalculator inferenceEngine, LogFunction log) {
+  public IncrementalEmTrainer(int numIterations, MarginalCalculator inferenceEngine, LogFunction log) {
     this.numIterations = numIterations;
     this.inferenceEngine = inferenceEngine;
     this.log = log;

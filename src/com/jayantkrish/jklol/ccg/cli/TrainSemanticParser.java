@@ -150,7 +150,7 @@ public class TrainSemanticParser extends AbstractCli {
         expression = null;
       } else if (line.startsWith("(")) {
         expression = parser.parseSingleExpression(line);
-
+        
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         SupertaggedSentence supertaggedSentence = ListSupertaggedSentence
             .createWithUnobservedSupertags(words, posTags);
@@ -159,6 +159,7 @@ public class TrainSemanticParser extends AbstractCli {
         words = Arrays.asList(line.split("\\s"));
       }
     }
+    
     return examples;
   }
 

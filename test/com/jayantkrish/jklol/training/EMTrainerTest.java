@@ -19,7 +19,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class EMTrainerTest extends TestCase {
+public class EmTrainerTest extends TestCase {
 
   ParametricFactorGraph bn;
   List<Example<Assignment, Assignment>> trainingData;
@@ -64,9 +64,9 @@ public class EMTrainerTest extends TestCase {
     trainingData.add(Example.create(Assignment.EMPTY, a2));
     trainingData.add(Example.create(Assignment.EMPTY, a3));
 
-    t = TrainerAdapter.createAssignmentAdapter(new IncrementalEMTrainer(10, new JunctionTree()));
-    s = TrainerAdapter.createAssignmentAdapter(new StepwiseEMTrainer(10, 4, 0.9, new JunctionTree(), null));
-    e = TrainerAdapter.createAssignmentAdapter(new EMTrainer(20, new JunctionTree(), null));
+    t = TrainerAdapter.createAssignmentAdapter(new IncrementalEmTrainer(10, new JunctionTree()));
+    s = TrainerAdapter.createAssignmentAdapter(new StepwiseEmTrainer(10, 4, 0.9, new JunctionTree(), null));
+    e = TrainerAdapter.createAssignmentAdapter(new EmTrainer(20, new JunctionTree(), null));
 
     testAssignment1 = allVars.outcomeArrayToAssignment("T", "T");
     testAssignment2 = allVars.outcomeArrayToAssignment("F", "F");

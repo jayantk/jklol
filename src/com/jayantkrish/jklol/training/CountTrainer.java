@@ -17,7 +17,7 @@ import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 /**
  * Trains a {@link #ParametricFactorGraph} using empirical outcome counts from a data set.
  */
-public class BNCountTrainer {
+public class CountTrainer {
 
   /**
    * Selects a model from the set of {@code bn} by counting the outcome

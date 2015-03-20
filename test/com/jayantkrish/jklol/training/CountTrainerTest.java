@@ -16,10 +16,10 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
-public class BNCountTrainerTest extends TestCase {
+public class CountTrainerTest extends TestCase {
 
 	ParametricFactorGraph bn;
-	BNCountTrainer t;
+	CountTrainer t;
 	List<DynamicAssignment> trainingData;
 
 	public void setUp() {
@@ -51,7 +51,7 @@ public class BNCountTrainerTest extends TestCase {
 			trainingData.add(a2);
 			trainingData.add(a3);
 		}
-		t = new BNCountTrainer();
+		t = new CountTrainer();
 	}
 
 	public void testTrain() {

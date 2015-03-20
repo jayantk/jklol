@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
  * Train the weights of a ParametricFactorGraph using stepwise EM, an online
  * variant of EM.
  */
-public class StepwiseEMTrainer extends AbstractTrainer
+public class StepwiseEmTrainer extends AbstractTrainer
 <ParametricFactorGraph, Example<DynamicAssignment, DynamicAssignment>> {
 
   private final int batchSize;
@@ -48,7 +48,7 @@ public class StepwiseEMTrainer extends AbstractTrainer
    * @param log monitors training progress. If {@code null}, no logging is
    * performed.
    */
-  public StepwiseEMTrainer(int numIterations, int batchSize, double decayRate,
+  public StepwiseEmTrainer(int numIterations, int batchSize, double decayRate,
       MarginalCalculator marginalCalculator, LogFunction log) {
     Preconditions.checkArgument(0.5 < decayRate && decayRate <= 1.0);
     this.numIterations = numIterations;

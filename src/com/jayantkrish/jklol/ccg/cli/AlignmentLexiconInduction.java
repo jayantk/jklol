@@ -10,6 +10,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricAlignmentModel;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -50,6 +51,12 @@ public class AlignmentLexiconInduction extends AbstractCli {
         initial, examples);
 
     System.out.println(pam.getParameterDescription(trainedParameters, 300));
+    
+    AlignmentModel model = pam.getModelFromParameters(trainedParameters);
+    for (AlignmentExample example : examples) {
+      System.out.println(example.getWords());
+      model.getBestAlignment(example);
+    }
   }
   
   private static List<AlignmentExample> readTrainingData(String trainingDataFile) {

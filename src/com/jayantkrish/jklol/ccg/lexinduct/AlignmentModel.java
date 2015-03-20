@@ -86,7 +86,7 @@ public class AlignmentModel {
         bools.outcomeArrayToAssignment("T", "F", "T"),
         bools.outcomeArrayToAssignment("F", "T", "T"));
   }
-  
+
   public void getBestAlignment(AlignmentExample example) {
     Pair<FactorGraph, AugmentedExpressionTree> pair = getFactorGraphWithTreeConstraint(example);
     FactorGraph fg = pair.getLeft();
@@ -171,7 +171,7 @@ public class AlignmentModel {
     if (!tree.hasChildren()) {
       return new AugmentedExpressionTree(wordActiveVar, tree.getExpression(),
           Collections.<AugmentedExpressionTree>emptyList(),
-          Collections.<AugmentedExpressionTree>emptyList(), null);
+          Collections.<AugmentedExpressionTree>emptyList(), wordVar, null);
     } else {
       List<ExpressionTree> lefts = tree.getLeftChildren();
       List<ExpressionTree> rights = tree.getRightChildren();
@@ -209,7 +209,7 @@ public class AlignmentModel {
         orVar = nextOrVar;
       }
 
-      return new AugmentedExpressionTree(orVar, tree.getExpression(), newLefts, newRights, null);
+      return new AugmentedExpressionTree(orVar, tree.getExpression(), newLefts, newRights, wordVar, null);
     }
   }
 
@@ -245,22 +245,24 @@ public class AlignmentModel {
     return newFactorGraph.toBuilder();
   }
   
-  private static class AugmentedExpressionTree {
+  public static class AugmentedExpressionTree {
     private final VariableNumMap var;
     private final Expression expression;
     
     private final List<AugmentedExpressionTree> lefts;
     private final List<AugmentedExpressionTree> rights;
-    
+
+    private final VariableNumMap wordVar;
     private final String word;
 
     public AugmentedExpressionTree(VariableNumMap var, Expression expression,
         List<AugmentedExpressionTree> lefts, List<AugmentedExpressionTree> rights,
-        String word) {
+        VariableNumMap wordVar, String word) {
       this.var = Preconditions.checkNotNull(var);
       this.expression = Preconditions.checkNotNull(expression);
       this.lefts = Preconditions.checkNotNull(lefts);
       this.rights = Preconditions.checkNotNull(rights);
+      this.wordVar = wordVar;
       this.word = word;
     }
 
@@ -276,10 +278,10 @@ public class AlignmentModel {
     public List<AugmentedExpressionTree> getRights() {
       return rights;
     }
-    
+
     public AugmentedExpressionTree pruneWithAssignment(Assignment assignment) {
       if (var.assignmentToOutcome(assignment).equals(Arrays.asList("T"))) {
-        
+
         List<AugmentedExpressionTree> newLefts = Lists.newArrayList();
         List<AugmentedExpressionTree> newRights = Lists.newArrayList();
         for (int i = 0; i < lefts.size(); i++) {
@@ -294,7 +296,8 @@ public class AlignmentModel {
             newRights.add(right);
           }
         }
-        return new AugmentedExpressionTree(var, expression, newLefts, newRights, word);
+        String word = (String) wordVar.assignmentToOutcome(assignment).get(0);
+        return new AugmentedExpressionTree(var, expression, newLefts, newRights, wordVar, word);
       } else {
         return null;
       }
@@ -311,6 +314,11 @@ public class AlignmentModel {
         sb.append(" ");
       }
       sb.append(tree.expression);
+      if (tree.word != ParametricAlignmentModel.NULL_WORD) {
+        sb.append(" -> \"");
+        sb.append(tree.word);
+        sb.append("\"");
+      }
       sb.append("\n");
 
       for (int i = 0; i < tree.lefts.size(); i++) {

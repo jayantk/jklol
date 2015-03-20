@@ -74,12 +74,12 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
     // Create another plate that allows us to build the tree of binary variables.
     builder.addPlate(BOOLEAN_PLATE_NAME, new VariableNumMap(Ints.asList(0), 
-        Arrays.asList(BOOLEAN_VAR_NAME), Arrays.asList(trueFalseVar)), 10000);
+        Arrays.asList(BOOLEAN_VAR_NAME), Arrays.asList(trueFalseVar)), 100000);
     VariableNumMap booleanPlateVar = VariableNumMap.singleton(0, BOOLEAN_VAR_PATTERN, trueFalseVar);
-    
+
     // Create a plate for each word / logical form pair.
     builder.addPlate(PLATE_NAME, new VariableNumMap(Ints.asList(1, 0), 
-        Arrays.asList(WORD_VAR_NAME, EXPRESSION_VAR_NAME), Arrays.asList(wordVar, expressionVar)), 10000);
+        Arrays.asList(WORD_VAR_NAME, EXPRESSION_VAR_NAME), Arrays.asList(wordVar, expressionVar)), 100000);
     VariableNumMap pattern = new VariableNumMap(Ints.asList(1, 0), 
         Arrays.asList(WORD_VAR_PATTERN, EXPRESSION_VAR_PATTERN), Arrays.asList(wordVar, expressionVar));
     VariableNumMap wordVarPattern = pattern.getVariablesByName(WORD_VAR_PATTERN);

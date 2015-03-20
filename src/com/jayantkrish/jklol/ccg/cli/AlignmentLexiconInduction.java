@@ -1,13 +1,16 @@
 package com.jayantkrish.jklol.ccg.cli;
 
 import java.util.List;
+import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
+import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel;
@@ -67,10 +70,12 @@ public class AlignmentLexiconInduction extends AbstractCli {
   private static List<AlignmentExample> readTrainingData(String trainingDataFile) {
     List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
     List<AlignmentExample> examples = Lists.newArrayList();
+    Set<ConstantExpression> constantsDontCount = Sets.newHashSet();
+    constantsDontCount.add(new ConstantExpression("and:<t*,t>"));
     
     int totalTreeSize = 0; 
     for (CcgExample ccgExample : ccgExamples) {
-      ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm());
+      ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(), constantsDontCount);
       examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
 
       totalTreeSize += tree.size();

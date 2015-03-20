@@ -39,6 +39,10 @@ public class ExpressionTree {
     this.lefts = ImmutableList.copyOf(lefts);
     this.rights = ImmutableList.copyOf(rights);
   }
+
+  public static ExpressionTree fromExpression(Expression expression) {
+    return fromExpression(expression, Collections.<ConstantExpression>emptySet());
+  }
   
   /**
    * Decompose the body of an expression into pieces that combine using
@@ -47,8 +51,10 @@ public class ExpressionTree {
    * @param expression
    * @return
    */
-  public static ExpressionTree fromExpression(Expression expression) {
+  public static ExpressionTree fromExpression(Expression expression,
+      Set<ConstantExpression> constantsThatDontCount) {
     List<ConstantExpression> args = Collections.emptyList();
+    expression = expression.simplify();
     Expression body = expression;
     if (expression instanceof LambdaExpression) {
       args = ((LambdaExpression) expression).getArguments();
@@ -84,25 +90,31 @@ public class ExpressionTree {
         List<ConstantExpression> newArgs = Lists.newArrayList(functionArg);
         newArgs.addAll(args);
         LambdaExpression rightExpression = new LambdaExpression(newArgs, otherBody);
+        
+        Set<ConstantExpression> rightFreeVars = rightExpression.getFreeVariables();
+        Set<ConstantExpression> leftFreeVars = leftExpression.getFreeVariables();
+        rightFreeVars.removeAll(constantsThatDontCount);
+        leftFreeVars.removeAll(constantsThatDontCount);
 
-        if (rightExpression.getFreeVariables().size() == 0 || leftExpression.getFreeVariables().size() == 0) {
+        if (rightFreeVars.size() == 0 || leftFreeVars.size() == 0) {
           // This expression is purely some lambda arguments applied to each other
           // in some way, e.g., (lambda f g (g f)). Don't generate these.
           continue;
         }
-        
-        ExpressionTree left = fromExpression(leftExpression);
-        ExpressionTree right = fromExpression(rightExpression);
+
+        ExpressionTree left = fromExpression(leftExpression, constantsThatDontCount);
+        ExpressionTree right = fromExpression(rightExpression, constantsThatDontCount);
         lefts.add(left);
         rights.add(right);
       }
 
-      doGeoquery(expression, lefts, rights);
+      // doGeoquery(expression, lefts, rights, constantsThatDontCount);
     }
     return new ExpressionTree(expression, lefts, rights);
   }
   
-  private static void doGeoquery(Expression expression, List<ExpressionTree> lefts, List<ExpressionTree> rights) {
+  private static void doGeoquery(Expression expression, List<ExpressionTree> lefts, List<ExpressionTree> rights,
+      Set<ConstantExpression> constantsThatDontCount) {
     List<ConstantExpression> args = Collections.emptyList();
     Expression body = expression.simplify();
     if (expression instanceof LambdaExpression) {
@@ -133,7 +145,7 @@ public class ExpressionTree {
               if (argumentArgs.size() > 0) {
                 leftExpression = new LambdaExpression(argumentArgs, leftExpression);
               }
-        
+
               ConstantExpression functionArg = ConstantExpression.generateUniqueVariable();
               Expression functionBody = functionArg;
               if (argumentArgs.size() > 0) {
@@ -158,8 +170,11 @@ public class ExpressionTree {
               System.out.println(rightExpression);
               */
               
-              Set<ConstantExpression> rightFreeVars = Sets.newHashSet(rightExpression.getFreeVariables());
+              Set<ConstantExpression> rightFreeVars = rightExpression.getFreeVariables();
+              Set<ConstantExpression> leftFreeVars = leftExpression.getFreeVariables();
+              rightFreeVars.removeAll(constantsThatDontCount);
               rightFreeVars.removeAll(freeVarsInFunction);
+              leftFreeVars.removeAll(constantsThatDontCount);
 
               if (rightFreeVars.size() == 0 || leftExpression.getFreeVariables().size() == 0) {
                 // This expression is purely some lambda arguments applied to each other

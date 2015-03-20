@@ -68,8 +68,28 @@ public class ExpressionTree {
     if (body instanceof ApplicationExpression) {
       ApplicationExpression applicationExpression = (ApplicationExpression) body;
       List<Expression> subexpressions = applicationExpression.getSubexpressions();
+      
+      // Canonicalize the order in which we remove arguments from multiargument
+      // functions.
+      int startIndex = 1;
+      for (int i = 1; i < subexpressions.size(); i++) {
+        ConstantExpression var = null;
+        if (subexpressions.get(i) instanceof ConstantExpression) {
+          var = (ConstantExpression) subexpressions.get(i);
+        } else if (subexpressions.get(i) instanceof ApplicationExpression) {
+          Expression function = ((ApplicationExpression) subexpressions.get(i)).getFunction();
+          if (function instanceof ConstantExpression) {
+            var = (ConstantExpression) function;
+          }
+        }
 
-      for (int i = 0; i < subexpressions.size(); i++) {
+        // TODO: better way to check if we made this variable.
+        if (var != null && var.getName().startsWith("var")) {
+          startIndex = i + 1;
+        }
+      }
+
+      for (int i = startIndex; i < subexpressions.size(); i++) {
         List<ConstantExpression> subexpressionArgs = Lists.newArrayList(argSet);
         subexpressionArgs.retainAll(subexpressions.get(i).getFreeVariables());
 

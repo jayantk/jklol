@@ -38,6 +38,11 @@ public class AlignmentLexiconInduction extends AbstractCli {
   public void run(OptionSet options) {
     List<AlignmentExample> examples = readTrainingData(options.valueOf(trainingData));
     
+    for (AlignmentExample example : examples) {
+      System.out.println(example.getWords());
+      System.out.println(example.getTree());
+    }
+
     ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(
         examples, !options.has(noTreeConstraint));
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
@@ -51,14 +56,14 @@ public class AlignmentLexiconInduction extends AbstractCli {
         initial, examples);
 
     System.out.println(pam.getParameterDescription(trainedParameters, 300));
-    
+
     AlignmentModel model = pam.getModelFromParameters(trainedParameters);
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());
       model.getBestAlignment(example);
     }
   }
-  
+
   private static List<AlignmentExample> readTrainingData(String trainingDataFile) {
     List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
     List<AlignmentExample> examples = Lists.newArrayList();

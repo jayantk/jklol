@@ -96,8 +96,86 @@ public class ExpressionTree {
         lefts.add(left);
         rights.add(right);
       }
+
+      doGeoquery(expression, lefts, rights);
     }
     return new ExpressionTree(expression, lefts, rights);
+  }
+  
+  private static void doGeoquery(Expression expression, List<ExpressionTree> lefts, List<ExpressionTree> rights) {
+    List<ConstantExpression> args = Collections.emptyList();
+    Expression body = expression.simplify();
+    if (expression instanceof LambdaExpression) {
+      args = ((LambdaExpression) expression).getArguments();
+      body = ((LambdaExpression) expression).getBody();
+    }
+    Set<ConstantExpression> argSet = Sets.newHashSet(args); 
+
+    if (body instanceof ApplicationExpression) {
+      ApplicationExpression applicationExpression = (ApplicationExpression) body;
+      List<Expression> subexpressions = applicationExpression.getSubexpressions();
+
+      if (applicationExpression.getFunction().toString().equals("and:<t*,t>")) {
+        // Hack for processing GeoQuery expressions.
+        Set<ConstantExpression> freeVarsInFunction = applicationExpression.getFunction().getFreeVariables();
+        for (int i = 1; i < subexpressions.size(); i++) {
+          // Pull out the arguments of any functions that are part of
+          // a conjunction.
+          if (subexpressions.get(i) instanceof ApplicationExpression) {
+            ApplicationExpression applicationSubexpression = (ApplicationExpression) subexpressions.get(i);
+            List<Expression> arguments = applicationSubexpression.getSubexpressions();
+            for (int j = 1; j < arguments.size(); j++) {
+              Expression argument = arguments.get(j);
+              List<ConstantExpression> argumentArgs = Lists.newArrayList(argSet);
+              argumentArgs.retainAll(argument.getFreeVariables());
+
+              Expression leftExpression = arguments.get(j);
+              if (argumentArgs.size() > 0) {
+                leftExpression = new LambdaExpression(argumentArgs, leftExpression);
+              }
+        
+              ConstantExpression functionArg = ConstantExpression.generateUniqueVariable();
+              Expression functionBody = functionArg;
+              if (argumentArgs.size() > 0) {
+                functionBody = new ApplicationExpression(functionBody, argumentArgs);
+              }
+              
+              List<Expression> newArguments = Lists.newArrayList(arguments);
+              newArguments.set(j, functionBody);
+
+              Expression initialBody = new ApplicationExpression(newArguments);
+              List<Expression> newSubexpressions = Lists.newArrayList(subexpressions);
+              newSubexpressions.set(i, initialBody);
+              Expression otherBody = new ApplicationExpression(newSubexpressions);
+
+              List<ConstantExpression> newArgs = Lists.newArrayList(functionArg);
+              newArgs.addAll(args);
+              LambdaExpression rightExpression = new LambdaExpression(newArgs, otherBody);
+
+              /*
+              System.out.println(expression);
+              System.out.println(leftExpression);
+              System.out.println(rightExpression);
+              */
+              
+              Set<ConstantExpression> rightFreeVars = Sets.newHashSet(rightExpression.getFreeVariables());
+              rightFreeVars.removeAll(freeVarsInFunction);
+
+              if (rightFreeVars.size() == 0 || leftExpression.getFreeVariables().size() == 0) {
+                // This expression is purely some lambda arguments applied to each other
+                // in some way, e.g., (lambda f g (g f)). Don't generate these.
+                continue;
+              }
+        
+              ExpressionTree left = fromExpression(leftExpression);
+              ExpressionTree right = fromExpression(rightExpression);
+              lefts.add(left);
+              rights.add(right);
+            }
+          }
+        }
+      }
+    }
   }
 
   public Expression getExpression() {

@@ -67,8 +67,10 @@ public class AlignmentModel {
     return newFactorGraph.conditional(assignment);
   }
 
+  /*
   public FactorGraph getFactorGraphWithTreeConstraint(AlignmentExample example) {
     FactorGraph fg = getFactorGraph(example);
     
   }
+  */
 }

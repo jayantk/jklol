@@ -108,7 +108,7 @@ public class ExpressionTree {
         rights.add(right);
       }
 
-      // doGeoquery(expression, lefts, rights, constantsThatDontCount);
+      doGeoquery(expression, lefts, rights, constantsThatDontCount);
     }
     return new ExpressionTree(expression, lefts, rights);
   }
@@ -182,8 +182,8 @@ public class ExpressionTree {
                 continue;
               }
         
-              ExpressionTree left = fromExpression(leftExpression);
-              ExpressionTree right = fromExpression(rightExpression);
+              ExpressionTree left = fromExpression(leftExpression, constantsThatDontCount);
+              ExpressionTree right = fromExpression(rightExpression, constantsThatDontCount);
               lefts.add(left);
               rights.add(right);
             }

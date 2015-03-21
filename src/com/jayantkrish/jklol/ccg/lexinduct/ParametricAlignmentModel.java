@@ -23,6 +23,16 @@ import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 
+/**
+ * TODO:
+ * 1. Smoothing across all outcomes (no sparsity)
+ * 2. Penalize complex expressions
+ *   A. 1/n generation of all "ungenerated" expressions
+ *   B. Complexity score for each expression that adds / multiplies over tree
+ *   
+ * @author jayant
+ *
+ */
 public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel> {
   private static final long serialVersionUID = 1L;
 
@@ -56,7 +66,7 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
   }
 
   public static ParametricAlignmentModel buildAlignmentModel(
-      Collection<AlignmentExample> examples, boolean useTreeConstraint) {
+      Collection<AlignmentExample> examples, boolean useTreeConstraint, boolean sparseCpt) {
     Set<Expression> allExpressions = Sets.newHashSet();
     Set<String> words = Sets.newHashSet();
     words.add(NULL_WORD);
@@ -84,25 +94,34 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
         Arrays.asList(WORD_VAR_PATTERN, EXPRESSION_VAR_PATTERN), Arrays.asList(wordVar, expressionVar));
     VariableNumMap wordVarPattern = pattern.getVariablesByName(WORD_VAR_PATTERN);
     VariableNumMap expressionVarPattern = pattern.getVariablesByName(EXPRESSION_VAR_PATTERN);
-    
-    TableFactorBuilder sparsityBuilder = new TableFactorBuilder(wordVarPattern.union(expressionVarPattern), 
-        SparseTensorBuilder.getFactory());
-    Set<Expression> expressions = Sets.newHashSet();
-    for (AlignmentExample example : examples) {
-      expressions.clear();
-      example.getTree().getAllExpressions(expressions);
-      for (Expression expression : expressions) {
-        for (String word : example.getWords()) {
-          sparsityBuilder.setWeight(1.0, expression, word);
+
+    TableFactor sparsityFactor = null;
+    if (sparseCpt) {
+      // Only map each word to the set of logical forms that it was observed
+      // with in the training data.
+      TableFactorBuilder sparsityBuilder = new TableFactorBuilder(wordVarPattern.union(expressionVarPattern), 
+          SparseTensorBuilder.getFactory());
+      Set<Expression> expressions = Sets.newHashSet();
+      for (AlignmentExample example : examples) {
+        expressions.clear();
+        example.getTree().getAllExpressions(expressions);
+        for (Expression expression : expressions) {
+          for (String word : example.getWords()) {
+            sparsityBuilder.setWeight(1.0, expression, word);
+          }
         }
       }
+      sparsityFactor = sparsityBuilder.build();
+    } else {
+      sparsityFactor = TableFactor.unity(wordVarPattern.union(expressionVarPattern));
     }
 
-    TableFactor sparsityFactor = sparsityBuilder.build();
+    // TODO: can divide by allExpressions.size() to encourage more
+    // mappings.
     DiscreteFactor constantFactor = TableFactor.unity(expressionVarPattern)
         .outerProduct(TableFactor.pointDistribution(wordVarPattern,
             wordVarPattern.outcomeArrayToAssignment(NULL_WORD)))
-            .product(1.0 / allExpressions.size());
+            .product(1.0); 
     
     SparseCptTableFactor factor = new SparseCptTableFactor(wordVarPattern,
         expressionVarPattern, sparsityFactor, constantFactor);

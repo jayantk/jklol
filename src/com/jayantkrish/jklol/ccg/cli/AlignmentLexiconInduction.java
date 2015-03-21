@@ -26,7 +26,9 @@ public class AlignmentLexiconInduction extends AbstractCli {
   
   private OptionSpec<String> trainingData;
   
+  private OptionSpec<Double> smoothingParam;
   private OptionSpec<Void> noTreeConstraint;
+  private OptionSpec<Void> sparseCpt;
 
   @Override
   public void initializeOptions(OptionParser parser) {
@@ -34,7 +36,9 @@ public class AlignmentLexiconInduction extends AbstractCli {
     trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     
     // Optional arguments
+    smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
     noTreeConstraint = parser.accepts("noTreeConstraint");
+    sparseCpt = parser.accepts("sparseCpt");
   }
 
   @Override
@@ -47,9 +51,9 @@ public class AlignmentLexiconInduction extends AbstractCli {
     }
 
     ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(
-        examples, !options.has(noTreeConstraint));
+        examples, !options.has(noTreeConstraint), options.has(sparseCpt));
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
-    smoothing.increment(0.1);
+    smoothing.increment(options.valueOf(smoothingParam));
     
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);

@@ -11,7 +11,7 @@ import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -31,7 +31,7 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
   private final FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator;
   private final VariableNumMap ccgSyntaxVar;
   private final VariableNumMap featureVar;
-  private final ConditionalLogLinearFactor featureFamily;
+  private final ParametricLinearClassifierFactor featureFamily;
 
   /**
    * Names of the parameter vectors governing each factor in the lexicon
@@ -45,7 +45,7 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
   public ParametricFeaturizedLexicon(VariableNumMap terminalVar,
       VariableNumMap ccgCategoryVar, ParametricFactor terminalFamily,
       FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator,
-      VariableNumMap ccgSyntaxVar, VariableNumMap featureVar, ConditionalLogLinearFactor featureFamily) {
+      VariableNumMap ccgSyntaxVar, VariableNumMap featureVar, ParametricLinearClassifierFactor featureFamily) {
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
     this.terminalFamily = Preconditions.checkNotNull(terminalFamily);

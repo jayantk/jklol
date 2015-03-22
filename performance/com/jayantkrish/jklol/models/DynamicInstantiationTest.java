@@ -12,7 +12,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.dynamic.VariablePattern;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
@@ -57,8 +57,8 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.EMPTY, 
-        DiscreteVariable.sequence("foo", 4)); 
+    ParametricLinearClassifierFactor f = new ParametricLinearClassifierFactor(x, y, VariableNumMap.EMPTY, 
+        DiscreteVariable.sequence("foo", 4), false); 
     builder.addFactor("f1", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY));
     platePattern = VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY);
 

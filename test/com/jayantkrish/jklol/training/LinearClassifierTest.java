@@ -15,7 +15,7 @@ import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -67,8 +67,8 @@ public class LinearClassifierTest extends TestCase {
     // A ConditionalLogLinearFactor represents a trainable linear classifier
     // (yes, the name is terrible). Just copy this definition, replacing x, y
     // and featureVar with whatever you called those things.
-    builder.addUnreplicatedFactor("classifier", new ConditionalLogLinearFactor(x, y, y,
-        featureVar));
+    builder.addUnreplicatedFactor("classifier", new ParametricLinearClassifierFactor(x, y, y,
+        featureVar, false));
     // Builds the actual trainable model.
     linearClassifier = builder.build();
 

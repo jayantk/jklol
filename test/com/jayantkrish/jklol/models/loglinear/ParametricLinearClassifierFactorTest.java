@@ -18,15 +18,15 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Unit tests for {@link ConditionalLogLinearFactor}.
+ * Unit tests for {@link ParametricLinearClassifierFactor}.
  * 
  * @author jayantk
  */
-public class ConditionalLogLinearFactorTest extends TestCase {
+public class ParametricLinearClassifierFactorTest extends TestCase {
 
   VariableNumMap input, output, both;
   
-  ConditionalLogLinearFactor factor;
+  ParametricLinearClassifierFactor factor, naiveBayes;
   
   List<Tensor> featureVectors;
   
@@ -40,8 +40,11 @@ public class ConditionalLogLinearFactorTest extends TestCase {
         Arrays.<Variable>asList(discreteVar));
     both = input.union(output);
     
-    factor = new ConditionalLogLinearFactor(input, output, VariableNumMap.EMPTY, 
-        DiscreteVariable.sequence("foo", 5));
+    factor = new ParametricLinearClassifierFactor(input, output, VariableNumMap.EMPTY, 
+        DiscreteVariable.sequence("foo", 5), false);
+    
+    naiveBayes = new ParametricLinearClassifierFactor(input, output, VariableNumMap.EMPTY, 
+        DiscreteVariable.sequence("foo", 5), true);
     
     featureVectors = Lists.newArrayList();
     featureVectors.add(SparseTensor.vector(0, 5, new double[] {1, 2, 0, 0, 0}));
@@ -84,5 +87,24 @@ public class ConditionalLogLinearFactorTest extends TestCase {
     assertEquals(2.0 + (.0468 * 5.0), conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("B")), 0.001);
     assertEquals(1.9405 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("A")), 0.001);
     assertEquals(0.0063 * 5.0, conditional.getUnnormalizedLogProbability(output.outcomeArrayToAssignment("C")), 0.001);
+  }
+  
+  public void testNaiveBayes() {
+    SufficientStatistics stats = naiveBayes.getNewSufficientStatistics();
+    SufficientStatistics currentParams = naiveBayes.getNewSufficientStatistics();
+    stats.increment(1.0);
+    naiveBayes.incrementSufficientStatisticsFromAssignment(stats, currentParams,
+        both.outcomeArrayToAssignment(featureVectors.get(0), "A"), 1.0);
+    
+    Factor classifier = naiveBayes.getModelFromParameters(stats);
+    Assignment inputAssignment = input.outcomeArrayToAssignment(featureVectors.get(0));
+    Factor conditional = classifier.conditional(inputAssignment);
+    
+    // Parameters of A are: 2 3 1 1 1 = 8
+    // = 1/4 3/8 1/8 1/8 1/8
+    // P(A) = 1/4 * 3/8 * 3/8
+
+    assertEquals(9.0 / 256, conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("A")), 0.001);
+    assertEquals(1.0 / 125, conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("B")), 0.001);
   }
 }

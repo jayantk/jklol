@@ -76,10 +76,11 @@ public class AlignmentModel {
     input2 = booleanPlateVar.relabelVariableNums(new int[] {1});
     output = booleanPlateVar.relabelVariableNums(new int[] {2});
     
+    // TODO: configuration of the scaling parameter on the ands.
     VariableNumMap bools = VariableNumMap.unionAll(input1, input2, output);
     this.andFactor = TableFactor.pointDistribution(bools, 
-        bools.outcomeArrayToAssignment("T", "T", "T"),
-        bools.outcomeArrayToAssignment("F", "F", "F"));
+        bools.outcomeArrayToAssignment("F", "F", "F")).add(TableFactor.pointDistribution(bools, 
+        bools.outcomeArrayToAssignment("T", "T", "T")).product(1.0));
 
     this.orFactor = TableFactor.pointDistribution(bools, 
         bools.outcomeArrayToAssignment("F", "F", "F"),
@@ -144,8 +145,9 @@ public class AlignmentModel {
     // Instantiate the plates with the expression and word variables.
     FactorGraph wholeFactorGraph = fg.build().conditional(assignment.union(booleanAssignment));
     
-    return Pair.of(wholeFactorGraph.conditional(tree.getVar().outcomeArrayToAssignment("T")),
-        tree);
+    Assignment treeAssignment = tree.getVar().outcomeArrayToAssignment("T").union(
+        tree.getWordActiveVar().outcomeArrayToAssignment("F"));
+    return Pair.of(wholeFactorGraph.conditional(treeAssignment), tree);
   }
 
   private AugmentedExpressionTree buildTreeConstraint(ExpressionTree tree,
@@ -171,7 +173,7 @@ public class AlignmentModel {
     if (!tree.hasChildren()) {
       return new AugmentedExpressionTree(wordActiveVar, tree.getExpression(),
           Collections.<AugmentedExpressionTree>emptyList(),
-          Collections.<AugmentedExpressionTree>emptyList(), wordVar, null);
+          Collections.<AugmentedExpressionTree>emptyList(), wordVar, wordActiveVar, null);
     } else {
       List<ExpressionTree> lefts = tree.getLeftChildren();
       List<ExpressionTree> rights = tree.getRightChildren();
@@ -209,7 +211,8 @@ public class AlignmentModel {
         orVar = nextOrVar;
       }
 
-      return new AugmentedExpressionTree(orVar, tree.getExpression(), newLefts, newRights, wordVar, null);
+      return new AugmentedExpressionTree(orVar, tree.getExpression(), newLefts,
+          newRights, wordVar, wordActiveVar, null);
     }
   }
 
@@ -253,21 +256,26 @@ public class AlignmentModel {
     private final List<AugmentedExpressionTree> rights;
 
     private final VariableNumMap wordVar;
+    private final VariableNumMap wordActiveVar;
     private final String word;
 
     public AugmentedExpressionTree(VariableNumMap var, Expression expression,
         List<AugmentedExpressionTree> lefts, List<AugmentedExpressionTree> rights,
-        VariableNumMap wordVar, String word) {
+        VariableNumMap wordVar, VariableNumMap wordActiveVar, String word) {
       this.var = Preconditions.checkNotNull(var);
       this.expression = Preconditions.checkNotNull(expression);
       this.lefts = Preconditions.checkNotNull(lefts);
       this.rights = Preconditions.checkNotNull(rights);
       this.wordVar = wordVar;
+      this.wordActiveVar = wordActiveVar;
       this.word = word;
     }
 
     public VariableNumMap getVar() {
       return var;
+    }
+    public VariableNumMap getWordActiveVar() {
+      return wordActiveVar;
     }
     public Expression getExpression() {
       return expression;
@@ -297,7 +305,7 @@ public class AlignmentModel {
           }
         }
         String word = (String) wordVar.assignmentToOutcome(assignment).get(0);
-        return new AugmentedExpressionTree(var, expression, newLefts, newRights, wordVar, word);
+        return new AugmentedExpressionTree(var, expression, newLefts, newRights, wordVar, wordActiveVar, word);
       } else {
         return null;
       }

@@ -275,7 +275,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     Preconditions.checkArgument(Arrays.equals(big.getDimensionNumbers(), small.getDimensionNumbers()));
     long[] resultKeyNums = new long[big.size()];
     double[] resultValues = new double[big.size()];
-    
+
     int bigSize = big.size();
     int numFilled = 0;
     long[] bigKeyNums = big.keyNums;

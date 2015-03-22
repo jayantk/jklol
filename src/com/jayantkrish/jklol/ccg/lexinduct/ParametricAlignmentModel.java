@@ -80,7 +80,7 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
     DiscreteVariable wordVar = new DiscreteVariable("words", Sets.newHashSet(words));
     
     System.out.println("alignment model: " + allExpressions.size() + " expressions, " + words.size() + " words.");
-
+    
     ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
     // Create another plate that allows us to build the tree of binary variables.
     builder.addPlate(BOOLEAN_PLATE_NAME, new VariableNumMap(Ints.asList(0), 
@@ -94,7 +94,7 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
         Arrays.asList(WORD_VAR_PATTERN, EXPRESSION_VAR_PATTERN), Arrays.asList(wordVar, expressionVar));
     VariableNumMap wordVarPattern = pattern.getVariablesByName(WORD_VAR_PATTERN);
     VariableNumMap expressionVarPattern = pattern.getVariablesByName(EXPRESSION_VAR_PATTERN);
-
+    
     TableFactor sparsityFactor = null;
     if (sparseCpt) {
       // Only map each word to the set of logical forms that it was observed
@@ -121,7 +121,7 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
     DiscreteFactor constantFactor = TableFactor.unity(expressionVarPattern)
         .outerProduct(TableFactor.pointDistribution(wordVarPattern,
             wordVarPattern.outcomeArrayToAssignment(NULL_WORD)))
-            .product(1.0); 
+            .product(1.0);
     
     SparseCptTableFactor factor = new SparseCptTableFactor(wordVarPattern,
         expressionVarPattern, sparsityFactor, constantFactor);

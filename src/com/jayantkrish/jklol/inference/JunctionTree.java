@@ -88,7 +88,7 @@ public class JunctionTree implements MarginalCalculator {
       return new FactorMarginalSet(factorGraph.getFactors(), theFactor.getTotalUnnormalizedLogProbability(),
           factorGraph.getConditionedVariables(), factorGraph.getConditionedValues());
     }
-
+    
     // long time = System.nanoTime();
     CliqueTree cliqueTree = CliqueTree.fromHeuristicVariableElimination(factorGraph);
     // long delta = (System.nanoTime() - time) / 1000;

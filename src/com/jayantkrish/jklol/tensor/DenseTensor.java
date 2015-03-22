@@ -119,9 +119,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
 
   @Override
   public Tensor elementwiseProduct(Tensor other) {
+    /*
     if (other instanceof SparseTensor && Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers())) {
       return other.elementwiseProduct(this);
     }
+    */
     DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
     result.incrementWithMultiplier(other, 1);

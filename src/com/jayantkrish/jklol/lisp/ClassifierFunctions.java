@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -148,10 +148,10 @@ public class ClassifierFunctions {
       VariableNumMap relabeledVars = relabeling.apply(factorVars);
       VariableNumMap relabeledFeatureVectorVar = relabeling.apply(featureVectorVar);
 
-      DiscreteVariable featureDictionary = ((ConditionalLogLinearFactor)
+      DiscreteVariable featureDictionary = ((ParametricLinearClassifierFactor)
           ((FactorParameterSpec) parameters.getParameterSpec()).getFactor()).getFeatureDictionary();
-      ParametricFactor pf = new ConditionalLogLinearFactor(relabeledFeatureVectorVar,
-          relabeledVars, VariableNumMap.EMPTY, featureDictionary);
+      ParametricFactor pf = new ParametricLinearClassifierFactor(relabeledFeatureVectorVar,
+          relabeledVars, VariableNumMap.EMPTY, featureDictionary, false);
 
       Factor factor = pf.getModelFromParameters(parameters.getParameters())
           .relabelVariables(relabeling.inverse());
@@ -182,8 +182,8 @@ public class ClassifierFunctions {
       VariableNumMap featureVectorVar = VariableNumMap.singleton(0, "feature-vector-var",
           new ObjectVariable(Tensor.class));
 
-      ParametricFactor pf = new ConditionalLogLinearFactor(featureVectorVar, vars,
-          VariableNumMap.EMPTY, featureDictionary);
+      ParametricFactor pf = new ParametricLinearClassifierFactor(featureVectorVar, vars,
+          VariableNumMap.EMPTY, featureDictionary, false);
 
       FactorParameterSpec fps = new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf);
       SufficientStatistics params = fps.getNewParameters();

@@ -36,7 +36,8 @@ public class SparseCptTableFactorTest extends TestCase {
         Arrays.asList(v, v));
     allVars = parents.union(children);
     
-    f = new SparseCptTableFactor(parents, children, TableFactor.unity(allVars));
+    f = new SparseCptTableFactor(parents, children, TableFactor.unity(allVars),
+        TableFactor.zero(allVars));
     
     // Note: Parent F, T was unassigned!
     assignments = new Object[][] {{ "T", "T", "T", "T" },

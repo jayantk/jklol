@@ -19,15 +19,17 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * A log-linear factor where one of the variables is always conditioned on. The
- * conditioned-on variable is a feature vector, which determines the conditional
- * distribution over the other variable.
+ * A parametric family of linear classifiers. This family 
+ * can contain either generative (Naive Bayes) classifiers
+ * or discriminative (e.g., SVM) classifiers depending on
+ * the choice of initialization. In both cases, the models
+ * within this family are represented by {@link LinearClassifierFactor}. 
  * 
  * @author jayantk
  */
-public class ConditionalLogLinearFactor extends AbstractParametricFactor {
+public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
 
-  private static final long serialVersionUID = 2L;
+  private static final long serialVersionUID = 3L;
   
   private final VariableNumMap inputVar;
   private final VariableNumMap outputVars;
@@ -45,6 +47,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   private final int[] dimensionNums;
   private final int[] dimensionSizes;
   private final VariableNumMap sufficientStatisticVars;
+  
+  private final boolean naiveBayes;
 
   /**
    * Create a factor which represents a conditional distribution over outputVars
@@ -55,9 +59,12 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
    * @param outputVars
    * @param conditionalVars
    * @param featureDictionary
+   * @param naiveBayes if {@code true}, this factor represents a parametric 
+   * family of multinomial Naive Bayes classifiers. If {@code false},
+   * it represents a family of discriminative linear classifiers (e.g., SVMs).  
    */
-  public ConditionalLogLinearFactor(VariableNumMap inputVar, VariableNumMap outputVars, 
-      VariableNumMap conditionalVars, DiscreteVariable featureDictionary) {
+  public ParametricLinearClassifierFactor(VariableNumMap inputVar, VariableNumMap outputVars, 
+      VariableNumMap conditionalVars, DiscreteVariable featureDictionary, boolean naiveBayes) {
     super(inputVar.union(outputVars));
     Preconditions.checkArgument(inputVar.size() == 1);
     Preconditions.checkArgument(outputVars.getDiscreteVariables().size() == outputVars.size());
@@ -84,6 +91,8 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
     VariableNumMap featureVar = VariableNumMap.singleton(inputVar.getOnlyVariableNum(), 
         inputVar.getOnlyVariableName(), featureDictionary);
     this.sufficientStatisticVars = featureVar.union(outputVars);
+
+    this.naiveBayes = naiveBayes;
   }
 
   public DiscreteVariable getFeatureDictionary() {
@@ -111,11 +120,6 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-      /*
-    return TensorSufficientStatistics.createSparse(sufficientStatisticVars,
-        SparseTensor.empty(dimensionNums, dimensionSizes));
-      */
-
     return TensorSufficientStatistics.createDense(sufficientStatisticVars,
         new DenseTensorBuilder(dimensionNums, dimensionSizes));
   }
@@ -170,6 +174,12 @@ public class ConditionalLogLinearFactor extends AbstractParametricFactor {
   }
 
   private Tensor getWeightTensorFromStatistics(SufficientStatistics stats) {
-    return ((TensorSufficientStatistics) stats).get();
+    if (naiveBayes) {
+      Tensor weights = ((TensorSufficientStatistics) stats).get();
+      Tensor normalization = weights.sumOutDimensions(inputVarNums);
+      return weights.elementwiseProduct(normalization.elementwiseInverse()).elementwiseLog();
+    } else {
+      return ((TensorSufficientStatistics) stats).get();
+    }
   }
 }

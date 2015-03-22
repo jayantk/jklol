@@ -26,9 +26,16 @@ public class AlignmentLexiconInduction extends AbstractCli {
   
   private OptionSpec<String> trainingData;
   
+  private OptionSpec<Integer> emIterations;
+  
   private OptionSpec<Double> smoothingParam;
   private OptionSpec<Void> noTreeConstraint;
   private OptionSpec<Void> sparseCpt;
+  private OptionSpec<Void> printSearchSpace;
+  
+  public AlignmentLexiconInduction() {
+    super(CommonOptions.MAP_REDUCE);
+  }
 
   @Override
   public void initializeOptions(OptionParser parser) {
@@ -36,18 +43,22 @@ public class AlignmentLexiconInduction extends AbstractCli {
     trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     
     // Optional arguments
+    emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
     noTreeConstraint = parser.accepts("noTreeConstraint");
     sparseCpt = parser.accepts("sparseCpt");
+    printSearchSpace = parser.accepts("printSearchSpace");
   }
 
   @Override
   public void run(OptionSet options) {
     List<AlignmentExample> examples = readTrainingData(options.valueOf(trainingData));
     
-    for (AlignmentExample example : examples) {
-      System.out.println(example.getWords());
-      System.out.println(example.getTree());
+    if (options.has(printSearchSpace)) { 
+      for (AlignmentExample example : examples) {
+        System.out.println(example.getWords());
+        System.out.println(example.getTree());
+      }
     }
 
     ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(
@@ -58,11 +69,11 @@ public class AlignmentLexiconInduction extends AbstractCli {
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
 
-    ExpectationMaximization em = new ExpectationMaximization(10, new DefaultLogFunction());
+    ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
     SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(true), smoothing),
         initial, examples);
 
-    System.out.println(pam.getParameterDescription(trainedParameters, 300));
+    // System.out.println(pam.getParameterDescription(trainedParameters, 300));
 
     AlignmentModel model = pam.getModelFromParameters(trainedParameters);
     for (AlignmentExample example : examples) {

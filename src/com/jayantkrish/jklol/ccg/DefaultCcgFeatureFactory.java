@@ -15,9 +15,9 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -207,8 +207,8 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
 
       VariableNumMap featureVar = VariableNumMap.singleton(terminalSyntaxVar.getOnlyVariableNum() - 1,
           "ccgLexiconFeatures", featureGenerator.getFeatureDictionary());
-      ConditionalLogLinearFactor featureFamily = new ConditionalLogLinearFactor(featureVar, terminalSyntaxVar,
-          VariableNumMap.EMPTY, featureGenerator.getFeatureDictionary());
+      ParametricLinearClassifierFactor featureFamily = new ParametricLinearClassifierFactor(featureVar, terminalSyntaxVar,
+          VariableNumMap.EMPTY, featureGenerator.getFeatureDictionary(), false);
 
       return new ParametricFeaturizedLexicon(terminalWordVar, ccgCategoryVar, terminalFamily,
           featureGenerator, terminalSyntaxVar, featureVar, featureFamily);

@@ -4,31 +4,26 @@ import java.util.Arrays;
 
 import junit.framework.TestCase;
 
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
-import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class IndicatorLogLinearFactorTest extends TestCase {
   
+  private VariableNumMap vars; 
   private IndicatorLogLinearFactor factor;
-  private ParametricFactorGraph factorGraph;
   
   public void setUp() {
-    ParametricFactorGraphBuilder builder = new ParametricFactorGraphBuilder();
     DiscreteVariable tfVar = new DiscreteVariable("TrueFalse",
         Arrays.asList(new String[] {"T", "F"}));
 
-    builder.addVariable("X0", tfVar);
-    builder.addVariable("X1", tfVar);
-    builder.addVariable("Y", tfVar);
-
-    VariableNumMap vars = builder.getVariables().getVariablesByName("X0", "X1", "Y");
+    vars = new VariableNumMap(Ints.asList(0, 1, 2), Arrays.asList("X0", "X1", "Y"),
+        Arrays.asList(tfVar, tfVar, tfVar));
     
     TableFactorBuilder sparsityBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     sparsityBuilder.setWeight(1.0, "T", "T", "T");
@@ -37,9 +32,6 @@ public class IndicatorLogLinearFactorTest extends TestCase {
     sparsityBuilder.setWeight(1.0, "T", "T", "F");
     
     factor = new IndicatorLogLinearFactor(vars, sparsityBuilder.build());
-		builder.addUnreplicatedFactor("f0", factor);
-
-		factorGraph = builder.build();
   }
   
   public void testIncrementFromMarginal() {
@@ -49,7 +41,9 @@ public class IndicatorLogLinearFactorTest extends TestCase {
     
     factor.incrementSufficientStatisticsFromMarginal(stats, stats, marginal, Assignment.EMPTY, 1.0, 1.0);
 
-    // TODO: implement a test case.
+    Factor f = factor.getModelFromParameters(stats);
+    assertEquals(Math.exp(1.0), f.getUnnormalizedProbability(vars.outcomeArrayToAssignment("T", "T", "T")));
+    assertEquals(0.0, f.getUnnormalizedProbability(vars.outcomeArrayToAssignment("F", "F", "F")));
   }
 
 }

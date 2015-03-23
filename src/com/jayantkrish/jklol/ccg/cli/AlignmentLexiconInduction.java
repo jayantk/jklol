@@ -19,11 +19,11 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel;
-import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel.AlignedExpression;
-import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel.AlignmentTree;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTokenFeatureGenerator;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricAlignmentModel;
@@ -95,7 +95,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     int numTreesWithFullAlignments = 0;
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());
-      AlignmentTree tree = model.getBestAlignment(example);
+      AlignedExpressionTree tree = model.getBestAlignment(example);
       System.out.println(tree);
 
       alignments.incrementOutcomes(tree.getWordAlignments(), 1);

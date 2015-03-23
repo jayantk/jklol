@@ -12,7 +12,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -84,7 +83,10 @@ public class AlignmentModel {
     input2 = booleanPlateVar.relabelVariableNums(new int[] {1});
     output = booleanPlateVar.relabelVariableNums(new int[] {2});
     
-    // TODO: configuration of the scaling parameter on the ands.
+    // The probability of the assignment T,T,T is set to 1 - epsilon
+    // to slightly prefer larger assignments. In cases where a single word
+    // is likely to align to any node of a tree of the form A -> (B, C),
+    // this setting means the alignment to A is preferable.
     VariableNumMap bools = VariableNumMap.unionAll(input1, input2, output);
     this.andFactor = TableFactor.pointDistribution(bools, 
         bools.outcomeArrayToAssignment("F", "F", "F")).add(TableFactor.pointDistribution(bools, 
@@ -96,7 +98,7 @@ public class AlignmentModel {
         bools.outcomeArrayToAssignment("F", "T", "T"));
   }
 
-  public AlignmentTree getBestAlignment(AlignmentExample example) {
+  public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
     Pair<FactorGraph, AlignmentTree> pair = getFactorGraphWithTreeConstraint(example);
     FactorGraph fg = pair.getLeft();
     AlignmentTree tree = pair.getRight();
@@ -105,10 +107,7 @@ public class AlignmentModel {
 
     Assignment best = maxMarginals.getNthBestAssignment(0);
 
-    AlignmentTree pruned = tree.pruneWithAssignment(best)
-        .alignTreeToSentenceSpans(example.getWords()).generateCcgCategories();
-
-    return pruned;
+    return tree.decodeAlignment(best, example.getWords());
   }
   
   public FactorGraph getFactorGraph(AlignmentExample example) {
@@ -159,6 +158,18 @@ public class AlignmentModel {
     return Pair.of(wholeFactorGraph.conditional(treeAssignment), tree);
   }
 
+  /**
+   * Adds factors and variables for the tree structured logical
+   * form decomposition constraint to {@code builder}. Furthermore,
+   * any assignments to the generated variables are added to 
+   * {@code expressionAssignments} and {@code booleanAssignments}.
+   * 
+   * @param tree
+   * @param builder
+   * @param expressionAssignments
+   * @param booleanAssignments
+   * @return
+   */
   private AlignmentTree buildTreeConstraint(ExpressionTree tree, 
       DynamicFactorGraphBuilder builder, List<Assignment> expressionAssignments,
       List<Assignment> booleanAssignments) {
@@ -182,9 +193,9 @@ public class AlignmentModel {
     builder.addUnreplicatedFactor("word-active" + expressionPlateIndex, activeFactor, factorVars);
 
     if (!tree.hasChildren()) {
-      return new AlignmentTree(wordActiveVar, tree.getExpression(), tree.getNumAppliedArguments(), null,
-          new int[0], new int[0], Collections.<AlignmentTree>emptyList(), Collections.<AlignmentTree>emptyList(),
-          wordVar, wordActiveVar, null);
+      return new AlignmentTree(wordActiveVar, tree.getExpression(), tree.getNumAppliedArguments(),
+          Collections.<AlignmentTree>emptyList(), Collections.<AlignmentTree>emptyList(),
+          wordVar, wordActiveVar);
     } else {
       List<ExpressionTree> lefts = tree.getLeftChildren();
       List<ExpressionTree> rights = tree.getRightChildren();
@@ -222,8 +233,8 @@ public class AlignmentModel {
         orVar = nextOrVar;
       }
 
-      return new AlignmentTree(orVar, tree.getExpression(), tree.getNumAppliedArguments(), null,
-          new int[0], new int[0], newLefts, newRights, wordVar, wordActiveVar, null);
+      return new AlignmentTree(orVar, tree.getExpression(), tree.getNumAppliedArguments(), 
+          newLefts, newRights, wordVar, wordActiveVar);
     }
   }
 
@@ -259,340 +270,101 @@ public class AlignmentModel {
     return newFactorGraph.toBuilder();
   }
   
-  public static class AlignmentTree {
+  private static class AlignmentTree {
     private final VariableNumMap var;
     private final Expression expression;
 
     // Number of arguments of expression that get
     // applied in this tree.
     private final int numAppliedArguments;
-    // Type specification (number of arguments) of each
-    // argument that this function is applied to.
-    private final int[] appliedArgumentSpec;
-    
-    // Possible spans of the input sentence that this
-    // node of the tree could be aligned to.
-    private final int[] possibleSpanStarts;
-    private final int[] possibleSpanEnds;
     
     private final List<AlignmentTree> lefts;
     private final List<AlignmentTree> rights;
 
     private final VariableNumMap wordVar;
     private final VariableNumMap wordActiveVar;
-    private final String word;
 
     public AlignmentTree(VariableNumMap var, Expression expression, int numAppliedArguments,
-        int[] appliedArgumentSpec, int[] possibleSpanStarts, int[] possibleSpanEnds,
         List<AlignmentTree> lefts, List<AlignmentTree> rights,
-        VariableNumMap wordVar, VariableNumMap wordActiveVar, String word) {
+        VariableNumMap wordVar, VariableNumMap wordActiveVar) {
       this.var = Preconditions.checkNotNull(var);
       this.expression = Preconditions.checkNotNull(expression);
       
       this.numAppliedArguments = numAppliedArguments;
-      this.appliedArgumentSpec = appliedArgumentSpec;
-      this.possibleSpanStarts = possibleSpanStarts;
-      this.possibleSpanEnds = possibleSpanEnds;
 
       this.lefts = Preconditions.checkNotNull(lefts);
       this.rights = Preconditions.checkNotNull(rights);
       this.wordVar = wordVar;
       this.wordActiveVar = wordActiveVar;
-      this.word = word;
     }
 
     public VariableNumMap getVar() {
       return var;
     }
-    public VariableNumMap getWordActiveVar() {
-      return wordActiveVar;
-    }
-    public Expression getExpression() {
-      return expression;
-    }
-    public List<AlignmentTree> getLefts() {
-      return lefts;
-    }
-    public List<AlignmentTree> getRights() {
-      return rights;
-    }
-    public int[] getSpanStarts() {
-      return possibleSpanStarts;
-    }
-    public int[] getSpanEnds() {
-      return possibleSpanEnds;
-    }
 
-    public Multimap<String, AlignedExpression> getWordAlignments() {
-      Multimap<String, AlignedExpression> alignments = HashMultimap.create();
-      getWordAlignmentsHelper(alignments);
-      return alignments;
-    }
-
-    private void getWordAlignmentsHelper(Multimap<String, AlignedExpression> map) {
-      if (word != null && !word.equals(ParametricAlignmentModel.NULL_WORD)) {
-        map.put(word, new AlignedExpression(word, expression, numAppliedArguments,
-            appliedArgumentSpec));
-      }
-      
-      for (int i = 0; i < lefts.size(); i++) {
-        lefts.get(i).getWordAlignmentsHelper(map);
-        rights.get(i).getWordAlignmentsHelper(map);
-      }
-    }
-
-    public AlignmentTree generateCcgCategories() {
-      return generateCcgCategoriesHelper(Collections.<AlignmentTree>emptyList());
-    }
-    
-    private AlignmentTree generateCcgCategoriesHelper(List<AlignmentTree> argumentStack) {
-      if (lefts.size() == 0) {
-        int[] argumentTypeSpec = new int[argumentStack.size()];
-        for (int i = 0; i < argumentStack.size(); i++) {
-          int numUnboundArgs = 0;
-          Expression arg = argumentStack.get(i).getExpression();
-          if (arg instanceof LambdaExpression) {
-            numUnboundArgs = ((LambdaExpression) arg).getArguments().size();
-          }
-          argumentTypeSpec[argumentStack.size() - (1 + i)] = numUnboundArgs;
-        }
-
-        return new AlignmentTree(var, expression, numAppliedArguments, argumentTypeSpec,
-            possibleSpanStarts, possibleSpanEnds, lefts, rights, wordVar, wordActiveVar, word);
-        
-      } else {
-        Preconditions.checkArgument(lefts.size() == 1);
-        AlignmentTree left = lefts.get(0);
-        AlignmentTree right = rights.get(0);
-        
-        AlignmentTree newLeft = left.generateCcgCategoriesHelper(Collections.<AlignmentTree>emptyList());
-
-        List<AlignmentTree> newArgs = Lists.newArrayList(argumentStack);
-        newArgs.add(newLeft);        
-        AlignmentTree newRight = right.generateCcgCategoriesHelper(newArgs);
-        
-        return new AlignmentTree(var, expression, numAppliedArguments, null,
-            possibleSpanStarts, possibleSpanEnds, Arrays.asList(newLeft),
-            Arrays.asList(newRight), wordVar, wordActiveVar, word);
-      }
-    }
-
-    /*
-    private void generateCcgCategoriesHelper(List<AlignmentTree> argumentStack) {
-      if (lefts.size() == 0) {
-        
-        SyntacticCategory syntax = SyntacticCategory.parseFrom("N");
-        for (int i = argumentStack.size() - 1; i >= 0; i--) {
-          AlignmentTree arg = argumentStack.get(i);
-          boolean left = false;
-          boolean right = false;
-          
-          int[] argSpanStarts = arg.getSpanStarts();
-          int[] argSpanEnds = arg.getSpanEnds();
-          for (int j = 0; j < argSpanStarts.length; j++) {
-            for (int k = 0; k < possibleSpanStarts.length; k++) {
-              if (argSpanEnds[j] <= possibleSpanStarts[k]) {
-                left = true;
-              }
-              if (possibleSpanEnds[k] <= argSpanStarts[j]) {
-                right = true;
-              }
-            }
-          }
-
-          if (left) {
-            syntax = syntax.addArgument(SyntacticCategory.parseFrom("N"), Direction.RIGHT);
-          } else if (right) {
-            syntax = syntax.addArgument(SyntacticCategory.parseFrom("N"), Direction.LEFT);
-          } else {
-            System.out.println("Problem.");
-          }
-        }
-        System.out.println(syntax + " " + expression);
-        
-      } else {
-        Preconditions.checkArgument(lefts.size() == 1);
-        AlignmentTree left = lefts.get(0);
-        AlignmentTree right = rights.get(0);
-        
-        List<AlignmentTree> newArgs = Lists.newArrayList(argumentStack);
-        newArgs.add(left);
-        left.generateCcgCategoriesHelper(Collections.<AlignmentTree>emptyList());
-        right.generateCcgCategoriesHelper(newArgs);
-      }
-    }
-    */
-    
-    public AlignmentTree alignTreeToSentenceSpans(List<String> sentence) {
+    public AlignedExpressionTree decodeAlignment(Assignment assignment, List<String> sentence) {
       Multimap<String, Integer> wordIndexes = HashMultimap.create();
       for (int i = 0; i < sentence.size(); i++) {
         wordIndexes.put(sentence.get(i), i);
       }
-      return alignTreeToSentenceSpansHelper(wordIndexes);
+      return decodeAlignmentHelper(assignment, wordIndexes);
     }
-    
-    private AlignmentTree alignTreeToSentenceSpansHelper(Multimap<String, Integer> wordIndexes) {
-      if (lefts.size() == 0) {
-        // Terminal nodes align to individual words.
+
+    private AlignedExpressionTree decodeAlignmentHelper(Assignment assignment,
+        Multimap<String, Integer> wordIndexes) {
+      Preconditions.checkState(isActive(assignment));
+
+      if (isWordActive(assignment)) {
+        String word = (String) wordVar.assignmentToOutcome(assignment).get(0);
+        
+        // Get the spans in the sentence where this word appears 
         int[] spanStarts = Ints.toArray(wordIndexes.get(word));
         int[] spanEnds = Arrays.copyOf(spanStarts, spanStarts.length);
         for (int i = 0; i < spanEnds.length; i++) {
           spanEnds[i] += 1;
         }
 
-        return new AlignmentTree(var, expression, numAppliedArguments, appliedArgumentSpec,
-            spanStarts, spanEnds, lefts, rights, wordVar, wordActiveVar, word);
+        return AlignedExpressionTree.forTerminal(expression, numAppliedArguments,
+            appliedArgumentSpec, spanStarts, spanEnds, word);
       } else {
-        // This method assumes that the tree has already been pruned.
-        Preconditions.checkArgument(lefts.size() == 1);
-        AlignmentTree left = lefts.get(0).alignTreeToSentenceSpansHelper(wordIndexes);
-        AlignmentTree right = rights.get(0).alignTreeToSentenceSpansHelper(wordIndexes);
-        
-        List<Integer> spanStarts = Lists.newArrayList();
-        List<Integer> spanEnds = Lists.newArrayList();
-        for (int i = 0; i < left.possibleSpanStarts.length; i++) {
-          for (int j = 0; j < right.possibleSpanStarts.length; j++) {
-            int leftSpanStart = left.possibleSpanStarts[i];
-            int leftSpanEnd = left.possibleSpanEnds[i];
-            int rightSpanStart = right.possibleSpanStarts[j];
-            int rightSpanEnd = right.possibleSpanEnds[j];
-
-            // Spans can compose as long as they do not overlap.
-            if (leftSpanEnd <= rightSpanStart || rightSpanEnd <= leftSpanStart) {
-              spanStarts.add(Math.min(leftSpanStart, rightSpanStart));
-              spanEnds.add(Math.max(leftSpanEnd, rightSpanEnd));
-            }
-          }
-        }
-
-        return new AlignmentTree(var, expression, numAppliedArguments, appliedArgumentSpec, Ints.toArray(spanStarts),
-            Ints.toArray(spanEnds), Arrays.asList(left), Arrays.asList(right), wordVar, wordActiveVar, word);
-      }
-    }
-
-    public AlignmentTree pruneWithAssignment(Assignment assignment) {
-      if (var.assignmentToOutcome(assignment).equals(Arrays.asList("T"))) {
-
-        List<AlignmentTree> newLefts = Lists.newArrayList();
-        List<AlignmentTree> newRights = Lists.newArrayList();
+        AlignedExpressionTree newLeft = null;
+        AlignedExpressionTree newRight = null;
         for (int i = 0; i < lefts.size(); i++) {
-          AlignmentTree left = lefts.get(i).pruneWithAssignment(assignment);
-          AlignmentTree right = rights.get(i).pruneWithAssignment(assignment);
-
-          Preconditions.checkState((left == null && right == null) ||
-              (left != null && right != null));
-          
-          if (left != null) {
-            newLefts.add(left);
-            newRights.add(right);
+          if (lefts.get(i).isActive(assignment)) {
+            // Only a single child of a node should be active. 
+            Preconditions.checkState(newLeft == null);
+            newLeft = lefts.get(i).decodeAlignmentHelper(assignment, wordIndexes);
+            newRight = rights.get(i).decodeAlignmentHelper(assignment, wordIndexes);
           }
         }
-        String word = (String) wordVar.assignmentToOutcome(assignment).get(0);
-        return new AlignmentTree(var, expression, numAppliedArguments, appliedArgumentSpec, possibleSpanStarts,
-            possibleSpanEnds, newLefts, newRights, wordVar, wordActiveVar, word);
-      } else {
-        return null;
+        Preconditions.checkState(newLeft != null);
+
+        return AlignedExpressionTree.forNonterminal(expression, numAppliedArguments,
+            appliedArgumentSpec, newLeft, newRight);
       }
     }
     
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      toStringHelper(this, sb, 0);
-      return sb.toString();
+    /**
+     * Returns {@code true} if this tree node is part of the
+     * alignment given by {@code assignment}.
+     * 
+     * @param assignment
+     * @return
+     */
+    public boolean isActive(Assignment assignment) {
+      return var.assignmentToOutcome(assignment).equals(Arrays.asList("T"));
     }
-
-    private static void toStringHelper(AlignmentTree tree, StringBuilder sb, int depth) {
-      for (int i = 0 ; i < depth; i++) {
-        sb.append(" ");
-      }
-      sb.append(tree.expression);
-      sb.append(" ");
-      sb.append(tree.numAppliedArguments);
-      sb.append(" ");
-      for (int i = 0; i < tree.possibleSpanStarts.length; i++) {
-        sb.append("[");
-        sb.append(tree.possibleSpanStarts[i]);
-        sb.append(",");
-        sb.append(tree.possibleSpanEnds[i]);
-        sb.append("]");
-      }
-      
-      if (tree.word != ParametricAlignmentModel.NULL_WORD) {
-        sb.append(" -> \"");
-        sb.append(tree.word);
-        sb.append("\"");
-      }
-      sb.append("\n");
-
-      for (int i = 0; i < tree.lefts.size(); i++) {
-        toStringHelper(tree.lefts.get(i), sb, depth + 2);      
-        toStringHelper(tree.rights.get(i), sb, depth + 2);
-      }
-    }
-  }
-  
-  public static class AlignedExpression {
-    private final String word;
-    private final Expression expression;
-    private final int numAppliedArgs;
-    private final int[] argTypes;
-
-    public AlignedExpression(String word, Expression expression, int numAppliedArgs,
-        int[] argTypes) {
-      this.word = Preconditions.checkNotNull(word);
-      this.expression = Preconditions.checkNotNull(expression);
-      this.numAppliedArgs = numAppliedArgs;
-      this.argTypes = argTypes;
-    }
-
-    public String getWord() {
-      return word;
-    }
-
-    public Expression getExpression() {
-      return expression;
-    }
-
-    public int getNumAppliedArgs() {
-      return numAppliedArgs;
-    }
-
-    public int[] getArgTypes() {
-      return argTypes;
-    }
-
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ((expression == null) ? 0 : expression.hashCode());
-      result = prime * result + numAppliedArgs;
-      result = prime * result + ((word == null) ? 0 : word.hashCode());
-      return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj)
-        return true;
-      if (obj == null)
-        return false;
-      if (getClass() != obj.getClass())
-        return false;
-      AlignedExpression other = (AlignedExpression) obj;
-      if (expression == null) {
-        if (other.expression != null)
-          return false;
-      } else if (!expression.equals(other.expression))
-        return false;
-      if (numAppliedArgs != other.numAppliedArgs)
-        return false;
-      if (word == null) {
-        if (other.word != null)
-          return false;
-      } else if (!word.equals(other.word))
-        return false;
-      return true;
+    
+    /**
+     * Returns {@code true} if this tree node is part of the 
+     * alignment given by {@code assignment} and if this node
+     * is aligned to a word in the sentence (i.e., is a terminal).
+     * 
+     * @param assignment
+     * @return
+     */
+    public boolean isWordActive(Assignment assignment) {
+      return wordActiveVar.assignmentToOutcome(assignment).equals(Arrays.asList("T"));
     }
   }
 }

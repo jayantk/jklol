@@ -24,12 +24,21 @@ import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 /**
- * TODO:
- * 1. Smoothing across all outcomes (no sparsity)
- * 2. Penalize complex expressions
- *   A. 1/n generation of all "ungenerated" expressions
- *   B. Complexity score for each expression that adds / multiplies over tree
- *   
+ * Model family for a word alignment-based lexicon induction 
+ * algorithm. This class implements methods for 
+ * creating {@code AlignmentModel} instances from parameter 
+ * vectors. 
+ * <p>
+ * Each instance of an alignment model is a factor graph that
+ * aligns words in a sentence with logical forms that are 
+ * decompositions of a target logical form. A tree structured
+ * constraint on the logical form decompositions selects a
+ * subset of these logical forms as active, and enforces that
+ * the selected logical forms can be composed to produce the 
+ * target. Words are aligned to each of the selected logical
+ * forms using a Naive Bayes classifier that generates the
+ * logical form's feature vector. 
+ *  
  * @author jayant
  *
  */
@@ -72,6 +81,21 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
     this.useTreeConstraint = useTreeConstraint;
   }
 
+  /**
+   * Creates a new family of word alignment models. 
+   *   
+   * @param examples training data that will be used to
+   * train this model. Used to define the space of possible 
+   * logical forms and feature vectors.
+   * @param useTreeConstraint if {@code true}, use the tree
+   * structured logical form decomposition constraint. If
+   * {@code false}, every possible decomposition of the target
+   * logical form is aligned to a word.
+   * @param featureVectorGenerator function mapping logical
+   * forms to feature vectors that are used for the word-logical
+   * form alignment.
+   * @return
+   */
   public static ParametricAlignmentModel buildAlignmentModel(
       Collection<AlignmentExample> examples, boolean useTreeConstraint,
       FeatureVectorGenerator<Expression> featureVectorGenerator) {

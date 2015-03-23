@@ -43,7 +43,6 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
     Preconditions.checkArgument(childVars.getDiscreteVariables().size() == childVars.size());
     this.parentVars = parentVars;
     this.childVars = childVars;
-    Preconditions.checkArgument(childVars.size() == 1);
 
     this.sparsityPattern = Preconditions.checkNotNull(sparsityPattern);
     this.constantPattern = Preconditions.checkNotNull(constantPattern);

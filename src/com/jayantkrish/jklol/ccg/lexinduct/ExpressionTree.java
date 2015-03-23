@@ -296,6 +296,7 @@ public class ExpressionTree {
     return sum;
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     toStringHelper(this, sb, 0);

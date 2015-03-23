@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -84,6 +85,30 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
     statisticsList.add(nonterminalFactor.getNewSufficientStatistics());
     statisticsList.add(terminalFactor.getNewSufficientStatistics());
     return new ListSufficientStatistics(STATISTIC_NAMES, statisticsList);
+  }
+  
+  public void incrementSufficientStatisticsFromParseChart(SufficientStatistics statistics,
+      SufficientStatistics currentParameters, CfgParseChart chart, double count,
+      double partitionFunction) {
+    Preconditions.checkArgument(statistics instanceof ListSufficientStatistics);
+    ListSufficientStatistics statisticsList = (ListSufficientStatistics) statistics;
+    Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
+    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
+    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
+
+    Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
+    ListSufficientStatistics parameterList = (ListSufficientStatistics) currentParameters;
+    Preconditions.checkArgument(parameterList.getStatistics().size() == 2);
+    SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(0);
+    SufficientStatistics terminalParameters = parameterList.getStatistics().get(1);
+
+    Factor binaryRuleDistribution = chart.getBinaryRuleExpectations();
+    nonterminalFactor.incrementSufficientStatisticsFromMarginal(nonterminalStatistics,
+        nonterminalParameters, binaryRuleDistribution, Assignment.EMPTY, count, partitionFunction);
+    
+    Factor terminalRuleDistribution = chart.getTerminalRuleExpectations();
+    terminalFactor.incrementSufficientStatisticsFromMarginal(terminalStatistics,
+        terminalParameters, terminalRuleDistribution, Assignment.EMPTY, count, partitionFunction);
   }
 
   public void incrementSufficientStatisticsFromParseTree(SufficientStatistics statistics,

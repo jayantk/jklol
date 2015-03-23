@@ -159,6 +159,18 @@ public class CfgParser implements Serializable {
         parentVar.outcomeArrayToAssignment(root));
     return marginal(chart, terminals, rootFactor);
   }
+  
+  /**
+   * Computes the marginal distribution over CFG parses given terminals.
+   * 
+   * @param terminals
+   * @param useSumProduct
+   * @return
+   */
+  public CfgParseChart parseMarginal(List<?> terminals, boolean useSumProduct) {
+    Factor rootDist = TableFactor.unity(parentVar);
+    return parseMarginal(terminals, rootDist, useSumProduct);
+  }
 
   /**
    * Compute the distribution over CFG entries, the parse root, and the
@@ -365,8 +377,7 @@ public class CfgParser implements Serializable {
 
   // ////////////////////////////////////////////////////////////////////////////////
   // Methods for computing partial parse distributions, intended mostly for
-  // running
-  // the CFG parser as part of a graphical model.
+  // running the CFG parser as part of a graphical model.
   // ////////////////////////////////////////////////////////////////////////////////
 
   /**

@@ -8,25 +8,15 @@ import junit.framework.TestCase;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.evaluation.Example;
-import com.jayantkrish.jklol.evaluation.FactorGraphPredictor.SimpleFactorGraphPredictor;
-import com.jayantkrish.jklol.evaluation.Predictor;
-import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
-import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.LoglikelihoodOracle;
-import com.jayantkrish.jklol.training.OracleAdapter;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Regression test for performing parameter estimation for a context-free grammar using 
@@ -38,7 +28,7 @@ public class ParametricCfgParserTest extends TestCase {
   
   ParametricCfgParser cfgFactor;
   VariableNumMap parent, left, right, terminal, ruleType;
-  List<Example<List<Object>, CfgParseTree>> trainingData;
+  List<CfgExample> trainingData;
   
   private static final String[] NONTERMINALS = new String[] {"S", "N", "V", "NP", "VP", "DT", "JJ"};
   private static final String[] TERMINALS = new String[] {"the", "black", "cat", "jumped", "drank", "fence", "<OOV>"};
@@ -88,7 +78,7 @@ public class ParametricCfgParserTest extends TestCase {
       CfgParseTree outputTree = parseTreeFromString(TRAINING_DATA[i]);
       List<Object> terminals = outputTree.getTerminalProductions();
 
-      trainingData.add(Example.create(terminals, outputTree));
+      trainingData.add(new CfgExample(terminals, outputTree));
     }
   }
   
@@ -126,30 +116,23 @@ public class ParametricCfgParserTest extends TestCase {
   }
   
   public void testLogLinearTraining() {
-    Predictor<Assignment, Assignment> predictor = runTrainerTest(new LoglikelihoodOracle(cfgModel, new JunctionTree())); 
+    CfgParser parser= runTrainerTest(cfgFactor, new CfgLoglikelihoodOracle(cfgFactor)); 
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       CfgParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));
-      Assignment actual = predictor.getBestPrediction(x.outcomeArrayToAssignment(
-          parseTreeFromString(TEST_DATA[i]).getTerminalProductions())).getBestPrediction();
-      assertEquals(expected, actual.getOnlyValue());
+      CfgParseTree predicted = parser.beamSearch(expected.getTerminalProductions()).get(0);
+      assertEquals(expected, predicted);
     }
   }
-  
-  private Predictor<Assignment, Assignment> runTrainerTest(
-      GradientOracle<DynamicFactorGraph, Example<DynamicAssignment, DynamicAssignment>> oracle) {
-    GradientOracle<DynamicFactorGraph, Example<Assignment, Assignment>> adaptedOracle = 
-        OracleAdapter.createAssignmentAdapter(oracle);
 
-    StochasticGradientTrainer trainer = new StochasticGradientTrainer(5, 
-        TRAINING_DATA.length, 1.0, true, false, new DefaultLogFunction());
+  private CfgParser runTrainerTest(ParametricCfgParser cfgModel,
+      GradientOracle<CfgParser, CfgExample> oracle) {
 
-    SufficientStatistics parameters = trainer.train(adaptedOracle,
-        adaptedOracle.initializeGradient(), trainingData);
-    FactorGraph trainedModel = cfgModel.getModelFromParameters(parameters)
-        .getFactorGraph(DynamicAssignment.EMPTY);
-    SimpleFactorGraphPredictor predictor = new SimpleFactorGraphPredictor(
-        trainedModel, y, new JunctionTree());
-    return predictor;
+    StochasticGradientTrainer trainer = new StochasticGradientTrainer(
+        10 * TRAINING_DATA.length, 1, 1.0, true, false, new DefaultLogFunction());
+
+    SufficientStatistics parameters = trainer.train(oracle,
+        oracle.initializeGradient(), trainingData);
+    return cfgModel.getModelFromParameters(parameters);
   }
 }

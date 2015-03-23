@@ -2,14 +2,19 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 
@@ -20,6 +25,20 @@ public class AlignmentModelTrainingTest extends TestCase {
       {"in plano", "(lambda x (in x plano))"}};
 
   VariableNumMap wordVarPattern, expressionVarPattern;
+  
+  List<AlignmentExample> examples;
+  FeatureVectorGenerator<Expression> featureGenerator;
+  
+  public void setUp() {
+    examples = parseData(dataSet1);
+    
+    Set<Expression> allExpressions = Sets.newHashSet();
+    for (AlignmentExample example : examples) {
+      example.getTree().getAllExpressions(allExpressions);
+    }
+    featureGenerator = DictionaryFeatureVectorGenerator.createFromData(allExpressions,
+        new ExpressionTokenFeatureGenerator(), false);
+  }
   
   public static List<AlignmentExample> parseData(String[][] data) {
     List<AlignmentExample> examples = Lists.newArrayList();
@@ -35,8 +54,7 @@ public class AlignmentModelTrainingTest extends TestCase {
   }
 
   public void testTrainingSimple() {
-    List<AlignmentExample> examples = parseData(dataSet1);
-    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, false, true, );
+    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, false, featureGenerator);
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);

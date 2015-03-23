@@ -46,7 +46,6 @@ public class AlignmentLexiconInduction extends AbstractCli {
   
   private OptionSpec<Double> smoothingParam;
   private OptionSpec<Void> noTreeConstraint;
-  private OptionSpec<Void> sparseCpt;
   private OptionSpec<Void> printSearchSpace;
   
   public AlignmentLexiconInduction() {
@@ -63,7 +62,6 @@ public class AlignmentLexiconInduction extends AbstractCli {
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
     noTreeConstraint = parser.accepts("noTreeConstraint");
-    sparseCpt = parser.accepts("sparseCpt");
     printSearchSpace = parser.accepts("printSearchSpace");
   }
 
@@ -81,7 +79,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     examples = applyFeatureVectorGenerator(vectorGenerator, examples);
 
     ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(
-        examples, !options.has(noTreeConstraint), options.has(sparseCpt), vectorGenerator);
+        examples, !options.has(noTreeConstraint), vectorGenerator);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(options.valueOf(smoothingParam));
     

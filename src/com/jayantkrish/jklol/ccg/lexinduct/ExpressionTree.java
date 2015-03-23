@@ -52,6 +52,11 @@ public class ExpressionTree {
   public static ExpressionTree fromExpression(Expression expression) {
     return fromExpression(expression, 0, Collections.<ConstantExpression>emptySet());
   }
+  
+  public static ExpressionTree fromExpression(Expression expression,
+      Set<ConstantExpression> constantsThatDontCount) {
+    return fromExpression(expression, 0, constantsThatDontCount);
+  }
 
   /**
    * Decompose the body of an expression into pieces that combine using

@@ -73,7 +73,7 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
   }
 
   public static ParametricAlignmentModel buildAlignmentModel(
-      Collection<AlignmentExample> examples, boolean useTreeConstraint, boolean sparseCpt,
+      Collection<AlignmentExample> examples, boolean useTreeConstraint,
       FeatureVectorGenerator<Expression> featureVectorGenerator) {
     Set<Expression> allExpressions = Sets.newHashSet();
     Set<String> words = Sets.newHashSet();
@@ -107,41 +107,8 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
     VariableNumMap featureVarPattern = pattern.getVariablesByName(FEATURE_VAR_PATTERN);
     VariableNumMap wordVarPattern = pattern.getVariablesByName(WORD_VAR_PATTERN);
 
-    /*
-    TableFactor sparsityFactor = null;
-    if (sparseCpt) {
-      // Only map each word to the set of logical forms that it was observed
-      // with in the training data.
-      TableFactorBuilder sparsityBuilder = new TableFactorBuilder(wordVarPattern.union(expressionVarPattern), 
-          SparseTensorBuilder.getFactory());
-      Set<Expression> expressions = Sets.newHashSet();
-      for (AlignmentExample example : examples) {
-        expressions.clear();
-        example.getTree().getAllExpressions(expressions);
-        for (Expression expression : expressions) {
-          for (String word : example.getWords()) {
-            sparsityBuilder.setWeight(1.0, expression, word);
-          }
-        }
-      }
-      sparsityFactor = sparsityBuilder.build();
-    } else {
-      sparsityFactor = TableFactor.unity(wordVarPattern.union(expressionVarPattern));
-    }
-
-    // TODO: can divide by allExpressions.size() to encourage more
-    // mappings.
-    DiscreteFactor constantFactor = TableFactor.unity(expressionVarPattern)
-        .outerProduct(TableFactor.pointDistribution(wordVarPattern,
-            wordVarPattern.outcomeArrayToAssignment(NULL_WORD)))
-            .product(1.0);
-    
-    SparseCptTableFactor factor = new SparseCptTableFactor(wordVarPattern,
-        expressionVarPattern, sparsityFactor, constantFactor);
-    builder.addFactor("word-expression-factor", factor, VariableNumPattern
-        .fromTemplateVariables(pattern, VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
-        */
-    
+    // Words generate the feature vector of each expression using a multinomial
+    // naive bayes model.  
     ParametricLinearClassifierFactor factor = new ParametricLinearClassifierFactor(featureVarPattern,
         wordVarPattern, VariableNumMap.EMPTY, featureVectorGenerator.getFeatureDictionary(),
         wordVarPattern.outcomeArrayToAssignment(NULL_WORD), true);

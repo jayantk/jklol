@@ -58,7 +58,7 @@ public class DynamicInstantiationTest extends PerformanceTestCase {
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
     ParametricLinearClassifierFactor f = new ParametricLinearClassifierFactor(x, y, VariableNumMap.EMPTY, 
-        DiscreteVariable.sequence("foo", 4), false); 
+        DiscreteVariable.sequence("foo", 4), null, false); 
     builder.addFactor("f1", f, VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY));
     platePattern = VariableNamePattern.fromTemplateVariables(all, VariableNumMap.EMPTY);
 

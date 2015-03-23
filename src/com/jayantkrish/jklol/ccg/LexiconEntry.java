@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg;
 
 import java.util.List;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -96,6 +97,10 @@ public class LexiconEntry {
    */
   public CcgCategory getCategory() {
     return category;
+  }
+
+  public String toCsvString() {
+    return "\"" + Joiner.on(" ").join(words) + "\"," + category.toCsvString();  
   }
 
   @Override

@@ -10,6 +10,9 @@ Fixes:
   - use EmOracle for stepwise em and incremental em
   - wtf is abstract trainer for?
 
+Refactoring:
+- clean up grammar generation in CCG parser. Lots of too verbose code.
+
 Dependencies:
 - get rid of GWT / Jackson
 - Add BLAS for faster math

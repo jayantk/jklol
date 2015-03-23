@@ -56,7 +56,7 @@ public class SequenceModelTest extends TestCase {
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
     ParametricLinearClassifierFactor f = new ParametricLinearClassifierFactor(x, y, VariableNumMap.EMPTY, 
-        DiscreteVariable.sequence("foo", 4), false);
+        DiscreteVariable.sequence("foo", 4), null, false);
     builder.addFactor("classifier", f, VariableNumPattern.fromTemplateVariables(all,
         VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
 

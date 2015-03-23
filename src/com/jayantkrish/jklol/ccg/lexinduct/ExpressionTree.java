@@ -13,15 +13,22 @@ import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.tensor.Tensor;
 
 public class ExpressionTree {
   private final Expression rootExpression;
+  // Number of arguments of expression that get
+  // applied in this tree.
+  private final int numAppliedArguments;
+
+  private final Tensor expressionFeatures;
   
   private final List<ExpressionTree> lefts;
   private final List<ExpressionTree> rights;
 
-  public ExpressionTree(Expression rootExpression, List<ExpressionTree> lefts,
-      List<ExpressionTree> rights) {
+  public ExpressionTree(Expression rootExpression, int numAppliedArguments,
+      Tensor expressionFeatures, List<ExpressionTree> lefts, List<ExpressionTree> rights) {
     // Canonicalize variable names.
     rootExpression = rootExpression.simplify();
     if (rootExpression instanceof LambdaExpression) {
@@ -34,6 +41,8 @@ public class ExpressionTree {
       rootExpression = lambdaExpression.renameVariables(args, newArgs);
     }
     this.rootExpression = Preconditions.checkNotNull(rootExpression);
+    this.numAppliedArguments = numAppliedArguments;
+    this.expressionFeatures = expressionFeatures;
 
     Preconditions.checkArgument(lefts.size() == rights.size());
     this.lefts = ImmutableList.copyOf(lefts);
@@ -41,9 +50,9 @@ public class ExpressionTree {
   }
 
   public static ExpressionTree fromExpression(Expression expression) {
-    return fromExpression(expression, Collections.<ConstantExpression>emptySet());
+    return fromExpression(expression, 0, Collections.<ConstantExpression>emptySet());
   }
-  
+
   /**
    * Decompose the body of an expression into pieces that combine using
    * function application to produce a tree.
@@ -51,7 +60,7 @@ public class ExpressionTree {
    * @param expression
    * @return
    */
-  public static ExpressionTree fromExpression(Expression expression,
+  public static ExpressionTree fromExpression(Expression expression, int numAppliedArguments,
       Set<ConstantExpression> constantsThatDontCount) {
     List<ConstantExpression> args = Collections.emptyList();
     expression = expression.simplify();
@@ -122,18 +131,19 @@ public class ExpressionTree {
           continue;
         }
 
-        ExpressionTree left = fromExpression(leftExpression, constantsThatDontCount);
-        ExpressionTree right = fromExpression(rightExpression, constantsThatDontCount);
+        ExpressionTree left = fromExpression(leftExpression, 0, constantsThatDontCount);
+        ExpressionTree right = fromExpression(rightExpression, numAppliedArguments + 1, constantsThatDontCount);
         lefts.add(left);
         rights.add(right);
       }
 
-      doGeoquery(expression, lefts, rights, constantsThatDontCount);
+      doGeoquery(expression, numAppliedArguments, lefts, rights, constantsThatDontCount);
     }
-    return new ExpressionTree(expression, lefts, rights);
+    return new ExpressionTree(expression, numAppliedArguments, null, lefts, rights);
   }
   
-  private static void doGeoquery(Expression expression, List<ExpressionTree> lefts, List<ExpressionTree> rights,
+  private static void doGeoquery(Expression expression, int numAppliedArguments,
+      List<ExpressionTree> lefts, List<ExpressionTree> rights,
       Set<ConstantExpression> constantsThatDontCount) {
     List<ConstantExpression> args = Collections.emptyList();
     Expression body = expression.simplify();
@@ -202,8 +212,8 @@ public class ExpressionTree {
                 continue;
               }
         
-              ExpressionTree left = fromExpression(leftExpression, constantsThatDontCount);
-              ExpressionTree right = fromExpression(rightExpression, constantsThatDontCount);
+              ExpressionTree left = fromExpression(leftExpression, 0, constantsThatDontCount);
+              ExpressionTree right = fromExpression(rightExpression, numAppliedArguments + 1, constantsThatDontCount);
               lefts.add(left);
               rights.add(right);
             }
@@ -215,6 +225,14 @@ public class ExpressionTree {
 
   public Expression getExpression() {
     return rootExpression;
+  }
+  
+  public int getNumAppliedArguments() {
+    return numAppliedArguments;
+  }
+  
+  public Tensor getExpressionFeatures() {
+    return expressionFeatures;
   }
 
   public boolean hasChildren() {
@@ -242,6 +260,26 @@ public class ExpressionTree {
       lefts.get(i).getAllExpressions(accumulator);
       rights.get(i).getAllExpressions(accumulator);
     }
+  }
+  
+  /**
+   * Returns a new expression tree with the same structure as this one,
+   * where {@code generator} has been applied to generate feature vectors
+   * for each expression in the tree.
+   *
+   * @param generator
+   * @return
+   */
+  public ExpressionTree applyFeatureVectorGenerator(FeatureVectorGenerator<Expression> generator) {
+    List<ExpressionTree> newLefts = Lists.newArrayList();
+    List<ExpressionTree> newRights = Lists.newArrayList();
+    for (int i = 0; i < lefts.size(); i++) {
+      newLefts.add(lefts.get(i).applyFeatureVectorGenerator(generator));
+      newRights.add(rights.get(i).applyFeatureVectorGenerator(generator));
+    }
+
+    return new ExpressionTree(rootExpression, numAppliedArguments,
+        generator.apply(rootExpression), newLefts, newRights);
   }
 
   public int size() {

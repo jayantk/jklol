@@ -254,7 +254,7 @@ public class TaggerUtils {
     VariableNumMap wordVectorVar = classifierVars.getVariablesByName(INPUT_FEATURES_PATTERN);
     VariableNumMap posVar = classifierVars.getVariablesByName(OUTPUT_PATTERN);
     ParametricLinearClassifierFactor wordClassifier = new ParametricLinearClassifierFactor(wordVectorVar, posVar,
-        VariableNumMap.EMPTY, featureDictionary, false);
+        VariableNumMap.EMPTY, featureDictionary, null, false);
 
     // Create a constant factor for encoding label restrictions.
     VariableNumMap restrictionVars = new VariableNumMap(Ints.asList(2, 4),

@@ -42,13 +42,20 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
   // Names of the features. Also defines the expected dimensionality 
   // of the input feature vector.
   private final DiscreteVariable featureDictionary;
+  
+  // Assignment to outputVars for a class whose parameters will be fixed
+  // at zero. This is useful for training a binary classifier and getting
+  // a single parameter vector (instead of two).
+  private final Assignment defaultClass;
+
+  private final boolean naiveBayes;
 
   // Size parameters for the sufficient statistics tensor. 
   private final int[] dimensionNums;
   private final int[] dimensionSizes;
   private final VariableNumMap sufficientStatisticVars;
   
-  private final boolean naiveBayes;
+  private final Tensor nonDefaultClassIndicator;
 
   /**
    * Create a factor which represents a conditional distribution over outputVars
@@ -59,12 +66,14 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
    * @param outputVars
    * @param conditionalVars
    * @param featureDictionary
+   * @param defaultClass
    * @param naiveBayes if {@code true}, this factor represents a parametric 
    * family of multinomial Naive Bayes classifiers. If {@code false},
    * it represents a family of discriminative linear classifiers (e.g., SVMs).  
    */
   public ParametricLinearClassifierFactor(VariableNumMap inputVar, VariableNumMap outputVars, 
-      VariableNumMap conditionalVars, DiscreteVariable featureDictionary, boolean naiveBayes) {
+      VariableNumMap conditionalVars, DiscreteVariable featureDictionary, Assignment defaultClass,
+      boolean naiveBayes) {
     super(inputVar.union(outputVars));
     Preconditions.checkArgument(inputVar.size() == 1);
     Preconditions.checkArgument(outputVars.getDiscreteVariables().size() == outputVars.size());
@@ -77,7 +86,11 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
     this.varNums = getVars().getVariableNumsArray();
 
     this.featureDictionary = featureDictionary;
-    
+    Preconditions.checkArgument(defaultClass == null || defaultClass.containsAll(outputVarNums));
+    this.defaultClass = defaultClass;
+
+    this.naiveBayes = naiveBayes;
+
     this.dimensionNums = inputVar.union(outputVars).getVariableNumsArray();
     Preconditions.checkArgument(dimensionNums[0] == inputVar.getOnlyVariableNum());
         
@@ -92,7 +105,14 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
         inputVar.getOnlyVariableName(), featureDictionary);
     this.sufficientStatisticVars = featureVar.union(outputVars);
 
-    this.naiveBayes = naiveBayes;
+    if (defaultClass != null) {
+      DenseTensorBuilder builder = new DenseTensorBuilder(outputVarNums, outputVars.getVariableSizes());
+      builder.increment(1.0);
+      builder.incrementEntry(-1, outputVars.assignmentToIntArray(defaultClass));
+      nonDefaultClassIndicator = builder.buildNoCopy();
+    } else {
+      nonDefaultClassIndicator = null;
+    }
   }
 
   public DiscreteVariable getFeatureDictionary() {
@@ -108,6 +128,10 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) { 
     Tensor weightTensor = getWeightTensorFromStatistics(parameters);
+    if (naiveBayes) {
+      weightTensor = weightTensor.elementwiseExp();
+    }
+
     VariableNumMap featureVariable = VariableNumMap.singleton(inputVar.getOnlyVariableNum(), 
         inputVar.getVariableNames().get(0) + "_features", featureDictionary);
     TableFactor parameterFactor = new TableFactor(featureVariable.union(outputVars), 
@@ -174,12 +198,18 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
   }
 
   private Tensor getWeightTensorFromStatistics(SufficientStatistics stats) {
+    Tensor weightTensor = null;
     if (naiveBayes) {
       Tensor weights = ((TensorSufficientStatistics) stats).get();
       Tensor normalization = weights.sumOutDimensions(inputVarNums);
-      return weights.elementwiseProduct(normalization.elementwiseInverse()).elementwiseLog();
+      weightTensor = weights.elementwiseProduct(normalization.elementwiseInverse()).elementwiseLog();
     } else {
-      return ((TensorSufficientStatistics) stats).get();
+      weightTensor = ((TensorSufficientStatistics) stats).get();
     }
+    
+    if (defaultClass != null) {
+      weightTensor = weightTensor.elementwiseProduct(nonDefaultClassIndicator);
+    }
+    return weightTensor;
   }
 }

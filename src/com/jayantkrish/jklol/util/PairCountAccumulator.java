@@ -9,6 +9,7 @@ import java.util.Set;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
 
 /**
@@ -54,6 +55,21 @@ public class PairCountAccumulator<A, B> implements Serializable {
     counts.get(first).put(second, amount + counts.get(first).get(second));
     conditionalCounts.put(first, amount + conditionalCounts.get(first));
     totalCount += amount;
+  }
+  
+  /**
+   * Increments the count of every outcome (key/value pair) in
+   * {@code outcomes} by {@code amount}.
+   *  
+   * @param outcomes
+   * @param amount
+   */
+  public void incrementOutcomes(Multimap<A, B> outcomes, double amount) {
+    for (A key : outcomes.keySet()) {
+      for (B value : outcomes.get(key)) {
+        incrementOutcome(key, value, amount);
+      }
+    }
   }
 
   /**

@@ -25,7 +25,7 @@ public class SyntacticCategory implements Serializable {
   private static final long serialVersionUID = 1L;
 
   public enum Direction {
-    LEFT("\\"), RIGHT("/");
+    LEFT("\\"), RIGHT("/"), BOTH("|");
 
     private final String slash;
 
@@ -119,7 +119,8 @@ public class SyntacticCategory implements Serializable {
     int minParenDepthIndex = -1;
 
     while (index < typeString.length()) {
-      if (typeString.charAt(index) == '\\' || typeString.charAt(index) == '/') {
+      if (typeString.charAt(index) == '\\' || typeString.charAt(index) == '/'
+          || typeString.charAt(index) == '|') {
         if (parenDepth < minParenDepth) {
           minParenDepth = parenDepth;
           minParenDepthIndex = index;
@@ -184,6 +185,8 @@ public class SyntacticCategory implements Serializable {
         direction = Direction.LEFT;
       } else if (directionString.startsWith("/")) {
         direction = Direction.RIGHT;
+      } else if (directionString.startsWith("|")) {
+        direction = Direction.BOTH;
       } else {
         throw new IllegalArgumentException("Invalid argument direction: " + directionString);
       }

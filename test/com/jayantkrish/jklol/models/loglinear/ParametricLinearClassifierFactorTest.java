@@ -41,10 +41,10 @@ public class ParametricLinearClassifierFactorTest extends TestCase {
     both = input.union(output);
     
     factor = new ParametricLinearClassifierFactor(input, output, VariableNumMap.EMPTY, 
-        DiscreteVariable.sequence("foo", 5), false);
+        DiscreteVariable.sequence("foo", 5), output.outcomeArrayToAssignment("D"), false);
     
     naiveBayes = new ParametricLinearClassifierFactor(input, output, VariableNumMap.EMPTY, 
-        DiscreteVariable.sequence("foo", 5), true);
+        DiscreteVariable.sequence("foo", 5), null, true);
     
     featureVectors = Lists.newArrayList();
     featureVectors.add(SparseTensor.vector(0, 5, new double[] {1, 2, 0, 0, 0}));
@@ -71,6 +71,7 @@ public class ParametricLinearClassifierFactorTest extends TestCase {
     assertEquals(Math.exp(2.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("B")), 0.001);
     assertEquals(Math.exp(5.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("A")), 0.001);
     assertEquals(Math.exp(0.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("C")), 0.001);
+    assertEquals(Math.exp(0.0), conditional.getUnnormalizedProbability(output.outcomeArrayToAssignment("D")), 0.001);
 
     // Try incrementing the sufficient statistics with a marginal distribution.
     double partitionFunction = conditional.getTotalUnnormalizedProbability();

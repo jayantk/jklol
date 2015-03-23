@@ -268,6 +268,23 @@ public class CcgCategory implements Serializable {
     }
     return unfilledDependencies;
   }
+  
+  public String toCsvString() {
+    List<String> parts = Lists.newArrayList();
+    parts.add(syntax.toString());
+    parts.add(logicalForm != null ? logicalForm.toString() : "");
+    for (int i = 0; i < variableAssignments.size(); i++) {
+      for (String assignment : variableAssignments.get(i)) {
+        parts.add(i + " " + assignment);
+      }
+    }
+    
+    for (int i = 0; i < subjects.size(); i++) {
+      parts.add(subjects.get(i) + " " + argumentNumbers.get(i) + " " + objects.get(i));
+    }
+
+    return CsvParser.defaultParser().toCsv(parts);
+  }
 
   @Override
   public String toString() {

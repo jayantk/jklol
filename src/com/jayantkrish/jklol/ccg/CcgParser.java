@@ -502,23 +502,29 @@ public class CcgParser implements Serializable {
 
   private static void appendApplicationRules(HeadedSyntacticCategory functionCat, HeadedSyntacticCategory argumentCat,
       DiscreteVariable syntaxType, Set<List<Object>> validOutcomes, Set<Combinator> combinators) {
+
     if (!functionCat.isAtomic() && functionCat.getArgumentType().isUnifiableWith(argumentCat)) {
       Direction direction = functionCat.getSyntax().getDirection();
+      Preconditions.checkState(direction == Direction.RIGHT || direction == Direction.LEFT
+          || direction == Direction.BOTH, "Unsupported direction %s", direction);
+
       Combinator combinator;
       List<Object> outcome;
-      if (direction.equals(Direction.LEFT)) {
+      if (direction.equals(Direction.LEFT) || direction.equals(Direction.BOTH)) {
         combinator = getApplicationCombinator(functionCat, argumentCat, true, syntaxType);
         outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
-      } else if (direction.equals(Direction.RIGHT)) {
+
+        combinators.add(combinator);
+        validOutcomes.add(outcome);
+      } 
+
+      if (direction.equals(Direction.RIGHT) || direction.equals(Direction.BOTH)) {
         combinator = getApplicationCombinator(functionCat, argumentCat, false, syntaxType);
         outcome = Arrays.<Object> asList(functionCat, argumentCat, combinator);
-      } else {
-        // Forward compatible error message, for handling
-        // Direction.BOTH if added.
-        throw new IllegalArgumentException("Unknown direction type: " + direction);
+        
+        combinators.add(combinator);
+        validOutcomes.add(outcome);
       }
-      validOutcomes.add(outcome);
-      combinators.add(combinator);
     }
   }
 
@@ -539,9 +545,12 @@ public class CcgParser implements Serializable {
         // that fails, to try the left word.
         if (functionCat.getArgumentType().isUnifiableWith(returnType)) {
           Direction direction = functionCat.getSyntax().getDirection();
-          Combinator combinator;
-          List<Object> outcome;
-          if (direction.equals(Direction.LEFT)) {
+          Preconditions.checkState(direction == Direction.RIGHT || direction == Direction.LEFT
+              || direction == Direction.BOTH, "Unsupported direction %s", direction);
+
+          Combinator combinator = null;
+          List<Object> outcome = null;
+          if (direction.equals(Direction.LEFT) || direction.equals(Direction.BOTH)) {
             combinator = getCompositionCombinator(functionCat, argumentCat, returnType, depth,
                 true, false, syntaxType);
             if (combinator == null) {
@@ -549,7 +558,17 @@ public class CcgParser implements Serializable {
                 true, true, syntaxType);
             }
             outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
-          } else if (direction.equals(Direction.RIGHT)) {
+          }
+
+          if (combinator != null) {
+            // It is possible for function composition to return syntactic categories
+            // which are not members of the parser's set of valid syntactic categories.
+            // Such composition rules are discarded.
+            validOutcomes.add(outcome);
+            combinators.add(combinator);
+          }
+
+          if (direction.equals(Direction.RIGHT) || direction.equals(Direction.BOTH)) {
             combinator = getCompositionCombinator(functionCat, argumentCat, returnType, depth,
                 false, true, syntaxType);
             if (combinator == null) {
@@ -557,18 +576,10 @@ public class CcgParser implements Serializable {
                   false, false, syntaxType);
             }
             outcome = Arrays.<Object> asList(functionCat, argumentCat, combinator);
-          } else {
-            // Forward compatible error message, for handling
-            // Direction.BOTH if added.
-            throw new IllegalArgumentException("Unknown direction type: " + direction);
           }
-
+          
           if (combinator != null) {
-            // It is possible for function composition to
-            // return syntactic categories
-            // which are not members of the parser's set of
-            // valid syntactic categories.
-            // Such composition rules are discarded.
+            // See comment in the equivalent if statement above.
             validOutcomes.add(outcome);
             combinators.add(combinator);
           }

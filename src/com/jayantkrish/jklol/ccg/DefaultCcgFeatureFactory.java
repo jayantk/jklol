@@ -208,7 +208,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       VariableNumMap featureVar = VariableNumMap.singleton(terminalSyntaxVar.getOnlyVariableNum() - 1,
           "ccgLexiconFeatures", featureGenerator.getFeatureDictionary());
       ParametricLinearClassifierFactor featureFamily = new ParametricLinearClassifierFactor(featureVar, terminalSyntaxVar,
-          VariableNumMap.EMPTY, featureGenerator.getFeatureDictionary(), false);
+          VariableNumMap.EMPTY, featureGenerator.getFeatureDictionary(), null, false);
 
       return new ParametricFeaturizedLexicon(terminalWordVar, ccgCategoryVar, terminalFamily,
           featureGenerator, terminalSyntaxVar, featureVar, featureFamily);

@@ -151,7 +151,7 @@ public class ClassifierFunctions {
       DiscreteVariable featureDictionary = ((ParametricLinearClassifierFactor)
           ((FactorParameterSpec) parameters.getParameterSpec()).getFactor()).getFeatureDictionary();
       ParametricFactor pf = new ParametricLinearClassifierFactor(relabeledFeatureVectorVar,
-          relabeledVars, VariableNumMap.EMPTY, featureDictionary, false);
+          relabeledVars, VariableNumMap.EMPTY, featureDictionary, null, false);
 
       Factor factor = pf.getModelFromParameters(parameters.getParameters())
           .relabelVariables(relabeling.inverse());
@@ -183,7 +183,7 @@ public class ClassifierFunctions {
           new ObjectVariable(Tensor.class));
 
       ParametricFactor pf = new ParametricLinearClassifierFactor(featureVectorVar, vars,
-          VariableNumMap.EMPTY, featureDictionary, false);
+          VariableNumMap.EMPTY, featureDictionary, null, false);
 
       FactorParameterSpec fps = new FactorParameterSpec(AbstractParameterSpec.getUniqueId(), pf);
       SufficientStatistics params = fps.getNewParameters();

@@ -61,4 +61,18 @@ public class CsvParser {
 
     return parts.toArray(new String[0]);
   }
+
+  public String toCsv(List<String> parts) {
+    // TODO: handle escaping and such
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0 ; i < parts.size(); i++) {
+      if (i > 0) {
+        sb.append(separator);
+      }
+      sb.append(quote);
+      sb.append(parts.get(i));
+      sb.append(quote);
+    }
+    return sb.toString();
+  }
 }

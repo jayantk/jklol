@@ -179,7 +179,7 @@ public class TrainLinearClassifier extends AbstractCli {
     // (yes, the name is terrible). Just copy this definition, replacing x, y
     // and featureVar with whatever you called those things.
     builder.addUnreplicatedFactor("classifier", new ParametricLinearClassifierFactor(x, y,
-        VariableNumMap.EMPTY, featureVar, false));
+        VariableNumMap.EMPTY, featureVar, null, false));
     // Builds the actual trainable model.
     return builder.build();
   }

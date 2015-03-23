@@ -55,7 +55,7 @@ public class LambdaExpression extends AbstractExpression {
   }
 
   public Expression reduce(List<Expression> argumentValues) {
-    if (argumentValues.size() <= argumentVariables.size()) {
+    if (argumentValues.size() > argumentVariables.size()) {
       throw new ExpressionException("Too many arguments. Expected " + 
           argumentVariables + " got " + argumentValues +". This expression: "
           + this);

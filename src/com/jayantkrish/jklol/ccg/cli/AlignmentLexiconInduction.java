@@ -114,6 +114,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     for (LexiconEntry lexiconEntry : lexiconEntries) {
       lines.add(lexiconEntry.toCsvString());
     }
+    Collections.sort(lines);
     IoUtils.writeLines(options.valueOf(lexiconOutput), lines);
   }
 

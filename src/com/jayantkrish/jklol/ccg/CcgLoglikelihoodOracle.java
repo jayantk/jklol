@@ -107,28 +107,22 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     
     for (CcgParse parse : parses) {
       boolean compatible = true;
-      if (observedDependencies != null && !Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
+      try {
+        if (observedDependencies != null && !Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
+          compatible = false;
+        }
+        if (observedLogicalForm != null) {
+          Expression predictedLogicalForm = parse.getLogicalForm();
+          
+          if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm.simplify())) {
+            compatible = false;
+          } 
+        }
+      } catch (ExpressionException e) {
+        System.out.println("FOO");
         compatible = false;
       }
-      if (observedLogicalForm != null) {
-        Expression predictedLogicalForm = parse.getLogicalForm();
-        
-        if (predictedLogicalForm == null) {
-          compatible = false;
-        } else {
-          Expression simplifiedPrediction = null;
-          try {
-            simplifiedPrediction = predictedLogicalForm.simplify();
-          } catch (ExpressionException e) {
-            compatible = false;
-          }
-          
-          if (simplifiedPrediction == null || !simplifiedPrediction.functionallyEquals(observedLogicalForm.simplify())) {
-            compatible = false;
-          }
-        }
-      }
-      
+
       if (compatible) {
         correctParses.add(parse);
       }

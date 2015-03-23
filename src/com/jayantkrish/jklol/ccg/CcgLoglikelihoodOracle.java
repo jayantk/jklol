@@ -9,6 +9,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionException;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -112,8 +113,19 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       if (observedLogicalForm != null) {
         Expression predictedLogicalForm = parse.getLogicalForm();
         
-        if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm.simplify())) {
+        if (predictedLogicalForm == null) {
           compatible = false;
+        } else {
+          Expression simplifiedPrediction = null;
+          try {
+            simplifiedPrediction = predictedLogicalForm.simplify();
+          } catch (ExpressionException e) {
+            compatible = false;
+          }
+          
+          if (simplifiedPrediction == null || !simplifiedPrediction.functionallyEquals(observedLogicalForm.simplify())) {
+            compatible = false;
+          }
         }
       }
       

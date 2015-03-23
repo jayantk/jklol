@@ -12,6 +12,14 @@ Fixes:
 
 Refactoring:
 - clean up grammar generation in CCG parser. Lots of too verbose code.
+- Decouple Expression from CcgParser
+  - Introduce a new interface for logical forms: Lf.
+    Only needs to support apply, maybe a descriptive toString() function, implement serializable
+  - Introduce a new interface for evaluating / comparing Lf instances.
+    Methods: intensionallyEquals(), evaluate()?
+  - Is casting the right way to go back from Lfs to the base type in a program?
+    Generics (for basically every class in CcgParser) seem way overkill,
+    and also mess up serialization.
 
 Dependencies:
 - get rid of GWT / Jackson

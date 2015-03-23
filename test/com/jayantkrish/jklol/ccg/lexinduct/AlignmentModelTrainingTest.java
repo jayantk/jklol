@@ -36,7 +36,7 @@ public class AlignmentModelTrainingTest extends TestCase {
 
   public void testTrainingSimple() {
     List<AlignmentExample> examples = parseData(dataSet1);
-    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, false, true);
+    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, false, true, );
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);

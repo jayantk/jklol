@@ -119,7 +119,6 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
           } 
         }
       } catch (ExpressionException e) {
-        System.out.println("FOO");
         compatible = false;
       }
 

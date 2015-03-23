@@ -11,7 +11,9 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionException;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
@@ -47,9 +49,15 @@ public class TestSemanticParser extends AbstractCli {
       System.out.println("====");
       System.out.println("SENT: " + example.getSentence().getWords());
       if (parse != null) {
-        Expression lf = parse.getLogicalForm().simplify();
-
-        int correct = lf.simplify().functionallyEquals(example.getLogicalForm()) ? 1 : 0;
+        int correct = 0; 
+        Expression lf = null;
+        try {
+          lf = parse.getLogicalForm().simplify();
+          correct = lf.functionallyEquals(example.getLogicalForm()) ? 1 : 0;
+        } catch (ExpressionException e) {
+          // Make lf print out as null.
+          lf = new ConstantExpression("null");
+        }
 
         System.out.println("PREDICTED: " + lf);
         System.out.println("TRUE: " + example.getLogicalForm());

@@ -58,11 +58,10 @@ public class AlignmentModelTrainingTest extends TestCase {
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);
-    
+
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
-    
-    // MapReduceConfiguration.setMapReduceExecutor(new LocalMapReduceExecutor(1, 1));
+
     ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
     SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing),
         initial, examples);

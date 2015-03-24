@@ -176,7 +176,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     return DictionaryFeatureVectorGenerator.createFromData(allExpressions,
         new ExpressionTokenFeatureGenerator(), false);
   }
-  
+
   private static List<AlignmentExample> applyFeatureVectorGenerator(
       FeatureVectorGenerator<Expression> generator, List<AlignmentExample> examples) {
     List<AlignmentExample> newExamples = Lists.newArrayList();

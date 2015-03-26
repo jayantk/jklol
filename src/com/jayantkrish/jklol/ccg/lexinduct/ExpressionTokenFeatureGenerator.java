@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +14,11 @@ public class ExpressionTokenFeatureGenerator implements FeatureGenerator<Express
   
   private static final long serialVersionUID = 1L;
   
-  public ExpressionTokenFeatureGenerator() {}
+  private final Set<String> tokensToIgnore;
+  
+  public ExpressionTokenFeatureGenerator(Collection<String> tokensToIgnore) {
+    this.tokensToIgnore = Sets.newHashSet(tokensToIgnore);
+  }
 
   @Override
   public Map<String, Double> generateFeatures(Expression item) {
@@ -22,7 +27,9 @@ public class ExpressionTokenFeatureGenerator implements FeatureGenerator<Express
     for (ConstantExpression expression : item.getFreeVariables()) {
       tokens.add(expression.getName());
     }
-    
+
+    tokens.removeAll(tokensToIgnore);
+
     CountAccumulator<String> counts = CountAccumulator.create();
     counts.incrementByOne(tokens);
     Map<String, Double> countMap = counts.getCountMap();

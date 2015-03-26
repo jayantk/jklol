@@ -1,8 +1,10 @@
 package com.jayantkrish.jklol.ccg.cli;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import joptsimple.OptionParser;
@@ -10,6 +12,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
@@ -18,7 +21,8 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypedExpression;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentEmOracle;
@@ -75,11 +79,13 @@ public class AlignmentLexiconInduction extends AbstractCli {
         System.out.println(example.getTree());
       }
     }
-    FeatureVectorGenerator<Expression> vectorGenerator = buildFeatureVectorGenerator(examples);
+    FeatureVectorGenerator<Expression> vectorGenerator = buildFeatureVectorGenerator(examples,
+        Collections.<String>emptyList());
+    System.out.println("features: " + vectorGenerator.getFeatureDictionary().getValues());
     examples = applyFeatureVectorGenerator(vectorGenerator, examples);
 
     ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(
-        examples, !options.has(noTreeConstraint), vectorGenerator);
+        examples, !options.has(noTreeConstraint), false, vectorGenerator);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(options.valueOf(smoothingParam));
     
@@ -106,7 +112,19 @@ public class AlignmentLexiconInduction extends AbstractCli {
     }
     System.out.println("Aligned: " + numTreesWithFullAlignments + " / " + examples.size());
 
-    List<LexiconEntry> lexiconEntries = generateCcgLexicon(alignments);
+    // TODO: this shouldn't be hard coded. Replace with 
+    // an input unification lattice for types.
+    Map<String, String> typeReplacements = Maps.newHashMap();
+    typeReplacements.put("lo", "e");
+    typeReplacements.put("c", "e");
+    typeReplacements.put("co", "e");
+    typeReplacements.put("s", "e");
+    typeReplacements.put("r", "e");
+    typeReplacements.put("l", "e");
+    typeReplacements.put("m", "e");
+    typeReplacements.put("p", "e");
+    
+    List<LexiconEntry> lexiconEntries = generateCcgLexicon(alignments, typeReplacements);
 
     List<String> lines = Lists.newArrayList();
     for (LexiconEntry lexiconEntry : lexiconEntries) {
@@ -116,7 +134,8 @@ public class AlignmentLexiconInduction extends AbstractCli {
     IoUtils.writeLines(options.valueOf(lexiconOutput), lines);
   }
 
-  private static List<LexiconEntry> generateCcgLexicon(PairCountAccumulator<String, AlignedExpression> alignments) {
+  private static List<LexiconEntry> generateCcgLexicon(PairCountAccumulator<String, AlignedExpression> alignments,
+      Map<String, String> typeReplacements) {
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
     for (String key : alignments.keySet()) {
       System.out.println(key + " (" + alignments.getTotalCount(key) + ")");
@@ -126,12 +145,19 @@ public class AlignmentLexiconInduction extends AbstractCli {
         // head / dependencies
         String head = key + "_" + wordLexEntryCount;
         
-        // Generate separate syntactic categories for each number of unbound
-        int numNonAppliedArgs = 0;
-        if (value.getExpression() instanceof LambdaExpression) {
-          numNonAppliedArgs = ((LambdaExpression) value.getExpression()).getArguments().size() - value.getNumAppliedArgs();
+        // Generate separate syntactic categories for each unbound
+        // argument.
+        Type type = TypedExpression.inferType(value.getExpression(), typeReplacements);
+        // TODO: hack for geoquery: replace unknown entries with type e
+        type = Type.parseFrom(type.toString().replaceAll("unknown", "e"));
+        Type returnType = type;
+        List<Type> argumentTypes = Lists.newArrayList();
+        for (int i = 0; i < value.getNumAppliedArgs(); i++) {
+          argumentTypes.add(returnType.getArgumentType());
+          returnType = returnType.getReturnType();
         }
-        
+        Collections.reverse(argumentTypes);
+
         // Build a syntactic category for the expression based on the 
         // number of arguments it accepted in the sentence. Simultaneously
         // generate its dependencies and head assignment.
@@ -140,10 +166,10 @@ public class AlignmentLexiconInduction extends AbstractCli {
         List<Integer> objects = Lists.newArrayList();
         List<Set<String>> assignments = Lists.newArrayList();
         assignments.add(Sets.newHashSet(head));
-        HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N:" + numNonAppliedArgs + "{0}");
+        HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N:" + returnType + "{0}");
         for (int i = 0; i < value.getNumAppliedArgs(); i++) {
           HeadedSyntacticCategory argSyntax = HeadedSyntacticCategory
-              .parseFrom("N:" + value.getArgTypes()[i] + "{" + (i + 1) +"}");
+              .parseFrom("N:" + argumentTypes.get(i) + "{" + (i + 1) +"}");
           syntax = syntax.addArgument(argSyntax, Direction.BOTH, 0);
 
           subjects.add(head);
@@ -168,16 +194,16 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
 
   private static FeatureVectorGenerator<Expression> buildFeatureVectorGenerator(
-      List<AlignmentExample> examples) {
+      List<AlignmentExample> examples, Collection<String> tokensToIgnore) {
     Set<Expression> allExpressions = Sets.newHashSet();
     for (AlignmentExample example : examples) {
       example.getTree().getAllExpressions(allExpressions);
     }
     return DictionaryFeatureVectorGenerator.createFromData(allExpressions,
-        new ExpressionTokenFeatureGenerator(), false);
+        new ExpressionTokenFeatureGenerator(tokensToIgnore), false);
   }
 
-  private static List<AlignmentExample> applyFeatureVectorGenerator(
+  public static List<AlignmentExample> applyFeatureVectorGenerator(
       FeatureVectorGenerator<Expression> generator, List<AlignmentExample> examples) {
     List<AlignmentExample> newExamples = Lists.newArrayList();
     for (AlignmentExample example : examples) {

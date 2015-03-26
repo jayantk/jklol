@@ -1,15 +1,15 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.Backpointers;
+import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * The "chart" of a CKY-style parser which enables efficient computations of
@@ -37,10 +37,14 @@ public class CfgParseChart {
   private List<?> terminals;
 
   private int numTerminals;
+  private final int numNonterminals;
   private boolean sumProduct;
   private boolean insideCalculated;
   private boolean outsideCalculated;
   private double partitionFunction;
+  
+  private final long[][][] backpointers;
+  private final int[][][] splitBackpointers;
 
   /**
    * Create a parse chart with the specified number of terminal symbols.
@@ -62,6 +66,7 @@ public class CfgParseChart {
     this.sumProduct = sumProduct;
     
     this.numTerminals = terminals.size();
+    this.numNonterminals = parentVar.getDiscreteVariables().get(0).numValues();
 
     insideChart = new Factor[numTerminals][numTerminals];
     outsideChart = new Factor[numTerminals][numTerminals];
@@ -73,13 +78,13 @@ public class CfgParseChart {
     outsideCalculated = false;
     partitionFunction = 0.0;
 
-    // TODO: backpointers
-    /*
     if (!sumProduct) {
-      backpointers = (Map<Object, PriorityQueue<Backpointer>>[][]) Array.newInstance(new HashMap<Object, PriorityQueue<Backpointer>>().getClass(), new int[] { numTerminals, numTerminals });
-      beamWidth = 1;
+      backpointers = new long[numTerminals][numTerminals][numNonterminals];
+      splitBackpointers = new int[numTerminals][numTerminals][numNonterminals];
+    } else {
+      backpointers = null;
+      splitBackpointers = null;
     }
-    */
   }
 
   /**
@@ -97,43 +102,53 @@ public class CfgParseChart {
   public void updateInsideEntry(int spanStart, int spanEnd, int splitInd,
       Factor binaryRuleProbabilities) {
     Preconditions.checkArgument(binaryRuleProbabilities.getVars().size() == 4);
-
-    // The first entry initializes the chart at this span.
-    if (insideChart[spanStart][spanEnd] == null) {
-      if (sumProduct) { 
-        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.marginalize(
-            VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)); 
-      } else {
-        insideChart[spanStart][spanEnd] = binaryRuleProbabilities.maxMarginalize(
-            VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar));
-        // TODO: backpointers
-        /*
-        backpointers[spanStart][spanEnd] = new HashMap<Object, PriorityQueue<Backpointer>>();
-        */
-      }
-      return;
-    }
-
+    
     if (sumProduct) {
-      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(
-          binaryRuleProbabilities.marginalize(
-              VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)));
+      Factor message = binaryRuleProbabilities.marginalize(
+          VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar));
+      if (insideChart[spanStart][spanEnd] == null){
+        insideChart[spanStart][spanEnd] = message;
+      } else {
+        insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(message);
+      }
     } else {
-      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].maximum(
-          binaryRuleProbabilities.maxMarginalize(
-              VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar)));
+      int[] dimsToRemove = VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar).getVariableNumsArray();
+      Tensor weights = binaryRuleProbabilities.coerceToDiscrete().getWeights();
+      
+      Backpointers tensorBackpointers = new Backpointers();
+      Tensor message = weights.maxOutDimensions(dimsToRemove, tensorBackpointers);
+    
+      if (insideChart[spanStart][spanEnd] == null) {
+        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, message);
+        
+        long[] newKeyNums = tensorBackpointers.getNewKeyNums();
+        long[] oldKeyNums = tensorBackpointers.getOldKeyNums();
+        long[] entryBackpointers = backpointers[spanStart][spanEnd];
+        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
+        for (int i = 0; i < newKeyNums.length; i++) {
+          int nonterminalNum = (int) newKeyNums[i];
+          entryBackpointers[nonterminalNum] = oldKeyNums[i];
+          currentSplit[nonterminalNum] = splitInd;
+        }
+      } else {
+        Tensor current = insideChart[spanStart][spanEnd].coerceToDiscrete().getWeights();
+        Tensor combined = message.elementwiseMaximum(current);
+        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, combined);
 
-      // TODO: backpointers
-      /*
-      if (!backpointers[spanStart][spanEnd].containsKey(p)) {
-        backpointers[spanStart][spanEnd].put(p, new PriorityQueue<Backpointer>());
+        long[] entryBackpointers = backpointers[spanStart][spanEnd];
+        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
+        double[] messageValues = message.getValues();
+        for (int i = 0; i < messageValues.length; i++) {
+          int nonterminalNum = (int) message.indexToKeyNum(i);
+          double curVal = current.get(nonterminalNum);
+          double msgVal = messageValues[i];
+          
+          if (msgVal > curVal) {
+            entryBackpointers[nonterminalNum] = tensorBackpointers.getBackpointer(nonterminalNum);
+            currentSplit[nonterminalNum] = splitInd;
+          }
+        }
       }
-      backpointers[spanStart][spanEnd].get(p).offer(new Backpointer(splitInd, rule, prob, ruleProb));
-
-      if (backpointers[spanStart][spanEnd].get(p).size() > beamWidth) {
-        backpointers[spanStart][spanEnd].get(p).poll();
-      }
-      */
     }
   }
 
@@ -307,87 +322,47 @@ public class CfgParseChart {
   }
 
   /**
-   * Gets the {@code numBest} most probable (i.e., max-marginal) parse trees
-   * given {@code rootDistribution} is the max-marginal over the root node.
-   * 
-   * @param rootDistribution
-   * @param numTrees
-   * @return
+   * Get the best parse tree spanning the entire sentence.
    */
-  public List<CfgParseTree> getBestParseTrees(Map<Object, Double> rootDistribution, int numTrees) {
-    PriorityQueue<CfgParseTree> bestTrees = new PriorityQueue<CfgParseTree>();
-    for (Object root : rootDistribution.keySet()) {
-      for (CfgParseTree parseTree : getBestParseTrees(root, numTrees)) {
-        bestTrees.offer(parseTree.multiplyProbability(rootDistribution.get(root)));
-
-        if (bestTrees.size() > numTrees) {
-          bestTrees.poll();
-        }
-      }
-    }
-
-    List<CfgParseTree> bestTreeList = new ArrayList<CfgParseTree>(bestTrees);
-    Collections.sort(bestTreeList);
-    Collections.reverse(bestTreeList);
-    return bestTreeList;
+  public CfgParseTree getBestParseTree(Object root) {
+    return getBestParseTreeWithSpan(root, 0, chartSize() - 1);
   }
-
-  /**
-   * Get the best parse trees spanning the entire sentence.
-   */
-  public List<CfgParseTree> getBestParseTrees(Object root, int numTrees) {
-    return getBestParseTreesWithSpan(root, 0, chartSize() - 1, numTrees);
-  }
-
+  
   /**
    * If this tree contains max-marginals, recover the best parse subtree for a
    * given symbol with the specified span.
    */
-  public List<CfgParseTree> getBestParseTreesWithSpan(Object root, int spanStart,
-      int spanEnd, int numTrees) {
-    /*
-    assert !sumProduct;
-    assert numTrees <= beamWidth;
+  public CfgParseTree getBestParseTreeWithSpan(Object root, int spanStart,
+      int spanEnd) {
+    Preconditions.checkState(!sumProduct);
 
-    if (backpointers[spanStart][spanEnd] == null ||
-        !backpointers[spanStart][spanEnd].containsKey(root)) {
-      return Collections.emptyList();
+    Assignment rootAssignment = parentVar.outcomeArrayToAssignment(root); 
+    int rootNonterminalNum = parentVar.assignmentToIntArray(rootAssignment)[0];
+    double prob = marginalChart[spanStart][spanEnd].getUnnormalizedProbability(rootAssignment);
+
+    if (spanStart == spanEnd) {
+      // TODO: handle the terminal case correctly for
+      // multi-word terminals and the probabilities.
+      List<Object> terminalList = Lists.newArrayList();
+      terminalList.addAll(terminals.subList(spanStart, spanStart + 1));
+      return new CfgParseTree(root, null, terminalList, 1.0, spanStart, spanEnd);
+    } else {
+      int splitInd = splitBackpointers[spanStart][spanEnd][rootNonterminalNum];
+      long binaryRuleKey = backpointers[spanStart][spanEnd][rootNonterminalNum];
+
+      int[] binaryRuleComponents = binaryRuleExpectations.coerceToDiscrete()
+          .getWeights().keyNumToDimKey(binaryRuleKey);
+
+      Assignment best = binaryRuleExpectations.getVars().intArrayToAssignment(binaryRuleComponents);
+      Object leftRoot = best.getValue(leftVar.getOnlyVariableNum());
+      Object rightRoot = best.getValue(rightVar.getOnlyVariableNum());
+      Object ruleType = best.getValue(ruleTypeVar.getOnlyVariableNum());
+
+      CfgParseTree leftTree = getBestParseTreeWithSpan(leftRoot, spanStart, spanStart + splitInd);
+      CfgParseTree rightTree = getBestParseTreeWithSpan(rightRoot, spanStart + splitInd + 1, spanEnd);
+
+      return new CfgParseTree(root, ruleType, leftTree, rightTree, prob);
     }
-
-    Backpointer[] bps = backpointers[spanStart][spanEnd].get(root).toArray(new Backpointer[] {});
-    Arrays.sort(bps);
-
-    PriorityQueue<ParseTree> bestTrees = new PriorityQueue<ParseTree>();
-    for (int i = bps.length - 1; i >= Math.max(0, bps.length - numTrees); i--) {
-      Backpointer backpointer = bps[i];
-      if (!backpointer.isTerminal()) {
-        int splitInd = backpointer.getSplitInd();
-        BinaryProduction rule = backpointer.getBinaryProduction();
-
-        List<ParseTree> leftTrees = getBestParseTreesWithSpan(rule.getLeft(), spanStart, spanStart + splitInd, numTrees);
-        List<ParseTree> rightTrees = getBestParseTreesWithSpan(rule.getRight(), spanStart + splitInd + 1, spanEnd, numTrees);
-
-        for (ParseTree left : leftTrees) {
-          for (ParseTree right : rightTrees) {
-            bestTrees.offer(new ParseTree(left, right, rule,
-                left.getProbability() * right.getProbability() * backpointer.getRuleProbability()));
-          }
-        }
-      } else {
-        // Terminal
-        bestTrees.offer(new ParseTree(backpointer.getTerminalProduction(), backpointer.getProbability()));
-      }
-    }
-    while (bestTrees.size() > numTrees) {
-      bestTrees.poll();
-    }
-
-    List<ParseTree> bestTreeList = new ArrayList<ParseTree>(bestTrees);
-    Collections.sort(bestTreeList);
-    Collections.reverse(bestTreeList);
-    return bestTreeList;
-    */
-    return null;
   }
 
   /**

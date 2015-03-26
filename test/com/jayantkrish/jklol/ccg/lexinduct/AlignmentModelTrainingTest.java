@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -8,6 +9,7 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.inference.JunctionTree;
@@ -37,9 +39,11 @@ public class AlignmentModelTrainingTest extends TestCase {
       example.getTree().getAllExpressions(allExpressions);
     }
     featureGenerator = DictionaryFeatureVectorGenerator.createFromData(allExpressions,
-        new ExpressionTokenFeatureGenerator(), false);
+        new ExpressionTokenFeatureGenerator(Collections.<String>emptyList()), false);
+    
+    examples = AlignmentLexiconInduction.applyFeatureVectorGenerator(featureGenerator, examples);
   }
-  
+
   public static List<AlignmentExample> parseData(String[][] data) {
     List<AlignmentExample> examples = Lists.newArrayList();
     for (int i = 0; i < data.length; i++) {
@@ -54,7 +58,7 @@ public class AlignmentModelTrainingTest extends TestCase {
   }
 
   public void testTrainingSimple() {
-    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, false, featureGenerator);
+    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, true, false, featureGenerator);
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);
@@ -77,7 +81,9 @@ public class AlignmentModelTrainingTest extends TestCase {
     System.out.println(pam.getParameterDescription(trainedParameters2, 30));
     AlignmentModel model = pam.getModelFromParameters(trainedParameters2);
     for (AlignmentExample example : examples) {
-      model.getBestAlignment(example);
+      System.out.println(example.getWords());
+      System.out.println(model.getBestAlignment(example));
+      System.out.println(model.getBestAlignmentCfg(example));
     }
   }
 }

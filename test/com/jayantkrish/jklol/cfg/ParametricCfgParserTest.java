@@ -75,22 +75,23 @@ public class ParametricCfgParserTest extends TestCase {
     // Create some training data.
     trainingData = Lists.newArrayList();
     for (int i = 0; i < TRAINING_DATA.length; i++) {
-      CfgParseTree outputTree = parseTreeFromString(TRAINING_DATA[i]);
+      CfgParseTree outputTree = parseTreeFromString(TRAINING_DATA[i], 0);
       List<Object> terminals = outputTree.getTerminalProductions();
 
       trainingData.add(new CfgExample(terminals, outputTree));
     }
   }
   
-  private CfgParseTree parseTreeFromString(String parseTreeString) {
+  private CfgParseTree parseTreeFromString(String parseTreeString, int wordInd) {
     String[] elements = partitionString(parseTreeString);
     String curPos = elements[0];
     if (elements.length == 2) {
       String terminalNode = elements[1];
-      return new CfgParseTree(curPos, "RULE", Arrays.<Object>asList(terminalNode), 1.0);
+      return new CfgParseTree(curPos, "RULE", Arrays.<Object>asList(terminalNode), 1.0, wordInd, wordInd);
     } else {
-      CfgParseTree leftTree = parseTreeFromString(elements[1]);
-      CfgParseTree rightTree = parseTreeFromString(elements[2]);
+      CfgParseTree leftTree = parseTreeFromString(elements[1], wordInd);
+      wordInd = leftTree.getSpanEnd() + 1;
+      CfgParseTree rightTree = parseTreeFromString(elements[2], wordInd);
       return new CfgParseTree(curPos, "RULE", leftTree, rightTree, 1.0);
     }
   }
@@ -119,7 +120,7 @@ public class ParametricCfgParserTest extends TestCase {
     CfgParser parser= runTrainerTest(cfgFactor, new CfgLoglikelihoodOracle(cfgFactor)); 
     
     for (int i = 0; i < TEST_DATA.length; i++) {
-      CfgParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"));
+      CfgParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"), 0);
       CfgParseTree predicted = parser.beamSearch(expected.getTerminalProductions()).get(0);
       assertEquals(expected, predicted);
     }

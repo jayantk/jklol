@@ -13,8 +13,10 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.bayesnet.LogLinearCptFactor;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
+import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
@@ -22,6 +24,8 @@ import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.NullLogFunction;
 
 /**
  * Model family for a word alignment-based lexicon induction 
@@ -91,6 +95,9 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
    * structured logical form decomposition constraint. If
    * {@code false}, every possible decomposition of the target
    * logical form is aligned to a word.
+   * @param useWordDistribution if {@code true}, the model includes
+   * a factor for learning a distribution over which words are chosen
+   * to be aligned.
    * @param featureVectorGenerator function mapping logical
    * forms to feature vectors that are used for the word-logical
    * form alignment.
@@ -98,7 +105,7 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
    */
   public static ParametricAlignmentModel buildAlignmentModel(
       Collection<AlignmentExample> examples, boolean useTreeConstraint,
-      FeatureVectorGenerator<Expression> featureVectorGenerator) {
+      boolean useWordDistribution, FeatureVectorGenerator<Expression> featureVectorGenerator) {
     Set<Expression> allExpressions = Sets.newHashSet();
     Set<String> words = Sets.newHashSet();
     words.add(NULL_WORD);
@@ -139,6 +146,19 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
     builder.addFactor("word-expression-factor", factor,
         VariableNumPattern.fromTemplateVariables(wordVarPattern.union(featureVarPattern),
             VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
+
+    if (useWordDistribution) {
+      // TODO: This distribution is learned as a global distribution
+      // over words, but it should be a conditional distribution given
+      // the sentence.
+      DiscreteLogLinearFactor wordFactor = DiscreteLogLinearFactor.createIndicatorFactor(wordVarPattern);
+      LogLinearCptFactor wrapperFactor = new LogLinearCptFactor(wordFactor,
+          new Lbfgs(20, 20, 1.0, new NullLogFunction()));
+      
+      builder.addFactor("word-factor", wrapperFactor,
+          VariableNumPattern.fromTemplateVariables(wordVarPattern,
+          VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
+    }
 
     ParametricFactorGraph pfg = builder.build();
 

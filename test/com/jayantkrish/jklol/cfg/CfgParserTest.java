@@ -18,7 +18,7 @@ public class CfgParserTest extends TestCase {
 
   DiscreteFactor binary;
   DiscreteFactor terminal;
-	CfgParser p;
+	CfgParser p, p2;
 	
 	VariableNumMap parentVar, leftVar, rightVar, termVar, ruleVar;
 
@@ -69,6 +69,8 @@ public class CfgParserTest extends TestCase {
 		terminal = terminalBuilder.build();
 		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
 		    binary, terminal, 10, false);
+		p2 = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
+		    binary, terminal, 10, true);
 	}
 	
 	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
@@ -96,10 +98,10 @@ public class CfgParserTest extends TestCase {
 	  }
 	  return wordSequences;
 	}
-	
+
 	public void testParseInsideMarginal() {
 		CfgParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
-
+		
 		Factor rootProductions = c.getInsideEntries(0, 3);
 		assertEquals(2.0, rootProductions.size());
 		assertEquals(0.25 * .25, rootProductions.getUnnormalizedProbability("S"));
@@ -172,52 +174,16 @@ public class CfgParserTest extends TestCase {
 		assertEquals(.5, prods.getUnnormalizedProbability("barP"));	
 	}
 
-	// These methods are no longer implemented.
-	/*
 	public void testParseMaxMarginalTree() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false); 
-		    
-		ParseTree t = c.getBestParseTrees("S", 1).get(0);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false); 
+
+		CfgParseTree t = c.getBestParseTree("S");
 		assertEquals("S", t.getRoot());
 		assertEquals("N", t.getLeft().getRoot());
 		assertEquals("VP", t.getRight().getRoot());
 		assertEquals("V", t.getRight().getLeft().getRoot());
 	}
-	
-	public void testParseMaxMarginalTreeDist() {
-	  ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false);
-		
-		Factor rootProbabilities = TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S")).product(0.5)
-		    .add(TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S2")));
-		
-		List<ParseTree> trees = c.getBestParseTrees(rootProbabilities, 2);
-		ParseTree best = trees.get(0);
-		assertEquals("S2", best.getRoot());
-		assertEquals("N", best.getLeft().getRoot());
-		assertEquals("VP", best.getRight().getRoot());
-		assertEquals("V", best.getRight().getLeft().getRoot());
-		
-		ParseTree second = trees.get(1);
-		assertEquals("S", second.getRoot());
-		assertEquals("N", second.getLeft().getRoot());
-		assertEquals("VP", second.getRight().getRoot());
-		assertEquals("V", second.getRight().getLeft().getRoot());
-	}
 
-	public void testMostLikelyProductions() {
-		ParseChart c = p.mostLikelyProductions("barP", 2, 2);
-
-		List<ParseTree> trees = c.getBestParseTrees("barP", 2);
-		assertEquals(0.5, trees.get(0).getProbability());
-		assertTrue(trees.get(0).isTerminal());
-		assertEquals(Arrays.asList("baz", "bbb"),
-				trees.get(0).getTerminalProductions());
-		assertEquals(0.125, trees.get(1).getProbability());
-		assertEquals("bar", trees.get(1).getLeft().getRoot());
-		assertEquals("bar", trees.get(1).getRight().getRoot());
-	}
-	*/
-	
 	public void testBeamSearch() {
 	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
 	  assertEquals(3, trees.size());

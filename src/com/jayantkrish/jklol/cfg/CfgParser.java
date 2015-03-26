@@ -74,7 +74,7 @@ public class CfgParser implements Serializable {
    * @param parentVar
    * @param leftVar
    * @param rightVar
-   * @param terminalVar
+   * @param terminalVar variable over *lists* of terminal symbols. 
    * @param ruleTypeVar
    * @param binaryDistribution
    * @param terminalDistribution
@@ -327,7 +327,8 @@ public class CfgParser implements Serializable {
     if (leftSplitIndex == chart.chartSize() &&
         rightSplitIndex == chart.chartSize()) {
       // The tree is a terminal.
-      return new CfgParseTree(rootObj, ruleObj, chart.getTerminals().subList(spanStart, spanEnd + 1), treeProb);
+      return new CfgParseTree(rootObj, ruleObj, chart.getTerminals().subList(spanStart, spanEnd + 1), treeProb,
+          spanStart, spanEnd);
     } else {
       // Tree is a nonterminal. Identify the left and right subtrees by decoding
       // the current key.
@@ -425,6 +426,8 @@ public class CfgParser implements Serializable {
    */
   private CfgParseChart marginal(CfgParseChart chart, List<?> terminals,
       Factor rootDist) {
+    Preconditions.checkArgument(canSkipTerminals == false,
+        "Terminal skipping is not properly implemented for exact inference. Just build a grammar with a skip nonterminal.");
 
     initializeChart(chart, terminals);
     upwardChartPass(chart);
@@ -454,13 +457,13 @@ public class CfgParser implements Serializable {
    * Calculate a single inside probability entry.
    */
   private void calculateInside(int spanStart, int spanEnd, CfgParseChart chart) {
-    for (int k = 0; k < spanEnd - spanStart; k++) {
-      Factor left = chart.getInsideEntries(spanStart, spanStart + k).relabelVariables(parentToLeft);
-      Factor right = chart.getInsideEntries(spanStart + k + 1, spanEnd).relabelVariables(
+    for (int i = 0; i < spanEnd - spanStart; i++) {
+      Factor left = chart.getInsideEntries(spanStart, spanStart + i).relabelVariables(parentToLeft);
+      Factor right = chart.getInsideEntries(spanStart + i + 1, spanEnd).relabelVariables(
           parentToRight);
 
       Factor binaryRuleDistribution = binaryDistribution.product(left).product(right);
-      chart.updateInsideEntry(spanStart, spanEnd, k, binaryRuleDistribution);
+      chart.updateInsideEntry(spanStart, spanEnd, i, binaryRuleDistribution);
     }
   }
 
@@ -497,10 +500,10 @@ public class CfgParser implements Serializable {
    */
   private void calculateOutside(int spanStart, int spanEnd, CfgParseChart chart) {
     Factor parentOutside = chart.getOutsideEntries(spanStart, spanEnd);
-    for (int k = 0; k < spanEnd - spanStart; k++) {
-      Factor leftInside = chart.getInsideEntries(spanStart, spanStart + k).relabelVariables(
+    for (int i = 0; i < spanEnd - spanStart; i++) {
+      Factor leftInside = chart.getInsideEntries(spanStart, spanStart + i).relabelVariables(
           parentToLeft);
-      Factor rightInside = chart.getInsideEntries(spanStart + k + 1, spanEnd).relabelVariables(
+      Factor rightInside = chart.getInsideEntries(spanStart + i + 1, spanEnd).relabelVariables(
           parentToRight);
 
       Factor binaryRuleMarginal = binaryDistribution.product(Arrays.asList(rightInside,
@@ -531,11 +534,11 @@ public class CfgParser implements Serializable {
         rightOutside = rightOutside.maxMarginalize(allButRight).relabelVariables(
             rightToParent);
       }
-      chart.updateOutsideEntry(spanStart, spanStart + k, leftOutside);
-      chart.updateOutsideEntry(spanStart + k + 1, spanEnd, rightOutside);
+      chart.updateOutsideEntry(spanStart, spanStart + i, leftOutside);
+      chart.updateOutsideEntry(spanStart + i + 1, spanEnd, rightOutside);
 
-      chart.updateMarginalEntry(spanStart, spanStart + k, leftMarginal);
-      chart.updateMarginalEntry(spanStart + k + 1, spanEnd, rightMarginal);
+      chart.updateMarginalEntry(spanStart, spanStart + i, leftMarginal);
+      chart.updateMarginalEntry(spanStart + i + 1, spanEnd, rightMarginal);
     }
   }
 

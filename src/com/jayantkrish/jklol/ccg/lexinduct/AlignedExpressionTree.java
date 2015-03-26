@@ -15,9 +15,6 @@ public class AlignedExpressionTree {
   // Number of arguments of expression that get
   // applied in this tree.
   private final int numAppliedArguments;
-  // Type specification (number of arguments) of each
-  // argument that this function is applied to.
-  private final int[] appliedArgumentSpec;
 
   // Possible spans of the input sentence that this
   // node of the tree could be aligned to.
@@ -35,11 +32,10 @@ public class AlignedExpressionTree {
   private final String word;
 
   private AlignedExpressionTree(Expression expression, int numAppliedArguments,
-      int[] appliedArgumentSpec, int[] possibleSpanStarts, int[] possibleSpanEnds,
-      AlignedExpressionTree left, AlignedExpressionTree right, String word) {
+      int[] possibleSpanStarts, int[] possibleSpanEnds, AlignedExpressionTree left,
+      AlignedExpressionTree right, String word) {
     this.expression = Preconditions.checkNotNull(expression);
     this.numAppliedArguments = numAppliedArguments;
-    this.appliedArgumentSpec = Preconditions.checkNotNull(appliedArgumentSpec);
     Preconditions.checkArgument(possibleSpanStarts.length == possibleSpanEnds.length);
     this.possibleSpanStarts = possibleSpanStarts;
     this.possibleSpanEnds = possibleSpanEnds;
@@ -53,13 +49,13 @@ public class AlignedExpressionTree {
   }
 
   public static AlignedExpressionTree forTerminal(Expression expression, int numAppliedArguments,
-      int[] appliedArgumentSpec, int[] possibleSpanStarts, int[] possibleSpanEnds, String word) {
-    return new AlignedExpressionTree(expression, numAppliedArguments, appliedArgumentSpec,
+      int[] possibleSpanStarts, int[] possibleSpanEnds, String word) {
+    return new AlignedExpressionTree(expression, numAppliedArguments, 
         possibleSpanStarts, possibleSpanEnds, null, null, word);
   }
 
   public static AlignedExpressionTree forNonterminal(Expression expression, int numAppliedArguments,
-      int[] appliedArgumentSpec, AlignedExpressionTree left, AlignedExpressionTree right) {
+      AlignedExpressionTree left, AlignedExpressionTree right) {
 
     List<Integer> spanStarts = Lists.newArrayList();
     List<Integer> spanEnds = Lists.newArrayList();
@@ -78,8 +74,8 @@ public class AlignedExpressionTree {
       }
     }
 
-    return new AlignedExpressionTree(expression, numAppliedArguments, appliedArgumentSpec,
-        Ints.toArray(spanStarts), Ints.toArray(spanEnds), left, right, null);
+    return new AlignedExpressionTree(expression, numAppliedArguments, Ints.toArray(spanStarts),
+        Ints.toArray(spanEnds), left, right, null);
   }
 
   public Expression getExpression() {
@@ -110,10 +106,6 @@ public class AlignedExpressionTree {
     return numAppliedArguments;
   }
 
-  public int[] getAppliedArgumentSpec() {
-    return appliedArgumentSpec;
-  }
-
   public Multimap<String, AlignedExpression> getWordAlignments() {
     Multimap<String, AlignedExpression> alignments = HashMultimap.create();
     getWordAlignmentsHelper(alignments);
@@ -122,8 +114,7 @@ public class AlignedExpressionTree {
 
   private void getWordAlignmentsHelper(Multimap<String, AlignedExpression> map) {
     if (word != null && !word.equals(ParametricAlignmentModel.NULL_WORD)) {
-      map.put(word, new AlignedExpression(word, expression, numAppliedArguments,
-          appliedArgumentSpec));
+      map.put(word, new AlignedExpression(word, expression, numAppliedArguments));
     }
 
     if (left != null) {
@@ -218,14 +209,11 @@ public class AlignedExpressionTree {
     private final String word;
     private final Expression expression;
     private final int numAppliedArgs;
-    private final int[] argTypes;
 
-    public AlignedExpression(String word, Expression expression, int numAppliedArgs,
-        int[] argTypes) {
+    public AlignedExpression(String word, Expression expression, int numAppliedArgs) {
       this.word = Preconditions.checkNotNull(word);
       this.expression = Preconditions.checkNotNull(expression);
       this.numAppliedArgs = numAppliedArgs;
-      this.argTypes = argTypes;
     }
 
     public String getWord() {
@@ -238,10 +226,6 @@ public class AlignedExpressionTree {
 
     public int getNumAppliedArgs() {
       return numAppliedArgs;
-    }
-
-    public int[] getArgTypes() {
-      return argTypes;
     }
 
     @Override

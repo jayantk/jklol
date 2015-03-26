@@ -11,13 +11,20 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.cfg.CfgParseChart;
+import com.jayantkrish.jklol.cfg.CfgParseTree;
+import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.inference.MaxMarginalSet;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.FactorGraph;
+import com.jayantkrish.jklol.models.Factors;
 import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
@@ -26,6 +33,8 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphBuilder;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 
@@ -50,6 +59,18 @@ public class AlignmentModel {
   private final VariableNumMap input1, input2, output;
   private final Factor andFactor;
   private final Factor orFactor;
+  
+  // The probability of splitting an expression is set to
+  // 1 - epsilon to favor larger expressions when probabilities
+  // are otherwise tied.
+  private static final double EPSILON = 0.0001;
+  
+  // Names for CFG rules used in the CFG decoding algorithm.
+  private static final String TERMINAL = "terminal";
+  private static final String FORWARD_APPLICATION = "fa";
+  private static final String BACKWARD_APPLICATION = "ba";
+  private static final String SKIP_RULE = "skip";
+  private static final Expression SKIP_EXPRESSION = new ConstantExpression("**skip**");
   
   public AlignmentModel(DynamicFactorGraph factorGraph, String expressionPlateName,
       VariableNumMap expressionPlateVar, VariableNumMap featurePlateVar,
@@ -90,7 +111,7 @@ public class AlignmentModel {
     VariableNumMap bools = VariableNumMap.unionAll(input1, input2, output);
     this.andFactor = TableFactor.pointDistribution(bools, 
         bools.outcomeArrayToAssignment("F", "F", "F")).add(TableFactor.pointDistribution(bools, 
-        bools.outcomeArrayToAssignment("T", "T", "T")).product(0.9999));
+        bools.outcomeArrayToAssignment("T", "T", "T")).product(1 - EPSILON));
 
     this.orFactor = TableFactor.pointDistribution(bools, 
         bools.outcomeArrayToAssignment("F", "F", "F"),
@@ -108,6 +129,113 @@ public class AlignmentModel {
     Assignment best = maxMarginals.getNthBestAssignment(0);
 
     return tree.decodeAlignment(best, example.getWords());
+  }
+
+  public AlignedExpressionTree getBestAlignmentCfg(AlignmentExample example) {
+    Pair<FactorGraph, AlignmentTree> pair = getFactorGraphWithTreeConstraint(example);
+    FactorGraph fg = pair.getLeft();
+    AlignmentTree tree = pair.getRight();
+    
+    Set<Expression> expressions = Sets.newHashSet();
+    example.getTree().getAllExpressions(expressions);
+    expressions.add(SKIP_EXPRESSION);
+
+    List<List<String>> terminalVarValues = Lists.newArrayList();
+    for (String word : example.getWords()) {
+      terminalVarValues.add(Arrays.asList(word));
+    }
+
+    DiscreteVariable expressionVarType = new DiscreteVariable("expressions", expressions);
+    DiscreteVariable terminalVarType = new DiscreteVariable("words", terminalVarValues);
+    DiscreteVariable ruleVarType = new DiscreteVariable("rule", Arrays.asList(TERMINAL,
+        FORWARD_APPLICATION, BACKWARD_APPLICATION, SKIP_RULE));
+    
+    VariableNumMap terminalVar = VariableNumMap.singleton(0, "terminal", terminalVarType);
+    VariableNumMap leftVar = VariableNumMap.singleton(1, "left", expressionVarType);
+    VariableNumMap rightVar = VariableNumMap.singleton(2, "right", expressionVarType);
+    VariableNumMap parentVar = VariableNumMap.singleton(3, "parent", expressionVarType);
+    VariableNumMap ruleVar = VariableNumMap.singleton(4, "rule", ruleVarType);
+    
+    VariableNumMap binaryRuleVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
+    TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
+        SparseTensorBuilder.getFactory());
+    binaryRuleBuilder.setWeight(1.0, SKIP_EXPRESSION, SKIP_EXPRESSION, SKIP_EXPRESSION, SKIP_RULE);
+    
+    VariableNumMap terminalRuleVars = VariableNumMap.unionAll(terminalVar, parentVar, ruleVar);
+    TableFactorBuilder terminalRuleBuilder = new TableFactorBuilder(terminalRuleVars,
+        DenseTensorBuilder.getFactory());
+    for (List<String> terminalVarValue : terminalVarValues) {
+      terminalRuleBuilder.setWeight(1.0, terminalVarValue, SKIP_EXPRESSION, SKIP_RULE);
+    }
+
+    tree.populateCfgDistributions(binaryRuleBuilder, terminalRuleBuilder, fg);
+    
+    TableFactor binaryDistribution = binaryRuleBuilder.build();
+    TableFactor terminalDistribution = terminalRuleBuilder.build();
+
+    CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleVar,
+        binaryDistribution, terminalDistribution, -1, false);
+
+    // TODO: implement backpointers in the CFG parser so we can
+    // do this computation exactly.
+    CfgParseChart chart = parser.parseMarginal(example.getWords(), false);
+    CfgParseTree parseTree = chart.getBestParseTree(tree.getExpression());
+    
+    System.out.println(parseTree);
+    return decodeCfgParse(parseTree, example.getTree());
+  }
+  
+  private AlignedExpressionTree decodeCfgParse(CfgParseTree t, ExpressionTree e) {
+    if (t.isTerminal()) {
+      Expression expression = e.getExpression();
+      int numAppliedArguments = e.getNumAppliedArguments();
+      int[] spanStarts = new int[0];
+      int[] spanEnds = new int[0];
+      String word = (String) t.getTerminalProductions().get(0);
+      return AlignedExpressionTree.forTerminal(expression, numAppliedArguments, spanStarts, spanEnds, word);
+    } else {
+      Expression parent = (Expression) t.getRoot();
+      Expression left = (Expression) t.getLeft().getRoot();
+      Expression right = (Expression) t.getRight().getRoot();
+      
+      if (left == SKIP_EXPRESSION) {
+        return decodeCfgParse(t.getLeft(), e);
+      } else if (right == SKIP_EXPRESSION) {
+        return decodeCfgParse(t.getRight(), e);
+      } else {
+        // A combination of expressions.
+        ExpressionTree argExp = null;
+        ExpressionTree funcExp = null;
+        CfgParseTree argTree = null;
+        CfgParseTree funcTree = null;
+        List<ExpressionTree> leftChildren = e.getLeftChildren();
+        List<ExpressionTree> rightChildren = e.getRightChildren();
+        for (int i = 0; i < leftChildren.size(); i++) {
+          if (leftChildren.get(i).getExpression().equals(left) &&
+              rightChildren.get(i).getExpression().equals(right)) {
+            argExp = leftChildren.get(i);
+            funcExp = rightChildren.get(i);
+            
+            argTree = t.getLeft();
+            funcTree = t.getRight();
+          } else if (leftChildren.get(i).getExpression().equals(right) &&
+              rightChildren.get(i).getExpression().equals(left)) {
+            argExp = leftChildren.get(i);
+            funcExp = rightChildren.get(i);
+
+            argTree = t.getRight();
+            funcTree = t.getLeft();
+          }
+        }
+        Preconditions.checkState(argExp != null && funcExp != null);
+        
+        AlignedExpressionTree leftTree = decodeCfgParse(argTree, argExp);
+        AlignedExpressionTree rightTree = decodeCfgParse(funcTree, funcExp);
+
+        return AlignedExpressionTree.forNonterminal(parent, e.getNumAppliedArguments(),
+            leftTree, rightTree);
+      }
+    }
   }
   
   public FactorGraph getFactorGraph(AlignmentExample example) {
@@ -298,6 +426,10 @@ public class AlignmentModel {
       this.wordActiveVar = wordActiveVar;
     }
 
+    public Expression getExpression() {
+      return expression;
+    }
+    
     public VariableNumMap getVar() {
       return var;
     }
@@ -316,7 +448,7 @@ public class AlignmentModel {
 
       if (isWordActive(assignment)) {
         String word = (String) wordVar.assignmentToOutcome(assignment).get(0);
-        
+
         // Get the spans in the sentence where this word appears 
         int[] spanStarts = Ints.toArray(wordIndexes.get(word));
         int[] spanEnds = Arrays.copyOf(spanStarts, spanStarts.length);
@@ -325,7 +457,7 @@ public class AlignmentModel {
         }
 
         return AlignedExpressionTree.forTerminal(expression, numAppliedArguments,
-            appliedArgumentSpec, spanStarts, spanEnds, word);
+            spanStarts, spanEnds, word);
       } else {
         AlignedExpressionTree newLeft = null;
         AlignedExpressionTree newRight = null;
@@ -340,10 +472,48 @@ public class AlignmentModel {
         Preconditions.checkState(newLeft != null);
 
         return AlignedExpressionTree.forNonterminal(expression, numAppliedArguments,
-            appliedArgumentSpec, newLeft, newRight);
+            newLeft, newRight);
       }
     }
     
+    public void populateCfgDistributions(TableFactorBuilder nonterminals,
+        TableFactorBuilder terminals, FactorGraph fg) {
+      
+      // Copy weights from the distribution P(l | w) over
+      // to the terminal distribution of the CFG.
+      List<Factor> wordFactors = Lists.newArrayList();
+      for (int factorNum : fg.getFactorsWithVariable(wordVar.getOnlyVariableNum())) {
+        Factor f = fg.getFactor(factorNum);
+        if (f.getVars().size() == 1) {
+          wordFactors.add(f);
+        }
+      }
+      DiscreteFactor wordFactor = Factors.product(wordFactors).coerceToDiscrete();
+
+      for (Assignment a : wordFactor.getNonzeroAssignments()) {
+        Object value = a.getOnlyValue();
+        if (value != ParametricAlignmentModel.NULL_WORD) {
+          // Null word is used to handle unaligned expressions that are
+          // inactive. These are not a problem in the CFG.
+          double prob = wordFactor.getUnnormalizedProbability(a);
+          terminals.setWeight(prob, Arrays.asList(value), expression, TERMINAL);
+        }
+      }
+      
+      
+      for (int i = 0 ; i < lefts.size(); i++) {
+        lefts.get(i).populateCfgDistributions(nonterminals, terminals, fg);
+        rights.get(i).populateCfgDistributions(nonterminals, terminals, fg);
+
+        // Add binary rule for this combination of expressions. Note
+        // that the expressions can occur in either order in the sentence.
+        nonterminals.setWeight(1 - EPSILON, lefts.get(i).expression,
+            rights.get(i).expression, expression, BACKWARD_APPLICATION);
+        nonterminals.setWeight(1 - EPSILON, rights.get(i).expression,
+            lefts.get(i).expression, expression, FORWARD_APPLICATION);
+      }
+    }
+
     /**
      * Returns {@code true} if this tree node is part of the
      * alignment given by {@code assignment}.

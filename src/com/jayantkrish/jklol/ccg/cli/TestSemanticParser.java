@@ -60,7 +60,7 @@ public class TestSemanticParser extends AbstractCli {
         }
 
         System.out.println("PREDICTED: " + lf);
-        System.out.println("TRUE: " + example.getLogicalForm());
+        System.out.println("TRUE:      " + example.getLogicalForm());
         System.out.println("CORRECT: " + correct);
 
         numCorrect += correct;

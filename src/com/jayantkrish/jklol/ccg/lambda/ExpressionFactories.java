@@ -104,6 +104,8 @@ public class ExpressionFactories {
           }
           Expression body = remaining.get(remaining.size() - 1).getExpression();
           return new TypedExpression(new LambdaExpression(variables, argTypes, body), null);
+        } else if (firstTermName.equals("and")) {
+          return new TypedExpression(new CommutativeOperator(firstTerm, TypedExpression.getExpressions(remaining)), null);
         } else {
           return new TypedExpression(new ApplicationExpression(subexpressions), null);
         }

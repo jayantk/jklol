@@ -6,7 +6,6 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 
 /**
  * A regex-like pattern for matching portions of a CCG parse.
- * The matched portions are 
  * 
  * @author jayant
  *

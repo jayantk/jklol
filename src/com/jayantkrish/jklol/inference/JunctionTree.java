@@ -203,10 +203,6 @@ public class JunctionTree implements MarginalCalculator {
     List<Factor> factorsToCombine = new ArrayList<Factor>();
     for (Integer adjacentFactorNum : factorIndicesToCombine) {
       factorsToCombine.add(cliqueTree.getMessage(adjacentFactorNum, startFactor));
-      // System.out.println("  combining: " + adjacentFactorNum + ": " +
-      // cliqueTree.getMessage(adjacentFactorNum, startFactor).getVars()
-      // + " (" + cliqueTree.getMessage(adjacentFactorNum, startFactor).size() +
-      // ")");
     }
 
     // Update the marginal distribution of startFactor in the clique tree.

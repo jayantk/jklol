@@ -305,21 +305,6 @@ public class VariableNumMap implements Serializable {
     return objectVars;
   }
 
-  /**
-   * Gets any boolean-valued variables in {@code this}.
-   * 
-   * @return
-   */
-  public final List<BooleanVariable> getBooleanVariables() {
-    List<BooleanVariable> booleanVars = new ArrayList<BooleanVariable>();
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] instanceof BooleanVariable) {
-        booleanVars.add((BooleanVariable) vars[i]);
-      }
-    }
-    return booleanVars;
-  }
-  
   private final int getVariableIndex(int varNum) {
     return Arrays.binarySearch(nums, varNum);
   }
@@ -690,7 +675,8 @@ public class VariableNumMap implements Serializable {
       } else {
         // Equal. Both maps must have the same values for this variable
         Preconditions.checkArgument(names[i].equals(otherNames[j]));
-        Preconditions.checkArgument(vars[i].getName().equals(otherVars[j].getName()));            checkCompatibility(other);
+        Preconditions.checkArgument(vars[i].getName().equals(otherVars[j].getName()));
+        checkCompatibility(other);
 
         newNums[numFilled] = nums[i];
         newNames[numFilled] = names[i];

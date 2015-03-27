@@ -331,11 +331,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     return this;
   }
 
-  @Override
-  public DiscreteObjectFactor coerceToDiscreteObject() {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-
   /**
    * Prints out this factor as a comma-separated values file, suitable for
    * reading using {@link TableFactor#fromDelimitedFile}.

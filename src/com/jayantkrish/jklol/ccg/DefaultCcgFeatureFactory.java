@@ -143,16 +143,32 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   public ParametricFactor getDependencyPuncDistanceFeatures(VariableNumMap dependencyHeadVar,
       VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap puncDistanceVar) {
-    return getDistanceFeatures(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar,
-        dependencyHeadPosVar, puncDistanceVar);
+    if (usePosFeatures) {
+      return getDistanceFeatures(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar,
+          dependencyHeadPosVar, puncDistanceVar);
+    } else {
+      // Can't compute the distance in terms of punctuation symbols
+      // without POS tags to identify punctuation.
+      VariableNumMap allVars = VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar,
+        dependencyArgNumVar, dependencyHeadPosVar, puncDistanceVar);
+      return new ConstantParametricFactor(allVars, TableFactor.logUnity(allVars));
+    }
   }
 
   @Override
   public ParametricFactor getDependencyVerbDistanceFeatures(VariableNumMap dependencyHeadVar,
       VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap verbDistanceVar) {
-    return getDistanceFeatures(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar,
-        dependencyHeadPosVar, verbDistanceVar);
+    if (usePosFeatures) {
+      return getDistanceFeatures(dependencyHeadVar, headSyntaxVar, dependencyArgNumVar,
+          dependencyHeadPosVar, verbDistanceVar);
+    } else {
+      // Can't compute the distance in terms of verbs without
+      // POS tags to identify verbs.
+      VariableNumMap allVars = VariableNumMap.unionAll(dependencyHeadVar, headSyntaxVar,
+          dependencyArgNumVar, dependencyHeadPosVar, verbDistanceVar);
+      return new ConstantParametricFactor(allVars, TableFactor.logUnity(allVars));
+    }
   }
 
   @Override

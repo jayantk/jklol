@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.cli;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,6 +56,12 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<String> trainingData;
   private OptionSpec<String> modelOutput;
 
+  // CCG parser options
+  private OptionSpec<String> ccgLexicon;
+  private OptionSpec<String> ccgRules;
+  private OptionSpec<Void> ccgApplicationOnly;
+  private OptionSpec<Void> ccgNormalFormOnly;
+
   private OptionSpec<String> syntaxMap;
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Long> maxParseTimeMillis;
@@ -69,8 +76,7 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Void> exactInference;
 
   public TrainCcg() {
-    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE,
-        CommonOptions.PARAMETRIC_CCG_PARSER);
+    super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
   }
 
   @Override
@@ -78,6 +84,17 @@ public class TrainCcg extends AbstractCli {
     // Required arguments.
     trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     modelOutput = parser.accepts("output").withRequiredArg().ofType(String.class).required();
+    
+    // CCG parser arguments
+    ccgLexicon = parser.accepts("lexicon",
+        "The CCG lexicon defining the grammar to use.").withRequiredArg().ofType(String.class).required();
+    ccgRules = parser.accepts("rules",
+        "Binary and unary rules to use during CCG parsing, in addition to function application and composition.")
+        .withRequiredArg().ofType(String.class);
+    ccgApplicationOnly = parser.accepts("applicationOnly",
+        "Use only function application during parsing, i.e., no composition.");
+    ccgNormalFormOnly = parser.accepts("normalFormOnly",
+        "Only permit CCG derivations in Eisner normal form.");
 
     // Optional options
     syntaxMap = parser.accepts("syntaxMap").withRequiredArg().ofType(String.class);
@@ -119,7 +136,12 @@ public class TrainCcg extends AbstractCli {
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
     CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, true);
-    ParametricCcgParser family = createCcgParser(posTags, observedRules, featureFactory);
+    List<String> lexiconEntries = IoUtils.readLines(options.valueOf(ccgLexicon));
+    List<String> ruleEntries = options.has(ccgRules) ? IoUtils.readLines(options.valueOf(ccgRules))
+        : Collections.<String> emptyList();
+    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
+        posTags, !options.has(ccgApplicationOnly), observedRules, false, options.has(ccgNormalFormOnly));
+    
     System.out.println("Done creating ParametricCcgParser.");
 
     // Read in training data and confirm its validity.
@@ -228,7 +250,7 @@ public class TrainCcg extends AbstractCli {
       this.includeGoldSupertags = includeGoldSupertags;
     }
 
-    @Override @SuppressWarnings("unchecked")
+    @Override
     public CcgExample map(CcgExample item) {
       SupertaggedSentence taggedSentence = supertagger.multitag(
           item.getSentence().getWordsAndPosTags(), multitagThreshold);

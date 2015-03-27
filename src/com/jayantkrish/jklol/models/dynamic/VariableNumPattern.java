@@ -102,6 +102,8 @@ public class VariableNumPattern extends AbstractVariablePattern {
     return new VariableNumPattern(plateStarts, plateEnds, plateReplicationSizes, plateVarOffsets,
         plateMatchIndexOffsets, templateVariables, fixedVariables);
   }
+  
+  // public static VariableNumPattern 
 
   @Override
   public List<VariableMatch> matchVariables(VariableNumMap inputVariables) {

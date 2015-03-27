@@ -48,6 +48,6 @@ public class ConstantParametricFactor extends AbstractParametricFactor {
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    return "constant\n";
+    return "";
   }
 }

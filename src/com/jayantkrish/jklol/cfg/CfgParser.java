@@ -153,8 +153,8 @@ public class CfgParser implements Serializable {
    * Compute the marginal distribution over all grammar entries conditioned on
    * the given sequence of terminals.
    */
-  public ParseChart parseMarginal(List<?> terminals, Object root, boolean useSumProduct) {
-    ParseChart chart = createParseChart(terminals, useSumProduct);
+  public CfgParseChart parseMarginal(List<?> terminals, Object root, boolean useSumProduct) {
+    CfgParseChart chart = createParseChart(terminals, useSumProduct);
     Factor rootFactor = TableFactor.pointDistribution(parentVar,
         parentVar.outcomeArrayToAssignment(root));
     return marginal(chart, terminals, rootFactor);
@@ -165,7 +165,7 @@ public class CfgParser implements Serializable {
    * children, conditioned on the provided terminals and assuming the provided
    * distributions over the root node.
    */
-  public ParseChart parseMarginal(List<?> terminals, Factor rootDist, boolean useSumProduct) {
+  public CfgParseChart parseMarginal(List<?> terminals, Factor rootDist, boolean useSumProduct) {
     return marginal(createParseChart(terminals, useSumProduct), terminals, rootDist);
   }
 
@@ -180,13 +180,13 @@ public class CfgParser implements Serializable {
    * @return
    */
   @SuppressWarnings("unchecked")
-  public List<ParseTree> beamSearch(List<?> terminals) {
+  public List<CfgParseTree> beamSearch(List<?> terminals) {
     if (terminals.size() == 0) {
       // Zero size inputs occur because unknown words may be automatically skipped.
       return Collections.emptyList();
     }
     
-    BeamSearchParseChart chart = new BeamSearchParseChart((List<Object>) terminals, beamSize);
+    BeamSearchCfgParseChart chart = new BeamSearchCfgParseChart((List<Object>) terminals, beamSize);
 
     // Construct an encoding for mapping partial parse trees to longs. Using an
     // encoding improves parsing efficiency.
@@ -229,7 +229,7 @@ public class CfgParser implements Serializable {
      */
 
     // Map the integer encodings of trees back to tree objects.
-    List<ParseTree> trees;
+    List<CfgParseTree> trees;
     if (canSkipTerminals) {
       trees = populateParseTreesFromChartSkippingTerminals(chart, treeKeyOffsets);
     } else {
@@ -247,7 +247,7 @@ public class CfgParser implements Serializable {
     return trees;
   }
 
-  private List<ParseTree> populateParseTreesFromChartSkippingTerminals(BeamSearchParseChart chart,
+  private List<CfgParseTree> populateParseTreesFromChartSkippingTerminals(BeamSearchCfgParseChart chart,
       long[] treeEncodingOffsets) {
     // If we can skip terminals, a parse for any subtree of the sentence
     // is a parse for the entire sentence. Identify a probability threshold
@@ -273,7 +273,7 @@ public class CfgParser implements Serializable {
     }
 
     // Construct the parse trees above the probability threshold.
-    List<ParseTree> trees = Lists.newArrayList();
+    List<CfgParseTree> trees = Lists.newArrayList();
     if (heapSize > 0) {
       double minimumProbability = bestValues[0];
       for (int spanSize = 0; spanSize < chart.chartSize() - 1; spanSize++) {
@@ -290,12 +290,12 @@ public class CfgParser implements Serializable {
         }
       }
     }
-    trees.add(ParseTree.EMPTY);
+    trees.add(CfgParseTree.EMPTY);
     return trees;
   }
 
-  private ParseTree mapTreeKeyToParseTree(long treeKey, double treeProb, int spanStart, int spanEnd,
-      BeamSearchParseChart chart, long[] treeEncodingOffsets) {
+  private CfgParseTree mapTreeKeyToParseTree(long treeKey, double treeProb, int spanStart, int spanEnd,
+      BeamSearchCfgParseChart chart, long[] treeEncodingOffsets) {
     // Unpack the components of treeKey.
     int ruleIndex = (int) ((treeKey % treeEncodingOffsets[4]) / treeEncodingOffsets[5]);
     int rootIndex = (int) ((treeKey % treeEncodingOffsets[3]) / treeEncodingOffsets[4]);
@@ -315,7 +315,7 @@ public class CfgParser implements Serializable {
     if (leftSplitIndex == chart.chartSize() &&
         rightSplitIndex == chart.chartSize()) {
       // The tree is a terminal.
-      return new ParseTree(rootObj, ruleObj, chart.getTerminals().subList(spanStart, spanEnd + 1), treeProb);
+      return new CfgParseTree(rootObj, ruleObj, chart.getTerminals().subList(spanStart, spanEnd + 1), treeProb);
     } else {
       // Tree is a nonterminal. Identify the left and right subtrees by decoding
       // the current key.
@@ -324,7 +324,7 @@ public class CfgParser implements Serializable {
       long rightTreeKey = chart.getParseTreeKeysForSpan(rightSplitIndex, spanEnd)[rightSubtreeBeamIndex];
       double rightProb = chart.getParseTreeProbsForSpan(rightSplitIndex, spanEnd)[rightSubtreeBeamIndex];
 
-      return new ParseTree(rootObj, ruleObj,
+      return new CfgParseTree(rootObj, ruleObj,
           mapTreeKeyToParseTree(leftTreeKey, leftProb, spanStart, leftSplitIndex, chart, treeEncodingOffsets),
           mapTreeKeyToParseTree(rightTreeKey, rightProb, rightSplitIndex, spanEnd, chart, treeEncodingOffsets),
           treeProb);
@@ -338,7 +338,7 @@ public class CfgParser implements Serializable {
    * @param tree
    * @return
    */
-  public double getProbability(List<?> terminals, ParseTree tree) {
+  public double getProbability(List<?> terminals, CfgParseTree tree) {
     if (!tree.getTerminalProductions().equals(terminals) && !canSkipTerminals) {
       return 0.0;
     } else {
@@ -346,7 +346,7 @@ public class CfgParser implements Serializable {
     }
   }
 
-  private double getProbabilityHelper(ParseTree tree) {
+  private double getProbabilityHelper(CfgParseTree tree) {
     if (tree.isTerminal()) {
       Assignment terminalAssignment = terminalVar.outcomeArrayToAssignment(tree.getTerminalProductions())
           .union(parentVar.outcomeArrayToAssignment(tree.getRoot()))
@@ -373,14 +373,14 @@ public class CfgParser implements Serializable {
    * Calculate the inside probabilities (i.e., run the upward pass of variable
    * elimination).
    */
-  public ParseChart parseInsideMarginal(List<?> terminals, boolean useSumProduct) {
-    ParseChart chart = createParseChart(terminals, useSumProduct);
+  public CfgParseChart parseInsideMarginal(List<?> terminals, boolean useSumProduct) {
+    CfgParseChart chart = createParseChart(terminals, useSumProduct);
     initializeChart(chart, terminals);
     upwardChartPass(chart);
     return chart;
   }
 
-  public ParseChart parseOutsideMarginal(ParseChart chart, Factor rootDist) {
+  public CfgParseChart parseOutsideMarginal(CfgParseChart chart, Factor rootDist) {
     assert chart.getInsideCalculated();
     assert !chart.getOutsideCalculated();
 
@@ -404,15 +404,15 @@ public class CfgParser implements Serializable {
    * @param useSumProduct
    * @return
    */
-  private ParseChart createParseChart(List<?> terminals, boolean useSumProduct) {
-    return new ParseChart(terminals, parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, useSumProduct);
+  private CfgParseChart createParseChart(List<?> terminals, boolean useSumProduct) {
+    return new CfgParseChart(terminals, parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, useSumProduct);
   }
 
   /*
    * Helper method for computing marginals / max-marginals with an arbitrary
    * distribution on terminals.
    */
-  private ParseChart marginal(ParseChart chart, List<?> terminals,
+  private CfgParseChart marginal(CfgParseChart chart, List<?> terminals,
       Factor rootDist) {
 
     initializeChart(chart, terminals);
@@ -427,7 +427,7 @@ public class CfgParser implements Serializable {
    * This method calculates all of the inside probabilities by iteratively
    * parsing larger and larger spans of the sentence.
    */
-  private void upwardChartPass(ParseChart chart) {
+  private void upwardChartPass(CfgParseChart chart) {
     // spanSize is the number of words *in addition* to the word under
     // spanStart.
     for (int spanSize = 1; spanSize < chart.chartSize(); spanSize++) {
@@ -442,7 +442,7 @@ public class CfgParser implements Serializable {
   /*
    * Calculate a single inside probability entry.
    */
-  private void calculateInside(int spanStart, int spanEnd, ParseChart chart) {
+  private void calculateInside(int spanStart, int spanEnd, CfgParseChart chart) {
     for (int k = 0; k < spanEnd - spanStart; k++) {
       Factor left = chart.getInsideEntries(spanStart, spanStart + k).relabelVariables(parentToLeft);
       Factor right = chart.getInsideEntries(spanStart + k + 1, spanEnd).relabelVariables(
@@ -456,7 +456,7 @@ public class CfgParser implements Serializable {
   /*
    * Compute the outside probabilities moving downward from the top of the tree.
    */
-  private void downwardChartPass(ParseChart chart) {
+  private void downwardChartPass(CfgParseChart chart) {
     assert chart.getInsideCalculated();
 
     // Calculate root marginal, which is not included in the rest of the pass.
@@ -484,7 +484,7 @@ public class CfgParser implements Serializable {
    * Calculate a single outside probability entry (and its corresponding
    * marginal).
    */
-  private void calculateOutside(int spanStart, int spanEnd, ParseChart chart) {
+  private void calculateOutside(int spanStart, int spanEnd, CfgParseChart chart) {
     Factor parentOutside = chart.getOutsideEntries(spanStart, spanEnd);
     for (int k = 0; k < spanEnd - spanStart; k++) {
       Factor leftInside = chart.getInsideEntries(spanStart, spanStart + k).relabelVariables(
@@ -531,7 +531,7 @@ public class CfgParser implements Serializable {
   /*
    * Fill in the initial chart entries implied by the given set of terminals.
    */
-  private void initializeChart(ParseChart chart, List<?> terminals) {
+  private void initializeChart(CfgParseChart chart, List<?> terminals) {
     Variable terminalListValue = terminalVar.getOnlyVariable();
 
     for (int i = 0; i < terminals.size(); i++) {
@@ -550,7 +550,7 @@ public class CfgParser implements Serializable {
     }
   }
 
-  private void updateTerminalRuleCounts(ParseChart chart) {
+  private void updateTerminalRuleCounts(CfgParseChart chart) {
     Variable terminalListValue = terminalVar.getOnlyVariable();
     List<?> terminals = chart.getTerminals();
 
@@ -576,7 +576,7 @@ public class CfgParser implements Serializable {
    * @param terminals
    * @param chart
    */
-  private void initializeBeamSearchChart(List<Object> terminals, BeamSearchParseChart chart,
+  private void initializeBeamSearchChart(List<Object> terminals, BeamSearchCfgParseChart chart,
       long[] treeEncodingOffsets) {
     Variable terminalListValue = terminalVar.getOnlyVariable();
 
@@ -615,7 +615,7 @@ public class CfgParser implements Serializable {
    * @param spanEnd
    * @param chart
    */
-  private void calculateInsideBeam(int spanStart, int spanEnd, BeamSearchParseChart chart,
+  private void calculateInsideBeam(int spanStart, int spanEnd, BeamSearchCfgParseChart chart,
       long[] treeEncodingOffsets) {
     // For efficiency, precompute values which are used repeatedly in the loop
     // below.

@@ -20,6 +20,9 @@ import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmKlElementwiseLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmValueLoss;
+import com.jayantkrish.jklol.cvsm.lrt.LrtFamily;
+import com.jayantkrish.jklol.cvsm.lrt.OpLrtFamily;
+import com.jayantkrish.jklol.cvsm.lrt.TensorLrtFamily;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -233,7 +236,7 @@ public class CvsmTrainingTest extends TestCase {
     List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
         Arrays.asList("red", "block", "on", "table"), Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG)), 10);
 
-    System.out.println(parses.get(0).getLogicalForm(false).simplify());
+    System.out.println(parses.get(0).getLogicalForm().simplify());
   }
 
   public void testCvsmAffineTraining() {

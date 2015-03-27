@@ -134,17 +134,6 @@ public abstract class AbstractFactor implements Factor, Serializable {
     throw new CoercionError("Cannot coerce this factor into a DiscreteFactor.");
   }
 
-  /**
-   * {@inheritDoc}
-   * 
-   * This default implementation always throws {@code CoercionError}. Subclasses
-   * which support this operation should override this implementation.
-   */
-  @Override
-  public DiscreteObjectFactor coerceToDiscreteObject() {
-    throw new CoercionError("Cannot coerce this factor into a DiscreteObjectFactor.");
-  }
-
   @Override
   public String getParameterDescription() {
     // This implementation will probably not be detailed enough.

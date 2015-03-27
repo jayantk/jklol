@@ -1,0 +1,4 @@
+
+# Unary rules.
+# Type change Ns to NPs
+"N{0} NP{0}","(lambda $1 $1)"

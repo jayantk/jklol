@@ -9,11 +9,11 @@ import org.timepedia.exporter.client.Exportable;
 
 import com.google.gwt.core.client.JsArrayMixed;
 import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.cli.ModelUtils;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.probdb.Query;
+import com.jayantkrish.jklol.sequence.SequenceModelUtils;
 
 @Export()
 @ExportPackage("jklol")
@@ -40,13 +40,13 @@ public class ExportTest implements Exportable {
     List<String> emissionFeatures = Arrays.asList("the,DT,the=DT,1",
         "the,N,the=N,0.5", "thing,DT,thing=DT,0.5", "thing,N,thing=N,1");
 
-    ParametricFactorGraph pfg = ModelUtils.buildSequenceModel(emissionFeatures, ","); 
+    ParametricFactorGraph pfg = SequenceModelUtils.buildSequenceModel(emissionFeatures, ","); 
     SufficientStatistics stats = pfg.getNewSufficientStatistics();
     stats.increment(1);
     DynamicFactorGraph model = pfg.getModelFromParameters(stats);
 
     List<String> words = Arrays.asList(input.split(" "));
-    List<String> labels = ModelUtils.testSequenceModel(words, model);
+    List<String> labels = SequenceModelUtils.testSequenceModel(words, model);
 
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < words.size(); i++) {

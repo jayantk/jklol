@@ -166,17 +166,6 @@ public class Lbfgs implements GradientOptimizer {
       double nextObjectiveValue, curInnerProd, cond1Rhs, nextInnerProd, cond2Rhs;
       SufficientStatistics nextParameters;
 
-      /*
-       * System.out.println("current:");
-       * System.out.println(currentParameters.getDescription());
-       * 
-       * System.out.println("direction:");
-       * System.out.println(direction.getDescription());
-       * 
-       * System.out.println("gradient:");
-       * System.out.println(gradient.getDescription());
-       */
-
       do {
         stepSize = stepSize * LINE_SEARCH_CONSTANT;
         nextParameters = currentParameters.duplicate();
@@ -191,26 +180,9 @@ public class Lbfgs implements GradientOptimizer {
 
         cond1Rhs = currentObjectiveValue - (WOLFE_CONDITION_C1 * stepSize * curInnerProd);
         cond2Rhs = -1.0 * WOLFE_CONDITION_C2 * curInnerProd;
-
-        /*
-        System.out.println("next:");
-        System.out.println(nextParameters.getDescription());
-        System.out.println("next gradient:");
-        System.out.println(nextGradient.getDescription());
-
-        System.out.println("current: " + currentObjectiveValue);
-        System.out.println("next: " + nextObjectiveValue);
-        System.out.println("next parameter l2Norm: " + nextParameters.getL2Norm());
-        System.out.println("next gradient l2Norm: " + nextGradient.getL2Norm());
-        System.out.println("curInnerProd: " + curInnerProd);
-        System.out.println("nextInnerProd: " + nextInnerProd);
-
-        System.out.println("cond1: " + nextObjectiveValue + " > " + cond1Rhs);
-        System.out.println("cond2: abs(" + nextInnerProd + ") < " + cond2Rhs);
-	*/
       } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs) || Double.isNaN(nextObjectiveValue))
-          && stepSize > MIN_STEP_SIZE); // || Math.abs(nextInnerProd)
-                                        // > cond2Rhs
+          && stepSize > MIN_STEP_SIZE);
+
       log.logStatistic(i, "step size", stepSize);
       log.stopTimer("compute_step_size");
 

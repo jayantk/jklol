@@ -2,8 +2,6 @@ package com.jayantkrish.jklol.cli;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 import joptsimple.OptionException;
@@ -16,12 +14,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.boost.FunctionalGradientAscent;
-import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
-import com.jayantkrish.jklol.ccg.CcgRuleSchema;
-import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.dtree.RegressionTreeTrainer;
 import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.sequence.cli.TrainSequenceModel;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;
@@ -30,7 +26,6 @@ import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.training.MinibatchLbfgs;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
-import com.jayantkrish.jklol.util.IoUtils;
 import com.jayantkrish.jklol.util.Pseudorandom;
 import com.jayantkrish.jklol.util.TimeUtils;
 
@@ -74,11 +69,6 @@ public abstract class AbstractCli {
      * these options include the maximum number of threads to use.
      */
     MAP_REDUCE,
-    /**
-     * Enables options for constructing a CCG parser, e.g., by
-     * providing a lexicon and CCG rules.
-     */
-    PARAMETRIC_CCG_PARSER,
     /**
      * Enables options for performing boosting via functional gradient
      * ascent.
@@ -129,13 +119,6 @@ public abstract class AbstractCli {
   // Map reduce options.
   protected OptionSpec<Integer> mrMaxThreads;
   protected OptionSpec<Integer> mrMaxBatchesPerThread;
-
-  // CCG parser options
-  protected OptionSpec<String> ccgLexicon;
-  protected OptionSpec<String> ccgRules;
-  protected OptionSpec<String> ccgDependencyFeatures;
-  protected OptionSpec<Void> ccgApplicationOnly;
-  protected OptionSpec<Void> ccgNormalFormOnly;
 
   // Functional gradient ascent options
   protected OptionSpec<Integer> fgaIterations;
@@ -332,20 +315,6 @@ public abstract class AbstractCli {
           .withRequiredArg().ofType(Integer.class).defaultsTo(20);
     }
 
-    if (opts.contains(CommonOptions.PARAMETRIC_CCG_PARSER)) {
-      ccgLexicon = parser.accepts("lexicon",
-          "The CCG lexicon defining the grammar to use.").withRequiredArg()
-          .ofType(String.class).required();
-      // Optional options
-      ccgRules = parser.accepts("rules",
-          "Binary and unary rules to use during CCG parsing, in addition to function application and composition.")
-          .withRequiredArg().ofType(String.class);
-      ccgApplicationOnly = parser.accepts("applicationOnly",
-          "Use only function application during parsing, i.e., no composition.");
-      ccgNormalFormOnly = parser.accepts("normalFormOnly",
-          "Only permit CCG derivations in Eisner normal form.");
-    }
-
     if (opts.contains(CommonOptions.FUNCTIONAL_GRADIENT_ASCENT)) {
       fgaIterations = parser.accepts("fgaIterations",
           "Number of iterations of functional gradient ascent to perform.").withRequiredArg()
@@ -477,16 +446,6 @@ public abstract class AbstractCli {
     }
 
     throw new UnsupportedOperationException("To use createGradientOptimizer, the CLI constructor must specify STOCHASTIC_GRADIENT and/or LBFGS.");
-  }
-
-  protected ParametricCcgParser createCcgParser(Set<String> posTagSet, Set<CcgRuleSchema> rules,
-      CcgFeatureFactory featureFactory) {
-    // Read in the lexicon to instantiate the model.
-    List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
-    List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
-        : Collections.<String> emptyList();
-    return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
-        posTagSet, !parsedOptions.has(ccgApplicationOnly), rules, false, parsedOptions.has(ccgNormalFormOnly));
   }
 
   protected FunctionalGradientAscent createFunctionalGradientAscent(int numExamples) {

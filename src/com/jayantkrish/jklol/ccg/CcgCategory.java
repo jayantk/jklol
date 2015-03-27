@@ -11,28 +11,28 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.util.CsvParser;
 
 /**
- * A CCG category composed of both a syntactic and semantic type.
- * Syntax is represented using a {@code HeadedSyntacticCategory},
- * while the semantics are contained within this class itself.
+ * A CCG category is a tuple of a syntactic category and semantic
+ * representation, as would appear on the right hand side of a CCG
+ * lexicon entry.
  * <p>
- * CCG semantics are represented in the dependency format and made up
- * of two parts: (1) a set of unfilled dependencies, and (2) a set of
- * semantic variable assignments. Each category contains a number of
- * unfilled dependencies, represented as a (subject, argument number,
- * object) tuples. The subject is the name of a predicate, the
- * argument number an argument to that predicate, and the object a
- * semantic variable. The semantic variable assignment is a mapping
- * from semantic variables to predicates; this assignment determines
- * the head of the current category, as well as the fillers for
- * unfilled dependencies.
+ * {@code CcgCategory} contains two independent semantic representations.
+ * The first is a dependency representation, as used in CCGbank. This
+ * representation consists of (1) a set of unfilled dependencies, and
+ * (2) a set of syntactic variable assignments. Each unfilled dependency
+ * is a (subject, argument number, object) triple, where the subject is
+ * the name of the predicate applied by this entry, the argument number is 
+ * an argument to that predicate, and the object is a variable number in the
+ * syntactic category whose assignment will be used to fill the dependency 
+ * during parsing. The syntactic variable assignments are a mapping
+ * from syntactic variables to predicates. This assignment determines
+ * the fillers of dependencies during parsing.
+ * <p>
+ * The second semantic representation is a lambda calculus logical form.  
  * 
  * @author jayant
  */
@@ -75,8 +75,6 @@ public class CcgCategory implements Serializable {
   public CcgCategory(HeadedSyntacticCategory syntax, Expression logicalForm, List<String> subjects,
       List<Integer> argumentNumbers, List<Integer> objects, List<Set<String>> variableAssignments) {
     this.syntax = Preconditions.checkNotNull(syntax);
-    // TODO: is this check really necessary? Seems useful, but could be 
-    // weird edge cases where we don't want this.
     Preconditions.checkArgument(syntax.isCanonicalForm(),
         "Syntactic category must be in canonical form. Got: %s", syntax);
     this.logicalForm = logicalForm;
@@ -175,114 +173,6 @@ public class CcgCategory implements Serializable {
     }
 
     return new CcgCategory(syntax, logicalForm, subjects, argumentNumbers, objects, values);
-  }
-  
-  public static Expression induceLogicalFormFromSyntax(HeadedSyntacticCategory syntax) {
-    int[] syntaxVarNums = syntax.getUniqueVariables();
-    Map<Integer, ConstantExpression> varMap = Maps.newHashMap();
-    for (int i = 0; i < syntaxVarNums.length; i++) {
-      varMap.put(i, new ConstantExpression("$" + syntaxVarNums[i]));
-    }
-
-    List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList();
-    List<Integer> argumentRoots = Lists.newArrayList();
-    List<ConstantExpression> argumentVariables = Lists.newArrayList();
-    int heuristicRootVariable = -1;
-    while (!syntax.isAtomic()) {
-      HeadedSyntacticCategory argument = syntax.getArgumentType();
-      argumentCats.add(argument);
-      argumentRoots.add(argument.getHeadVariable());
-      argumentVariables.add(varMap.get(argument.getHeadVariable()));
-      syntax = syntax.getReturnType();
-      
-      if (argument.getSyntax().getWithoutFeatures().isUnifiableWith(syntax.getSyntax().getWithoutFeatures())) {
-        heuristicRootVariable = argument.getHeadVariable();
-      }
-    }
-    Set<Integer> argumentRootSet = Sets.newHashSet(argumentRoots);
-    if (argumentRootSet.size() < argumentRoots.size()) {
-      // Multiple arguments bind the same semantic variable.
-      // It's not clear what the logical form should do here.
-      return null;
-    }
-
-    if (argumentCats.size() == 0 && !syntax.getSyntax().getValue().equals("S")) {
-      // Some sort of unknown noun or something.
-      return new ConstantExpression("unknown");
-    }
-
-    Expression body = null;
-    int argumentIndex = argumentRoots.indexOf(syntax.getHeadVariable());
-    if (argumentIndex == -1) {
-      // The head of the returned category is not one of the argument variables.
-      // Try guessing a head based on syntactic unifiability.
-      argumentIndex = argumentRoots.indexOf(heuristicRootVariable);
-    }
-
-    if (argumentIndex != -1) {
-      List<Expression> argumentArguments = Lists.newArrayList();
-      int argumentRoot = argumentRoots.get(argumentIndex);
-      Set<Integer> usedVariables = Sets.newHashSet();
-      usedVariables.add(argumentRoot);
-      HeadedSyntacticCategory argument = argumentCats.get(argumentIndex);
-      if (argument.isAtomic()) {
-        body = argumentVariables.get(argumentIndex);
-      } else {
-        while (!argument.isAtomic()) {
-          int argumentArgumentRoot = argument.getArgumentType().getHeadVariable();
-          usedVariables.add(argumentArgumentRoot);
-          argumentArguments.add(varMap.get(argumentArgumentRoot));
-          argument = argument.getReturnType();
-        }
-        body = new ApplicationExpression(argumentVariables.get(argumentIndex), argumentArguments);
-      }
-      return new LambdaExpression(argumentVariables, body);
-    }
-
-    return null;
-
-    // See if there are any other arguments to the category whose
-    // argument variables unify with the return value.
-    /*
-    if (argument.getSyntax().getValue().startsWith("N")) {
-      ConstantExpression var1 = new ConstantExpression("x");
-      ConstantExpression var2 = new ConstantExpression("y");
-      Expression equalsExpression = new LambdaExpression(Arrays.asList(var2), new ApplicationExpression(
-          new ConstantExpression("equals"), Arrays.asList(var1, var2)));
-      for (int i = 0; i < argumentRoots.size(); i++) {
-        int otherArgumentRoot = argumentRoots.get(i);
-        if (!usedVariables.contains(otherArgumentRoot)) {
-          HeadedSyntacticCategory argumentCat = argumentCats.get(i);
-
-          List<Integer> argumentArgumentRoots = Lists.newArrayList();
-          if (!argumentCat.isAtomic()) {
-            HeadedSyntacticCategory cat = argumentCat.getArgumentType();
-            argumentArgumentRoots.add(cat.getRootVariable());
-            argumentCat = argumentCat.getReturnType();
-          }
-
-          if (argumentCat.getSyntax().getValue().equals("S") && 
-              usedVariables.containsAll(argumentArgumentRoots)) {
-            ConstantExpression sentenceVariable = argumentVariables.get(i); 
-            Expression sentenceExpression = null;
-            if (argumentArgumentRoots.size() > 0) {
-              List<ConstantExpression> argumentVars = Lists.newArrayList();
-              for (int j = 0; j < argumentArgumentRoots.size(); j++) {
-                argumentVars.add(varMap.get(argumentArgumentRoots.get(j)));
-              }
-              sentenceExpression = new ApplicationExpression(sentenceVariable, equalsExpression);
-            } else {
-              sentenceExpression = sentenceVariable;
-            }
-            body = new CommutativeOperator(new ConstantExpression("and"),
-                Arrays.asList(body, sentenceExpression));
-          }
-        }
-      }
-    }
-    */
-
-
   }
 
   /**

@@ -56,6 +56,11 @@ public class UnaryCombinator implements Serializable {
   public CcgUnaryRule getUnaryRule() {
     return unaryRule;
   }
+  
+  @Override
+  public String toString() {
+    return unaryRule.toString();
+  }
 
   @Override
   public int hashCode() {

@@ -116,7 +116,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
           compatible = false;
         }
       }
-
+      
       if (compatible) {
         correctParses.add(parse);
       }

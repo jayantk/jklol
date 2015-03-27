@@ -53,7 +53,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
 
   @Override
-  public DenseTensor slice(int[] dimensionNumbers, int[] key) {
+  public Tensor slice(int[] dimensionNumbers, int[] key) {
     if (dimensionNumbers.length == 0) {
       return this;
     }
@@ -118,7 +118,10 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
 
   @Override
-  public DenseTensor elementwiseProduct(Tensor other) {
+  public Tensor elementwiseProduct(Tensor other) {
+    if (other instanceof SparseTensor && Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers())) {
+      return other.elementwiseProduct(this);
+    }
     DenseTensorBuilder result = new DenseTensorBuilder(getDimensionNumbers(),
         getDimensionSizes());
     result.incrementWithMultiplier(other, 1);
@@ -127,8 +130,8 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
 
   @Override
-  public DenseTensor elementwiseProduct(Collection<Tensor> others) {
-    DenseTensor result = this;
+  public Tensor elementwiseProduct(Collection<Tensor> others) {
+    Tensor result = this;
     for (Tensor other : others) {
       result = result.elementwiseProduct(other);
     }
@@ -146,7 +149,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
 
   @Override
-  public DenseTensor innerProduct(Tensor other) {
+  public Tensor innerProduct(Tensor other) {
     int[] otherDims = other.getDimensionNumbers();
     int[] otherSizes = other.getDimensionSizes();
     if (otherDims.length == 0) {
@@ -278,7 +281,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
 
   @Override
-  public DenseTensor outerProduct(Tensor other) {
+  public Tensor outerProduct(Tensor other) {
     int[] otherDims = other.getDimensionNumbers();
     int[] myDims = getDimensionNumbers();
     

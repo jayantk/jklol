@@ -98,7 +98,7 @@ public class CfgParserTest extends TestCase {
 	}
 	
 	public void testParseInsideMarginal() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
+		CfgParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
 
 		Factor rootProductions = c.getInsideEntries(0, 3);
 		assertEquals(2.0, rootProductions.size());
@@ -113,7 +113,7 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testParseOutsideMarginal() {
-		ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
+		CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor rootProductions = c.getOutsideEntries(0, 3);
 		assertEquals(1.0, rootProductions.size());
@@ -124,7 +124,7 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testParseMarginal() {
-	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor rootProductions = c.getMarginalEntries(0, 3);
 		assertEquals(1.0, rootProductions.size());
@@ -135,7 +135,7 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testRuleCounts() {
-	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor ruleCounts = c.getBinaryRuleExpectations();
 		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S2", "rule1"));
@@ -150,7 +150,7 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testAmbiguous() {
-	  ParseChart c = p.parseMarginal(Arrays.asList("a", "b", "c"), "A", true);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("a", "b", "c"), "A", true);
 
 		Factor leftProds = c.getMarginalEntries(0, 1);
 		assertEquals(0.5, leftProds.getUnnormalizedProbability("A") / c.getPartitionFunction());
@@ -166,7 +166,7 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testParseMaxMarginal() {
-		ParseChart c = p.parseMarginal(Arrays.asList("baz", "bbb"), "barP", false);
+		CfgParseChart c = p.parseMarginal(Arrays.asList("baz", "bbb"), "barP", false);
 		Factor prods = c.getInsideEntries(0, 1);
 		assertEquals(1.0, prods.size());
 		assertEquals(.5, prods.getUnnormalizedProbability("barP"));	
@@ -219,22 +219,22 @@ public class CfgParserTest extends TestCase {
 	*/
 	
 	public void testBeamSearch() {
-	  List<ParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
+	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
 	  assertEquals(3, trees.size());
 	  
-	  ParseTree bestTree = trees.get(0);
+	  CfgParseTree bestTree = trees.get(0);
 	  assertEquals("barP", bestTree.getRoot());
 	  assertEquals("rule1", bestTree.getRuleType());
 	  assertTrue(bestTree.isTerminal());
 	  assertEquals(0.5, bestTree.getProbability());
 	  
-	  ParseTree secondBestTree = trees.get(1);
+	  CfgParseTree secondBestTree = trees.get(1);
 	  assertEquals("barP", secondBestTree.getRoot());
 	  assertEquals("rule1", secondBestTree.getRuleType());
 	  assertFalse(secondBestTree.isTerminal());
 	  assertEquals(0.125, secondBestTree.getProbability());
 	  
-	  ParseTree thirdBestTree = trees.get(2);
+	  CfgParseTree thirdBestTree = trees.get(2);
 	  assertEquals("barP", thirdBestTree.getRoot());
 	  assertEquals("rule2", thirdBestTree.getRuleType());
 	  assertFalse(thirdBestTree.isTerminal());
@@ -252,10 +252,10 @@ public class CfgParserTest extends TestCase {
 	}
 	
 	public void testBeamSearch2() {
-	  List<ParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"));
+	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"));
 	  assertEquals(5, trees.size());
 	  
-	  for (ParseTree tree : trees) {
+	  for (CfgParseTree tree : trees) {
 	    assertEquals("A", tree.getRoot());
 	    assertEquals("rule1", tree.getRuleType());
 	    assertFalse(tree.isTerminal());

@@ -5,7 +5,6 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 
 public class CcgCombinatorPattern implements CcgPattern {
 

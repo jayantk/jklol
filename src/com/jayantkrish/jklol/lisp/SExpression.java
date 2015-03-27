@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * A LISP S-expression.
@@ -24,23 +25,32 @@ public class SExpression {
 
   // Null unless this expression is not a constant. 
   private final List<SExpression> subexpressions;
+  
+  // Number of nodes in this expression's syntax tree
+  private final int size;
 
   private SExpression(String constantName, int constantNameIndex, Object primitiveValue,
-      List<SExpression> subexpressions) {
+      List<SExpression> subexpressions, int size) {
     Preconditions.checkArgument(constantName == null ^ subexpressions == null);
     this.constantName = constantName;
     this.constantNameIndex = constantNameIndex;
     this.primitiveValue = primitiveValue;
     this.subexpressions = subexpressions;
+    this.size = size;
   }
 
   public static SExpression constant(String constantName, int constantNameIndex,
       Object primitiveValue) {
-    return new SExpression(constantName, constantNameIndex, primitiveValue, null);
+    return new SExpression(constantName, constantNameIndex, primitiveValue, null, 1);
   }
 
   public static SExpression nested(List<SExpression> subexpressions) {
-    return new SExpression(null, -1, null, subexpressions);
+    int size = 1;
+    for (SExpression subexpression : subexpressions) {
+      size += subexpression.size();
+    }
+
+    return new SExpression(null, -1, null, subexpressions, size);
   }
 
   public boolean isConstant() {
@@ -63,6 +73,65 @@ public class SExpression {
     return subexpressions;
   }
   
+  public int size() {
+    return size;
+  }
+  
+  /**
+   * Gets the subexpression of {@code this} at position
+   * {@code index} in the syntax tree.
+   * 
+   * @param index
+   * @return
+   */
+  // TODO: rename this method, it's confusing to call it a
+  // subexpression.
+  public SExpression getSubexpression(int index) {
+    Preconditions.checkArgument(index < size);
+    if (index == 0) {
+      return this;
+    } else {
+      int startIndex = 1;
+      for (SExpression subexpression : subexpressions) {
+        int endIndex = startIndex + subexpression.size();
+        
+        if (index < endIndex) {
+          return subexpression.getSubexpression(index - startIndex);
+        } else {
+          startIndex += subexpression.size();
+        }
+      }
+      // This should never happen due to the preconditions
+      // check at the beginning.
+      throw new IllegalArgumentException("Something bad happened.");
+    }
+  }
+
+  public SExpression substitute(int index, SExpression newExpression) {
+    Preconditions.checkArgument(index < size);
+    if (index == 0) {
+      return newExpression;
+    } else {
+      int startIndex = 1;
+      for (int i = 0; i < subexpressions.size(); i++) {
+        SExpression subexpression = subexpressions.get(i);
+        int endIndex = startIndex + subexpression.size();
+        
+        if (index < endIndex) {
+          SExpression substituted = subexpression.substitute(index - startIndex, newExpression);
+          List<SExpression> newSubexpressions = Lists.newArrayList(subexpressions);
+          newSubexpressions.set(i, substituted);
+          return SExpression.nested(newSubexpressions);
+        } else {
+          startIndex += subexpression.size();
+        }
+      }
+      // This should never happen due to the preconditions
+      // check at the beginning.
+      throw new IllegalArgumentException("Something bad happened.");
+    }
+  }
+
   @Override
   public String toString() {
     if (isConstant()) {

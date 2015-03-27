@@ -159,7 +159,10 @@ public class AlignmentModel {
     VariableNumMap binaryRuleVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
-    binaryRuleBuilder.setWeight(1.0, SKIP_EXPRESSION, SKIP_EXPRESSION, SKIP_EXPRESSION, SKIP_RULE);
+    for (Expression e : expressions) {
+      binaryRuleBuilder.setWeight(1.0, e, SKIP_EXPRESSION, e, SKIP_RULE);
+      binaryRuleBuilder.setWeight(1.0, SKIP_EXPRESSION, e, e, SKIP_RULE);
+    }
     
     VariableNumMap terminalRuleVars = VariableNumMap.unionAll(terminalVar, parentVar, ruleVar);
     TableFactorBuilder terminalRuleBuilder = new TableFactorBuilder(terminalRuleVars,
@@ -172,67 +175,56 @@ public class AlignmentModel {
     
     TableFactor binaryDistribution = binaryRuleBuilder.build();
     TableFactor terminalDistribution = terminalRuleBuilder.build();
-
+    
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleVar,
         binaryDistribution, terminalDistribution, -1, false);
 
-    // TODO: implement backpointers in the CFG parser so we can
-    // do this computation exactly.
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), false);
+    CfgParseChart chart = parser.parseMarginal(example.getWords(), tree.getExpression(), false);
     CfgParseTree parseTree = chart.getBestParseTree(tree.getExpression());
     
     System.out.println(parseTree);
-    return decodeCfgParse(parseTree, example.getTree());
+    return decodeCfgParse(parseTree, 0);
   }
   
-  private AlignedExpressionTree decodeCfgParse(CfgParseTree t, ExpressionTree e) {
+  private AlignedExpressionTree decodeCfgParse(CfgParseTree t, int numAppliedArguments) {
+    Preconditions.checkArgument(t.getRoot() != SKIP_EXPRESSION);
+
     if (t.isTerminal()) {
-      Expression expression = e.getExpression();
-      int numAppliedArguments = e.getNumAppliedArguments();
-      int[] spanStarts = new int[0];
-      int[] spanEnds = new int[0];
+      // Expression tree spans have an exclusive end index.
+      int[] spanStarts = new int[] {t.getSpanStart()};
+      int[] spanEnds = new int[] {t.getSpanEnd() + 1};
       String word = (String) t.getTerminalProductions().get(0);
-      return AlignedExpressionTree.forTerminal(expression, numAppliedArguments, spanStarts, spanEnds, word);
+      return AlignedExpressionTree.forTerminal((Expression) t.getRoot(),
+          numAppliedArguments, spanStarts, spanEnds, word);
     } else {
       Expression parent = (Expression) t.getRoot();
       Expression left = (Expression) t.getLeft().getRoot();
       Expression right = (Expression) t.getRight().getRoot();
       
       if (left == SKIP_EXPRESSION) {
-        return decodeCfgParse(t.getLeft(), e);
+        return decodeCfgParse(t.getRight(), numAppliedArguments);
       } else if (right == SKIP_EXPRESSION) {
-        return decodeCfgParse(t.getRight(), e);
+        return decodeCfgParse(t.getLeft(), numAppliedArguments);
       } else {
         // A combination of expressions.
-        ExpressionTree argExp = null;
-        ExpressionTree funcExp = null;
         CfgParseTree argTree = null;
         CfgParseTree funcTree = null;
-        List<ExpressionTree> leftChildren = e.getLeftChildren();
-        List<ExpressionTree> rightChildren = e.getRightChildren();
-        for (int i = 0; i < leftChildren.size(); i++) {
-          if (leftChildren.get(i).getExpression().equals(left) &&
-              rightChildren.get(i).getExpression().equals(right)) {
-            argExp = leftChildren.get(i);
-            funcExp = rightChildren.get(i);
-            
-            argTree = t.getLeft();
-            funcTree = t.getRight();
-          } else if (leftChildren.get(i).getExpression().equals(right) &&
-              rightChildren.get(i).getExpression().equals(left)) {
-            argExp = leftChildren.get(i);
-            funcExp = rightChildren.get(i);
-
-            argTree = t.getRight();
-            funcTree = t.getLeft();
-          }
-        }
-        Preconditions.checkState(argExp != null && funcExp != null);
         
-        AlignedExpressionTree leftTree = decodeCfgParse(argTree, argExp);
-        AlignedExpressionTree rightTree = decodeCfgParse(funcTree, funcExp);
+        if (t.getRuleType().equals(FORWARD_APPLICATION)) {
+          // Thing on the left is the function
+          funcTree = t.getLeft();
+          argTree = t.getRight();
+        } else if (t.getRuleType().equals(BACKWARD_APPLICATION)) {
+          // Thing on the right is the function
+          funcTree = t.getRight();
+          argTree = t.getLeft();
+        }
+        Preconditions.checkState(funcTree != null && argTree!= null); 
+        
+        AlignedExpressionTree leftTree = decodeCfgParse(argTree, 0);
+        AlignedExpressionTree rightTree = decodeCfgParse(funcTree, numAppliedArguments + 1);
 
-        return AlignedExpressionTree.forNonterminal(parent, e.getNumAppliedArguments(),
+        return AlignedExpressionTree.forNonterminal(parent, numAppliedArguments,
             leftTree, rightTree);
       }
     }

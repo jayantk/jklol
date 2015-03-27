@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.cfg;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -125,6 +126,9 @@ public class CfgParseChart {
         long[] oldKeyNums = tensorBackpointers.getOldKeyNums();
         long[] entryBackpointers = backpointers[spanStart][spanEnd];
         int[] currentSplit = splitBackpointers[spanStart][spanEnd];
+        Arrays.fill(entryBackpointers, -1L);
+        Arrays.fill(currentSplit, -1);
+        
         for (int i = 0; i < newKeyNums.length; i++) {
           int nonterminalNum = (int) newKeyNums[i];
           entryBackpointers[nonterminalNum] = oldKeyNums[i];
@@ -339,6 +343,10 @@ public class CfgParseChart {
     Assignment rootAssignment = parentVar.outcomeArrayToAssignment(root); 
     int rootNonterminalNum = parentVar.assignmentToIntArray(rootAssignment)[0];
     double prob = marginalChart[spanStart][spanEnd].getUnnormalizedProbability(rootAssignment);
+    
+    if (prob == 0.0) {
+      return null;
+    }
 
     if (spanStart == spanEnd) {
       // TODO: handle the terminal case correctly for

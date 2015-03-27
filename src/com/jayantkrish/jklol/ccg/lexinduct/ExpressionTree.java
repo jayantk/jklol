@@ -13,6 +13,8 @@ import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypedExpression;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 
@@ -30,16 +32,7 @@ public class ExpressionTree {
   public ExpressionTree(Expression rootExpression, int numAppliedArguments,
       Tensor expressionFeatures, List<ExpressionTree> lefts, List<ExpressionTree> rights) {
     // Canonicalize variable names.
-    rootExpression = rootExpression.simplify();
-    if (rootExpression instanceof LambdaExpression) {
-      LambdaExpression lambdaExpression = (LambdaExpression) rootExpression;
-      List<ConstantExpression> args = lambdaExpression.getArguments();
-      List<ConstantExpression> newArgs = Lists.newArrayList();
-      for (int i = 0; i < args.size(); i++) {
-        newArgs.add(new ConstantExpression("$f" + i));
-      }
-      rootExpression = lambdaExpression.renameVariables(args, newArgs);
-    }
+    rootExpression = canonicalizeVariableNames(rootExpression.simplify(), 0);
     this.rootExpression = Preconditions.checkNotNull(rootExpression);
     this.numAppliedArguments = numAppliedArguments;
     this.expressionFeatures = expressionFeatures;
@@ -47,6 +40,32 @@ public class ExpressionTree {
     Preconditions.checkArgument(lefts.size() == rights.size());
     this.lefts = ImmutableList.copyOf(lefts);
     this.rights = ImmutableList.copyOf(rights);
+  }
+  
+  private static Expression canonicalizeVariableNames(Expression e, int numRenamed) {
+    if (e instanceof LambdaExpression) {
+      LambdaExpression lambdaExpression = (LambdaExpression) e;
+      List<ConstantExpression> args = lambdaExpression.getArguments();
+      List<ConstantExpression> newArgs = Lists.newArrayList();
+      for (int i = 0; i < args.size(); i++) {
+        newArgs.add(new ConstantExpression("$f" + (i + numRenamed)));
+      }
+
+      numRenamed = numRenamed + args.size();
+      Expression canonicalizedBody = canonicalizeVariableNames(lambdaExpression.getBody(),
+          numRenamed);
+      
+      lambdaExpression = new LambdaExpression(args, canonicalizedBody);
+      return lambdaExpression.renameVariables(args, newArgs);
+    } else if (e instanceof ApplicationExpression) {
+      List<Expression> newSubexpressions = Lists.newArrayList();
+      for (Expression subexpression : ((ApplicationExpression) e).getSubexpressions()) {
+        newSubexpressions.add(canonicalizeVariableNames(subexpression, numRenamed));
+      }
+      return new ApplicationExpression(newSubexpressions);
+    } else {
+      return e;
+    }
   }
 
   public static ExpressionTree fromExpression(Expression expression) {
@@ -124,7 +143,7 @@ public class ExpressionTree {
         List<ConstantExpression> newArgs = Lists.newArrayList(functionArg);
         newArgs.addAll(args);
         LambdaExpression rightExpression = new LambdaExpression(newArgs, otherBody);
-        
+
         Set<ConstantExpression> rightFreeVars = rightExpression.getFreeVariables();
         Set<ConstantExpression> leftFreeVars = leftExpression.getFreeVariables();
         rightFreeVars.removeAll(constantsThatDontCount);

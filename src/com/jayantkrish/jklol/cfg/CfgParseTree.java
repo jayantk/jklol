@@ -140,10 +140,24 @@ public class CfgParseTree implements Comparable<CfgParseTree> {
   public String toString() {
     if (this == CfgParseTree.EMPTY) {
       return "ParseTree.EMPTY";
-    } else if (!isTerminal()) {
-      return "(" + root + " --" + ruleType + "--> " + left.toString() + " " + right.toString() + ")";
+    } 
+    StringBuilder sb = new StringBuilder();
+    this.toStringHelper(sb, 0);
+    return sb.toString();
+  }
+  
+  public void toStringHelper(StringBuilder sb, int depth) {
+    for (int i = 0; i < depth; i++) {  
+        sb.append(" ");
     }
-    return "(" + root + "--" + ruleType + "-->" + terminal + ":" + spanStart + "," + spanEnd + ")";
+
+    if (!isTerminal()) {
+      sb.append(root + " --" + ruleType + "--> \n");
+      left.toStringHelper(sb, depth + 2);
+      right.toStringHelper(sb, depth + 2);
+    } else {
+      sb.append(root + " --" + ruleType + "-->" + terminal + "\n");
+    }
   }
 
   @Override

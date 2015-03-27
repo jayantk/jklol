@@ -137,8 +137,7 @@ public class TypedExpression {
     Type newType = unify(oldType, type);
 
     if (!newType.equals(oldType)) {
-      System.out.println(expression + " " + oldType + " " + type + " -> " + newType);
-
+      // System.out.println(expression + " " + oldType + " " + type + " -> " + newType);
       typeMap.put(expression, newType);
       return true;
     } else {

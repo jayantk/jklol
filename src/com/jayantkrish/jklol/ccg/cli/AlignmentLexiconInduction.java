@@ -101,7 +101,8 @@ public class AlignmentLexiconInduction extends AbstractCli {
     int numTreesWithFullAlignments = 0;
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());
-      AlignedExpressionTree tree = model.getBestAlignment(example);
+      // AlignedExpressionTree tree = model.getBestAlignment(example);
+      AlignedExpressionTree tree = model.getBestAlignmentCfg(example);
       System.out.println(tree);
 
       alignments.incrementOutcomes(tree.getWordAlignments(), 1);
@@ -137,7 +138,9 @@ public class AlignmentLexiconInduction extends AbstractCli {
   private static List<LexiconEntry> generateCcgLexicon(PairCountAccumulator<String, AlignedExpression> alignments,
       Map<String, String> typeReplacements) {
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-    for (String key : alignments.keySet()) {
+    List<String> words = Lists.newArrayList(alignments.keySet());
+    Collections.sort(words);
+    for (String key : words) {
       System.out.println(key + " (" + alignments.getTotalCount(key) + ")");
       int wordLexEntryCount = 0;
       for (AlignedExpression value : alignments.getValues(key)) {

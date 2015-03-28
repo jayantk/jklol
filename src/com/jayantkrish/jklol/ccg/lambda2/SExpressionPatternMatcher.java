@@ -174,4 +174,23 @@ public class SExpressionPatternMatcher {
       throw new UnsupportedOperationException();
     }
   }
+  
+    // warning: need to freshen rest / body to avoid capturing parts of val
+  // ((lambda ?x ?rest+ ?body) ?val ?valrest+) -> 
+  // ((lambda ?rest sub(?body, ?x, ?val)) ?valrest)
+  //
+  // ((lambda ?x ?body) ?val) ->
+  // sub(?body, ?x, ?val)
+  //
+  // List valued variables (* and +) are inlined automatically
+  // (and<t,t> ?first* (and<t,t> ?inner*) ?last*)
+  // (and<t,t> ?first ?inner ?last)
+  //
+  // (and ?first* (exists ?vars* ?body) ?last*)
+  // (exists ?vars (and ?first ?body ?last))
+  //
+  // (exists ?vars* (exists ?vars2* ?body))
+  // (exists ?vars* ?vars2* body)
+
+
 }

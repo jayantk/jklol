@@ -15,8 +15,7 @@ import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
 public class TemplateCcgParseAugmenter implements CcgParseAugmenter {
   
@@ -76,7 +75,7 @@ public class TemplateCcgParseAugmenter implements CcgParseAugmenter {
       CcgCategory currentEntry = input.getLexiconEntry();
       HeadedSyntacticCategory cat = currentEntry.getSyntax();
       
-      Expression logicalForm = currentEntry.getLogicalForm();
+      Expression2 logicalForm = currentEntry.getLogicalForm();
       Collection<DependencyStructure> deps = wholeParse
           .getDependenciesWithHeadInSpan(input.getSpanStart(), input.getSpanEnd());
 
@@ -110,7 +109,7 @@ public class TemplateCcgParseAugmenter implements CcgParseAugmenter {
       Combinator combinator = result.getCombinator();
       CcgBinaryRule rule = combinator.getBinaryRule();
 
-      LambdaExpression newLogicalForm = rule.getLogicalForm();
+      Expression2 newLogicalForm = rule.getLogicalForm();
       for (BinaryRulePattern pattern : binaryRulePatterns) {
         if (pattern.matches(rule)) {
           newLogicalForm = pattern.getLogicalForm(rule);
@@ -140,7 +139,7 @@ public class TemplateCcgParseAugmenter implements CcgParseAugmenter {
     if (result.hasUnaryRule()) {
       UnaryCombinator combinator = result.getUnaryRule();
       CcgUnaryRule rule = combinator.getUnaryRule();
-      LambdaExpression logicalForm = rule.getLogicalForm();
+      Expression2 logicalForm = rule.getLogicalForm();
       for (UnaryRulePattern pattern : unaryRulePatterns) {
         if (pattern.matches(rule)) {
           logicalForm = pattern.getLogicalForm(rule);

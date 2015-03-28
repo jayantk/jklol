@@ -25,6 +25,7 @@ import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -91,7 +92,7 @@ public class ParseToLogicalForm extends AbstractCli {
       sb.append("\t");
 
       CcgParseResult result = null;
-      Expression lf = null;
+      Expression2 lf = null;
       try { 
         result = supertaggingParser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags));
         if (result != null && result.getParse().getSyntacticCategory().isAtomic()) {
@@ -150,24 +151,6 @@ public class ParseToLogicalForm extends AbstractCli {
     }
   }
 
-  /*
-  private static void simplifyEquals(Expression expression) {
-    if (expression instanceof QuantifierExpression) {
-      QuantifierExpression quantifier = ((QuantifierExpression) expression);
-      if (quantifier.getBody() instanceof CommutativeOperator) {
-        CommutativeOperator conjunction = (CommutativeOperator) quantifier.getBody();
-        
-        List<Expression> newArguments = Lists.newArrayList();
-        for (Expression argument : conjunction.getArguments()) {
-          if (argument instanceof ApplicationExpression) {
-            String functionName = ((ApplicationExpression) argument).getFunction();
-          }
-        }
-      }
-    }
-  }
-  */
-  
   private static void getCategoryExpressions(Expression expression, Multimap<String, String> categoryPredicateInstances,
       Multimap<String, List<String>> relationPredicateInstances) {
     if (expression instanceof QuantifierExpression) {

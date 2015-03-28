@@ -11,8 +11,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.util.CsvParser;
 
 /**
@@ -46,7 +46,7 @@ public class CcgCategory implements Serializable {
   private final HeadedSyntacticCategory syntax;
 
   // The logical form for this category. May be null.
-  private final Expression logicalForm;
+  private final Expression2 logicalForm;
 
   // The semantic dependencies of this category, both filled and
   // unfilled.
@@ -72,7 +72,7 @@ public class CcgCategory implements Serializable {
    * @param objects
    * @param variableAssignments
    */
-  public CcgCategory(HeadedSyntacticCategory syntax, Expression logicalForm, List<String> subjects,
+  public CcgCategory(HeadedSyntacticCategory syntax, Expression2 logicalForm, List<String> subjects,
       List<Integer> argumentNumbers, List<Integer> objects, List<Set<String>> variableAssignments) {
     this.syntax = Preconditions.checkNotNull(syntax);
     Preconditions.checkArgument(syntax.isCanonicalForm(),
@@ -126,9 +126,9 @@ public class CcgCategory implements Serializable {
     Map<Integer, Integer> relabeling = Maps.newHashMap();
     syntax = syntax.getCanonicalForm(relabeling);
 
-    Expression logicalForm = null;
+    Expression2 logicalForm = null;
     if (categoryParts[1].trim().length() > 0) {
-      logicalForm = ExpressionParser.lambdaCalculus().parseSingleExpression(categoryParts[1]);
+      logicalForm = ExpressionParser.expression2().parseSingleExpression(categoryParts[1]);
     }
 
     // Create an empty assignment to each variable in the syntactic
@@ -184,7 +184,7 @@ public class CcgCategory implements Serializable {
     return syntax;
   }
   
-  public Expression getLogicalForm() {
+  public Expression2 getLogicalForm() {
     return logicalForm;
   }
 

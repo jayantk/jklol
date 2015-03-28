@@ -4,7 +4,7 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgBinaryRule;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class BinaryRulePattern {
@@ -12,10 +12,10 @@ public class BinaryRulePattern {
   private final SyntacticCategory leftSyntax;
   private final SyntacticCategory rightSyntax;
   private final SyntacticCategory outputSyntax;
-  private final LambdaExpression logicalForm;
+  private final Expression2 logicalForm;
 
   public BinaryRulePattern(SyntacticCategory leftSyntax, SyntacticCategory rightSyntax,
-      SyntacticCategory outputSyntax, LambdaExpression logicalForm) {
+      SyntacticCategory outputSyntax, Expression2 logicalForm) {
     this.leftSyntax = Preconditions.checkNotNull(leftSyntax);
     this.rightSyntax = Preconditions.checkNotNull(rightSyntax);
     this.outputSyntax = Preconditions.checkNotNull(outputSyntax);
@@ -28,7 +28,7 @@ public class BinaryRulePattern {
 
     return new BinaryRulePattern(SyntacticCategory.parseFrom(parts[0]),
         SyntacticCategory.parseFrom(parts[1]), SyntacticCategory.parseFrom(parts[2]),
-        (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(parts[3]));
+        ExpressionParser.expression2().parseSingleExpression(parts[3]));
   }
 
   public boolean matches(CcgBinaryRule rule) {
@@ -37,7 +37,7 @@ public class BinaryRulePattern {
         && outputSyntax.isUnifiableWith(rule.getParentSyntacticType().getSyntax());
   }
 
-  public LambdaExpression getLogicalForm(CcgBinaryRule rule) {
+  public Expression2 getLogicalForm(CcgBinaryRule rule) {
     return logicalForm;
   }
 }

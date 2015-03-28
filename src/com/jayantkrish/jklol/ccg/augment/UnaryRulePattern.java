@@ -4,17 +4,17 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgUnaryRule;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class UnaryRulePattern {
   
   private final SyntacticCategory inputSyntax;
   private final SyntacticCategory outputSyntax;
-  private final LambdaExpression logicalForm;
+  private final Expression2 logicalForm;
 
   public UnaryRulePattern(SyntacticCategory inputSyntax, SyntacticCategory outputSyntax,
-      LambdaExpression logicalForm) {
+      Expression2 logicalForm) {
     this.inputSyntax = Preconditions.checkNotNull(inputSyntax);
     this.outputSyntax = Preconditions.checkNotNull(outputSyntax);
     this.logicalForm = Preconditions.checkNotNull(logicalForm);
@@ -25,7 +25,7 @@ public class UnaryRulePattern {
     Preconditions.checkArgument(parts.length == 3);
 
     return new UnaryRulePattern(SyntacticCategory.parseFrom(parts[0]), SyntacticCategory.parseFrom(parts[1]),
-        (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(parts[2]));
+        ExpressionParser.expression2().parseSingleExpression(parts[2]));
   }
 
   public boolean matches(CcgUnaryRule rule) {
@@ -33,7 +33,7 @@ public class UnaryRulePattern {
         && outputSyntax.isUnifiableWith(rule.getResultSyntacticCategory().getSyntax());
   }
 
-  public LambdaExpression getLogicalForm(CcgUnaryRule rule) {
+  public Expression2 getLogicalForm(CcgUnaryRule rule) {
     return logicalForm;
   }
 }

@@ -7,7 +7,8 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class CcgUnaryRule implements Serializable {
@@ -17,17 +18,18 @@ public class CcgUnaryRule implements Serializable {
   private final HeadedSyntacticCategory inputSyntax;
   private final HeadedSyntacticCategory returnSyntax;
   
-  private final LambdaExpression logicalForm;
+  private final Expression2 logicalForm;
 
   public CcgUnaryRule(HeadedSyntacticCategory inputSyntax, HeadedSyntacticCategory returnSyntax,
-      LambdaExpression logicalForm) {
+      Expression2 logicalForm) {
     this.inputSyntax = Preconditions.checkNotNull(inputSyntax);
     this.returnSyntax = Preconditions.checkNotNull(returnSyntax);
-    
-    this.logicalForm = logicalForm;
-    Preconditions.checkArgument(logicalForm == null || logicalForm.getArguments().size() == 1,
-        "Illegal logical form for unary rule: " + logicalForm);
 
+    this.logicalForm = logicalForm;
+    Preconditions.checkArgument(logicalForm == null || 
+        (StaticAnalysis.isLambda(logicalForm, 0) && StaticAnalysis.getLambdaArguments(logicalForm, 0).size() >= 1), 
+          "Illegal logical form for unary rule: " + logicalForm);
+    
     Preconditions.checkArgument(returnSyntax.isCanonicalForm());
   }
 
@@ -77,9 +79,9 @@ public class CcgUnaryRule implements Serializable {
     }
     HeadedSyntacticCategory relabeledInput = inputSyntax.relabelVariables(inputVars, inputRelabeling);
 
-    LambdaExpression logicalForm = null;
+    Expression2 logicalForm = null;
     if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
-      logicalForm = (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(chunks[1]);
+      logicalForm = ExpressionParser.expression2().parseSingleExpression(chunks[1]);
     }
 
     if (chunks.length >= 3) {
@@ -129,7 +131,7 @@ public class CcgUnaryRule implements Serializable {
    * 
    * @return
    */
-  public LambdaExpression getLogicalForm() {
+  public Expression2 getLogicalForm() {
     return logicalForm;
   }
 

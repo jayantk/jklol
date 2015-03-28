@@ -24,6 +24,7 @@ import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
 import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
 /**
  * A rule-based system that assigns a semantics to sentences given a
@@ -51,7 +52,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       HeadedSyntacticCategory cat = currentEntry.getSyntax();
 
       String predicateString = String.format(wordPredicateFormatString, Joiner.on("_").join(input.getWords()));
-      Expression logicalForm = logicalFormFromSyntacticCategory(cat, predicateString);
+      Expression2 logicalForm = logicalFormFromSyntacticCategory(cat, predicateString);
 
       CcgCategory lexiconEntry = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
           currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
@@ -74,7 +75,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       Combinator combinator = result.getCombinator();
       CcgBinaryRule rule = combinator.getBinaryRule();
 
-      LambdaExpression newLogicalForm = logicalFormFromBinaryRule(rule.getLeftSyntacticType(),
+      Expression2 newLogicalForm = logicalFormFromBinaryRule(rule.getLeftSyntacticType(),
           rule.getRightSyntacticType(), rule.getParentSyntacticType(), rule.getCombinatorType());
 
       // Rebuild the CcgParse wrapping the new logical form. 
@@ -102,7 +103,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       UnaryCombinator combinator = result.getUnaryRule();
       CcgUnaryRule rule = combinator.getUnaryRule();
 
-      LambdaExpression newLogicalForm = logicalFormFromUnaryRule(rule.getInputSyntacticCategory(),
+      Expression2 newLogicalForm = logicalFormFromUnaryRule(rule.getInputSyntacticCategory(),
           rule.getResultSyntacticCategory());
       
       CcgUnaryRule newRule = new CcgUnaryRule(rule.getInputSyntacticCategory(),
@@ -116,7 +117,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
     return result;
   }
 
-  public static LambdaExpression logicalFormFromBinaryRule(HeadedSyntacticCategory left,
+  public static Expression2 logicalFormFromBinaryRule(HeadedSyntacticCategory left,
       HeadedSyntacticCategory right, HeadedSyntacticCategory parent, Combinator.Type type) {
     if (type != Combinator.Type.CONJUNCTION) {
       // Create a "virtual" syntactic category which encodes the function
@@ -126,15 +127,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       HeadedSyntacticCategory virtualCategory = parent.addArgument(right, Direction.RIGHT, parentHeadVar)
           .addArgument(left, Direction.RIGHT, parentHeadVar);
 
-      LambdaExpression newLogicalForm = (LambdaExpression) logicalFormFromSyntacticCategory(virtualCategory, null);
-
-      // Binary rules are two argument functions, but the returned
-      // function is curried to accept each argument one at a time.
-      LambdaExpression nestedLogicalForm = (LambdaExpression) newLogicalForm.getBody();
-      List<ConstantExpression> arguments = Lists.newArrayList();
-      arguments.addAll(newLogicalForm.getArguments());
-      arguments.addAll(nestedLogicalForm.getArguments());
-      return new LambdaExpression(arguments, nestedLogicalForm.getBody());
+      return logicalFormFromSyntacticCategory(virtualCategory, null);
     } else {
       // The implementation of the conjunction case here is a bit of a
       // hack that's dependent on the particular rules in CCGbank.
@@ -148,7 +141,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       ConstantExpression argVar = new ConstantExpression("$1");
       ConstantExpression quantifiedVar = new ConstantExpression("qvar");
 
-      LambdaExpression parentExpression = (LambdaExpression) logicalFormFromSyntacticCategory(parent, null);
+      Expression2 parentExpression = logicalFormFromSyntacticCategory(parent, null);
       ConstantExpression firstArg = parentExpression.getArguments().get(0);
       Expression body = parentExpression.getBody().renameVariable(firstArg, quantifiedVar);
 
@@ -164,17 +157,17 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
     }
   }
 
-  public static LambdaExpression logicalFormFromUnaryRule(HeadedSyntacticCategory child,
+  public static Expression2 logicalFormFromUnaryRule(HeadedSyntacticCategory child,
       HeadedSyntacticCategory parent) {
     // Create a "virtual" syntactic category that encodes the function 
     // input -> parent.
     HeadedSyntacticCategory virtualCategory = parent.addArgument(child,
         Direction.RIGHT, parent.getHeadVariable());
     
-    return (LambdaExpression) logicalFormFromSyntacticCategory(virtualCategory, null);
+    return logicalFormFromSyntacticCategory(virtualCategory, null);
   }
 
-  public static Expression logicalFormFromSyntacticCategory(HeadedSyntacticCategory cat, String word) {
+  public static Expression2 logicalFormFromSyntacticCategory(HeadedSyntacticCategory cat, String word) {
     // Category needs to be in canonical form for the
     // numerical ordering of variables in the category to
     // coincide with the category's argument ordering.
@@ -246,7 +239,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       expr = "(lambda f" + args.get(i).getHeadVariable() + " " + expr + ")";
     }
     
-    return ExpressionParser.lambdaCalculus().parseSingleExpression(expr);
+    return ExpressionParser.expression2().parseSingleExpression(expr);
   }
   
   /**

@@ -4,12 +4,18 @@ import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.augment.DavidsonianCcgParseAugmenter;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 
 public class DavidsonianCcgParseAugmenterTest extends TestCase {
+  
+  ExpressionSimplifier simplifier;
+  
+  public void setUp() {
+    simplifier = ExpressionSimplifier.lambdaCalculus();
+  }
   
   public void testLfFromSyntax1() {
     runCategoryTest("N{0}", "foo", "(lambda x (foo x))");
@@ -76,16 +82,16 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
         "(lambda $L $R (lambda f (lambda x (exists e2 (and (($R f) x) ($L e2))))))");
   }
 
-  private static void runBinaryRuleTest(String leftCatString, String rightCatString, 
+  private void runBinaryRuleTest(String leftCatString, String rightCatString, 
       String parentCatString, Combinator.Type type, String expectedExpressionString) {
     HeadedSyntacticCategory left = HeadedSyntacticCategory.parseFrom(leftCatString);
     HeadedSyntacticCategory right = HeadedSyntacticCategory.parseFrom(rightCatString);
     HeadedSyntacticCategory parent = HeadedSyntacticCategory.parseFrom(parentCatString);
     
-    Expression result = DavidsonianCcgParseAugmenter.logicalFormFromBinaryRule(left,
-        right, parent, type).simplify();
-    Expression expected = ExpressionParser.lambdaCalculus()
-        .parseSingleExpression(expectedExpressionString).simplify();
+    Expression2 result = simplifier.apply(DavidsonianCcgParseAugmenter
+        .logicalFormFromBinaryRule(left, right, parent, type));
+    Expression2 expected = simplifier.apply(ExpressionParser.expression2()
+        .parseSingleExpression(expectedExpressionString));
     
     System.out.println(left + " " + right + " -> " + parent + " result: " + result
         + " exp: " + expected);
@@ -97,10 +103,12 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
     assertTrue(expected.functionallyEquals(result));
   }
   
-  private static void runCategoryTest(String catString, String word, String expectedExpressionString) {
+  private void runCategoryTest(String catString, String word, String expectedExpressionString) {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(catString);
-    Expression expected = ExpressionParser.lambdaCalculus().parseSingleExpression(expectedExpressionString).simplify();
-    Expression result = DavidsonianCcgParseAugmenter.logicalFormFromSyntacticCategory(cat, word).simplify();
+    Expression2 expected = simplifier.apply(ExpressionParser.expression2()
+        .parseSingleExpression(expectedExpressionString));
+    Expression2 result = simplifier.apply(DavidsonianCcgParseAugmenter
+        .logicalFormFromSyntacticCategory(cat, word));
     
     System.out.println(cat + " result: " + result + " exp: " + expected);
     

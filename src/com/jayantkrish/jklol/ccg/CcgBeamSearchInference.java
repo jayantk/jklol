@@ -6,7 +6,7 @@ import java.util.Set;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -74,7 +74,7 @@ public class CcgBeamSearchInference implements CcgInference {
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      Set<DependencyStructure> observedDependencies, Expression observedLogicalForm) {
+      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm) {
 
     List<CcgParse> possibleParses = null; 
     if (observedSyntacticTree != null) {
@@ -89,8 +89,13 @@ public class CcgBeamSearchInference implements CcgInference {
           log, -1, maxChartSize, numThreads);
     }
 
-    possibleParses = CcgLoglikelihoodOracle.filterSemanticallyCompatibleParses(
-        observedDependencies, observedLogicalForm, possibleParses);
+    if (observedDependencies != null) {
+      possibleParses = CcgLoglikelihoodOracle.filterParsesByDependencies(observedDependencies, possibleParses);
+    }
+    if (observedLogicalForm != null) {
+      possibleParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(observedLogicalForm,
+          comparator, possibleParses);
+    }
 
     if (verbose) {
       System.out.println("num correct: " + possibleParses.size());

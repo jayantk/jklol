@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda2;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Joiner;
@@ -25,6 +26,18 @@ public class Expression2 {
     return new Expression2(constantName, null, 1);
   }
 
+  public static List<Expression2> constants(List<String> constantNames) {
+    List<Expression2> constants = Lists.newArrayList();
+    for (String constantName : constantNames) {
+      constants.add(Expression2.constant(constantName));
+    }
+    return constants;
+  }
+
+  public static Expression2 nested(Expression2... subexpressions) {
+    return nested(Arrays.asList(subexpressions));
+  }
+  
   public static Expression2 nested(List<Expression2> subexpressions) {
     int size = 1;
     for (Expression2 subexpression : subexpressions) {

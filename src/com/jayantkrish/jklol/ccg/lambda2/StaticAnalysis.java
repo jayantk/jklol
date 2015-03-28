@@ -9,9 +9,20 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 
+/**
+ * Static analysis of lambda calculus expressions. Computes
+ * the variables that are free / bound at every program 
+ * location, as well as the types of expressions. 
+ * 
+ * @author jayant
+ *
+ */
 public class StaticAnalysis {
+  
+  public static final String LAMBDA = "lambda";
 
   private StaticAnalysis() {
     // Prevent instantiation
@@ -30,16 +41,53 @@ public class StaticAnalysis {
     ScopeSet scopes = getScopes(expression);
     for (int i = 0; i < expression.size(); i++) {
       Scope scope = scopes.getScope(i);
-      
-      Expression2 sub = expression.getSubexpression(i);
-      if (sub.isConstant()) {
-        String constant = sub.getConstant();
-        if (!constant.equals("lambda") && !scope.isBound(constant)) {
-          freeVariables.add(sub.getConstant());
-        } 
+      String varName = getFreeVariable(expression, i, scope);
+      if (varName != null) {
+        freeVariables.add(varName);
       }
     }
     return freeVariables;
+  }
+  
+  /**
+   * If {@code index} points to a free variable in {@code expression},
+   * return its name. Otherwise, returns null.
+   * 
+   * @param expression
+   * @param index
+   * @param scope
+   * @return
+   */
+  private static String getFreeVariable(Expression2 expression, int index, Scope scope) {
+    Expression2 sub = expression.getSubexpression(index);
+    if (sub.isConstant()) {
+      String constant = sub.getConstant();
+      if (!constant.equals(LAMBDA) && !scope.isBound(constant)) {
+        return sub.getConstant();
+      } 
+    }
+    return null;
+  }
+  
+  /**
+   * Gets the set of indexes where {@code variableName} appears
+   * as a free variable in {@code expression}.
+   * 
+   * @code expression
+   * @param variableName
+   * @return
+   */
+  public static int[] getIndexesOfFreeVariable(Expression2 expression, String variableName) {
+    List<Integer> indexes = Lists.newArrayList();
+    ScopeSet scopes = getScopes(expression);
+    for (int i = 0; i < expression.size(); i++) {
+      Scope scope = scopes.getScope(i);
+      String varName = getFreeVariable(expression, i, scope);
+      if (varName != null && varName.equals(variableName)) {
+        indexes.add(i);
+      }
+    }
+    return Ints.toArray(indexes);
   }
 
   /**
@@ -69,12 +117,12 @@ public class StaticAnalysis {
       Expression2 sub = expression.getSubexpression(i);
       if (sub.isConstant()) {
         String constant = sub.getConstant();
-        if (constant.equals("lambda")) {
+        if (constant.equals(LAMBDA)) {
           // Read off the variables and add them to a static scope.
           Expression2 lambdaExpression = expression.getSubexpression(i - 1);
           List<Expression2> subexpressions = lambdaExpression.getSubexpressions();
 
-          // First expression is "lambda", last is body.
+          // First expression is LAMBDA, last is body.
           Map<String, Integer> bindings = Maps.newHashMap();
           for (int j = 1; j < subexpressions.size() - 1; j++) {
             Preconditions.checkState(subexpressions.get(j).isConstant(),
@@ -94,6 +142,26 @@ public class StaticAnalysis {
     return new ScopeSet(allCreatedScopes);
   }
   
+  public static boolean isLambda(Expression2 expression, int index) {
+    Expression2 subexpression = expression.getSubexpression(index);
+    return !subexpression.isConstant() && subexpression.getSubexpression(1).isConstant() && 
+        subexpression.getSubexpression(1).getConstant().equals(LAMBDA);
+  }
+  
+  public static List<String> getLambdaArguments(Expression2 expression, int index) {
+    int[] children = expression.getChildIndexes(index);
+    List<String> args = Lists.newArrayList();
+    for (int i = 1; i < children.length - 1; i++){
+      args.add(expression.getSubexpression(children[i]).getConstant());
+    }
+    return args;
+  }
+
+  public static Expression2 getLambdaBody(Expression2 expression, int index) {
+    int[] children = expression.getChildIndexes(index);
+    return expression.getSubexpression(children[children.length - 1]);
+  }
+
   public static boolean isPartOfSpecialForm(Expression2 expression, int index) {
     int parentIndex = expression.getParentExpressionIndex(index);
     if (parentIndex == -1) {
@@ -102,7 +170,7 @@ public class StaticAnalysis {
       Expression2 parent = expression.getSubexpression(parentIndex);
       
       Expression2 sub = parent.getSubexpression(1);
-      if (sub.isConstant() && sub.getConstant().equals("lambda")) {
+      if (sub.isConstant() && sub.getConstant().equals(LAMBDA)) {
         int bodyIndex = parentIndex + parent.getSubexpressions().size();
         return index < bodyIndex;
       }
@@ -155,7 +223,7 @@ public class StaticAnalysis {
 
         } else if (subexpression.getSubexpressions().size() > 1 && 
             subexpression.getSubexpression(1).isConstant() && 
-            subexpression.getSubexpression(1).getConstant().equals("lambda")) {
+            subexpression.getSubexpression(1).getConstant().equals(LAMBDA)) {
           // Lambda expression.
           int[] childIndexes = expression.getChildIndexes(index);
           int bodyIndex = childIndexes[childIndexes.length - 1];
@@ -228,7 +296,7 @@ public class StaticAnalysis {
   private static void initializeSubexpressionTypeMap(Expression2 expression,
       Map<Integer, Type> subexpressionTypeMap) {
     for (int i = 0; i < expression.size(); i++) {
-      if (!(expression.isConstant() && expression.getConstant().equals("lambda"))) {
+      if (!(expression.isConstant() && expression.getConstant().equals(LAMBDA))) {
         // Don't include the lambda part of lambda expressions.
         subexpressionTypeMap.put(i, Type.createAtomic("unknown"));
       }
@@ -289,6 +357,16 @@ public class StaticAnalysis {
     // TODO: do this in a canonical way
     int random = (int) (Math.random() * 1000000.0);
     return "var" + random;
+  }
+  
+  public static List<String> getNewVariableNames(Expression2 expression, int num) {
+    // TODO: warning, this may break if the above generates a single
+    // canonical name for expression.
+    List<String> names = Lists.newArrayList();
+    for (int i = 0; i < num; i++) {
+      names.add(getNewVariableName(expression));
+    }
+    return names;
   }
 
   public static class Scope {
@@ -390,22 +468,4 @@ public class StaticAnalysis {
       return best;
     }
   }
-
-  // warning: need to freshen rest / body to avoid capturing parts of val
-  // ((lambda ?x ?rest+ ?body) ?val ?valrest+) -> 
-  // ((lambda ?rest sub(?body, ?x, ?val)) ?valrest)
-  //
-  // ((lambda ?x ?body) ?val) ->
-  // sub(?body, ?x, ?val)
-  //
-  // List valued variables (* and +) are inlined automatically
-  // (and<t,t> ?first* (and<t,t> ?inner*) ?last*)
-  // (and<t,t> ?first ?inner ?last)
-  //
-  // (and ?first* (exists ?vars* ?body) ?last*)
-  // (exists ?vars (and ?first ?body ?last))
-  //
-  // (exists ?vars* (exists ?vars2* ?body))
-  // (exists ?vars* ?vars2* body)
-
 }

@@ -6,7 +6,7 @@ import java.util.List;
 
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
 public interface CategoryPattern extends Serializable {
   
@@ -16,6 +16,6 @@ public interface CategoryPattern extends Serializable {
   /**
    * Returns {@code null} if this pattern does not match the input. 
    */
-  Expression getLogicalForm(List<String> words, SyntacticCategory category,
+  Expression2 getLogicalForm(List<String> words, SyntacticCategory category,
       Collection<DependencyStructure> deps);
 }

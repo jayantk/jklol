@@ -20,8 +20,8 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
@@ -79,7 +79,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
         System.out.println(example.getTree());
       }
     }
-    FeatureVectorGenerator<Expression> vectorGenerator = buildFeatureVectorGenerator(examples,
+    FeatureVectorGenerator<Expression2> vectorGenerator = buildFeatureVectorGenerator(examples,
         Collections.<String>emptyList());
     System.out.println("features: " + vectorGenerator.getFeatureDictionary().getValues());
     examples = applyFeatureVectorGenerator(vectorGenerator, examples);
@@ -196,9 +196,9 @@ public class AlignmentLexiconInduction extends AbstractCli {
     return lexiconEntries;
   }
 
-  private static FeatureVectorGenerator<Expression> buildFeatureVectorGenerator(
+  private static FeatureVectorGenerator<Expression2> buildFeatureVectorGenerator(
       List<AlignmentExample> examples, Collection<String> tokensToIgnore) {
-    Set<Expression> allExpressions = Sets.newHashSet();
+    Set<Expression2> allExpressions = Sets.newHashSet();
     for (AlignmentExample example : examples) {
       example.getTree().getAllExpressions(allExpressions);
     }

@@ -8,27 +8,41 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.ExpressionException;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
- * Trains a CCG from observed CCG dependency structures.
+ * Trains a CCG from observed CCG dependency structures 
+ * or logical forms using a loglikelihood objective function
+ * with approximate inference (beam search). 
  * 
  * @author jayant
  */
 public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExample> {
 
   private final ParametricCcgParser family;
+  
+  // Function for comparing the equality of logical forms.
+  private final ExpressionComparator comparator;
 
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
 
-  public CcgLoglikelihoodOracle(ParametricCcgParser family, int beamSize) {
+  /**
+   * 
+   * @param family
+   * @param comparator may be {@code null} if logical forms are not
+   * to be used for training.
+   * @param beamSize
+   */
+  public CcgLoglikelihoodOracle(ParametricCcgParser family,
+      ExpressionComparator comparator, int beamSize) {
     this.family = Preconditions.checkNotNull(family);
+    this.comparator = comparator;
     this.beamSize = beamSize;
   }
 
@@ -70,9 +84,16 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       possibleParses = Lists.newArrayList(parses);
     }
 
-    // Condition on true dependency structures, if provided.
-    List<CcgParse> correctParses = filterSemanticallyCompatibleParses(example.getDependencies(),
-        example.getLogicalForm(), possibleParses);
+    List<CcgParse> correctParses = possibleParses;
+    // Condition on correct dependency structures, if provided.
+    if (example.getDependencies() != null) {
+      correctParses = filterParsesByDependencies(example.getDependencies(),
+          correctParses);
+    }
+    // Condition on correct logical form, if provided.
+    if (example.hasLogicalForm()) {
+      correctParses = filterParsesByLogicalForm(example.getLogicalForm(), comparator, correctParses);
+    }
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
@@ -101,30 +122,27 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
   }
 
-  public static List<CcgParse> filterSemanticallyCompatibleParses(Set<DependencyStructure> observedDependencies,
-      Expression observedLogicalForm, Iterable<CcgParse> parses) {
+  public static List<CcgParse> filterParsesByDependencies(Set<DependencyStructure> observedDependencies,
+      Iterable<CcgParse> parses) {
     List<CcgParse> correctParses = Lists.newArrayList();
     
     for (CcgParse parse : parses) {
-      boolean compatible = true;
-      try {
-        if (observedDependencies != null && !Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
-          compatible = false;
-        }
-        if (observedLogicalForm != null) {
-          Expression predictedLogicalForm = parse.getLogicalForm();
-          
-          if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm.simplify())) {
-            compatible = false;
-          } 
-        }
-      } catch (ExpressionException e) {
-        compatible = false;
-      }
-
-      if (compatible) {
+      if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
         correctParses.add(parse);
       }
+    }
+    return correctParses;
+  }
+  
+  public static List<CcgParse> filterParsesByLogicalForm(Expression2 observedLogicalForm,
+    ExpressionComparator comparator, Iterable<CcgParse> parses) {
+    List<CcgParse> correctParses = Lists.newArrayList();
+    for (CcgParse parse : parses) {
+      Expression2 predictedLogicalForm = parse.getLogicalForm();
+
+      if (predictedLogicalForm != null && comparator.equals(predictedLogicalForm, observedLogicalForm)) {
+        correctParses.add(parse);
+      } 
     }
     return correctParses;
   }

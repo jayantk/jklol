@@ -22,8 +22,8 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -112,7 +112,7 @@ public class TrainSemanticParser extends AbstractCli {
   public static List<CcgExample> readCcgExamplesJson(String jsonFilename) {
     List<CcgExample> examples = Lists.newArrayList();
     try {
-      ExpressionParser<Expression> lfParser = ExpressionParser.lambdaCalculus();
+      ExpressionParser<Expression2> lfParser = ExpressionParser.expression2();
       ObjectMapper mapper = new ObjectMapper();
       JsonNode rootNode = mapper.readTree(new File(jsonFilename));
       Iterator<JsonNode> iter = rootNode.elements();
@@ -123,7 +123,7 @@ public class TrainSemanticParser extends AbstractCli {
         String targetFormula = exampleNode.get("targetFormula").asText();
         
         List<String> words = Arrays.asList(utterance.split("\\s"));
-        Expression lf = lfParser.parseSingleExpression(targetFormula);
+        Expression2 lf = lfParser.parseSingleExpression(targetFormula);
         
         // Parts-of-speech are assumed to be unknown.
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
@@ -142,8 +142,8 @@ public class TrainSemanticParser extends AbstractCli {
     List<String> lines = IoUtils.readLines(filename);
     List<CcgExample> examples = Lists.newArrayList();
     List<String> words = null;
-    Expression expression = null;
-    ExpressionParser<Expression> parser = ExpressionParser.lambdaCalculus();
+    Expression2 expression = null;
+    ExpressionParser<Expression2> parser = ExpressionParser.expression2();
     for (String line : lines) {
       if (line.trim().length() == 0 && words != null && expression != null) {
         words = null;

@@ -3,7 +3,7 @@ package com.jayantkrish.jklol.ccg;
 import java.util.Set;
 
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
@@ -45,5 +45,5 @@ public interface CcgInference {
    */
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      Set<DependencyStructure> observedDependencies, Expression observedLogicalForm);
+      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm);
 }

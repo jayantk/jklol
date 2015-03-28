@@ -32,7 +32,8 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
@@ -184,9 +185,9 @@ public class ParseCcg extends AbstractCli {
         System.out.println("SYN: " + parses.get(i).getSyntacticParse());
 
         if (printLf) {
-          Expression logicalForm = parses.get(i).getLogicalForm();
+          Expression2 logicalForm = parses.get(i).getLogicalForm();
           if (logicalForm != null) {
-            logicalForm = logicalForm.simplify();
+            logicalForm = ExpressionSimplifier.lambdaCalculus().apply(logicalForm);
           }
           System.out.println("LF: " + logicalForm);
         }

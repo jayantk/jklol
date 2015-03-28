@@ -10,15 +10,12 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
 /**
- * A CCG parse tree containing both a syntactic and semantic parse 
- * for a text.
- * 
+ * A syntactic and semantic parse of a text.
+ *  
  * @author jayant
  *
  */
@@ -248,14 +245,14 @@ public class CcgParse {
    * 
    * @return
    */
-  public Expression getLogicalForm() {
-    Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
+  public Expression2 getLogicalForm() {
+    Expression2 preUnaryLogicalForm = getPreUnaryLogicalForm();
     if (unaryRule == null) {
       return preUnaryLogicalForm;
     } else if (preUnaryLogicalForm == null || unaryRule.getUnaryRule().getLogicalForm() == null) {
       return null;
     } else {
-      return unaryRule.getUnaryRule().getLogicalForm().reduce(Arrays.asList(preUnaryLogicalForm));
+      return Expression2.nested(unaryRule.getUnaryRule().getLogicalForm(), preUnaryLogicalForm);
     }
   }
 
@@ -269,7 +266,7 @@ public class CcgParse {
    */
   public SpannedExpression getLogicalFormForSpan(int spanStart, int spanEnd) {
     CcgParse spanningParse = getParseForSpan(spanStart, spanEnd);
-    Expression lf = spanningParse.getPreUnaryLogicalForm();
+    Expression2 lf = spanningParse.getPreUnaryLogicalForm();
     if (lf != null) {
       return new SpannedExpression(spanningParse.getHeadedSyntacticCategory(),
           spanningParse.getLogicalForm(), spanningParse.getSpanStart(), spanningParse.getSpanEnd());
@@ -287,41 +284,25 @@ public class CcgParse {
    */
   public List<SpannedExpression> getSpannedLogicalForms() {
     List<SpannedExpression> spannedExpressions = Lists.newArrayList();
-    getSpannedLogicalFormsHelper(spannedExpressions, false);
+    getSpannedLogicalFormsHelper(spannedExpressions);
     return spannedExpressions;
   }
 
-  /**
-   * Gets the logical forms for the maximal subspans of this sentence
-   * for which logical forms exist. None of the returned logical forms
-   * combine with each other in this parse.
-   * 
-   * @return
-   */
-  public List<SpannedExpression> getMaximalSpannedLogicalForms() {
-    List<SpannedExpression> spannedExpressions = Lists.newArrayList();
-    getSpannedLogicalFormsHelper(spannedExpressions, true);
-    return spannedExpressions;
-  }
-
-  private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions,
-      boolean onlyMaximal) {
-    Expression logicalForm = getLogicalForm();
+  private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions) {
+    Expression2 logicalForm = getLogicalForm();
     if (logicalForm != null) {
-      spannedExpressions.add(new SpannedExpression(syntax, logicalForm.simplify(), spanStart, spanEnd));
-      if (onlyMaximal) { return; }
+      spannedExpressions.add(new SpannedExpression(syntax, logicalForm, spanStart, spanEnd));
     } 
-    Expression preUnaryLogicalForm = getPreUnaryLogicalForm();
+    Expression2 preUnaryLogicalForm = getPreUnaryLogicalForm();
 
     if (preUnaryLogicalForm != null && unaryRule != null) {
       spannedExpressions.add(new SpannedExpression(unaryRule.getInputType().getCanonicalForm(),
-          preUnaryLogicalForm.simplify(), spanStart, spanEnd));
-      if (onlyMaximal) { return; }
+          preUnaryLogicalForm, spanStart, spanEnd));
     }
 
     if (!isTerminal()) {
-      left.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal);
-      right.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal);
+      left.getSpannedLogicalFormsHelper(spannedExpressions);
+      right.getSpannedLogicalFormsHelper(spannedExpressions);
     }
   }
 
@@ -331,76 +312,62 @@ public class CcgParse {
    * 
    * @return
    */
-  private Expression getPreUnaryLogicalForm() {
+  private Expression2 getPreUnaryLogicalForm() {
     if (isTerminal()) {
-      Expression logicalForm = lexiconEntry.getLogicalForm();
+      Expression2 logicalForm = lexiconEntry.getLogicalForm();
       return logicalForm;
     } else {
-      Expression leftLogicalForm = left.getLogicalForm();
-      Expression rightLogicalForm = right.getLogicalForm();
+      Expression2 leftLogicalForm = left.getLogicalForm();
+      Expression2 rightLogicalForm = right.getLogicalForm();
 
-      Expression result = null;
+      if (leftLogicalForm == null || rightLogicalForm == null) {
+        return null;
+      }
+
       if (combinator.getBinaryRule() != null) {
-        // Binary rules may not require both argument logical forms to be
-        // defined in order to produce the logical form for the phrase.
-        LambdaExpression combinatorExpression = combinator.getBinaryRule().getLogicalForm();
-        if (combinatorExpression != null && leftLogicalForm != null && rightLogicalForm != null) {
-          List<Expression> argValues = Lists.newArrayList(leftLogicalForm, rightLogicalForm);
-          result = combinatorExpression.reduce(argValues);
+        // Binary rules have a two-argument function that is applied to the 
+        // left and right logical forms to produce the answer.
+        Expression2 combinatorExpression = combinator.getBinaryRule().getLogicalForm();
+        if (combinatorExpression != null) {
+          return Expression2.nested(Expression2.nested(combinatorExpression, leftLogicalForm),
+              rightLogicalForm);
         }
+
       } else if (leftLogicalForm != null && rightLogicalForm != null) {
         // Function application or composition.
-        Expression functionLogicalForm = null;
-        Expression argumentLogicalForm = null;
-        CcgParse functionParse = null;
+        Expression2 functionLogicalForm = null;
+        Expression2 argumentLogicalForm = null;
         if (combinator.isArgumentOnLeft()) {
           functionLogicalForm = rightLogicalForm;
-          functionParse = right;
           argumentLogicalForm = leftLogicalForm;
         } else {
           functionLogicalForm = leftLogicalForm;
-          functionParse = left;
           argumentLogicalForm = rightLogicalForm;
         }
 
-        Expression simplifiedFunction = functionLogicalForm.simplify();
-        Preconditions.checkState(simplifiedFunction instanceof LambdaExpression,
-            "Not a function: %s for parse %s", simplifiedFunction, functionParse);
-        LambdaExpression functionAsLambda = (LambdaExpression) simplifiedFunction;
         int numArgsToKeep = combinator.getArgumentReturnDepth();
         if (numArgsToKeep == 0) {
-          // Function application.
-          int numArguments = functionAsLambda.getArguments().size(); 
-          if (numArguments > 1) {
-            List<ConstantExpression> remainingArguments = ConstantExpression.generateUniqueVariables(numArguments - 1);
-            List<Expression> arguments = Lists.newArrayList(argumentLogicalForm);
-            arguments.addAll(remainingArguments);
-            result = new LambdaExpression(remainingArguments, new ApplicationExpression(functionAsLambda, arguments));
-          } else {
-            result = new ApplicationExpression(functionAsLambda, Arrays.asList(argumentLogicalForm));
-          }
+          // Function application
+          return Expression2.nested(functionLogicalForm, argumentLogicalForm);
         } else {
           // Composition.
-          LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
-          Preconditions.checkArgument(argumentAsLambda.getArguments().size() >= numArgsToKeep,
-              "Invalid logical form for category: " + argumentAsLambda);
+          List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(argumentLogicalForm, numArgsToKeep);
+          List<Expression2> remainingArgExpressions = Expression2.constants(remainingArgsRenamed);
+          List<Expression2> applicationExpressions = Lists.newArrayList(argumentLogicalForm);
+          applicationExpressions.addAll(remainingArgExpressions);
+          Expression2 argumentApplication = Expression2.nested(applicationExpressions);
 
-          List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
-          List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
-
-          List<Expression> functionArguments = Lists.newArrayList();
-          functionArguments.add(new ApplicationExpression(argumentAsLambda, remainingArgsRenamed));
-          List<ConstantExpression> newFunctionArgs = ConstantExpression.generateUniqueVariables(functionAsLambda.getArguments().size() - 1);
-          functionArguments.addAll(newFunctionArgs);
-
-          result = new ApplicationExpression(functionAsLambda, functionArguments);
-          if (newFunctionArgs.size() > 0) {
-            result = new LambdaExpression(newFunctionArgs, result);
-          }
-          result = new LambdaExpression(remainingArgsRenamed, result);
+          Expression2 body = Expression2.nested(functionLogicalForm, argumentApplication);
+          List<Expression2> functionExpressions = Lists.newArrayList();
+          functionExpressions.add(Expression2.constant("lambda"));
+          functionExpressions.addAll(remainingArgExpressions);
+          functionExpressions.add(body);
+          return Expression2.nested(functionExpressions);
         }
       }
-      return result;
+
+      // Unknown combinator.
+      return null;
     }
   }
 
@@ -790,8 +757,9 @@ public class CcgParse {
   
   private void toHtmlStringHelper(StringBuilder sb) {
     String syntaxString = syntax.getSyntax().toString();
-    Expression logicalForm = getLogicalForm();
-    String lfString = logicalForm != null ? logicalForm.simplify().toString() : "";
+    Expression2 logicalForm = getLogicalForm();
+    // TODO: static analysis simplification here.
+    String lfString = logicalForm != null ? logicalForm.toString() : "";
 
     /*
     if (unaryRule != null) {
@@ -853,11 +821,11 @@ public class CcgParse {
   
   public static class SpannedExpression {
     private final HeadedSyntacticCategory syntax;
-    private final Expression expression;
+    private final Expression2 expression;
     private final int spanStart;
     private final int spanEnd;
 
-    public SpannedExpression(HeadedSyntacticCategory syntax, Expression expression, int spanStart,
+    public SpannedExpression(HeadedSyntacticCategory syntax, Expression2 expression, int spanStart,
         int spanEnd) {
       this.syntax = Preconditions.checkNotNull(syntax);
       this.expression = Preconditions.checkNotNull(expression);
@@ -869,7 +837,7 @@ public class CcgParse {
       return syntax;
     }
     
-    public Expression getExpression() {
+    public Expression2 getExpression() {
       return expression;
     }
     

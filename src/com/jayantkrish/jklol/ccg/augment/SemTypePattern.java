@@ -9,9 +9,9 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class SemTypePattern implements CategoryPattern {
@@ -20,7 +20,7 @@ public class SemTypePattern implements CategoryPattern {
   
   private final String[] patterns;
   private final SyntacticCategory patternCategory;
-  private final Expression template;
+  private final Expression2 template;
   private final boolean matchOnSemanticType;
   
   private static final String WORD_SEP = "_";
@@ -28,8 +28,8 @@ public class SemTypePattern implements CategoryPattern {
   private static final String WORD_LC_PATTERN = "<lc_word>";
   private static final String ARG_PATTERN = "<arg_([0-9]*)>";
 
-  public SemTypePattern(String[] patterns, SyntacticCategory patternCategory, Expression template,
-      boolean matchOnSemanticType) {
+  public SemTypePattern(String[] patterns, SyntacticCategory patternCategory,
+      Expression2 template, boolean matchOnSemanticType) {
     this.patterns = Preconditions.checkNotNull(patterns);
     this.patternCategory = Preconditions.checkNotNull(patternCategory);
     this.template = Preconditions.checkNotNull(template);
@@ -43,7 +43,7 @@ public class SemTypePattern implements CategoryPattern {
     String[] patterns = parts[0].split("\\s+");
 
     return new SemTypePattern(patterns, SyntacticCategory.parseFrom(parts[1]),
-        ExpressionParser.lambdaCalculus().parseSingleExpression(parts[2]),
+        ExpressionParser.expression2().parseSingleExpression(parts[2]),
         parts[3].equals("T"));
   }
 
@@ -89,12 +89,11 @@ public class SemTypePattern implements CategoryPattern {
   }
 
   @Override
-  public Expression getLogicalForm(List<String> words, SyntacticCategory category,
+  public Expression2 getLogicalForm(List<String> words, SyntacticCategory category,
       Collection<DependencyStructure> deps) {
     String parameterName = Joiner.on(WORD_SEP).join(words);
-    Expression result = template;
-    for (ConstantExpression expression : template.getFreeVariables()) {
-      String name = expression.getName();
+    Expression2 result = template;
+    for (String name : StaticAnalysis.getFreeVariables(template)) {
       String newName = name;
       if (name.contains(WORD_PATTERN)) {
         newName = name.replace(WORD_PATTERN, parameterName);
@@ -127,7 +126,7 @@ public class SemTypePattern implements CategoryPattern {
 
       // TODO: possibly include part of speech tags, etc.
       if (!newName.equals(name)) {
-        result = result.renameVariable(expression, new ConstantExpression(newName));
+        result = result.substitute(name, newName);
       }
     }
 

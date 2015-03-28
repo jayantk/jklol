@@ -18,14 +18,8 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
 import com.jayantkrish.jklol.ccg.cli.ParseCcg;
-import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
-import com.jayantkrish.jklol.ccg.lambda.CommutativeOperator;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
-import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -81,7 +75,7 @@ public class ParseToLogicalForm extends AbstractCli {
 
     // Read the logical form templates.
     CcgParseAugmenter augmenter = TemplateCcgParseAugmenter.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)), true);
-
+    ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
     for (String line : IoUtils.readLines(options.valueOf(inputFile))) {
       List<String> words = Lists.newArrayList();
       List<String> posTags = Lists.newArrayList();
@@ -110,24 +104,15 @@ public class ParseToLogicalForm extends AbstractCli {
       } else if (lf == null) {
         sb.append("NO LF CONVERSION");
       } else {
-        lf = lf.simplify();
-        if (lf instanceof LambdaExpression) {
-          LambdaExpression lambdaExp = (LambdaExpression) lf;
-          List<ConstantExpression> arguments = ConstantExpression.generateUniqueVariables(
-              lambdaExp.getArguments().size());
-          lf = new QuantifierExpression("exists", arguments, new ApplicationExpression(lambdaExp, arguments));
-          lf = lf.simplify();
-        }
-
-        if (lf instanceof ForAllExpression) {
-          lf = ((ForAllExpression) lf).expandQuantifier().simplify();
-        }
+        // TODO: implement a simplifier for logic that also assumes the quantification
+        // of any final lambda args and expands universal quantifiers.
+        lf = simplifier.apply(lf);
         sb.append(lf);
         sb.append("\t");
 
         Multimap<String, String> categoryInstances = HashMultimap.create();
         Multimap<String, List<String>> relationInstances = HashMultimap.create();
-        getCategoryExpressions(lf, categoryInstances, relationInstances);
+        getEntailedPredicateInstances(lf, categoryInstances, relationInstances);
 
         sb.append(Joiner.on(",").join(categoryInstances.keySet()));
         sb.append("\t");
@@ -151,39 +136,21 @@ public class ParseToLogicalForm extends AbstractCli {
     }
   }
 
-  private static void getCategoryExpressions(Expression expression, Multimap<String, String> categoryPredicateInstances,
+  private static void getEntailedPredicateInstances(Expression2 expression,
+      Multimap<String, String> categoryPredicateInstances,
       Multimap<String, List<String>> relationPredicateInstances) {
-    if (expression instanceof QuantifierExpression) {
-      QuantifierExpression quantifier = ((QuantifierExpression) expression);
-      
-      List<Expression> conjunctionClauses = Lists.newArrayList();
-      if (quantifier.getBody() instanceof CommutativeOperator) {
-        CommutativeOperator conjunction = (CommutativeOperator) quantifier.getBody();
-        conjunctionClauses.addAll(conjunction.getArguments());
-      } else {
-        conjunctionClauses.add(quantifier.getBody());
-      }
-      
-      for (Expression conjunctionClause : conjunctionClauses) {
-        if (conjunctionClause instanceof ApplicationExpression) {
-          Expression functionExpression = ((ApplicationExpression) conjunctionClause).getFunction();
-          List<Expression> argumentExpressions = ((ApplicationExpression) conjunctionClause).getArguments();
-          
-          if (functionExpression instanceof ConstantExpression) {
-            String predName = ((ConstantExpression) functionExpression).getName();
-            if (argumentExpressions.size() == 1 && 
-                argumentExpressions.get(0) instanceof ConstantExpression) {
-              String varName = ((ConstantExpression) argumentExpressions.get(0)).getName();
-              categoryPredicateInstances.put(varName, predName);
-            } else if (argumentExpressions.size() == 2 && 
-                argumentExpressions.get(0) instanceof ConstantExpression &&
-                argumentExpressions.get(1) instanceof ConstantExpression) {
-              String arg1 = ((ConstantExpression) argumentExpressions.get(0)).getName();
-              String arg2 = ((ConstantExpression) argumentExpressions.get(1)).getName();
-              
-              relationPredicateInstances.put(predName, Arrays.asList(arg1, arg2));
-            }
-          }
+    for (int i = 0; i < expression.size(); i++) {
+      Expression2 subexpression = expression.getSubexpression(i);
+      if (!subexpression.isConstant()) {
+        List<Expression2> components = subexpression.getSubexpressions();
+        if (components.size() == 2  && components.get(0).isConstant()
+            && components.get(1).isConstant()) {
+          categoryPredicateInstances.put(components.get(1).getConstant(),
+              components.get(0).getConstant());
+        } else if (components.size() == 3 && components.get(0).isConstant()
+            && components.get(1).isConstant() && components.get(2).isConstant()) {
+          relationPredicateInstances.put(components.get(0).getConstant(),
+              Arrays.asList(components.get(1).getConstant(), components.get(2).getConstant()));          
         }
       }
     }

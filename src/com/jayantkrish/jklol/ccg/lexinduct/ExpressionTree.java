@@ -1,7 +1,9 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -9,7 +11,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.Scope;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -39,46 +43,20 @@ public class ExpressionTree {
     this.rights = ImmutableList.copyOf(rights);
   }
 
-  /*
-  private static Expression2 canonicalizeVariableNames(Expression2 e, int numRenamed) {
-    if (e instanceof LambdaExpression) {
-      LambdaExpression lambdaExpression = (LambdaExpression) e;
-      List<ConstantExpression> args = lambdaExpression.getArguments();
-      List<ConstantExpression> newArgs = Lists.newArrayList();
-      for (int i = 0; i < args.size(); i++) {
-        newArgs.add(new ConstantExpression("$f" + (i + numRenamed)));
-      }
-
-      numRenamed = numRenamed + args.size();
-      Expression canonicalizedBody = canonicalizeVariableNames(lambdaExpression.getBody(),
-          numRenamed);
-      
-      lambdaExpression = new LambdaExpression(args, canonicalizedBody);
-      return lambdaExpression.renameVariables(args, newArgs);
-    } else if (e instanceof ApplicationExpression) {
-      List<Expression> newSubexpressions = Lists.newArrayList();
-      for (Expression subexpression : ((ApplicationExpression) e).getSubexpressions()) {
-        newSubexpressions.add(canonicalizeVariableNames(subexpression, numRenamed));
-      }
-      return new ApplicationExpression(newSubexpressions);
-    } else {
-      return e;
-    }
-  }
-  */
-
   public static ExpressionTree fromExpression(Expression2 expression) {
-    return fromExpression(expression, 0, 2);
+    return fromExpression(expression, ExpressionSimplifier.lambdaCalculus(),
+        Collections.<String, String>emptyMap(), 0, 2);
   }
 
-  public static ExpressionTree fromExpression(Expression2 expression, int numAppliedArguments,
-      int maxDepth) {
+  public static ExpressionTree fromExpression(Expression2 expression,
+      ExpressionSimplifier simplifier, Map<String, String> typeReplacements,
+      int numAppliedArguments, int maxDepth) {
     Expression2 lambdaTemplate = ExpressionParser.expression2()
         .parseSingleExpression("(lambda ARGS BODY)");
     Expression2 applicationTemplate = ExpressionParser.expression2()
         .parseSingleExpression("(FUNC VALUES)");
 
-    // System.out.println(expression);
+    expression = simplifier.apply(expression);
     
     List<ExpressionTree> lefts = Lists.newArrayList();
     List<ExpressionTree> rights = Lists.newArrayList();
@@ -120,9 +98,18 @@ public class ExpressionTree {
           // The function is something like (lambda x y (x y))
           continue;
         }
+        
+        Type argType = StaticAnalysis.inferType(argExpression, typeReplacements);
+        if (argType.isFunctional() && argType.getReturnType().isFunctional()) {
+          // The argument has a complex type that is unlikely to be
+          // the argument of another category. 
+          continue;
+        }
 
-        ExpressionTree left = ExpressionTree.fromExpression(argExpression);
-        ExpressionTree right = ExpressionTree.fromExpression(funcExpression);
+        ExpressionTree left = ExpressionTree.fromExpression(argExpression, simplifier,
+            typeReplacements, 0, maxDepth);
+        ExpressionTree right = ExpressionTree.fromExpression(funcExpression, simplifier,
+            typeReplacements, numAppliedArguments + 1, maxDepth);
         lefts.add(left);
         rights.add(right);
       }

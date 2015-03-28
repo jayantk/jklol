@@ -19,9 +19,9 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
@@ -71,7 +71,20 @@ public class AlignmentLexiconInduction extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    List<AlignmentExample> examples = readTrainingData(options.valueOf(trainingData));
+    // TODO: this shouldn't be hard coded. Replace with 
+    // an input unification lattice for types.
+    Map<String, String> typeReplacements = Maps.newHashMap();
+    typeReplacements.put("lo", "e");
+    typeReplacements.put("c", "e");
+    typeReplacements.put("co", "e");
+    typeReplacements.put("s", "e");
+    typeReplacements.put("r", "e");
+    typeReplacements.put("l", "e");
+    typeReplacements.put("m", "e");
+    typeReplacements.put("p", "e");
+
+    List<AlignmentExample> examples = readTrainingData(options.valueOf(trainingData),
+        typeReplacements);
     
     if (options.has(printSearchSpace)) { 
       for (AlignmentExample example : examples) {
@@ -113,18 +126,6 @@ public class AlignmentLexiconInduction extends AbstractCli {
     }
     System.out.println("Aligned: " + numTreesWithFullAlignments + " / " + examples.size());
 
-    // TODO: this shouldn't be hard coded. Replace with 
-    // an input unification lattice for types.
-    Map<String, String> typeReplacements = Maps.newHashMap();
-    typeReplacements.put("lo", "e");
-    typeReplacements.put("c", "e");
-    typeReplacements.put("co", "e");
-    typeReplacements.put("s", "e");
-    typeReplacements.put("r", "e");
-    typeReplacements.put("l", "e");
-    typeReplacements.put("m", "e");
-    typeReplacements.put("p", "e");
-    
     List<LexiconEntry> lexiconEntries = generateCcgLexicon(alignments, typeReplacements);
 
     List<String> lines = Lists.newArrayList();
@@ -216,15 +217,16 @@ public class AlignmentLexiconInduction extends AbstractCli {
     return newExamples;
   }
 
-  private static List<AlignmentExample> readTrainingData(String trainingDataFile) {
+  private static List<AlignmentExample> readTrainingData(String trainingDataFile,
+      Map<String, String> typeReplacements) {
     List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
     List<AlignmentExample> examples = Lists.newArrayList();
-    Set<ConstantExpression> constantsDontCount = Sets.newHashSet();
-    constantsDontCount.add(new ConstantExpression("and:<t*,t>"));
+    ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
 
     int totalTreeSize = 0; 
     for (CcgExample ccgExample : ccgExamples) {
-      ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(), 0, constantsDontCount);
+      ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(), simplifier,
+          typeReplacements, 0, 2);
       examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
 
       totalTreeSize += tree.size();

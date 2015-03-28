@@ -10,8 +10,8 @@ import junit.framework.TestCase;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -29,12 +29,12 @@ public class AlignmentModelTrainingTest extends TestCase {
   VariableNumMap wordVarPattern, expressionVarPattern;
   
   List<AlignmentExample> examples;
-  FeatureVectorGenerator<Expression> featureGenerator;
+  FeatureVectorGenerator<Expression2> featureGenerator;
   
   public void setUp() {
     examples = parseData(dataSet1);
     
-    Set<Expression> allExpressions = Sets.newHashSet();
+    Set<Expression2> allExpressions = Sets.newHashSet();
     for (AlignmentExample example : examples) {
       example.getTree().getAllExpressions(allExpressions);
     }
@@ -48,7 +48,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     List<AlignmentExample> examples = Lists.newArrayList();
     for (int i = 0; i < data.length; i++) {
       ExpressionTree tree = ExpressionTree.fromExpression(ExpressionParser
-        .lambdaCalculus().parseSingleExpression(data[i][1]));
+        .expression2().parseSingleExpression(data[i][1]));
       List<String> words = Arrays.asList(data[i][0].split(" "));
       System.out.println(words);
       System.out.println(tree);

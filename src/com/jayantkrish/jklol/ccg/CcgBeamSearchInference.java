@@ -7,6 +7,8 @@ import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -93,8 +95,9 @@ public class CcgBeamSearchInference implements CcgInference {
       possibleParses = CcgLoglikelihoodOracle.filterParsesByDependencies(observedDependencies, possibleParses);
     }
     if (observedLogicalForm != null) {
+      // TODO: The comparison function can't be hardcoded here.
       possibleParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(observedLogicalForm,
-          comparator, possibleParses);
+          new SimplificationComparator(ExpressionSimplifier.lambdaCalculus()), possibleParses);
     }
 
     if (verbose) {

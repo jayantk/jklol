@@ -1,17 +1,12 @@
 package com.jayantkrish.jklol.ccg.lambda2;
 
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.lisp.SExpression;
 
 public class SExpressionPatternMatcher {
 
-  
-  public static interface SExpressionPattern {
+  public static interface Expression2Pattern {
     
-    public Match getNextMatch(SExpression expression, int startIndex);
+    public Match getNextMatch(Expression2 expression, int startIndex);
   }
   
   public static class Match {
@@ -37,14 +32,14 @@ public class SExpressionPatternMatcher {
     }
   }
 
-  public static class ConstantSExpressionPattern implements SExpressionPattern {
+  public static class ConstantExpression2Pattern implements Expression2Pattern {
     private String constantName;
 
-    public ConstantSExpressionPattern(String constantName) {
+    public ConstantExpression2Pattern(String constantName) {
       this.constantName = Preconditions.checkNotNull(constantName);
     }
 
-    public Match getNextMatch(SExpression expression, int startIndex) {
+    public Match getNextMatch(Expression2 expression, int startIndex) {
       while (startIndex < expression.size() && !matches(expression.getSubexpression(startIndex)))  {
         startIndex++;
       }
@@ -56,26 +51,26 @@ public class SExpressionPatternMatcher {
       }
     }
 
-    public boolean matches(SExpression subexpression) {
+    public boolean matches(Expression2 subexpression) {
       return subexpression.isConstant() && subexpression.getConstant().equals(constantName);
     }
   }
 
-  public static class SubexpressionPattern implements SExpressionPattern {
-    private final SExpressionPattern insidePattern;
+  public static class SubexpressionPattern implements Expression2Pattern {
+    private final Expression2Pattern insidePattern;
     
     // Matches any subexpression.
     public SubexpressionPattern() {
       insidePattern = null;
     }
     
-    public SubexpressionPattern(SExpressionPattern insidePattern) {
+    public SubexpressionPattern(Expression2Pattern insidePattern) {
       this.insidePattern = insidePattern;
     }
 
-    public Match getNextMatch(SExpression expression, int startIndex) {
+    public Match getNextMatch(Expression2 expression, int startIndex) {
       while (startIndex < expression.size()) {
-        SExpression subexpression = expression.getSubexpression(startIndex);
+        Expression2 subexpression = expression.getSubexpression(startIndex);
         if (insidePattern == null) {
           return new Match(startIndex, startIndex + subexpression.size());
         } else {
@@ -91,16 +86,16 @@ public class SExpressionPatternMatcher {
     }
   }
 
-  public static class ListPattern implements SExpressionPattern {
-    private final SExpressionPattern first;
-    private final SExpressionPattern second;
+  public static class ListPattern implements Expression2Pattern {
+    private final Expression2Pattern first;
+    private final Expression2Pattern second;
     
-    public ListPattern(SExpressionPattern first, SExpressionPattern second) {
+    public ListPattern(Expression2Pattern first, Expression2Pattern second) {
       this.first = Preconditions.checkNotNull(first);
       this.second = Preconditions.checkNotNull(second);
     }
     
-    public Match getNextMatch(SExpression expression, int startIndex) {
+    public Match getNextMatch(Expression2 expression, int startIndex) {
       boolean matched = false;
       int matchStart = startIndex;
       int matchEnd = -1;
@@ -124,8 +119,9 @@ public class SExpressionPatternMatcher {
     }
   }
 
+  /*
   private static class RepeatedPattern {
-    private final SExpressionPattern pattern;
+    private final Expression2Pattern pattern;
     
     public Iterator<Match> getMatches(Expression2 expression, int startIndex) {
       return new RepeatedPatternMatchIterator();
@@ -142,11 +138,11 @@ public class SExpressionPatternMatcher {
     
     private Match next;
     private Expression2 expression;
-    private SExpressionPattern pattern;
+    private Expression2Pattern pattern;
     private int startIndex;
     
     public RepeatedPatternMatchIterator(Expression2 expression,
-        SExpressionPattern pattern, int startIndex) {
+        Expression2Pattern pattern, int startIndex) {
       this.expression = expression;
       this.pattern = pattern;
       this.startIndex = startIndex;
@@ -192,5 +188,5 @@ public class SExpressionPatternMatcher {
   // (exists ?vars* (exists ?vars2* ?body))
   // (exists ?vars* ?vars2* body)
 
-
+*/
 }

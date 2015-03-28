@@ -19,12 +19,9 @@ import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
 /**
  * A rule-based system that assigns a semantics to sentences given a
@@ -136,24 +133,14 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       
       // This code assumes that the left category instantiates the conj,
       // and the right category is the category being conjuncted.
-      ConstantExpression leftVar = new ConstantExpression("$L");
-      ConstantExpression rightVar = new ConstantExpression("$R");
-      ConstantExpression argVar = new ConstantExpression("$1");
-      ConstantExpression quantifiedVar = new ConstantExpression("qvar");
+      Expression2 quantifiedVar = Expression2.constant("qvar");
 
       Expression2 parentExpression = logicalFormFromSyntacticCategory(parent, null);
-      ConstantExpression firstArg = parentExpression.getArguments().get(0);
-      Expression body = parentExpression.getBody().renameVariable(firstArg, quantifiedVar);
+      String firstArg = StaticAnalysis.getLambdaArguments(parentExpression, 0).get(0);
+      Expression2 body = StaticAnalysis.getLambdaBody(parentExpression, 0).substitute(firstArg, quantifiedVar);
 
-      ForAllExpression forAllExpr = new ForAllExpression(
-          Arrays.asList(quantifiedVar),
-          Arrays.asList(ExpressionParser.lambdaCalculus().parseSingleExpression("(set $R $1)")),
-          body);
-      
-      Expression simplified = forAllExpr.simplify();
-      
-      LambdaExpression firstLambda = new LambdaExpression(Arrays.asList(argVar), simplified);
-      return new LambdaExpression(Arrays.asList(leftVar, rightVar), firstLambda);
+      return ExpressionParser.expression2().parseSingleExpression(
+          "(lambda $L $R (lambda $1 (forall (qvar (set $R $1)) " + body + ")))");
     }
   }
 

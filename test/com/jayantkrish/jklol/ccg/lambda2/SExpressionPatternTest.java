@@ -1,13 +1,10 @@
-package com.jayantkrish.jklol.lisp.syntax;
+package com.jayantkrish.jklol.ccg.lambda2;
 
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda2.SExpressionPatternMatcher;
+import com.jayantkrish.jklol.ccg.lambda2.SExpressionPatternMatcher.Expression2Pattern;
 import com.jayantkrish.jklol.ccg.lambda2.SExpressionPatternMatcher.Match;
-import com.jayantkrish.jklol.ccg.lambda2.SExpressionPatternMatcher.SExpressionPattern;
-import com.jayantkrish.jklol.lisp.SExpression;
-import com.jayantkrish.jklol.util.IndexedList;
 
 public class SExpressionPatternTest extends TestCase {
 
@@ -16,17 +13,17 @@ public class SExpressionPatternTest extends TestCase {
       "(foo)"
   };
   
-  SExpression[] expressions = new SExpression[expressionStrings.length];
+  Expression2[] expressions = new Expression2[expressionStrings.length];
   
   public void setUp() {
     for (int i = 0; i < expressionStrings.length; i++) {
-      expressions[i] = ExpressionParser.sExpression(IndexedList.<String>create())
+      expressions[i] = ExpressionParser.expression2()
           .parseSingleExpression(expressionStrings[i]);
     }
   }
 
   public void testMatchConstant() {
-    SExpressionPattern pattern = new SExpressionPatternMatcher.ConstantSExpressionPattern("foo");
+    Expression2Pattern pattern = new SExpressionPatternMatcher.ConstantExpression2Pattern("foo");
 
     Match match1 = pattern.getNextMatch(expressions[0], 0);
     Match match2 = pattern.getNextMatch(expressions[0], match1.getSpanStart() + 1);
@@ -40,9 +37,9 @@ public class SExpressionPatternTest extends TestCase {
   }
   
   public void testMatchSequence() {
-    SExpressionPattern c1 = new SExpressionPatternMatcher.ConstantSExpressionPattern("foo");
-    SExpressionPattern c2= new SExpressionPatternMatcher.ConstantSExpressionPattern("bar");
-    SExpressionPattern pattern = new SExpressionPatternMatcher.ListPattern(c1, c2);
+    Expression2Pattern c1 = new SExpressionPatternMatcher.ConstantExpression2Pattern("foo");
+    Expression2Pattern c2= new SExpressionPatternMatcher.ConstantExpression2Pattern("bar");
+    Expression2Pattern pattern = new SExpressionPatternMatcher.ListPattern(c1, c2);
     
     Match match1 = pattern.getNextMatch(expressions[0], 0);
     Match match2 = pattern.getNextMatch(expressions[0], match1.getSpanStart() + 1);
@@ -53,7 +50,7 @@ public class SExpressionPatternTest extends TestCase {
   }
   
   public void testMatchSubexpression1() {
-    SExpressionPattern pattern = new SExpressionPatternMatcher.SubexpressionPattern();
+    Expression2Pattern pattern = new SExpressionPatternMatcher.SubexpressionPattern();
 
     Match match1 = pattern.getNextMatch(expressions[0], 0);
     Match match2 = pattern.getNextMatch(expressions[0], match1.getSpanStart() + 1);
@@ -63,8 +60,8 @@ public class SExpressionPatternTest extends TestCase {
   }
   
   public void testMatchSubexpression2() {
-    SExpressionPattern c1 = new SExpressionPatternMatcher.ConstantSExpressionPattern("foo");
-    SExpressionPattern pattern = new SExpressionPatternMatcher.SubexpressionPattern(c1);
+    Expression2Pattern c1 = new SExpressionPatternMatcher.ConstantExpression2Pattern("foo");
+    Expression2Pattern pattern = new SExpressionPatternMatcher.SubexpressionPattern(c1);
 
     Match match1 = pattern.getNextMatch(expressions[0], 0);
     assertNull(match1);

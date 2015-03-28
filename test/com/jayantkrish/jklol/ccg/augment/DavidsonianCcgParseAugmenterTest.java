@@ -5,16 +5,19 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 
 public class DavidsonianCcgParseAugmenterTest extends TestCase {
   
   ExpressionSimplifier simplifier;
+  ExpressionComparator comparator;
   
   public void setUp() {
     simplifier = ExpressionSimplifier.lambdaCalculus();
+    comparator = new SimplificationComparator(simplifier);
   }
   
   public void testLfFromSyntax1() {
@@ -96,11 +99,7 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
     System.out.println(left + " " + right + " -> " + parent + " result: " + result
         + " exp: " + expected);
 
-    if (result instanceof ForAllExpression) {
-      System.out.println(((ForAllExpression) result).expandQuantifier().simplify());
-    }
-
-    assertTrue(expected.functionallyEquals(result));
+    assertTrue(comparator.equals(expected, result));
   }
   
   private void runCategoryTest(String catString, String word, String expectedExpressionString) {
@@ -112,6 +111,6 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
     
     System.out.println(cat + " result: " + result + " exp: " + expected);
     
-    assertTrue(expected.functionallyEquals(result));
+    assertTrue(comparator.equals(expected, result));
   }
 }

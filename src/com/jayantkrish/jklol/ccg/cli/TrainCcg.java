@@ -32,6 +32,9 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -173,11 +176,11 @@ public class TrainCcg extends AbstractCli {
 
     // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
+    ExpressionComparator comparator = new SimplificationComparator(ExpressionSimplifier.lambdaCalculus());
     if (options.has(maxMargin)) {
-      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm,
-          options.valueOf(maxMargin));
+      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm, options.valueOf(maxMargin));
     } else {
-      oracle = new CcgLoglikelihoodOracle(family, options.valueOf(beamSize));
+      oracle = new CcgLoglikelihoodOracle(family, comparator, options.valueOf(beamSize));
     }
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),

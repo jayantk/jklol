@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -9,17 +8,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
-import com.jayantkrish.jklol.ccg.lambda.Type;
-import com.jayantkrish.jklol.ccg.lambda.TypedExpression;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.Scope;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public class ExpressionTree {
-  private final Expression rootExpression;
+  private final Expression2 rootExpression;
   // Number of arguments of expression that get
   // applied in this tree.
   private final int numAppliedArguments;
@@ -29,10 +26,10 @@ public class ExpressionTree {
   private final List<ExpressionTree> lefts;
   private final List<ExpressionTree> rights;
 
-  public ExpressionTree(Expression rootExpression, int numAppliedArguments,
+  public ExpressionTree(Expression2 rootExpression, int numAppliedArguments,
       Tensor expressionFeatures, List<ExpressionTree> lefts, List<ExpressionTree> rights) {
     // Canonicalize variable names.
-    rootExpression = canonicalizeVariableNames(rootExpression.simplify(), 0);
+    // rootExpression = canonicalizeVariableNames(rootExpression.simplify(), 0);
     this.rootExpression = Preconditions.checkNotNull(rootExpression);
     this.numAppliedArguments = numAppliedArguments;
     this.expressionFeatures = expressionFeatures;
@@ -41,8 +38,9 @@ public class ExpressionTree {
     this.lefts = ImmutableList.copyOf(lefts);
     this.rights = ImmutableList.copyOf(rights);
   }
-  
-  private static Expression canonicalizeVariableNames(Expression e, int numRenamed) {
+
+  /*
+  private static Expression2 canonicalizeVariableNames(Expression2 e, int numRenamed) {
     if (e instanceof LambdaExpression) {
       LambdaExpression lambdaExpression = (LambdaExpression) e;
       List<ConstantExpression> args = lambdaExpression.getArguments();
@@ -67,14 +65,69 @@ public class ExpressionTree {
       return e;
     }
   }
+  */
 
-  public static ExpressionTree fromExpression(Expression expression) {
-    return fromExpression(expression, 0, Collections.<ConstantExpression>emptySet());
+  public static ExpressionTree fromExpression(Expression2 expression) {
+    return fromExpression(expression, 0, 2);
   }
-  
-  public static ExpressionTree fromExpression(Expression expression,
-      Set<ConstantExpression> constantsThatDontCount) {
-    return fromExpression(expression, 0, constantsThatDontCount);
+
+  public static ExpressionTree fromExpression(Expression2 expression, int numAppliedArguments,
+      int maxDepth) {
+    Expression2 lambdaTemplate = ExpressionParser.expression2()
+        .parseSingleExpression("(lambda ARGS BODY)");
+    Expression2 applicationTemplate = ExpressionParser.expression2()
+        .parseSingleExpression("(FUNC VALUES)");
+
+    // System.out.println(expression);
+    
+    List<ExpressionTree> lefts = Lists.newArrayList();
+    List<ExpressionTree> rights = Lists.newArrayList();
+    
+    for (int i = 1; i < expression.size(); i++) {
+      int depth = expression.getDepth(i);
+      Scope scope = StaticAnalysis.getEnclosingScope(expression, i);
+      if (depth <= (maxDepth + scope.getDepth()) && !StaticAnalysis.isPartOfSpecialForm(expression, i)) {
+        Expression2 subexpression = expression.getSubexpression(i);
+
+        // System.out.println(subexpression);
+        Set<String> freeVars = Sets.newHashSet(StaticAnalysis.getFreeVariables(subexpression));
+        Set<String> scopeBindings = scope.getBoundVariables();
+
+        freeVars.retainAll(scopeBindings);
+        List<Expression2> args = Lists.newArrayList();
+        for (String freeVar : freeVars) {
+          args.add(Expression2.constant(freeVar));
+        }
+
+        Expression2 argExpression = subexpression;
+        if (args.size() > 0) {
+          argExpression = lambdaTemplate.substituteInline("ARGS", args);
+          argExpression = argExpression.substitute("BODY", subexpression);
+        }
+
+        Expression2 newVariable = Expression2.constant(StaticAnalysis.getNewVariableName(expression));
+        Expression2 bodySub = newVariable;
+        if (args.size() > 0) {
+          bodySub = applicationTemplate.substitute("FUNC", newVariable);
+          bodySub = bodySub.substituteInline("VALUES", args);
+        }
+
+        Expression2 funcExpression = lambdaTemplate.substitute("ARGS", newVariable);
+        funcExpression = funcExpression.substitute("BODY", expression.substitute(i, bodySub));
+
+        if (StaticAnalysis.getFreeVariables(funcExpression).size() == 0 ||
+            StaticAnalysis.getFreeVariables(argExpression).size() == 0) {
+          // The function is something like (lambda x y (x y))
+          continue;
+        }
+
+        ExpressionTree left = ExpressionTree.fromExpression(argExpression);
+        ExpressionTree right = ExpressionTree.fromExpression(funcExpression);
+        lefts.add(left);
+        rights.add(right);
+      }
+    }
+    return new ExpressionTree(expression, numAppliedArguments, null, lefts, rights);
   }
 
   /**
@@ -84,7 +137,8 @@ public class ExpressionTree {
    * @param expression
    * @return
    */
-  public static ExpressionTree fromExpression(Expression expression, int numAppliedArguments,
+  /*
+  public static ExpressionTree fromExpression(Expression2 expression, int numAppliedArguments,
       Set<ConstantExpression> constantsThatDontCount) {
     List<ConstantExpression> args = Collections.emptyList();
     expression = expression.simplify();
@@ -218,11 +272,9 @@ public class ExpressionTree {
               newArgs.addAll(args);
               LambdaExpression rightExpression = new LambdaExpression(newArgs, otherBody);
 
-              /*
               System.out.println(expression);
               System.out.println(leftExpression);
               System.out.println(rightExpression);
-              */
               
               Set<ConstantExpression> rightFreeVars = rightExpression.getFreeVariables();
               Set<ConstantExpression> leftFreeVars = leftExpression.getFreeVariables();
@@ -246,8 +298,9 @@ public class ExpressionTree {
       }
     }
   }
+  */
 
-  public Expression getExpression() {
+  public Expression2 getExpression() {
     return rootExpression;
   }
   
@@ -277,7 +330,7 @@ public class ExpressionTree {
    * 
    * @param accumulator
    */
-  public void getAllExpressions(Collection<Expression> accumulator) {
+  public void getAllExpressions(Collection<Expression2> accumulator) {
     accumulator.add(rootExpression);
 
     for (int i = 0; i < lefts.size(); i++) {
@@ -294,7 +347,7 @@ public class ExpressionTree {
    * @param generator
    * @return
    */
-  public ExpressionTree applyFeatureVectorGenerator(FeatureVectorGenerator<Expression> generator) {
+  public ExpressionTree applyFeatureVectorGenerator(FeatureVectorGenerator<Expression2> generator) {
     List<ExpressionTree> newLefts = Lists.newArrayList();
     List<ExpressionTree> newRights = Lists.newArrayList();
     for (int i = 0; i < lefts.size(); i++) {

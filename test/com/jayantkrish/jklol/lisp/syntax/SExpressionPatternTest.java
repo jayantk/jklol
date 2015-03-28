@@ -3,9 +3,10 @@ package com.jayantkrish.jklol.lisp.syntax;
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.SExpressionPatternMatcher;
+import com.jayantkrish.jklol.ccg.lambda2.SExpressionPatternMatcher.Match;
+import com.jayantkrish.jklol.ccg.lambda2.SExpressionPatternMatcher.SExpressionPattern;
 import com.jayantkrish.jklol.lisp.SExpression;
-import com.jayantkrish.jklol.lisp.syntax.SExpressionPatternMatcher.Match;
-import com.jayantkrish.jklol.lisp.syntax.SExpressionPatternMatcher.SExpressionPattern;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class SExpressionPatternTest extends TestCase {

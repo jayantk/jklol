@@ -5,12 +5,12 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.util.CountAccumulator;
 
-public class ExpressionTokenFeatureGenerator implements FeatureGenerator<Expression, String> {
+public class ExpressionTokenFeatureGenerator implements FeatureGenerator<Expression2, String> {
   
   private static final long serialVersionUID = 1L;
   
@@ -21,11 +21,11 @@ public class ExpressionTokenFeatureGenerator implements FeatureGenerator<Express
   }
 
   @Override
-  public Map<String, Double> generateFeatures(Expression item) {
+  public Map<String, Double> generateFeatures(Expression2 item) {
     // List<String> tokens = ExpressionParser.lambdaCalculus().tokenize(item.toString());
     Set<String> tokens = Sets.newHashSet();
-    for (ConstantExpression expression : item.getFreeVariables()) {
-      tokens.add(expression.getName());
+    for (String expression : StaticAnalysis.getFreeVariables(item)) {
+      tokens.add(expression);
     }
 
     tokens.removeAll(tokensToIgnore);

@@ -7,10 +7,10 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
 public class AlignedExpressionTree {
-  private final Expression expression;
+  private final Expression2 expression;
 
   // Number of arguments of expression that get
   // applied in this tree.
@@ -31,7 +31,7 @@ public class AlignedExpressionTree {
   // Null unless this node is a terminal.
   private final String word;
 
-  private AlignedExpressionTree(Expression expression, int numAppliedArguments,
+  private AlignedExpressionTree(Expression2 expression, int numAppliedArguments,
       int[] possibleSpanStarts, int[] possibleSpanEnds, AlignedExpressionTree left,
       AlignedExpressionTree right, String word) {
     this.expression = Preconditions.checkNotNull(expression);
@@ -48,13 +48,13 @@ public class AlignedExpressionTree {
     this.word = word;
   }
 
-  public static AlignedExpressionTree forTerminal(Expression expression, int numAppliedArguments,
+  public static AlignedExpressionTree forTerminal(Expression2 expression, int numAppliedArguments,
       int[] possibleSpanStarts, int[] possibleSpanEnds, String word) {
     return new AlignedExpressionTree(expression, numAppliedArguments, 
         possibleSpanStarts, possibleSpanEnds, null, null, word);
   }
 
-  public static AlignedExpressionTree forNonterminal(Expression expression, int numAppliedArguments,
+  public static AlignedExpressionTree forNonterminal(Expression2 expression, int numAppliedArguments,
       AlignedExpressionTree left, AlignedExpressionTree right) {
 
     List<Integer> spanStarts = Lists.newArrayList();
@@ -78,7 +78,7 @@ public class AlignedExpressionTree {
         Ints.toArray(spanEnds), left, right, null);
   }
 
-  public Expression getExpression() {
+  public Expression2 getExpression() {
     return expression;
   }
 
@@ -207,10 +207,10 @@ public class AlignedExpressionTree {
    */
   public static class AlignedExpression {
     private final String word;
-    private final Expression expression;
+    private final Expression2 expression;
     private final int numAppliedArgs;
 
-    public AlignedExpression(String word, Expression expression, int numAppliedArgs) {
+    public AlignedExpression(String word, Expression2 expression, int numAppliedArgs) {
       this.word = Preconditions.checkNotNull(word);
       this.expression = Preconditions.checkNotNull(expression);
       this.numAppliedArgs = numAppliedArgs;
@@ -220,7 +220,7 @@ public class AlignedExpressionTree {
       return word;
     }
 
-    public Expression getExpression() {
+    public Expression2 getExpression() {
       return expression;
     }
 

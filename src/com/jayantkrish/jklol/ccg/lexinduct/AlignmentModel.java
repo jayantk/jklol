@@ -11,8 +11,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cfg.CfgParser;
@@ -64,14 +63,14 @@ public class AlignmentModel {
   // 1 - epsilon to favor larger expressions when probabilities
   // are otherwise tied.
   private static final double EPSILON = 0.0001;
-  
+
   // Names for CFG rules used in the CFG decoding algorithm.
   private static final String TERMINAL = "terminal";
   private static final String FORWARD_APPLICATION = "fa";
   private static final String BACKWARD_APPLICATION = "ba";
   private static final String SKIP_RULE = "skip";
-  private static final Expression SKIP_EXPRESSION = new ConstantExpression("**skip**");
-  
+  private static final Expression2 SKIP_EXPRESSION = Expression2.constant("**skip**");
+
   public AlignmentModel(DynamicFactorGraph factorGraph, String expressionPlateName,
       VariableNumMap expressionPlateVar, VariableNumMap featurePlateVar,
       VariableNumMap wordPlateVar, String booleanPlateName,
@@ -136,7 +135,7 @@ public class AlignmentModel {
     FactorGraph fg = pair.getLeft();
     AlignmentTree tree = pair.getRight();
     
-    Set<Expression> expressions = Sets.newHashSet();
+    Set<Expression2> expressions = Sets.newHashSet();
     example.getTree().getAllExpressions(expressions);
     expressions.add(SKIP_EXPRESSION);
 
@@ -159,7 +158,7 @@ public class AlignmentModel {
     VariableNumMap binaryRuleVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
-    for (Expression e : expressions) {
+    for (Expression2 e : expressions) {
       binaryRuleBuilder.setWeight(1.0, e, SKIP_EXPRESSION, e, SKIP_RULE);
       binaryRuleBuilder.setWeight(1.0, SKIP_EXPRESSION, e, e, SKIP_RULE);
     }
@@ -194,12 +193,12 @@ public class AlignmentModel {
       int[] spanStarts = new int[] {t.getSpanStart()};
       int[] spanEnds = new int[] {t.getSpanEnd() + 1};
       String word = (String) t.getTerminalProductions().get(0);
-      return AlignedExpressionTree.forTerminal((Expression) t.getRoot(),
+      return AlignedExpressionTree.forTerminal((Expression2) t.getRoot(),
           numAppliedArguments, spanStarts, spanEnds, word);
     } else {
-      Expression parent = (Expression) t.getRoot();
-      Expression left = (Expression) t.getLeft().getRoot();
-      Expression right = (Expression) t.getRight().getRoot();
+      Expression2 parent = (Expression2) t.getRoot();
+      Expression2 left = (Expression2) t.getLeft().getRoot();
+      Expression2 right = (Expression2) t.getRight().getRoot();
       
       if (left == SKIP_EXPRESSION) {
         return decodeCfgParse(t.getRight(), numAppliedArguments);
@@ -241,7 +240,7 @@ public class AlignmentModel {
   private FactorGraph getFactorGraphWithoutTreeConstaint(AlignmentExample example) {
     // Assign the values of the observed expressions in this example.
     List<Assignment> treeAssignment = Lists.newArrayList();
-    List<Expression> treeExpressions = Lists.newArrayList();
+    List<Expression2> treeExpressions = Lists.newArrayList();
     example.getTree().getAllExpressions(treeExpressions);
     for (int i = 0; i < treeExpressions.size(); i++) {
       treeAssignment.add(expressionPlateVar.outcomeArrayToAssignment(treeExpressions.get(i)));
@@ -392,7 +391,7 @@ public class AlignmentModel {
   
   private static class AlignmentTree {
     private final VariableNumMap var;
-    private final Expression expression;
+    private final Expression2 expression;
 
     // Number of arguments of expression that get
     // applied in this tree.
@@ -404,7 +403,7 @@ public class AlignmentModel {
     private final VariableNumMap wordVar;
     private final VariableNumMap wordActiveVar;
 
-    public AlignmentTree(VariableNumMap var, Expression expression, int numAppliedArguments,
+    public AlignmentTree(VariableNumMap var, Expression2 expression, int numAppliedArguments,
         List<AlignmentTree> lefts, List<AlignmentTree> rights,
         VariableNumMap wordVar, VariableNumMap wordActiveVar) {
       this.var = Preconditions.checkNotNull(var);
@@ -418,7 +417,7 @@ public class AlignmentModel {
       this.wordActiveVar = wordActiveVar;
     }
 
-    public Expression getExpression() {
+    public Expression2 getExpression() {
       return expression;
     }
     

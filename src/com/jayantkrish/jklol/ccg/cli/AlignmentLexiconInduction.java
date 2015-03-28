@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.Type;
-import com.jayantkrish.jklol.ccg.lambda.TypedExpression;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentEmOracle;
@@ -150,7 +150,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
         
         // Generate separate syntactic categories for each unbound
         // argument.
-        Type type = TypedExpression.inferType(value.getExpression(), typeReplacements);
+        Type type = StaticAnalysis.inferType(value.getExpression(), typeReplacements);
         // TODO: hack for geoquery: replace unknown entries with type e
         type = Type.parseFrom(type.toString().replaceAll("unknown", "e"));
         Type returnType = type;
@@ -207,7 +207,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
 
   public static List<AlignmentExample> applyFeatureVectorGenerator(
-      FeatureVectorGenerator<Expression> generator, List<AlignmentExample> examples) {
+      FeatureVectorGenerator<Expression2> generator, List<AlignmentExample> examples) {
     List<AlignmentExample> newExamples = Lists.newArrayList();
     for (AlignmentExample example : examples) {
       ExpressionTree newTree = example.getTree().applyFeatureVectorGenerator(generator);

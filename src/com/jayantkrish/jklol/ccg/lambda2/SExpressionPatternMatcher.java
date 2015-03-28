@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.lisp.syntax;
+package com.jayantkrish.jklol.ccg.lambda2;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -127,7 +127,7 @@ public class SExpressionPatternMatcher {
   private static class RepeatedPattern {
     private final SExpressionPattern pattern;
     
-    public Iterator<Match> getMatches(SExpression expression, int startIndex) {
+    public Iterator<Match> getMatches(Expression2 expression, int startIndex) {
       return new RepeatedPatternMatchIterator();
       
       if (startIndex == endIndex) {
@@ -141,11 +141,11 @@ public class SExpressionPatternMatcher {
   private static class RepeatedPatternMatchIterator implements Iterator<Match> {
     
     private Match next;
-    private SExpression expression;
+    private Expression2 expression;
     private SExpressionPattern pattern;
     private int startIndex;
     
-    public RepeatedPatternMatchIterator(SExpression expression,
+    public RepeatedPatternMatchIterator(Expression2 expression,
         SExpressionPattern pattern, int startIndex) {
       this.expression = expression;
       this.pattern = pattern;

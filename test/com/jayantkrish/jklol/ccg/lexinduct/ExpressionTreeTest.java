@@ -1,24 +1,29 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
-import java.util.Set;
-
 import junit.framework.TestCase;
 
-import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
 public class ExpressionTreeTest extends TestCase {
-  String exp1 = "(lambda $0 (lambda $1 (and:<t*,t> (state:<s,t> $1) (next_to:<lo,<lo,t>> $0 $1))))";
-  String exp2 = "(lambda $0 (lambda $1 (and:<t*,t> (state:<s,t> $1) (next_to:<lo,<lo,t>> $0 texas:s))))";
-  String exp3 = "(lambda $0 (and:<t*,t> (major:<lo,t> $0) (river:<r,t> $0) (loc:<lo,<lo,t>> $0 texas:s)))";
   
-  Set<ConstantExpression> disallowedConstants = Sets.newHashSet(new ConstantExpression("and:<t*,t>"));
+  String[] expressionStrings = new String[] {
+      "(lambda $0 (lambda $1 (and:<t*,t> (state:<s,t> $1) (next_to:<lo,<lo,t>> $0 $1))))",
+      "(lambda $0 (lambda $1 (and:<t*,t> (state:<s,t> $1) (next_to:<lo,<lo,t>> $0 texas:s))))",
+      "(lambda $0 (and:<t*,t> (major:<lo,t> $0) (river:<r,t> $0) (loc:<lo,<lo,t>> $0 texas:s)))",
+  };
   
+  Expression2[] expressions = new Expression2[expressionStrings.length];
+  
+  public void setUp() {
+    ExpressionParser<Expression2> parser = ExpressionParser.expression2();
+    for (int i = 0; i < expressionStrings.length; i++) {
+      expressions[i] = parser.parseSingleExpression(expressionStrings[i]);
+    }
+  }
+
   public void testAnd() {
-    Expression exp = ExpressionParser.lambdaCalculus().parseSingleExpression(exp1);
-    ExpressionTree tree = ExpressionTree.fromExpression(exp, disallowedConstants);
+    ExpressionTree tree = ExpressionTree.fromExpression(expressions[0]);
 
     System.out.println(tree);
     
@@ -26,8 +31,7 @@ public class ExpressionTreeTest extends TestCase {
   }
 
   public void testAnd2() {
-    Expression exp = ExpressionParser.lambdaCalculus().parseSingleExpression(exp2);
-    ExpressionTree tree = ExpressionTree.fromExpression(exp, disallowedConstants);
+    ExpressionTree tree = ExpressionTree.fromExpression(expressions[1]);
 
     System.out.println(tree);
 
@@ -36,8 +40,7 @@ public class ExpressionTreeTest extends TestCase {
 
   public void testAnd3() {
     // TODO: handle adding conjuncts in ANDs, e.g., for "major"
-    Expression exp = ExpressionParser.lambdaCalculus().parseSingleExpression(exp3);
-    ExpressionTree tree = ExpressionTree.fromExpression(exp, disallowedConstants);
+    ExpressionTree tree = ExpressionTree.fromExpression(expressions[2]);
 
     System.out.println(tree);
 

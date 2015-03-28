@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.lisp.syntax;
+package com.jayantkrish.jklol.ccg.lambda2;
 
 public interface SExpressionReplacementRule {
 

@@ -5,7 +5,7 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 
 /**
@@ -32,7 +32,7 @@ public class CcgExample {
   private final CcgSyntaxTree syntacticParse;
   // Expected logical form for the parse. May be null,
   // in which case the true logical form is unobserved.
-  private final Expression logicalForm;
+  private final Expression2 logicalForm;
 
   /**
    * Create a new training example for a CCG parser.
@@ -49,7 +49,7 @@ public class CcgExample {
    * value is treated as unobserved.
    */
   public CcgExample(SupertaggedSentence sentence, Set<DependencyStructure> dependencies,
-      CcgSyntaxTree syntacticParse, Expression logicalForm) {
+      CcgSyntaxTree syntacticParse, Expression2 logicalForm) {
     this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
@@ -108,7 +108,7 @@ public class CcgExample {
     return logicalForm != null;
   }
 
-  public Expression getLogicalForm() {
+  public Expression2 getLogicalForm() {
     return logicalForm;
   }
 

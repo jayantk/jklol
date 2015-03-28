@@ -7,7 +7,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.ObjectVariable;
@@ -105,8 +105,8 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
    */
   public static ParametricAlignmentModel buildAlignmentModel(
       Collection<AlignmentExample> examples, boolean useTreeConstraint,
-      boolean useWordDistribution, FeatureVectorGenerator<Expression> featureVectorGenerator) {
-    Set<Expression> allExpressions = Sets.newHashSet();
+      boolean useWordDistribution, FeatureVectorGenerator<Expression2> featureVectorGenerator) {
+    Set<Expression2> allExpressions = Sets.newHashSet();
     Set<String> words = Sets.newHashSet();
     words.add(NULL_WORD);
     for (AlignmentExample example : examples) {

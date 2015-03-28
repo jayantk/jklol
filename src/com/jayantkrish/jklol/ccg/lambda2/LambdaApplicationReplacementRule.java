@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.lisp.syntax;
+package com.jayantkrish.jklol.ccg.lambda2;
 
 import java.util.List;
 
@@ -7,7 +7,7 @@ import com.jayantkrish.jklol.lisp.SExpression;
 public class LambdaApplicationReplacementRule implements SExpressionReplacementRule {
 
   @Override
-  public SExpression replace(SExpression input) {
+  public Expression2 replace(SExpression input) {
     if (!input.isConstant() && input.getSubexpressions().size() > 0) {
       
       List<SExpression> subexpressions = input.getSubexpressions();

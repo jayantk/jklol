@@ -49,7 +49,6 @@ public class ExpressionSimplifier {
         for (int i = expression.size() - 1; i >= 0; i--) {
           Expression2 result = rule.getReplacement(expression, i);
           if (result != null) {
-            System.out.println(result + " "+ expression);
             expression = expression.substitute(i, result);
             changed = true;
           }

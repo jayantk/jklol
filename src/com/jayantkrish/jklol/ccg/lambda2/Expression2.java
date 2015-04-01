@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda2;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
@@ -8,8 +9,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-// TODO: move me to a new package.
-public class Expression2 {
+public class Expression2 implements Serializable, Comparable<Expression2> {
+  private static final long serialVersionUID = 1L;
 
   protected final String constantName;
   protected final List<Expression2> subexpressions;
@@ -64,6 +65,7 @@ public class Expression2 {
   }
 
   private int[] findSubexpression(int index) {
+    Preconditions.checkArgument(index < size, "Cannot get index %s of expression %s", index, this);
     int startIndex = 1;
     for (int i = 0; i < subexpressions.size(); i++) {
       Expression2 subexpression = subexpressions.get(i);
@@ -268,5 +270,10 @@ public class Expression2 {
     } else if (!subexpressions.equals(other.subexpressions))
       return false;
     return true;
+  }
+
+  @Override
+  public int compareTo(Expression2 arg0) {
+    return this.toString().compareTo(arg0.toString());
   }
 }

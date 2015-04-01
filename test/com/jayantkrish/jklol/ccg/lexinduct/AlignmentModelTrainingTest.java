@@ -67,15 +67,17 @@ public class AlignmentModelTrainingTest extends TestCase {
     initial.increment(1);
 
     ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
+    /*
     SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing),
         initial, examples);
 
     // TODO: put in an actual test here.
     System.out.println(pam.getParameterDescription(trainedParameters, 30));
+    */
 
     pam = pam.updateUseTreeConstraint(true);
-    SufficientStatistics trainedParameters2 = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing),
-        trainedParameters, examples);
+    SufficientStatistics trainedParameters2 = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing, true),
+        initial, examples);
     
     // TODO: put in an actual test here.
     System.out.println(pam.getParameterDescription(trainedParameters2, 30));
@@ -84,6 +86,28 @@ public class AlignmentModelTrainingTest extends TestCase {
       System.out.println(example.getWords());
       System.out.println(model.getBestAlignment(example));
       System.out.println(model.getBestAlignmentCfg(example));
+    }
+  }
+
+  public void testTrainingCfg() {
+    ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(examples, featureGenerator);
+
+    SufficientStatistics smoothing = pam.getNewSufficientStatistics();
+    smoothing.increment(0.1);
+
+    SufficientStatistics initial = pam.getNewSufficientStatistics();
+    initial.increment(1);
+
+    ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
+    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+        initial, examples);
+
+    // TODO: put in an actual test here.
+    System.out.println(pam.getParameterDescription(trainedParameters2, 30));
+    CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters2);
+    for (AlignmentExample example : examples) {
+      System.out.println(example.getWords());
+      System.out.println(model.getBestAlignment(example));
     }
   }
 }

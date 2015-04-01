@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +19,7 @@ import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.Scope;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.SubsetIterator;
 
 public class ExpressionTree {
   private final Expression2 rootExpression;
@@ -32,8 +34,6 @@ public class ExpressionTree {
 
   public ExpressionTree(Expression2 rootExpression, int numAppliedArguments,
       Tensor expressionFeatures, List<ExpressionTree> lefts, List<ExpressionTree> rights) {
-    // Canonicalize variable names.
-    // rootExpression = canonicalizeVariableNames(rootExpression.simplify(), 0);
     this.rootExpression = Preconditions.checkNotNull(rootExpression);
     this.numAppliedArguments = numAppliedArguments;
     this.expressionFeatures = expressionFeatures;
@@ -45,17 +45,12 @@ public class ExpressionTree {
 
   public static ExpressionTree fromExpression(Expression2 expression) {
     return fromExpression(expression, ExpressionSimplifier.lambdaCalculus(),
-        Collections.<String, String>emptyMap(), 0, 2);
+        Collections.<String, String>emptyMap(), Collections.<String>emptySet(), 0, 2);
   }
 
   public static ExpressionTree fromExpression(Expression2 expression,
       ExpressionSimplifier simplifier, Map<String, String> typeReplacements,
-      int numAppliedArguments, int maxDepth) {
-    Expression2 lambdaTemplate = ExpressionParser.expression2()
-        .parseSingleExpression("(lambda ARGS BODY)");
-    Expression2 applicationTemplate = ExpressionParser.expression2()
-        .parseSingleExpression("(FUNC VALUES)");
-
+      Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth) {
     expression = simplifier.apply(expression);
     
     List<ExpressionTree> lefts = Lists.newArrayList();
@@ -65,56 +60,178 @@ public class ExpressionTree {
       int depth = expression.getDepth(i);
       Scope scope = StaticAnalysis.getEnclosingScope(expression, i);
       if (depth <= (maxDepth + scope.getDepth()) && !StaticAnalysis.isPartOfSpecialForm(expression, i)) {
-        Expression2 subexpression = expression.getSubexpression(i);
 
-        // System.out.println(subexpression);
-        Set<String> freeVars = Sets.newHashSet(StaticAnalysis.getFreeVariables(subexpression));
+        List<Expression2> genLefts = Lists.newArrayList();
+        List<Expression2> genRights = Lists.newArrayList();
+        
+        doBasicGeneration(expression, i, scope, genLefts, genRights);
+        doAndGeneration(expression, i, scope, genLefts, genRights);
+        
+        for (int j = 0; j < genLefts.size(); j++) {
+          Expression2 argExpression = genLefts.get(j);
+          Expression2 funcExpression = genRights.get(j);
+
+          Set<String> funcFreeVars = StaticAnalysis.getFreeVariables(funcExpression);
+          Set<String> argFreeVars = StaticAnalysis.getFreeVariables(argExpression);
+          funcFreeVars.removeAll(constantsToIgnore);
+          argFreeVars.removeAll(constantsToIgnore);
+
+          if (funcFreeVars.size() == 0 || argFreeVars.size() == 0) {
+            // The function is something like (lambda x y (x y))
+            continue;
+          }
+
+          Type argType = StaticAnalysis.inferType(argExpression, typeReplacements);
+          if (argType.isFunctional() && argType.getReturnType().isFunctional()) {
+            // The argument has a complex type that is unlikely to be
+            // the argument of another category. 
+            continue;
+          }
+
+          if (numAppliedArguments == 2) {
+            // This means that the generated function will accept 3 arguments
+            // in the sentence, which is quite unlikely.
+            continue;
+          }
+
+          ExpressionTree left = ExpressionTree.fromExpression(argExpression, simplifier,
+              typeReplacements, constantsToIgnore, 0, maxDepth);
+          ExpressionTree right = ExpressionTree.fromExpression(funcExpression, simplifier,
+              typeReplacements, constantsToIgnore, numAppliedArguments + 1, maxDepth);
+          lefts.add(left);
+          rights.add(right);
+        }
+      }
+    }
+    return new ExpressionTree(expression, numAppliedArguments, null, lefts, rights);
+  }
+  
+  private static void doBasicGeneration(Expression2 expression, int i, Scope scope,
+      List<Expression2> argExpressions, List<Expression2> funcExpressions) {
+    Expression2 lambdaTemplate = ExpressionParser.expression2()
+        .parseSingleExpression("(lambda ARGS BODY)");
+    Expression2 applicationTemplate = ExpressionParser.expression2()
+        .parseSingleExpression("(FUNC VALUES)");
+
+    Expression2 subexpression = expression.getSubexpression(i);
+    // Don't remove the first element of applications
+    int[] parentChildren = expression.getChildIndexes(i - 1);
+    if (parentChildren.length > 0 && parentChildren[0] == i) {
+      return;
+    }
+
+    // Don't remove lambda expressions, because removing their bodies 
+    // produces an identical decomposition
+    if (StaticAnalysis.isLambda(subexpression, 0)) {
+      return;
+    }
+
+    // System.out.println(subexpression);
+    Set<String> freeVars = Sets.newHashSet(StaticAnalysis.getFreeVariables(subexpression));
+    Set<String> scopeBindings = scope.getBoundVariables();
+
+    freeVars.retainAll(scopeBindings);
+    List<Expression2> args = Lists.newArrayList();
+    for (String freeVar : freeVars) {
+      args.add(Expression2.constant(freeVar));
+    }
+
+    Expression2 argExpression = subexpression;
+    if (args.size() > 0) {
+      argExpression = lambdaTemplate.substituteInline("ARGS", args);
+      argExpression = argExpression.substitute("BODY", subexpression);
+    }
+
+    Expression2 newVariable = Expression2.constant(StaticAnalysis.getNewVariableName(expression));
+    Expression2 bodySub = newVariable;
+    if (args.size() > 0) {
+      bodySub = applicationTemplate.substitute("FUNC", newVariable);
+      bodySub = bodySub.substituteInline("VALUES", args);
+    }
+
+    Expression2 funcExpression = lambdaTemplate.substitute("ARGS", newVariable);
+    funcExpression = funcExpression.substitute("BODY", expression.substitute(i, bodySub));
+
+    argExpressions.add(argExpression);
+    funcExpressions.add(funcExpression);
+  }
+  
+  private static void doAndGeneration(Expression2 expression, int i, Scope scope,
+      List<Expression2> argExpressions, List<Expression2> funcExpressions) {
+    Expression2 lambdaTemplate = ExpressionParser.expression2()
+        .parseSingleExpression("(lambda ARGS BODY)");
+    Expression2 andTemplate = ExpressionParser.expression2()
+        .parseSingleExpression("(and:<t*,t> BODY)");
+    Expression2 applicationTemplate = ExpressionParser.expression2()
+        .parseSingleExpression("(FUNC VALUES)");
+
+    Expression2 subexpression = expression.getSubexpression(i);
+    if (!subexpression.isConstant() && subexpression.getSubexpression(1).isConstant() &&
+        subexpression.getSubexpression(1).getConstant().equals("and:<t*,t>")) {
+      
+      int[] childIndexes = expression.getChildIndexes(i);
+      int numTerms = childIndexes.length - 1;
+      
+      if (numTerms < 3) {
+        // Only generate the types of functions that aren't generated
+        // by the standard splitting above (which works for 2-term
+        // conjunctions)
+        return;
+      }
+      
+      Iterator<boolean[]> iter = new SubsetIterator(numTerms);
+      while (iter.hasNext()) {
+        boolean[] selected = iter.next();
+        
+        List<Expression2> argTerms = Lists.newArrayList();
+        List<Expression2> funcTerms = Lists.newArrayList();
+        for (int j = 0; j < selected.length; j++) {
+          if (selected[j]) {
+            argTerms.add(expression.getSubexpression(childIndexes[j + 1]));
+          } else {
+            funcTerms.add(expression.getSubexpression(childIndexes[j + 1]));
+          }
+        }
+        
+        if (argTerms.size() <= 1 || argTerms.size() == numTerms) {
+          continue;
+        }
+
+        // Find variables that are bound by outside lambdas.
+        Set<String> freeVars = Sets.newHashSet();
+        for (Expression2 argTerm : argTerms) {
+          freeVars.addAll(StaticAnalysis.getFreeVariables(argTerm));
+        }
         Set<String> scopeBindings = scope.getBoundVariables();
 
         freeVars.retainAll(scopeBindings);
+        
         List<Expression2> args = Lists.newArrayList();
         for (String freeVar : freeVars) {
           args.add(Expression2.constant(freeVar));
         }
 
-        Expression2 argExpression = subexpression;
+        Expression2 argExpression = andTemplate.substituteInline("BODY", argTerms);
         if (args.size() > 0) {
-          argExpression = lambdaTemplate.substituteInline("ARGS", args);
-          argExpression = argExpression.substitute("BODY", subexpression);
+          argExpression = lambdaTemplate.substituteInline("ARGS", args).substitute("BODY", argExpression);
         }
 
         Expression2 newVariable = Expression2.constant(StaticAnalysis.getNewVariableName(expression));
-        Expression2 bodySub = newVariable;
-        if (args.size() > 0) {
-          bodySub = applicationTemplate.substitute("FUNC", newVariable);
-          bodySub = bodySub.substituteInline("VALUES", args);
-        }
-
-        Expression2 funcExpression = lambdaTemplate.substitute("ARGS", newVariable);
-        funcExpression = funcExpression.substitute("BODY", expression.substitute(i, bodySub));
-
-        if (StaticAnalysis.getFreeVariables(funcExpression).size() == 0 ||
-            StaticAnalysis.getFreeVariables(argExpression).size() == 0) {
-          // The function is something like (lambda x y (x y))
-          continue;
-        }
         
-        Type argType = StaticAnalysis.inferType(argExpression, typeReplacements);
-        if (argType.isFunctional() && argType.getReturnType().isFunctional()) {
-          // The argument has a complex type that is unlikely to be
-          // the argument of another category. 
-          continue;
+        Expression2 functionConjunct = newVariable;
+        if (args.size() > 0) {
+          functionConjunct = applicationTemplate.substitute("FUNC", functionConjunct)
+              .substituteInline("VALUES", args);
         }
-
-        ExpressionTree left = ExpressionTree.fromExpression(argExpression, simplifier,
-            typeReplacements, 0, maxDepth);
-        ExpressionTree right = ExpressionTree.fromExpression(funcExpression, simplifier,
-            typeReplacements, numAppliedArguments + 1, maxDepth);
-        lefts.add(left);
-        rights.add(right);
+        funcTerms.add(functionConjunct);
+        Expression2 body = expression.substitute(i, andTemplate.substituteInline("BODY", funcTerms));
+        Expression2 funcTerm = lambdaTemplate.substitute("ARGS", newVariable)
+            .substitute("BODY", body);
+        
+        argExpressions.add(argExpression);
+        funcExpressions.add(funcTerm);
       }
     }
-    return new ExpressionTree(expression, numAppliedArguments, null, lefts, rights);
   }
 
   /**

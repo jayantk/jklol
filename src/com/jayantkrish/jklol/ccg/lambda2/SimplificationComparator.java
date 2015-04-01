@@ -21,6 +21,7 @@ public class SimplificationComparator implements ExpressionComparator {
   public boolean equals(Expression2 a, Expression2 b) {
     Expression2 simpleA = simplifier.apply(a);
     Expression2 simpleB = simplifier.apply(b);
+    
     return simpleA.equals(simpleB);
   }
 }

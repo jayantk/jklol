@@ -75,10 +75,10 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample> {
 
     if (!ignoreSemantics) {
       return new CcgExample(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags),
-          dependencies, tree, logicalForm);
+          dependencies, tree, logicalForm, null);
     } else {
       return new CcgExample(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags),
-          null, tree, logicalForm);
+          null, tree, logicalForm, null);
     }
   }
 }

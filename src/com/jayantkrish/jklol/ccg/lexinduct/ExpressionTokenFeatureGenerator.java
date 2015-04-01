@@ -29,9 +29,13 @@ public class ExpressionTokenFeatureGenerator implements FeatureGenerator<Express
     }
 
     tokens.removeAll(tokensToIgnore);
-
+    
     CountAccumulator<String> counts = CountAccumulator.create();
-    counts.incrementByOne(tokens);
+    for (String token : tokens) {
+      int count = StaticAnalysis.getIndexesOfFreeVariable(item, token).length;
+      counts.increment(token, count);
+    }
+
     Map<String, Double> countMap = counts.getCountMap();
     return countMap;
   }

@@ -114,6 +114,8 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
     for (int i = 0; i < parameterList.size(); i++) {
+      builder.append(factorNames.get(i));
+      builder.append("\n");
       builder.append(parametricFactors.get(i).getParameterDescription(parameterList.get(i), numFeatures));
     }
     return builder.toString();

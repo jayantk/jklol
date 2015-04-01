@@ -224,7 +224,8 @@ public class StaticAnalysis {
         } else if (subexpression.getSubexpressions().size() > 1 && 
             subexpression.getSubexpression(1).isConstant() && 
             subexpression.getSubexpression(1).getConstant().equals(LAMBDA)) {
-          // Lambda expression.
+          // Lambda expression. Propagate argument / body types to the whole expression,
+          // and the expressions type back to the arguments / body.
           int[] childIndexes = expression.getChildIndexes(index);
           int bodyIndex = childIndexes[childIndexes.length - 1];
           
@@ -234,6 +235,18 @@ public class StaticAnalysis {
           }
 
           updated = updated || updateType(index, newType, subexpressionTypeMap, expression);
+          
+          // Propagate the expression's type back to the arguments / body
+          Type lambdaType = subexpressionTypeMap.get(index);
+          for (int i = 1; i < childIndexes.length - 1; i++) {
+            Type argType = lambdaType.getArgumentType();
+            updated = updated || updateType(childIndexes[i], argType, subexpressionTypeMap, expression);
+            lambdaType = lambdaType.getReturnType();
+          }
+          
+          updated = updated || updateType(childIndexes[childIndexes.length - 1], lambdaType,
+              subexpressionTypeMap, expression);
+
         } else {
           // Application
           int[] childIndexes = expression.getChildIndexes(index);
@@ -445,6 +458,14 @@ public class StaticAnalysis {
       } 
       allBindings.addAll(bindings.keySet());
       return allBindings;
+    }
+    
+    public int getNumBindings() {
+      int num = bindings.size();
+      if (parent != null) {
+        num += parent.getNumBindings();
+      }
+      return num;
     }
   }
 

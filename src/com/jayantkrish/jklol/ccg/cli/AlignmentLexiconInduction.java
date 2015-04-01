@@ -44,13 +44,15 @@ import com.jayantkrish.jklol.util.PairCountAccumulator;
 public class AlignmentLexiconInduction extends AbstractCli {
   
   private OptionSpec<String> trainingData;
-  private OptionSpec<String> lexiconOutput; 
+  private OptionSpec<String> lexiconOutput;
+  private OptionSpec<String> modelOutput;
   
   private OptionSpec<Integer> emIterations;
   
   private OptionSpec<Double> smoothingParam;
   private OptionSpec<Void> noTreeConstraint;
   private OptionSpec<Void> printSearchSpace;
+  private OptionSpec<Void> printParameters;
   
   public AlignmentLexiconInduction() {
     super(CommonOptions.MAP_REDUCE);
@@ -61,12 +63,14 @@ public class AlignmentLexiconInduction extends AbstractCli {
     // Required arguments.
     trainingData = parser.accepts("trainingData").withRequiredArg().ofType(String.class).required();
     lexiconOutput = parser.accepts("lexiconOutput").withRequiredArg().ofType(String.class).required();
+    modelOutput = parser.accepts("modelOutput").withRequiredArg().ofType(String.class).required();
     
     // Optional arguments
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
     noTreeConstraint = parser.accepts("noTreeConstraint");
     printSearchSpace = parser.accepts("printSearchSpace");
+    printParameters = parser.accepts("printParameters");
   }
 
   @Override
@@ -106,16 +110,22 @@ public class AlignmentLexiconInduction extends AbstractCli {
     initial.increment(1);
 
     ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
-    SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(true), smoothing),
+    SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(true), smoothing, true),
         initial, examples);
+    
+    if (options.has(printParameters)) {
+      System.out.println(pam.getParameterDescription(trainedParameters));
+    }
 
     PairCountAccumulator<String, AlignedExpression> alignments = PairCountAccumulator.create();
+    List<AlignedExpressionTree> alignedTrees = Lists.newArrayList();
     AlignmentModel model = pam.getModelFromParameters(trainedParameters);
     int numTreesWithFullAlignments = 0;
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());
       // AlignedExpressionTree tree = model.getBestAlignment(example);
       AlignedExpressionTree tree = model.getBestAlignmentCfg(example);
+      alignedTrees.add(tree);
       System.out.println(tree);
 
       alignments.incrementOutcomes(tree.getWordAlignments(), 1);
@@ -127,15 +137,16 @@ public class AlignmentLexiconInduction extends AbstractCli {
     System.out.println("Aligned: " + numTreesWithFullAlignments + " / " + examples.size());
 
     List<LexiconEntry> lexiconEntries = generateCcgLexicon(alignments, typeReplacements);
-
     List<String> lines = Lists.newArrayList();
     for (LexiconEntry lexiconEntry : lexiconEntries) {
       lines.add(lexiconEntry.toCsvString());
     }
     Collections.sort(lines);
     IoUtils.writeLines(options.valueOf(lexiconOutput), lines);
-  }
 
+    IoUtils.serializeObjectToFile(model, options.valueOf(modelOutput));
+  }
+  
   private static List<LexiconEntry> generateCcgLexicon(PairCountAccumulator<String, AlignedExpression> alignments,
       Map<String, String> typeReplacements) {
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
@@ -219,14 +230,15 @@ public class AlignmentLexiconInduction extends AbstractCli {
 
   private static List<AlignmentExample> readTrainingData(String trainingDataFile,
       Map<String, String> typeReplacements) {
-    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
+    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile, null);
     List<AlignmentExample> examples = Lists.newArrayList();
     ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
+    Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
 
     int totalTreeSize = 0; 
     for (CcgExample ccgExample : ccgExamples) {
       ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(), simplifier,
-          typeReplacements, 0, 2);
+          typeReplacements, constantsToIgnore, 0, 2);
       examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
 
       totalTreeSize += tree.size();

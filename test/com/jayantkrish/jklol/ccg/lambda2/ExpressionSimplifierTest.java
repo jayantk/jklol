@@ -8,8 +8,7 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 
 public class ExpressionSimplifierTest extends TestCase {
 
-  ExpressionSimplifier simplifier;
-  ExpressionSimplifier canonicalizer;
+  ExpressionSimplifier simplifier, canonicalizer, conjunction;
 
   public void setUp() {
     simplifier = new ExpressionSimplifier(Arrays.
@@ -17,6 +16,10 @@ public class ExpressionSimplifierTest extends TestCase {
     canonicalizer = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule()));
+    conjunction = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new ConjunctionReplacementRule("and:<t*,t>")));
   }
   
   public void testSimplifyLambda() {
@@ -47,6 +50,11 @@ public class ExpressionSimplifierTest extends TestCase {
     runTest(simplifier, "(((lambda x y (x bar baz y)) foo) ((lambda x x) abcd))", "(foo bar baz abcd)");
   }
   
+  public void testSimplifyLambda8() {
+    runTest(canonicalizer, "((lambda $0 (lambda $1 ($0 $1))) (lambda $1 (lambda $2 (loc:<lo,<lo,t>> $2 $1)) ))",
+        "(lambda $0 (lambda $1 (loc:<lo,<lo,t>> $1 $0)))");
+  }
+
   public void testCanonicalize1() {
     runTest(canonicalizer, "(foo bar baz)", "(foo bar baz)");
   }
@@ -66,8 +74,29 @@ public class ExpressionSimplifierTest extends TestCase {
   public void testCanonicalize5() {
     runTest(canonicalizer, "(lambda x (((lambda y (x y)) foo) ((lambda z (x z)) bar)))", "(lambda $0 (($0 foo) ($0 bar)))");
   }
+
+  public void testConjunction1() {
+    runTest(conjunction, "(and:<t*,t> x y z)", "(and:<t*,t> x y z)");
+  }
   
+  public void testConjunction2() {
+    runTest(conjunction, "(and:<t*,t> x (and:<t*,t> y z))", "(and:<t*,t> x y z)");
+  }
   
+  public void testConjunction3() {
+    runTest(conjunction, "(and:<t*,t> z (and:<t*,t> y x))", "(and:<t*,t> x y z)");
+  }
+  
+  public void testConjunction4() {
+    runTest(conjunction, "((lambda $0 (and:<t*,t> y x $0)) (and:<t*,t> z))", "(and:<t*,t> x y z)");
+  }
+  
+  public void testConjunction5() {
+    runTest(conjunction, "((lambda $0 (lambda $1 ($0 $1))) (lambda $1 "
+        + "(lambda $2 (loc:<lo,<lo,t>> $2 $1)) ))",
+        "(lambda $0 (lambda $1 (loc:<lo,<lo,t>> $1 $0)))");
+  }
+
   private void runTest(ExpressionSimplifier simp, String input, String expected) {
     ExpressionParser<Expression2> parser = ExpressionParser.expression2();
     Expression2 inputExpression = parser.parseSingleExpression(input);

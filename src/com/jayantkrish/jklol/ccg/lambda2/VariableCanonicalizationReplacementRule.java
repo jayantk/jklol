@@ -29,8 +29,8 @@ public class VariableCanonicalizationReplacementRule implements ExpressionReplac
           Expression2 body = StaticAnalysis.getLambdaBody(input, i);
           int[] indexes = input.getChildIndexes(i);
           int bodyIndex = indexes[indexes.length - 1];
-          int startNum = scope.getBoundVariables().size();
-
+          int startNum = scope.getNumBindings();
+          
           for (int j = 0; j < args.size(); j++) {
             String newVarName = "$" + (startNum + j);
 

@@ -170,7 +170,7 @@ public class TrainCcg extends AbstractCli {
       inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
           options.valueOf(maxChartSize), options.valueOf(parserThreads));
     } else {
-      inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
+      inferenceAlgorithm = new CcgBeamSearchInference(null, null, options.valueOf(beamSize),
           options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), options.valueOf(parserThreads), true);
     }
 
@@ -294,7 +294,7 @@ public class TrainCcg extends AbstractCli {
       }
 
       return new CcgExample(taggedSentence, item.getDependencies(), item.getSyntacticParse(),
-          item.getLogicalForm());
+          item.getLogicalForm(), null);
     }
   }
 }

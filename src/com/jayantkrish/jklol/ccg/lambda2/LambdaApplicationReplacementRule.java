@@ -28,6 +28,10 @@ public class LambdaApplicationReplacementRule implements ExpressionReplacementRu
       if (applicationArgs.size() > lambdaArgs.size()) {
         throw new ExpressionSimplificationException("Lambda applied to too many arguments: " + subexpression);
       }
+      
+      // List<String> freshLambdaArgs = StaticAnalysis.getNewVariableNames(expression, lambdaArgs.size());
+      
+
 
       for (int i = 0; i < applicationArgs.size(); i++) {
         int[] freeIndexes = StaticAnalysis.getIndexesOfFreeVariable(body, lambdaArgs.get(i));

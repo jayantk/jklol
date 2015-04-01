@@ -7,8 +7,7 @@ import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
-import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -25,6 +24,8 @@ public class CcgBeamSearchInference implements CcgInference {
   // Optional constraint to use during inference. Null if
   // no constraints are imposed on the search.
   private final ChartCost searchFilter;
+  
+  private final ExpressionComparator comparator;
 
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
@@ -41,9 +42,10 @@ public class CcgBeamSearchInference implements CcgInference {
   // Whether to print out information about correct parses, etc.
   private final boolean verbose;
 
-  public CcgBeamSearchInference(ChartCost searchFilter, int beamSize, long maxParseTimeMillis,
-      int maxChartSize, int numThreads, boolean verbose) {
+  public CcgBeamSearchInference(ChartCost searchFilter, ExpressionComparator comparator,
+      int beamSize, long maxParseTimeMillis, int maxChartSize, int numThreads, boolean verbose) {
     this.searchFilter = searchFilter;
+    this.comparator = comparator;
     this.beamSize = beamSize;
     this.maxParseTimeMillis = maxParseTimeMillis;
     this.maxChartSize = maxChartSize;
@@ -95,9 +97,8 @@ public class CcgBeamSearchInference implements CcgInference {
       possibleParses = CcgLoglikelihoodOracle.filterParsesByDependencies(observedDependencies, possibleParses);
     }
     if (observedLogicalForm != null) {
-      // TODO: The comparison function can't be hardcoded here.
       possibleParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(observedLogicalForm,
-          new SimplificationComparator(ExpressionSimplifier.lambdaCalculus()), possibleParses);
+          comparator, possibleParses);
     }
 
     if (verbose) {

@@ -179,6 +179,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   @Override
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
+
     if (entryFilter != null) {
       probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType));
     }

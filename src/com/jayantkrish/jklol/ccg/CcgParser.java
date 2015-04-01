@@ -1140,7 +1140,7 @@ public class CcgParser implements Serializable {
       LogFunction log, long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(input, maxChartSize, beamSize);
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
-
+    
     if (chart.isFinishedParsing()) {
       if (allowWordSkipping) {
         return addSentenceToParses(chart.decodeBestParsesForSubspan(

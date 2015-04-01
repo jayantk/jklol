@@ -12,6 +12,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
@@ -104,13 +105,13 @@ public class CcgTrainingTest extends TestCase {
     trainingExamplesLfOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
       trainingExamplesLfOnly.add(new CcgExample(example.getSentence().removeSupertags(), null,
-          null, example.getLogicalForm()));
+          null, example.getLogicalForm(), null));
     }
     
     trainingExamplesDepsOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
       trainingExamplesDepsOnly.add(new CcgExample(example.getSentence().removeSupertags(),
-          example.getDependencies(), null, null));
+          example.getDependencies(), null, null, null));
     }
 
     trainingExamplesWithSyntax = Lists.newArrayList();
@@ -123,7 +124,7 @@ public class CcgTrainingTest extends TestCase {
     trainingExamplesSyntaxOnly = Lists.newArrayList();
     for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
       trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence().removeSupertags(), 
-          null, syntaxExample.getSyntacticParse(), null));
+          null, syntaxExample.getSyntacticParse(), null, null));
     }
 
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
@@ -301,7 +302,8 @@ public class CcgTrainingTest extends TestCase {
     if (exactInference) {
       inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE, 1);
     } else {
-      inferenceAlg = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, 1, true);
+      ExpressionComparator comparator = new SimplificationComparator(ExpressionSimplifier.lambdaCalculus());
+      inferenceAlg = new CcgBeamSearchInference(null, comparator, 100, -1, Integer.MAX_VALUE, 1, true);
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(
         family, inferenceAlg, maxMargin ? 1.0 : 0.0);

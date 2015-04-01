@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.cli;
 
+import java.util.Arrays;
 import java.util.List;
 
 import joptsimple.OptionParser;
@@ -11,9 +12,15 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplificationException;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
+import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
@@ -34,7 +41,7 @@ public class TestSemanticParser extends AbstractCli {
   @Override
   public void run(OptionSet options) {
     List<CcgExample> testExamples = TrainSemanticParser.readCcgExamples(
-        options.valueOf(testData));
+        options.valueOf(testData), null);
     System.out.println("Read " + testExamples.size() + " test examples");
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
@@ -43,7 +50,11 @@ public class TestSemanticParser extends AbstractCli {
     int numParsed = 0;
 
     CcgInference inferenceAlg = new CcgExactInference(null, -1L, Integer.MAX_VALUE, 1);
-    ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
+    ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new ConjunctionReplacementRule("and:<t*,t>")));
+    ExpressionComparator comparator = new SimplificationComparator(simplifier);
     LogFunction log = new NullLogFunction();
     for (CcgExample example : testExamples) {
       CcgParse parse = inferenceAlg.getBestParse(parser, example.getSentence(), null, log);
@@ -54,7 +65,7 @@ public class TestSemanticParser extends AbstractCli {
         Expression2 lf = null;
         try {
           lf = simplifier.apply(parse.getLogicalForm());
-          correct = lf.equals(example.getLogicalForm()) ? 1 : 0;
+          correct = comparator.equals(lf, example.getLogicalForm()) ? 1 : 0;
         } catch (ExpressionSimplificationException e) {
           // Make lf print out as null.
           lf = Expression2.constant("null");

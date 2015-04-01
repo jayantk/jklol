@@ -126,6 +126,11 @@ public class StaticAnalysisTest extends TestCase {
         "<<e,t>,<e,t>>");
   }
   
+  public void testSomething3() {
+    runTypeInferenceTest("(lambda $0 (size:<lo,i> (argmax:<<e,t>,<<e,i>,e>> (lambda $1 ($0 $1)) (lambda $1 (size:<lo,i> $1)))))",
+        "<<e,t>,i>");
+  }
+  
   public void testVariablesSameName() {
     runTypeInferenceTest("(lambda f (and:<t*,t> (f texas:e) ((lambda f (state:<e,t> f)) austin:e)))",
         "<<e,t>,t>");

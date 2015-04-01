@@ -118,7 +118,7 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    DiscreteFactor factor = getModelFromParameters(parameters).product(sparsityPattern);
+    DiscreteFactor factor = getModelFromParameters(parameters).product(sparsityPattern).add(constantPattern);
     
     VariableRelabeling parentIdentity = VariableRelabeling.identity(parentVars);
     int nextVarNum = Ints.max(parentVars.getVariableNumsArray()) + 1;

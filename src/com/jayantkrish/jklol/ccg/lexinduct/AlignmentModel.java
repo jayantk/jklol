@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -32,12 +33,14 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraphBuilder;
 import com.jayantkrish.jklol.models.dynamic.PlateFactor;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 
-public class AlignmentModel {
+public class AlignmentModel implements Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final DynamicFactorGraph factorGraph;
   
@@ -49,6 +52,8 @@ public class AlignmentModel {
   
   private final String booleanPlateName;
   private final VariableNumMap booleanPlateVar;
+  
+  private final FeatureVectorGenerator<Expression2> featureGen;
   
   private final boolean useTreeConstraint;
 
@@ -74,7 +79,8 @@ public class AlignmentModel {
   public AlignmentModel(DynamicFactorGraph factorGraph, String expressionPlateName,
       VariableNumMap expressionPlateVar, VariableNumMap featurePlateVar,
       VariableNumMap wordPlateVar, String booleanPlateName,
-      VariableNumMap booleanPlateVar, boolean useTreeConstraint) {
+      VariableNumMap booleanPlateVar, FeatureVectorGenerator<Expression2> featureGen,
+      boolean useTreeConstraint) {
     this.factorGraph = Preconditions.checkNotNull(factorGraph);
 
     this.expressionPlateName = Preconditions.checkNotNull(expressionPlateName);
@@ -85,6 +91,8 @@ public class AlignmentModel {
     this.booleanPlateName = booleanPlateName;
     this.booleanPlateVar = booleanPlateVar;
     
+    this.featureGen = featureGen;
+
     this.useTreeConstraint = useTreeConstraint;
 
     wordActiveBoolean = booleanPlateVar.relabelVariableNums(new int[] {0});
@@ -119,6 +127,11 @@ public class AlignmentModel {
   }
 
   public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
+    if (example.getTree().getExpressionFeatures() == null) {
+      example = new AlignmentExample(example.getWords(),
+          example.getTree().applyFeatureVectorGenerator(featureGen));
+    }
+    
     Pair<FactorGraph, AlignmentTree> pair = getFactorGraphWithTreeConstraint(example);
     FactorGraph fg = pair.getLeft();
     AlignmentTree tree = pair.getRight();
@@ -131,53 +144,8 @@ public class AlignmentModel {
   }
 
   public AlignedExpressionTree getBestAlignmentCfg(AlignmentExample example) {
-    Pair<FactorGraph, AlignmentTree> pair = getFactorGraphWithTreeConstraint(example);
-    FactorGraph fg = pair.getLeft();
-    AlignmentTree tree = pair.getRight();
-    
-    Set<Expression2> expressions = Sets.newHashSet();
-    example.getTree().getAllExpressions(expressions);
-    expressions.add(SKIP_EXPRESSION);
-
-    List<List<String>> terminalVarValues = Lists.newArrayList();
-    for (String word : example.getWords()) {
-      terminalVarValues.add(Arrays.asList(word));
-    }
-
-    DiscreteVariable expressionVarType = new DiscreteVariable("expressions", expressions);
-    DiscreteVariable terminalVarType = new DiscreteVariable("words", terminalVarValues);
-    DiscreteVariable ruleVarType = new DiscreteVariable("rule", Arrays.asList(TERMINAL,
-        FORWARD_APPLICATION, BACKWARD_APPLICATION, SKIP_RULE));
-    
-    VariableNumMap terminalVar = VariableNumMap.singleton(0, "terminal", terminalVarType);
-    VariableNumMap leftVar = VariableNumMap.singleton(1, "left", expressionVarType);
-    VariableNumMap rightVar = VariableNumMap.singleton(2, "right", expressionVarType);
-    VariableNumMap parentVar = VariableNumMap.singleton(3, "parent", expressionVarType);
-    VariableNumMap ruleVar = VariableNumMap.singleton(4, "rule", ruleVarType);
-    
-    VariableNumMap binaryRuleVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
-    TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
-        SparseTensorBuilder.getFactory());
-    for (Expression2 e : expressions) {
-      binaryRuleBuilder.setWeight(1.0, e, SKIP_EXPRESSION, e, SKIP_RULE);
-      binaryRuleBuilder.setWeight(1.0, SKIP_EXPRESSION, e, e, SKIP_RULE);
-    }
-    
-    VariableNumMap terminalRuleVars = VariableNumMap.unionAll(terminalVar, parentVar, ruleVar);
-    TableFactorBuilder terminalRuleBuilder = new TableFactorBuilder(terminalRuleVars,
-        DenseTensorBuilder.getFactory());
-    for (List<String> terminalVarValue : terminalVarValues) {
-      terminalRuleBuilder.setWeight(1.0, terminalVarValue, SKIP_EXPRESSION, SKIP_RULE);
-    }
-
-    tree.populateCfgDistributions(binaryRuleBuilder, terminalRuleBuilder, fg);
-    
-    TableFactor binaryDistribution = binaryRuleBuilder.build();
-    TableFactor terminalDistribution = terminalRuleBuilder.build();
-    
-    CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleVar,
-        binaryDistribution, terminalDistribution, -1, false);
-
+    CfgParser parser = getCfgParser(example);
+    ExpressionTree tree = example.getTree();
     CfgParseChart chart = parser.parseMarginal(example.getWords(), tree.getExpression(), false);
     CfgParseTree parseTree = chart.getBestParseTree(tree.getExpression());
     
@@ -227,6 +195,60 @@ public class AlignmentModel {
             leftTree, rightTree);
       }
     }
+  }
+  
+  public CfgParser getCfgParser(AlignmentExample example) {
+    if (example.getTree().getExpressionFeatures() == null) {
+      example = new AlignmentExample(example.getWords(),
+          example.getTree().applyFeatureVectorGenerator(featureGen));
+    }
+
+    Pair<FactorGraph, AlignmentTree> pair = getFactorGraphWithTreeConstraint(example);
+    FactorGraph fg = pair.getLeft();
+    AlignmentTree tree = pair.getRight();
+    
+    Set<Expression2> expressions = Sets.newHashSet();
+    example.getTree().getAllExpressions(expressions);
+    expressions.add(SKIP_EXPRESSION);
+
+    List<List<String>> terminalVarValues = Lists.newArrayList();
+    for (String word : example.getWords()) {
+      terminalVarValues.add(Arrays.asList(word));
+    }
+
+    DiscreteVariable expressionVarType = new DiscreteVariable("expressions", expressions);
+    DiscreteVariable terminalVarType = new DiscreteVariable("words", terminalVarValues);
+    DiscreteVariable ruleVarType = new DiscreteVariable("rule", Arrays.asList(TERMINAL,
+        FORWARD_APPLICATION, BACKWARD_APPLICATION, SKIP_RULE));
+    
+    VariableNumMap terminalVar = VariableNumMap.singleton(0, "terminal", terminalVarType);
+    VariableNumMap leftVar = VariableNumMap.singleton(1, "left", expressionVarType);
+    VariableNumMap rightVar = VariableNumMap.singleton(2, "right", expressionVarType);
+    VariableNumMap parentVar = VariableNumMap.singleton(3, "parent", expressionVarType);
+    VariableNumMap ruleVar = VariableNumMap.singleton(4, "rule", ruleVarType);
+    
+    VariableNumMap binaryRuleVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
+    TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
+        SparseTensorBuilder.getFactory());
+    for (Expression2 e : expressions) {
+      binaryRuleBuilder.setWeight(1.0, e, SKIP_EXPRESSION, e, SKIP_RULE);
+      binaryRuleBuilder.setWeight(1.0, SKIP_EXPRESSION, e, e, SKIP_RULE);
+    }
+    
+    VariableNumMap terminalRuleVars = VariableNumMap.unionAll(terminalVar, parentVar, ruleVar);
+    TableFactorBuilder terminalRuleBuilder = new TableFactorBuilder(terminalRuleVars,
+        DenseTensorBuilder.getFactory());
+    for (List<String> terminalVarValue : terminalVarValues) {
+      terminalRuleBuilder.setWeight(1.0, terminalVarValue, SKIP_EXPRESSION, SKIP_RULE);
+    }
+
+    tree.populateCfgDistributions(binaryRuleBuilder, terminalRuleBuilder, fg);
+    
+    TableFactor binaryDistribution = binaryRuleBuilder.build();
+    TableFactor terminalDistribution = terminalRuleBuilder.build();
+    
+    return new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleVar,
+        binaryDistribution, terminalDistribution, -1, false);
   }
   
   public FactorGraph getFactorGraph(AlignmentExample example) {
@@ -475,15 +497,17 @@ public class AlignmentModel {
       List<Factor> wordFactors = Lists.newArrayList();
       for (int factorNum : fg.getFactorsWithVariable(wordVar.getOnlyVariableNum())) {
         Factor f = fg.getFactor(factorNum);
-        if (f.getVars().size() == 1) {
+        if (!f.getVars().containsAny(wordActiveVar.getVariableNumsArray())) {
           wordFactors.add(f);
         }
       }
       DiscreteFactor wordFactor = Factors.product(wordFactors).coerceToDiscrete();
+      VariableNumMap nonWordVars = wordFactor.getVars().removeAll(wordVar);
+      wordFactor = wordFactor.marginalize(nonWordVars);
 
       for (Assignment a : wordFactor.getNonzeroAssignments()) {
         Object value = a.getOnlyValue();
-        if (value != ParametricAlignmentModel.NULL_WORD) {
+        if (!value.equals(ParametricAlignmentModel.NULL_WORD)) {
           // Null word is used to handle unaligned expressions that are
           // inactive. These are not a problem in the CFG.
           double prob = wordFactor.getUnnormalizedProbability(a);

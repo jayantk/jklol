@@ -114,7 +114,10 @@ public class AlignedExpressionTree {
 
   private void getWordAlignmentsHelper(Multimap<String, AlignedExpression> map) {
     if (word != null && !word.equals(ParametricAlignmentModel.NULL_WORD)) {
-      map.put(word, new AlignedExpression(word, expression, numAppliedArguments));
+      for (int i = 0 ; i < possibleSpanStarts.length; i++) {
+        map.put(word, new AlignedExpression(word, expression, numAppliedArguments,
+            possibleSpanStarts[i], possibleSpanEnds[i]));
+      }
     }
 
     if (left != null) {
@@ -209,11 +212,16 @@ public class AlignedExpressionTree {
     private final String word;
     private final Expression2 expression;
     private final int numAppliedArgs;
+    private final int spanStart;
+    private final int spanEnd;
 
-    public AlignedExpression(String word, Expression2 expression, int numAppliedArgs) {
+    public AlignedExpression(String word, Expression2 expression, int numAppliedArgs,
+        int spanStart, int spanEnd) {
       this.word = Preconditions.checkNotNull(word);
       this.expression = Preconditions.checkNotNull(expression);
       this.numAppliedArgs = numAppliedArgs;
+      this.spanStart = spanStart;
+      this.spanEnd = spanEnd;
     }
 
     public String getWord() {
@@ -226,6 +234,14 @@ public class AlignedExpressionTree {
 
     public int getNumAppliedArgs() {
       return numAppliedArgs;
+    }
+    
+    public int getSpanStart() {
+      return spanStart;
+    }
+    
+    public int getSpanEnd() {
+      return spanEnd;
     }
 
     @Override

@@ -13,6 +13,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -120,6 +122,10 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * Default part-of-speech tags that qualify as verbs.
    */
   public static final Set<String> DEFAULT_VERB_TAGS = Sets.newHashSet("VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
+  
+  public static final HeadedSyntacticCategory SKIP_CAT = HeadedSyntacticCategory.parseFrom("SKIP{0}");
+  public static final Expression2 SKIP_LF = Expression2.constant("**skip**");
+  public static final String SKIP_PREDICATE = "**skip**";
   
   private static final IndexedList<String> STATISTIC_NAME_LIST = IndexedList.create(Arrays.asList(
       LEXICON_PARAMETERS,DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS,
@@ -235,6 +241,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     // from the lexicon.
     IndexedList<CcgCategory> categories = IndexedList.create();
     IndexedList<List<String>> words = IndexedList.create();
+    posTagSet = posTagSet != null ? posTagSet : Sets.newHashSet(DEFAULT_POS_TAG);
     IndexedList<String> semanticPredicates = IndexedList.create();
     Map<Integer, Integer> maxNumArgs = Maps.newHashMap();
     Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
@@ -270,6 +277,45 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           maxNumArgs);
     }
 
+    if (allowWordSkipping) {
+      // Generate a SKIP syntactic category and binary rules that absorb them.
+      Expression2 skipLeftExp = ExpressionParser.expression2().parseSingleExpression("(lambda $L $R $R)");
+      Expression2 skipRightExp = ExpressionParser.expression2().parseSingleExpression("(lambda $L $R $L)");
+      List<String> subjects = Collections.emptyList();
+      List<HeadedSyntacticCategory> subjectSyntaxes = Collections.emptyList();
+      List<Integer> argumentNumbers = Collections.emptyList();
+      List<Integer> objects = Collections.emptyList(); 
+
+      HeadedSyntacticCategory ruleSkipCat = SKIP_CAT.relabelVariables(new int[] {0}, new int[] {100});
+      for (HeadedSyntacticCategory cat : syntacticCategories) {
+        binaryRules.add(new CcgBinaryRule(ruleSkipCat, cat, cat, skipLeftExp,
+            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
+        binaryRules.add(new CcgBinaryRule(cat, ruleSkipCat, cat, skipRightExp,
+            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
+      }
+
+      syntacticCategories.add(SKIP_CAT);
+      List<Set<String>> assignment = Lists.newArrayList();
+      assignment.add(Sets.newHashSet(SKIP_PREDICATE));
+      semanticPredicates.add(SKIP_PREDICATE);
+      CcgCategory ccgCategory = new CcgCategory(SKIP_CAT, SKIP_LF, subjects,
+            argumentNumbers, objects, assignment);
+      categories.add(ccgCategory);
+      for (List<String> word : words.items()) {
+        LexiconEntry entry = new LexiconEntry(word, ccgCategory);
+        lexiconEntries.add(entry);
+      }
+      
+      for (String posTag : posTagSet) {
+        String word = (CcgLexicon.UNKNOWN_WORD_PREFIX + posTag).toLowerCase();
+        LexiconEntry entry = new LexiconEntry(Arrays.asList(word), ccgCategory);
+        lexiconEntries.add(entry);
+        words.add(Arrays.asList(word));
+      }
+      
+      allowWordSkipping = false;
+    }
+
     // Create features over ways to combine syntactic categories.
     // System.out.println("Building syntactic distribution...");
     DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
@@ -298,6 +344,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         binaryRuleDistribution, syntaxType);
     VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
         CcgParser.PARENT_MOVE_SYNTAX_VAR_NAME);
+    
+    System.out.println(compiledSyntaxDistribution.getParameterDescription());
 
     // Build the terminal distribution. This maps word sequences to
     // CCG categories, with one possible mapping per entry in the
@@ -312,7 +360,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     VariableNumMap terminalWordVars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
     VariableNumMap terminalWordSyntaxVars = VariableNumMap.unionAll(terminalVar, terminalSyntaxVar);
-    posTagSet = posTagSet != null ? posTagSet : Sets.newHashSet(DEFAULT_POS_TAG);
     DiscreteVariable posType = new DiscreteVariable("pos", posTagSet);
     VariableNumMap posVar = VariableNumMap.singleton(0, "pos", posType);
 
@@ -329,6 +376,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       terminalSyntaxBuilder.setWeight(terminalWordSyntaxVars.outcomeArrayToAssignment(lexiconWords,
           lexiconEntry.getCategory().getSyntax()), 1.0);
     }
+    
+    System.out.println(terminalBuilder.build().getParameterDescription());
 
     ParametricCcgLexicon lexiconFamily = featureFactory.getLexiconFeatures(terminalVar,
         ccgCategoryVar, posVar, terminalSyntaxVar, terminalBuilder.build());

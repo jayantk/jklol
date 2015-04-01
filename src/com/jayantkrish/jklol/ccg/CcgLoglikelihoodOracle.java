@@ -7,9 +7,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -64,22 +66,34 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
     // Calculate the unconditional distribution over CCG parses.
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getSentence(), 
-        beamSize, log);
+    List<CcgParse> parses = instantiatedParser.beamSearch(example.getSentence(), beamSize,
+        null, log, -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
+        
     if (parses.size() == 0) {
       // Search error: couldn't find any parses.
+      System.out.println("Search error (Predicted): " + example.getSentence() + " " + example.getLogicalForm());
       throw new ZeroProbabilityError();      
     }
     log.stopTimer("update_gradient/input_marginal");
 
     // Find parses with the correct syntactic structure and dependencies.
     log.startTimer("update_gradient/condition_parses_on_dependencies");
-    // Condition parses on provided syntactic information, if any is provided.
-    List<CcgParse> possibleParses = null;
+    // Condition parses on provided syntactic / lexicon information,
+    // if any is provided.
+    ChartCost syntacticCost = null;
+    ChartCost lexiconCost = null;
     if (example.hasSyntacticParse()) {
-      ChartCost conditionalChartFilter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
+      syntacticCost = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
+    }
+    if (example.hasLexiconEntries()) {
+      lexiconCost = new LexiconChartCost(example.getLexiconEntries());
+    }
+    ChartCost cost = SumChartCost.create(syntacticCost, lexiconCost);
+
+    List<CcgParse> possibleParses = null;
+    if (cost != null) {
       possibleParses = instantiatedParser.beamSearch(example.getSentence(), beamSize,
-        conditionalChartFilter, log, -1, Integer.MAX_VALUE, 1);
+        cost, log, -1, Integer.MAX_VALUE, 1);
     } else {
       possibleParses = Lists.newArrayList(parses);
     }
@@ -97,6 +111,12 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
+      System.out.println("Search error (Correct): " + example.getSentence() + " " + example.getLogicalForm());
+      /*
+      for (CcgParse parse : possibleParses) {
+        System.out.println(parse.getLogicalForm());
+      }
+      */
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/condition_parses_on_dependencies");

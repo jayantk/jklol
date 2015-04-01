@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
@@ -23,7 +24,19 @@ import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
+import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel;
+import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -46,6 +59,10 @@ public class TrainSemanticParser extends AbstractCli {
   private OptionSpec<String> trainingData;
 
   private OptionSpec<Integer> beamSize;
+  
+  // If provided, use this model to produce word/logical form
+  // alignments to help train the parser.
+  private OptionSpec<String> alignmentModel;
 
   // Where the trained parser is saved.
   private OptionSpec<String> modelOutput;
@@ -76,15 +93,22 @@ public class TrainSemanticParser extends AbstractCli {
     skipWords = parser.accepts("skipWords", "Allow the parser to skip words in the parse");
 
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+    
+    alignmentModel = parser.accepts("alignmentModel").withRequiredArg().ofType(String.class);
   }
 
   @Override
   public void run(OptionSet options) {
+    AlignmentModel aligner = null;
+    if (options.has(alignmentModel)) {
+      aligner = IoUtils.readSerializedObject(options.valueOf(alignmentModel), AlignmentModel.class);
+    }
+    
     List<CcgExample> trainingExamples = null; 
     if (options.has(jsonTrainingData)) {
       trainingExamples = readCcgExamplesJson(options.valueOf(jsonTrainingData));
     } else if (options.has(trainingData)) {
-      trainingExamples = readCcgExamples(options.valueOf(trainingData));
+      trainingExamples = readCcgExamples(options.valueOf(trainingData), aligner);
     }
 
     Preconditions.checkState(trainingExamples != null);
@@ -92,10 +116,20 @@ public class TrainSemanticParser extends AbstractCli {
 
     ParametricCcgParser family = createCcgParser(options);
 
-    CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, options.valueOf(beamSize),
+    ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new ConjunctionReplacementRule("and:<t*,t>")));
+    ExpressionComparator comparator = new SimplificationComparator(simplifier);
+
+    CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator, options.valueOf(beamSize),
         -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), false);
     GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family,
         inferenceAlgorithm, 0.0);
+    /*
+    GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family,
+        comparator, options.valueOf(beamSize));
+        */ 
 
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
@@ -121,15 +155,15 @@ public class TrainSemanticParser extends AbstractCli {
         
         String utterance = exampleNode.get("utterance").asText();
         String targetFormula = exampleNode.get("targetFormula").asText();
-        
+
         List<String> words = Arrays.asList(utterance.split("\\s"));
         Expression2 lf = lfParser.parseSingleExpression(targetFormula);
-        
+
         // Parts-of-speech are assumed to be unknown.
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         SupertaggedSentence sentence = ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags);
 
-        CcgExample example = new CcgExample(sentence, null, null, lf);
+        CcgExample example = new CcgExample(sentence, null, null, lf, null);
         examples.add(example);
       }
     } catch (Exception e) {
@@ -138,7 +172,7 @@ public class TrainSemanticParser extends AbstractCli {
     return examples;
   }
 
-  public static List<CcgExample> readCcgExamples(String filename) {
+  public static List<CcgExample> readCcgExamples(String filename, AlignmentModel alignmentModel) {
     List<String> lines = IoUtils.readLines(filename);
     List<CcgExample> examples = Lists.newArrayList();
     List<String> words = null;
@@ -154,12 +188,30 @@ public class TrainSemanticParser extends AbstractCli {
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         SupertaggedSentence supertaggedSentence = ListSupertaggedSentence
             .createWithUnobservedSupertags(words, posTags);
-        examples.add(new CcgExample(supertaggedSentence, null, null, expression));
+
+        List<Expression2> lexiconEntries = null;
+        if (alignmentModel != null) {
+          AlignedExpressionTree tree = alignmentModel.getBestAlignmentCfg(
+              new AlignmentExample(words, ExpressionTree.fromExpression(expression)));
+          
+          Multimap<String, AlignedExpression> alignments = tree.getWordAlignments();
+          lexiconEntries = Lists.newArrayList(Collections.nCopies(words.size(), ParametricCcgParser.SKIP_LF));
+          for (int j = 0; j < words.size(); j++) {
+            for (AlignedExpression alignedExp : alignments.get(words.get(j))) {
+              if (alignedExp.getSpanStart() == j && alignedExp.getSpanEnd() == j + 1) {
+                lexiconEntries.set(j, alignedExp.getExpression()); 
+                System.out.println(words.get(j) + " " +  alignedExp.getExpression());
+              }
+            }
+          }
+        }
+
+        examples.add(new CcgExample(supertaggedSentence, null, null, expression, lexiconEntries));
       } else {
         words = Arrays.asList(line.split("\\s"));
       }
     }
-    
+
     return examples;
   }
 
@@ -169,9 +221,9 @@ public class TrainSemanticParser extends AbstractCli {
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
+
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
-        null, !parsedOptions.has(ccgApplicationOnly), null, parsedOptions.has(skipWords),
-        parsedOptions.has(ccgNormalFormOnly));
+        null, !parsedOptions.has(ccgApplicationOnly), null, parsedOptions.has(skipWords), parsedOptions.has(ccgNormalFormOnly));
   }
 
   public static void main(String[] args) {

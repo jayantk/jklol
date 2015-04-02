@@ -174,6 +174,20 @@ public abstract class AbstractTensorBase implements TensorBase, Serializable {
   }
 
   @Override
+  public final int indexToPartialDimKey(int index, int dimIndex) {
+    return keyNumToPartialDimKey(indexToKeyNum(index), dimIndex);
+  }
+
+  @Override
+  public final int keyNumToPartialDimKey(long keyNum, int dimIndex) {
+    long v = keyNum;
+    if (dimIndex > 0) {
+      v = v % indexOffsets[dimIndex - 1];
+    }
+    return (int) (v / indexOffsets[dimIndex]);
+  }
+
+  @Override
   public int[] keyNumToDimKey(long keyNum) {
     int[] key = new int[sizes.length];
     keyNumToDimKey(keyNum, key);

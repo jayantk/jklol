@@ -1248,6 +1248,23 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     ArrayUtils.sortKeyValuePairs(keyNums, values, 0, keyNums.length);
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, values);
   }
+  
+  public static SparseTensor copyRemovingZeros(Tensor other, double[] newValues) {
+    Preconditions.checkArgument(other.getValues().length == newValues.length);
+    int fillInd = 0;
+    long[] keyNums = new long[newValues.length];
+    double[] copiedNewValues = new double[newValues.length];
+    for (int i = 0; i < newValues.length; i++) {
+      if (newValues[i] != 0.0) {
+        keyNums[fillInd] = other.indexToKeyNum(i);
+        copiedNewValues[fillInd] = newValues[i];
+        fillInd++;
+      }
+    }
+    
+    return resizeIntoTable(other.getDimensionNumbers(), other.getDimensionSizes(),
+        keyNums, copiedNewValues, fillInd);
+  }
 
   public static SparseTensor singleElement(int[] dimensionNumbers, int[] dimensionSizes, int[] dimKey, double value) {
     long[] keyNums = new long[1];

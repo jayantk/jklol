@@ -103,12 +103,12 @@ public class CfgParserTest extends TestCase {
 		CfgParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
 		
 		Factor rootProductions = c.getInsideEntries(0, 3);
-		assertEquals(2.0, rootProductions.size());
+		assertEquals(2, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(0.25 * .25, rootProductions.getUnnormalizedProbability("S"));
 		assertEquals(0.25 * .25, rootProductions.getUnnormalizedProbability("S2"));
 
 		Factor nounProductions = c.getInsideEntries(2, 3);
-		assertEquals(3.0, nounProductions.size());
+		assertEquals(3, nounProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(.25, nounProductions.getUnnormalizedProbability("N"));
 		assertEquals(.25 * .25, nounProductions.getUnnormalizedProbability("NP"));
 		assertEquals(.5 * .25 * .25, nounProductions.getUnnormalizedProbability("foo"));
@@ -118,7 +118,7 @@ public class CfgParserTest extends TestCase {
 		CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor rootProductions = c.getOutsideEntries(0, 3);
-		assertEquals(1.0, rootProductions.size());
+		assertEquals(1, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(1.0, rootProductions.getUnnormalizedProbability("S"));
 
 		Factor vpProductions = c.getOutsideEntries(1, 3);
@@ -129,7 +129,7 @@ public class CfgParserTest extends TestCase {
 	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor rootProductions = c.getMarginalEntries(0, 3);
-		assertEquals(1.0, rootProductions.size());
+		assertEquals(1, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(1.0, rootProductions.getUnnormalizedProbability("S") / c.getPartitionFunction());
 
 		Factor nProductions = c.getMarginalEntries(2, 3);
@@ -140,6 +140,7 @@ public class CfgParserTest extends TestCase {
 	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor ruleCounts = c.getBinaryRuleExpectations();
+		// System.out.println(ruleCounts.getParameterDescription());
 		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S2", "rule1"));
 		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S", "rule1") / c.getPartitionFunction());
 		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "N", "NP", "rule1"));
@@ -170,7 +171,7 @@ public class CfgParserTest extends TestCase {
 	public void testParseMaxMarginal() {
 		CfgParseChart c = p.parseMarginal(Arrays.asList("baz", "bbb"), "barP", false);
 		Factor prods = c.getInsideEntries(0, 1);
-		assertEquals(1.0, prods.size());
+		assertEquals(1, prods.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(.5, prods.getUnnormalizedProbability("barP"));	
 	}
 

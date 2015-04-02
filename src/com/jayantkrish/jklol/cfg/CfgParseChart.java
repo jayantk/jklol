@@ -1,14 +1,16 @@
 package com.jayantkrish.jklol.cfg;
 
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.Backpointers;
+import com.jayantkrish.jklol.tensor.DenseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
@@ -22,9 +24,8 @@ import com.jayantkrish.jklol.util.Assignment;
 public class CfgParseChart {
 
   // Storage for the various probability distributions.
-  private Factor[][] insideChart;
-  private Factor[][] outsideChart;
-  private Factor[][] marginalChart;
+  private double[][][] insideChart;
+  private double[][][] outsideChart;
 
   private VariableNumMap parentVar;
   private VariableNumMap leftVar;
@@ -32,7 +33,8 @@ public class CfgParseChart {
   private VariableNumMap terminalVar;
   private VariableNumMap ruleTypeVar;
 
-  private Factor binaryRuleExpectations;
+  private Factor binaryRuleDistribution;
+  private double[] binaryRuleExpectations;
   private Factor terminalRuleExpectations;
 
   private List<?> terminals;
@@ -55,8 +57,8 @@ public class CfgParseChart {
    * probability, meaning ParseChart computes max-marginals.
    */
   public CfgParseChart(List<?> terminals, VariableNumMap parent, VariableNumMap left, 
-      VariableNumMap right, VariableNumMap terminal, VariableNumMap ruleTypeVar, 
-      boolean sumProduct) {
+      VariableNumMap right, VariableNumMap terminal, VariableNumMap ruleTypeVar,
+      Factor binaryRuleDistribution, boolean sumProduct) {
     this.terminals = terminals;
     this.parentVar = parent;
     this.leftVar = left;
@@ -69,10 +71,10 @@ public class CfgParseChart {
     this.numTerminals = terminals.size();
     this.numNonterminals = parentVar.getDiscreteVariables().get(0).numValues();
 
-    insideChart = new Factor[numTerminals][numTerminals];
-    outsideChart = new Factor[numTerminals][numTerminals];
-    marginalChart = new Factor[numTerminals][numTerminals];
-    binaryRuleExpectations = TableFactor.zero(VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleTypeVar));
+    insideChart = new double[numTerminals][numTerminals][numNonterminals];
+    outsideChart = new double[numTerminals][numTerminals][numNonterminals];
+    this.binaryRuleDistribution = binaryRuleDistribution;
+    binaryRuleExpectations = new double[binaryRuleDistribution.coerceToDiscrete().getWeights().getValues().length];
     terminalRuleExpectations = TableFactor.zero(VariableNumMap.unionAll(parentVar, terminalVar, ruleTypeVar));
 
     insideCalculated = false;
@@ -105,53 +107,54 @@ public class CfgParseChart {
     Preconditions.checkArgument(binaryRuleProbabilities.getVars().size() == 4);
     
     if (sumProduct) {
-      Factor message = binaryRuleProbabilities.marginalize(
-          VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar));
-      if (insideChart[spanStart][spanEnd] == null){
-        insideChart[spanStart][spanEnd] = message;
-      } else {
-        insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(message);
-      }
+      updateEntrySumProduct(insideChart[spanStart][spanEnd], binaryRuleProbabilities.coerceToDiscrete().getWeights().getValues(),
+          binaryRuleProbabilities.coerceToDiscrete().getWeights(), parentVar.getOnlyVariableNum());
     } else {
       int[] dimsToRemove = VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar).getVariableNumsArray();
       Tensor weights = binaryRuleProbabilities.coerceToDiscrete().getWeights();
       
       Backpointers tensorBackpointers = new Backpointers();
       Tensor message = weights.maxOutDimensions(dimsToRemove, tensorBackpointers);
-    
-      if (insideChart[spanStart][spanEnd] == null) {
-        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, message);
-        
-        long[] newKeyNums = tensorBackpointers.getNewKeyNums();
-        long[] oldKeyNums = tensorBackpointers.getOldKeyNums();
-        long[] entryBackpointers = backpointers[spanStart][spanEnd];
-        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
-        Arrays.fill(entryBackpointers, Integer.MIN_VALUE);
-        Arrays.fill(currentSplit, Integer.MIN_VALUE);
 
-        for (int i = 0; i < newKeyNums.length; i++) {
-          int nonterminalNum = (int) newKeyNums[i];
-          entryBackpointers[nonterminalNum] = oldKeyNums[i];
-          currentSplit[nonterminalNum] = splitInd;
-        }
-      } else {
-        Tensor current = insideChart[spanStart][spanEnd].coerceToDiscrete().getWeights();
-        Tensor combined = message.elementwiseMaximum(current);
-        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, combined);
+      updateInsideEntryMaxProduct(spanStart, spanEnd, message, tensorBackpointers, splitInd);
+    }
+  }
+  
+  private final void updateEntrySumProduct(double[] entries, double[] messageValues,
+      Tensor message, int varNum) {
+    int[] dimNums = message.getDimensionNumbers();
+    int parentIndex = Ints.indexOf(dimNums, varNum);
+    for (int i = 0; i < messageValues.length; i++) {
+      entries[message.indexToPartialDimKey(i, parentIndex)] += messageValues[i];
+    }
+  }
+  
+  private final void updateEntryMaxProduct(double[] entries, double[] messageValues,
+      Tensor message, int varNum) {
+    int[] dimNums = message.getDimensionNumbers();
+    int parentIndex = Ints.indexOf(dimNums, varNum);
+    for (int i = 0; i < messageValues.length; i++) {
+      int entryInd = (int) message.indexToPartialDimKey(i, parentIndex);
+      entries[entryInd] = Math.max(messageValues[i], entries[entryInd]);
+    }
+  }
 
-        long[] entryBackpointers = backpointers[spanStart][spanEnd];
-        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
-        double[] messageValues = message.getValues();
-        for (int i = 0; i < messageValues.length; i++) {
-          int nonterminalNum = (int) message.indexToKeyNum(i);
-          double curVal = current.get(nonterminalNum);
-          double msgVal = messageValues[i];
-          
-          if (msgVal > curVal) {
-            entryBackpointers[nonterminalNum] = tensorBackpointers.getBackpointer(nonterminalNum);
-            currentSplit[nonterminalNum] = splitInd;
-          }
-        }
+  private final void updateInsideEntryMaxProduct(int spanStart, int spanEnd, Tensor message,
+      Backpointers tensorBackpointers, int splitInd) {
+    double[] chartEntries = insideChart[spanStart][spanEnd];
+    updateEntryMaxProduct(chartEntries, message.getValues(), message, parentVar.getOnlyVariableNum());
+
+    double[] messageValues = message.getValues();
+    long[] entryBackpointers = backpointers[spanStart][spanEnd];
+    int[] currentSplit = splitBackpointers[spanStart][spanEnd];
+    for (int i = 0; i < messageValues.length; i++) {
+      int nonterminalNum = (int) message.indexToKeyNum(i);
+      double curVal = chartEntries[nonterminalNum];
+      double msgVal = messageValues[i];
+
+      if (msgVal >= curVal) {
+        entryBackpointers[nonterminalNum] = tensorBackpointers.getBackpointer(nonterminalNum);
+        currentSplit[nonterminalNum] = splitInd;
       }
     }
   }
@@ -165,13 +168,8 @@ public class CfgParseChart {
     Preconditions.checkArgument(factor.getVars().size() == 2);
     // The first entry initializes the chart at this span.
     if (sumProduct) {
-      Factor message = factor.marginalize(ruleTypeVar);
-
-      if (insideChart[spanStart][spanEnd] == null) {
-        insideChart[spanStart][spanEnd] = message;
-      } else {
-        insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(message);
-      } 
+      updateEntrySumProduct(insideChart[spanStart][spanEnd], factor.coerceToDiscrete().getWeights().getValues(),
+          factor.coerceToDiscrete().getWeights(), parentVar.getOnlyVariableNum());
     } else {
       int[] dimsToRemove = VariableNumMap.unionAll(ruleTypeVar).getVariableNumsArray();
       Tensor weights = factor.coerceToDiscrete().getWeights();
@@ -179,45 +177,9 @@ public class CfgParseChart {
       Backpointers tensorBackpointers = new Backpointers();
       Tensor message = weights.maxOutDimensions(dimsToRemove, tensorBackpointers);
 
-      if (insideChart[spanStart][spanEnd] == null) {
-        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, message);
-
-        long[] newKeyNums = tensorBackpointers.getNewKeyNums();
-        long[] oldKeyNums = tensorBackpointers.getOldKeyNums();
-        long[] entryBackpointers = backpointers[spanStart][spanEnd];
-        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
-        Arrays.fill(entryBackpointers, Integer.MIN_VALUE);
-        Arrays.fill(currentSplit, Integer.MIN_VALUE);
-
-        // Negative split indexes are used to represent terminal rules.
-        int splitInd = -1 * (spanStart * numTerminals + spanEnd + 1); 
-        for (int i = 0; i < newKeyNums.length; i++) {
-          int nonterminalNum = (int) newKeyNums[i];
-          entryBackpointers[nonterminalNum] = oldKeyNums[i];
-          currentSplit[nonterminalNum] = splitInd;
-        }
-      } else {
-        Tensor current = insideChart[spanStart][spanEnd].coerceToDiscrete().getWeights();
-        Tensor combined = message.elementwiseMaximum(current);
-        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, combined);
-
-        long[] entryBackpointers = backpointers[spanStart][spanEnd];
-        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
-        double[] messageValues = message.getValues();
-        // Negative split indexes are used to represent terminal rules.
-        int splitInd = -1 * (spanStart * numTerminals + spanEnd + 1); 
-
-        for (int i = 0; i < messageValues.length; i++) {
-          int nonterminalNum = (int) message.indexToKeyNum(i);
-          double curVal = current.get(nonterminalNum);
-          double msgVal = messageValues[i];
-          
-          if (msgVal > curVal) {
-            entryBackpointers[nonterminalNum] = tensorBackpointers.getBackpointer(nonterminalNum);
-            currentSplit[nonterminalNum] = splitInd;
-          }
-        }
-      }
+      // Negative split indexes are used to represent terminal rules.
+      int splitInd = -1 * (spanStart * numTerminals + spanEnd + 1); 
+      updateInsideEntryMaxProduct(spanStart, spanEnd, message, tensorBackpointers, splitInd);
     }
   }
 
@@ -226,36 +188,13 @@ public class CfgParseChart {
    * the type of the chart, this performs either a sum or max over productions
    * of the same type in the same entry.
    */
-  public void updateOutsideEntry(int spanStart, int spanEnd, Factor factor) {
-    Preconditions.checkArgument(factor.getVars().size() == 1);
-    if (outsideChart[spanStart][spanEnd] == null) {
-      outsideChart[spanStart][spanEnd] = factor;
-      return;
-    }
-
+  public void updateOutsideEntry(int spanStart, int spanEnd, double[] values, Factor factor, VariableNumMap var) {
     if (sumProduct) {
-      outsideChart[spanStart][spanEnd] = outsideChart[spanStart][spanEnd].add(factor);
+      updateEntrySumProduct(outsideChart[spanStart][spanEnd],
+          values, factor.coerceToDiscrete().getWeights(), var.getOnlyVariableNum());
     } else {
-      outsideChart[spanStart][spanEnd] = outsideChart[spanStart][spanEnd].maximum(factor);
-    }
-  }
-
-  /**
-   * Update an entry of the marginal chart with a new production. Depending on
-   * the type of the chart, this performs either a sum or max over productions
-   * of the same type in the same entry.
-   */
-  public void updateMarginalEntry(int spanStart, int spanEnd, Factor marginal) {
-    Preconditions.checkArgument(marginal.getVars().size() == 1);
-    if (marginalChart[spanStart][spanEnd] == null) {
-      marginalChart[spanStart][spanEnd] = marginal;
-      return;
-    }
-
-    if (sumProduct) {
-      marginalChart[spanStart][spanEnd] = marginalChart[spanStart][spanEnd].add(marginal);
-    } else {
-      marginalChart[spanStart][spanEnd] = marginalChart[spanStart][spanEnd].maximum(marginal);
+      updateEntryMaxProduct(outsideChart[spanStart][spanEnd],
+          values, factor.coerceToDiscrete().getWeights(), var.getOnlyVariableNum());
     }
   }
 
@@ -314,10 +253,9 @@ public class CfgParseChart {
    * span in the tree.
    */
   public Factor getInsideEntries(int spanStart, int spanEnd) {
-    if (insideChart[spanStart][spanEnd] == null) {
-      return TableFactor.zero(parentVar);
-    }
-    return insideChart[spanStart][spanEnd];
+    Tensor entries = new DenseTensor(parentVar.getVariableNumsArray(),
+        parentVar.getVariableSizes(), insideChart[spanStart][spanEnd]);
+    return new TableFactor(parentVar, entries);
   }
 
   /**
@@ -325,10 +263,9 @@ public class CfgParseChart {
    * span in the tree.
    */
   public Factor getOutsideEntries(int spanStart, int spanEnd) {
-    if (outsideChart[spanStart][spanEnd] == null) {
-      return TableFactor.zero(parentVar);
-    }
-    return outsideChart[spanStart][spanEnd];
+    Tensor entries = new DenseTensor(parentVar.getVariableNumsArray(),
+        parentVar.getVariableSizes(), outsideChart[spanStart][spanEnd]);
+    return new TableFactor(parentVar, entries);
   }
 
   /**
@@ -336,11 +273,7 @@ public class CfgParseChart {
    * particular node in the tree.
    */
   public Factor getMarginalEntries(int spanStart, int spanEnd) {
-    if (marginalChart[spanStart][spanEnd] == null) {
-      return TableFactor.zero(parentVar);
-    }
-
-    return marginalChart[spanStart][spanEnd];
+    return getOutsideEntries(spanStart, spanEnd).product(getInsideEntries(spanStart, spanEnd));
   }
 
   /**
@@ -368,7 +301,8 @@ public class CfgParseChart {
 
     Assignment rootAssignment = parentVar.outcomeArrayToAssignment(root); 
     int rootNonterminalNum = parentVar.assignmentToIntArray(rootAssignment)[0];
-    double prob = marginalChart[spanStart][spanEnd].getUnnormalizedProbability(rootAssignment);
+    double prob = insideChart[spanStart][spanEnd][rootNonterminalNum] 
+        * outsideChart[spanStart][spanEnd][rootNonterminalNum];
     
     if (prob == 0.0) {
       return null;
@@ -389,10 +323,10 @@ public class CfgParseChart {
       return new CfgParseTree(root, ruleType, terminalList, prob, spanStart, spanEnd);
     } else {
       long binaryRuleKey = backpointers[spanStart][spanEnd][rootNonterminalNum];
-      int[] binaryRuleComponents = binaryRuleExpectations.coerceToDiscrete()
+      int[] binaryRuleComponents = binaryRuleDistribution.coerceToDiscrete()
           .getWeights().keyNumToDimKey(binaryRuleKey);
 
-      Assignment best = binaryRuleExpectations.getVars().intArrayToAssignment(binaryRuleComponents);
+      Assignment best = binaryRuleDistribution.getVars().intArrayToAssignment(binaryRuleComponents);
       Object leftRoot = best.getValue(leftVar.getOnlyVariableNum());
       Object rightRoot = best.getValue(rightVar.getOnlyVariableNum());
       Object ruleType = best.getValue(ruleTypeVar.getOnlyVariableNum());
@@ -411,15 +345,21 @@ public class CfgParseChart {
    * Update the expected number of times that a binary production rule is used
    * in a parse. (This method assumes sum-product)
    */
-  public void updateBinaryRuleExpectations(Factor binaryRuleMarginal) {
-    binaryRuleExpectations = binaryRuleExpectations.add(binaryRuleMarginal);
+  public void updateBinaryRuleExpectations(double[] binaryRuleMarginal) {
+    for (int i = 0; i < binaryRuleExpectations.length; i++) {
+      binaryRuleExpectations[i] += binaryRuleMarginal[i];
+    }
   }
 
   /**
    * Compute the expected *unnormalized* probability of every rule.
    */
   public Factor getBinaryRuleExpectations() {
-    return binaryRuleExpectations;
+    Tensor binaryRuleWeights = binaryRuleDistribution.coerceToDiscrete().getWeights();
+    SparseTensor tensor = SparseTensor.copyRemovingZeros(binaryRuleWeights,
+        binaryRuleExpectations);
+
+    return new TableFactor(binaryRuleDistribution.getVars(), tensor);
   }
 
   /**
@@ -484,20 +424,6 @@ public class CfgParseChart {
       }
     }
 
-    sb.append("\nmarginal:\n");
-    for (int i = 0; i < chartSize(); i++) {
-      for (int j = 0; j < chartSize(); j++) {
-        if (marginalChart[i][j] != null) {
-          sb.append("(");
-          sb.append(i);
-          sb.append(",");
-          sb.append(j);
-          sb.append(") ");
-          sb.append(marginalChart[i][j]);
-          sb.append("\n");
-        }
-      }
-    }
     return sb.toString();
   }
 }

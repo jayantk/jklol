@@ -1,13 +1,13 @@
 package com.jayantkrish.jklol.cfg;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -47,8 +47,6 @@ public class CfgParser implements Serializable {
   // Each entry in the parse chart contains a factor defined over parentVar.
   // These relabelings are necessary to apply binaryDistribution and
   // terminalDistribution during parsing.
-  private final VariableRelabeling leftToParent;
-  private final VariableRelabeling rightToParent;
   private final VariableRelabeling parentToLeft;
   private final VariableRelabeling parentToRight;
 
@@ -108,8 +106,6 @@ public class CfgParser implements Serializable {
 
     // Construct some variable->variable renamings which are useful during
     // parsing.
-    this.leftToParent = VariableRelabeling.createFromVariables(leftVar, parentVar);
-    this.rightToParent = VariableRelabeling.createFromVariables(rightVar, parentVar);
     this.parentToLeft = VariableRelabeling.createFromVariables(parentVar, leftVar);
     this.parentToRight = VariableRelabeling.createFromVariables(parentVar, rightVar);
 
@@ -396,7 +392,8 @@ public class CfgParser implements Serializable {
     assert chart.getInsideCalculated();
     assert !chart.getOutsideCalculated();
 
-    chart.updateOutsideEntry(0, chart.chartSize() - 1, rootDist);
+    chart.updateOutsideEntry(0, chart.chartSize() - 1, rootDist.coerceToDiscrete().getWeights().getValues(), 
+        rootDist, parentVar);
     downwardChartPass(chart);
     return chart;
   }
@@ -417,7 +414,8 @@ public class CfgParser implements Serializable {
    * @return
    */
   private CfgParseChart createParseChart(List<?> terminals, boolean useSumProduct) {
-    return new CfgParseChart(terminals, parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, useSumProduct);
+    return new CfgParseChart(terminals, parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
+        binaryDistribution, useSumProduct);
   }
 
   /*
@@ -432,7 +430,8 @@ public class CfgParser implements Serializable {
     initializeChart(chart, terminals);
     upwardChartPass(chart);
     // Set the initial outside probabilities
-    chart.updateOutsideEntry(0, chart.chartSize() - 1, rootDist);
+    chart.updateOutsideEntry(0, chart.chartSize() - 1,
+        rootDist.coerceToDiscrete().getWeights().getValues(), rootDist, parentVar);
     downwardChartPass(chart);
     return chart;
   }
@@ -478,14 +477,14 @@ public class CfgParser implements Serializable {
     Factor rootOutside = chart.getOutsideEntries(0, chart.chartSize() - 1);
     Factor rootInside = chart.getInsideEntries(0, chart.chartSize() - 1);
     Factor rootMarginal = rootOutside.product(rootInside);
-    chart.updateMarginalEntry(0, chart.chartSize() - 1, rootMarginal);
     chart.setPartitionFunction(rootMarginal.marginalize(parentVar).getUnnormalizedProbability(
         Assignment.EMPTY));
 
+    double[] newValues = new double[binaryDistributionWeights.getValues().length];
     for (int spanSize = chart.chartSize() - 1; spanSize >= 1; spanSize--) {
       for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
         int spanEnd = spanStart + spanSize;
-        calculateOutside(spanStart, spanEnd, chart);
+        calculateOutside(spanStart, spanEnd, chart, newValues);
       }
     }
     updateTerminalRuleCounts(chart);
@@ -498,47 +497,45 @@ public class CfgParser implements Serializable {
    * Calculate a single outside probability entry (and its corresponding
    * marginal).
    */
-  private void calculateOutside(int spanStart, int spanEnd, CfgParseChart chart) {
+  private void calculateOutside(int spanStart, int spanEnd, CfgParseChart chart, double[] newValues) {
     Factor parentOutside = chart.getOutsideEntries(spanStart, spanEnd);
+    Tensor binaryDistributionWeights = binaryDistribution.coerceToDiscrete().getWeights();
+    int parentIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), parentVar.getOnlyVariableNum());
+    int leftIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), leftVar.getOnlyVariableNum());
+    int rightIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), rightVar.getOnlyVariableNum());
+
+    double[] binaryDistributionValues = binaryDistributionWeights.getValues();
     for (int i = 0; i < spanEnd - spanStart; i++) {
       Factor leftInside = chart.getInsideEntries(spanStart, spanStart + i).relabelVariables(
           parentToLeft);
       Factor rightInside = chart.getInsideEntries(spanStart + i + 1, spanEnd).relabelVariables(
           parentToRight);
 
-      Factor binaryRuleMarginal = binaryDistribution.product(Arrays.asList(rightInside,
-          parentOutside, leftInside));
-      chart.updateBinaryRuleExpectations(binaryRuleMarginal);
+      Tensor parentWeights = parentOutside.coerceToDiscrete().getWeights();
+      Tensor leftInsideWeights = leftInside.coerceToDiscrete().getWeights();
+      Tensor rightInsideWeights = rightInside.coerceToDiscrete().getWeights();
 
-      Factor leftOutside = binaryDistribution.product(Arrays.asList(rightInside, parentOutside));
-      Factor rightOutside = binaryDistribution.product(Arrays.asList(leftInside, parentOutside));
-      VariableNumMap allButLeft = VariableNumMap.unionAll(rightVar, parentVar, ruleTypeVar);
-      VariableNumMap allButRight = VariableNumMap.unionAll(leftVar, parentVar, ruleTypeVar);
-      Factor leftMarginal, rightMarginal;
-      if (chart.getSumProduct()) {
-        leftMarginal = binaryRuleMarginal.marginalize(allButLeft).relabelVariables(
-            leftToParent);
-        rightMarginal = binaryRuleMarginal.marginalize(allButRight).relabelVariables(
-            rightToParent);
-        leftOutside = leftOutside.marginalize(allButLeft).relabelVariables(
-            leftToParent);
-        rightOutside = rightOutside.marginalize(allButRight).relabelVariables(
-            rightToParent);
-      } else {
-        leftMarginal = binaryRuleMarginal.maxMarginalize(allButLeft)
-            .relabelVariables(leftToParent);
-        rightMarginal = binaryRuleMarginal.maxMarginalize(allButRight)
-            .relabelVariables(rightToParent);
-        leftOutside = leftOutside.maxMarginalize(allButLeft).relabelVariables(
-            leftToParent);
-        rightOutside = rightOutside.maxMarginalize(allButRight).relabelVariables(
-            rightToParent);
+      for (int j = 0; j < newValues.length; j++) {
+        newValues[j] = binaryDistributionValues[j] * parentWeights.get(binaryDistributionWeights.indexToPartialDimKey(j, parentIndex));
+        newValues[j] *= rightInsideWeights.get(binaryDistributionWeights.indexToPartialDimKey(j, rightIndex));
       }
-      chart.updateOutsideEntry(spanStart, spanStart + i, leftOutside);
-      chart.updateOutsideEntry(spanStart + i + 1, spanEnd, rightOutside);
 
-      chart.updateMarginalEntry(spanStart, spanStart + i, leftMarginal);
-      chart.updateMarginalEntry(spanStart + i + 1, spanEnd, rightMarginal);
+      // Factor binaryDistributionWithParent = new TableFactor(binaryDistribution.getVars(), binaryDistributionWeights.replaceValues(newValues));;
+      // Factor leftOutside = new TableFactor(binaryDistribution.getVars(), binaryDistributionWeights.replaceValues(newValues));
+      chart.updateOutsideEntry(spanStart, spanStart + i, newValues, binaryDistribution, leftVar);
+      
+      for (int j = 0; j < newValues.length; j++) {
+        newValues[j] *= leftInsideWeights.get(binaryDistributionWeights.indexToPartialDimKey(j, leftIndex));
+      }
+      chart.updateBinaryRuleExpectations(newValues);
+
+      for (int j = 0; j < newValues.length; j++) {
+        if (newValues[j] != 0.0) {
+          newValues[j] = newValues[j] / rightInsideWeights.get(binaryDistributionWeights.indexToPartialDimKey(j, rightIndex));
+        }
+      }
+
+      chart.updateOutsideEntry(spanStart + i + 1, spanEnd, newValues, binaryDistribution, rightVar);
     }
   }
 

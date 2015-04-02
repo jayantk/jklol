@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -7,6 +8,7 @@ import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -50,22 +52,24 @@ public class CcgExactInference implements CcgInference {
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm) {
+      List<Expression2> lexiconEntries, Set<DependencyStructure> observedDependencies,
+      Expression2 observedLogicalForm) {
     Preconditions.checkArgument(observedDependencies == null && observedLogicalForm == null);
 
-    CcgParse bestParse = null; 
+    ChartCost supertagCost = new SupertagChartCost(sentence.getSupertags());
+    ChartCost syntacticCost = null;
+    ChartCost lexiconCost = null;
     if (observedSyntacticTree != null) {
-      ChartCost conditionalChartFilter = SumChartCost.create(
-          SyntacticChartCost.createAgreementCost(observedSyntacticTree), searchFilter,
-          new SupertagChartCost(sentence.getSupertags()));
-      bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
-          maxChartSize, numThreads);
-    } else {
-      ChartCost conditionalChartFilter = SumChartCost.create(
-          new SupertagChartCost(sentence.getSupertags()), searchFilter);
-      bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
-          maxChartSize, numThreads);
+      syntacticCost = SyntacticChartCost.createAgreementCost(observedSyntacticTree);
+    } 
+    if (lexiconEntries != null) {
+      lexiconCost = new LexiconChartCost(lexiconEntries);
     }
+    ChartCost conditionalChartFilter = SumChartCost.create(searchFilter, chartFilter,
+        supertagCost, syntacticCost, lexiconCost);
+
+    CcgParse bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
+          maxChartSize, numThreads);
 
     // Note that bestParse may still be null, if parsing failed.
     return bestParse;

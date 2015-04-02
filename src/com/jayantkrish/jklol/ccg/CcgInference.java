@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.List;
 import java.util.Set;
 
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
@@ -39,11 +40,13 @@ public interface CcgInference {
    * @param chartFilter
    * @param log
    * @param observedSyntacticTree
+   * @param lexiconEntries
    * @param observedDependencies
    * @param observedLogicalForm
    * @return
    */
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm);
+      List<Expression2> lexiconEntries, Set<DependencyStructure> observedDependencies,
+      Expression2 observedLogicalForm);
 }

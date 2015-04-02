@@ -22,6 +22,11 @@ public class SimplificationComparator implements ExpressionComparator {
     Expression2 simpleA = simplifier.apply(a);
     Expression2 simpleB = simplifier.apply(b);
     
+    /*
+    System.out.println("   " + simpleA);
+    System.out.println("   " + simpleB);
+    */
+
     return simpleA.equals(simpleB);
   }
 }

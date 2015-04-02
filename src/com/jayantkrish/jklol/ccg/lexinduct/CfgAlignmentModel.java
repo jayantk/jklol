@@ -1,11 +1,13 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cfg.CfgParser;
@@ -15,7 +17,8 @@ import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 
-public class CfgAlignmentModel {
+public class CfgAlignmentModel implements AlignmentModelInterface, Serializable {
+  private static final long serialVersionUID = 1L;
 
   private final DiscreteFactor terminalFactor;
 
@@ -41,30 +44,33 @@ public class CfgAlignmentModel {
   public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
     CfgParser parser = getCfgParser(example);
     ExpressionTree tree = example.getTree();
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), tree.getExpression(), false);
-    CfgParseTree parseTree = chart.getBestParseTree(tree.getExpression());
+    CfgParseChart chart = parser.parseMarginal(example.getWords(), tree.getExpressionNode(), false);
+    CfgParseTree parseTree = chart.getBestParseTree(tree.getExpressionNode());
+    
+    System.out.println(parseTree);
     
     return decodeCfgParse(parseTree, 0);
   }
 
   private AlignedExpressionTree decodeCfgParse(CfgParseTree t, int numAppliedArguments) {
-    Preconditions.checkArgument(t.getRoot() != ParametricCfgAlignmentModel.SKIP_EXPRESSION);
+    Preconditions.checkArgument(!t.getRoot().equals(ParametricCfgAlignmentModel.SKIP_EXPRESSION));
 
     if (t.isTerminal()) {
       // Expression tree spans have an exclusive end index.
       int[] spanStarts = new int[] {t.getSpanStart()};
       int[] spanEnds = new int[] {t.getSpanEnd() + 1};
       String word = (String) t.getTerminalProductions().get(0);
-      return AlignedExpressionTree.forTerminal((Expression2) t.getRoot(),
+      Expression2 expression = ((ExpressionNode) t.getRoot()).getExpression();
+      return AlignedExpressionTree.forTerminal(expression,
           numAppliedArguments, spanStarts, spanEnds, word);
     } else {
-      Expression2 parent = (Expression2) t.getRoot();
-      Expression2 left = (Expression2) t.getLeft().getRoot();
-      Expression2 right = (Expression2) t.getRight().getRoot();
-      
-      if (left == ParametricCfgAlignmentModel.SKIP_EXPRESSION) {
+      ExpressionNode parent = ((ExpressionNode) t.getRoot());
+      ExpressionNode left = ((ExpressionNode) t.getLeft().getRoot());
+      ExpressionNode right = ((ExpressionNode) t.getRight().getRoot());
+
+      if (left.equals(ParametricCfgAlignmentModel.SKIP_EXPRESSION)) {
         return decodeCfgParse(t.getRight(), numAppliedArguments);
-      } else if (right == ParametricCfgAlignmentModel.SKIP_EXPRESSION) {
+      } else if (right.equals(ParametricCfgAlignmentModel.SKIP_EXPRESSION)) {
         return decodeCfgParse(t.getLeft(), numAppliedArguments);
       } else {
         // A combination of expressions.
@@ -80,26 +86,26 @@ public class CfgAlignmentModel {
           funcTree = t.getRight();
           argTree = t.getLeft();
         }
-        Preconditions.checkState(funcTree != null && argTree!= null); 
+        Preconditions.checkState(funcTree != null && argTree!= null, "Tree is broken %s", t); 
         
         AlignedExpressionTree leftTree = decodeCfgParse(argTree, 0);
         AlignedExpressionTree rightTree = decodeCfgParse(funcTree, numAppliedArguments + 1);
 
-        return AlignedExpressionTree.forNonterminal(parent, numAppliedArguments,
+        return AlignedExpressionTree.forNonterminal(parent.getExpression(), numAppliedArguments,
             leftTree, rightTree);
       }
     }
   }
 
   public CfgParser getCfgParser(AlignmentExample example) {
-    Set<Expression2> expressions = Sets.newHashSet();
-    example.getTree().getAllExpressions(expressions);
+    Set<ExpressionNode> expressions = Sets.newHashSet();
+    example.getTree().getAllExpressionNodes(expressions);
     expressions.add(ParametricCfgAlignmentModel.SKIP_EXPRESSION);
 
     VariableNumMap binaryRuleVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
-    for (Expression2 e : expressions) {
+    for (ExpressionNode e : expressions) {
       binaryRuleBuilder.setWeight(1.0, e, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
           e, ParametricCfgAlignmentModel.SKIP_RULE);
       binaryRuleBuilder.setWeight(1.0, ParametricCfgAlignmentModel.SKIP_EXPRESSION, e,
@@ -112,10 +118,10 @@ public class CfgAlignmentModel {
     return new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleVar,
         binaryDistribution, terminalFactor, -1, false);
   }
-  
+
   private void populateBinaryRuleDistribution(ExpressionTree tree, TableFactorBuilder builder) {
     if (tree.hasChildren()) {
-      Expression2 root = tree.getExpression();
+      ExpressionNode root = tree.getExpressionNode();
 
       List<ExpressionTree> argChildren = tree.getLeftChildren();
       List<ExpressionTree> funcChildren = tree.getRightChildren();
@@ -125,10 +131,10 @@ public class CfgAlignmentModel {
 
         // Add binary rule for this combination of expressions. Note
         // that the expressions can occur in either order in the sentence.
-        builder.setWeight(1 - EPSILON, arg.getExpression(),
-            func.getExpression(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
-        builder.setWeight(1 - EPSILON, func.getExpression(),
-            arg.getExpression(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
+        builder.setWeight(1 - EPSILON, arg.getExpressionNode(),
+            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
+        builder.setWeight(1 - EPSILON, func.getExpressionNode(),
+            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
         
         // Populate children
         populateBinaryRuleDistribution(arg, builder);

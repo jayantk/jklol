@@ -8,6 +8,7 @@ import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -78,20 +79,24 @@ public class CcgBeamSearchInference implements CcgInference {
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm) {
+      List<Expression2> lexiconEntries, Set<DependencyStructure> observedDependencies,
+      Expression2 observedLogicalForm) {
 
-    List<CcgParse> possibleParses = null; 
+    List<CcgParse> possibleParses = null;
+    ChartCost supertagCost = new SupertagChartCost(sentence.getSupertags());
+    ChartCost syntacticCost = null;
+    ChartCost lexiconCost = null;
     if (observedSyntacticTree != null) {
-      ChartCost conditionalChartFilter = SumChartCost.create(SyntacticChartCost.createAgreementCost(observedSyntacticTree),
-          new SupertagChartCost(sentence.getSupertags()), searchFilter);
-      possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
-          log, -1, maxChartSize, numThreads);
-    } else {
-      ChartCost conditionalChartFilter = SumChartCost.create(
-          new SupertagChartCost(sentence.getSupertags()), searchFilter);
-      possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
-          log, -1, maxChartSize, numThreads);
+      syntacticCost = SyntacticChartCost.createAgreementCost(observedSyntacticTree);
+    } 
+    if (lexiconEntries != null) {
+      lexiconCost = new LexiconChartCost(lexiconEntries);
     }
+    
+    ChartCost conditionalChartFilter = SumChartCost.create(searchFilter, chartFilter,
+        supertagCost, syntacticCost, lexiconCost);
+    possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
+        log, -1, maxChartSize, numThreads);
 
     if (observedDependencies != null) {
       possibleParses = CcgLoglikelihoodOracle.filterParsesByDependencies(observedDependencies, possibleParses);

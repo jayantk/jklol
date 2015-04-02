@@ -131,6 +131,14 @@ public class StaticAnalysisTest extends TestCase {
         "<<e,t>,i>");
   }
   
+  public void testSomething4() {
+    Type expected = Type.parseFrom("<<e,t>,<e,<e,t>>>");
+    Expression2 exp = ExpressionParser.expression2().parseSingleExpression(
+        "(lambda $0 (lambda $1 (lambda $2 (and:<t*,t> ($0 $2) (loc:<lo,<lo,t>> $2 $1)))))");
+    Type predicted = StaticAnalysis.inferType(exp, expected, typeReplacementMap);
+    assertEquals(expected, predicted);
+  }
+
   public void testVariablesSameName() {
     runTypeInferenceTest("(lambda f (and:<t*,t> (f texas:e) ((lambda f (state:<e,t> f)) austin:e)))",
         "<<e,t>,t>");

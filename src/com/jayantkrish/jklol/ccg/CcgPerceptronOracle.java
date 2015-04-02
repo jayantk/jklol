@@ -61,7 +61,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     log.startTimer("update_gradient/conditional_max_marginal");
     CcgParse bestCorrectParse = inferenceAlgorithm.getBestConditionalParse(instantiatedParser,
         example.getSentence(), null, log, example.getSyntacticParse(),
-        example.getDependencies(), example.getLogicalForm());
+        example.getLexiconEntries(), example.getDependencies(), example.getLogicalForm());
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
       System.out.println("Search error (Correct): " + example.getSentence() + " " + example.getLogicalForm());

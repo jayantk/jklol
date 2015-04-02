@@ -554,11 +554,7 @@ public class CfgParser implements Serializable {
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
 
           Factor terminalRules = terminalDistribution.conditional(assignment);
-          if (chart.getSumProduct()) {
-            chart.updateInsideEntryTerminal(i, j, terminalRules.marginalize(ruleTypeVar));
-          } else {
-            chart.updateInsideEntryTerminal(i, j, terminalRules.maxMarginalize(ruleTypeVar));
-          }
+          chart.updateInsideEntryTerminal(i, j, terminalRules);
         }
       }
     }

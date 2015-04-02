@@ -32,7 +32,7 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
     log.stopTimer("e_step/getCfg");
 
     log.startTimer("e_step/marginals");
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), example.getTree().getExpression(), true);
+    CfgParseChart chart = parser.parseMarginal(example.getWords(), example.getTree().getExpressionNode(), true);
     log.stopTimer("e_step/marginals");
 
     log.startTimer("e_step/compute_expectations");

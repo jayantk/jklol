@@ -8,11 +8,13 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
+import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -33,7 +35,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public static final String FORWARD_APPLICATION = "fa";
   public static final String BACKWARD_APPLICATION = "ba";
   public static final String SKIP_RULE = "skip";
-  public static final Expression2 SKIP_EXPRESSION = Expression2.constant("**skip**");
+  public static final ExpressionNode SKIP_EXPRESSION = new ExpressionNode(Expression2.constant("**skip**"), 0);
 
   public ParametricCfgAlignmentModel(ParametricFactor terminalFactor, VariableNumMap terminalVar,
       VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
@@ -49,11 +51,11 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   
   public static ParametricCfgAlignmentModel buildAlignmentModel(Collection<AlignmentExample> examples,
       FeatureVectorGenerator<Expression2> featureVectorGenerator) {
-    Set<Expression2> expressions = Sets.newHashSet();
+    Set<ExpressionNode> expressions = Sets.newHashSet();
     Set<List<String>> terminalVarValues = Sets.newHashSet();
 
     for (AlignmentExample example : examples) {
-      example.getTree().getAllExpressions(expressions);
+      example.getTree().getAllExpressionNodes(expressions);
       for (String word : example.getWords()) {
         terminalVarValues.add(Arrays.asList(word));
       }
@@ -70,10 +72,13 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     VariableNumMap rightVar = VariableNumMap.singleton(2, "right", expressionVarType);
     VariableNumMap parentVar = VariableNumMap.singleton(3, "parent", expressionVarType);
     VariableNumMap ruleVar = VariableNumMap.singleton(4, "rule", ruleVarType);
-    
-    // VariableNumMap terminalRuleVars = VariableNumMap.unionAll(terminalVar, parentVar, ruleVar);
-    CptTableFactor terminalFactor = new CptTableFactor(parentVar, terminalVar.union(ruleVar));
-    
+
+    DiscreteFactor sparsityFactor = TableFactor.unity(parentVar.union(terminalVar))
+        .outerProduct(TableFactor.pointDistribution(ruleVar, ruleVar.outcomeArrayToAssignment(TERMINAL)));
+    DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
+    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar), terminalVar,
+        sparsityFactor, constantFactor);
+
     return new ParametricCfgAlignmentModel(terminalFactor, terminalVar, leftVar, rightVar,
         parentVar, ruleVar);
   }

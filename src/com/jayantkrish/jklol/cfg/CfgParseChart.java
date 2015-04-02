@@ -126,9 +126,9 @@ public class CfgParseChart {
         long[] oldKeyNums = tensorBackpointers.getOldKeyNums();
         long[] entryBackpointers = backpointers[spanStart][spanEnd];
         int[] currentSplit = splitBackpointers[spanStart][spanEnd];
-        Arrays.fill(entryBackpointers, -1L);
-        Arrays.fill(currentSplit, -1);
-        
+        Arrays.fill(entryBackpointers, Integer.MIN_VALUE);
+        Arrays.fill(currentSplit, Integer.MIN_VALUE);
+
         for (int i = 0; i < newKeyNums.length; i++) {
           int nonterminalNum = (int) newKeyNums[i];
           entryBackpointers[nonterminalNum] = oldKeyNums[i];
@@ -162,37 +162,62 @@ public class CfgParseChart {
    * the same type in the same entry.
    */
   public void updateInsideEntryTerminal(int spanStart, int spanEnd, Factor factor) {
-    Preconditions.checkArgument(factor.getVars().size() == 1);
+    Preconditions.checkArgument(factor.getVars().size() == 2);
     // The first entry initializes the chart at this span.
-    if (insideChart[spanStart][spanEnd] == null) {
-      if (sumProduct) {
-        insideChart[spanStart][spanEnd] = factor;
-      } else {
-        insideChart[spanStart][spanEnd] = factor;
-        // TODO: backpointers
-        /*
-        backpointers[spanStart][spanEnd] = new HashMap<Object, PriorityQueue<Backpointer>>();
-        */
-      }
-      return;
-    }
-
     if (sumProduct) {
-      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(factor);
+      Factor message = factor.marginalize(ruleTypeVar);
+
+      if (insideChart[spanStart][spanEnd] == null) {
+        insideChart[spanStart][spanEnd] = message;
+      } else {
+        insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].add(message);
+      } 
     } else {
-      insideChart[spanStart][spanEnd] = insideChart[spanStart][spanEnd].maximum(factor);
+      int[] dimsToRemove = VariableNumMap.unionAll(ruleTypeVar).getVariableNumsArray();
+      Tensor weights = factor.coerceToDiscrete().getWeights();
+      
+      Backpointers tensorBackpointers = new Backpointers();
+      Tensor message = weights.maxOutDimensions(dimsToRemove, tensorBackpointers);
 
-      // TODO: backpointers
-      /*
-      if (!backpointers[spanStart][spanEnd].containsKey(p)) {
-        backpointers[spanStart][spanEnd].put(p, new PriorityQueue<Backpointer>());
-      }
-      backpointers[spanStart][spanEnd].get(p).offer(new Backpointer(splitInd, rule, prob, ruleProb));
+      if (insideChart[spanStart][spanEnd] == null) {
+        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, message);
 
-      if (backpointers[spanStart][spanEnd].get(p).size() > beamWidth) {
-        backpointers[spanStart][spanEnd].get(p).poll();
+        long[] newKeyNums = tensorBackpointers.getNewKeyNums();
+        long[] oldKeyNums = tensorBackpointers.getOldKeyNums();
+        long[] entryBackpointers = backpointers[spanStart][spanEnd];
+        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
+        Arrays.fill(entryBackpointers, Integer.MIN_VALUE);
+        Arrays.fill(currentSplit, Integer.MIN_VALUE);
+
+        // Negative split indexes are used to represent terminal rules.
+        int splitInd = -1 * (spanStart * numTerminals + spanEnd + 1); 
+        for (int i = 0; i < newKeyNums.length; i++) {
+          int nonterminalNum = (int) newKeyNums[i];
+          entryBackpointers[nonterminalNum] = oldKeyNums[i];
+          currentSplit[nonterminalNum] = splitInd;
+        }
+      } else {
+        Tensor current = insideChart[spanStart][spanEnd].coerceToDiscrete().getWeights();
+        Tensor combined = message.elementwiseMaximum(current);
+        insideChart[spanStart][spanEnd] = new TableFactor(parentVar, combined);
+
+        long[] entryBackpointers = backpointers[spanStart][spanEnd];
+        int[] currentSplit = splitBackpointers[spanStart][spanEnd];
+        double[] messageValues = message.getValues();
+        // Negative split indexes are used to represent terminal rules.
+        int splitInd = -1 * (spanStart * numTerminals + spanEnd + 1); 
+
+        for (int i = 0; i < messageValues.length; i++) {
+          int nonterminalNum = (int) message.indexToKeyNum(i);
+          double curVal = current.get(nonterminalNum);
+          double msgVal = messageValues[i];
+          
+          if (msgVal > curVal) {
+            entryBackpointers[nonterminalNum] = tensorBackpointers.getBackpointer(nonterminalNum);
+            currentSplit[nonterminalNum] = splitInd;
+          }
+        }
       }
-      */
     }
   }
 
@@ -339,6 +364,7 @@ public class CfgParseChart {
   public CfgParseTree getBestParseTreeWithSpan(Object root, int spanStart,
       int spanEnd) {
     Preconditions.checkState(!sumProduct);
+    // System.out.println(root);
 
     Assignment rootAssignment = parentVar.outcomeArrayToAssignment(root); 
     int rootNonterminalNum = parentVar.assignmentToIntArray(rootAssignment)[0];
@@ -347,17 +373,22 @@ public class CfgParseChart {
     if (prob == 0.0) {
       return null;
     }
-
-    if (spanStart == spanEnd) {
-      // TODO: handle the terminal case correctly for
-      // multi-word terminals and the probabilities.
+    
+    int splitInd = splitBackpointers[spanStart][spanEnd][rootNonterminalNum];
+    if (splitInd < 0) {
+      long terminalKey = backpointers[spanStart][spanEnd][rootNonterminalNum];
+      
+      // This is a really sucky way to transform the keys back to objects.
+      VariableNumMap vars = parentVar.union(ruleTypeVar);
+      int[] dimKey = TableFactor.zero(vars).getWeights().keyNumToDimKey(terminalKey);
+      Assignment a = vars.intArrayToAssignment(dimKey);
+      Object ruleType = a.getValue(ruleTypeVar.getOnlyVariableNum());
+      
       List<Object> terminalList = Lists.newArrayList();
       terminalList.addAll(terminals.subList(spanStart, spanStart + 1));
-      return new CfgParseTree(root, null, terminalList, 1.0, spanStart, spanEnd);
+      return new CfgParseTree(root, ruleType, terminalList, prob, spanStart, spanEnd);
     } else {
-      int splitInd = splitBackpointers[spanStart][spanEnd][rootNonterminalNum];
       long binaryRuleKey = backpointers[spanStart][spanEnd][rootNonterminalNum];
-
       int[] binaryRuleComponents = binaryRuleExpectations.coerceToDiscrete()
           .getWeights().keyNumToDimKey(binaryRuleKey);
 
@@ -368,7 +399,10 @@ public class CfgParseChart {
 
       CfgParseTree leftTree = getBestParseTreeWithSpan(leftRoot, spanStart, spanStart + splitInd);
       CfgParseTree rightTree = getBestParseTreeWithSpan(rightRoot, spanStart + splitInd + 1, spanEnd);
-
+      
+      Preconditions.checkState(leftTree != null);
+      Preconditions.checkState(rightTree != null);
+      
       return new CfgParseTree(root, ruleType, leftTree, rightTree, prob);
     }
   }

@@ -177,6 +177,10 @@ public class StaticAnalysis {
       return false;
     }
   }
+  
+  public static Type inferType(Expression2 expression, Map<String, String> typeReplacements) {
+    return inferType(expression, Type.createAtomic("unknown"), typeReplacements);
+  }
 
   /**
    * Fairly hacky implementation of type inference. Expects 
@@ -191,9 +195,10 @@ public class StaticAnalysis {
    * @param typeReplacements
    * @return
    */
-  public static Type inferType(Expression2 expression, Map<String, String> typeReplacements) {
+  public static Type inferType(Expression2 expression, Type type, Map<String, String> typeReplacements) {
     Map<Integer, Type> subexpressionTypeMap = Maps.newHashMap();
     initializeSubexpressionTypeMap(expression, subexpressionTypeMap);
+    updateType(0, type, subexpressionTypeMap, expression);
     ScopeSet scopes = getScopes(expression);
 
     boolean updated = true;
@@ -330,7 +335,7 @@ public class StaticAnalysis {
     }
   }
 
-  private static Type unify(Type t1, Type t2) {
+  public static Type unify(Type t1, Type t2) {
     if (t1.toString().equals("unknown")) {
       return t2;
     } else if (t2.toString().equals("unknown")) {

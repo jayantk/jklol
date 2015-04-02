@@ -39,7 +39,7 @@ import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 
-public class AlignmentModel implements Serializable {
+public class AlignmentModel implements Serializable, AlignmentModelInterface {
   private static final long serialVersionUID = 1L;
 
   private final DynamicFactorGraph factorGraph;

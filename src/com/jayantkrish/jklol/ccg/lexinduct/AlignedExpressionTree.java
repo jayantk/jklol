@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -7,6 +9,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
 public class AlignedExpressionTree {
@@ -85,6 +89,10 @@ public class AlignedExpressionTree {
   public String getWord() {
     return word;
   }
+  
+  public boolean isLeaf() {
+    return word != null;
+  }
 
   public AlignedExpressionTree getLeft() {
     return left;
@@ -125,46 +133,6 @@ public class AlignedExpressionTree {
       right.getWordAlignmentsHelper(map);
     }
   }
-
-  // These methods don't do the right thing in terms of 
-  // generating the type specification of the logical forms.
-  /*
-    public AlignmentTree generateCcgCategories() {
-      return generateCcgCategoriesHelper(Collections.<AlignmentTree>emptyList());
-    }
-
-    private AlignmentTree generateCcgCategoriesHelper(List<AlignmentTree> argumentStack) {
-      if (lefts.size() == 0) {
-        int[] argumentTypeSpec = new int[argumentStack.size()];
-        for (int i = 0; i < argumentStack.size(); i++) {
-          int numUnboundArgs = 0;
-          Expression arg = argumentStack.get(i).getExpression();
-          if (arg instanceof LambdaExpression) {
-            numUnboundArgs = ((LambdaExpression) arg).getArguments().size();
-          }
-          argumentTypeSpec[argumentStack.size() - (1 + i)] = numUnboundArgs;
-        }
-
-        return new AlignmentTree(var, expression, numAppliedArguments, argumentTypeSpec,
-            possibleSpanStarts, possibleSpanEnds, lefts, rights, wordVar, wordActiveVar, word);
-
-      } else {
-        Preconditions.checkArgument(lefts.size() == 1);
-        AlignmentTree left = lefts.get(0);
-        AlignmentTree right = rights.get(0);
-
-        AlignmentTree newLeft = left.generateCcgCategoriesHelper(Collections.<AlignmentTree>emptyList());
-
-        List<AlignmentTree> newArgs = Lists.newArrayList(argumentStack);
-        newArgs.add(newLeft);        
-        AlignmentTree newRight = right.generateCcgCategoriesHelper(newArgs);
-
-        return new AlignmentTree(var, expression, numAppliedArguments, null,
-            possibleSpanStarts, possibleSpanEnds, Arrays.asList(newLeft),
-            Arrays.asList(newRight), wordVar, wordActiveVar, word);
-      }
-    }
-   */
 
   @Override
   public String toString() {
@@ -243,6 +211,11 @@ public class AlignedExpressionTree {
     public int getSpanEnd() {
       return spanEnd;
     }
+    
+    @Override
+    public String toString() {
+      return "[" + expression + " " + spanStart + "," + spanEnd + "]";
+    }
 
     @Override
     public int hashCode() {
@@ -250,6 +223,8 @@ public class AlignedExpressionTree {
       int result = 1;
       result = prime * result + ((expression == null) ? 0 : expression.hashCode());
       result = prime * result + numAppliedArgs;
+      result = prime * result + spanEnd;
+      result = prime * result + spanStart;
       result = prime * result + ((word == null) ? 0 : word.hashCode());
       return result;
     }
@@ -269,6 +244,10 @@ public class AlignedExpressionTree {
       } else if (!expression.equals(other.expression))
         return false;
       if (numAppliedArgs != other.numAppliedArgs)
+        return false;
+      if (spanEnd != other.spanEnd)
+        return false;
+      if (spanStart != other.spanStart)
         return false;
       if (word == null) {
         if (other.word != null)

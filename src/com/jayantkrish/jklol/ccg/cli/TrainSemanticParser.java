@@ -36,6 +36,7 @@ import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel;
+import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModelInterface;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
@@ -99,9 +100,9 @@ public class TrainSemanticParser extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    AlignmentModel aligner = null;
+    AlignmentModelInterface aligner = null;
     if (options.has(alignmentModel)) {
-      aligner = IoUtils.readSerializedObject(options.valueOf(alignmentModel), AlignmentModel.class);
+      aligner = IoUtils.readSerializedObject(options.valueOf(alignmentModel), AlignmentModelInterface.class);
     }
     
     List<CcgExample> trainingExamples = null; 
@@ -172,7 +173,7 @@ public class TrainSemanticParser extends AbstractCli {
     return examples;
   }
 
-  public static List<CcgExample> readCcgExamples(String filename, AlignmentModel alignmentModel) {
+  public static List<CcgExample> readCcgExamples(String filename, AlignmentModelInterface alignmentModel) {
     List<String> lines = IoUtils.readLines(filename);
     List<CcgExample> examples = Lists.newArrayList();
     List<String> words = null;
@@ -191,8 +192,11 @@ public class TrainSemanticParser extends AbstractCli {
 
         List<Expression2> lexiconEntries = null;
         if (alignmentModel != null) {
-          AlignedExpressionTree tree = alignmentModel.getBestAlignmentCfg(
-              new AlignmentExample(words, ExpressionTree.fromExpression(expression)));
+          AlignedExpressionTree tree = alignmentModel.getBestAlignment(
+              new AlignmentExample(words, AlignmentLexiconInduction.expressionToExpressionTree(expression)));
+
+          System.out.println(words);
+          System.out.println(tree);
           
           Multimap<String, AlignedExpression> alignments = tree.getWordAlignments();
           lexiconEntries = Lists.newArrayList(Collections.nCopies(words.size(), ParametricCcgParser.SKIP_LF));
@@ -200,7 +204,7 @@ public class TrainSemanticParser extends AbstractCli {
             for (AlignedExpression alignedExp : alignments.get(words.get(j))) {
               if (alignedExp.getSpanStart() == j && alignedExp.getSpanEnd() == j + 1) {
                 lexiconEntries.set(j, alignedExp.getExpression()); 
-                System.out.println(words.get(j) + " " +  alignedExp.getExpression());
+                System.out.println(j + " " + words.get(j) + " " +  alignedExp.getExpression());
               }
             }
           }

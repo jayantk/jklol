@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -408,6 +409,10 @@ public class ExpressionTree {
     return rootExpression;
   }
   
+  public ExpressionNode getExpressionNode() {
+    return new ExpressionNode(rootExpression, numAppliedArguments);
+  }
+  
   public int getNumAppliedArguments() {
     return numAppliedArguments;
   }
@@ -443,6 +448,21 @@ public class ExpressionTree {
     }
   }
   
+  /**
+   * Gets all of the expressions contained in this tree and 
+   * its subtrees.
+   * 
+   * @param accumulator
+   */
+  public void getAllExpressionNodes(Collection<ExpressionNode> accumulator) {
+    accumulator.add(new ExpressionNode(rootExpression, numAppliedArguments));
+
+    for (int i = 0; i < lefts.size(); i++) {
+      lefts.get(i).getAllExpressionNodes(accumulator);
+      rights.get(i).getAllExpressionNodes(accumulator);
+    }
+  }
+
   /**
    * Returns a new expression tree with the same structure as this one,
    * where {@code generator} has been applied to generate feature vectors
@@ -489,6 +509,59 @@ public class ExpressionTree {
     for (int i = 0; i < tree.lefts.size(); i++) {
       toStringHelper(tree.lefts.get(i), sb, depth + 2);      
       toStringHelper(tree.rights.get(i), sb, depth + 2);
+    }
+  }
+  
+  public static class ExpressionNode implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private final Expression2 expression;
+    private final int numAppliedArguments;
+    
+    public ExpressionNode(Expression2 expression, int numAppliedArguments) {
+      this.expression = Preconditions.checkNotNull(expression);
+      this.numAppliedArguments = numAppliedArguments;
+    }
+
+    public Expression2 getExpression() {
+      return expression;
+    }
+
+    public int getNumAppliedArguments() {
+      return numAppliedArguments;
+    }
+
+    @Override
+    public String toString() {
+      return numAppliedArguments + ":" + expression;
+    }
+    
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((expression == null) ? 0 : expression.hashCode());
+      result = prime * result + numAppliedArguments;
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      ExpressionNode other = (ExpressionNode) obj;
+      if (expression == null) {
+        if (other.expression != null)
+          return false;
+      } else if (!expression.equals(other.expression))
+        return false;
+      if (numAppliedArguments != other.numAppliedArguments)
+        return false;
+      return true;
     }
   }
 }

@@ -247,6 +247,10 @@ public class CfgParseChart {
   public boolean getSumProduct() {
     return sumProduct;
   }
+  
+  public double[] getInsideEntriesArray(int spanStart, int spanEnd) {
+    return insideChart[spanStart][spanEnd];
+  }
 
   /**
    * Get the inside unnormalized probabilities over productions at a particular
@@ -256,6 +260,10 @@ public class CfgParseChart {
     Tensor entries = new DenseTensor(parentVar.getVariableNumsArray(),
         parentVar.getVariableSizes(), insideChart[spanStart][spanEnd]);
     return new TableFactor(parentVar, entries);
+  }
+  
+  public double[] getOutsideEntriesArray(int spanStart, int spanEnd) {
+    return insideChart[spanStart][spanEnd];
   }
 
   /**

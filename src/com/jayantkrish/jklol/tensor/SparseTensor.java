@@ -903,18 +903,22 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     double[] resultValues = new double[relabeled.values.length];
 
     int resultInd = 0;
-    for (int i = 0; i < relabeled.values.length; i++) {
+    long[] relabeledKeyNums = relabeled.keyNums;
+    double[] relabeledValues = relabeled.values;
+    int relabeledValuesLength = relabeled.values.length;
+    for (int i = 0; i < relabeledValuesLength; i++) {
+      long relabeledKeyNumI = relabeledKeyNums[i];
       if (i != 0 && resultInd > 0 &&
-          (relabeled.keyNums[i] / keyNumDenominator) == resultKeyInts[resultInd - 1]) {
+          (relabeledKeyNumI / keyNumDenominator) == resultKeyInts[resultInd - 1]) {
         // This key maps to the same entry as the previous key.
         if (useSum) {
-          resultValues[resultInd - 1] += relabeled.values[i];
+          resultValues[resultInd - 1] += relabeledValues[i];
         } else {
           double resultVal = resultValues[resultInd - 1];
-          double relabeledVal = relabeled.values[i];
+          double relabeledVal = relabeledValues[i];
           if (relabeledVal > resultVal) {
             resultValues[resultInd - 1] = relabeledVal;
-            backpointerKeyInts[resultInd - 1] = relabeled.keyNums[i];
+            backpointerKeyInts[resultInd - 1] = relabeledKeyNumI;
           }
         }
       } else {
@@ -924,33 +928,29 @@ public class SparseTensor extends AbstractTensor implements Serializable {
           resultInd--;
         }
 
-        resultKeyInts[resultInd] = relabeled.keyNums[i] / keyNumDenominator;
-        backpointerKeyInts[resultInd] = relabeled.keyNums[i];
-        resultValues[resultInd] = relabeled.values[i];
+        resultKeyInts[resultInd] = relabeledKeyNumI / keyNumDenominator;
+        backpointerKeyInts[resultInd] = relabeledKeyNumI;
+        resultValues[resultInd] = relabeledValues[i];
         resultInd++;
       }
 
       int prevIndex = resultInd - 1;
       if (!useSum && resultValues[prevIndex] < 0.0) {
         // Ensure that, if values is negative, we include missing keys
-        // in the
-        // maximization.
-        long prevKeyNum = relabeled.keyNums[i] - 1;
-        long nextKeyNum = relabeled.keyNums[i] + 1;
+        // in the maximization.
+        long prevKeyNum = relabeledKeyNumI - 1;
+        long nextKeyNum = relabeledKeyNumI + 1;
 
-        if (i > 0 && relabeled.keyNums[i - 1] != prevKeyNum
+        if (i > 0 && relabeledKeyNums[i - 1] != prevKeyNum
             && prevKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
           // prevKeyNum is not in relabeled, but has a higher value
-          // than the
-          // current key.
+          // than the current key.
           resultValues[prevIndex] = 0.0;
           backpointerKeyInts[prevIndex] = prevKeyNum;
-        } else if (i + 1 < relabeled.keyNums.length && relabeled.keyNums[i + 1] != nextKeyNum
+        } else if (i + 1 < relabeledValuesLength && relabeledKeyNums[i + 1] != nextKeyNum
             && nextKeyNum / keyNumDenominator == resultKeyInts[prevIndex]) {
           // nextKeyNum is not in relabeled, but has a higher value
-          // than the
-          // current key.
-          // Delete the current key from the tensor.
+          // than the current key. Delete the current key from the tensor.
           resultValues[prevIndex] = 0.0;
           backpointerKeyInts[prevIndex] = nextKeyNum;
         }
@@ -959,8 +959,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
     if (backpointers != null) {
       // backpointerKeyInts needs to have the inverse dimension
-      // relabeling
-      // applied to it.
+      // relabeling applied to it.
       long[] transformedBackpointers = transformKeyNums(backpointerKeyInts, relabeled.indexOffsets,
           this.indexOffsets, inversionPermutation);
       backpointers.setBackpointers(resultKeyInts, transformedBackpointers, resultInd, this);

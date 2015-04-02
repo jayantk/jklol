@@ -456,13 +456,22 @@ public class CfgParser implements Serializable {
    * Calculate a single inside probability entry.
    */
   private void calculateInside(int spanStart, int spanEnd, CfgParseChart chart) {
+    double[] binaryRuleValues = binaryDistributionWeights.getValues();
+    double[] newValues = new double[binaryRuleValues.length];
+    
+    int leftIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), leftVar.getOnlyVariableNum());
+    int rightIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), rightVar.getOnlyVariableNum());
+    
     for (int i = 0; i < spanEnd - spanStart; i++) {
-      Factor left = chart.getInsideEntries(spanStart, spanStart + i).relabelVariables(parentToLeft);
-      Factor right = chart.getInsideEntries(spanStart + i + 1, spanEnd).relabelVariables(
-          parentToRight);
+      double[] left = chart.getInsideEntriesArray(spanStart, spanStart + i);
+      double[] right = chart.getInsideEntriesArray(spanStart + i + 1, spanEnd);
 
-      Factor binaryRuleDistribution = binaryDistribution.product(left).product(right);
-      chart.updateInsideEntry(spanStart, spanEnd, i, binaryRuleDistribution);
+      for (int j = 0; j < newValues.length; j++) {
+        newValues[j] = binaryRuleValues[j] * left[binaryDistributionWeights.indexToPartialDimKey(j, leftIndex)]
+            * right[binaryDistributionWeights.indexToPartialDimKey(j, rightIndex)];
+      }
+
+      chart.updateInsideEntry(spanStart, spanEnd, i, newValues, binaryDistribution);
     }
   }
 
@@ -515,9 +524,6 @@ public class CfgParser implements Serializable {
         newValues[j] = binaryDistributionValues[j] * parentWeights.get(binaryDistributionWeights.indexToPartialDimKey(j, parentIndex));
         newValues[j] *= rightInside[binaryDistributionWeights.indexToPartialDimKey(j, rightIndex)];
       }
-
-      // Factor binaryDistributionWithParent = new TableFactor(binaryDistribution.getVars(), binaryDistributionWeights.replaceValues(newValues));;
-      // Factor leftOutside = new TableFactor(binaryDistribution.getVars(), binaryDistributionWeights.replaceValues(newValues));
       chart.updateOutsideEntry(spanStart, spanStart + i, newValues, binaryDistribution, leftVar);
       
       for (int j = 0; j < newValues.length; j++) {
@@ -530,7 +536,6 @@ public class CfgParser implements Serializable {
           newValues[j] = newValues[j] / rightInside[binaryDistributionWeights.indexToPartialDimKey(j, rightIndex)];
         }
       }
-
       chart.updateOutsideEntry(spanStart + i + 1, spanEnd, newValues, binaryDistribution, rightVar);
     }
   }

@@ -103,20 +103,16 @@ public class CfgParseChart {
    * the same type in the same entry.
    */
   public void updateInsideEntry(int spanStart, int spanEnd, int splitInd,
-      Factor binaryRuleProbabilities) {
+      double[] values, Factor binaryRuleProbabilities) {
     Preconditions.checkArgument(binaryRuleProbabilities.getVars().size() == 4);
     
     if (sumProduct) {
-      updateEntrySumProduct(insideChart[spanStart][spanEnd], binaryRuleProbabilities.coerceToDiscrete().getWeights().getValues(),
+      updateEntrySumProduct(insideChart[spanStart][spanEnd], values,
           binaryRuleProbabilities.coerceToDiscrete().getWeights(), parentVar.getOnlyVariableNum());
     } else {
-      int[] dimsToRemove = VariableNumMap.unionAll(leftVar, rightVar, ruleTypeVar).getVariableNumsArray();
       Tensor weights = binaryRuleProbabilities.coerceToDiscrete().getWeights();
-      
-      Backpointers tensorBackpointers = new Backpointers();
-      Tensor message = weights.maxOutDimensions(dimsToRemove, tensorBackpointers);
 
-      updateInsideEntryMaxProduct(spanStart, spanEnd, message, tensorBackpointers, splitInd);
+      updateInsideEntryMaxProduct(spanStart, spanEnd, values, weights, splitInd);
     }
   }
   
@@ -139,21 +135,23 @@ public class CfgParseChart {
     }
   }
 
-  private final void updateInsideEntryMaxProduct(int spanStart, int spanEnd, Tensor message,
-      Backpointers tensorBackpointers, int splitInd) {
+  private final void updateInsideEntryMaxProduct(int spanStart, int spanEnd, double[] values,
+      Tensor message, int splitInd) {
     double[] chartEntries = insideChart[spanStart][spanEnd];
-    updateEntryMaxProduct(chartEntries, message.getValues(), message, parentVar.getOnlyVariableNum());
+    updateEntryMaxProduct(chartEntries, values, message, parentVar.getOnlyVariableNum());
 
-    double[] messageValues = message.getValues();
+    int[] dimNums = message.getDimensionNumbers();
+    int parentIndex = Ints.indexOf(dimNums, parentVar.getOnlyVariableNum());
+
     long[] entryBackpointers = backpointers[spanStart][spanEnd];
     int[] currentSplit = splitBackpointers[spanStart][spanEnd];
-    for (int i = 0; i < messageValues.length; i++) {
-      int nonterminalNum = (int) message.indexToKeyNum(i);
+    for (int i = 0; i < values.length; i++) {      
+      int nonterminalNum = (int) message.indexToPartialDimKey(i, parentIndex);
       double curVal = chartEntries[nonterminalNum];
-      double msgVal = messageValues[i];
+      double msgVal = values[i];
 
       if (msgVal >= curVal) {
-        entryBackpointers[nonterminalNum] = tensorBackpointers.getBackpointer(nonterminalNum);
+        entryBackpointers[nonterminalNum] = message.indexToKeyNum(i);
         currentSplit[nonterminalNum] = splitInd;
       }
     }
@@ -171,15 +169,11 @@ public class CfgParseChart {
       updateEntrySumProduct(insideChart[spanStart][spanEnd], factor.coerceToDiscrete().getWeights().getValues(),
           factor.coerceToDiscrete().getWeights(), parentVar.getOnlyVariableNum());
     } else {
-      int[] dimsToRemove = VariableNumMap.unionAll(ruleTypeVar).getVariableNumsArray();
       Tensor weights = factor.coerceToDiscrete().getWeights();
-      
-      Backpointers tensorBackpointers = new Backpointers();
-      Tensor message = weights.maxOutDimensions(dimsToRemove, tensorBackpointers);
 
       // Negative split indexes are used to represent terminal rules.
       int splitInd = -1 * (spanStart * numTerminals + spanEnd + 1); 
-      updateInsideEntryMaxProduct(spanStart, spanEnd, message, tensorBackpointers, splitInd);
+      updateInsideEntryMaxProduct(spanStart, spanEnd, weights.getValues(), weights, splitInd);
     }
   }
 

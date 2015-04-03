@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -11,6 +12,7 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -19,7 +21,6 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.util.Assignment;
 
 public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmentModel> {
   private static final long serialVersionUID = 1L;
@@ -96,8 +97,16 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
   public void incrementSufficientStatistics(SufficientStatistics statistics,
       SufficientStatistics currentParameters, CfgParseChart chart, double count) {
-    terminalFactor.incrementSufficientStatisticsFromMarginal(statistics, currentParameters,
-        chart.getTerminalRuleExpectations(), Assignment.EMPTY, count, chart.getPartitionFunction());
+    DiscreteFactor terminalExpectations = chart.getTerminalRuleExpectations().coerceToDiscrete();
+    Iterator<Outcome> iter = terminalExpectations.outcomeIterator();
+    double partitionFunction = chart.getPartitionFunction();
+    
+    while (iter.hasNext()) {
+      Outcome o = iter.next();
+      terminalFactor.incrementSufficientStatisticsFromAssignment(statistics, currentParameters,
+          o.getAssignment(), o.getProbability() / partitionFunction);
+
+    }
   }
 
   @Override

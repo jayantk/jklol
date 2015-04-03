@@ -441,12 +441,14 @@ public class CfgParser implements Serializable {
    * parsing larger and larger spans of the sentence.
    */
   private void upwardChartPass(CfgParseChart chart) {
+    double[] newValues = new double[binaryDistributionWeights.getValues().length];
+
     // spanSize is the number of words *in addition* to the word under
     // spanStart.
     for (int spanSize = 1; spanSize < chart.chartSize(); spanSize++) {
       for (int spanStart = 0; spanStart + spanSize < chart.chartSize(); spanStart++) {
         int spanEnd = spanStart + spanSize;
-        calculateInside(spanStart, spanEnd, chart);
+        calculateInside(spanStart, spanEnd, chart, newValues);
       }
     }
     chart.setInsideCalculated();
@@ -455,9 +457,8 @@ public class CfgParser implements Serializable {
   /*
    * Calculate a single inside probability entry.
    */
-  private void calculateInside(int spanStart, int spanEnd, CfgParseChart chart) {
+  private void calculateInside(int spanStart, int spanEnd, CfgParseChart chart, double[] newValues) {
     double[] binaryRuleValues = binaryDistributionWeights.getValues();
-    double[] newValues = new double[binaryRuleValues.length];
     
     int leftIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), leftVar.getOnlyVariableNum());
     int rightIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), rightVar.getOnlyVariableNum());
@@ -515,23 +516,24 @@ public class CfgParser implements Serializable {
     int leftIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), leftVar.getOnlyVariableNum());
     int rightIndex = Ints.indexOf(binaryDistributionWeights.getDimensionNumbers(), rightVar.getOnlyVariableNum());
 
+    int length = newValues.length;
     double[] binaryDistributionValues = binaryDistributionWeights.getValues();
     for (int i = 0; i < spanEnd - spanStart; i++) {
       double[] leftInside = chart.getInsideEntriesArray(spanStart, spanStart + i);
       double[] rightInside = chart.getInsideEntriesArray(spanStart + i + 1, spanEnd);
 
-      for (int j = 0; j < newValues.length; j++) {
+      for (int j = 0; j < length; j++) {
         newValues[j] = binaryDistributionValues[j] * parentWeights.get(binaryDistributionWeights.indexToPartialDimKey(j, parentIndex));
         newValues[j] *= rightInside[binaryDistributionWeights.indexToPartialDimKey(j, rightIndex)];
       }
       chart.updateOutsideEntry(spanStart, spanStart + i, newValues, binaryDistribution, leftVar);
       
-      for (int j = 0; j < newValues.length; j++) {
+      for (int j = 0; j < length; j++) {
         newValues[j] *= leftInside[binaryDistributionWeights.indexToPartialDimKey(j, leftIndex)];
       }
       chart.updateBinaryRuleExpectations(newValues);
 
-      for (int j = 0; j < newValues.length; j++) {
+      for (int j = 0; j < length; j++) {
         if (newValues[j] != 0.0) {
           newValues[j] = newValues[j] / rightInside[binaryDistributionWeights.indexToPartialDimKey(j, rightIndex)];
         }

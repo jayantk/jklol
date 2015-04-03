@@ -58,6 +58,15 @@ public class CcgBeamSearchInference implements CcgInference {
   @Override
   public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log) {
+    // There's no reason to do beam search in this case:
+    ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
+        new SupertagChartCost(sentence.getSupertags()));
+    
+    return parser.parse(sentence, filter, log, maxParseTimeMillis,
+        maxChartSize, numThreads);
+    
+    // This code does beam search.
+    /*
     List<CcgParse> parses = beamSearch(parser, sentence, chartFilter, log);
 
     if (parses.size() > 0) {
@@ -65,6 +74,7 @@ public class CcgBeamSearchInference implements CcgInference {
     } else {
       return null;
     }
+    */
   }
   
   public List<CcgParse> beamSearch(CcgParser parser, SupertaggedSentence sentence,

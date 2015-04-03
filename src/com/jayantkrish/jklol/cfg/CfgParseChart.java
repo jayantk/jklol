@@ -8,14 +8,13 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.tensor.Backpointers;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * The "chart" of a CKY-style parser which enables efficient computations of
+ * The chart of a CKY-style parser which enables efficient computations of
  * feature expectations of the parser.
  * 
  * ParseChart also enables the computation of both marginals and max-marginals
@@ -124,7 +123,7 @@ public class CfgParseChart {
       entries[message.indexToPartialDimKey(i, parentIndex)] += messageValues[i];
     }
   }
-  
+
   private final void updateEntryMaxProduct(double[] entries, double[] messageValues,
       Tensor message, int varNum) {
     int[] dimNums = message.getDimensionNumbers();

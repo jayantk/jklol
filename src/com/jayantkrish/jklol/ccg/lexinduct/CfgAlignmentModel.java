@@ -1,10 +1,13 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
@@ -12,10 +15,14 @@ import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.util.Assignment;
 
 public class CfgAlignmentModel implements AlignmentModelInterface, Serializable {
   private static final long serialVersionUID = 1L;
@@ -101,8 +108,21 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     Set<ExpressionNode> expressions = Sets.newHashSet();
     example.getTree().getAllExpressionNodes(expressions);
     expressions.add(ParametricCfgAlignmentModel.SKIP_EXPRESSION);
+    
+    List<List<String>> words = Lists.newArrayList();
+    for (String word : example.getWords()) {
+      words.add(Arrays.asList(word));
+    }
 
-    VariableNumMap binaryRuleVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
+    // Build a new CFG parser restricted to these logical forms:
+    DiscreteVariable expressionVar = new DiscreteVariable("new-expressions", expressions);
+    DiscreteVariable wordVar = new DiscreteVariable("new-expressions", words);
+    VariableNumMap newLeftVar = VariableNumMap.singleton(leftVar.getOnlyVariableNum(), leftVar.getOnlyVariableName(), expressionVar);
+    VariableNumMap newRightVar = VariableNumMap.singleton(rightVar.getOnlyVariableNum(), rightVar.getOnlyVariableName(), expressionVar);
+    VariableNumMap newParentVar = VariableNumMap.singleton(parentVar.getOnlyVariableNum(), parentVar.getOnlyVariableName(), expressionVar);
+    VariableNumMap newTerminalVar = VariableNumMap.singleton(terminalVar.getOnlyVariableNum(), terminalVar.getOnlyVariableName(), wordVar);
+
+    VariableNumMap binaryRuleVars = VariableNumMap.unionAll(newLeftVar, newRightVar, newParentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
     for (ExpressionNode e : expressions) {
@@ -111,12 +131,27 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
       binaryRuleBuilder.setWeight(1.0, ParametricCfgAlignmentModel.SKIP_EXPRESSION, e,
           e, ParametricCfgAlignmentModel.SKIP_RULE);
     }
-    
+
     populateBinaryRuleDistribution(example.getTree(), binaryRuleBuilder);
     TableFactor binaryDistribution = binaryRuleBuilder.build();
+    
+    // Build a new terminal distribution over only these expressions.
+    VariableNumMap newVars = VariableNumMap.unionAll(newTerminalVar, newParentVar, ruleVar);
+    TableFactorBuilder newTerminalFactor = new TableFactorBuilder(newVars,
+        DenseTensorBuilder.getFactory());
+    for (List<String> word : words) {
+      Iterator<Outcome> iter = terminalFactor.outcomePrefixIterator(terminalVar.outcomeArrayToAssignment(word));
+      while (iter.hasNext()) {
+        Outcome o = iter.next();
+        Assignment a = o.getAssignment();
+        if (newVars.isValidAssignment(a)) {
+          newTerminalFactor.setWeight(a, o.getProbability());
+        }
+      }
+    }
 
-    return new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleVar,
-        binaryDistribution, terminalFactor, -1, false);
+    return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
+        binaryDistribution, newTerminalFactor.build(), -1, false);
   }
 
   private void populateBinaryRuleDistribution(ExpressionTree tree, TableFactorBuilder builder) {

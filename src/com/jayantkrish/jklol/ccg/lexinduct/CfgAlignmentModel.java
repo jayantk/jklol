@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.io.Serializable;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -15,7 +14,6 @@ import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
@@ -140,13 +138,10 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     TableFactorBuilder newTerminalFactor = new TableFactorBuilder(newVars,
         DenseTensorBuilder.getFactory());
     for (List<String> word : words) {
-      Iterator<Outcome> iter = terminalFactor.outcomePrefixIterator(terminalVar.outcomeArrayToAssignment(word));
-      while (iter.hasNext()) {
-        Outcome o = iter.next();
-        Assignment a = o.getAssignment();
-        if (newVars.isValidAssignment(a)) {
-          newTerminalFactor.setWeight(a, o.getProbability());
-        }
+      for (ExpressionNode expression : expressions) {
+        Assignment a = newVars.outcomeArrayToAssignment(word, expression, ParametricCfgAlignmentModel.TERMINAL);
+        double prob = terminalFactor.getUnnormalizedProbability(a);
+        newTerminalFactor.setWeight(a, prob);
       }
     }
 

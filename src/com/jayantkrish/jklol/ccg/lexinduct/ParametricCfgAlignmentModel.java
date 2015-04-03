@@ -98,6 +98,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public void incrementSufficientStatistics(SufficientStatistics statistics,
       SufficientStatistics currentParameters, CfgParseChart chart, double count) {
     DiscreteFactor terminalExpectations = chart.getTerminalRuleExpectations().coerceToDiscrete();
+    
     Iterator<Outcome> iter = terminalExpectations.outcomeIterator();
     double partitionFunction = chart.getPartitionFunction();
     

@@ -38,7 +38,7 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
     log.startTimer("e_step/compute_expectations");
     SufficientStatistics statistics = pam.getNewSufficientStatistics();
     pam.incrementSufficientStatistics(statistics, currentParameters, chart, 1.0);
-    log.startTimer("e_step/compute_expectations");
+    log.stopTimer("e_step/compute_expectations");
 
     return statistics;
   }

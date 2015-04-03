@@ -151,20 +151,8 @@ public class AlignmentLexiconInduction extends AbstractCli {
       model = pam.getModelFromParameters(trainedParameters);
     }
 
-    PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
-    for (AlignmentExample example : examples) {
-      System.out.println(example.getWords());
-      AlignedExpressionTree tree = model.getBestAlignment(example);
-      System.out.println(tree);
-      
-      List<LexiconEntry> generatedEntries = Lists.newArrayList();
-      generateCcgCategories(tree, generatedEntries);
-      
-      for (LexiconEntry entry : generatedEntries) {
-        alignments.incrementOutcome(entry.getWords(), entry, 1);
-      }
-    }
-    
+    PairCountAccumulator<List<String>, LexiconEntry> alignments = generateLexiconFromAlignmentModel(
+        model, examples, typeReplacements);
     for (List<String> words : alignments.keySet()) {
       System.out.println(words);
       for (LexiconEntry entry : alignments.getValues(words)) {
@@ -182,138 +170,24 @@ public class AlignmentLexiconInduction extends AbstractCli {
 
     IoUtils.serializeObjectToFile(model, options.valueOf(modelOutput));
   }
-
-  public void generateCcgCategories(AlignedExpressionTree tree, List<LexiconEntry> lexiconEntries) {
-    generateCcgCategoriesHelper(tree, Collections.<AlignedExpressionTree>emptyList(), lexiconEntries);
-  }
-
-  private void generateCcgCategoriesHelper(AlignedExpressionTree tree,
-      List<AlignedExpressionTree> argumentStack, List<LexiconEntry> lexiconEntries) {
-    if (tree.isLeaf()) {
-      Type type = Type.createAtomic("unknown");
-      List<Direction> argDirs = Lists.newArrayList();
-      for (int i = 0; i < argumentStack.size(); i++) {
-        Expression2 arg = argumentStack.get(i).getExpression();
-        Type argType = StaticAnalysis.inferType(arg, typeReplacements);
-        type = type.addArgument(argType);
-        
-        if (argumentStack.get(i).getSpanStarts()[0] < tree.getSpanStarts()[0]) {
-          argDirs.add(Direction.LEFT);
-        } else if (argumentStack.get(i).getSpanEnds()[0] > tree.getSpanEnds()[0]) {
-          argDirs.add(Direction.RIGHT);
-        } else {
-          // Unknown direction. This case shouldn't happen when decoding the CFG model.
-          argDirs.add(Direction.BOTH);
-        }
-      }
-
-      Type initialType = StaticAnalysis.inferType(tree.getExpression(), typeReplacements);
-      Type returnType = StaticAnalysis.inferType(tree.getExpression(), StaticAnalysis.unify(initialType, type), typeReplacements);;
-      List<Type> argumentTypes = Lists.newArrayList();
-      for (int i = 0; i < tree.getNumAppliedArguments(); i++) {
-        argumentTypes.add(returnType.getArgumentType());
-        returnType = returnType.getReturnType();
-      }
-      Collections.reverse(argumentTypes);
-      
-      // Build a syntactic category for the expression based on the 
-      // number of arguments it accepted in the sentence. Simultaneously
-      // generate its dependencies and head assignment.
-      String head = tree.getWord();
-      List<String> subjects = Lists.newArrayList();
-      List<Integer> argumentNums = Lists.newArrayList();
-      List<Integer> objects = Lists.newArrayList();
-      List<Set<String>> assignments = Lists.newArrayList();
-      assignments.add(Sets.newHashSet(head));
-      HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N:" + returnType + "{0}");
-      for (int i = 0; i < tree.getNumAppliedArguments(); i++) {
-        HeadedSyntacticCategory argSyntax = HeadedSyntacticCategory
-            .parseFrom("N:" + argumentTypes.get(i) + "{" + (i + 1) +"}");
-        syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
-
-        subjects.add(head);
-        argumentNums.add(i + 1);
-        objects.add(i + 1);
-        assignments.add(Collections.<String>emptySet());
-      }
-
-      CcgCategory ccgCategory = new CcgCategory(syntax, tree.getExpression(), subjects,
-            argumentNums, objects, assignments);
-      LexiconEntry entry = new LexiconEntry(Arrays.asList(tree.getWord()), ccgCategory);
-
-      lexiconEntries.add(entry);
-    } else {      
-      generateCcgCategoriesHelper(tree.getLeft(), Collections.<AlignedExpressionTree>emptyList(),
-          lexiconEntries);
-
-      List<AlignedExpressionTree> newArgs = Lists.newArrayList(argumentStack);
-      newArgs.add(tree.getLeft());
-      generateCcgCategoriesHelper(tree.getRight(), newArgs, lexiconEntries);
-    }
-  }
   
-  private static List<LexiconEntry> generateCcgLexicon(PairCountAccumulator<String, ExpressionNode> alignments,
+  public static PairCountAccumulator<List<String>, LexiconEntry> generateLexiconFromAlignmentModel(
+      AlignmentModelInterface model, Collection<AlignmentExample> examples,
       Map<String, String> typeReplacements) {
-    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-    List<String> words = Lists.newArrayList(alignments.keySet());
-    Collections.sort(words);
-    // TODO: eliminate word position.
-    for (String key : words) {
-      System.out.println(key + " (" + alignments.getTotalCount(key) + ")");
-      int wordLexEntryCount = 0;
-      for (ExpressionNode value : alignments.getValues(key)) {
-        // Assign each lexicon entry a unique predicate name for its
-        // head / dependencies
-        String head = key + "_" + wordLexEntryCount;
-        
-        // Generate separate syntactic categories for each unbound
-        // argument.
-        Type type = StaticAnalysis.inferType(value.getExpression(), typeReplacements);
+    PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
+    for (AlignmentExample example : examples) {
+      System.out.println(example.getWords());
+      AlignedExpressionTree tree = model.getBestAlignment(example);
+      System.out.println(tree);
 
-        Type returnType = type;
-        List<Type> argumentTypes = Lists.newArrayList();
-        for (int i = 0; i < value.getNumAppliedArguments(); i++) {
-          argumentTypes.add(returnType.getArgumentType());
-          returnType = returnType.getReturnType();
-        }
-        Collections.reverse(argumentTypes);
-
-        // Build a syntactic category for the expression based on the 
-        // number of arguments it accepted in the sentence. Simultaneously
-        // generate its dependencies and head assignment.
-        List<String> subjects = Lists.newArrayList();
-        List<Integer> argumentNums = Lists.newArrayList();
-        List<Integer> objects = Lists.newArrayList();
-        List<Set<String>> assignments = Lists.newArrayList();
-        assignments.add(Sets.newHashSet(head));
-        HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N:" + returnType + "{0}");
-        for (int i = 0; i < value.getNumAppliedArguments(); i++) {
-          HeadedSyntacticCategory argSyntax = HeadedSyntacticCategory
-              .parseFrom("N:" + argumentTypes.get(i) + "{" + (i + 1) +"}");
-          syntax = syntax.addArgument(argSyntax, Direction.BOTH, 0);
-
-          subjects.add(head);
-          argumentNums.add(i + 1);
-          objects.add(i + 1);
-          assignments.add(Collections.<String>emptySet());
-        }
-
-        CcgCategory ccgCategory = new CcgCategory(syntax, value.getExpression(), subjects,
-            argumentNums, objects, assignments);
-        LexiconEntry entry = new LexiconEntry(Arrays.asList(key), ccgCategory);
-        lexiconEntries.add(entry);
-        
-        double count = alignments.getCount(key, value);
-        System.out.println("  " + count + " : " + entry);
-        
-        wordLexEntryCount++;
+      for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
+        alignments.incrementOutcome(entry.getWords(), entry, 1);
       }
     }
-
-    return lexiconEntries;
+    return alignments;
   }
 
-  private static FeatureVectorGenerator<Expression2> buildFeatureVectorGenerator(
+  public static FeatureVectorGenerator<Expression2> buildFeatureVectorGenerator(
       List<AlignmentExample> examples, Collection<String> tokensToIgnore) {
     Set<Expression2> allExpressions = Sets.newHashSet();
     for (AlignmentExample example : examples) {
@@ -333,7 +207,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     return newExamples;
   }
 
-  private static List<AlignmentExample> readTrainingData(String trainingDataFile) {
+  public static List<AlignmentExample> readTrainingData(String trainingDataFile) {
     List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile, null);
     List<AlignmentExample> examples = Lists.newArrayList();
 

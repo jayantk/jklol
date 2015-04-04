@@ -59,6 +59,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   private OptionSpec<String> trainingDataFolds;
   private OptionSpec<String> outputDir;
   
+  private OptionSpec<String> foldNameOpt;
+  
   // Configuration for the alignment model
   private OptionSpec<Integer> emIterations;
   private OptionSpec<Double> smoothingParam;
@@ -67,8 +69,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   private OptionSpec<Integer> sgdIterations;
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Double> l2Regularization;
+  private OptionSpec<String> additionalLexicon;
 
-  
   // TODO: this shouldn't be hard coded. Replace with 
   // an input unification lattice for types.
   private static final Map<String, String> typeReplacements = Maps.newHashMap();
@@ -93,6 +95,9 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     trainingDataFolds = parser.accepts("trainingDataFolds").withRequiredArg().ofType(String.class).required();
     outputDir = parser.accepts("outputDir").withRequiredArg().ofType(String.class).required();
     
+    // Optional option to only run one fold
+    foldNameOpt = parser.accepts("foldName").withRequiredArg().ofType(String.class);
+    
     // Optional arguments
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
@@ -100,6 +105,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     sgdIterations = parser.accepts("sgdIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     l2Regularization = parser.accepts("l2Regularization").withRequiredArg().ofType(Double.class).defaultsTo(0.0);
+    additionalLexicon = parser.accepts("additionalLexicon").withRequiredArg().ofType(String.class);
   }
 
   @Override
@@ -108,14 +114,21 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     List<List<AlignmentExample>> folds = Lists.newArrayList();
     readFolds(options.valueOf(trainingDataFolds), foldNames, folds);
     
+    List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
+    
     FoldRunner runner = new FoldRunner(foldNames, folds, options.valueOf(emIterations),
         options.valueOf(smoothingParam), options.valueOf(sgdIterations),
-        options.valueOf(l2Regularization), options.valueOf(beamSize), options.valueOf(outputDir));
+        options.valueOf(l2Regularization), options.valueOf(beamSize), additionalLexiconEntries,
+        options.valueOf(outputDir));
     
     // MapReduceExecutor executor = new LocalMapReduceExecutor(1, 1);
     List<SemanticParserLoss> losses = Lists.newArrayList();
-    for (String foldName : foldNames) {
-      losses.add(runner.apply(foldName));
+    if (options.has(foldNameOpt)) {
+      losses.add(runner.apply(options.valueOf(foldNameOpt)));
+    } else {
+      for (String foldName : foldNames) {
+        losses.add(runner.apply(foldName));
+      }
     }
     
     SemanticParserLoss overall = new SemanticParserLoss(0, 0, 0);
@@ -134,7 +147,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
       int emIterations, double smoothingAmount, int sgdIterations, double l2Regularization, int beamSize,
-      String lexiconOutputFilename, String alignmentModelOutputFilename,
+      List<String> additionalLexiconEntries, String lexiconOutputFilename, String alignmentModelOutputFilename,
       String parserModelOutputFilename) {
     
     // Train the alignment model.
@@ -148,6 +161,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Log the generated lexicon and model.
     Collection<LexiconEntry> allEntries = alignments.getKeyValueMultimap().values();  
     List<String> lexiconEntryLines = Lists.newArrayList();
+    lexiconEntryLines.addAll(additionalLexiconEntries);
     for (LexiconEntry lexiconEntry : allEntries) {
       lexiconEntryLines.add(lexiconEntry.toCsvString());
     }
@@ -204,7 +218,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Get the trained model.
     return pam.getModelFromParameters(trainedParameters);
   }
-  
+
   private static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,
       List<String> lexiconEntryLines, List<String> ruleEntries, CcgFeatureFactory featureFactory,
       CcgInference inferenceAlgorithm, int iterations, double l2Penalty) {
@@ -285,11 +299,12 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     private final int sgdIterations;
     private final double l2Regularization;
     private final int beamSize;
+    private final List<String> additionalLexiconEntries;
     private final String outputDir;
     
     public FoldRunner(List<String> foldNames, List<List<AlignmentExample>> folds,
         int emIterations, double smoothing, int sgdIterations, double l2Regularization,
-        int beamSize, String outputDir) {
+        int beamSize, List<String> additionalLexiconEntries, String outputDir) {
       this.foldNames = foldNames;
       this.folds = folds;
       
@@ -298,6 +313,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       this.sgdIterations = sgdIterations;
       this.l2Regularization = l2Regularization;
       this.beamSize = beamSize;
+      this.additionalLexiconEntries = additionalLexiconEntries;
       this.outputDir = outputDir;
     }
 
@@ -322,8 +338,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       // System.setOut()
       
       return runFold(trainingData, heldOut, emIterations, smoothing,
-          sgdIterations, l2Regularization, beamSize, lexiconOutputFilename,
-          alignmentModelOutputFilename, parserModelOutputFilename);
+          sgdIterations, l2Regularization, beamSize, additionalLexiconEntries,
+          lexiconOutputFilename, alignmentModelOutputFilename, parserModelOutputFilename);
     }
   }
 }

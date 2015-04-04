@@ -40,6 +40,7 @@ with open(entity_types, 'r') as f:
         for entity_name in entity_names:    
             print entity_format % {'name' : entity_name, 'entity' : entity}
 
+'''
 with open(predicate_types, 'r') as f:
     for line in f:
         parts = line.split(":")
@@ -57,3 +58,4 @@ with open(predicate_types, 'r') as f:
                 for name in names:
                     print pattern[1] % {'name' : name, 'predicate' : predicate}
 
+'''

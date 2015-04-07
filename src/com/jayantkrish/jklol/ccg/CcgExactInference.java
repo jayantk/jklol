@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
@@ -52,7 +51,7 @@ public class CcgExactInference implements CcgInference {
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      List<Expression2> lexiconEntries, Set<DependencyStructure> observedDependencies,
+      LexiconEntryLabels lexiconEntries, Set<DependencyStructure> observedDependencies,
       Expression2 observedLogicalForm) {
     Preconditions.checkArgument(observedDependencies == null && observedLogicalForm == null);
 

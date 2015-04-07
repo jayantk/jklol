@@ -1,7 +1,11 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.IOException;
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -63,6 +67,32 @@ public class LexiconEntry {
     return new LexiconEntry(words, category);
   }
   
+  public static LexiconEntry parseFromJson(String line) {
+    try {
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode root = mapper.readTree(line);
+      return LexiconEntry.parseFromJson(root);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
+  public static LexiconEntry parseFromJson(JsonNode root) {
+    JsonNode wordsNode = root.get("words");
+    Preconditions.checkState(wordsNode.isArray());
+    List<String> words = Lists.newArrayList();
+    for (JsonNode word : wordsNode) {
+      words.add(word.asText().intern());
+    }
+
+    JsonNode ccgCategoryNode = root.get("ccgCategory");
+    CcgCategory category = CcgCategory.parseFromJson(ccgCategoryNode);
+
+    return new LexiconEntry(words, category);
+  }
+  
   public static List<LexiconEntry> parseLexiconEntries(Iterable<String> unfilteredLexiconLines) {
     // Remove comments, which are lines that begin with "#".
     List<String> lexiconLines = Lists.newArrayList();
@@ -76,6 +106,17 @@ public class LexiconEntry {
     for (String lexiconLine : lexiconLines) {
       // Create the CCG category.
       lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLine));
+    }
+    return lexiconEntries;
+  }
+
+  public static List<LexiconEntry> parseLexiconEntriesJson(Iterable<String> lexiconLines) {
+    // Remove comments, which are lines that begin with "#".
+    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
+    for (String line : lexiconLines) {
+      if (!line.startsWith("#")) {
+        lexiconEntries.add(LexiconEntry.parseFromJson(line));
+      }
     }
     return lexiconEntries;
   }

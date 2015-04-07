@@ -320,7 +320,7 @@ public class CfgParseChart {
       Object ruleType = a.getValue(ruleTypeVar.getOnlyVariableNum());
       
       List<Object> terminalList = Lists.newArrayList();
-      terminalList.addAll(terminals.subList(spanStart, spanStart + 1));
+      terminalList.addAll(terminals.subList(spanStart, spanEnd + 1));
       return new CfgParseTree(root, ruleType, terminalList, prob, spanStart, spanEnd);
     } else {
       long binaryRuleKey = backpointers[spanStart][spanEnd][rootNonterminalNum];

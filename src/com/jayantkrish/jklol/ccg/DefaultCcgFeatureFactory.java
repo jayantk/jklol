@@ -182,9 +182,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
           terminalWordVar.union(ccgCategoryVar), lexiconIndicatorFactor);
 
       // Backoff features mapping words to syntactic categories (ignoring 
-      // semantics). The CCGbank lexicon does not contain multiple lexicon 
-      // entries for a single word with the same syntactic category but different 
-      // semantics, so these features are set to be ignored. 
+      // semantics). These features aren't very useful for semantic parsing. 
       VariableNumMap vars = terminalWordVar.union(terminalSyntaxVar); 
       ParametricFactor terminalSyntaxFactor = new ConstantParametricFactor(vars,
           TableFactor.logUnity(vars));

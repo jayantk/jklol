@@ -52,6 +52,7 @@ public class SemanticParserUtils {
 
         System.out.println("PREDICTED: " + lf);
         System.out.println("TRUE:      " + correctLf);
+        System.out.println("DEPS: " + parse.getAllDependencies());
         System.out.println("CORRECT: " + correct);
 
         numCorrect += correct;

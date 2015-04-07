@@ -1,11 +1,15 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -169,6 +173,67 @@ public class CcgCategory implements Serializable {
             categoryParts[0]);
         int objectVarNum = relabeling.get(originalVarNum);
         objects.add(objectVarNum);
+      }
+    }
+
+    return new CcgCategory(syntax, logicalForm, subjects, argumentNumbers, objects, values);
+  }
+
+  public static CcgCategory parseFromJson(String json) {
+    ObjectMapper mapper = new ObjectMapper();
+
+    try {
+      return CcgCategory.parseFromJson(mapper.readTree(json));
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static CcgCategory parseFromJson(JsonNode node) {
+    // Parse the syntactic category and store it in canonical form.
+    HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom(node.get("syntax").asText());
+    Map<Integer, Integer> relabeling = Maps.newHashMap();
+    syntax = syntax.getCanonicalForm(relabeling);
+
+    Expression2 logicalForm = null;
+    String expressionString = node.get("logicalForm").asText();
+    if (expressionString.trim().length() > 0) {
+      logicalForm = ExpressionParser.expression2().parseSingleExpression(expressionString);
+    }
+
+    // Create an empty assignment to each variable in the syntactic
+    // category.
+    List<Set<String>> values = Lists.newArrayList();
+    for (int i = 0; i < syntax.getUniqueVariables().length; i++) {
+      values.add(Sets.<String> newHashSet());
+    }
+    
+    // Parse assignments, if any are given.
+    if (node.has("assignments")) {
+      for (JsonNode assignment : node.get("assignments")) {
+        int varNum = assignment.get("num").asInt();
+        String value = assignment.get("value").asText().intern();
+        values.get(relabeling.get(varNum)).add(value);
+      }
+    }
+    
+    // Create empty set of unfilled dependencies.
+    List<String> subjects = Lists.newArrayList();
+    List<Integer> argumentNumbers = Lists.newArrayList();
+    List<Integer> objects = Lists.newArrayList();
+
+    // Parse any unfilled dependencies, if given.
+    if (node.has("dependencies")) {
+      for (JsonNode dependency : node.get("dependencies")) {
+        String head = dependency.get("head").asText().intern();
+        int argNum = dependency.get("argNum").asInt();
+        int varNum = dependency.get("varNum").asInt();
+        
+        subjects.add(head);
+        argumentNumbers.add(argNum);
+        objects.add(relabeling.get(varNum));
       }
     }
 

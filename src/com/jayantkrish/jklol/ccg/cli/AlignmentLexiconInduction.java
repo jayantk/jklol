@@ -14,18 +14,13 @@ import joptsimple.OptionSpec;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
-import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
-import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentEmOracle;
@@ -34,7 +29,6 @@ import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModelInterface;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTokenFeatureGenerator;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
-import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -56,6 +50,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
   private OptionSpec<Integer> emIterations;
   
   private OptionSpec<Double> smoothingParam;
+  private OptionSpec<Integer> nGramLength;
   private OptionSpec<Void> noTreeConstraint;
   private OptionSpec<Void> printSearchSpace;
   private OptionSpec<Void> printParameters;
@@ -89,6 +84,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     // Optional arguments
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
+    nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     noTreeConstraint = parser.accepts("noTreeConstraint");
     printSearchSpace = parser.accepts("printSearchSpace");
     printParameters = parser.accepts("printParameters");
@@ -113,8 +109,8 @@ public class AlignmentLexiconInduction extends AbstractCli {
     
     AlignmentModelInterface model = null;
     if (options.has(useCfg)) {
-      ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-          examples, vectorGenerator);
+      ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
+          examples, vectorGenerator, options.valueOf(nGramLength));
       SufficientStatistics smoothing = pam.getNewSufficientStatistics();
       smoothing.increment(options.valueOf(smoothingParam));
 

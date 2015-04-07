@@ -89,7 +89,7 @@ public class CcgBeamSearchInference implements CcgInference {
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      List<Expression2> lexiconEntries, Set<DependencyStructure> observedDependencies,
+      LexiconEntryLabels lexiconEntries, Set<DependencyStructure> observedDependencies,
       Expression2 observedLogicalForm) {
 
     List<CcgParse> possibleParses = null;

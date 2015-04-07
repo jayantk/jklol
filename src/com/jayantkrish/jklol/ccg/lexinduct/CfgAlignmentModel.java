@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -32,18 +31,21 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   private final VariableNumMap rightVar;
   private final VariableNumMap parentVar;
   private final VariableNumMap ruleVar;
+  
+  private final int nGramLength;
 
   private static final double EPSILON = 0.0001;
   
   public CfgAlignmentModel(DiscreteFactor terminalFactor, VariableNumMap terminalVar,
       VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
-      VariableNumMap ruleVar) {
+      VariableNumMap ruleVar, int nGramLength) {
     this.terminalFactor = Preconditions.checkNotNull(terminalFactor);
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.leftVar = Preconditions.checkNotNull(leftVar);
     this.rightVar = Preconditions.checkNotNull(rightVar);
     this.parentVar = Preconditions.checkNotNull(parentVar);
     this.ruleVar = Preconditions.checkNotNull(ruleVar);
+    this.nGramLength = nGramLength;
   }
 
   public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
@@ -64,10 +66,13 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
       // Expression tree spans have an exclusive end index.
       int[] spanStarts = new int[] {t.getSpanStart()};
       int[] spanEnds = new int[] {t.getSpanEnd() + 1};
-      String word = (String) t.getTerminalProductions().get(0);
+      List<String> words = Lists.newArrayList();
+      for (Object o : t.getTerminalProductions()) {
+        words.add((String) o);
+      }
       Expression2 expression = ((ExpressionNode) t.getRoot()).getExpression();
       return AlignedExpressionTree.forTerminal(expression,
-          numAppliedArguments, spanStarts, spanEnds, word);
+          numAppliedArguments, spanStarts, spanEnds, words);
     } else {
       ExpressionNode parent = ((ExpressionNode) t.getRoot());
       ExpressionNode left = ((ExpressionNode) t.getLeft().getRoot());
@@ -106,15 +111,14 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     Set<ExpressionNode> expressions = Sets.newHashSet();
     example.getTree().getAllExpressionNodes(expressions);
     expressions.add(ParametricCfgAlignmentModel.SKIP_EXPRESSION);
-    
-    List<List<String>> words = Lists.newArrayList();
-    for (String word : example.getWords()) {
-      words.add(Arrays.asList(word));
-    }
+
+    Set<List<String>> words = Sets.newHashSet();
+    words.addAll(example.getNGrams(nGramLength));
+    words.retainAll(terminalVar.getDiscreteVariables().get(0).getValues());
 
     // Build a new CFG parser restricted to these logical forms:
     DiscreteVariable expressionVar = new DiscreteVariable("new-expressions", expressions);
-    DiscreteVariable wordVar = new DiscreteVariable("new-expressions", words);
+    DiscreteVariable wordVar = new DiscreteVariable("new-words", words);
     VariableNumMap newLeftVar = VariableNumMap.singleton(leftVar.getOnlyVariableNum(), leftVar.getOnlyVariableName(), expressionVar);
     VariableNumMap newRightVar = VariableNumMap.singleton(rightVar.getOnlyVariableNum(), rightVar.getOnlyVariableName(), expressionVar);
     VariableNumMap newParentVar = VariableNumMap.singleton(parentVar.getOnlyVariableNum(), parentVar.getOnlyVariableName(), expressionVar);
@@ -132,7 +136,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
 
     populateBinaryRuleDistribution(example.getTree(), binaryRuleBuilder);
     TableFactor binaryDistribution = binaryRuleBuilder.build();
-    
+
     // Build a new terminal distribution over only these expressions.
     VariableNumMap newVars = VariableNumMap.unionAll(newTerminalVar, newParentVar, ruleVar);
     TableFactorBuilder newTerminalFactor = new TableFactorBuilder(newVars,
@@ -144,7 +148,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
         newTerminalFactor.setWeight(a, prob);
       }
     }
-
+    
     return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
         binaryDistribution, newTerminalFactor.build(), -1, false);
   }

@@ -35,7 +35,7 @@ public class CcgExample {
   private final Expression2 logicalForm;
   // Lexicon entries to use in the correct parse. May be null,
   // in which case they are unobserved.
-  private final List<Expression2> lexiconEntries;
+  private final LexiconEntryLabels lexiconEntries;
 
   /**
    * Create a new training example for a CCG parser.
@@ -53,7 +53,7 @@ public class CcgExample {
    * @param lexiconEntries
    */
   public CcgExample(SupertaggedSentence sentence, Set<DependencyStructure> dependencies,
-      CcgSyntaxTree syntacticParse, Expression2 logicalForm, List<Expression2> lexiconEntries) {
+      CcgSyntaxTree syntacticParse, Expression2 logicalForm, LexiconEntryLabels lexiconEntries) {
     this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
@@ -121,7 +121,7 @@ public class CcgExample {
     return lexiconEntries != null;
   }
 
-  public List<Expression2> getLexiconEntries() {
+  public LexiconEntryLabels getLexiconEntries() {
     return lexiconEntries;
   }
 

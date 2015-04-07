@@ -85,12 +85,11 @@ public class AlignmentModelTrainingTest extends TestCase {
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());
       System.out.println(model.getBestAlignment(example));
-      System.out.println(model.getBestAlignmentCfg(example));
     }
   }
 
   public void testTrainingCfg() {
-    ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(examples, featureGenerator);
+    ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(examples, featureGenerator, 1);
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);

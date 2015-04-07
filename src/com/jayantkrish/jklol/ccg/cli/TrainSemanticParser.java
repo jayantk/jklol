@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
@@ -22,6 +21,7 @@ import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
+import com.jayantkrish.jklol.ccg.LexiconEntryLabels;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
@@ -33,11 +33,8 @@ import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
-import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree.AlignedExpression;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
-import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModelInterface;
-import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -190,27 +187,14 @@ public class TrainSemanticParser extends AbstractCli {
         SupertaggedSentence supertaggedSentence = ListSupertaggedSentence
             .createWithUnobservedSupertags(words, posTags);
 
-        List<Expression2> lexiconEntries = null;
+        LexiconEntryLabels lexiconEntryLabels = null;;
         if (alignmentModel != null) {
-          AlignedExpressionTree tree = alignmentModel.getBestAlignment(
-              new AlignmentExample(words, AlignmentLexiconInduction.expressionToExpressionTree(expression)));
-
-          System.out.println(words);
-          System.out.println(tree);
-          
-          Multimap<String, AlignedExpression> alignments = tree.getWordAlignments();
-          lexiconEntries = Lists.newArrayList(Collections.nCopies(words.size(), ParametricCcgParser.SKIP_LF));
-          for (int j = 0; j < words.size(); j++) {
-            for (AlignedExpression alignedExp : alignments.get(words.get(j))) {
-              if (alignedExp.getSpanStart() == j && alignedExp.getSpanEnd() == j + 1) {
-                lexiconEntries.set(j, alignedExp.getExpression()); 
-                System.out.println(j + " " + words.get(j) + " " +  alignedExp.getExpression());
-              }
-            }
-          }
+          AlignmentExample example = new AlignmentExample(words, AlignmentLexiconInduction.expressionToExpressionTree(expression));
+          AlignedExpressionTree tree = alignmentModel.getBestAlignment(example);
+          lexiconEntryLabels = tree.getLexiconEntryLabels(example);
         }
 
-        examples.add(new CcgExample(supertaggedSentence, null, null, expression, lexiconEntries));
+        examples.add(new CcgExample(supertaggedSentence, null, null, expression, lexiconEntryLabels));
       } else {
         words = Arrays.asList(line.split("\\s"));
       }

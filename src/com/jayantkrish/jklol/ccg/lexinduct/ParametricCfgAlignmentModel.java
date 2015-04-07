@@ -31,6 +31,8 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   private final VariableNumMap rightVar;
   private final VariableNumMap parentVar;
   private final VariableNumMap ruleVar;
+  
+  private final int nGramLength;
     
   public static final String TERMINAL = "terminal";
   public static final String FORWARD_APPLICATION = "fa";
@@ -40,7 +42,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
   public ParametricCfgAlignmentModel(ParametricFactor terminalFactor, VariableNumMap terminalVar,
       VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
-      VariableNumMap ruleVar) {
+      VariableNumMap ruleVar, int nGramLength) {
     this.terminalFactor = Preconditions.checkNotNull(terminalFactor);
 
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
@@ -48,18 +50,33 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     this.rightVar = Preconditions.checkNotNull(rightVar);
     this.parentVar = Preconditions.checkNotNull(parentVar);
     this.ruleVar = Preconditions.checkNotNull(ruleVar);
+    
+    this.nGramLength = nGramLength;
+  }
+  
+  public static ParametricCfgAlignmentModel buildAlignmentModelWithNGrams(Collection<AlignmentExample> examples,
+      FeatureVectorGenerator<Expression2> featureVectorGenerator, int nGramLength) {
+    Set<List<String>> terminalVarValues = Sets.newHashSet();
+    for (AlignmentExample example : examples) {
+      terminalVarValues.addAll(example.getNGrams(nGramLength));
+    }
+    return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues);
   }
   
   public static ParametricCfgAlignmentModel buildAlignmentModel(Collection<AlignmentExample> examples,
-      FeatureVectorGenerator<Expression2> featureVectorGenerator) {
+      FeatureVectorGenerator<Expression2> featureVectorGenerator, Set<List<String>> terminalVarValues) {
     Set<ExpressionNode> expressions = Sets.newHashSet();
-    Set<List<String>> terminalVarValues = Sets.newHashSet();
+
+    System.out.println("num terminals: " + terminalVarValues.size());
+    System.out.println(terminalVarValues);
+
+    int nGramLength = 0;
+    for (List<String> terminalVarValue : terminalVarValues) {
+      nGramLength = Math.max(nGramLength, terminalVarValue.size());
+    }
 
     for (AlignmentExample example : examples) {
       example.getTree().getAllExpressionNodes(expressions);
-      for (String word : example.getWords()) {
-        terminalVarValues.add(Arrays.asList(word));
-      }
     }
     expressions.add(SKIP_EXPRESSION);
 
@@ -81,7 +98,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         sparsityFactor, constantFactor);
 
     return new ParametricCfgAlignmentModel(terminalFactor, terminalVar, leftVar, rightVar,
-        parentVar, ruleVar);
+        parentVar, ruleVar, nGramLength);
   }
   
   @Override
@@ -92,13 +109,13 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   @Override
   public CfgAlignmentModel getModelFromParameters(SufficientStatistics parameters) {
     DiscreteFactor f = terminalFactor.getModelFromParameters(parameters).coerceToDiscrete();
-    return new CfgAlignmentModel(f, terminalVar, leftVar, rightVar, parentVar, ruleVar);
+    return new CfgAlignmentModel(f, terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength);
   }
 
   public void incrementSufficientStatistics(SufficientStatistics statistics,
       SufficientStatistics currentParameters, CfgParseChart chart, double count) {
     DiscreteFactor terminalExpectations = chart.getTerminalRuleExpectations().coerceToDiscrete();
-    
+
     Iterator<Outcome> iter = terminalExpectations.outcomeIterator();
     double partitionFunction = chart.getPartitionFunction();
     

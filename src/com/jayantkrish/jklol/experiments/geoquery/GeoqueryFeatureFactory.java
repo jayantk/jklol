@@ -1,26 +1,37 @@
-package com.jayantkrish.jklol.ccg;
+package com.jayantkrish.jklol.experiments.geoquery;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+import com.google.common.base.Joiner;
+import com.google.common.primitives.Ints;
+import com.jayantkrish.jklol.ccg.CcgCategory;
+import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
+import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.util.Assignment;
 
-public class SemanticParserFeatureFactory implements CcgFeatureFactory {
+public class GeoqueryFeatureFactory implements CcgFeatureFactory {
 
   private final boolean useDependencyFeatures;
   private final boolean useSyntacticFeatures;
   
-  public SemanticParserFeatureFactory(boolean useDependencyFeatures, boolean useSyntacticFeatures) {
+  public GeoqueryFeatureFactory(boolean useDependencyFeatures, boolean useSyntacticFeatures) {
     this.useDependencyFeatures = useDependencyFeatures;
     this.useSyntacticFeatures = useSyntacticFeatures;
   }
@@ -100,13 +111,55 @@ public class SemanticParserFeatureFactory implements CcgFeatureFactory {
   @Override
   public ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
-      DiscreteFactor lexiconIndicatorFactor) {
+      DiscreteFactor lexiconIndicatorFactor, Collection<LexiconEntry> lexiconEntries) {
     // Features for mapping words to ccg categories (which include both 
     // syntax and semantics). 
-    ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(
+    ParametricFactor terminalIndicatorFactor = new IndicatorLogLinearFactor(
         terminalWordVar.union(ccgCategoryVar), lexiconIndicatorFactor);
+    
+    // Additional features that generalize across lexicon entries.
+    VariableNumMap terminalVars = terminalWordVar.union(ccgCategoryVar);
+    int varNum = Ints.max(VariableNumMap.unionAll(terminalWordVar, ccgCategoryVar).getVariableNumsArray()) + 1;
+    DiscreteVariable featureNames = new DiscreteVariable("featureVar", Arrays.asList("entity-name-match"));
+    VariableNumMap featureVar = VariableNumMap.singleton(varNum, "lexiconFeatures", featureNames);
+    TableFactorBuilder featureBuilder = new TableFactorBuilder(terminalVars.union(featureVar),
+        SparseTensorBuilder.getFactory());
+    for (LexiconEntry entry : lexiconEntries) {
+      List<String> words = entry.getWords();
+      CcgCategory category = entry.getCategory();
+      Expression2 lf = category.getLogicalForm();
 
-    // Backoff features mapping words to syntactic categories (ignoring 
+      if (lf.isConstant()) {
+        String[] constantNameParts = lf.getConstant().split(":");
+        String constantName = constantNameParts[0];
+        String type = "";
+        if (constantNameParts.length >= 2) {
+          type = constantNameParts[1];
+        }
+        if (type.equals("c")) {
+          // Cities have state abbreviations appended.
+          List<String> parts = Arrays.asList(constantName.split("_"));
+          constantName = Joiner.on("_").join(parts.subList(0, parts.size() - 1));
+        }
+        String expectedConstantName = Joiner.on("_").join(words);
+
+        if (constantName.equals(expectedConstantName) && !type.equals("n")) {
+          Assignment assignment = terminalVars.outcomeArrayToAssignment(entry.getWords(), entry.getCategory())
+              .union(featureVar.outcomeArrayToAssignment("entity-name-match"));
+          featureBuilder.setWeight(assignment, 1.0);
+        }
+      }
+    }
+
+    DiscreteLogLinearFactor additionalFeatures = new DiscreteLogLinearFactor(terminalVars, featureVar,
+        featureBuilder.build(), lexiconIndicatorFactor);
+    
+    System.out.println(featureBuilder.build().getParameterDescription());
+
+    ParametricFactor terminalParametricFactor = new CombiningParametricFactor(terminalVars,
+        Arrays.asList("indicators", "features"), Arrays.asList(terminalIndicatorFactor, additionalFeatures), false);
+
+    // backoff features mapping words to syntactic categories (ignoring 
     // semantics). The CCGbank lexicon does not contain multiple lexicon 
     // entries for a single word with the same syntactic category but different 
     // semantics, so these features are set to be ignored. 

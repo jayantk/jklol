@@ -126,6 +126,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
       }
 
       model = pam.getModelFromParameters(trainedParameters);
+      pam.getModelFromParameters(trainedParameters).printStuffOut();
 
     } else {
       ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(

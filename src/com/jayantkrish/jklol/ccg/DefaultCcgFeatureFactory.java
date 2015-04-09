@@ -174,7 +174,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   @Override
   public ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
-      DiscreteFactor lexiconIndicatorFactor) {
+      DiscreteFactor lexiconIndicatorFactor, Collection<LexiconEntry> lexiconEntries) {
     if (featureGenerator == null) {
       // Features for mapping words to ccg categories (which include both 
       // syntax and semantics). 

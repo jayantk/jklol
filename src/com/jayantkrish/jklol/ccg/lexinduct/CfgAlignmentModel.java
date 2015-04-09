@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -48,6 +49,28 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     this.nGramLength = nGramLength;
   }
 
+  public List<List<String>> getTerminalVarValues() {
+    DiscreteVariable v = terminalVar.getDiscreteVariables().get(0);
+    List<List<String>> values = Lists.newArrayList();
+    for (Object o : v.getValues()) {
+      List<String> value = Lists.newArrayList();
+      for (Object obj : (List<?>) o) {
+        value.add((String) obj);
+      }
+      values.add(value);
+    }
+    return values;
+  }
+  
+  public void printStuffOut() {
+    for (List<String> terminalVarValue : getTerminalVarValues()) {
+      DiscreteFactor conditional = terminalFactor.conditional(terminalVar.outcomeArrayToAssignment(terminalVarValue));
+      String description = conditional.describeAssignments(conditional.getMostLikelyAssignments(10));
+      System.out.println(terminalVarValue);
+      System.out.println(description);
+    }
+  }
+
   public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
     CfgParser parser = getCfgParser(example);
     ExpressionTree tree = example.getTree();
@@ -55,7 +78,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     CfgParseTree parseTree = chart.getBestParseTree(tree.getExpressionNode());
     
     System.out.println(parseTree);
-    
+
     return decodeCfgParse(parseTree, 0);
   }
 

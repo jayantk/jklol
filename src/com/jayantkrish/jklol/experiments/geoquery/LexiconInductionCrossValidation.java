@@ -16,12 +16,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
-import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.LexiconEntryLabels;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
@@ -176,6 +176,16 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     for (LexiconEntry lexiconEntry : allEntries) {
       lexiconEntryLines.add(lexiconEntry.toCsvString());
     }
+    List<Set<String>> assignment = Lists.newArrayList();
+    assignment.add(Sets.newHashSet(ParametricCcgParser.SKIP_PREDICATE));
+    CcgCategory skipCcgCategory = new CcgCategory(ParametricCcgParser.SKIP_CAT,
+        ParametricCcgParser.SKIP_LF, Collections.<String>emptyList(),
+        Collections.<Integer>emptyList(), Collections.<Integer>emptyList(), assignment);
+    
+    for (List<String> terminal : model.getTerminalVarValues()) {
+      LexiconEntry entry = new LexiconEntry(terminal, skipCcgCategory);
+      lexiconEntryLines.add(entry.toCsvString());
+    }
     Collections.sort(lexiconEntryLines);
     IoUtils.writeLines(lexiconOutputFilename, lexiconEntryLines);
     IoUtils.serializeObjectToFile(model, alignmentModelOutputFilename);
@@ -184,7 +194,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData, model);
     List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
     // CcgFeatureFactory featureFactory = new SemanticParserFeatureFactory(true, true);
-    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, false);
+    CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true);
 
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
@@ -249,7 +259,9 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         initial, trainingData);
 
     // Get the trained model.
-    return pam.getModelFromParameters(trainedParameters);
+    CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
+    model.printStuffOut();
+    return model;
   }
 
   private static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,

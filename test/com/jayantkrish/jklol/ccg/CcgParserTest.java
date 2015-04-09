@@ -26,6 +26,7 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
@@ -152,7 +153,8 @@ public class CcgParserTest extends TestCase {
 
     exp = ExpressionParser.expression2();
     simplifier = new ExpressionSimplifier(Arrays.
-        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule()));
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule()));
   }
 
   public void testLexiconPosBackoff() {
@@ -333,12 +335,12 @@ public class CcgParserTest extends TestCase {
 
   public void testParseLogicalFormApplication2() {
     runLogicalFormTest(parser, Arrays.asList("i", "that", "eat", "berries"),
-        "(lambda x (exists a b (and (i x) (equals a x) (berries b) (eat a b))))");
+        "(lambda x (and (i x) (exists a b (and (equals a x) (berries b) (eat a b)))))");
   }
 
   public void testParseLogicalFormComposition() {
     runLogicalFormTest(parserWithComposition, Arrays.asList("the", "colorful", "tasty"), 
-        "(lambda $1 (lambda e (and (colorful e) (tasty e) ($1 e))))");
+        "(lambda $1 (lambda e (and (colorful e) (and (tasty e) ($1 e)))))");
   }
 
   public void testParseLogicalFormBinaryRule() {
@@ -359,7 +361,7 @@ public class CcgParserTest extends TestCase {
 
   public void testParseLogicalFormConjunction() {
     runLogicalFormTest(parserWithComposition, Arrays.asList("i", "eat", "people", "or", "berries"), 
-        "(forall (pred (set berries people)) (exists a b (and (i a) (pred b) (eat a b))))");
+        "(exists a b (and (i a) (forall (pred (set berries people)) (pred b)) (eat a b)))");
   }
 
   public void testParseLogicalFormUnary() {
@@ -367,12 +369,12 @@ public class CcgParserTest extends TestCase {
         Arrays.asList("berries", "that", "i", "eat"), 10);
 
     Expression2 expectedLf = exp.parseSingleExpression(
-        "(lambda x (exists a b (and (berries x) (i a) (equals b x) (eat a b))))");
+        "(lambda x (and (berries x) (exists a b (and (i a) (equals b x) (eat a b)))))");
     boolean foundN = false;
     for (CcgParse parse : parses) {
       String root = parse.getSyntacticCategory().getValue();
       if (root != null && root.equals("N")) {
-        assertEquals(expectedLf, simplifier.apply(parse.getLogicalForm()));
+        assertEquals(simplifier.apply(expectedLf), simplifier.apply(parse.getLogicalForm()));
         foundN = true;
       }
     }
@@ -386,7 +388,7 @@ public class CcgParserTest extends TestCase {
     assertTrue(parses.size() > 0);
     Expression2 expectedLf = exp.parseSingleExpression(expectedExpression);
     for (CcgParse parse : parses) {
-      assertEquals(expectedLf, simplifier.apply(parse.getLogicalForm()));
+      assertEquals(simplifier.apply(expectedLf), simplifier.apply(parse.getLogicalForm()));
     }
     return parses;
   }

@@ -305,13 +305,15 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         LexiconEntry entry = new LexiconEntry(word, ccgCategory);
         lexiconEntries.add(entry);
       }
-      
+
+      /*
       for (String posTag : posTagSet) {
         String word = (CcgLexicon.UNKNOWN_WORD_PREFIX + posTag).toLowerCase();
         LexiconEntry entry = new LexiconEntry(Arrays.asList(word), ccgCategory);
         lexiconEntries.add(entry);
         words.add(Arrays.asList(word));
       }
+      */
       
       allowWordSkipping = false;
     }
@@ -380,7 +382,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     System.out.println(terminalBuilder.build().getParameterDescription());
 
     ParametricCcgLexicon lexiconFamily = featureFactory.getLexiconFeatures(terminalVar,
-        ccgCategoryVar, posVar, terminalSyntaxVar, terminalBuilder.build());
+        ccgCategoryVar, posVar, terminalSyntaxVar, terminalBuilder.build(), lexiconEntries);
 
     // Create variables for representing the CCG parser's dependency
     // structures.

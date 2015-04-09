@@ -43,7 +43,7 @@ public class CcgTrainingTest extends TestCase {
       "near,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda x (exists y (and ($1 x) (pred:near x y) ($2 y))))),0 pred:near,pred:near 1 1,pred:near 2 2",
       "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},(lambda $2 $1 ($1 (lambda x (exists y (and (pred:near x y) ($2 y)))))),0 pred:near,pred:near 2 2",
       "near,(PP{0}/N{1}){0},(lambda $1 $1),0 pred:near,pred:near 2 1",
-      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},(lambda $1 (lambda x ((pred:almost $1) x))),0 pred:almost,pred:almost 1 2",
+      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},(lambda $1 $2 (lambda x ((pred:almost $1) x))),0 pred:almost,pred:almost 1 2",
       "is,((S{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists x y (and ($1 x) (pred:equals x y) ($2 y)))),0 pred:equals,pred:equals 1 1,pred:equals 2 2",
       "\",\",((N{1}\\N{1}){0}/N{2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 x)))),\"0 ,\",\", 1 1\",\", 2 2\"",
       "2,N{0},pred:num,0 NUM", 

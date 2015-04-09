@@ -1,14 +1,20 @@
 package com.jayantkrish.jklol.ccg.augment;
 
+import java.util.Arrays;
+
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
+import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 
 public class DavidsonianCcgParseAugmenterTest extends TestCase {
   
@@ -16,18 +22,20 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
   ExpressionComparator comparator;
   
   public void setUp() {
-    simplifier = ExpressionSimplifier.lambdaCalculus();
+    simplifier = new ExpressionSimplifier(Arrays.<ExpressionReplacementRule>asList(
+        new LambdaApplicationReplacementRule(), new VariableCanonicalizationReplacementRule(),
+        new ConjunctionReplacementRule("and")));
     comparator = new SimplificationComparator(simplifier);
   }
   
   public void testLfFromSyntax1() {
-    runCategoryTest("N{0}", "foo", "(lambda x (foo x))");
-    runCategoryTest("N{1}", "foo", "(lambda x (foo x))");
+    runCategoryTest("N{0}", "foo", "(lambda x (and (foo x)))");
+    runCategoryTest("N{1}", "foo", "(lambda x (and (foo x)))");
   }
   
   public void testLfFromSyntax2() {
     runCategoryTest("(N{1}/N{1}){0}", "foo", "(lambda f (lambda x (and (f x) (foo x))))");
-    runCategoryTest("((N{1}/N{1}){0}/N{2}){3}", "foo", "(lambda f (lambda g (lambda x (exists y (and (g x) (foo x y) (f y))))))");
+    runCategoryTest("((N{1}/N{1}){0}/N{2}){3}", "foo", "(lambda f (lambda g (lambda x (exists e3 (and (g x) (foo x e3) (f e3))))))");
   }
   
   public void testLfFromSyntax3() {

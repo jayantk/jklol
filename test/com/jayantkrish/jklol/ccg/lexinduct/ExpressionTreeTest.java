@@ -37,13 +37,4 @@ public class ExpressionTreeTest extends TestCase {
 
     assertTrue(tree.size() > 1);
   }
-
-  public void testAnd3() {
-    // TODO: handle adding conjuncts in ANDs, e.g., for "major"
-    ExpressionTree tree = ExpressionTree.fromExpression(expressions[2]);
-
-    System.out.println(tree);
-
-    assertTrue(false);
-  }
 }

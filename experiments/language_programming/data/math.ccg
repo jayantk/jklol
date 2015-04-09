@@ -1,0 +1,26 @@
+add 2 and 2
+(+ 2 2)
+
+add 3 and 4
+(+ 3 4)
+
+3 plus 4
+(+ 3 4)
+
+1 times 2
+(* 1 2)
+
+1 plus 2
+(+ 1 2)
+
+increment 1
+(increment 1)
+
+add one to 1
+(increment 1)
+
+add one to 2
+(increment 2)
+
+foo
+foo

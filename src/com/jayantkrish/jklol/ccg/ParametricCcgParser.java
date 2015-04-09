@@ -306,14 +306,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         lexiconEntries.add(entry);
       }
 
-      /*
       for (String posTag : posTagSet) {
         String word = (CcgLexicon.UNKNOWN_WORD_PREFIX + posTag).toLowerCase();
         LexiconEntry entry = new LexiconEntry(Arrays.asList(word), ccgCategory);
         lexiconEntries.add(entry);
         words.add(Arrays.asList(word));
       }
-      */
       
       allowWordSkipping = false;
     }

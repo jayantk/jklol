@@ -14,13 +14,34 @@ add 3 and 4
 (+ 1 2)
 
 increment 1
-(increment 1)
+(inc 1)
 
 add one to 1
-(increment 1)
+(inc 1)
 
 add one to 2
-(increment 2)
+(inc 2)
 
-foo
-foo
+what is 7 factorial 
+(fact 7)
+
+3 factorial
+(fact 3)
+
+3 plus 2 factorial
+(fact (+ 3 2))
+
+what is 4 plus 3 factorial
+(fact (+ 4 3))
+
+1 plus 2
+(+ 1 2)
+
+2 plus 3
+(+ 3 2)
+
+define a function of x that returns 1 plus x
+(define func (lambda x (+ 1 x)))
+
+define a function of y that returns 1 plus x
+(define func (lambda y (+ 1 y)))

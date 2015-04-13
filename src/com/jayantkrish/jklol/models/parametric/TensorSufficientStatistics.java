@@ -103,6 +103,11 @@ public class TensorSufficientStatistics implements SufficientStatistics {
   public static TensorSufficientStatistics createDense(VariableNumMap statisticNames, TensorBuilder statistics) {
     return new TensorSufficientStatistics(statisticNames, statistics);
   }
+  
+  public static TensorSufficientStatistics createDense(VariableNumMap statisticNames) {
+    return new TensorSufficientStatistics(statisticNames,
+        new DenseTensorBuilder(statisticNames.getVariableNumsArray(), statisticNames.getVariableSizes()));
+  }
 
   /**
    * Gets the tensor in {@code this}.

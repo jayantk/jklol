@@ -1,4 +1,8 @@
 (define foo "foo")
 
-(define increment (lambda (x) (+ x 1)))
+(define inc (lambda (x) (+ x 1)))
+
+(define fact (lambda (x) (if (< x 2)
+                                  x 
+                                (* x (fact (- x 1))))))
 

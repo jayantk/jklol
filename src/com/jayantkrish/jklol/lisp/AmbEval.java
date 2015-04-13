@@ -135,10 +135,14 @@ public class AmbEval {
 
   private AmbLambdaValue makeLambda(SExpression arguments, List<SExpression> bodyExpressions,
       Environment environment) {
-    Preconditions.checkArgument(arguments.getSubexpressions() != null,
-        "Illegal argument list in lambda: %s", arguments);
 
-    List<SExpression> argumentExpressions = arguments.getSubexpressions();
+    List<SExpression> argumentExpressions = null;
+    if (arguments.isConstant()) {
+      argumentExpressions = Arrays.asList(arguments);
+    } else {
+      argumentExpressions = arguments.getSubexpressions();
+    }
+
     int[] argumentNameIndexes = new int[argumentExpressions.size()];
     int ind = 0;
     for (SExpression argumentExpression : argumentExpressions) {

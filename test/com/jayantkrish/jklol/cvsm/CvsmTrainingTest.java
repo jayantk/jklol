@@ -55,6 +55,8 @@ public class CvsmTrainingTest extends TestCase {
       "vec:distribution",
       "vec:logistic",
       "vec:log",
+      "vec:red",
+      "vec:thing"
   };
 
   private static final String[] matrixNames = {
@@ -180,6 +182,26 @@ public class CvsmTrainingTest extends TestCase {
       { 0 }, { 0 },
   };
 
+  private static final String[] diagOpExamples = {
+      "vec:block",
+      "vec:table",
+      "vec:thing",
+      "vec:red",
+      "(op:matvecmul (op:diag vec:red) vec:block)",
+      "(op:matvecmul (op:diag vec:red) vec:table)",
+      "(op:matvecmul (op:diag vec:red) vec:thing)",
+  };
+
+  private static final double[][] diagOpTargets = {
+      { 0, 1, 0 },
+      { 1, 0, 0 },
+      { 0, 0, 1 },
+      { 1, 0, 1 },
+      { 0, 0, 0 },
+      { 1, 0, 0 },
+      { 0, 0, 1 },
+  };
+
   private static final int NUM_DIMS = 3;
 
   private ParametricCcgParser family;
@@ -241,7 +263,7 @@ public class CvsmTrainingTest extends TestCase {
   }
   
   public void testLowRankCvsmAffineTraining() {
-    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), lowRankCvsmFamily, new CvsmSquareLoss(), 5000);
+    runCvsmTrainingTest(parseExamples(affineExamples, affineTargets), lowRankCvsmFamily, new CvsmSquareLoss(), 10000);
   }
   
   public void testCvsmDiagTraining() {
@@ -313,6 +335,11 @@ public class CvsmTrainingTest extends TestCase {
   public void testCvsmValueTraining() {
     List<CvsmExample> examples = parseExamples(valueExamples, valueTargets);
     runCvsmTrainingTest(examples, cvsmFamily, new CvsmValueLoss(), 1000);
+  }
+  
+  public void testCvsmDiagOpTraining() {
+    List<CvsmExample> examples = parseExamples(diagOpExamples, diagOpTargets);
+    runCvsmTrainingTest(examples, cvsmFamily, new CvsmSquareLoss(), -1);
   }
 
   private static void runCvsmTrainingTest(List<CvsmExample> cvsmExamples,

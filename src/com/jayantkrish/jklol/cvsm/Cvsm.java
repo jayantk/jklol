@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.cvsm.tree.CvsmAdditionTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmConstantTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmDiagTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmInnerProductTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLaplaceSigmoidTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLogTree;
@@ -119,6 +120,11 @@ public class Cvsm implements Serializable {
           value = new CvsmAdditionTree(value, getInterpretationTree(args.get(i)));
         }
         return value;
+      } else if (functionName.equals("op:diag")) {
+        Preconditions.checkArgument(args.size() == 1);
+        CvsmTree value = getInterpretationTree(args.get(0));
+
+        return new CvsmDiagTree(value);
       }
 
       throw new IllegalArgumentException("Unknown function name: " + functionName);

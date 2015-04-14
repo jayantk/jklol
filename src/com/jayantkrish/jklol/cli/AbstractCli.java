@@ -110,6 +110,7 @@ public abstract class AbstractCli {
   protected OptionSpec<Void> sgdReturnAveragedParameters;
   protected OptionSpec<Double> sgdL2Regularization;
   protected OptionSpec<Double> sgdRegularizationFrequency;
+  protected OptionSpec<Void> sgdAdagrad;
 
   // LBFGS options.
   protected OptionSpec<Void> lbfgs;
@@ -281,6 +282,7 @@ public abstract class AbstractCli {
       sgdRegularizationFrequency = parser.accepts("regularizationFrequency",
           "Fraction of iterations on which to apply regularization. Must be between 0 and 1")
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
+      sgdAdagrad = parser.accepts("adagrad", "Use the adagrad algorithm for stochastic gradient descent.");
     }
 
     if (opts.contains(CommonOptions.LBFGS)) {
@@ -413,10 +415,18 @@ public abstract class AbstractCli {
     double l2Regularization = parsedOptions.valueOf(sgdL2Regularization);
 
     LogFunction log = LogFunctions.getLogFunction();
-    StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
-        numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
-        parsedOptions.has(sgdReturnAveragedParameters), l2Regularization,
-        parsedOptions.valueOf(sgdRegularizationFrequency), log);
+    StochasticGradientTrainer trainer = null;
+    if (!parsedOptions.has(sgdAdagrad)) {
+      trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
+          numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
+          parsedOptions.has(sgdReturnAveragedParameters), l2Regularization,
+          parsedOptions.valueOf(sgdRegularizationFrequency), log);
+    } else {
+      trainer = StochasticGradientTrainer.createAdagrad(
+          numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
+          parsedOptions.has(sgdReturnAveragedParameters), l2Regularization,
+          parsedOptions.valueOf(sgdRegularizationFrequency), log);
+    }
 
     return trainer;
   }

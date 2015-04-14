@@ -1217,6 +1217,15 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     return new SparseTensor(dimensionNumbers, dimensionSizes, keyNums, valuesCopy);
   }
 
+  public static SparseTensor diagonal(int[] dimensionNumbers, Tensor tensor) {
+    Preconditions.checkArgument(tensor.getDimensionNumbers().length == 1);
+    int dimSize = tensor.getDimensionSizes()[0];
+    int[] dimensionSizes = new int[] {dimSize, dimSize};
+
+    double[] values = DenseTensor.copyOf(tensor).getValues();
+    return SparseTensor.diagonal(dimensionNumbers, dimensionSizes, values);
+  }
+
   /**
    * Similar to the constructor, except does not require
    * {@code keyNums} to occur in ascending order.

@@ -22,7 +22,6 @@ import com.jayantkrish.jklol.ccg.lambda.CommutativeOperator;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ForAllExpression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
 import com.jayantkrish.jklol.ccg.lambda.QuantifierExpression;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
@@ -104,24 +103,26 @@ public class ParseToLogicalForm extends AbstractCli {
         e.printStackTrace(System.err);
       }
 
-      if (result == null || !result.getParse().getSyntacticCategory().isAtomic()) {
+      if (result == null) {
         sb.append("NO PARSE");
+      } else if (!result.getParse().getSyntacticCategory().isAtomic()) {
+        sb.append("NOT ATOMIC\t" + result.getParse().getSyntacticParse());
       } else if (lf == null) {
-        sb.append("NO LF CONVERSION");
+        sb.append("NO LF CONVERSION\t" + result.getParse().getSyntacticParse());
       } else {
         lf = lf.simplify();
-        if (lf instanceof LambdaExpression) {
-          LambdaExpression lambdaExp = (LambdaExpression) lf;
-          List<ConstantExpression> arguments = ConstantExpression.generateUniqueVariables(
-              lambdaExp.getArguments().size());
-          lf = new QuantifierExpression("exists", arguments, new ApplicationExpression(lambdaExp, arguments));
-          lf = lf.simplify();
-        }
 
         if (lf instanceof ForAllExpression) {
           lf = ((ForAllExpression) lf).expandQuantifier().simplify();
         }
         sb.append(lf);
+        sb.append("\t");
+        
+        String resultString = null;
+        if (result != null) {
+          resultString = result.getParse().getSyntacticParse().toString();
+        }
+        sb.append(resultString);
         sb.append("\t");
 
         Multimap<String, String> categoryInstances = HashMultimap.create();

@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
@@ -39,7 +38,4 @@ public interface CcgLexicon extends Serializable {
   List<LexiconEntry> getLexiconEntriesWithUnknown(String word, String posTag);
   
   List<LexiconEntry> getLexiconEntriesWithUnknown(List<String> originalWords, List<String> posTags);
-  
-  boolean isPossibleLexiconEntry(List<String> originalWords, List<String> posTags,
-      HeadedSyntacticCategory category);
 }

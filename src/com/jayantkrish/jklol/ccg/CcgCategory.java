@@ -110,7 +110,7 @@ public class CcgCategory implements Serializable {
    * </ul>
    * <p>
    * For example, the category for "in" is: <code>
-   * ((N{1}\N{1}){0}/N{2}){0},0 in,in 1 1,in 2 2
+   * ((N{1}\N{1}){0}/N{2}){0},,0 in,in 1 1,in 2 2
    * </code>
    * 
    * @param categoryString
@@ -313,6 +313,11 @@ public class CcgCategory implements Serializable {
 
   public List<Integer> getArgumentNumbers() {
     return argumentNumbers;
+  }
+
+  public CcgCategory replaceLogicalForm(Expression2 newLogicalForm) {
+    return new CcgCategory(syntax, newLogicalForm, subjects, argumentNumbers, objects,
+        variableAssignments);
   }
 
   public List<UnfilledDependency> createUnfilledDependencies(int wordIndex,

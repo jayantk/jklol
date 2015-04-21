@@ -5,6 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -12,7 +13,11 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class TableLexicon extends AbstractCcgLexicon {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
+  
+  private final VariableNumMap terminalVar;
+  private final VariableNumMap ccgCategoryVar;
+  private final DiscreteFactor terminalDistribution;
 
   // Weights and pos tag -> syntactic category mappings for the
   // lexicon (terminals).
@@ -29,7 +34,13 @@ public class TableLexicon extends AbstractCcgLexicon {
   public TableLexicon(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
       DiscreteFactor terminalPosDistribution, DiscreteFactor terminalSyntaxDistribution) {
-    super(terminalVar, ccgCategoryVar, terminalDistribution, null);
+    super(terminalVar, null);
+    
+    this.terminalVar = Preconditions.checkNotNull(terminalVar);
+    this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
+    this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
+    VariableNumMap expectedTerminalVars = terminalVar.union(ccgCategoryVar);
+    Preconditions.checkArgument(expectedTerminalVars.equals(terminalDistribution.getVars()));
 
     this.terminalPosVar = Preconditions.checkNotNull(terminalPosVar);
     this.terminalSyntaxVar = Preconditions.checkNotNull(terminalSyntaxVar);
@@ -59,18 +70,35 @@ public class TableLexicon extends AbstractCcgLexicon {
   }
 
   @Override
+  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence) {
+    return AbstractCcgLexicon.getLexiconEntriesFromFactor(wordSequence,
+        terminalDistribution, terminalVar, ccgCategoryVar);
+  }
+
+  @Override
   protected double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,
       List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors, int spanStart,
       int spanEnd, List<String> terminals, CcgCategory category) {
+    double entryProb = getTerminalProbability(terminals, category);
     double posProb = getTerminalPosProbability(pos.get(spanEnd), category.getSyntax());
     double syntaxProb = getTerminalSyntaxProbability(terminals, category.getSyntax());
-    return posProb * syntaxProb;
+    return entryProb * posProb * syntaxProb;
+  }
+  
+  public double getTerminalProbability(List<String> terminal, CcgCategory category) {
+    Assignment terminalAssignment = terminalVar.outcomeArrayToAssignment(terminal);
+    Assignment categoryAssignment = ccgCategoryVar.outcomeArrayToAssignment(category);
+    Assignment a = terminalAssignment.union(categoryAssignment);
+    if (terminalDistribution.getVars().isValidAssignment(a)) {
+      return terminalDistribution.getUnnormalizedProbability(a);
+    } else {
+      return 1.0;
+    }
   }
 
   public double getTerminalPosProbability(String posTag, HeadedSyntacticCategory syntax) {
     Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTag);
     Assignment syntaxAssignment = terminalSyntaxVar.outcomeArrayToAssignment(syntax);
-    // TODO: this check should be made unnecessary by preprocessing.
     if (terminalPosVar.isValidAssignment(posAssignment)) {
       return terminalPosDistribution.getUnnormalizedProbability(posAssignment.union(syntaxAssignment));
     } else {

@@ -84,7 +84,7 @@ public class CcgTrainingTest extends TestCase {
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
 
   private DataFormat<CcgExample> exampleReader;
-  private ParametricCcgParser family, wordSkipFamily;
+  private ParametricCcgParser family, wordSkipFamily, stringFamily;
   private List<CcgExample> trainingExamples;
   private List<CcgExample> trainingExamplesWithSyntax;
   private List<CcgExample> trainingExamplesSyntaxOnly;
@@ -134,6 +134,8 @@ public class CcgTrainingTest extends TestCase {
     wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
         new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax), true),
         posTags, true, null, true, false);
+    
+    
   }
   
   public void testSyntacticChartFilter1() {

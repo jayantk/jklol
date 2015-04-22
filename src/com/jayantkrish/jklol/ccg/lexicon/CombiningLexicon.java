@@ -22,12 +22,12 @@ import com.jayantkrish.jklol.tensor.Tensor;
 public class CombiningLexicon extends AbstractCcgLexicon {
   private static final long serialVersionUID = 1L;
 
-  private final List<AbstractCcgLexicon> lexicons;
+  private final List<CcgLexicon> lexicons;
   
-  public CombiningLexicon(VariableNumMap terminalVar, List<AbstractCcgLexicon> lexicons) {
+  public CombiningLexicon(VariableNumMap terminalVar, List<CcgLexicon> lexicons) {
     super(terminalVar, null);
     this.lexicons = ImmutableList.copyOf(lexicons);
-    for (AbstractCcgLexicon lexicon : lexicons) {
+    for (CcgLexicon lexicon : lexicons) {
       Preconditions.checkArgument(terminalVar.equals(lexicon.getTerminalVar()));
     }
   }
@@ -35,18 +35,18 @@ public class CombiningLexicon extends AbstractCcgLexicon {
   @Override
   public List<LexiconEntry> getLexiconEntries(List<String> wordSequence) {
     Set<LexiconEntry> entries = Sets.newHashSet();
-    for (AbstractCcgLexicon lexicon : lexicons) {
+    for (CcgLexicon lexicon : lexicons) {
       entries.addAll(lexicon.getLexiconEntries(wordSequence));
     }
     return Lists.newArrayList(entries);
   }
 
   @Override
-  protected double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,
+  public double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,
       List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors, int spanStart,
       int spanEnd, List<String> terminals, CcgCategory category) {
     double prob = 1.0;
-    for (AbstractCcgLexicon lexicon : lexicons) {
+    for (CcgLexicon lexicon : lexicons) {
       prob *= lexicon.getCategoryWeight(originalWords, preprocessedWords, pos, ccgWordList,
           featureVectors, spanStart, spanEnd, terminals, category);
     }

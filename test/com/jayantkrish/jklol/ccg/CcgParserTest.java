@@ -27,7 +27,7 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
-import com.jayantkrish.jklol.ccg.lexicon.AbstractCcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.CombiningLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
@@ -1182,12 +1182,12 @@ public class CcgParserTest extends TestCase {
     }
     DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
 
-    AbstractCcgLexicon lexiconFactor = new TableLexicon(terminalVar, ccgCategoryVar,
+    CcgLexicon lexiconFactor = new TableLexicon(terminalVar, ccgCategoryVar,
         terminalBuilder.build(), posTagVar, terminalSyntaxVar, posDistribution,
         terminalSyntaxDistribution);
     if (useStringLexicon) {
       CcgCategory stringCategory = CcgCategory.parseFrom("N{0},(lambda $0 $0),0 special:string");
-      AbstractCcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory));
+      CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory));
       lexiconFactor = new CombiningLexicon(terminalVar, Arrays.asList(stringLexicon, lexiconFactor));
     }
 

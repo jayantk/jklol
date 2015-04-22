@@ -81,10 +81,6 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
     initializeChartWithDistribution(input, chart, getTerminalVar(), true, parser);
   }
 
-  protected abstract double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords, 
-      List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors,
-      int spanStart, int spanEnd, List<String> terminals, CcgCategory category);
-
   /**
    * This method is a hack.
    * 

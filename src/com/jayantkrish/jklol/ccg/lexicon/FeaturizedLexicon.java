@@ -56,7 +56,7 @@ public class FeaturizedLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  protected double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,
+  public double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,
       List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors, int spanStart,
       int spanEnd, List<String> terminals, CcgCategory category) {
     Assignment terminalAssignment = terminalVar.outcomeArrayToAssignment(terminals);

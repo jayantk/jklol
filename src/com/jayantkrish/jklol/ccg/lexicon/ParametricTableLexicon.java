@@ -141,8 +141,10 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
     Assignment assignment = Assignment.unionAll(
         terminalVar.outcomeArrayToAssignment(entry.getWords()),
         ccgCategoryVar.outcomeArrayToAssignment(entry.getCategory()));
-    terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
-        terminalParameters, assignment, count);
+    if (terminalFamily.getVars().isValidAssignment(assignment)) {
+      terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
+          terminalParameters, assignment, count);
+    }
   }
 
   public void incrementPosSufficientStatistics(SufficientStatistics gradient,
@@ -154,8 +156,10 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
         .getStatisticByName(TERMINAL_POS_PARAMETERS);
     Assignment posAssignment = terminalPosVar.outcomeArrayToAssignment(posTag).union(
         terminalSyntaxVar.outcomeArrayToAssignment(syntax));
-    terminalPosFamily.incrementSufficientStatisticsFromAssignment(terminalPosGradient,
-        terminalPosParameters, posAssignment, count);
+    if (terminalPosFamily.getVars().isValidAssignment(posAssignment)) {
+      terminalPosFamily.incrementSufficientStatisticsFromAssignment(terminalPosGradient,
+          terminalPosParameters, posAssignment, count);
+    }
   }
 
   public void incrementLexiconSyntaxSufficientStatistics(SufficientStatistics gradient, 
@@ -167,7 +171,9 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
         .getStatisticByName(TERMINAL_SYNTAX_PARAMETERS);
     Assignment assignment = terminalVar.outcomeArrayToAssignment(words).union(
         terminalSyntaxVar.outcomeArrayToAssignment(syntax));
-    terminalSyntaxFamily.incrementSufficientStatisticsFromAssignment(terminalSyntaxGradient,
-        terminalSyntaxParameters, assignment, count);
+    if (terminalSyntaxFamily.getVars().isValidAssignment(assignment)) {
+      terminalSyntaxFamily.incrementSufficientStatisticsFromAssignment(terminalSyntaxGradient,
+          terminalSyntaxParameters, assignment, count);
+    }
   }
 }

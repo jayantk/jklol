@@ -369,7 +369,8 @@ public class CcgParser implements Serializable {
     Preconditions.checkArgument(dependencySyntaxType.numValues() < MAX_SYNTACTIC_CATEGORIES);
   }
 
-  public static DiscreteVariable buildSyntacticCategoryDictionary(Iterable<HeadedSyntacticCategory> syntacticCategories) {
+  public static Set<HeadedSyntacticCategory> getSyntacticCategoryClosure(
+      Iterable<HeadedSyntacticCategory> syntacticCategories) {
     Set<String> featureValues = Sets.newHashSet();
     for (HeadedSyntacticCategory cat : syntacticCategories) {
       getAllFeatureValues(cat.getSyntax(), featureValues);
@@ -388,8 +389,7 @@ public class CcgParser implements Serializable {
         cat = cat.getReturnType();
       }
     }
-    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategory", allCategories);
-    return syntaxType;
+    return allCategories;
   }
 
   public static DiscreteFactor buildRestrictedBinaryDistribution(DiscreteVariable syntaxType,

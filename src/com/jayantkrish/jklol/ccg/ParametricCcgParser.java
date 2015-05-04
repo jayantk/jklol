@@ -276,6 +276,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       addSubjectsToPredicateList(rule.getSubjects(), rule.getArgumentNumbers(), semanticPredicates,
           maxNumArgs);
     }
+    
+    syntacticCategories = CcgParser.getSyntacticCategoryClosure(syntacticCategories);
 
     if (allowWordSkipping) {
       // Generate a SKIP syntactic category and binary rules that absorb them.
@@ -318,7 +320,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     // Create features over ways to combine syntactic categories.
     // System.out.println("Building syntactic distribution...");
-    DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
+    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategories", syntacticCategories);
     DiscreteFactor binaryRuleDistribution = null;
     if (allowedCombinationRules == null) {
       binaryRuleDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);

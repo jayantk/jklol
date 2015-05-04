@@ -1054,7 +1054,7 @@ public class CcgParserTest extends TestCase {
     }
 
     // Distribution over CCG combinators, i.e., binary combination rules.
-    DiscreteVariable syntaxType = CcgParser.buildSyntacticCategoryDictionary(syntacticCategories);
+    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategories", CcgParser.getSyntacticCategoryClosure(syntacticCategories));
     DiscreteFactor syntaxDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
     VariableNumMap leftSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);

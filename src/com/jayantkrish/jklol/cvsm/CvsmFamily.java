@@ -61,6 +61,11 @@ public class CvsmFamily implements ParametricFamily<Cvsm> {
           tensorStats.increment(diag, 1.0);
         } else {
           List<SufficientStatistics> stats = curStats.coerceToList().getStatistics();
+          if (stats.size() == 0) {
+            // ConstantLrtFamily
+            continue;
+          }
+          
           TensorSufficientStatistics diagStats = (TensorSufficientStatistics) stats.get(stats.size() - 1);
           Tensor tensor = diagStats.get();
 

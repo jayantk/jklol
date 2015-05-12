@@ -195,7 +195,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
 
   @Override
   public Tensor findKeysLargerThan(double thresholdValue) {
-    Preconditions.checkArgument(thresholdValue > 0.0);
+    Preconditions.checkArgument(thresholdValue >= 0.0);
     long[] resultKeyNums = new long[keyNums.length];
     double[] resultValues = new double[values.length];
 

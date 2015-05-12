@@ -6,6 +6,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
+import com.jayantkrish.jklol.cvsm.tree.CvsmHingeElementwiseLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlElementwiseLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
@@ -104,6 +105,13 @@ public class CvsmLoglikelihoodOracle implements GradientOracle<Cvsm, CvsmExample
     @Override
     public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
       return new CvsmKlElementwiseLossTree(targets, tree);
+    }
+  }
+  
+  public static class CvsmHingeElementwiseLoss implements CvsmLoss {
+    @Override
+    public CvsmTree augmentTreeWithLoss(CvsmTree tree, Cvsm cvsm, Tensor targets) {
+      return new CvsmHingeElementwiseLossTree(targets, tree);
     }
   }
 

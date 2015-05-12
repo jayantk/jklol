@@ -181,7 +181,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
       int spanEnd, DiscreteVariable syntaxVarType) {
 
     if (entryFilter != null) {
-      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType));
+      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, numTerminals, syntaxVarType));
     }
 
     if (probability != 0.0) {

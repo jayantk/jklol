@@ -37,7 +37,8 @@ public class LexiconChartCost implements ChartCost {
   }
 
   @Override
-  public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxType) {
+  public double apply(ChartEntry entry, int spanStart, int spanEnd,
+      int sentenceLength, DiscreteVariable syntaxType) {
     int spanIndex = getSpanIndex(spanStart, spanEnd);
     int entryIndex = Ints.indexOf(spanIndexes, spanIndex);
     if (entryIndex < 0) {

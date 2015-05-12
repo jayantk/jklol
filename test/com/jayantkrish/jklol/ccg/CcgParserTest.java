@@ -1204,7 +1204,8 @@ public class CcgParserTest extends TestCase {
   private static class TestChartFilter implements ChartCost {
 
     @Override
-    public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
+    public double apply(ChartEntry entry, int spanStart, int spanEnd,
+        int sentenceLength, DiscreteVariable syntaxVarType) {
       if (spanStart == 3 && spanEnd == 5) {
         HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(entry.getHeadedSyntax());
         return syntax.getSyntax().equals(SyntacticCategory.parseFrom("N\\N")) ? 0.0 : Double.NEGATIVE_INFINITY;

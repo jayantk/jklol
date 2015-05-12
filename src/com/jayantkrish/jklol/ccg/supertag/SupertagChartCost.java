@@ -24,7 +24,8 @@ public class SupertagChartCost implements ChartCost {
   }
 
   @Override
-  public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxType) {
+  public double apply(ChartEntry entry, int spanStart, int spanEnd, int sentenceLength,
+      DiscreteVariable syntaxType) {
     // This filter only applies to single word terminal entries where
     // the example has a specified set of valid supertags.
     if (spanStart != spanEnd || supertags.get(spanStart).size() == 0) {

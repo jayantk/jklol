@@ -81,7 +81,8 @@ public class SyntacticChartCost implements ChartCost {
   }
 
   @Override
-  public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
+  public double apply(ChartEntry entry, int spanStart, int spanEnd, int sentenceLength,
+      DiscreteVariable syntaxVarType) {
     int mapIndex = (spanStart * SPAN_START_OFFSET) + spanEnd;
     if (!binaryRuleResult.containsKey(mapIndex)) {
       return disagreeCost;

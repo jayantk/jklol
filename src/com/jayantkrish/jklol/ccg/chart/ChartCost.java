@@ -20,9 +20,10 @@ public interface ChartCost {
    * @param entry
    * @param spanStart
    * @param spanEnd
+   * @param sentenceLength
    * @param syntaxVarType
    * @return
    */
   public double apply(ChartEntry entry, int spanStart, int spanEnd,
-      DiscreteVariable syntaxVarType);
+      int sentenceLength, DiscreteVariable syntaxVarType);
 }

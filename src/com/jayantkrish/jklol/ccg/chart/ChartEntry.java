@@ -69,6 +69,8 @@ public class ChartEntry {
   // the category. This may be different from the words in the
   // sentence, if the original words were not part of the lexicon.
   private final List<String> lexiconTriggerWords;
+  // Index of the CCG lexicon in the parser that generated this entry.
+  private final int lexiconIndex;
 
   // Backpointer information
   private final int leftSpanStart;
@@ -130,6 +132,7 @@ public class ChartEntry {
 
     this.lexiconEntry = null;
     this.lexiconTriggerWords = null;
+    this.lexiconIndex = -1;
     this.deps = Preconditions.checkNotNull(deps);
 
     this.leftSpanStart = leftSpanStart;
@@ -152,6 +155,7 @@ public class ChartEntry {
    * @param syntaxHeadVar
    * @param ccgCategory
    * @param terminalWords
+   * @param lexiconIndex
    * @param rootUnaryRule
    * @param assignmentVarIndex
    * @param assignments
@@ -162,7 +166,7 @@ public class ChartEntry {
    * @param spanEnd
    */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, CcgCategory ccgCategory,
-      List<String> terminalWords, UnaryCombinator rootUnaryRule, int[] assignmentVarIndex,
+      List<String> terminalWords, int lexiconIndex, UnaryCombinator rootUnaryRule, int[] assignmentVarIndex,
       long[] assignments, int[] unfilledDependencyVarIndex, long[] unfilledDependencies,
       long[] deps, int spanStart, int spanEnd) {
     this.syntax = syntax;
@@ -181,6 +185,7 @@ public class ChartEntry {
 
     this.lexiconEntry = ccgCategory;
     this.lexiconTriggerWords = terminalWords;
+    this.lexiconIndex = lexiconIndex;
     this.deps = Preconditions.checkNotNull(deps);
 
     // Use the leftSpan to represent the spanned terminal.
@@ -248,16 +253,6 @@ public class ChartEntry {
   public long[] getAssignments() {
     return assignments;
   }
-
-  /*
-  public int[] getAssignmentPredicateNums() {
-    int[] predicateNums = new int[assignments.length];
-    for (int i = 0; i < assignments.length; i++) {
-      predicateNums[i] = CcgParser.getAssignmentPredicateNum(assignments[i]);
-    }
-    return predicateNums;
-  }
-  */
 
   /**
    * Replaces the {@code i}th unique variable in {@code this} with the
@@ -350,6 +345,10 @@ public class ChartEntry {
   public List<String> getLexiconTriggerWords() {
     return lexiconTriggerWords;
   }
+  
+  public int getLexiconIndex() {
+    return lexiconIndex;
+  }
 
   public long[] getDependencies() {
     return deps;
@@ -398,8 +397,8 @@ public class ChartEntry {
     Preconditions.checkState(rootUnaryRule == null);
     if (isTerminal()) {
       return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, lexiconEntry, lexiconTriggerWords,
-          unaryRuleCombinator, newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex, newUnfilledDeps,
-          newFilledDeps, leftSpanStart, leftSpanEnd);
+          lexiconIndex, unaryRuleCombinator, newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex,
+          newUnfilledDeps, newFilledDeps, leftSpanStart, leftSpanEnd);
     } else {
       return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
           newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex, newUnfilledDeps, newFilledDeps, leftSpanStart,

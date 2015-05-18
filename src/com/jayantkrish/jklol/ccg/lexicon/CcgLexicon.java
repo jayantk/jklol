@@ -4,13 +4,8 @@ import java.io.Serializable;
 import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgCategory;
-import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.tensor.Tensor;
 
 /**
  * The lexicon of a CCG parser which determines the initial 
@@ -23,41 +18,31 @@ import com.jayantkrish.jklol.tensor.Tensor;
 public interface CcgLexicon extends Serializable {
   public static final String UNKNOWN_WORD_PREFIX = "UNK-";
 
-  void initializeChartTerminals(SupertaggedSentence input, CcgChart chart, CcgParser parser);
-
   VariableNumMap getTerminalVar();
   
   /**
    * Gets the possible lexicon entries for {@code wordSequence} that
-   * can be used in this parser. The returned entries do not include
-   * lexicon entries for unknown words, which may occur in the parse
-   * if {@code wordSequence} is unrecognized.
+   * can be used in this parser. {@code alreadyGenerated} is a collection
+   * of lexicon entries that have already been created for
+   * {@code wordSequence}. 
    * 
    * @param wordSequence
+   * @param posSequence
+   * @param alreadyGenerated
    * @return
    */
-  List<LexiconEntry> getLexiconEntries(List<String> wordSequence);
-  
-  List<LexiconEntry> getLexiconEntriesWithUnknown(String word, String posTag);
-  
-  List<LexiconEntry> getLexiconEntriesWithUnknown(List<String> originalWords, List<String> posTags);
-  
+  List<LexiconEntry> getLexiconEntries(List<String> wordSequence,
+      List<String> posSequence, List<LexiconEntry> alreadyGenerated);
+
   /**
-   * TODO: the lexicon interface needs to be refactored to clean up this method
-   * and some of this other nonsense
+   * Gets the unnormalized probability of generating {@code category}
+   * for {@code wordSequence} and {@code posSequence}.
    * 
-   * @param originalWords
-   * @param preprocessedWords
-   * @param pos
-   * @param ccgWordList
-   * @param featureVectors
-   * @param spanStart
-   * @param spanEnd
-   * @param terminals
+   * @param wordSequence
+   * @param posSequence
    * @param category
    * @return
    */
-  double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords, 
-      List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors,
-      int spanStart, int spanEnd, List<String> terminals, CcgCategory category);
+  double getCategoryWeight(List<String> wordSequence, List<String> posSequence,
+      CcgCategory category);
 }

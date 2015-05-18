@@ -1,9 +1,10 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
 import java.util.Collections;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.CcgParse;
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
@@ -39,7 +40,8 @@ public class ParametricStringLexicon implements ParametricCcgLexicon {
 
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      SufficientStatistics currentParameters, CcgParse parse, double count) {
+      SufficientStatistics currentParameters, List<String> wordSequence,
+      List<String> posSequence, CcgCategory category, double count) {
     // Don't need to do anything.
   }
 }

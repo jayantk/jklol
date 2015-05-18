@@ -31,6 +31,9 @@ public class CcgParse {
   // May be different from spannedWords if spannedWords is not in
   // the parser's lexicon.
   private final List<String> lexiconTriggerWords;
+  // Which lexicon in the CCG parser that this lexicon entry came from.
+  private final int lexiconIndex;
+
   // The words spanned by this portion of the parse tree.
   // Non-null only when this is a terminal.
   private final List<String> spannedWords;
@@ -79,6 +82,8 @@ public class CcgParse {
    * 
    * @param syntax
    * @param lexiconEntry
+   * @param lexiconTriggerWords
+   * @param lexiconIndex
    * @param spannedWords
    * @param posTags
    * @param heads
@@ -88,13 +93,15 @@ public class CcgParse {
    * @param right
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> lexiconTriggerWords, List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
+      List<String> lexiconTriggerWords, int lexiconIndex, List<String> spannedWords,
+      List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
       Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd,
       List<String> originalSentenceWords, List<String> originalSentencePosTags) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
     this.lexiconTriggerWords = lexiconTriggerWords;
+    this.lexiconIndex = lexiconIndex;
     this.spannedWords = spannedWords;
     this.posTags = posTags;
     this.heads = Preconditions.checkNotNull(heads);
@@ -132,6 +139,7 @@ public class CcgParse {
    * @param syntax
    * @param lexiconEntry
    * @param lexiconTriggerWords
+   * @param lexiconIndex
    * @param posTags
    * @param heads
    * @param deps
@@ -140,17 +148,18 @@ public class CcgParse {
    * @return
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> lexiconTriggerWords, List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
+      List<String> lexiconTriggerWords, int lexiconIndex, List<String> posTags,
+      Set<IndexedPredicate> heads, List<DependencyStructure> deps,
       List<String> spannedWords, double probability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd) {
-    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, deps,
-        probability, null, null, null, unaryRule, spanStart, spanEnd, null, null);
+    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, lexiconIndex, spannedWords,
+        posTags, heads, deps, probability, null, null, null, unaryRule, spanStart, spanEnd, null, null);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left,
       CcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
-    return new CcgParse(syntax, null, null, null, null, heads, dependencies, probability, left,
+    return new CcgParse(syntax, null, null, -1, null, null, heads, dependencies, probability, left,
         right, combinator, unaryRule, spanStart, spanEnd, null, null);
   }
 
@@ -473,18 +482,18 @@ public class CcgParse {
   }
 
   /**
-   * Returns one POS tag per lexicon entry. Differs from
+   * Returns the POS tags spanned by each lexicon entry. Differs from
    * {@link #getSpannedPosTags()} because lexicon entries may span
-   * multiple words. In these cases, only the last tag in the spanned
-   * sequence is included in the returned list.
+   * multiple words.
    * 
    * @return
    */
-  public List<String> getSpannedPosTagsByLexiconEntry() {
+  @SuppressWarnings("unchecked")
+  public List<List<String>> getSpannedPosTagsByLexiconEntry() {
     if (isTerminal()) {
-      return Arrays.asList(posTags.get(posTags.size() - 1));
+      return Arrays.<List<String>>asList(posTags);
     } else {
-      List<String> tags = Lists.newArrayList();
+      List<List<String>> tags = Lists.newArrayList();
       tags.addAll(left.getSpannedPosTagsByLexiconEntry());
       tags.addAll(right.getSpannedPosTagsByLexiconEntry());
       return tags;
@@ -505,6 +514,17 @@ public class CcgParse {
       lexiconEntries.addAll(left.getSpannedLexiconEntries());
       lexiconEntries.addAll(right.getSpannedLexiconEntries());
       return lexiconEntries;
+    }
+  }
+  
+  public List<Integer> getSpannedLexiconEntryIndexes() {
+    if (isTerminal()) {
+      return Arrays.asList(lexiconIndex);
+    } else {
+      List<Integer> lexiconEntryIndexes = Lists.newArrayList();
+      lexiconEntryIndexes.addAll(left.getSpannedLexiconEntryIndexes());
+      lexiconEntryIndexes.addAll(right.getSpannedLexiconEntryIndexes());
+      return lexiconEntryIndexes;
     }
   }
   
@@ -724,8 +744,8 @@ public class CcgParse {
   
 
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
-    return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
-        dependencies, probability, left, right, combinator, rule, spanStart, spanEnd,
+    return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, lexiconIndex, spannedWords,
+        posTags, heads, dependencies, probability, left, right, combinator, rule, spanStart, spanEnd,
         originalSentenceWords, originalSentencePosTags);
   }
 
@@ -739,9 +759,9 @@ public class CcgParse {
    * @return
    */
   public CcgParse addSentence(List<String> words, List<String> posTags) {
-    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
-        dependencies, probability, left, right, combinator, unaryRule, spanStart, spanEnd, words,
-        posTags);
+    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, lexiconIndex, spannedWords,
+        this.posTags, heads, dependencies, probability, left, right, combinator, unaryRule,
+        spanStart, spanEnd, words, posTags);
   }
 
   /**

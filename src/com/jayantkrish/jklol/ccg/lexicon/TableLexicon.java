@@ -1,15 +1,16 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
+import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class TableLexicon extends AbstractCcgLexicon {
@@ -34,7 +35,7 @@ public class TableLexicon extends AbstractCcgLexicon {
   public TableLexicon(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
       DiscreteFactor terminalPosDistribution, DiscreteFactor terminalSyntaxDistribution) {
-    super(terminalVar, null);
+    super(terminalVar);
     
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
@@ -70,21 +71,21 @@ public class TableLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence) {
-    return AbstractCcgLexicon.getLexiconEntriesFromFactor(wordSequence,
-        terminalDistribution, terminalVar, ccgCategoryVar);
+  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags,
+      List<LexiconEntry> alreadyGenerated) {
+    return TableLexicon.getLexiconEntriesFromFactor(wordSequence, terminalDistribution,
+        terminalVar, ccgCategoryVar);
   }
 
   @Override
-  public double getCategoryWeight(List<String> originalWords, List<String> preprocessedWords,
-      List<String> pos, List<WordAndPos> ccgWordList, List<Tensor> featureVectors, int spanStart,
-      int spanEnd, List<String> terminals, CcgCategory category) {
-    double entryProb = getTerminalProbability(terminals, category);
-    double posProb = getTerminalPosProbability(pos.get(spanEnd), category.getSyntax());
-    double syntaxProb = getTerminalSyntaxProbability(terminals, category.getSyntax());
+  public double getCategoryWeight(List<String> wordSequence, 
+      List<String> posTags, CcgCategory category) {
+    double entryProb = getTerminalProbability(wordSequence, category);
+    double posProb = getTerminalPosProbability(posTags.get(posTags.size() - 1), category.getSyntax());
+    double syntaxProb = getTerminalSyntaxProbability(wordSequence, category.getSyntax());
     return entryProb * posProb * syntaxProb;
   }
-  
+
   public double getTerminalProbability(List<String> terminal, CcgCategory category) {
     Assignment terminalAssignment = terminalVar.outcomeArrayToAssignment(terminal);
     Assignment categoryAssignment = ccgCategoryVar.outcomeArrayToAssignment(category);
@@ -113,5 +114,34 @@ public class TableLexicon extends AbstractCcgLexicon {
     } else {
       return 1.0;
     }
+  }
+
+  /**
+   * Gets the possible lexicon entries for {@code wordSequence} from
+   * {@code terminalDistribution}, a distribution over CCG categories
+   * given word sequences.
+   * 
+   * @param wordSequence
+   * @param terminalDistribution
+   * @param terminalVar
+   * @param ccgCategoryVar
+   * @return
+   */
+  public static List<LexiconEntry> getLexiconEntriesFromFactor(List<String> wordSequence,
+      DiscreteFactor terminalDistribution, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar) {
+    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
+    if (terminalVar.isValidOutcomeArray(wordSequence)) {
+      Assignment assignment = terminalVar.outcomeArrayToAssignment(wordSequence);
+
+      Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+      while (iterator.hasNext()) {
+        Outcome bestOutcome = iterator.next();
+        CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
+            ccgCategoryVar.getOnlyVariableNum());
+
+        lexiconEntries.add(new LexiconEntry(wordSequence, ccgCategory));
+      }
+    }
+    return lexiconEntries;
   }
 }

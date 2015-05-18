@@ -28,7 +28,6 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
-import com.jayantkrish.jklol.ccg.lexicon.CombiningLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
@@ -83,11 +82,14 @@ public class CcgParserTest extends TestCase {
       "blue,(N{0}/N{0}){1},blue,0 blue",
       "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
       "a,(NP{1}/N{1}){0},,0 a,a 1 1",
-      "unk-nn,N{0},,0 unk-nn",
       "#,#{0},#,0 #",
       "stringfunc,(S{0}/N{1}){0},(lambda $1 (stringFunc $1)),0 stringfunc,stringfunc 1 1",
       };
   
+  private static final String[] unknownLexicon = {
+    "nn,N{0},,0 unk-nn",
+  };
+
   private static final String DEFAULT_POS = ParametricCcgParser.DEFAULT_POS_TAG;
 
   private static final double[] weights = { 0.5, 1.0, 1.0, 1.0, 1.0,
@@ -1182,16 +1184,23 @@ public class CcgParserTest extends TestCase {
     }
     DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
 
+    List<CcgLexicon> lexicons = Lists.newArrayList();
     CcgLexicon lexiconFactor = new TableLexicon(terminalVar, ccgCategoryVar,
         terminalBuilder.build(), posTagVar, terminalSyntaxVar, posDistribution,
         terminalSyntaxDistribution);
+    lexicons.add(lexiconFactor);
+    /*
+    CcgLexicon unknownWordLexicon = new UnknownWordLexicon(terminalVar, terminalPosSequenceVar,
+        ccgCategoryVar, terminalDistribution)
+        */
+
     if (useStringLexicon) {
       CcgCategory stringCategory = CcgCategory.parseFrom("N{0},(lambda $0 $0),0 special:string");
       CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory));
-      lexiconFactor = new CombiningLexicon(terminalVar, Arrays.asList(stringLexicon, lexiconFactor));
+      lexicons.add(stringLexicon);
     }
 
-    return new CcgParser(lexiconFactor, semanticHeadVar, semanticSyntaxVar,
+    return new CcgParser(lexicons, semanticHeadVar, semanticSyntaxVar,
         semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,

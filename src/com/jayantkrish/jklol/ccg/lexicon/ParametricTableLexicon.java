@@ -4,9 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.CcgParse;
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
@@ -117,30 +116,25 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
   }
 
   @Override
-  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, 
-      SufficientStatistics currentParameters, CcgParse parse, double count) {
-    List<LexiconEntry> lexiconEntries = parse.getSpannedLexiconEntries();
-    List<String> posTags = parse.getSpannedPosTagsByLexiconEntry();
-    Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
-    int numEntries = lexiconEntries.size();
-    for (int i = 0; i < numEntries; i++) {
-      LexiconEntry lexiconEntry = lexiconEntries.get(i);
-      incrementLexiconEntrySufficientStatistics(gradient, currentParameters, lexiconEntry, count);
-      incrementPosSufficientStatistics(gradient, currentParameters, posTags.get(i), 
-          lexiconEntry.getCategory().getSyntax(), count);
-      incrementLexiconSyntaxSufficientStatistics(gradient, currentParameters,
-          lexiconEntry.getWords(), lexiconEntry.getCategory().getSyntax(), count);
-    }
+  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, List<String> wordSequence,
+      List<String> posSequence, CcgCategory category, double count) {
+    incrementLexiconEntrySufficientStatistics(gradient, currentParameters, wordSequence,
+        category, count);
+    incrementPosSufficientStatistics(gradient, currentParameters,
+        posSequence.get(posSequence.size() - 1), category.getSyntax(), count);
+    incrementLexiconSyntaxSufficientStatistics(gradient, currentParameters,
+        wordSequence, category.getSyntax(), count);
   }
 
   public void incrementLexiconEntrySufficientStatistics(SufficientStatistics gradient, 
-      SufficientStatistics currentParameters, LexiconEntry entry, double count) {
+      SufficientStatistics currentParameters, List<String> wordSequence, CcgCategory category,
+      double count) {
     SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
     SufficientStatistics terminalParameters = currentParameters.coerceToList()
         .getStatisticByName(TERMINAL_PARAMETERS);
-    Assignment assignment = Assignment.unionAll(
-        terminalVar.outcomeArrayToAssignment(entry.getWords()),
-        ccgCategoryVar.outcomeArrayToAssignment(entry.getCategory()));
+    Assignment assignment = Assignment.unionAll(terminalVar.outcomeArrayToAssignment(wordSequence),
+        ccgCategoryVar.outcomeArrayToAssignment(category));
     if (terminalFamily.getVars().isValidAssignment(assignment)) {
       terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
           terminalParameters, assignment, count);

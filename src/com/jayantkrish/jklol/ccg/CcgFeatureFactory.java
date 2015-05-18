@@ -122,7 +122,7 @@ public interface CcgFeatureFactory {
    * {@code lexiconIndicatorFactor}.
    * @return
    */
-  ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
+  List<ParametricCcgLexicon> getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconIndicatorFactor,
       Collection<LexiconEntry> lexiconEntries);

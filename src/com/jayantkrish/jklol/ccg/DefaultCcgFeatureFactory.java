@@ -172,7 +172,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   }
 
   @Override
-  public ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
+  public List<ParametricCcgLexicon> getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
       DiscreteFactor lexiconIndicatorFactor, Collection<LexiconEntry> lexiconEntries) {
     if (featureGenerator == null) {
@@ -197,8 +197,9 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
         terminalPosParametricFactor = new ConstantParametricFactor(terminalPosVars, TableFactor.logUnity(terminalPosVars));
       }
 
-      return new ParametricTableLexicon(terminalWordVar, ccgCategoryVar, terminalParametricFactor,
-          terminalPosVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor);
+      return Arrays.<ParametricCcgLexicon>asList(new ParametricTableLexicon(terminalWordVar, ccgCategoryVar,
+          terminalParametricFactor, terminalPosVar, terminalSyntaxVar, terminalPosParametricFactor,
+          terminalSyntaxFactor));
     } else {
       ParametricFactor terminalFamily = new IndicatorLogLinearFactor(terminalWordVar.union(ccgCategoryVar),
           lexiconIndicatorFactor);
@@ -208,8 +209,10 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       ParametricLinearClassifierFactor featureFamily = new ParametricLinearClassifierFactor(featureVar, terminalSyntaxVar,
           VariableNumMap.EMPTY, featureGenerator.getFeatureDictionary(), null, false);
 
-      return new ParametricFeaturizedLexicon(terminalWordVar, ccgCategoryVar, terminalFamily,
-          featureGenerator, terminalSyntaxVar, featureVar, featureFamily);
+      // TODO: delete me here.
+      return Arrays.<ParametricCcgLexicon>asList(new ParametricFeaturizedLexicon(
+          terminalWordVar, ccgCategoryVar, terminalFamily, featureGenerator,
+          terminalSyntaxVar, featureVar, featureFamily));
     }
   }
 

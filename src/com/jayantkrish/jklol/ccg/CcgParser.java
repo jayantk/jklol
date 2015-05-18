@@ -16,6 +16,7 @@ import java.util.concurrent.Future;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -107,7 +108,7 @@ public class CcgParser implements Serializable {
   // Member variables ////////////////////////////////////
 
   // Weights on lexicon entries
-  private final CcgLexicon lexicon; 
+  private final List<CcgLexicon> lexicons; 
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -214,7 +215,7 @@ public class CcgParser implements Serializable {
   private final boolean allowWordSkipping;
   private final boolean normalFormOnly;
 
-  public CcgParser(CcgLexicon lexicon, VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
+  public CcgParser(List<CcgLexicon> lexicons, VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar,
       DiscreteFactor dependencyDistribution, VariableNumMap wordDistanceVar,
@@ -229,7 +230,7 @@ public class CcgParser implements Serializable {
       VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar, VariableNumMap rootPosVar, 
       DiscreteFactor rootSyntaxDistribution, DiscreteFactor headedRootSyntaxDistribution,
       boolean allowWordSkipping, boolean normalFormOnly) {
-    this.lexicon = Preconditions.checkNotNull(lexicon);
+    this.lexicons = ImmutableList.copyOf(lexicons);
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(VariableNumMap.unionAll(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
@@ -1022,8 +1023,8 @@ public class CcgParser implements Serializable {
         newRightRelabeling, newRightInverseRelabeling, newRightToReturnInverseRelabeling, newRightDepRelabeling);
   }
 
-  public CcgLexicon getLexicon() {
-    return lexicon;
+  public List<CcgLexicon> getLexicons() {
+    return lexicons;
   }
 
   public boolean isPossibleDependencyStructure(DependencyStructure dependency, List<String> posTags) {
@@ -1080,7 +1081,7 @@ public class CcgParser implements Serializable {
   }
 
   public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
-    return new CcgParser(lexicon, dependencyHeadVar, dependencySyntaxVar,
+    return new CcgParser(lexicons, dependencyHeadVar, dependencySyntaxVar,
         dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
@@ -1208,10 +1209,10 @@ public class CcgParser implements Serializable {
     if (log == null) {
       log = new NullLogFunction();
     }
-    
+
     log.startTimer("initialize_chart");
     initializeChart(chart, input, beamFilter);
-    lexicon.initializeChartTerminals(input, chart, this);
+    initializeChartTerminals(chart, lexicons, input);
     log.stopTimer("initialize_chart");
 
     log.startTimer("calculate_inside_beam");
@@ -1275,9 +1276,69 @@ public class CcgParser implements Serializable {
     // (Possibly a cache issue?)
     // sparsifyDependencyDistribution(chart);
   }
+  
+  private void initializeChartTerminals(CcgChart chart, List<CcgLexicon> lexicons,
+      SupertaggedSentence sentence) {
+    List<String> terminals = sentence.getWords();
+    List<String> preprocessedTerminals = preprocessInput(terminals);
+    List<String> posTags = sentence.getPosTags();
+
+    for (int i = 0; i < preprocessedTerminals.size(); i++) {
+      for (int j = i; j < preprocessedTerminals.size(); j++) {
+        List<String> terminalValue = preprocessedTerminals.subList(i, j + 1);
+        List<String> posTagValue = posTags.subList(i, j + 1);
+        String posTag = posTags.get(j);
+
+        List<LexiconEntry> allLexiconEntries = Lists.newArrayList();
+        for (int k = 0; k < lexicons.size(); k++) {
+          CcgLexicon lexicon = lexicons.get(k);
+          List<LexiconEntry> lexiconEntries = lexicon.getLexiconEntries(terminalValue,
+              posTagValue, allLexiconEntries);
+          allLexiconEntries.addAll(lexiconEntries);
+
+          for (LexiconEntry lexiconEntry : lexiconEntries) {
+            CcgCategory category = lexiconEntry.getCategory();
+
+            // Look up how likely this syntactic entry is according to
+            // any additional parameters in subclasses.
+            double subclassProb = lexicon.getCategoryWeight(terminalValue, posTagValue, category);
+
+            /*
+            subclassProb *= sharedLexiconFeatures.getCategoryWeight(terminals, preprocessedTerminals,
+                posTags, i, j, terminalValue, category);
+                */
+            
+            // Add all possible chart entries to the ccg chart.
+            ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, i, j, k);
+            chart.addChartEntryForSpan(entry, subclassProb, i, j, syntaxVarType);
+          }
+        }
+        chart.doneAddingChartEntriesForSpan(i, j);
+        
+        /*
+        int numAdded = lexicon.addChartEntriesForTerminal(terminals, preprocessedTerminals, posTags,
+            ccgWordList, featureVectors, terminalValue, posTag, i, j, chart, terminalVar, parser);
+        if (numAdded == 0 && i == j && useUnknownWords) {
+          // Backoff to POS tags if the input is unknown.
+          terminalValue = preprocessInput(Arrays.asList(CcgLexicon.UNKNOWN_WORD_PREFIX + posTags.get(i)));
+          addChartEntriesForTerminal(terminals, preprocessedTerminals, posTags, ccgWordList, 
+              featureVectors, terminalValue, posTag, i, j, chart, terminalVar, parser);
+        }
+        */
+      }
+    }
+  }
+
+  private List<String> preprocessInput(List<String> terminals) {
+    List<String> preprocessedTerminals = Lists.newArrayList();
+    for (String terminal : terminals) {
+      preprocessedTerminals.add(terminal.toLowerCase());
+    }
+    return preprocessedTerminals;
+  }
 
   public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
-      int spanStart, int spanEnd) {
+      int spanStart, int spanEnd, int lexiconIndex) {
     // Assign each predicate in this category a unique word index.
     List<Long> assignments = Lists.newArrayList();
     List<Set<String>> values = result.getAssignment();
@@ -1312,7 +1373,7 @@ public class CcgParser implements Serializable {
     int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
     int syntaxHeadVar = result.getSyntax().getHeadVariable();
     return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), syntaxHeadVar, 
-        result, terminalWords, null, assignmentVarIndex, Longs.toArray(assignments),
+        result, terminalWords, lexiconIndex, null, assignmentVarIndex, Longs.toArray(assignments),
         unfilledDependencyVarIndex, unfilledDepArray, depArray, spanStart, spanEnd);
   }
 

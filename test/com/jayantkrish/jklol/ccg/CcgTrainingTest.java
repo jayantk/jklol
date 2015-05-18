@@ -128,14 +128,10 @@ public class CcgTrainingTest extends TestCase {
     }
 
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax), true),
-        posTags, true, null, false, false);
+        new DefaultCcgFeatureFactory(null, true), posTags, true, null, false, false);
     
     wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax), true),
-        posTags, true, null, true, false);
-    
-    
+        new DefaultCcgFeatureFactory(null, true), posTags, true, null, true, false);
   }
   
   public void testSyntacticChartFilter1() {
@@ -365,6 +361,7 @@ public class CcgTrainingTest extends TestCase {
     // Test that zero training error is achieved.
     for (CcgExample example : examples) {
       List<CcgParse> parses = beamSearch(parser, example.getSentence().getWords(), example.getSentence().getPosTags(), 100);
+      assertTrue(parses.size() > 0);
       CcgParse bestParse = parses.get(0);
 
       System.out.println(example.getSentence().getWords() + " " + bestParse);

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -120,12 +121,19 @@ public interface CcgFeatureFactory {
    * each outcome with value 1.0 represents a entry in the lexicon.
    * @param lexiconEntries the lexicon entries used to build
    * {@code lexiconIndicatorFactor}.
+   * @param unknownLexiconIndicatorFactor
+   * @param unknownLexiconEntries
    * @return
    */
   List<ParametricCcgLexicon> getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar, DiscreteFactor lexiconIndicatorFactor,
-      Collection<LexiconEntry> lexiconEntries);
+      Collection<LexiconEntry> lexiconEntries, DiscreteFactor unknownLexiconIndicatorFactor,
+      Collection<LexiconEntry> unknownLexiconEntries);
+  
+  List<ParametricLexiconScorer> getLexiconScorers(VariableNumMap terminalWordVar,
+      VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
+      VariableNumMap terminalSyntaxVar);
 
   /**
    * Gets features over CCG binary rules. {@code binaryRuleDistribution} is the

@@ -61,6 +61,7 @@ public class TrainCcg extends AbstractCli {
 
   // CCG parser options
   private OptionSpec<String> ccgLexicon;
+  private OptionSpec<String> ccgUnknownLexicon;
   private OptionSpec<String> ccgRules;
   private OptionSpec<Void> ccgApplicationOnly;
   private OptionSpec<Void> ccgNormalFormOnly;
@@ -91,6 +92,8 @@ public class TrainCcg extends AbstractCli {
     // CCG parser arguments
     ccgLexicon = parser.accepts("lexicon",
         "The CCG lexicon defining the grammar to use.").withRequiredArg().ofType(String.class).required();
+    ccgUnknownLexicon = parser.accepts("unknownLexicon",
+        "The CCG lexicon for unknown words.").withRequiredArg().ofType(String.class);
     ccgRules = parser.accepts("rules",
         "Binary and unary rules to use during CCG parsing, in addition to function application and composition.")
         .withRequiredArg().ofType(String.class);
@@ -140,10 +143,13 @@ public class TrainCcg extends AbstractCli {
     System.out.println("Creating ParametricCcgParser.");
     CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, true);
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(ccgLexicon));
+    List<String> unknownLexiconEntries = options.has(ccgUnknownLexicon) ?
+        IoUtils.readLines(options.valueOf(ccgUnknownLexicon)) : Collections.<String>emptyList();
     List<String> ruleEntries = options.has(ccgRules) ? IoUtils.readLines(options.valueOf(ccgRules))
         : Collections.<String> emptyList();
-    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
-        posTags, !options.has(ccgApplicationOnly), observedRules, false, options.has(ccgNormalFormOnly));
+    ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries,
+        unknownLexiconEntries, ruleEntries, featureFactory, posTags,
+        !options.has(ccgApplicationOnly), observedRules, false, options.has(ccgNormalFormOnly));
     
     System.out.println("Done creating ParametricCcgParser.");
 

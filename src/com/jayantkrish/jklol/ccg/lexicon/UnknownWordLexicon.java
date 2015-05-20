@@ -21,16 +21,16 @@ import com.jayantkrish.jklol.util.Assignment;
 public class UnknownWordLexicon extends AbstractCcgLexicon {
   private static final long serialVersionUID = 1L;
 
-  private final VariableNumMap terminalPosSequenceVar;
+  private final VariableNumMap posVar;
   private final VariableNumMap ccgCategoryVar;
-  private final DiscreteFactor terminalDistribution;
+  private final DiscreteFactor posCategoryDistribution;
 
-  public UnknownWordLexicon(VariableNumMap terminalVar, VariableNumMap terminalPosSequenceVar,
-      VariableNumMap ccgCategoryVar, DiscreteFactor terminalDistribution) {
+  public UnknownWordLexicon(VariableNumMap terminalVar, VariableNumMap posVar,
+      VariableNumMap ccgCategoryVar, DiscreteFactor posCategoryDistribution) {
     super(terminalVar);
-    this.terminalPosSequenceVar = Preconditions.checkNotNull(terminalPosSequenceVar);
+    this.posVar = Preconditions.checkNotNull(posVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
-    this.terminalDistribution = Preconditions.checkNotNull(terminalDistribution);
+    this.posCategoryDistribution = Preconditions.checkNotNull(posCategoryDistribution);
   }
 
   @Override
@@ -38,10 +38,11 @@ public class UnknownWordLexicon extends AbstractCcgLexicon {
       List<LexiconEntry> alreadyGenerated) {
 
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-    if (alreadyGenerated.size() == 0) {
-      Assignment assignment = terminalPosSequenceVar.outcomeArrayToAssignment(posSequence);
+    if (alreadyGenerated.size() == 0 && posSequence.size() == 1) {
+      String pos = posSequence.get(0);
+      Assignment assignment = posVar.outcomeArrayToAssignment(pos);
 
-      Iterator<Outcome> iterator = terminalDistribution.outcomePrefixIterator(assignment);
+      Iterator<Outcome> iterator = posCategoryDistribution.outcomePrefixIterator(assignment);
       while (iterator.hasNext()) {
         Outcome bestOutcome = iterator.next();
         CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
@@ -56,9 +57,12 @@ public class UnknownWordLexicon extends AbstractCcgLexicon {
   @Override
   public double getCategoryWeight(List<String> wordSequence, List<String> posSequence,
       CcgCategory category) {
-    Assignment terminalAssignment = terminalPosSequenceVar.outcomeArrayToAssignment(posSequence);
+    Preconditions.checkArgument(posSequence.size() == 1);
+    String pos = posSequence.get(0);
+
+    Assignment terminalAssignment = posVar.outcomeArrayToAssignment(pos);
     Assignment categoryAssignment = ccgCategoryVar.outcomeArrayToAssignment(category);
     Assignment a = terminalAssignment.union(categoryAssignment);
-    return terminalDistribution.getUnnormalizedProbability(a);
+    return posCategoryDistribution.getUnnormalizedProbability(a);
   }
 }

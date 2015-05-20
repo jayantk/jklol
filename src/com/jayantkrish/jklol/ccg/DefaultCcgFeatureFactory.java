@@ -7,8 +7,10 @@ import java.util.List;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconFeatureGenerator;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
-import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricSyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricUnknownWordLexicon;
 import com.jayantkrish.jklol.ccg.supertag.TrainSupertagger;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -17,7 +19,6 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -174,36 +175,48 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   @Override
   public List<ParametricCcgLexicon> getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
-      DiscreteFactor lexiconIndicatorFactor, Collection<LexiconEntry> lexiconEntries) {
-    if (featureGenerator == null) {
-      // Features for mapping words to ccg categories (which include both 
-      // syntax and semantics). 
-      ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(
-          terminalWordVar.union(ccgCategoryVar), lexiconIndicatorFactor);
+      DiscreteFactor lexiconIndicatorFactor, Collection<LexiconEntry> lexiconEntries,
+      DiscreteFactor unknownLexiconIndicatorFactor, Collection<LexiconEntry> unknownLexiconEntries) {
+    List<ParametricCcgLexicon> lexicons = Lists.newArrayList();
 
+    // Lexicon mapping words to ccg categories (which include both 
+    // syntax and semantics). 
+    ParametricFactor terminalParametricFactor = new IndicatorLogLinearFactor(
+        terminalWordVar.union(ccgCategoryVar), lexiconIndicatorFactor);
+    lexicons.add(new ParametricTableLexicon(terminalWordVar, ccgCategoryVar, terminalParametricFactor));
+    
+    if (unknownLexiconEntries.size() > 0) {
+      ParametricFactor unknownTerminalFamily = new IndicatorLogLinearFactor(
+          terminalPosVar.union(ccgCategoryVar), unknownLexiconIndicatorFactor);
+      ParametricCcgLexicon unknownLexicon = new ParametricUnknownWordLexicon(terminalWordVar,
+          terminalPosVar, ccgCategoryVar, unknownTerminalFamily);
+     
+      lexicons.add(unknownLexicon);
+    }
+    return lexicons;
+  }
+
+  @Override
+  public List<ParametricLexiconScorer> getLexiconScorers(VariableNumMap terminalWordVar,
+      VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
+      VariableNumMap terminalSyntaxVar) {
+    List<ParametricLexiconScorer> scorers = Lists.newArrayList();
+    if (usePosFeatures) {
       // Backoff features mapping words to syntactic categories (ignoring 
       // semantics). These features aren't very useful for semantic parsing. 
       VariableNumMap vars = terminalWordVar.union(terminalSyntaxVar); 
-      ParametricFactor terminalSyntaxFactor = new ConstantParametricFactor(vars,
+      ParametricFactor terminalSyntaxFamily = new ConstantParametricFactor(vars,
           TableFactor.logUnity(vars));
-     
-      // Backoff distribution over parts-of-speech and syntactic 
-      // categories.
+
       VariableNumMap terminalPosVars = VariableNumMap.unionAll(terminalPosVar, terminalSyntaxVar);
-      ParametricFactor terminalPosParametricFactor;
-      if (usePosFeatures) {
-        terminalPosParametricFactor = new DenseIndicatorLogLinearFactor(terminalPosVars, true);
-      } else {
-        terminalPosParametricFactor = new ConstantParametricFactor(terminalPosVars, TableFactor.logUnity(terminalPosVars));
-      }
+      ParametricFactor terminalPosFamily = new DenseIndicatorLogLinearFactor(terminalPosVars, true);
 
-      return Arrays.<ParametricCcgLexicon>asList(new ParametricTableLexicon(terminalWordVar, ccgCategoryVar,
-          terminalParametricFactor, terminalPosVar, terminalSyntaxVar, terminalPosParametricFactor,
-          terminalSyntaxFactor));
-    } else {
-      ParametricFactor terminalFamily = new IndicatorLogLinearFactor(terminalWordVar.union(ccgCategoryVar),
-          lexiconIndicatorFactor);
+      scorers.add(new ParametricSyntaxLexiconScorer(terminalWordVar, terminalPosVar,
+          terminalSyntaxVar, terminalPosFamily, terminalSyntaxFamily));
+    }
 
+    /*
+    if (featureGenerator != null) {
       VariableNumMap featureVar = VariableNumMap.singleton(terminalSyntaxVar.getOnlyVariableNum() - 1,
           "ccgLexiconFeatures", featureGenerator.getFeatureDictionary());
       ParametricLinearClassifierFactor featureFamily = new ParametricLinearClassifierFactor(featureVar, terminalSyntaxVar,
@@ -212,8 +225,11 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       // TODO: delete me here.
       return Arrays.<ParametricCcgLexicon>asList(new ParametricFeaturizedLexicon(
           terminalWordVar, ccgCategoryVar, terminalFamily, featureGenerator,
-          terminalSyntaxVar, featureVar, featureFamily));
+          terminalSyntaxVar, featureVar, featureFamily), unknownLexicon);
     }
+    */
+
+    return scorers;
   }
 
   @Override

@@ -92,9 +92,9 @@ public class TemplateCcgParseAugmenter implements CcgParseAugmenter {
           currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
 
       result = CcgParse.forTerminal(input.getHeadedSyntacticCategory(), lexiconEntry,
-          input.getLexiconTriggerWords(), input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(), 
-          input.getWords(), input.getNodeProbability(), input.getUnaryRule(),
-          input.getSpanStart(), input.getSpanEnd()); 
+          input.getLexiconTriggerWords(), input.getLexiconIndex(), input.getSpannedPosTags(),
+          input.getSemanticHeads(), input.getNodeDependencies(),  input.getWords(),
+          input.getNodeProbability(), input.getUnaryRule(), input.getSpanStart(), input.getSpanEnd()); 
     } else {
       CcgParse left = addLogicalFormsHelper(input.getLeft(), wholeParse);
       CcgParse right = addLogicalFormsHelper(input.getRight(), wholeParse);

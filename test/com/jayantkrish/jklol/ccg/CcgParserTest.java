@@ -28,8 +28,11 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.UnknownWordLexicon;
 import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -87,7 +90,7 @@ public class CcgParserTest extends TestCase {
       };
   
   private static final String[] unknownLexicon = {
-    "nn,N{0},,0 unk-nn",
+    "NN,N{0},,0 unk-nn",
   };
 
   private static final String DEFAULT_POS = ParametricCcgParser.DEFAULT_POS_TAG;
@@ -101,7 +104,9 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 3.0, 1.0, 1.0};
+      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+
+  private static final double[] unknownWeights = { 3.0 };
 
   private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
@@ -150,16 +155,16 @@ public class CcgParserTest extends TestCase {
   semanticArgVar, semanticHeadPosVar, semanticArgPosVar;
 
   public void setUp() {
-    parser = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, false, false, false);
-    parserWithComposition = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false, false, false);
-    parserWithCompositionNormalForm = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, true, false, true, false);
-    parserWithUnary = parseLexicon(lexicon, binaryRuleArray, unaryRuleArray, weights, false, false, false, false);
-    parserWithUnaryAndComposition = parseLexicon(lexicon, binaryRuleArray,
-        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, true, false, false, false);
+    parser = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, false, false, false);
+    parserWithComposition = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, true, false, false, false);
+    parserWithCompositionNormalForm = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, true, false, true, false);
+    parserWithUnary = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, unaryRuleArray, weights, unknownWeights, false, false, false, false);
+    parserWithUnaryAndComposition = parseLexicon(lexicon, unknownLexicon, binaryRuleArray,
+        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, unknownWeights, true, false, false, false);
 
-    parserWordSkip = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true, false, false);
+    parserWordSkip = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, true, false, false);
     
-    parserWithString = parseLexicon(lexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, false, true, false, true);
+    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, true, false, true);
 
     exp = ExpressionParser.expression2();
     simplifier = new ExpressionSimplifier(Arrays.
@@ -174,9 +179,9 @@ public class CcgParserTest extends TestCase {
     CcgParse parse = parses.get(0);
     assertEquals(6.0, parse.getSubtreeProbability());
     assertEquals("N", parse.getSyntacticCategory().getValue());
-    assertEquals(Arrays.asList("unk-nn"), parse.getLexiconTriggerWords());
-    assertEquals(Arrays.asList("unk-nn"), parse.getSpannedLexiconEntries().get(0).getWords());
-    
+    assertEquals(Arrays.asList("not_in_lexicon"), parse.getLexiconTriggerWords());
+    assertEquals(Arrays.asList("not_in_lexicon"), parse.getSpannedLexiconEntries().get(0).getWords());
+
     // No backoff should happen if the word is in the lexicon.
     parses = beamSearch(parser, Arrays.asList("a"), Arrays.asList("NN"), 10);
     assertEquals(1, parses.size());
@@ -996,9 +1001,9 @@ public class CcgParserTest extends TestCase {
     return new DependencyStructure(subject, subjIndex, cat, object, objectIndex, argNum);
   }
 
-  private CcgParser parseLexicon(String[] lexicon, String[] binaryRuleArray, String[] unaryRuleArray,
-      double[] weights, boolean allowComposition, boolean allowWordSkipping, boolean normalFormOnly,
-      boolean useStringLexicon) {
+  private CcgParser parseLexicon(String[] lexicon, String[] unknownLexicon, String[] binaryRuleArray,
+      String[] unaryRuleArray, double[] weights, double[] unknownWeights, boolean allowComposition,
+      boolean allowWordSkipping, boolean normalFormOnly, boolean useStringLexicon) {
     Preconditions.checkArgument(lexicon.length == weights.length);
     List<CcgCategory> categories = Lists.newArrayList();
     Set<HeadedSyntacticCategory> syntacticCategories = Sets.newHashSet();
@@ -1009,6 +1014,19 @@ public class CcgParserTest extends TestCase {
       words.add(Arrays.asList(lexicon[i].substring(0, commaInd)));
 
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
+      categories.add(category);
+      for (String head : Iterables.concat(category.getAssignment())) {
+        semanticPredicates.addAll(Arrays.asList(head));
+      }
+      semanticPredicates.addAll(category.getSubjects());
+      syntacticCategories.add(category.getSyntax());
+    }
+
+    // Parse unknown word lexicon entries.
+    for (int i = 0; i < unknownLexicon.length; i++) {
+      int commaInd = unknownLexicon[i].indexOf(",");
+
+      CcgCategory category = CcgCategory.parseFrom(unknownLexicon[i].substring(commaInd + 1));
       categories.add(category);
       for (String head : Iterables.concat(category.getAssignment())) {
         semanticPredicates.addAll(Arrays.asList(head));
@@ -1045,14 +1063,26 @@ public class CcgParserTest extends TestCase {
         Lists.newArrayList(DEFAULT_POS, "NN", "JJ"));
 
     terminalVar = VariableNumMap.singleton(0, "words", wordType);
-    ccgCategoryVar = VariableNumMap.singleton(1, "ccgCategory", ccgCategoryType);
+    posTagVar = VariableNumMap.singleton(1, "posTag", posType);
+    ccgCategoryVar = VariableNumMap.singleton(2, "ccgCategory", ccgCategoryType);
     VariableNumMap vars = VariableNumMap.unionAll(terminalVar, ccgCategoryVar);
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
-    for (int i = 0; i < categories.size(); i++) {
+    for (int i = 0; i < lexicon.length; i++) {
       int commaInd = lexicon[i].indexOf(",");
       List<String> wordList = Arrays.asList(lexicon[i].substring(0, commaInd));
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, category), weights[i]);
+    }
+    
+    // Build the unknown word terminal distribution
+    VariableNumMap unknownVars = VariableNumMap.unionAll(posTagVar, ccgCategoryVar);
+    TableFactorBuilder unknownTerminalBuilder = new TableFactorBuilder(unknownVars,
+        SparseTensorBuilder.getFactory());
+    for (int i = 0; i < unknownLexicon.length; i++) {
+      int commaInd = unknownLexicon[i].indexOf(",");
+      String posTag = unknownLexicon[i].substring(0, commaInd);
+      CcgCategory category = CcgCategory.parseFrom(unknownLexicon[i].substring(commaInd + 1));
+      unknownTerminalBuilder.setWeight(unknownVars.outcomeArrayToAssignment(posTag, category), unknownWeights[i]);
     }
 
     // Distribution over CCG combinators, i.e., binary combination rules.
@@ -1123,8 +1153,7 @@ public class CcgParserTest extends TestCase {
 
     // Distribution over pos tags and terminal syntactic types,
     // for smoothing sparse word counts.
-    posTagVar = VariableNumMap.singleton(0, "posTag", posType);
-    terminalSyntaxVar = VariableNumMap.singleton(1, "terminalSyntax", leftSyntaxVar.getDiscreteVariables().get(0));
+    terminalSyntaxVar = VariableNumMap.singleton(3, "terminalSyntax", leftSyntaxVar.getDiscreteVariables().get(0));
     VariableNumMap terminalPosVars = posTagVar.union(terminalSyntaxVar);
     DiscreteFactor posDistribution = TableFactor.unity(terminalPosVars);
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom("N{0}");
@@ -1186,21 +1215,24 @@ public class CcgParserTest extends TestCase {
 
     List<CcgLexicon> lexicons = Lists.newArrayList();
     CcgLexicon lexiconFactor = new TableLexicon(terminalVar, ccgCategoryVar,
-        terminalBuilder.build(), posTagVar, terminalSyntaxVar, posDistribution,
-        terminalSyntaxDistribution);
+        terminalBuilder.build());
     lexicons.add(lexiconFactor);
-    /*
-    CcgLexicon unknownWordLexicon = new UnknownWordLexicon(terminalVar, terminalPosSequenceVar,
-        ccgCategoryVar, terminalDistribution)
-        */
+ 
+    CcgLexicon unknownWordLexicon = new UnknownWordLexicon(terminalVar, posTagVar,
+        ccgCategoryVar, unknownTerminalBuilder.build());
+    lexicons.add(unknownWordLexicon);
 
     if (useStringLexicon) {
       CcgCategory stringCategory = CcgCategory.parseFrom("N{0},(lambda $0 $0),0 special:string");
       CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory));
       lexicons.add(stringLexicon);
     }
+    
+    List<LexiconScorer> scorers = Lists.newArrayList();
+    scorers.add(new SyntaxLexiconScorer(terminalVar, posTagVar, terminalSyntaxVar, posDistribution,
+        terminalSyntaxDistribution));
 
-    return new CcgParser(lexicons, semanticHeadVar, semanticSyntaxVar,
+    return new CcgParser(lexicons, scorers, semanticHeadVar, semanticSyntaxVar,
         semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,

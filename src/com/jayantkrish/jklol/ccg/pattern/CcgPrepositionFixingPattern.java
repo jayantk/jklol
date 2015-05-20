@@ -116,7 +116,7 @@ public class CcgPrepositionFixingPattern implements CcgPattern {
           oldCategory.getSubjects(), oldCategory.getArgumentNumbers(), oldCategory.getObjects(),
           Collections.<Set<String>>nCopies(numHeads, Sets.<String>newHashSet()));
 
-      return CcgParse.forTerminal(newRoot, newCcgCategory, parse.getLexiconTriggerWords(),
+      return CcgParse.forTerminal(newRoot, newCcgCategory, parse.getLexiconTriggerWords(), parse.getLexiconIndex(),
           parse.getPosTags(), parse.getSemanticHeads(), parse.getNodeDependencies(), parse.getWords(),
           parse.getNodeProbability(), parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd());
     }

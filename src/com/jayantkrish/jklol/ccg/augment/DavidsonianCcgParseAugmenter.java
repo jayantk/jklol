@@ -55,8 +55,9 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
           currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
 
       result = CcgParse.forTerminal(input.getHeadedSyntacticCategory(), lexiconEntry,
-          input.getLexiconTriggerWords(), input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(), 
-          input.getWords(), input.getNodeProbability(), input.getUnaryRule(),
+          input.getLexiconTriggerWords(), input.getLexiconIndex(), input.getSpannedPosTags(),
+          input.getSemanticHeads(), input.getNodeDependencies(),  input.getWords(),
+          input.getNodeProbability(), input.getUnaryRule(),
           input.getSpanStart(), input.getSpanEnd());
     } else {
       CcgParse left = addLogicalForms(input.getLeft());

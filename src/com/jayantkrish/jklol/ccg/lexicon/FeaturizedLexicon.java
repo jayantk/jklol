@@ -15,13 +15,15 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * CCG lexicon which uses a given feature set to determine the
- * weight of a lexicon entry.
- *
+ * Scoring function for lexicon entries that applies a
+ * user supplied feature generation function to the input
+ * sentence. 
+ *  
  * @author jayant
+ *
  */
-public class FeaturizedLexicon extends AbstractCcgLexicon {
-  private static final long serialVersionUID = 2L;
+public class FeaturizedLexicon implements LexiconScorer {
+  private static final long serialVersionUID = 3L;
   
   private final VariableNumMap terminalVar;
   private final VariableNumMap ccgCategoryVar;
@@ -34,7 +36,6 @@ public class FeaturizedLexicon extends AbstractCcgLexicon {
   public FeaturizedLexicon(VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor terminalDistribution, FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator,
       VariableNumMap ccgSyntaxVar, VariableNumMap featureVectorVar, ClassifierFactor featureWeights) {
-    super(terminalVar, featureGenerator);
 
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
@@ -47,12 +48,6 @@ public class FeaturizedLexicon extends AbstractCcgLexicon {
     this.featureWeights = Preconditions.checkNotNull(featureWeights);
     Preconditions.checkArgument(((long) featureGenerator.getNumberOfFeatures()) 
         == featureWeights.getInputVariable().getNumberOfPossibleAssignments());
-  }
-
-  @Override
-  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence) {
-    return AbstractCcgLexicon.getLexiconEntriesFromFactor(wordSequence,
-        terminalDistribution, terminalVar, ccgCategoryVar);
   }
 
   @Override

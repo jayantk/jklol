@@ -47,6 +47,7 @@ public class TrainSemanticParser extends AbstractCli {
   
   // CCG parser options
   private OptionSpec<String> ccgLexicon;
+  private OptionSpec<String> ccgUnknownLexicon;
   private OptionSpec<String> ccgRules;
   private OptionSpec<Void> ccgApplicationOnly;
   private OptionSpec<Void> ccgNormalFormOnly;
@@ -74,6 +75,9 @@ public class TrainSemanticParser extends AbstractCli {
     // Required arguments.
     ccgLexicon = parser.accepts("lexicon", "The CCG lexicon defining the grammar to use.")
         .withRequiredArg().ofType(String.class).required();
+    ccgUnknownLexicon = parser.accepts("unknownLexicon", "The CCG lexicon for unknown words.")
+        .withRequiredArg().ofType(String.class);
+
     // Optional arguments
     ccgRules = parser.accepts("rules",
         "Binary and unary rules to use during CCG parsing, in addition to function application and composition.")
@@ -207,11 +211,14 @@ public class TrainSemanticParser extends AbstractCli {
     CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, false);
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
+    List<String> unknownLexiconEntries = parsedOptions.has(ccgUnknownLexicon) ?
+        IoUtils.readLines(parsedOptions.valueOf(ccgUnknownLexicon)) : Collections.<String> emptyList();
     List<String> ruleEntries = parsedOptions.has(ccgRules) ? IoUtils.readLines(parsedOptions.valueOf(ccgRules))
         : Collections.<String> emptyList();
 
-    return ParametricCcgParser.parseFromLexicon(lexiconEntries, ruleEntries, featureFactory,
-        null, !parsedOptions.has(ccgApplicationOnly), null, parsedOptions.has(skipWords), parsedOptions.has(ccgNormalFormOnly));
+    return ParametricCcgParser.parseFromLexicon(lexiconEntries, unknownLexiconEntries, ruleEntries,
+        featureFactory, null, !parsedOptions.has(ccgApplicationOnly), null,
+        parsedOptions.has(skipWords), parsedOptions.has(ccgNormalFormOnly));
   }
 
   public static void main(String[] args) {

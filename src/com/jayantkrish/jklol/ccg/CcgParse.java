@@ -572,6 +572,10 @@ public class CcgParse {
     return lexiconEntry;
   }
 
+  public int getLexiconIndex() {
+    return lexiconIndex;
+  }
+
   public CcgCategory getLexiconEntryForWordIndex(int index) {
     Preconditions.checkArgument(spanStart <= index && index <= spanEnd, 
         "Illegal word index: %s (current span: %s,%s)", index, spanStart, spanEnd);

@@ -2,16 +2,20 @@ package com.jayantkrish.jklol.experiments.geoquery;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricUnknownWordLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -109,9 +113,10 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
   }
 
   @Override
-  public ParametricCcgLexicon getLexiconFeatures(VariableNumMap terminalWordVar,
+  public List<ParametricCcgLexicon> getLexiconFeatures(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar, VariableNumMap terminalSyntaxVar,
-      DiscreteFactor lexiconIndicatorFactor, Collection<LexiconEntry> lexiconEntries) {
+      DiscreteFactor lexiconIndicatorFactor, Collection<LexiconEntry> lexiconEntries,
+      DiscreteFactor unknownLexiconIndicatorFactor, Collection<LexiconEntry> unknownLexiconEntries) {
     // Features for mapping words to ccg categories (which include both 
     // syntax and semantics). 
     ParametricFactor terminalIndicatorFactor = new IndicatorLogLinearFactor(
@@ -159,22 +164,25 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
     ParametricFactor terminalParametricFactor = new CombiningParametricFactor(terminalVars,
         Arrays.asList("indicators", "features"), Arrays.asList(terminalIndicatorFactor, additionalFeatures), false);
 
-    // backoff features mapping words to syntactic categories (ignoring 
-    // semantics). The CCGbank lexicon does not contain multiple lexicon 
-    // entries for a single word with the same syntactic category but different 
-    // semantics, so these features are set to be ignored. 
-    VariableNumMap vars = terminalWordVar.union(terminalSyntaxVar); 
-    ParametricFactor terminalSyntaxFactor = new ConstantParametricFactor(vars,
-        TableFactor.logUnity(vars));
-
-    // Backoff distribution over parts-of-speech and syntactic 
-    // categories.
-    VariableNumMap terminalPosVars = VariableNumMap.unionAll(terminalPosVar, terminalSyntaxVar);
-    ParametricFactor terminalPosParametricFactor = new ConstantParametricFactor(terminalPosVars,
-        TableFactor.logUnity(terminalPosVars));
-
-    return new ParametricTableLexicon(terminalWordVar, ccgCategoryVar, terminalParametricFactor,
-        terminalPosVar, terminalSyntaxVar, terminalPosParametricFactor, terminalSyntaxFactor);
+    List<ParametricCcgLexicon> lexicons = Lists.newArrayList();
+    lexicons.add(new ParametricTableLexicon(terminalWordVar, ccgCategoryVar, terminalParametricFactor));
+    
+    if (unknownLexiconEntries.size() > 0) {
+      ParametricFactor unknownTerminalFamily = new IndicatorLogLinearFactor(
+          terminalPosVar.union(ccgCategoryVar), unknownLexiconIndicatorFactor);
+      ParametricCcgLexicon unknownLexicon = new ParametricUnknownWordLexicon(terminalWordVar,
+          terminalPosVar, ccgCategoryVar, unknownTerminalFamily);
+     
+      lexicons.add(unknownLexicon);
+    }
+    return lexicons;
+  }
+  
+  @Override
+  public List<ParametricLexiconScorer> getLexiconScorers(VariableNumMap terminalWordVar,
+      VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
+      VariableNumMap terminalSyntaxVar) {
+    return Collections.emptyList();
   }
 
   @Override

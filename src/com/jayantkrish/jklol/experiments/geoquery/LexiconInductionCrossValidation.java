@@ -205,8 +205,10 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator, beamSize,
         -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), false);
 
-    CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines, ruleEntries,
-        featureFactory, inferenceAlgorithm, sgdIterations, l2Regularization);
+    List<String> unknownLexiconEntryLines = Lists.newArrayList();
+    CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
+        unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm,
+        sgdIterations, l2Regularization);
 
     IoUtils.serializeObjectToFile(ccgParser, parserModelOutputFilename);
     
@@ -265,10 +267,11 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   }
 
   private static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,
-      List<String> lexiconEntryLines, List<String> ruleEntries, CcgFeatureFactory featureFactory,
+      List<String> lexiconEntryLines, List<String> unknownLexiconEntryLines,
+      List<String> ruleEntries, CcgFeatureFactory featureFactory,
       CcgInference inferenceAlgorithm, int iterations, double l2Penalty) {
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntryLines,
-        ruleEntries, featureFactory, null, true, null, true, false);
+        unknownLexiconEntryLines, ruleEntries, featureFactory, null, true, null, true, false);
 
     GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family,
         inferenceAlgorithm, 0.0);

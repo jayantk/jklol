@@ -1,37 +1,26 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
-import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
+import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.lexicon.FeaturizedLexicon.StringContext;
 import com.jayantkrish.jklol.models.ClassifierFactor;
-import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
-import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.sequence.ListLocalContext;
-import com.jayantkrish.jklol.sequence.LocalContext;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
-  private static final long serialVersionUID = 1L;
-  
-  private final VariableNumMap terminalVar;
-  private final VariableNumMap ccgCategoryVar;
-  private final ParametricFactor terminalFamily;
+public class ParametricFeaturizedLexicon implements ParametricLexiconScorer {
+  private static final long serialVersionUID = 2L;
 
-  private final FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator;
-  private final VariableNumMap ccgSyntaxVar;
-  private final VariableNumMap featureVar;
-  private final ParametricLinearClassifierFactor featureFamily;
+  private final FeatureVectorGenerator<StringContext> featureGenerator;
+  private final VariableNumMap syntaxVar;
+  private final VariableNumMap featureVectorVar;
+  private final ParametricLinearClassifierFactor classifierFamily;
 
   /**
    * Names of the parameter vectors governing each factor in the lexicon
@@ -42,38 +31,27 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
   
   public static final String TERMINAL_FEATURE_VAR_NAME = "terminalFeaturesVar";
 
-  public ParametricFeaturizedLexicon(VariableNumMap terminalVar,
-      VariableNumMap ccgCategoryVar, ParametricFactor terminalFamily,
-      FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator,
-      VariableNumMap ccgSyntaxVar, VariableNumMap featureVar, ParametricLinearClassifierFactor featureFamily) {
-    this.terminalVar = Preconditions.checkNotNull(terminalVar);
-    this.ccgCategoryVar = Preconditions.checkNotNull(ccgCategoryVar);
-    this.terminalFamily = Preconditions.checkNotNull(terminalFamily);
+  public ParametricFeaturizedLexicon(FeatureVectorGenerator<StringContext> featureGenerator,
+      VariableNumMap syntaxVar, VariableNumMap featureVectorVar,
+      ParametricLinearClassifierFactor classifierFamily) {
     this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
-    this.ccgSyntaxVar = Preconditions.checkNotNull(ccgSyntaxVar);
-    this.featureVar = Preconditions.checkNotNull(featureVar);
-    this.featureFamily = Preconditions.checkNotNull(featureFamily);
+    this.syntaxVar = Preconditions.checkNotNull(syntaxVar);
+    this.featureVectorVar = Preconditions.checkNotNull(featureVectorVar);
+    this.classifierFamily = Preconditions.checkNotNull(classifierFamily);
   }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    SufficientStatistics terminalParameters = terminalFamily.getNewSufficientStatistics();
-    SufficientStatistics terminalFeatureParameters = featureFamily.getNewSufficientStatistics(); 
-
-    return new ListSufficientStatistics(Arrays.asList(TERMINAL_PARAMETERS, TERMINAL_FEATURE_PARAMETERS),
-        Arrays.asList(terminalParameters, terminalFeatureParameters));
+    return classifierFamily.getNewSufficientStatistics();
   }
 
   @Override
-  public CcgLexicon getModelFromParameters(SufficientStatistics parameters) {
-    ListSufficientStatistics parameterList = parameters.coerceToList();
-    DiscreteFactor terminalDistribution = terminalFamily.getModelFromParameters(parameterList
-        .getStatisticByName(TERMINAL_PARAMETERS)).coerceToDiscrete();
-    ClassifierFactor terminalFeatureDistribution = featureFamily.getModelFromParameters(parameterList
-        .getStatisticByName(TERMINAL_FEATURE_PARAMETERS));
+  public FeaturizedLexicon getModelFromParameters(SufficientStatistics parameters) {
+    ClassifierFactor classifier = classifierFamily
+        .getModelFromParameters(parameters);
 
-   return new FeaturizedLexicon(terminalVar, ccgCategoryVar, terminalDistribution,
-       featureGenerator, ccgSyntaxVar, featureVar, terminalFeatureDistribution);
+   return new FeaturizedLexicon(featureGenerator, syntaxVar, featureVectorVar,
+       classifier);
   }
 
   @Override
@@ -83,52 +61,25 @@ public class ParametricFeaturizedLexicon implements ParametricCcgLexicon {
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    ListSufficientStatistics parameterList = parameters.coerceToList();
-    StringBuilder sb = new StringBuilder();
-    sb.append(terminalFamily.getParameterDescription(
-        parameterList.getStatisticByName(TERMINAL_PARAMETERS), numFeatures));
-    sb.append(featureFamily.getParameterDescription(
-        parameterList.getStatisticByName(TERMINAL_FEATURE_PARAMETERS), numFeatures));
-    return sb.toString();
+    return classifierFamily.getParameterDescription(parameters, numFeatures);
   }
 
   @Override
-  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient, 
-      SufficientStatistics currentParameters, CcgParse parse, double count) {
-    SufficientStatistics terminalGradient = gradient.coerceToList().getStatisticByName(TERMINAL_PARAMETERS);
-    SufficientStatistics featureGradient = gradient.coerceToList().getStatisticByName(TERMINAL_FEATURE_PARAMETERS);
+  public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, int spanStart, int spanEnd,
+      List<String> sentenceWords, List<String> sentencePreprocessedWords,
+      List<String> sentencePos, List<String> wordSequence, List<String> posSequence,
+      CcgCategory category, double count) {
+
+    StringContext context = new StringContext(spanStart, spanEnd, sentenceWords,
+        sentencePreprocessedWords, sentencePos);
+    Tensor featureVector = featureGenerator.apply(context);
+    HeadedSyntacticCategory syntax = category.getSyntax();
     
-    SufficientStatistics terminalCurrentParameters = currentParameters.coerceToList()
-        .getStatisticByName(TERMINAL_PARAMETERS);
-    SufficientStatistics featureCurrentParameters = currentParameters.coerceToList()
-        .getStatisticByName(TERMINAL_FEATURE_PARAMETERS);
+    Assignment assignment = syntaxVar.outcomeArrayToAssignment(syntax)
+        .union(featureVectorVar.outcomeArrayToAssignment(featureVector));
 
-    List<String> originalWords = parse.getSentenceWords();
-    List<String> posTags = parse.getSentencePosTags();
-    List<WordAndPos> wordAndPosList = WordAndPos.createExample(originalWords, posTags);
-    List<Integer> wordIndexes = parse.getWordIndexesWithLexiconEntries();
-    List<LexiconEntry> lexiconEntries = parse.getSpannedLexiconEntries();
-    Preconditions.checkArgument(wordIndexes.size() == lexiconEntries.size());
-    for (int i = 0; i < lexiconEntries.size(); i++) {
-      CcgCategory ccgCategory = lexiconEntries.get(i).getCategory();
-      List<String> terminals = lexiconEntries.get(i).getWords();
-      // Update the word -> ccg category features.
-      Assignment assignment = Assignment.unionAll(
-          terminalVar.outcomeArrayToAssignment(terminals),
-          ccgCategoryVar.outcomeArrayToAssignment(ccgCategory));
-      terminalFamily.incrementSufficientStatisticsFromAssignment(terminalGradient,
-          terminalCurrentParameters, assignment, count);
-
-      // Update the feature weights for the generated feature vectors.
-      int sentenceIndex = wordIndexes.get(i);
-      LocalContext<WordAndPos> context = new ListLocalContext<WordAndPos>(wordAndPosList, sentenceIndex);
-      Tensor featureWeights = featureGenerator.apply(context);
-
-      assignment = Assignment.unionAll(
-          ccgSyntaxVar.outcomeArrayToAssignment(lexiconEntries.get(i).getCategory().getSyntax()),
-          featureVar.outcomeArrayToAssignment(featureWeights));
-      featureFamily.incrementSufficientStatisticsFromAssignment(featureGradient,
-          featureCurrentParameters, assignment, count);
-    }
+    classifierFamily.incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
+        assignment, count);
   }
 }

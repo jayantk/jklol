@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 public interface ParametricLexiconScorer extends Serializable, ParametricFamily<LexiconScorer> {
 
   void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      SufficientStatistics currentParameters, List<String> wordSequence,
-      List<String> posSequence, CcgCategory category, double count);  
+      SufficientStatistics currentParameters, int spanStart, int spanEnd, List<String> sentenceWords,
+      List<String> sentencePreprocessedWords, List<String> sentencePos, List<String> lexiconEntryWords,
+      List<String> lexiconEntryPos, CcgCategory lexiconEntryCategory, double count);  
 }

@@ -772,14 +772,23 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     List<SufficientStatistics> lexiconScorerParameterList = parameters.coerceToList()
         .getStatisticByName(LEXICON_SCORER_PARAMETERS).coerceToList().getStatistics();
 
+    List<String> sentenceOriginalWords = parse.getSpannedWords();
+    List<String> sentencePreprocessedWords = parse.getLexiconTriggerWords();
+    List<String> sentencePosTags = parse.getPosTags();
+    
     List<LexiconEntry> lexiconEntries = parse.getSpannedLexiconEntries();
     List<Integer> lexiconEntryIndexes = parse.getSpannedLexiconEntryIndexes();
     List<List<String>> posTags = parse.getSpannedPosTagsByLexiconEntry();
     Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
     int numEntries = lexiconEntries.size();
+    int numTokensProcessed = 0;
     for (int i = 0; i < numEntries; i++) {
       LexiconEntry lexiconEntry = lexiconEntries.get(i);
       int lexiconIndex = lexiconEntryIndexes.get(i);
+      int spanStart = numTokensProcessed;
+      int spanEnd = numTokensProcessed + posTags.get(i).size() - 1;
+
+      numTokensProcessed += posTags.get(i).size();
 
       lexiconFamilies.get(lexiconIndex).incrementLexiconSufficientStatistics(
           lexiconGradientList.get(lexiconIndex), lexiconParameterList.get(lexiconIndex),
@@ -788,6 +797,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       for (int j = 0; j < lexiconScorerFamilies.size(); j++) {
         lexiconScorerFamilies.get(j).incrementLexiconSufficientStatistics(
           lexiconScorerGradientList.get(j), lexiconScorerParameterList.get(j),
+          spanStart, spanEnd, sentenceOriginalWords, sentencePreprocessedWords, sentencePosTags,
           lexiconEntry.getWords(), posTags.get(i), lexiconEntry.getCategory(), count);
       }
     }

@@ -86,7 +86,7 @@ public class CcgParserTest extends TestCase {
       "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
       "a,(NP{1}/N{1}){0},,0 a,a 1 1",
       "#,#{0},#,0 #",
-      "stringfunc,(S{0}/N{1}){0},(lambda $1 (stringFunc $1)),0 stringfunc,stringfunc 1 1",
+      "stringfunc,(S{0}/String{1}){0},(lambda $1 (stringFunc $1)),0 stringfunc,stringfunc 1 1",
       };
   
   private static final String[] unknownLexicon = {
@@ -164,7 +164,7 @@ public class CcgParserTest extends TestCase {
 
     parserWordSkip = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, true, false, false);
     
-    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, true, false, true);
+    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "String{0} N{0},(lambda x x)" }, weights, unknownWeights, false, false, false, true);
 
     exp = ExpressionParser.expression2();
     simplifier = new ExpressionSimplifier(Arrays.
@@ -972,9 +972,37 @@ public class CcgParserTest extends TestCase {
 
   public void testStringLexicon() {
     List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar", "baz"), 20);
+    assertTrue(parses.size() > 0);
+    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("(stringFunc \"bar baz\")");
+    CcgParse theSentence = null;
     for (CcgParse parse : parses) {
-      System.out.println(parse.getLogicalForm());
+      if (parse.getHeadedSyntacticCategory().equals(HeadedSyntacticCategory.parseFrom("S{0}"))) {
+        theSentence = parse;
+        break;
+      }
     }
+    assertTrue(theSentence != null);
+    Expression2 actual = simplifier.apply(theSentence.getLogicalForm());
+    assertEquals(expected, actual);
+  }
+
+  public void testStringOneWord() {
+    List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("baz"), 20);
+    assertTrue(parses.size() > 0);
+
+    boolean foundN = false;
+    boolean foundString = false;
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+      if (parse.getHeadedSyntacticCategory().equals(HeadedSyntacticCategory.parseFrom("N{0}"))) {
+        foundN = true;
+      }
+      if (parse.getHeadedSyntacticCategory().equals(HeadedSyntacticCategory.parseFrom("String{0}"))) {
+        foundString = true;
+      }
+    }
+    assertTrue(foundN);
+    assertTrue(foundString);
   }
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
@@ -1223,7 +1251,7 @@ public class CcgParserTest extends TestCase {
     lexicons.add(unknownWordLexicon);
 
     if (useStringLexicon) {
-      CcgCategory stringCategory = CcgCategory.parseFrom("N{0},(lambda $0 $0),0 special:string");
+      CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda $0 $0),0 special:string");
       CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory));
       lexicons.add(stringLexicon);
     }

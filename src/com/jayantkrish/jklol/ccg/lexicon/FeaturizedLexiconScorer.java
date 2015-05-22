@@ -3,7 +3,9 @@ package com.jayantkrish.jklol.ccg.lexicon;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory;
+import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -11,14 +13,14 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
- * Scoring function for lexicon entries that applies a
- * user supplied feature generation function to the input
- * sentence. 
+ * Lexicon scoring function for that applies a linear classifier
+ * to features generated from spans of the input sentence. The
+ * feature generation function is supplied by the user. 
  *  
  * @author jayant
  *
  */
-public class FeaturizedLexicon implements LexiconScorer {
+public class FeaturizedLexiconScorer implements LexiconScorer {
   private static final long serialVersionUID = 4L;
 
   private final FeatureVectorGenerator<StringContext> featureGenerator;
@@ -27,7 +29,7 @@ public class FeaturizedLexicon implements LexiconScorer {
   private final VariableNumMap featureVectorVar;
   private final ClassifierFactor featureWeights;
 
-  public FeaturizedLexicon(FeatureVectorGenerator<StringContext> featureGenerator,
+  public FeaturizedLexiconScorer(FeatureVectorGenerator<StringContext> featureGenerator,
       VariableNumMap syntaxVar, VariableNumMap featureVectorVar, ClassifierFactor featureWeights) {
     this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
     
@@ -36,6 +38,28 @@ public class FeaturizedLexicon implements LexiconScorer {
     this.featureWeights = Preconditions.checkNotNull(featureWeights);
     Preconditions.checkArgument(((long) featureGenerator.getNumberOfFeatures()) 
         == featureWeights.getInputVariable().getNumberOfPossibleAssignments());
+  }
+  
+  /**
+   * Generates and returns a list of every StringContext for every
+   * sentence in {@code examples}.
+   *  
+   * @param examples
+   * @return
+   */
+  public static List<StringContext> getContextsFromExamples(List<CcgExample> examples) {
+    List<StringContext> contexts = Lists.newArrayList();
+    for (CcgExample example : examples) {
+      List<String> words = example.getSentence().getWords();
+      List<String> pos = example.getSentence().getPosTags();
+      int numTerminals = words.size();
+      for (int i = 0; i < numTerminals; i++) {
+        for (int j = i; j < numTerminals; j++) {
+          contexts.add(new StringContext(i, j, words, pos));
+        }
+      }
+    }
+    return contexts;
   }
 
   @Override
@@ -47,11 +71,11 @@ public class FeaturizedLexicon implements LexiconScorer {
       for (int j = i; j < numTerminals; j++) {
         int spanIndex = getSpanIndex(i, j, numTerminals);
         featureVectors[spanIndex] = featureGenerator.apply(
-            new StringContext(i, j, terminals, preprocessedTerminals, posTags));
+            new StringContext(i, j, terminals, posTags));
       }
     }
 
-    return new FeatureInstantiatedLexiconScorer(featureVectors, numTerminals,
+    return new FeaturizedInstantiatedLexiconScorer(featureVectors, numTerminals,
         syntaxVar, featureVectorVar, featureWeights);
   }
 
@@ -59,7 +83,7 @@ public class FeaturizedLexicon implements LexiconScorer {
     return (spanStart * numTerminals) + (spanEnd - spanStart);
   }
 
-  public static class FeatureInstantiatedLexiconScorer implements InstantiatedLexiconScorer {
+  public static class FeaturizedInstantiatedLexiconScorer implements InstantiatedLexiconScorer {
     private final Tensor[] featureVectors;
     private final int numTerminals;
 
@@ -68,7 +92,7 @@ public class FeaturizedLexicon implements LexiconScorer {
 
     private final ClassifierFactor featureWeights;
     
-    public FeatureInstantiatedLexiconScorer(Tensor[] featureVectors, int numTerminals,
+    public FeaturizedInstantiatedLexiconScorer(Tensor[] featureVectors, int numTerminals,
         VariableNumMap syntaxVar, VariableNumMap featureVectorVar,
         ClassifierFactor featureWeights) {
       this.featureVectors = Preconditions.checkNotNull(featureVectors);
@@ -82,13 +106,17 @@ public class FeaturizedLexicon implements LexiconScorer {
     @Override
     public double getCategoryWeight(int spanStart, int spanEnd, List<String> terminalValue,
         List<String> posTags, CcgCategory category) {
-      int spanIndex = FeaturizedLexicon.getSpanIndex(spanStart, spanEnd, numTerminals);
+      int spanIndex = FeaturizedLexiconScorer.getSpanIndex(spanStart, spanEnd, numTerminals);
       Tensor featureVector = featureVectors[spanIndex];
       
       Assignment syntaxAssignment = syntaxVar.outcomeArrayToAssignment(category.getSyntax());
       Assignment assignment = featureVectorVar.outcomeArrayToAssignment(featureVector)
           .union(syntaxAssignment);
-      return featureWeights.getUnnormalizedProbability(assignment);
+      double prob = featureWeights.getUnnormalizedProbability(assignment);
+      
+      System.out.println(prob + " " + featureVector);
+      
+      return prob;
     }
   }
   
@@ -104,16 +132,14 @@ public class FeaturizedLexicon implements LexiconScorer {
     private final int spanEnd;
     
     private final List<String> originalWords;
-    private final List<String> preprocessedWords;
     private final List<String> pos;
 
     public StringContext(int spanStart, int spanEnd, List<String> originalWords,
-        List<String> preprocessedWords, List<String> pos) {
+        List<String> pos) {
       this.spanStart = spanStart;
       this.spanEnd = spanEnd;
 
       this.originalWords = originalWords;
-      this.preprocessedWords = preprocessedWords;
       this.pos = pos;
     }
 
@@ -125,18 +151,8 @@ public class FeaturizedLexicon implements LexiconScorer {
       return spanEnd;
     }
 
-    public List<String> getOriginalWords() {
+    public List<String> getWords() {
       return originalWords;
-    }
-
-    /**
-     * Gets the words in the sentence after preprocessing
-     * (e.g., lowercasing)
-     * 
-     * @return
-     */
-    public List<String> getPreprocessedWords() {
-      return preprocessedWords;
     }
 
     public List<String> getPos() {

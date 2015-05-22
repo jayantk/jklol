@@ -5,7 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.lexicon.FeaturizedLexicon.StringContext;
+import com.jayantkrish.jklol.ccg.lexicon.FeaturizedLexiconScorer.StringContext;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
@@ -14,7 +14,7 @@ import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class ParametricFeaturizedLexicon implements ParametricLexiconScorer {
+public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScorer {
   private static final long serialVersionUID = 2L;
 
   private final FeatureVectorGenerator<StringContext> featureGenerator;
@@ -31,7 +31,7 @@ public class ParametricFeaturizedLexicon implements ParametricLexiconScorer {
   
   public static final String TERMINAL_FEATURE_VAR_NAME = "terminalFeaturesVar";
 
-  public ParametricFeaturizedLexicon(FeatureVectorGenerator<StringContext> featureGenerator,
+  public ParametricFeaturizedLexiconScorer(FeatureVectorGenerator<StringContext> featureGenerator,
       VariableNumMap syntaxVar, VariableNumMap featureVectorVar,
       ParametricLinearClassifierFactor classifierFamily) {
     this.featureGenerator = Preconditions.checkNotNull(featureGenerator);
@@ -46,11 +46,11 @@ public class ParametricFeaturizedLexicon implements ParametricLexiconScorer {
   }
 
   @Override
-  public FeaturizedLexicon getModelFromParameters(SufficientStatistics parameters) {
+  public FeaturizedLexiconScorer getModelFromParameters(SufficientStatistics parameters) {
     ClassifierFactor classifier = classifierFamily
         .getModelFromParameters(parameters);
 
-   return new FeaturizedLexicon(featureGenerator, syntaxVar, featureVectorVar,
+   return new FeaturizedLexiconScorer(featureGenerator, syntaxVar, featureVectorVar,
        classifier);
   }
 
@@ -72,12 +72,14 @@ public class ParametricFeaturizedLexicon implements ParametricLexiconScorer {
       CcgCategory category, double count) {
 
     StringContext context = new StringContext(spanStart, spanEnd, sentenceWords,
-        sentencePreprocessedWords, sentencePos);
+        sentencePos);
     Tensor featureVector = featureGenerator.apply(context);
     HeadedSyntacticCategory syntax = category.getSyntax();
     
     Assignment assignment = syntaxVar.outcomeArrayToAssignment(syntax)
         .union(featureVectorVar.outcomeArrayToAssignment(featureVector));
+    
+    System.out.println("increment:" + assignment + " " + count);
 
     classifierFamily.incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
         assignment, count);

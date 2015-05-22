@@ -5,8 +5,10 @@ import java.util.Collection;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.lexicon.FeaturizedLexiconScorer.StringContext;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconFeatureGenerator;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricSyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
@@ -19,6 +21,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -35,7 +38,7 @@ import com.jayantkrish.jklol.sequence.LocalContext;
  */
 public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
 
-  private final FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator;
+  private final FeatureVectorGenerator<StringContext> featureGenerator;
   private final boolean usePosFeatures;
   
   /**
@@ -45,7 +48,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
    * {@code null}, use word / CCG category and POS / syntactic
    * category features.
    */
-  public DefaultCcgFeatureFactory(FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator,
+  public DefaultCcgFeatureFactory(FeatureVectorGenerator<StringContext> featureGenerator,
       boolean usePosFeatures) {
     this.featureGenerator = featureGenerator;
     this.usePosFeatures = usePosFeatures;
@@ -215,19 +218,16 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
           terminalSyntaxVar, terminalPosFamily, terminalSyntaxFamily));
     }
 
-    /*
     if (featureGenerator != null) {
       VariableNumMap featureVar = VariableNumMap.singleton(terminalSyntaxVar.getOnlyVariableNum() - 1,
           "ccgLexiconFeatures", featureGenerator.getFeatureDictionary());
-      ParametricLinearClassifierFactor featureFamily = new ParametricLinearClassifierFactor(featureVar, terminalSyntaxVar,
-          VariableNumMap.EMPTY, featureGenerator.getFeatureDictionary(), null, false);
+      ParametricLinearClassifierFactor featureFamily = new ParametricLinearClassifierFactor(
+          featureVar, terminalSyntaxVar, VariableNumMap.EMPTY,
+          featureGenerator.getFeatureDictionary(), null, false);
 
-      // TODO: delete me here.
-      return Arrays.<ParametricCcgLexicon>asList(new ParametricFeaturizedLexicon(
-          terminalWordVar, ccgCategoryVar, terminalFamily, featureGenerator,
-          terminalSyntaxVar, featureVar, featureFamily), unknownLexicon);
+      scorers.add(new ParametricFeaturizedLexiconScorer(featureGenerator, terminalSyntaxVar,
+          featureVar, featureFamily));
     }
-    */
 
     return scorers;
   }

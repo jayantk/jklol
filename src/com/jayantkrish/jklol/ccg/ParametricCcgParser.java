@@ -856,6 +856,14 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           lexiconParameterList.get(i), numFeatures));
     }
 
+    sb.append("lexicon scorers:\n");
+    List<SufficientStatistics> lexiconScorerParameterList = parameterList
+        .getStatisticByName(LEXICON_SCORER_PARAMETERS).coerceToList().getStatistics();
+    for (int i = 0; i < lexiconScorerFamilies.size(); i++) {
+      sb.append(lexiconScorerFamilies.get(i).getParameterDescription(
+          lexiconScorerParameterList.get(i), numFeatures));
+    }
+
     sb.append("syntax:\n");
     sb.append(syntaxFamily.getParameterDescription(
         parameterList.getStatisticByName(SYNTAX_PARAMETERS), numFeatures));

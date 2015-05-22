@@ -59,49 +59,6 @@ public class StringLexicon extends AbstractCcgLexicon {
    * @author jayant
    */
   /*
-  public static class StringContext {
-    private final int spanStart;
-    private final int spanEnd;
-    
-    private final List<String> originalWords;
-    private final List<String> preprocessedWords;
-    private final List<String> pos;
-    
-    private final CcgCategory category;
 
-    public StringContext(int spanStart, int spanEnd, List<String> originalWords,
-        List<String> preprocessedWords, List<String> pos, CcgCategory category) {
-      this.spanStart = spanStart;
-      this.spanEnd = spanEnd;
-      this.originalWords = originalWords;
-      this.preprocessedWords = preprocessedWords;
-      this.pos = pos;
-      this.category = category;
-    }
-
-    public int getSpanStart() {
-      return spanStart;
-    }
-
-    public int getSpanEnd() {
-      return spanEnd;
-    }
-
-    public List<String> getOriginalWords() {
-      return originalWords;
-    }
-
-    public List<String> getPreprocessedWords() {
-      return preprocessedWords;
-    }
-
-    public List<String> getPos() {
-      return pos;
-    }
-
-    public CcgCategory getCategory() {
-      return category;
-    }
-  }
   */
 }

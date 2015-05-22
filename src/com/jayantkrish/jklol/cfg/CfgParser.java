@@ -15,7 +15,6 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.Variable;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.HeapUtils;
@@ -44,12 +43,7 @@ public class CfgParser implements Serializable {
   private final DiscreteVariable nonterminalVariableType;
   private final DiscreteVariable ruleVariableType;
 
-  // Each entry in the parse chart contains a factor defined over parentVar.
-  // These relabelings are necessary to apply binaryDistribution and
-  // terminalDistribution during parsing.
-  private final VariableRelabeling parentToLeft;
-  private final VariableRelabeling parentToRight;
-
+  // The distributions over terminals and binary rules.
   private final DiscreteFactor binaryDistribution;
   private final DiscreteFactor terminalDistribution;
 
@@ -103,11 +97,6 @@ public class CfgParser implements Serializable {
     this.ruleVariableType = ruleTypeVar.getDiscreteVariables().get(0);
     this.nonterminalVariableType = parentVar.getDiscreteVariables().get(0);
     this.binaryDistributionWeights = binaryDistribution.getWeights();
-
-    // Construct some variable->variable renamings which are useful during
-    // parsing.
-    this.parentToLeft = VariableRelabeling.createFromVariables(parentVar, leftVar);
-    this.parentToRight = VariableRelabeling.createFromVariables(parentVar, rightVar);
 
     this.beamSize = beamSize;
     this.canSkipTerminals = canSkipTerminals;

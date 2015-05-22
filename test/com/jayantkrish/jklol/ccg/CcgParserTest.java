@@ -164,7 +164,7 @@ public class CcgParserTest extends TestCase {
 
     parserWordSkip = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, true, false, false);
     
-    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "String{0} N{0},(lambda x x)" }, weights, unknownWeights, false, false, false, true);
+    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "String{0} N{0},(lambda x x)" }, weights, unknownWeights, false, true, false, true);
 
     exp = ExpressionParser.expression2();
     simplifier = new ExpressionSimplifier(Arrays.
@@ -971,9 +971,9 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testStringLexicon() {
-    List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar", "baz"), 20);
+    List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar"), 20);
     assertTrue(parses.size() > 0);
-    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("(stringFunc \"bar baz\")");
+    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("(stringFunc \"bar\")");
     CcgParse theSentence = null;
     for (CcgParse parse : parses) {
       if (parse.getHeadedSyntacticCategory().equals(HeadedSyntacticCategory.parseFrom("S{0}"))) {

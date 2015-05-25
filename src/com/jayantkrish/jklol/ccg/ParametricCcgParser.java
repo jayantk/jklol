@@ -774,7 +774,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
     List<String> sentenceOriginalWords = parse.getSpannedWords();
     List<String> sentencePreprocessedWords = parse.getLexiconTriggerWords();
-    List<String> sentencePosTags = parse.getPosTags();
+    List<String> sentencePosTags = parse.getSpannedPosTags();
     
     List<LexiconEntry> lexiconEntries = parse.getSpannedLexiconEntries();
     List<Integer> lexiconEntryIndexes = parse.getSpannedLexiconEntryIndexes();

@@ -62,6 +62,7 @@ public class FeaturizedLexiconScorerTest extends TestCase {
         String featureName = Integer.toString(item.getSpanStart());
         Map<String, Double> features = Maps.newHashMap();
         features.put(featureName, 1.0);
+        features.put(item.getPos().get(item.getSpanStart()), 1.0);
         return features;
       }
     };

@@ -30,6 +30,7 @@ import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.StringLexicon.CategorySpanConfig;
 import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.UnknownWordLexicon;
@@ -985,6 +986,23 @@ public class CcgParserTest extends TestCase {
     Expression2 actual = simplifier.apply(theSentence.getLogicalForm());
     assertEquals(expected, actual);
   }
+  
+  public void testStringLexiconWholeSentence() {
+    List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar"), 20);
+    assertTrue(parses.size() > 0);
+    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("unknownCommand");
+    CcgParse theSentence = null;
+    int numUnknown = 0;
+    for (CcgParse parse : parses) {
+      if (parse.getHeadedSyntacticCategory().equals(HeadedSyntacticCategory.parseFrom("Unknown{0}"))) {
+        theSentence = parse;
+        numUnknown++;
+      }
+    }
+    assertTrue(numUnknown == 1);
+    Expression2 actual = simplifier.apply(theSentence.getLogicalForm());
+    assertEquals(expected, actual);
+  }
 
   public void testStringOneWord() {
     List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("baz"), 20);
@@ -1082,7 +1100,9 @@ public class CcgParserTest extends TestCase {
       syntacticCategories.add(rule.getInputSyntacticCategory().getCanonicalForm());
       syntacticCategories.add(rule.getResultSyntacticCategory().getCanonicalForm());
     }
+    syntacticCategories.add(HeadedSyntacticCategory.parseFrom("Unknown{0}"));
     semanticPredicates.add("special:string");
+    semanticPredicates.add("special:unknown");
 
     // Build the terminal distribution.
     DiscreteVariable ccgCategoryType = new DiscreteVariable("ccgCategory", categories);
@@ -1252,7 +1272,9 @@ public class CcgParserTest extends TestCase {
 
     if (useStringLexicon) {
       CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda $0 $0),0 special:string");
-      CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory));
+      CcgCategory unknownCategory = CcgCategory.parseFrom("Unknown{0},(lambda $0 unknownCommand),0 special:unknown");
+      CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory, unknownCategory),
+          Arrays.asList(CategorySpanConfig.ALL_SPANS, CategorySpanConfig.WHOLE_SENTENCE));
       lexicons.add(stringLexicon);
     }
     

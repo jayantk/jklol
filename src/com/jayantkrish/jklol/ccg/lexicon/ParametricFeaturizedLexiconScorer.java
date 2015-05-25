@@ -47,8 +47,7 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
 
   @Override
   public FeaturizedLexiconScorer getModelFromParameters(SufficientStatistics parameters) {
-    ClassifierFactor classifier = classifierFamily
-        .getModelFromParameters(parameters);
+    ClassifierFactor classifier = classifierFamily.getModelFromParameters(parameters);
 
    return new FeaturizedLexiconScorer(featureGenerator, syntaxVar, featureVectorVar,
        classifier);
@@ -78,8 +77,6 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
     
     Assignment assignment = syntaxVar.outcomeArrayToAssignment(syntax)
         .union(featureVectorVar.outcomeArrayToAssignment(featureVector));
-    
-    System.out.println("increment:" + assignment + " " + count);
 
     classifierFamily.incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
         assignment, count);

@@ -35,7 +35,7 @@ public class UnknownWordLexicon extends AbstractCcgLexicon {
 
   @Override
   public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posSequence,
-      List<LexiconEntry> alreadyGenerated) {
+      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, List<String> sentenceWords) {
 
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
     if (alreadyGenerated.size() == 0 && posSequence.size() == 1) {

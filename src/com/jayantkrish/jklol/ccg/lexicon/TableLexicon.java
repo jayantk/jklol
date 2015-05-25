@@ -39,7 +39,7 @@ public class TableLexicon extends AbstractCcgLexicon {
 
   @Override
   public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags,
-      List<LexiconEntry> alreadyGenerated) {
+      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, List<String> sentenceWords) {
     return TableLexicon.getLexiconEntriesFromFactor(wordSequence, terminalDistribution,
         terminalVar, ccgCategoryVar);
   }
@@ -68,7 +68,7 @@ public class TableLexicon extends AbstractCcgLexicon {
    * @param ccgCategoryVar
    * @return
    */
-  public static List<LexiconEntry> getLexiconEntriesFromFactor(List<String> wordSequence,
+  private static List<LexiconEntry> getLexiconEntriesFromFactor(List<String> wordSequence,
       DiscreteFactor terminalDistribution, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar) {
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
     if (terminalVar.isValidOutcomeArray(wordSequence)) {

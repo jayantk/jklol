@@ -1037,7 +1037,7 @@ public class CcgParser implements Serializable {
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
       List<LexiconEntry> lexiconEntries = lexicon.getLexiconEntries(preprocessInput(wordSequence),
-          posTags, allLexiconEntries);
+          posTags, allLexiconEntries, 0, wordSequence.size() - 1, wordSequence);
       allLexiconEntries.addAll(lexiconEntries);
     }
     return allLexiconEntries;
@@ -1316,7 +1316,7 @@ public class CcgParser implements Serializable {
         for (int k = 0; k < lexicons.size(); k++) {
           CcgLexicon lexicon = lexicons.get(k);
           List<LexiconEntry> lexiconEntries = lexicon.getLexiconEntries(terminalValue,
-              posTagValue, allLexiconEntries);
+              posTagValue, allLexiconEntries, i, j, terminals);
           allLexiconEntries.addAll(lexiconEntries);
 
           for (LexiconEntry lexiconEntry : lexiconEntries) {

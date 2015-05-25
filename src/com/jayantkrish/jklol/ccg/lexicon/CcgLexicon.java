@@ -29,10 +29,14 @@ public interface CcgLexicon extends Serializable {
    * @param wordSequence
    * @param posSequence
    * @param alreadyGenerated
+   * @param spanStart
+   * @param spanEnd
+   * @param sentenceWords
    * @return
    */
   List<LexiconEntry> getLexiconEntries(List<String> wordSequence,
-      List<String> posSequence, List<LexiconEntry> alreadyGenerated);
+      List<String> posSequence, List<LexiconEntry> alreadyGenerated,
+      int spanStart, int spanEnd, List<String> sentenceWords);
 
   /**
    * Gets the unnormalized probability of generating {@code category}

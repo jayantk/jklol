@@ -113,9 +113,7 @@ public class FeaturizedLexiconScorer implements LexiconScorer {
       Assignment assignment = featureVectorVar.outcomeArrayToAssignment(featureVector)
           .union(syntaxAssignment);
       double prob = featureWeights.getUnnormalizedProbability(assignment);
-      
-      System.out.println(prob + " " + featureVector);
-      
+
       return prob;
     }
   }

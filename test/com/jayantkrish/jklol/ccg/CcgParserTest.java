@@ -1274,7 +1274,8 @@ public class CcgParserTest extends TestCase {
       CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda $0 $0),0 special:string");
       CcgCategory unknownCategory = CcgCategory.parseFrom("Unknown{0},(lambda $0 unknownCommand),0 special:unknown");
       CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory, unknownCategory),
-          Arrays.asList(CategorySpanConfig.ALL_SPANS, CategorySpanConfig.WHOLE_SENTENCE));
+          Arrays.asList(CategorySpanConfig.ALL_SPANS, CategorySpanConfig.WHOLE_SENTENCE),
+          StringLexicon.getDefaultDetokenizer());
       lexicons.add(stringLexicon);
     }
     

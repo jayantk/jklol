@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg.lexicon;
 
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -28,20 +29,34 @@ public class StringLexicon extends AbstractCcgLexicon {
   
   private final List<CcgCategory> categories;
   private final List<CategorySpanConfig> spanConfig;
+  private final Function<List<String>, Expression2> detokenizer;
 
   /**
    * 
    * @param terminalVar
    * @param categories
    * @param spanConfig controls which sentence spans each category
-   * is instantiated for.  
+   * is instantiated for.
+   * @param detokenizer function to use for detokenizing the sentence
+   * into a string
    */
   public StringLexicon(VariableNumMap terminalVar, List<CcgCategory> categories,
-      List<CategorySpanConfig> spanConfig) {
+      List<CategorySpanConfig> spanConfig, Function<List<String>, Expression2> detokenizer) {
     super(terminalVar);
     this.categories = ImmutableList.copyOf(categories);
     this.spanConfig = ImmutableList.copyOf(spanConfig);
     Preconditions.checkArgument(spanConfig.size() == categories.size());
+    
+    this.detokenizer = Preconditions.checkNotNull(detokenizer);
+  }
+
+  public static Function<List<String>, Expression2> getDefaultDetokenizer() {
+    return new Function<List<String>, Expression2>() {
+      @Override
+      public Expression2 apply(List<String> tokens) {
+        return Expression2.constant("\"" + Joiner.on(" ").join(tokens) + "\"");
+      }
+    };
   }
 
   @Override
@@ -53,8 +68,7 @@ public class StringLexicon extends AbstractCcgLexicon {
       CategorySpanConfig config = spanConfig.get(i);
       if (config == CategorySpanConfig.ALL_SPANS || (config == CategorySpanConfig.WHOLE_SENTENCE
           && spanStart == 0 && spanEnd == sentenceWords.size() - 1)) {
-        Expression2 wordSequenceExpression = Expression2.constant(
-            "\"" + Joiner.on(" ").join(sentenceWords.subList(spanStart, spanEnd + 1)) + "\"");
+        Expression2 wordSequenceExpression = detokenizer.apply(sentenceWords.subList(spanStart, spanEnd + 1)); 
         Expression2 newLf = Expression2.nested(category.getLogicalForm(), wordSequenceExpression);
         CcgCategory newCategory = category.replaceLogicalForm(newLf);
         entries.add(new LexiconEntry(wordSequence, newCategory));

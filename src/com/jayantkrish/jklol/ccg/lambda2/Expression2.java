@@ -228,14 +228,25 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
       return Expression2.nested(newSubexpressions);
     }
   }
-
-  @Override
-  public String toString() {
+  
+  /**
+   * Returns a string representation of this expression, where each
+   * constant is surrounded by {@code constantDelimiter}.
+   * 
+   * @param constantDelimiter
+   * @return
+   */
+  public String toString(String constantDelimiter) {
     if (isConstant()) {
-      return constantName;
+      return constantDelimiter + constantName + constantDelimiter;
     } else {
       return "(" + Joiner.on(" ").join(subexpressions) + ")";
     }
+  }
+
+  @Override
+  public String toString() {
+    return toString("");
   }
 
   @Override

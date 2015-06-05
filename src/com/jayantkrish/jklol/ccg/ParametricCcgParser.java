@@ -128,7 +128,11 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    */
   public static final Set<String> DEFAULT_VERB_TAGS = Sets.newHashSet("VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
   
+  /**
+   * Syntactic categories added for word skipping
+   */
   public static final HeadedSyntacticCategory SKIP_CAT = HeadedSyntacticCategory.parseFrom("SKIP{0}");
+  public static final HeadedSyntacticCategory START_CAT = HeadedSyntacticCategory.parseFrom("START{0}");
   public static final Expression2 SKIP_LF = Expression2.constant("**skip**");
   public static final String SKIP_PREDICATE = "**skip**";
   
@@ -310,15 +314,29 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       List<Integer> argumentNumbers = Collections.emptyList();
       List<Integer> objects = Collections.emptyList(); 
 
+      // Allow categories to absorb SKIP_CAT on the right.
+      Set<HeadedSyntacticCategory> categoriesExceptSkippable = Sets.newHashSet(syntacticCategories);
+      categoriesExceptSkippable.remove(SKIP_CAT);
+      categoriesExceptSkippable.remove(START_CAT);
       HeadedSyntacticCategory ruleSkipCat = SKIP_CAT.relabelVariables(new int[] {0}, new int[] {100});
-      for (HeadedSyntacticCategory cat : syntacticCategories) {
-        binaryRules.add(new CcgBinaryRule(ruleSkipCat, cat, cat, skipLeftExp,
-            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
+      for (HeadedSyntacticCategory cat : categoriesExceptSkippable) {
         binaryRules.add(new CcgBinaryRule(cat, ruleSkipCat, cat, skipRightExp,
+            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
+      }
+      // START_CAT can also absorb SKIP_CAT on the right
+      binaryRules.add(new CcgBinaryRule(START_CAT, ruleSkipCat, START_CAT, skipRightExp,
+            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
+
+      // START_CAT can be absorbed on the left by any non-SKIP_CAT category.
+      HeadedSyntacticCategory ruleStartCat = START_CAT.relabelVariables(new int[] {0}, new int[] {100});
+      for (HeadedSyntacticCategory cat : categoriesExceptSkippable) {
+        binaryRules.add(new CcgBinaryRule(ruleStartCat, cat, cat, skipLeftExp,
             subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
       }
 
       syntacticCategories.add(SKIP_CAT);
+      syntacticCategories.add(START_CAT);
+      
       List<Set<String>> assignment = Lists.newArrayList();
       assignment.add(Sets.newHashSet(SKIP_PREDICATE));
       semanticPredicates.add(SKIP_PREDICATE);

@@ -1195,8 +1195,13 @@ public class CcgParser implements Serializable {
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
 
     if (chart.isFinishedParsing()) {
+      if (allowWordSkipping) {
         return addSentenceToParse(chart.decodeBestParseForSubspan(
             0, chart.size() - 1, this), chart);
+      } else {
+        return addSentenceToParse(chart.decodeBestParseForSpan(
+            0, chart.size() - 1, this), chart);
+      }
     } else {
       System.out.println("CCG Parser Timeout");
       return null;

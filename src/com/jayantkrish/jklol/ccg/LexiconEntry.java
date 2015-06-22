@@ -52,8 +52,7 @@ public class LexiconEntry {
    * @return
    */
   public static LexiconEntry parseLexiconEntry(String lexiconLine) {
-    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, 
-        '~').parseLine(lexiconLine);
+    String[] parts = getCsvParser().parseLine(lexiconLine);
 
     // Add the lexicon word sequence to the lexicon.
     String wordPart = parts[0];
@@ -67,6 +66,10 @@ public class LexiconEntry {
     return new LexiconEntry(words, category);
   }
   
+  public static CsvParser getCsvParser() {
+    return new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, '~');
+  }
+
   public static LexiconEntry parseFromJson(String line) {
     try {
       ObjectMapper mapper = new ObjectMapper();
@@ -141,7 +144,8 @@ public class LexiconEntry {
   }
 
   public String toCsvString() {
-    return "\"" + Joiner.on(" ").join(words) + "\"," + category.toCsvString();  
+    return "\"" + getCsvParser().escape(Joiner.on(" ").join(words))
+        + "\"," + category.toCsvString();  
   }
 
   @Override

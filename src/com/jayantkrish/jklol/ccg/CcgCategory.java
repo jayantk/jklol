@@ -17,7 +17,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.util.CsvParser;
 
 /**
  * A CCG category is a tuple of a syntactic category and semantic
@@ -64,8 +63,6 @@ public class CcgCategory implements Serializable {
   // TODO: Set is the wrong representation! Must allow duplicate
   // elements.
   private final List<Set<String>> variableAssignments;
-
-  private static final char ENTRY_DELIMITER = ',';
 
   /**
    * 
@@ -117,7 +114,7 @@ public class CcgCategory implements Serializable {
    * @return
    */
   public static CcgCategory parseFrom(String categoryString) {
-    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, CsvParser.NULL_ESCAPE).parseLine(
+    String[] parts = LexiconEntry.getCsvParser().parseLine(
         categoryString);
     Preconditions.checkArgument(parts.length >= 1, "Invalid CCG category string: %s",
         categoryString);
@@ -353,7 +350,7 @@ public class CcgCategory implements Serializable {
       parts.add(subjects.get(i) + " " + argumentNumbers.get(i) + " " + objects.get(i));
     }
 
-    return CsvParser.defaultParser().toCsv(parts);
+    return LexiconEntry.getCsvParser().toCsv(parts);
   }
 
   @Override

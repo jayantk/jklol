@@ -228,6 +228,27 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
       return Expression2.nested(newSubexpressions);
     }
   }
+  
+  /**
+   * Returns {@code true} if this expression contains {@code subexpression}.
+   * 
+   * @param subexpression
+   * @return
+   */
+  public boolean hasSubexpression(Expression2 subexpression) {
+    if (this.equals(subexpression)) {
+      return true;
+    } else if (this.isConstant()) {
+      return false;
+    } else {
+      for (Expression2 sub : subexpressions) {
+        if (sub.hasSubexpression(subexpression)) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
 
   @Override
   public String toString() {

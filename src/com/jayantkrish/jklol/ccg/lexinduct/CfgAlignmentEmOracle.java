@@ -5,6 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParser;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.EmOracle;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -32,7 +33,8 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
     log.stopTimer("e_step/getCfg");
 
     log.startTimer("e_step/marginals");
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), example.getTree().getExpressionNode(), true);
+    Factor rootFactor = model.getRootFactor(example.getTree(), parser.getParentVariable());
+    CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, true);
     log.stopTimer("e_step/marginals");
 
     log.startTimer("e_step/compute_expectations");

@@ -218,7 +218,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         inferenceAlgorithm, simplifier, comparator);
   }
 
-  private static CfgAlignmentModel trainAlignmentModel(List<AlignmentExample> trainingData,
+  public static CfgAlignmentModel trainAlignmentModel(List<AlignmentExample> trainingData,
       Set<List<String>> entityNames, double smoothingAmount, int emIterations, int nGramLength) {
     // Preprocess data to generate features.
     FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
@@ -266,7 +266,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     return model;
   }
 
-  private static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,
+  public static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,
       List<String> lexiconEntryLines, List<String> unknownLexiconEntryLines,
       List<String> ruleEntries, CcgFeatureFactory featureFactory,
       CcgInference inferenceAlgorithm, int iterations, double l2Penalty) {
@@ -287,7 +287,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     return family.getModelFromParameters(parameters);
   }
 
-  private static List<CcgExample> alignmentExamplesToCcgExamples(
+  public static List<CcgExample> alignmentExamplesToCcgExamples(
       List<AlignmentExample> alignmentExamples, CfgAlignmentModel model) {
     // Convert data to CCG training data.
     List<CcgExample> ccgExamples = Lists.newArrayList();

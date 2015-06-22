@@ -217,6 +217,9 @@ public class AlignedExpressionTree {
       // generate its dependencies and head assignment.
       // String head = getWord();
       for (String head : freeVars) {
+        // TODO: move the normalization elsewhere:
+        head = head.replaceAll(" ", "_");
+        
         List<String> subjects = Lists.newArrayList();
         List<Integer> argumentNums = Lists.newArrayList();
         List<Integer> objects = Lists.newArrayList();

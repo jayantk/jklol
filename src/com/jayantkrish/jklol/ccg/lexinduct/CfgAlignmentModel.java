@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -73,10 +74,10 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
     CfgParser parser = getCfgParser(example);
     ExpressionTree tree = example.getTree();
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), tree.getExpressionNode(), false);
-    CfgParseTree parseTree = chart.getBestParseTree(tree.getExpressionNode());
     
-    System.out.println(parseTree);
+    Factor rootFactor = getRootFactor(tree, parser.getParentVariable());
+    CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, false);
+    CfgParseTree parseTree = chart.getBestParseTree();
 
     return decodeCfgParse(parseTree, 0);
   }
@@ -197,5 +198,28 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
         populateBinaryRuleDistribution(func, builder);
       }
     }
+    
+    List<ExpressionTree> substitutions = tree.getSubstitutions();
+    for (int i = 0; i < substitutions.size(); i++) {
+      populateBinaryRuleDistribution(substitutions.get(i), builder);
+    }
+  }
+  
+
+  /**
+   * This method is a hack that enables the use of the "substitutions"
+   * field of ExpressionTree at the root of the CFG parse. In the future,
+   * these substitutions should be handled using unary rules in the 
+   * CFG parser.
+   */
+  public Factor getRootFactor(ExpressionTree tree, VariableNumMap expressionVar) {
+    List<Assignment> roots = Lists.newArrayList();
+    roots.add(expressionVar.outcomeArrayToAssignment(tree.getExpressionNode()));
+
+    for (ExpressionTree substitution : tree.getSubstitutions()) {
+      roots.add(expressionVar.outcomeArrayToAssignment(substitution.getExpressionNode()));
+    }
+
+    return TableFactor.pointDistribution(expressionVar, roots.toArray(new Assignment[0]));
   }
 }

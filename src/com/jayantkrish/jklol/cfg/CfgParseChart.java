@@ -285,7 +285,19 @@ public class CfgParseChart {
   }
 
   /**
-   * Get the best parse tree spanning the entire sentence.
+   * Gets the best parse tree spanning the entire sentence.
+   * 
+   * @return
+   */
+  public CfgParseTree getBestParseTree() {
+    Factor rootMarginal = getMarginalEntries(0, chartSize() - 1);
+    Assignment bestAssignment = rootMarginal.getMostLikelyAssignments(1).get(0);
+    return getBestParseTree(bestAssignment.getOnlyValue());
+  }
+
+  /**
+   * Get the best parse tree spanning the entire sentence with
+   * {@code root} as its root.
    */
   public CfgParseTree getBestParseTree(Object root) {
     return getBestParseTreeWithSpan(root, 0, chartSize() - 1);

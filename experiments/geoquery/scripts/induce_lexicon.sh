@@ -1,11 +1,11 @@
 #!/bin/bash -e
 
-TRAINING_DATA=experiments/geoquery/data/sample.ccg
-TEST_DATA=experiments/geoquery/data/sample.ccg
+TRAINING_DATA=experiments/geoquery/data/fold0.ccg
+# TEST_DATA=experiments/geoquery/data/all_folds.ccg
 
 RULES=experiments/geoquery/grammar/rules.txt
 
-LEXICON=lexicon.txt
+LEXICON=experiments/geoquery/grammar/generated_lexicon.txt
 ALIGNMENT_MODEL=alignment_out.ser
 MODEL=out.ser
 

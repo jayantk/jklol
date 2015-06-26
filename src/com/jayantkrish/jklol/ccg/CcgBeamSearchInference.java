@@ -64,19 +64,8 @@ public class CcgBeamSearchInference implements CcgInference {
     
     return parser.parse(sentence, filter, log, maxParseTimeMillis,
         maxChartSize, numThreads);
-    
-    // This code does beam search.
-    /*
-    List<CcgParse> parses = beamSearch(parser, sentence, chartFilter, log);
-
-    if (parses.size() > 0) {
-      return parses.get(0);
-    } else {
-      return null;
-    }
-    */
   }
-  
+
   public List<CcgParse> beamSearch(CcgParser parser, SupertaggedSentence sentence,
       ChartCost chartFilter, LogFunction log) {
     ChartCost filter = SumChartCost.create(searchFilter, chartFilter,

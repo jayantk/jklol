@@ -1,3 +1,4 @@
+"**start**","START{0}","**skip**"
 "0","N_e{0}","0:i","0 0:i"
 "abilene","N_e{0}","abilene_tx:c","0 abilene_tx:c"
 "abingdon","N_e{0}","abingdon_pa:c","0 abingdon_pa:c"

@@ -26,18 +26,23 @@ public class TestSemanticParser extends AbstractCli {
 
   private OptionSpec<String> testData;
   private OptionSpec<String> model;
+  
+  private OptionSpec<Void> skipWords;
 
   @Override
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
     testData = parser.accepts("testData").withRequiredArg().ofType(String.class).required();
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
+    
+    // FIXME: eliminate this option when refactoring the word skipping behavior.
+    skipWords = parser.accepts("skipWords", "Allow the parser to skip words in the parse");
   }
 
   @Override
   public void run(OptionSet options) {
     List<CcgExample> testExamples = TrainSemanticParser.readCcgExamples(
-        options.valueOf(testData), null);
+        options.valueOf(testData), null, options.has(skipWords));
     System.out.println("Read " + testExamples.size() + " test examples");
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);

@@ -205,7 +205,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
 
   public static List<AlignmentExample> readTrainingData(String trainingDataFile) {
-    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile, null);
+    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile, null, false);
     List<AlignmentExample> examples = Lists.newArrayList();
 
     int totalTreeSize = 0; 

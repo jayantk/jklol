@@ -65,6 +65,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
       System.out.println("Search error (Correct): " + example.getSentence() + " " + example.getLogicalForm());
+      System.out.println("predicted: " + bestPredictedParse.getLogicalForm());
       // System.out.println("Expected tree: " + example.getSyntacticParse());
       // System.out.println("Search error cause: " + conditionalChartFilter.analyzeParseFailure());
       log.stopTimer("update_gradient/conditional_max_marginal");

@@ -65,6 +65,8 @@ public class TrainSemanticParser extends AbstractCli {
 
   // Where the trained parser is saved.
   private OptionSpec<String> modelOutput;
+  
+  public static final String START_WORD = "**start**";
 
   public TrainSemanticParser() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
@@ -110,7 +112,7 @@ public class TrainSemanticParser extends AbstractCli {
     if (options.has(jsonTrainingData)) {
       trainingExamples = readCcgExamplesJson(options.valueOf(jsonTrainingData));
     } else if (options.has(trainingData)) {
-      trainingExamples = readCcgExamples(options.valueOf(trainingData), aligner);
+      trainingExamples = readCcgExamples(options.valueOf(trainingData), aligner, options.has(skipWords));
     }
 
     Preconditions.checkState(trainingExamples != null);
@@ -174,7 +176,8 @@ public class TrainSemanticParser extends AbstractCli {
     return examples;
   }
 
-  public static List<CcgExample> readCcgExamples(String filename, AlignmentModelInterface alignmentModel) {
+  public static List<CcgExample> readCcgExamples(String filename, AlignmentModelInterface alignmentModel,
+      boolean skipWords) {
     List<String> lines = IoUtils.readLines(filename);
     List<CcgExample> examples = Lists.newArrayList();
     List<String> words = null;
@@ -186,6 +189,13 @@ public class TrainSemanticParser extends AbstractCli {
         expression = null;
       } else if (line.startsWith("(")) {
         expression = parser.parseSingleExpression(line);
+        
+        if (skipWords) {
+          List<String> newWords = Lists.newArrayList();
+          newWords.add(START_WORD);
+          newWords.addAll(words);
+          words = newWords;
+        }
         
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         SupertaggedSentence supertaggedSentence = ListSupertaggedSentence

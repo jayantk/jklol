@@ -214,10 +214,12 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
    */
   public Factor getRootFactor(ExpressionTree tree, VariableNumMap expressionVar) {
     List<Assignment> roots = Lists.newArrayList();
-    roots.add(expressionVar.outcomeArrayToAssignment(tree.getExpressionNode()));
-
-    for (ExpressionTree substitution : tree.getSubstitutions()) {
-      roots.add(expressionVar.outcomeArrayToAssignment(substitution.getExpressionNode()));
+    if (tree.getSubstitutions().size() == 0) {
+      roots.add(expressionVar.outcomeArrayToAssignment(tree.getExpressionNode()));
+    } else {
+      for (ExpressionTree substitution : tree.getSubstitutions()) {
+        roots.add(expressionVar.outcomeArrayToAssignment(substitution.getExpressionNode()));
+      }
     }
 
     return TableFactor.pointDistribution(expressionVar, roots.toArray(new Assignment[0]));

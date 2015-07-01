@@ -25,11 +25,8 @@ public class LambdaApplicationReplacementRule implements ExpressionReplacementRu
       List<String> lambdaArgs = StaticAnalysis.getLambdaArguments(lambdaExpression, 0);
       Expression2 body = StaticAnalysis.getLambdaBody(lambdaExpression, 0);
 
-      if (applicationArgs.size() > lambdaArgs.size()) {
-        throw new ExpressionSimplificationException("Lambda applied to too many arguments: " + subexpression);
-      }
-
-      for (int i = 0; i < applicationArgs.size(); i++) {
+      int numArgsToApply = Math.min(applicationArgs.size(), lambdaArgs.size());
+      for (int i = 0; i < numArgsToApply; i++) {
         int[] freeIndexes = StaticAnalysis.getIndexesOfFreeVariable(body, lambdaArgs.get(i));
         for (int j = freeIndexes.length - 1; j >= 0; j--) {
           // Do substitutions in backward order to prevent the indexes
@@ -43,6 +40,11 @@ public class LambdaApplicationReplacementRule implements ExpressionReplacementRu
         terms.add(Expression2.constant("lambda"));
         terms.addAll(Expression2.constants(lambdaArgs.subList(applicationArgs.size(), lambdaArgs.size())));
         terms.add(body);
+        return Expression2.nested(terms);
+      } else if (applicationArgs.size() > lambdaArgs.size()) {
+        List<Expression2> terms = Lists.newArrayList();
+        terms.add(body);
+        terms.addAll(applicationArgs.subList(lambdaArgs.size(), applicationArgs.size()));
         return Expression2.nested(terms);
       } else {
         return body;

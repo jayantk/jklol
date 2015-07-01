@@ -858,19 +858,6 @@ public class CcgParserTest extends TestCase {
     }
   }
 
-
-  public void testParseTimeout() {
-    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
-        Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
-    assertTrue(parses.size() > 0);
-    
-    parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
-        Arrays.asList("people", "berries", "people", "berries", "berries", "berries", "berries"), 
-        Collections.nCopies(7, DEFAULT_POS)), 100, null, new NullLogFunction(), 1, Integer.MAX_VALUE, 1);
-    assertEquals(0, parses.size());
-  }
-
   public void testParseUnaryRules1() {
     List<CcgParse> parses = beamSearch(parserWithUnary,
         Arrays.asList("people", "eat", "berries", "or", "directed", "houses"), 10);

@@ -1032,6 +1032,29 @@ public class CcgParser implements Serializable {
     return lexicons;
   }
   
+  /**
+   * Creates a new CCG parser by replacing a lexicon of
+   * this parser with {@code newLexicon}.
+   * 
+   * @param index
+   * @param newLexicon
+   * @return
+   */
+  public CcgParser replaceLexicon(int index, CcgLexicon newLexicon) {
+    List<CcgLexicon> newLexicons = Lists.newArrayList(lexicons);
+    newLexicons.set(index, newLexicon);
+
+    return new CcgParser(newLexicons, lexiconScorers, dependencyHeadVar, dependencySyntaxVar,
+      dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar,
+      dependencyDistribution, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
+      puncDistanceFactor, puncTagSet, verbDistanceVar, verbDistanceFactor, verbTagSet,
+      leftSyntaxVar, rightSyntaxVar, combinatorVar, binaryRuleDistribution, unaryRuleInputVar,
+      unaryRuleVar, unaryRuleFactor, headedBinaryPredicateVar, headedBinaryPosVar,
+      headedBinaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
+      rootSyntaxVar, rootPredicateVar, rootPosVar, rootSyntaxDistribution, headedRootSyntaxDistribution,
+      allowWordSkipping, normalFormOnly);
+  }
+
   public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags) {
     List<LexiconEntry> allLexiconEntries = Lists.newArrayList();
     for (int k = 0; k < lexicons.size(); k++) {

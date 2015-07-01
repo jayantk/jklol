@@ -54,6 +54,10 @@ public class ExpressionSimplifierTest extends TestCase {
     runTest(canonicalizer, "((lambda $0 (lambda $1 ($0 $1))) (lambda $1 (lambda $2 (loc:<lo,<lo,t>> $2 $1)) ))",
         "(lambda $0 (lambda $1 (loc:<lo,<lo,t>> $1 $0)))");
   }
+  
+  public void testSimplifyLambda9() {
+    runTest(simplifier, "((lambda x (lambda y (x bar baz y))) foo abcd)", "(foo bar baz abcd)");
+  }
 
   public void testCanonicalize1() {
     runTest(canonicalizer, "(foo bar baz)", "(foo bar baz)");

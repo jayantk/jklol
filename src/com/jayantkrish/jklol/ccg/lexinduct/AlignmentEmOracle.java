@@ -1,17 +1,15 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.training.EmOracle;
+import com.jayantkrish.jklol.training.AbstractEmOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
-public class AlignmentEmOracle implements EmOracle<AlignmentModel, AlignmentExample, SufficientStatistics> {
+public class AlignmentEmOracle extends AbstractEmOracle<AlignmentModel, AlignmentExample> {
 
   private final ParametricAlignmentModel pam;
   private final MarginalCalculator marginalCalculator;
@@ -27,6 +25,11 @@ public class AlignmentEmOracle implements EmOracle<AlignmentModel, AlignmentExam
   @Override
   public AlignmentModel instantiateModel(SufficientStatistics parameters) {
     return pam.getModelFromParameters(parameters);
+  }
+
+  @Override
+  public SufficientStatistics getInitialExpectationAccumulator() {
+    return pam.getNewSufficientStatistics();
   }
 
   @Override
@@ -55,16 +58,12 @@ public class AlignmentEmOracle implements EmOracle<AlignmentModel, AlignmentExam
   }
 
   @Override
-  public SufficientStatistics maximizeParameters(List<SufficientStatistics> expectations,
+  public SufficientStatistics maximizeParameters(SufficientStatistics expectations,
       SufficientStatistics currentParameters, LogFunction log) {
-
     SufficientStatistics aggregate = pam.getNewSufficientStatistics();
     aggregate.increment(smoothing, 1.0);
-    
-    for (SufficientStatistics expectation : expectations) {
-      aggregate.increment(expectation, 1.0);
-    }
-    
+    aggregate.increment(expectations, 1.0);
+
     return aggregate;
   }
 }

@@ -96,7 +96,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
     SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar), terminalVar,
         sparsityFactor, constantFactor);
-    
+
     /*
     VariableNumMap vars = VariableNumMap.unionAll(parentVar, ruleVar, terminalVar);
     int featureVarNum = Ints.max(vars.getVariableNumsArray()) + 1;

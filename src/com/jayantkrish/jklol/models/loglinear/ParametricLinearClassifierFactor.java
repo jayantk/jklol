@@ -139,7 +139,7 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
     
     List<Assignment> assignments = parameterFactor.product(parameterFactor)
         .getMostLikelyAssignments(numFeatures);
-    return parameterFactor.describeAssignments(assignments);
+    return parameterFactor.describeAssignments(assignments, false);
   }
 
   @Override

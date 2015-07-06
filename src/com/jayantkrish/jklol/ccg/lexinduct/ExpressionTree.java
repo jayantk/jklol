@@ -50,12 +50,12 @@ public class ExpressionTree {
 
   public static ExpressionTree fromExpression(Expression2 expression) {
     return fromExpression(expression, ExpressionSimplifier.lambdaCalculus(),
-        Collections.<String, String>emptyMap(), Collections.<String>emptySet(), 0, 2);
+        Collections.<String, String>emptyMap(), Collections.<String>emptySet(), 0, 2, 2);
   }
 
   public static ExpressionTree fromExpression(Expression2 expression,
       ExpressionSimplifier simplifier, Map<String, String> typeReplacements,
-      Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth) {
+      Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth, int maxAppliedArguments) {
     expression = simplifier.apply(expression);
     
     List<ExpressionTree> substitutions = Lists.newArrayList();
@@ -94,16 +94,16 @@ public class ExpressionTree {
             continue;
           }
 
-          if (numAppliedArguments == 2) {
+          if (numAppliedArguments >= maxAppliedArguments) {
             // This means that the generated function will accept 3 arguments
             // in the sentence, which is quite unlikely.
             continue;
           }
 
           ExpressionTree left = ExpressionTree.fromExpression(argExpression, simplifier,
-              typeReplacements, constantsToIgnore, 0, maxDepth);
+              typeReplacements, constantsToIgnore, 0, maxDepth, maxAppliedArguments);
           ExpressionTree right = ExpressionTree.fromExpression(funcExpression, simplifier,
-              typeReplacements, constantsToIgnore, numAppliedArguments + 1, maxDepth);
+              typeReplacements, constantsToIgnore, numAppliedArguments + 1, maxDepth, maxAppliedArguments);
           lefts.add(left);
           rights.add(right);
         }

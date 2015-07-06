@@ -200,7 +200,7 @@ public class AlignedExpressionTree {
       }
 
       Type initialType = StaticAnalysis.inferType(getExpression(), typeReplacements);
-      Type returnType = StaticAnalysis.inferType(getExpression(), StaticAnalysis.unify(initialType, type), typeReplacements);;
+      Type returnType = StaticAnalysis.inferType(getExpression(), StaticAnalysis.unify(initialType, type), typeReplacements);
       List<Type> argumentTypes = Lists.newArrayList();
       for (int i = 0; i < getNumAppliedArguments(); i++) {
         argumentTypes.add(returnType.getArgumentType());

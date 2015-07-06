@@ -192,6 +192,7 @@ public class StaticAnalysis {
    * hardcoded constants in the process. Get rid of typeReplacements.
    * 
    * @param expression
+   * @param type
    * @param typeReplacements
    * @return
    */

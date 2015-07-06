@@ -227,7 +227,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
 
     return ExpressionTree.fromExpression(expression, simplifier, typeReplacements,
-        constantsToIgnore, 0, 2);
+        constantsToIgnore, 0, 2, 2);
   }
 
   public static void main(String[] args) {

@@ -1570,6 +1570,10 @@ public class CcgParser implements Serializable {
             return false;
           }
         }
+        
+        if (chart.getTotalNumChartEntries() > chart.getMaxChartEntries()) {
+          return false;
+        }        
       }
     } catch (InterruptedException e) {
       e.printStackTrace();

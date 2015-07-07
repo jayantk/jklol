@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -39,7 +40,7 @@ public class TableLexicon extends AbstractCcgLexicon {
 
   @Override
   public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags,
-      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, List<String> sentenceWords) {
+      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence) {
     return TableLexicon.getLexiconEntriesFromFactor(wordSequence, terminalDistribution,
         terminalVar, ccgCategoryVar);
   }

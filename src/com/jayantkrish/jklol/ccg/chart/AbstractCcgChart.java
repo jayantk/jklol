@@ -8,9 +8,9 @@ import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IntMultimap;
 
@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.util.IntMultimap;
 public abstract class AbstractCcgChart implements CcgChart {
 
   // The words and pos tags of the sentence being parsed.
-  private final SupertaggedSentence input;
+  private final AnnotatedSentence input;
   private final List<String> terminals;
   private final List<String> posTags;
   private int[] posTagsInt;
@@ -57,7 +57,7 @@ public abstract class AbstractCcgChart implements CcgChart {
 
   private boolean finishedParsing;
 
-  public AbstractCcgChart(SupertaggedSentence input, int maxChartSize) {
+  public AbstractCcgChart(AnnotatedSentence input, int maxChartSize) {
     this.input = input;
     this.terminals = ImmutableList.copyOf(input.getWords());
     this.posTags = ImmutableList.copyOf(input.getPosTags());
@@ -75,7 +75,7 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
   
   @Override
-  public SupertaggedSentence getInput() {
+  public AnnotatedSentence getInput() {
     return input;
   }
 

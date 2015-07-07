@@ -32,14 +32,13 @@ import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
-import com.jayantkrish.jklol.ccg.lexicon.InstantiatedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -1060,7 +1059,7 @@ public class CcgParser implements Serializable {
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
       List<LexiconEntry> lexiconEntries = lexicon.getLexiconEntries(preprocessInput(wordSequence),
-          posTags, allLexiconEntries, 0, wordSequence.size() - 1, wordSequence);
+          posTags, allLexiconEntries, 0, wordSequence.size() - 1, new AnnotatedSentence(wordSequence, posTags));
       allLexiconEntries.addAll(lexiconEntries);
     }
     return allLexiconEntries;
@@ -1158,11 +1157,11 @@ public class CcgParser implements Serializable {
    * @param log
    * @return {@code beamSize} best parses for {@code terminals}.
    */
-  public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize, LogFunction log) {
+  public List<CcgParse> beamSearch(AnnotatedSentence input, int beamSize, LogFunction log) {
     return beamSearch(input, beamSize, null, log, -1, Integer.MAX_VALUE, 1);
   }
 
-  public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize) {
+  public List<CcgParse> beamSearch(AnnotatedSentence input, int beamSize) {
     return beamSearch(input, beamSize, new NullLogFunction());
   }
 
@@ -1180,19 +1179,17 @@ public class CcgParser implements Serializable {
    * parsing.
    * @return
    */
-  public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize, ChartCost beamFilter,
+  public List<CcgParse> beamSearch(AnnotatedSentence input, int beamSize, ChartCost beamFilter,
       LogFunction log, long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(input, maxChartSize, beamSize);
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
     
     if (chart.isFinishedParsing()) {
       if (allowWordSkipping) {
-        return addSentenceToParses(chart.decodeBestParsesForSubspan(
-            0, chart.size() - 1, beamSize, this), chart);
+        return chart.decodeBestParsesForSubspan(0, chart.size() - 1, beamSize, this);
       } else {
         int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
-        return addSentenceToParses(chart.decodeBestParsesForSpan(
-            0, chart.size() - 1, numParses, this), chart);
+        return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this);
       }
     } else {
       System.out.println("CCG Parser Timeout");
@@ -1212,42 +1209,24 @@ public class CcgParser implements Serializable {
    * @param numThreads number of threads to use for parsing.
    * @return
    */
-  public CcgParse parse(SupertaggedSentence input, ChartCost beamFilter, LogFunction log,
+  public CcgParse parse(AnnotatedSentence input, ChartCost beamFilter, LogFunction log,
       long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgExactHashTableChart chart = new CcgExactHashTableChart(input, maxChartSize);
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
 
     if (chart.isFinishedParsing()) {
       if (allowWordSkipping) {
-        return addSentenceToParse(chart.decodeBestParseForSubspan(
-            0, chart.size() - 1, this), chart);
+        return chart.decodeBestParseForSubspan(0, chart.size() - 1, this);
       } else {
-        return addSentenceToParse(chart.decodeBestParseForSpan(
-            0, chart.size() - 1, this), chart);
+        return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
       }
     } else {
       System.out.println("CCG Parser Timeout");
       return null;
     }
   }
-  
-  public static final CcgParse addSentenceToParse(CcgParse parse, CcgChart chart) {
-    if (parse == null) {
-      return null;
-    } else {
-      return parse.addSentence(chart.getWords(), chart.getPosTags());
-    }
-  }
 
-  public static final List<CcgParse> addSentenceToParses(List<CcgParse> parses, CcgChart chart) {
-    List<CcgParse> newParses = Lists.newArrayList();
-    for (CcgParse parse : parses) {
-      newParses.add(addSentenceToParse(parse, chart));
-    }
-    return newParses;
-  }
-
-  public void parseCommon(CcgChart chart, SupertaggedSentence input, ChartCost beamFilter,
+  public void parseCommon(CcgChart chart, AnnotatedSentence input, ChartCost beamFilter,
       LogFunction log, long maxParseTimeMillis, int numThreads) {
     if (log == null) {
       log = new NullLogFunction();
@@ -1255,7 +1234,7 @@ public class CcgParser implements Serializable {
 
     log.startTimer("initialize_chart");
     initializeChart(chart, input, beamFilter);
-    initializeChartTerminals(chart, lexicons, input);
+    initializeChartTerminals(chart, input);
     log.stopTimer("initialize_chart");
 
     log.startTimer("calculate_inside_beam");
@@ -1275,7 +1254,7 @@ public class CcgParser implements Serializable {
     chart.setFinishedParsing(finishedParsing);
   }
 
-  public void initializeChart(CcgChart chart, SupertaggedSentence input, ChartCost chartFilter) {
+  public void initializeChart(CcgChart chart, AnnotatedSentence input, ChartCost chartFilter) {
     int numWords = input.size();
     int[] puncCounts = computeDistanceCounts(input.getPosTags(), puncTagSet);
     int[] verbCounts = computeDistanceCounts(input.getPosTags(), verbTagSet);
@@ -1319,16 +1298,10 @@ public class CcgParser implements Serializable {
     // sparsifyDependencyDistribution(chart);
   }
   
-  private void initializeChartTerminals(CcgChart chart, List<CcgLexicon> lexicons,
-      SupertaggedSentence sentence) {
+  private void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
     List<String> terminals = sentence.getWords();
     List<String> preprocessedTerminals = preprocessInput(terminals);
     List<String> posTags = sentence.getPosTags();
-    
-    List<InstantiatedLexiconScorer> sentenceScorers = Lists.newArrayList();
-    for (LexiconScorer lexiconScorer : lexiconScorers) {
-      sentenceScorers.add(lexiconScorer.get(terminals, preprocessedTerminals, posTags));
-    }
 
     for (int i = 0; i < preprocessedTerminals.size(); i++) {
       for (int j = i; j < preprocessedTerminals.size(); j++) {
@@ -1339,7 +1312,7 @@ public class CcgParser implements Serializable {
         for (int k = 0; k < lexicons.size(); k++) {
           CcgLexicon lexicon = lexicons.get(k);
           List<LexiconEntry> lexiconEntries = lexicon.getLexiconEntries(terminalValue,
-              posTagValue, allLexiconEntries, i, j, terminals);
+              posTagValue, allLexiconEntries, i, j, sentence);
           allLexiconEntries.addAll(lexiconEntries);
 
           for (LexiconEntry lexiconEntry : lexiconEntries) {
@@ -1349,8 +1322,8 @@ public class CcgParser implements Serializable {
             // any additional parameters in subclasses.
             double subclassProb = lexicon.getCategoryWeight(terminalValue, posTagValue, category);
 
-            for (InstantiatedLexiconScorer sentenceScorer : sentenceScorers) {
-              subclassProb *= sentenceScorer.getCategoryWeight(i, j, terminalValue,
+            for (LexiconScorer lexiconScorer : lexiconScorers) {
+              subclassProb *= lexiconScorer.getCategoryWeight(i, j, sentence, terminalValue,
                   posTagValue, category);
             }
 

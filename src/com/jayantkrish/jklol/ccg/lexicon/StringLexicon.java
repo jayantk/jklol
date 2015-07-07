@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 /**
  * CCG Lexicon that allows strings from the text to be 
@@ -61,8 +62,9 @@ public class StringLexicon extends AbstractCcgLexicon {
 
   @Override
   public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags, 
-      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, List<String> sentenceWords) {
+      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence) {
     List<LexiconEntry> entries = Lists.newArrayList();
+    List<String> sentenceWords = sentence.getWords();
     for (int i = 0; i < categories.size(); i++) {
       CcgCategory category = categories.get(i);
       CategorySpanConfig config = spanConfig.get(i);

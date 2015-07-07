@@ -35,10 +35,9 @@ import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModelInterface;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -165,7 +164,7 @@ public class TrainSemanticParser extends AbstractCli {
 
         // Parts-of-speech are assumed to be unknown.
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-        SupertaggedSentence sentence = ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags);
+        AnnotatedSentence sentence = new AnnotatedSentence(words, posTags);
 
         CcgExample example = new CcgExample(sentence, null, null, lf, null);
         examples.add(example);
@@ -198,8 +197,7 @@ public class TrainSemanticParser extends AbstractCli {
         }
         
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-        SupertaggedSentence supertaggedSentence = ListSupertaggedSentence
-            .createWithUnobservedSupertags(words, posTags);
+        AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);
 
         LexiconEntryLabels lexiconEntryLabels = null;;
         if (alignmentModel != null) {
@@ -218,7 +216,7 @@ public class TrainSemanticParser extends AbstractCli {
   }
 
   private ParametricCcgParser createCcgParser(OptionSet parsedOptions) {
-    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, false);
+    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(false);
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> unknownLexiconEntries = parsedOptions.has(ccgUnknownLexicon) ?

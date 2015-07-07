@@ -15,9 +15,9 @@ import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 
@@ -107,13 +107,13 @@ public class CcgTrainingTest extends TestCase {
     
     trainingExamplesLfOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
-      trainingExamplesLfOnly.add(new CcgExample(example.getSentence().removeSupertags(), null,
+      trainingExamplesLfOnly.add(new CcgExample(example.getSentence(), null,
           null, example.getLogicalForm(), null));
     }
     
     trainingExamplesDepsOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
-      trainingExamplesDepsOnly.add(new CcgExample(example.getSentence().removeSupertags(),
+      trainingExamplesDepsOnly.add(new CcgExample(example.getSentence(),
           example.getDependencies(), null, null, null));
     }
 
@@ -126,15 +126,17 @@ public class CcgTrainingTest extends TestCase {
 
     trainingExamplesSyntaxOnly = Lists.newArrayList();
     for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
-      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence().removeSupertags(), 
+      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence(), 
           null, syntaxExample.getSyntacticParse(), null, null));
     }
 
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(unknownLexicon),
-        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(null, true), posTags, true, null, false, false);
+    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
+        Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
+        new DefaultCcgFeatureFactory(true), posTags, true, null, false, false);
     
-    wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(unknownLexicon),
-        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(null, true), posTags, true, null, true, false);
+    wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
+        Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
+        new DefaultCcgFeatureFactory(true), posTags, true, null, true, false);
   }
   
   public void testSyntacticChartFilter1() {
@@ -376,14 +378,13 @@ public class CcgTrainingTest extends TestCase {
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.beamSearch(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG)), beamSize);
   }
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
-        posTags), beamSize);
+    return parser.beamSearch(new AnnotatedSentence(words, posTags), beamSize);
   }
 
   private List<CcgParse> filterNonAtomicParses(List<CcgParse> parses) {

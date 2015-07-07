@@ -172,7 +172,7 @@ public class CcgParserUtils {
 
       if (bestParse != null) {
         ccgFamily.incrementSufficientStatistics(featureCounts, parserZeroParameters,
-            bestParse, 1.0);
+            example.getSentence(), bestParse, 1.0);
       }
       
       return featureCounts;

@@ -45,6 +45,15 @@ public class ListSufficientStatistics implements SufficientStatistics {
   }
 
   /**
+   * Creates a {@code ListSufficientStatistics} containing no parameters.
+   * 
+   * @return
+   */
+  public static ListSufficientStatistics empty() {
+    return new ListSufficientStatistics(Lists.newArrayList(), Lists.newArrayList());
+  }
+
+  /**
    * Gets the names of the statistics in {@code this}.
    *
    * @return

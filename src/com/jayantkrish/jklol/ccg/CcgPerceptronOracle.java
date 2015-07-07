@@ -78,9 +78,11 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the predicted feature counts.
-    family.incrementSufficientStatistics(gradient, currentParameters, bestPredictedParse, -1.0);
+    family.incrementSufficientStatistics(gradient, currentParameters,
+        example.getSentence(), bestPredictedParse, -1.0);
     // Add the feature counts of best correct parse.
-    family.incrementSufficientStatistics(gradient, currentParameters, bestCorrectParse, 1.0);
+    family.incrementSufficientStatistics(gradient, currentParameters,
+        example.getSentence(), bestCorrectParse, 1.0);
     log.stopTimer("update_gradient/increment_gradient");
 
     // Return the amount by which the predicted parse's score exceeds the

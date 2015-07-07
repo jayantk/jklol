@@ -35,11 +35,12 @@ import com.jayantkrish.jklol.ccg.data.CcgbankSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.MapReduceExecutor;
 import com.jayantkrish.jklol.parallel.Mapper;
@@ -54,7 +55,7 @@ import com.jayantkrish.jklol.util.IoUtils;
  * 
  * @author jayantk
  */
-public class TrainCcg extends AbstractCli {
+public class TrainSyntacticCcgParser extends AbstractCli {
 
   private OptionSpec<String> trainingData;
   private OptionSpec<String> modelOutput;
@@ -78,8 +79,10 @@ public class TrainCcg extends AbstractCli {
   private OptionSpec<Void> ignoreSemantics;
   private OptionSpec<Void> onlyObservedBinaryRules;
   private OptionSpec<Void> exactInference;
+  
+  public static final String SUPERTAG_ANNOTATION_NAME = "supertags";
 
-  public TrainCcg() {
+  public TrainSyntacticCcgParser() {
     super(CommonOptions.STOCHASTIC_GRADIENT, CommonOptions.MAP_REDUCE);
   }
 
@@ -141,7 +144,7 @@ public class TrainCcg extends AbstractCli {
 
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
-    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, true);
+    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, null, true, SUPERTAG_ANNOTATION_NAME);
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(ccgLexicon));
     List<String> unknownLexiconEntries = options.has(ccgUnknownLexicon) ?
         IoUtils.readLines(options.valueOf(ccgUnknownLexicon)) : Collections.<String>emptyList();
@@ -244,7 +247,7 @@ public class TrainCcg extends AbstractCli {
   }
 
   public static void main(String[] args) {
-    new TrainCcg().run(args);
+    new TrainSyntacticCcgParser().run(args);
   }
 
   private static class SupertaggerMapper extends Mapper<CcgExample, CcgExample> {
@@ -261,7 +264,7 @@ public class TrainCcg extends AbstractCli {
 
     @Override
     public CcgExample map(CcgExample item) {
-      SupertaggedSentence taggedSentence = supertagger.multitag(
+      ListSupertaggedSentence taggedSentence = supertagger.multitag(
           item.getSentence().getWordsAndPosTags(), multitagThreshold);
 
       if (includeGoldSupertags) {
@@ -298,8 +301,10 @@ public class TrainCcg extends AbstractCli {
         
         taggedSentence = taggedSentence.replaceSupertags(newLabels, newProbs);
       }
+      AnnotatedSentence annotatedSentence = item.getSentence().addAnnotation(
+          SUPERTAG_ANNOTATION_NAME, taggedSentence.getAnnotation());
 
-      return new CcgExample(taggedSentence, item.getDependencies(), item.getSyntacticParse(),
+      return new CcgExample(annotatedSentence, item.getDependencies(), item.getSyntacticParse(),
           item.getLogicalForm(), null);
     }
   }

@@ -29,6 +29,7 @@ import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -780,7 +781,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   }
   
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      SufficientStatistics parameters, CcgParse parse, double count) {
+      SufficientStatistics parameters, AnnotatedSentence sentence, CcgParse parse, double count) {
     List<SufficientStatistics> lexiconGradientList = gradient.coerceToList()
         .getStatisticByName(LEXICON_PARAMETERS).coerceToList().getStatistics();
     List<SufficientStatistics> lexiconParameterList = parameters.coerceToList()
@@ -790,10 +791,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     List<SufficientStatistics> lexiconScorerParameterList = parameters.coerceToList()
         .getStatisticByName(LEXICON_SCORER_PARAMETERS).coerceToList().getStatistics();
 
-    List<String> sentenceOriginalWords = parse.getSpannedWords();
     List<String> sentencePreprocessedWords = parse.getLexiconTriggerWords();
-    List<String> sentencePosTags = parse.getSpannedPosTags();
-    
+        
     List<LexiconEntry> lexiconEntries = parse.getSpannedLexiconEntries();
     List<Integer> lexiconEntryIndexes = parse.getSpannedLexiconEntryIndexes();
     List<List<String>> posTags = parse.getSpannedPosTagsByLexiconEntry();
@@ -815,7 +814,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       for (int j = 0; j < lexiconScorerFamilies.size(); j++) {
         lexiconScorerFamilies.get(j).incrementLexiconSufficientStatistics(
           lexiconScorerGradientList.get(j), lexiconScorerParameterList.get(j),
-          spanStart, spanEnd, sentenceOriginalWords, sentencePreprocessedWords, sentencePosTags,
+          spanStart, spanEnd, sentence, sentencePreprocessedWords,
           lexiconEntry.getWords(), posTags.get(i), lexiconEntry.getCategory(), count);
       }
     }
@@ -832,8 +831,9 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @param count
    */
   public void incrementSufficientStatistics(SufficientStatistics gradient, 
-      SufficientStatistics currentParameters, CcgParse parse, double count) {
-    List<String> posTags = parse.getSentencePosTags();
+      SufficientStatistics currentParameters, AnnotatedSentence sentence,
+      CcgParse parse, double count) {
+    List<String> posTags = sentence.getPosTags();
 
     // Update the dependency structure parameters, including distance
     // parameters.
@@ -846,7 +846,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     incrementRootSyntaxSufficientStatistics(gradient, currentParameters,
         parse.getHeadedSyntacticCategory(), parse.getSemanticHeads(), posTags, count);
     // Update terminal distribution parameters.
-    incrementLexiconSufficientStatistics(gradient, currentParameters, parse, count);
+    incrementLexiconSufficientStatistics(gradient, currentParameters, sentence, parse, count);
   }
 
   public String getParameterDescription(SufficientStatistics parameters) {

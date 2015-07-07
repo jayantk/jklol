@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -15,7 +16,7 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayant
  */
-public class SyntaxLexiconScorer implements LexiconScorer, InstantiatedLexiconScorer {
+public class SyntaxLexiconScorer implements LexiconScorer {
   private static final long serialVersionUID = 1L;
 
   private final VariableNumMap terminalVar;
@@ -68,16 +69,10 @@ public class SyntaxLexiconScorer implements LexiconScorer, InstantiatedLexiconSc
   public DiscreteFactor getTerminalSyntaxDistribution() {
     return terminalSyntaxDistribution;
   }
-  
-  @Override
-  public InstantiatedLexiconScorer get(List<String> terminals, List<String> preprocessedTerminals,
-      List<String> posTags) {
-    return this;
-  }
 
   @Override
-  public double getCategoryWeight(int spanStart, int spanEnd, List<String> wordSequence,
-      List<String> posTags, CcgCategory category) {
+  public double getCategoryWeight(int spanStart, int spanEnd, AnnotatedSentence sentence,
+      List<String> wordSequence, List<String> posTags, CcgCategory category) {
     double posProb = getTerminalPosProbability(posTags.get(posTags.size() - 1), category.getSyntax());
     double syntaxProb = getTerminalSyntaxProbability(wordSequence, category.getSyntax());
     return posProb * syntaxProb;

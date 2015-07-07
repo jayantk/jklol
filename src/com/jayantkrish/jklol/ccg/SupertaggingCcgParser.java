@@ -5,11 +5,10 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.chart.SumChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
 /**
@@ -29,15 +28,18 @@ public class SupertaggingCcgParser {
   // May be null, in which case supertagging is not used.
   private final Supertagger supertagger;
   private final double[] multitagThresholds;
+  private final String supertaggerAnnotationName;
+
 
   public SupertaggingCcgParser(CcgParser parser, CcgInference inference,
-      Supertagger supertagger, double[] multitagThresholds) {
+      Supertagger supertagger, double[] multitagThresholds, String supertaggerAnnotationName) {
     this.parser = Preconditions.checkNotNull(parser);
     this.inference = Preconditions.checkNotNull(inference);
 
     Preconditions.checkArgument(supertagger == null || multitagThresholds.length > 0);
     this.supertagger = supertagger;
     this.multitagThresholds = Arrays.copyOf(multitagThresholds, multitagThresholds.length);
+    this.supertaggerAnnotationName = supertaggerAnnotationName;
   }
 
   /**
@@ -51,22 +53,24 @@ public class SupertaggingCcgParser {
    * @param inputFilter
    * @return
    */
-  public CcgParseResult parse(SupertaggedSentence sentence, ChartCost inputFilter) {
-    SupertaggedSentence supertaggedSentence = null;
+  public CcgParseResult parse(AnnotatedSentence sentence, ChartCost inputFilter) {
+    AnnotatedSentence annotatedSentence = null;
     if (supertagger != null) {
       for (int i = 0; i < multitagThresholds.length; i++) {
         // Try parsing at each multitag threshold. If parsing succeeds,
         // immediately return the parse. Otherwise, continue to further
         // thresholds.
         List<WordAndPos> supertaggerInput = sentence.getWordsAndPosTags();
-        supertaggedSentence = supertagger.multitag(supertaggerInput, multitagThresholds[i]);
+        ListSupertaggedSentence supertaggedSentence = supertagger
+            .multitag(supertaggerInput, multitagThresholds[i]);
         
-        ChartCost filter = SumChartCost.create(inputFilter,
-            new SupertagChartCost(supertaggedSentence.getSupertags()));
+        annotatedSentence = sentence.addAnnotation(supertaggerAnnotationName,
+            supertaggedSentence.getAnnotation());
 
-        CcgParse parse = inference.getBestParse(parser, sentence, filter, new NullLogFunction());
+        CcgParse parse = inference.getBestParse(parser, annotatedSentence, inputFilter,
+            new NullLogFunction());
         if (parse != null) {
-          return new CcgParseResult(parse, supertaggedSentence, multitagThresholds[i]);
+          return new CcgParseResult(parse, annotatedSentence, multitagThresholds[i]);
         }
       }
       // Parsing was unsuccessful at all thresholds
@@ -74,7 +78,7 @@ public class SupertaggingCcgParser {
     } else {
       CcgParse parse = inference.getBestParse(parser, sentence, inputFilter, new NullLogFunction());
       if (parse != null) {
-        return new CcgParseResult(parse, supertaggedSentence, 0.0);
+        return new CcgParseResult(parse, sentence, 0.0);
       } else {
         return null;
       }
@@ -82,13 +86,13 @@ public class SupertaggingCcgParser {
   }
 
   /**
-   * Same as {@link #parse(SupertaggedSentence, ChartCost)},
+   * Same as {@link #parse(AnnotatedSentence, ChartCost)},
    * without a {@code ChartCost}.
    *  
    * @param sentence
    * @return
    */
-  public CcgParseResult parse(SupertaggedSentence sentence) {
+  public CcgParseResult parse(AnnotatedSentence sentence) {
     return parse(sentence, null);
   }
 
@@ -98,10 +102,10 @@ public class SupertaggingCcgParser {
 
   public static class CcgParseResult {
     private final CcgParse parse;
-    private final SupertaggedSentence sentence;
+    private final AnnotatedSentence sentence;
     private final double tagThreshold;
 
-    public CcgParseResult(CcgParse parse, SupertaggedSentence sentence, double tagThreshold) {
+    public CcgParseResult(CcgParse parse, AnnotatedSentence sentence, double tagThreshold) {
       this.parse = Preconditions.checkNotNull(parse);
       this.sentence = Preconditions.checkNotNull(sentence);
       this.tagThreshold = tagThreshold;
@@ -111,7 +115,7 @@ public class SupertaggingCcgParser {
       return parse;
     }
 
-    public SupertaggedSentence getSentence() {
+    public AnnotatedSentence getSentence() {
       return sentence;
     }
 

@@ -6,6 +6,7 @@ import java.util.List;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 /**
  * The lexicon of a CCG parser which determines the initial 
@@ -31,12 +32,12 @@ public interface CcgLexicon extends Serializable {
    * @param alreadyGenerated
    * @param spanStart
    * @param spanEnd
-   * @param sentenceWords
+   * @param sentence
    * @return
    */
   List<LexiconEntry> getLexiconEntries(List<String> wordSequence,
       List<String> posSequence, List<LexiconEntry> alreadyGenerated,
-      int spanStart, int spanEnd, List<String> sentenceWords);
+      int spanStart, int spanEnd, AnnotatedSentence sentence);
 
   /**
    * Gets the unnormalized probability of generating {@code category}

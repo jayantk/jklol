@@ -4,8 +4,8 @@ import java.util.Arrays;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 public class CcgExactHashTableChart extends AbstractCcgChart {
@@ -29,7 +29,7 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
 
-  public CcgExactHashTableChart(SupertaggedSentence input, int maxChartSize) {
+  public CcgExactHashTableChart(AnnotatedSentence input, int maxChartSize) {
     super(input, maxChartSize);
     numTerminals = input.size();
 

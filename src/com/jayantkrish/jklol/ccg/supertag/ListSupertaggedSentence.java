@@ -6,9 +6,10 @@ import java.util.List;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.sequence.ListMultitaggedSequence;
 
-public class ListSupertaggedSentence extends ListMultitaggedSequence<WordAndPos, HeadedSyntacticCategory> implements SupertaggedSentence {
+public class ListSupertaggedSentence extends ListMultitaggedSequence<WordAndPos, HeadedSyntacticCategory> {
 
   public ListSupertaggedSentence(List<WordAndPos> items, List<List<HeadedSyntacticCategory>> labels,
       List<List<Double>> labelProbabilities) {
@@ -30,26 +31,22 @@ public class ListSupertaggedSentence extends ListMultitaggedSequence<WordAndPos,
         Collections.nCopies(words.size(), Collections.<Double>emptyList()));
   }
 
-  @Override
   public ListSupertaggedSentence replaceSupertags(List<List<HeadedSyntacticCategory>> supertags,
       List<List<Double>> labelProbabilities) {
     List<WordAndPos> words = getItems();
     return new ListSupertaggedSentence(words, supertags, labelProbabilities);
   }
 
-  @Override
   public ListSupertaggedSentence removeSupertags() {
     List<WordAndPos> words = getItems();
     return replaceSupertags(Collections.nCopies(words.size(), Collections.<HeadedSyntacticCategory>emptyList()),
         Collections.nCopies(words.size(), Collections.<Double>emptyList()));
   }
 
-  @Override
   public int size() {
     return getItems().size();
   }
 
-  @Override
   public List<String> getWords() {
     List<String> words = Lists.newArrayList();
     for (WordAndPos wordAndPos : getItems()) {
@@ -57,8 +54,7 @@ public class ListSupertaggedSentence extends ListMultitaggedSequence<WordAndPos,
     }
     return words;
   }
-  
-  @Override
+
   public List<String> getPosTags() {
     List<String> posTags = Lists.newArrayList();
     for (WordAndPos wordAndPos : getItems()) {
@@ -67,19 +63,26 @@ public class ListSupertaggedSentence extends ListMultitaggedSequence<WordAndPos,
     return posTags;
   }
   
-  @Override
   public List<WordAndPos> getWordsAndPosTags() {
     return getItems();
   }
 
-  @Override
   public List<List<HeadedSyntacticCategory>> getSupertags() {
     return getLabels();
   }
   
-  @Override
   public List<List<Double>> getSupertagScores() {
     return getLabelProbabilities();
+  }
+  
+  /**
+   * Gets an annotation that can be added to a
+   * {@link AnnotatedSentence} to represent its supertags.
+   * 
+   * @return
+   */
+  public SupertagAnnotation getAnnotation() {
+    return new SupertagAnnotation(getLabels(), getLabelProbabilities());
   }
 
   @Override

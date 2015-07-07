@@ -12,8 +12,8 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 public class CcgPatternTest extends TestCase {
   
@@ -50,7 +50,7 @@ public class CcgPatternTest extends TestCase {
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(unknownLexicon),
-        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(null, true),
+        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(true),
         Sets.newHashSet(ParametricCcgParser.DEFAULT_POS_TAG), true, null, false, false);
     parameters = family.getNewSufficientStatistics();
     parser = family.getModelFromParameters(parameters);
@@ -124,7 +124,7 @@ public class CcgPatternTest extends TestCase {
   }
 
   private CcgParse parse(CcgParser parser, List<String> words) {
-    return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.parse(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG)), null, null,
         -1L, Integer.MAX_VALUE, 1);
   }

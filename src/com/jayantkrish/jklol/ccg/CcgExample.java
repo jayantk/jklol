@@ -6,7 +6,7 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 /**
  * A training example for training a CCG parser. The input
@@ -22,7 +22,7 @@ public class CcgExample {
 
   // The sentence to parse, along with part-of-speech tags for each word
   // and optional supertags (syntactic categories to consider for each word).
-  private final SupertaggedSentence sentence;
+  private final AnnotatedSentence sentence;
 
   // May be null, in which case the true dependencies are
   // unobserved.
@@ -52,7 +52,7 @@ public class CcgExample {
    * value is treated as unobserved.
    * @param lexiconEntries
    */
-  public CcgExample(SupertaggedSentence sentence, Set<DependencyStructure> dependencies,
+  public CcgExample(AnnotatedSentence sentence, Set<DependencyStructure> dependencies,
       CcgSyntaxTree syntacticParse, Expression2 logicalForm, LexiconEntryLabels lexiconEntries) {
     this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
@@ -83,7 +83,7 @@ public class CcgExample {
     return posTagVocabulary;
   }
 
-  public SupertaggedSentence getSentence() {
+  public AnnotatedSentence getSentence() {
     return sentence;
   }
 

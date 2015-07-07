@@ -8,7 +8,7 @@ import joptsimple.OptionSpec;
 
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.cli.TrainCcg;
+import com.jayantkrish.jklol.ccg.cli.TrainSyntacticCcgParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.inference.BeamPruningStrategy;
 import com.jayantkrish.jklol.inference.JunctionTree;
@@ -55,7 +55,7 @@ public class TestSupertagger extends AbstractCli {
     }
 
     if (options.has(testFilename)) {
-      List<CcgExample> ccgExamples = TrainCcg.readTrainingData(
+      List<CcgExample> ccgExamples = TrainSyntacticCcgParser.readTrainingData(
           options.valueOf(testFilename), true, true, options.valueOf(syntaxMap));
 
       List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> testData = 

@@ -4,8 +4,8 @@ import java.util.Arrays;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
@@ -25,7 +25,7 @@ public class CcgExactChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 100;
 
-  public CcgExactChart(SupertaggedSentence input, int maxChartSize) {
+  public CcgExactChart(AnnotatedSentence input, int maxChartSize) {
     super(input, maxChartSize);
     numTerminals = input.size();
     this.chart = new ChartEntry[numTerminals][numTerminals][];

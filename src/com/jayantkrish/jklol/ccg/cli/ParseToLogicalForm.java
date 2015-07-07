@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.augment;
+package com.jayantkrish.jklol.ccg.cli;
 
 import java.util.Arrays;
 import java.util.List;
@@ -17,12 +17,13 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
-import com.jayantkrish.jklol.ccg.cli.ParseCcg;
+import com.jayantkrish.jklol.ccg.augment.CcgParseAugmenter;
+import com.jayantkrish.jklol.ccg.augment.TemplateCcgParseAugmenter;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class ParseToLogicalForm extends AbstractCli {
@@ -70,8 +71,9 @@ public class ParseToLogicalForm extends AbstractCli {
     double[] tagThresholds = Doubles.toArray(options.valuesOf(multitagThresholds));
 
     SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser, 
-        new CcgExactInference(null, options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), options.valueOf(parserThreads)),
-        tagger, tagThresholds);
+        new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
+            options.valueOf(maxChartSize), options.valueOf(parserThreads)),
+        tagger, tagThresholds, TrainSyntacticCcgParser.SUPERTAG_ANNOTATION_NAME);
 
     // Read the logical form templates.
     CcgParseAugmenter augmenter = TemplateCcgParseAugmenter.parseFrom(IoUtils.readLines(options.valueOf(lfTemplates)), true);
@@ -79,7 +81,7 @@ public class ParseToLogicalForm extends AbstractCli {
     for (String line : IoUtils.readLines(options.valueOf(inputFile))) {
       List<String> words = Lists.newArrayList();
       List<String> posTags = Lists.newArrayList();
-      ParseCcg.parsePosTaggedInput(Arrays.asList(line.split("\\s")), words, posTags);
+      TestSyntacticCcgParser.parsePosTaggedInput(Arrays.asList(line.split("\\s")), words, posTags);
 
       StringBuilder sb = new StringBuilder();
       sb.append(line);
@@ -88,7 +90,7 @@ public class ParseToLogicalForm extends AbstractCli {
       CcgParseResult result = null;
       Expression2 lf = null;
       try { 
-        result = supertaggingParser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags));
+        result = supertaggingParser.parse(new AnnotatedSentence(words, posTags));
         if (result != null && result.getParse().getSyntacticCategory().isAtomic()) {
           CcgParse parse = result.getParse();
           CcgParse augmentedParse = augmenter.addLogicalForms(parse);

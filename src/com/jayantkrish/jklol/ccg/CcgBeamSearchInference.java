@@ -9,8 +9,7 @@ import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
@@ -56,33 +55,30 @@ public class CcgBeamSearchInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
+  public CcgParse getBestParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log) {
     // There's no reason to do beam search in this case:
-    ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
-        new SupertagChartCost(sentence.getSupertags()));
+    ChartCost filter = SumChartCost.create(searchFilter, chartFilter);
     
     return parser.parse(sentence, filter, log, maxParseTimeMillis,
         maxChartSize, numThreads);
   }
 
-  public List<CcgParse> beamSearch(CcgParser parser, SupertaggedSentence sentence,
+  public List<CcgParse> beamSearch(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log) {
-    ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
-        new SupertagChartCost(sentence.getSupertags()));
+    ChartCost filter = SumChartCost.create(searchFilter, chartFilter);
 
     return parser.beamSearch(sentence, beamSize, filter, log,
         maxParseTimeMillis, maxChartSize, numThreads);
   }
 
   @Override
-  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
+  public CcgParse getBestConditionalParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
       LexiconEntryLabels lexiconEntries, Set<DependencyStructure> observedDependencies,
       Expression2 observedLogicalForm) {
 
     List<CcgParse> possibleParses = null;
-    ChartCost supertagCost = new SupertagChartCost(sentence.getSupertags());
     ChartCost syntacticCost = null;
     ChartCost lexiconCost = null;
     if (observedSyntacticTree != null) {
@@ -93,12 +89,13 @@ public class CcgBeamSearchInference implements CcgInference {
     }
     
     ChartCost conditionalChartFilter = SumChartCost.create(searchFilter, chartFilter,
-        supertagCost, syntacticCost, lexiconCost);
+        syntacticCost, lexiconCost);
     possibleParses = parser.beamSearch(sentence, beamSize, conditionalChartFilter,
         log, -1, maxChartSize, numThreads);
 
     if (observedDependencies != null) {
-      possibleParses = CcgLoglikelihoodOracle.filterParsesByDependencies(observedDependencies, possibleParses);
+      possibleParses = CcgLoglikelihoodOracle.filterParsesByDependencies(observedDependencies,
+          possibleParses);
     }
     if (observedLogicalForm != null) {
       possibleParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(observedLogicalForm,

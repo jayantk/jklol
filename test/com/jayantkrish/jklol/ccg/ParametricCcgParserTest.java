@@ -8,8 +8,8 @@ import junit.framework.TestCase;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 public class ParametricCcgParserTest extends TestCase {
 
@@ -55,13 +55,14 @@ public class ParametricCcgParserTest extends TestCase {
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
         Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(null, true), posTags, true, null, false, false);
+        new DefaultCcgFeatureFactory(true), posTags, true, null, false, false);
     parameters = family.getNewSufficientStatistics();
     parser = family.getModelFromParameters(parameters);
   }
 
   public void testTerminals() {
-    List<CcgParse> parses = beamSearch(parser, Arrays.asList("Green"), Arrays.asList("NN"), 10);
+    AnnotatedSentence sentence = new AnnotatedSentence(Arrays.asList("Green"), Arrays.asList("NN"));
+    List<CcgParse> parses = parser.beamSearch(sentence, 10);
 
     CcgParse nounParse = null;
     CcgParse adjParse = null;
@@ -78,7 +79,9 @@ public class ParametricCcgParserTest extends TestCase {
     Preconditions.checkState(nounParse != null);
     Preconditions.checkState(adjParse != null);
 
-    parses = beamSearch(parser, Arrays.asList("unknown_adjective"), Arrays.asList("JJ"), 10);
+    AnnotatedSentence unknownSentence = new AnnotatedSentence(
+        Arrays.asList("unknown_adjective"), Arrays.asList("JJ"));
+    parses = parser.beamSearch(unknownSentence, 10);
     CcgParse unknownAdjParse = null;
     for (CcgParse parse : parses) {
       if (parse.getSyntacticCategory().equals(adjCat)) {
@@ -87,9 +90,9 @@ public class ParametricCcgParserTest extends TestCase {
     }
     Preconditions.checkState(unknownAdjParse != null);
 
-    family.incrementSufficientStatistics(parameters, parameters, nounParse, 1.0);
-    family.incrementSufficientStatistics(parameters, parameters, adjParse, -0.5);
-    family.incrementSufficientStatistics(parameters, parameters, unknownAdjParse, 0.75);
+    family.incrementSufficientStatistics(parameters, parameters, sentence, nounParse, 1.0);
+    family.incrementSufficientStatistics(parameters, parameters, sentence, adjParse, -0.5);
+    family.incrementSufficientStatistics(parameters, parameters, unknownSentence, unknownAdjParse, 0.75);
     CcgParser newParser = family.getModelFromParameters(parameters);
 
     System.out.println(family.getParameterDescription(parameters));
@@ -98,10 +101,6 @@ public class ParametricCcgParserTest extends TestCase {
     // NN -> N{0} parameter and root N{0} parameter.
     parses = beamSearch(newParser, Arrays.asList("BLOCK"), Arrays.asList("NN"), 10);
     assertEquals(2, parses.size());
-    for (CcgParse parse : parses) {
-      System.out.println(parse);
-    }
-
     assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
     assertEquals(nounCat, parses.get(0).getSyntacticCategory());
     // This parse only triggers the lexicon parameter.
@@ -111,6 +110,10 @@ public class ParametricCcgParserTest extends TestCase {
     // green -> N{0} root and N{0} root parameters. 
     parses = beamSearch(newParser, Arrays.asList("green"), Arrays.asList("JJ"), 10);
     assertEquals(3, parses.size());
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+    }
+
     assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
     assertEquals(nounCat, parses.get(0).getSyntacticCategory());
     assertEquals(1.0, Math.log(parses.get(1).getSubtreeProbability()), TOLERANCE);
@@ -130,8 +133,7 @@ public class ParametricCcgParserTest extends TestCase {
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
-        posTags), beamSize);
+    return parser.beamSearch(new AnnotatedSentence(words, posTags), beamSize);
   }
 }
 

@@ -15,9 +15,10 @@ import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
-import com.jayantkrish.jklol.ccg.lexicon.FeaturizedLexiconScorer;
-import com.jayantkrish.jklol.ccg.lexicon.FeaturizedLexiconScorer.StringContext;
+import com.jayantkrish.jklol.ccg.lexicon.SpanFeatureAnnotation;
+import com.jayantkrish.jklol.ccg.lexicon.StringContext;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -29,14 +30,17 @@ public class FeaturizedLexiconScorerTest extends TestCase {
   private static final String[] lexicon = {
       "block,N{0},(lambda x (pred:block x)),0 pred:block",
       "block,NP{0},(lambda x (pred:object x)),0 pred:object",
+      "**start**,START{0},**skip**"
   };
   
   private static final String[] unknownLexicon = {};
   private static final String[] ruleArray = {"ABC{0} ABCD{0}"};
   
   private static final String[] trainingData = {
-      "red block#########(lambda x (pred:block x))",
-      "block red#########(lambda x (pred:object x))",
+      "**start** red block#########(lambda x (pred:block x))",
+      "**start** block red#########(lambda x (pred:object x))",
+      "**start** block block red#########(lambda x (pred:object x))",
+      "**start** block block red#########(lambda x (pred:object x))",
   };
   
   private ParametricCcgParser family;
@@ -48,10 +52,10 @@ public class FeaturizedLexiconScorerTest extends TestCase {
     examples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {
       CcgExample example = exampleReader.parseFrom(trainingData[i]);
-      examples.add(new CcgExample(example.getSentence().removeSupertags(), null,
+      examples.add(new CcgExample(example.getSentence(), null,
           null, example.getLogicalForm(), null));
     }
-    List<StringContext> contexts = FeaturizedLexiconScorer.getContextsFromExamples(examples);
+    List<StringContext> contexts = StringContext.getContextsFromExamples(examples);
     
     Set<String> posTags = Sets.newHashSet(ParametricCcgParser.DEFAULT_POS_TAG);
     FeatureGenerator<StringContext, String> featureGen = new FeatureGenerator<StringContext, String>() {
@@ -68,12 +72,21 @@ public class FeaturizedLexiconScorerTest extends TestCase {
     };
     FeatureVectorGenerator<StringContext> featureVectorGen = DictionaryFeatureVectorGenerator
         .createFromData(contexts, featureGen, true);
-    
     System.out.println(featureVectorGen.getFeatureDictionary().getValues());
     
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(unknownLexicon),
-        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(featureVectorGen, true), posTags, true, null,
-        true, false);
+    List<CcgExample> featurizedExamples = Lists.newArrayList();
+    for (CcgExample example : examples) {
+      SpanFeatureAnnotation annotation = SpanFeatureAnnotation.annotate(example.getSentence(), featureVectorGen);
+      AnnotatedSentence newSentence = example.getSentence().addAnnotation("features", annotation);
+      featurizedExamples.add(new CcgExample(newSentence, example.getDependencies(),
+          example.getSyntacticParse(), example.getLogicalForm(), example.getLexiconEntries()));
+    }
+    examples = featurizedExamples;
+    
+    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
+        Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
+        new DefaultCcgFeatureFactory("features", featureVectorGen.getFeatureDictionary(), true, null),
+        posTags, true, null, true, false);
   }
 
   public void testTraining() {

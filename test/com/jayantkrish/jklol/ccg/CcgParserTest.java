@@ -34,14 +34,15 @@ import com.jayantkrish.jklol.ccg.lexicon.StringLexicon.CategorySpanConfig;
 import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.TableLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.UnknownWordLexicon;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
+import com.jayantkrish.jklol.ccg.supertag.SupertagAnnotation;
+import com.jayantkrish.jklol.ccg.supertag.SupertagLexiconScorer;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.Assignment;
@@ -539,10 +540,6 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(6, parses.size());
     assertTrue(Ordering.natural().reverse().isOrdered(Doubles.asList(probs)));
-    
-    for (CcgParse parse : parses) {
-      assertEquals(words, parse.getSentenceWords());
-    }
   }
 
   public void testParseWordSkipExact() {
@@ -552,7 +549,6 @@ public class CcgParserTest extends TestCase {
     assertEquals(2, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
     assertEquals(1.5, bestParse.getSubtreeProbability());
-    assertEquals(words, bestParse.getSentenceWords());
   }
 
   public void testParseHeadedSyntaxWeights() {
@@ -920,7 +916,7 @@ public class CcgParserTest extends TestCase {
 
   public void testChartFilterApply() {
     ChartCost filter = new TestChartFilter();
-    List<CcgParse> parses = parserWithUnary.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
+    List<CcgParse> parses = parserWithUnary.beamSearch(new AnnotatedSentence(
         Arrays.asList("I", "eat", "berries", "in", "people", "houses"),
         Collections.nCopies(6, DEFAULT_POS)), 10, filter, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
 
@@ -935,20 +931,22 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testSupertagChartFilter() {
-    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
-        Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)),
-        10, new NullLogFunction());
+    AnnotatedSentence sentence = new AnnotatedSentence(
+        Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS));
+    List<CcgParse> parses = parser.beamSearch(sentence, 10, new NullLogFunction());
     assertEquals(2, parses.size());
 
     List<List<HeadedSyntacticCategory>> supertags = Lists.newArrayList();
+    List<List<Double>> scores = Lists.newArrayList();
     supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
+    scores.add(Lists.newArrayList(1.0));
     supertags.add(Lists.newArrayList(HeadedSyntacticCategory.parseFrom("N{0}")));
+    scores.add(Lists.newArrayList(1.0));
+    
+    SupertagAnnotation annotation = new SupertagAnnotation(supertags, scores);
+    AnnotatedSentence annotatedSentence = sentence.addAnnotation("supertags", annotation);
 
-    ChartCost supertagChartFilter = new SupertagChartCost(supertags);
-
-    parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
-        Arrays.asList("blue", "berries"), Collections.nCopies(2, DEFAULT_POS)), 10,
-        supertagChartFilter, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
+    parses = parser.beamSearch(annotatedSentence, 10, new NullLogFunction());
     assertEquals(1, parses.size());
   }
 
@@ -1012,19 +1010,19 @@ public class CcgParserTest extends TestCase {
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.beamSearch(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), beamSize, null, new NullLogFunction(),
         -1, Integer.MAX_VALUE, 16);
   }
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
+    return parser.beamSearch(new AnnotatedSentence(words, 
         posTags), beamSize, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 16);
   }
 
   private CcgParse parse(CcgParser parser, List<String> words) {
-    return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.parse(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE, 16);
   }
 
@@ -1267,6 +1265,7 @@ public class CcgParserTest extends TestCase {
     }
     
     List<LexiconScorer> scorers = Lists.newArrayList();
+    scorers.add(new SupertagLexiconScorer("supertags"));
     scorers.add(new SyntaxLexiconScorer(terminalVar, posTagVar, terminalSyntaxVar, posDistribution,
         terminalSyntaxDistribution));
 

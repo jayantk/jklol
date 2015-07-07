@@ -39,12 +39,11 @@ import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
@@ -294,8 +293,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     for (AlignmentExample example : alignmentExamples) {
       List<String> words = example.getWords();
       List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-      SupertaggedSentence supertaggedSentence = ListSupertaggedSentence
-          .createWithUnobservedSupertags(words, posTags);
+      AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);
 
       LexiconEntryLabels ccgLexiconEntries = null;
       if (model != null) {

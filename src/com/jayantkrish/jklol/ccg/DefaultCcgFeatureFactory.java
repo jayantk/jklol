@@ -4,17 +4,16 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.lexicon.FeaturizedLexiconScorer.StringContext;
-import com.jayantkrish.jklol.ccg.lexicon.LexiconFeatureGenerator;
+import com.jayantkrish.jklol.ccg.lexicon.ConstantParametricLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricSyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricUnknownWordLexicon;
-import com.jayantkrish.jklol.ccg.supertag.TrainSupertagger;
-import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
+import com.jayantkrish.jklol.ccg.supertag.SupertagLexiconScorer;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -25,35 +24,65 @@ import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
-import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
-import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
-import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.sequence.ListLocalContext;
-import com.jayantkrish.jklol.sequence.LocalContext;
 
 /**
- * Creates an indicator feature parameterization for a CCG parser.
+ * Default collection of features for a CCG parser. This collection
+ * includes indicator features for lexicon entries, dependencies, 
+ * dependency distances and combinators. Optionally can be configured
+ * to include indicator features for POS tags and arbitrary feature
+ * vectors for lexicon entries. 
  * 
  * @author jayantk
  */
 public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
 
-  private final FeatureVectorGenerator<StringContext> featureGenerator;
+  private final String lexiconFeatureAnnotationName;
+  private final DiscreteVariable lexiconFeatureVariable;
   private final boolean usePosFeatures;
+  private final String supertagAnnotationName;
   
   /**
-   * 
-   * @param featureGenerator generates the features to use in
-   * predicting the CCG category for terminal spans in the parse. If
-   * {@code null}, use word / CCG category and POS / syntactic
-   * category features.
+   * Creates a feature factory that instantiates the indicator features
+   * described above. If {@code usePosFeatures} is true, also includes
+   * POS tags (and various backoff combinations) within all of the feature
+   * sets.
+   *      
+   * @param usePosFeatures
    */
-  public DefaultCcgFeatureFactory(FeatureVectorGenerator<StringContext> featureGenerator,
-      boolean usePosFeatures) {
-    this.featureGenerator = featureGenerator;
+  public DefaultCcgFeatureFactory(boolean usePosFeatures) {
+    this.lexiconFeatureAnnotationName = null;
+    this.lexiconFeatureVariable = null;
+    // Both must be null or non-null
+    Preconditions.checkArgument(!(lexiconFeatureVariable == null ^ lexiconFeatureAnnotationName == null));
+
     this.usePosFeatures = usePosFeatures;
+    this.supertagAnnotationName = null;
   }
 
+  /**
+   * Creates a feature factory that uses additional lexicon entry features
+   * (given by {@code lexiconFeatureVariable}) and optionally includes a 
+   * supertag-based filter on possible lexicon entries.
+   * 
+   * @param lexiconFeatureAnnotationName
+   * @param lexiconFeatureVariable
+   * @param usePosFeatures
+   * @param supertagAnnotationName
+   */
+  public DefaultCcgFeatureFactory(String lexiconFeatureAnnotationName,
+      DiscreteVariable lexiconFeatureVariable, boolean usePosFeatures,
+      String supertagAnnotationName) {
+    this.lexiconFeatureAnnotationName = lexiconFeatureAnnotationName;
+    this.lexiconFeatureVariable = lexiconFeatureVariable;
+    // Both must be null or non-null
+    Preconditions.checkArgument(!(lexiconFeatureVariable == null ^ lexiconFeatureAnnotationName == null));
+    
+    this.usePosFeatures = usePosFeatures;
+    this.supertagAnnotationName = supertagAnnotationName;
+  }
+
+  // TODO: Delete me!!!
+  /*
   public static FeatureVectorGenerator<LocalContext<WordAndPos>> getDefaultFeatureGenerator(
       Collection<CcgExample> examples) {
     List<LocalContext<WordAndPos>> contexts = getContextsFromExamples(examples);
@@ -81,6 +110,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
     }
     return contexts;
   }
+  */
 
   @Override
   public DiscreteVariable getSemanticPredicateVar(List<String> semanticPredicates) {
@@ -204,6 +234,11 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar) {
     List<ParametricLexiconScorer> scorers = Lists.newArrayList();
+    if (supertagAnnotationName != null) {
+      scorers.add(new ConstantParametricLexiconScorer(
+          new SupertagLexiconScorer(supertagAnnotationName)));
+    }
+
     if (usePosFeatures) {
       // Backoff features mapping words to syntactic categories (ignoring 
       // semantics). These features aren't very useful for semantic parsing. 
@@ -218,15 +253,15 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
           terminalSyntaxVar, terminalPosFamily, terminalSyntaxFamily));
     }
 
-    if (featureGenerator != null) {
+    if (lexiconFeatureAnnotationName != null) {
       VariableNumMap featureVar = VariableNumMap.singleton(terminalSyntaxVar.getOnlyVariableNum() - 1,
-          "ccgLexiconFeatures", featureGenerator.getFeatureDictionary());
+          "ccgLexiconFeatures", lexiconFeatureVariable);
       ParametricLinearClassifierFactor featureFamily = new ParametricLinearClassifierFactor(
           featureVar, terminalSyntaxVar, VariableNumMap.EMPTY,
-          featureGenerator.getFeatureDictionary(), null, false);
+          lexiconFeatureVariable, null, false);
 
-      scorers.add(new ParametricFeaturizedLexiconScorer(featureGenerator, terminalSyntaxVar,
-          featureVar, featureFamily));
+      scorers.add(new ParametricFeaturizedLexiconScorer(lexiconFeatureAnnotationName,
+          terminalSyntaxVar, featureVar, featureFamily));
     }
 
     return scorers;

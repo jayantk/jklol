@@ -34,10 +34,10 @@ import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.ccg.supertag.SupertagAnnotation;
 import com.jayantkrish.jklol.ccg.supertag.Supertagger;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.parallel.Reducer.SimpleReducer;
@@ -50,7 +50,7 @@ import com.jayantkrish.jklol.util.IoUtils;
  * 
  * @author jayant
  */
-public class ParseCcg extends AbstractCli {
+public class TestSyntacticCcgParser extends AbstractCli {
   
   private OptionSpec<String> model;
   
@@ -73,7 +73,7 @@ public class ParseCcg extends AbstractCli {
   private OptionSpec<String> supertagger;
   private OptionSpec<Double> multitagThresholds;
   
-  public ParseCcg() {
+  public TestSyntacticCcgParser() {
     super(CommonOptions.MAP_REDUCE);
   }
 
@@ -123,7 +123,7 @@ public class ParseCcg extends AbstractCli {
     
     if (options.has(testFile)) {
       // Parse all test examples.
-      List<CcgExample> testExamples = TrainCcg.readTrainingData(
+      List<CcgExample> testExamples = TrainSyntacticCcgParser.readTrainingData(
           options.valueOf(testFile), false, options.has(useCcgBankFormat), options.valueOf(syntaxMap));
       System.out.println(testExamples.size() + " test examples after filtering.");
 
@@ -137,7 +137,7 @@ public class ParseCcg extends AbstractCli {
 
       LogFunctions.getLogFunction().notifyIterationStart(0);
       SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser,
-          inferenceAlgorithm, tagger, tagThresholds);
+          inferenceAlgorithm, tagger, tagThresholds, TrainSyntacticCcgParser.SUPERTAG_ANNOTATION_NAME);
       CcgLoss loss = runTestSetEvaluation(testExamples, supertaggingParser,
           options.has(useGoldSyntacticTrees), options.has(filterDependenciesCcgbank));
       LogFunctions.getLogFunction().notifyIterationEnd(0);
@@ -153,8 +153,7 @@ public class ParseCcg extends AbstractCli {
         sentenceToParse = input;
         posTags = Collections.nCopies(sentenceToParse.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       }
-      SupertaggedSentence sentence = ListSupertaggedSentence.createWithUnobservedSupertags(
-          sentenceToParse, posTags);
+      AnnotatedSentence sentence = new AnnotatedSentence(sentenceToParse, posTags);
 
       List<CcgParse> parses = ccgParser.beamSearch(sentence, options.valueOf(beamSize));
       printCcgParses(parses, options.valueOf(numParses), options.has(atomic), options.has(printLf));
@@ -171,7 +170,7 @@ public class ParseCcg extends AbstractCli {
   }
 
   public static void main(String[] args) {
-    new ParseCcg().run(args);
+    new TestSyntacticCcgParser().run(args);
   }
   
   public static void printCcgParses(List<CcgParse> parses, int numParses, boolean onlyPrintAtomic, boolean printLf) {
@@ -278,7 +277,7 @@ public class ParseCcg extends AbstractCli {
     int correctSyntacticCategories = 0, supertaggerErrors = 0, lexiconErrors = 0, parserErrors = 0,
         totalSyntacticCategories = 0;
     CcgParse parse = parseResult.getParse();
-    SupertaggedSentence sentence = parseResult.getSentence();
+    AnnotatedSentence sentence = parseResult.getSentence();
     List<SyntacticCategory> predictedSyntacticCategories = Lists.newArrayList();
     List<String> words = example.getSentence().getWords();
     List<String> posTags = example.getSentence().getPosTags();
@@ -300,7 +299,10 @@ public class ParseCcg extends AbstractCli {
 
         // Attribute the mistake to either (1) the supertagger, (2) the parser's 
         // internal weights or (3) a missing lexicon entry.
-        List<SyntacticCategory> supertags = HeadedSyntacticCategory.convertToCcgbank(sentence.getSupertags().get(i));
+        SupertagAnnotation supertagAnnotation = (SupertagAnnotation) sentence.getAnnotation(
+            TrainSyntacticCcgParser.SUPERTAG_ANNOTATION_NAME);
+        List<SyntacticCategory> supertags = HeadedSyntacticCategory.convertToCcgbank(
+            supertagAnnotation.getSupertags().get(i));
         List<SyntacticCategory> possibleLexiconEntries = Lists.newArrayList();
         for (LexiconEntry lexiconEntry : parser.getLexiconEntries(words.get(i), posTags.get(i))) {
           possibleLexiconEntries.add(lexiconEntry.getCategory().getSyntax().getSyntax().discardFeaturePassingMarkup());

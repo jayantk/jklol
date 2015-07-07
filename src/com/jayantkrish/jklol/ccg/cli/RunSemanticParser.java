@@ -19,14 +19,13 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -61,7 +60,7 @@ public class RunSemanticParser extends AbstractCli {
 
     List<String> words = options.nonOptionArguments();
     List<String> pos = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    SupertaggedSentence sentence = ListSupertaggedSentence.createWithUnobservedSupertags(words, pos);
+    AnnotatedSentence sentence = new AnnotatedSentence(words, pos);
 
     CcgParse parse = inferenceAlg.getBestParse(parser, sentence, null, new NullLogFunction());
 

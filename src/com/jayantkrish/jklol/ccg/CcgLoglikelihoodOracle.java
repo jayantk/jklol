@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
@@ -62,16 +63,18 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   public double accumulateGradient(SufficientStatistics gradient,
       SufficientStatistics currentParameters, CcgParser instantiatedParser,
       CcgExample example, LogFunction log) {
+    AnnotatedSentence sentence = example.getSentence();
+
     // Gradient is the feature expectations of all correct CCG parses, minus all
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
     // Calculate the unconditional distribution over CCG parses.
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getSentence(), beamSize,
+    List<CcgParse> parses = instantiatedParser.beamSearch(sentence, beamSize,
         null, log, -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
         
     if (parses.size() == 0) {
       // Search error: couldn't find any parses.
-      System.out.println("Search error (Predicted): " + example.getSentence() + " " + example.getLogicalForm());
+      System.out.println("Search error (Predicted): " + sentence + " " + example.getLogicalForm());
       throw new ZeroProbabilityError();      
     }
     log.stopTimer("update_gradient/input_marginal");
@@ -92,7 +95,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
     List<CcgParse> possibleParses = null;
     if (cost != null) {
-      possibleParses = instantiatedParser.beamSearch(example.getSentence(), beamSize,
+      possibleParses = instantiatedParser.beamSearch(sentence, beamSize,
         cost, log, -1, Integer.MAX_VALUE, 1);
     } else {
       possibleParses = Lists.newArrayList(parses);
@@ -111,7 +114,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
-      System.out.println("Search error (Correct): " + example.getSentence() + " " + example.getLogicalForm());
+      System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
       /*
       for (CcgParse parse : possibleParses) {
         System.out.println(parse.getLogicalForm());
@@ -125,14 +128,14 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Subtract the unconditional expected feature counts.
     double unconditionalPartitionFunction = getPartitionFunction(parses);
     for (CcgParse parse : parses) {
-      family.incrementSufficientStatistics(gradient, currentParameters, parse, -1.0 * 
+      family.incrementSufficientStatistics(gradient, currentParameters, sentence, parse, -1.0 * 
           parse.getSubtreeProbability() / unconditionalPartitionFunction);
     }
 
     // Add conditional expected feature counts.
     double conditionalPartitionFunction = getPartitionFunction(correctParses);
     for (CcgParse parse : correctParses) {
-      family.incrementSufficientStatistics(gradient, currentParameters, parse,
+      family.incrementSufficientStatistics(gradient, currentParameters, sentence, parse,
           parse.getSubtreeProbability() / conditionalPartitionFunction);
     }
     log.stopTimer("update_gradient/increment_gradient");

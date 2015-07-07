@@ -391,7 +391,7 @@ public abstract class DiscreteFactor extends AbstractFactor {
     StringBuilder sb = new StringBuilder();
     for (Assignment assignment : assignments) {
       double unnormalizedProb = getUnnormalizedProbability(assignment);
-      if (unnormalizedProb > 0 || includeZeros) {
+      if (unnormalizedProb != 0.0 || includeZeros) {
         Outcome outcome = new Outcome(assignment, unnormalizedProb);
         sb.append(outcome.toString());
         sb.append("\n");

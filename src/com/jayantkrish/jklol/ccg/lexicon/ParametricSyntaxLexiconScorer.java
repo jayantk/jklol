@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class ParametricSyntaxLexiconScorer implements ParametricLexiconScorer {
@@ -89,9 +90,8 @@ public class ParametricSyntaxLexiconScorer implements ParametricLexiconScorer {
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
       SufficientStatistics currentParameters, int spanStart, int spanEnd,
-      List<String> sentenceWords, List<String> sentencePreprocessedWords,
-      List<String> sentencePos, List<String> wordSequence, List<String> posSequence,
-      CcgCategory category, double count) {
+      AnnotatedSentence sentence, List<String> sentencePreprocessedWords,
+      List<String> wordSequence, List<String> posSequence, CcgCategory category, double count) {
     incrementPosSufficientStatistics(gradient, currentParameters,
         posSequence.get(posSequence.size() - 1), category.getSyntax(), count);
     incrementLexiconSyntaxSufficientStatistics(gradient, currentParameters,

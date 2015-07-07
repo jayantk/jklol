@@ -8,8 +8,7 @@ import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertagChartCost;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
 public class CcgExactInference implements CcgInference {
@@ -40,22 +39,19 @@ public class CcgExactInference implements CcgInference {
   }
 
   @Override
-  public CcgParse getBestParse(CcgParser parser, SupertaggedSentence sentence,
+  public CcgParse getBestParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log) {
-    ChartCost filter = SumChartCost.create(searchFilter, chartFilter,
-        new SupertagChartCost(sentence.getSupertags()));
-
+    ChartCost filter = SumChartCost.create(searchFilter, chartFilter);
     return parser.parse(sentence, filter, log, maxParseTimeMillis, maxChartSize, numThreads);
   }
 
   @Override
-  public CcgParse getBestConditionalParse(CcgParser parser, SupertaggedSentence sentence,
+  public CcgParse getBestConditionalParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
       LexiconEntryLabels lexiconEntries, Set<DependencyStructure> observedDependencies,
       Expression2 observedLogicalForm) {
     Preconditions.checkArgument(observedDependencies == null && observedLogicalForm == null);
 
-    ChartCost supertagCost = new SupertagChartCost(sentence.getSupertags());
     ChartCost syntacticCost = null;
     ChartCost lexiconCost = null;
     if (observedSyntacticTree != null) {
@@ -65,7 +61,7 @@ public class CcgExactInference implements CcgInference {
       lexiconCost = new LexiconChartCost(lexiconEntries);
     }
     ChartCost conditionalChartFilter = SumChartCost.create(searchFilter, chartFilter,
-        supertagCost, syntacticCost, lexiconCost);
+        syntacticCost, lexiconCost);
 
     CcgParse bestParse = parser.parse(sentence, conditionalChartFilter, log, maxParseTimeMillis,
           maxChartSize, numThreads);

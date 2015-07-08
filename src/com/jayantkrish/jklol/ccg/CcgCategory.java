@@ -355,8 +355,7 @@ public class CcgCategory implements Serializable {
 
   @Override
   public String toString() {
-    return getSemanticHeads() + ":" + syntax.toString() + " " + 
-        (logicalForm != null ? logicalForm : "");
+    return toCsvString();
   }
 
   @Override

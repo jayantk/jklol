@@ -19,7 +19,7 @@ import com.jayantkrish.jklol.util.Assignment;
  *
  */
 public class FeaturizedLexiconScorer implements LexiconScorer {
-  private static final long serialVersionUID = 4L;
+  private static final long serialVersionUID = 5L;
 
   private final String featureVectorAnnotationName;
   
@@ -41,6 +41,8 @@ public class FeaturizedLexiconScorer implements LexiconScorer {
       List<String> terminalValue, List<String> posTags, CcgCategory category) {
     SpanFeatureAnnotation annotation = (SpanFeatureAnnotation) sentence.getAnnotation(
         featureVectorAnnotationName);
+    Preconditions.checkNotNull(annotation, "Sentence was not annotated with features: " + sentence);
+    
     Tensor featureVector = annotation.getFeatureVector(spanStart, spanEnd);
 
     Assignment syntaxAssignment = syntaxVar.outcomeArrayToAssignment(category.getSyntax());

@@ -81,37 +81,6 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
     this.supertagAnnotationName = supertagAnnotationName;
   }
 
-  // TODO: Delete me!!!
-  /*
-  public static FeatureVectorGenerator<LocalContext<WordAndPos>> getDefaultFeatureGenerator(
-      Collection<CcgExample> examples) {
-    List<LocalContext<WordAndPos>> contexts = getContextsFromExamples(examples);
-    return TrainSupertagger.buildFeatureVectorGenerator(contexts, null, Integer.MAX_VALUE, 250, 100, false);
-  }
-
-  public static FeatureVectorGenerator<LocalContext<WordAndPos>> getPosFeatureGenerator(
-      Collection<CcgExample> examples) {
-    List<LocalContext<WordAndPos>> contexts = getContextsFromExamples(examples);
-
-    FeatureGenerator<LocalContext<WordAndPos>, String> posGenerator = new LexiconFeatureGenerator();
-    FeatureVectorGenerator<LocalContext<WordAndPos>> featureGenerator = DictionaryFeatureVectorGenerator
-        .createFromData(contexts, posGenerator, true);
-    return featureGenerator;
-  }
-
-  private static List<LocalContext<WordAndPos>> getContextsFromExamples(
-      Collection<CcgExample> examples) {
-    List<LocalContext<WordAndPos>> contexts = Lists.newArrayList();
-    for (CcgExample example : examples) {
-      List<WordAndPos> wordAndPos = example.getSentence().getWordsAndPosTags();
-      for (int i = 0; i < wordAndPos.size(); i++) {
-        contexts.add(new ListLocalContext<WordAndPos>(wordAndPos, i));
-      }
-    }
-    return contexts;
-  }
-  */
-
   @Override
   public DiscreteVariable getSemanticPredicateVar(List<String> semanticPredicates) {
     return new DiscreteVariable("semanticPredicates", semanticPredicates);

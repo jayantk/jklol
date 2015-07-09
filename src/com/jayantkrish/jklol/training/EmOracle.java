@@ -32,14 +32,6 @@ public interface EmOracle<M, E, O, A> {
   public A getInitialExpectationAccumulator();
   
   /**
-   * Accumulates {@code expectation} into {@code accumulator}.
-   * 
-   * @param expectation
-   * @param aggregator
-   */
-  public void accumulateExpectation(O expectation, A accumulator);
-  
-  /**
    * Combines two accumulators into a single accumulator. May
    * mutate both accumulators.
    * 
@@ -50,16 +42,20 @@ public interface EmOracle<M, E, O, A> {
   public A combineAccumulators(A accumulator1, A accumulator2);
 
   /**
-   * E-step of the Expectation-Maximization algorithm.
+   * E-step of the Expectation-Maximization algorithm. Computes
+   * expectations for {@code example} under {@code model} and
+   * adds the expectations to {@code accumulator}. Returns the
+   * accumulated expectations.
    * 
    * @param model
    * @param currentParameters
    * @param example
+   * @param accumulator
    * @param log
    * @return
    */
-  public O computeExpectations(M model, SufficientStatistics currentParameters,
-      E example, LogFunction log);
+  public A computeExpectations(M model, SufficientStatistics currentParameters,
+      E example, A accumulator, LogFunction log);
   
   /**
    * M-step of the Expectation-Maximization algorithm. Re-estimates parameters

@@ -34,7 +34,8 @@ public class AlignmentEmOracle extends AbstractEmOracle<AlignmentModel, Alignmen
 
   @Override
   public SufficientStatistics computeExpectations(AlignmentModel model,
-      SufficientStatistics currentParameters, AlignmentExample example, LogFunction log) {
+      SufficientStatistics currentParameters, AlignmentExample example, SufficientStatistics accumulator,
+      LogFunction log) {
     log.startTimer("e_step/getFactorGraph");
     FactorGraph fg = model.getFactorGraph(example);
     log.stopTimer("e_step/getFactorGraph");
@@ -50,11 +51,10 @@ public class AlignmentEmOracle extends AbstractEmOracle<AlignmentModel, Alignmen
     log.stopTimer("e_step/marginals");
 
     log.startTimer("e_step/compute_expectations");
-    SufficientStatistics statistics = pam.getNewSufficientStatistics();
-    pam.incrementSufficientStatistics(statistics, currentParameters, marginals, 1.0);
+    pam.incrementSufficientStatistics(accumulator, currentParameters, marginals, 1.0);
     log.startTimer("e_step/compute_expectations");
 
-    return statistics;
+    return accumulator;
   }
 
   @Override

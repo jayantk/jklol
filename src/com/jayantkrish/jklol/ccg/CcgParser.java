@@ -1225,6 +1225,16 @@ public class CcgParser implements Serializable {
       return null;
     }
   }
+  
+  /**
+   * Simplified version of {@link #parse} with sane default arguments.
+   *  
+   * @param input
+   * @return
+   */
+  public CcgParse parse(AnnotatedSentence input) {
+    return parse(input, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
+  }
 
   public void parseCommon(CcgChart chart, AnnotatedSentence input, ChartCost beamFilter,
       LogFunction log, long maxParseTimeMillis, int numThreads) {

@@ -30,7 +30,8 @@ public class CfgAlignmentEmOracle extends AbstractEmOracle<CfgAlignmentModel, Al
 
   @Override
   public SufficientStatistics computeExpectations(CfgAlignmentModel model,
-      SufficientStatistics currentParameters, AlignmentExample example, LogFunction log) {
+      SufficientStatistics currentParameters, AlignmentExample example,
+      SufficientStatistics accumulator, LogFunction log) {
     log.startTimer("e_step/getCfg");
     CfgParser parser = model.getCfgParser(example);
     log.stopTimer("e_step/getCfg");
@@ -41,11 +42,10 @@ public class CfgAlignmentEmOracle extends AbstractEmOracle<CfgAlignmentModel, Al
     log.stopTimer("e_step/marginals");
 
     log.startTimer("e_step/compute_expectations");
-    SufficientStatistics statistics = pam.getNewSufficientStatistics();
-    pam.incrementSufficientStatistics(statistics, currentParameters, chart, 1.0);
+    pam.incrementSufficientStatistics(accumulator, currentParameters, chart, 1.0);
     log.stopTimer("e_step/compute_expectations");
 
-    return statistics;
+    return accumulator;
   }
 
   @Override

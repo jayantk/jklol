@@ -57,4 +57,8 @@ public class ExpressionSimplifier {
     }
     return expression;
   }
+
+  public List<ExpressionReplacementRule> getReplacementRules() {
+    return rules;
+  }
 }

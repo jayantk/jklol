@@ -42,7 +42,8 @@ public class EmFactorGraphOracle extends AbstractEmOracle<DynamicFactorGraph,
 
   @Override
   public SufficientStatistics computeExpectations(DynamicFactorGraph model,
-      SufficientStatistics currentParameters, DynamicAssignment example, LogFunction log) {
+      SufficientStatistics currentParameters, DynamicAssignment example,
+      SufficientStatistics accumulator, LogFunction log) {
 
     log.startTimer("sufficientStatistics/getFactorGraph");
     FactorGraph factorGraph = model.getFactorGraph(example);
@@ -58,9 +59,8 @@ public class EmFactorGraphOracle extends AbstractEmOracle<DynamicFactorGraph,
     MarginalSet marginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
     log.stopTimer("sufficientStatistics/marginals");
 
-    SufficientStatistics statistics = parametricModel.getNewSufficientStatistics();
-    parametricModel.incrementSufficientStatistics(statistics, currentParameters, marginals, 1.0);
-    return statistics;
+    parametricModel.incrementSufficientStatistics(accumulator, currentParameters, marginals, 1.0);
+    return accumulator;
   }
 
   @Override

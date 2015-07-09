@@ -104,6 +104,7 @@ public class CcgBeamSearchInference implements CcgInference {
 
     if (verbose) {
       System.out.println("num correct: " + possibleParses.size());
+      System.out.println(sentence);
       for (CcgParse correctParse : possibleParses) {
         System.out.println("correct: " + correctParse);
       }

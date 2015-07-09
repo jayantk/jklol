@@ -8,12 +8,12 @@ import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 
-public class ParametricStringLexicon implements ParametricCcgLexicon {
+public class ConstantParametricLexicon implements ParametricCcgLexicon {
   private static final long serialVersionUID = 1L;
   
-  private final StringLexicon lexicon;
+  private final CcgLexicon lexicon;
   
-  public ParametricStringLexicon(StringLexicon lexicon) {
+  public ConstantParametricLexicon(CcgLexicon lexicon) {
     this.lexicon = Preconditions.checkNotNull(lexicon);
   }
 

@@ -16,6 +16,22 @@ public class Environment {
     this.bindings = Preconditions.checkNotNull(bindings);
     this.parentEnvironment = parentEnvironment;
   }
+  
+  /**
+   * Copy constructor. If {@code env} has a parent environment,
+   * that environment (and its parents) are recursively copied
+   * as well.
+   * 
+   * @param env
+   */
+  public Environment(Environment env) {
+    this.bindings = Maps.newHashMap(env.bindings);
+    if (env.parentEnvironment != null) {
+      this.parentEnvironment = new Environment(env.parentEnvironment);
+    } else {
+      this.parentEnvironment = null;
+    }
+  }
 
   public static Environment empty() {
     return Environment.extend(null);
@@ -50,6 +66,27 @@ public class Environment {
     for (int i = 0; i < nameIndexes.length; i++) {
       bindings.put(nameIndexes[i], values.get(i));
     }
+  }
+  
+  /**
+   * Removes a binding from this environment. Returns the value
+   * bound to that name if the name was bound, otherwise returns
+   * {@code null}. 
+   * 
+   * @param name
+   * @param symbolTable
+   * @return
+   */
+  public Object unbindName(String name, IndexedList<String> symbolTable) {
+    if (!symbolTable.contains(name)) {
+      return null;
+    }
+    int index = symbolTable.getIndex(name);
+    return bindings.remove(index);
+  }
+  
+  public Object unbindName(int nameIndex) {
+    return bindings.remove(nameIndex);
   }
 
   public Object getValue(String name, IndexedList<String> symbolTable) {

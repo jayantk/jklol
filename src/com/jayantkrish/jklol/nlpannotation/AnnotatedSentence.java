@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 
@@ -24,15 +25,15 @@ public class AnnotatedSentence {
 
   public AnnotatedSentence(List<String> words, List<String> posTags,
       Map<String, Object> annotations) {
-    this.words = Preconditions.checkNotNull(words);
-    this.posTags = Preconditions.checkNotNull(posTags);
+    this.words = ImmutableList.copyOf(words);
+    this.posTags = ImmutableList.copyOf(posTags);
     Preconditions.checkArgument(words.size() == posTags.size());
     this.annotations = Preconditions.checkNotNull(annotations);
   }
 
   public AnnotatedSentence(List<String> words, List<String> posTags) {
-    this.words = Preconditions.checkNotNull(words);
-    this.posTags = Preconditions.checkNotNull(posTags);
+    this.words = ImmutableList.copyOf(words);
+    this.posTags = ImmutableList.copyOf(posTags);
     Preconditions.checkArgument(words.size() == posTags.size());
     this.annotations = Collections.emptyMap();
   }

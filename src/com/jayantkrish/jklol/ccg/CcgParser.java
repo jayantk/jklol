@@ -1058,8 +1058,11 @@ public class CcgParser implements Serializable {
     List<LexiconEntry> allLexiconEntries = Lists.newArrayList();
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
-      List<LexiconEntry> lexiconEntries = lexicon.getLexiconEntries(preprocessInput(wordSequence),
-          posTags, allLexiconEntries, 0, wordSequence.size() - 1, new AnnotatedSentence(wordSequence, posTags));
+      List<LexiconEntry> lexiconEntries = Lists.newArrayList();
+      List<Double> probs = Lists.newArrayList();
+      lexicon.getLexiconEntries(preprocessInput(wordSequence), posTags, allLexiconEntries,
+          0, wordSequence.size() - 1, new AnnotatedSentence(wordSequence, posTags),
+          lexiconEntries, probs);
       allLexiconEntries.addAll(lexiconEntries);
     }
     return allLexiconEntries;
@@ -1319,18 +1322,22 @@ public class CcgParser implements Serializable {
         List<String> posTagValue = posTags.subList(i, j + 1);
 
         List<LexiconEntry> allLexiconEntries = Lists.newArrayList();
+        List<LexiconEntry> accumulator = Lists.newArrayList();
+        List<Double> probAccumulator = Lists.newArrayList();
         for (int k = 0; k < lexicons.size(); k++) {
           CcgLexicon lexicon = lexicons.get(k);
-          List<LexiconEntry> lexiconEntries = lexicon.getLexiconEntries(terminalValue,
-              posTagValue, allLexiconEntries, i, j, sentence);
-          allLexiconEntries.addAll(lexiconEntries);
+          
+          accumulator.clear();
+          probAccumulator.clear();
+          lexicon.getLexiconEntries(terminalValue, posTagValue, allLexiconEntries,
+              i, j, sentence, accumulator, probAccumulator);
+          Preconditions.checkState(accumulator.size() == probAccumulator.size());
+          allLexiconEntries.addAll(accumulator);
 
-          for (LexiconEntry lexiconEntry : lexiconEntries) {
+          for (int n = 0; n < accumulator.size(); n++) {
+            LexiconEntry lexiconEntry = accumulator.get(n);
             CcgCategory category = lexiconEntry.getCategory();
-
-            // Look up how likely this syntactic entry is according to
-            // any additional parameters in subclasses.
-            double subclassProb = lexicon.getCategoryWeight(terminalValue, posTagValue, category);
+            double subclassProb = probAccumulator.get(n);
 
             for (LexiconScorer lexiconScorer : lexiconScorers) {
               subclassProb *= lexiconScorer.getCategoryWeight(i, j, sentence, terminalValue,

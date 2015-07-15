@@ -95,8 +95,8 @@ public class ExpressionTree {
           }
 
           if (numAppliedArguments >= maxAppliedArguments) {
-            // This means that the generated function will accept 3 arguments
-            // in the sentence, which is quite unlikely.
+            // This means that the generated function will accept too
+            // many arguments in the sentence.
             continue;
           }
 

@@ -150,13 +150,6 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     VariableNumMap binaryRuleVars = VariableNumMap.unionAll(newLeftVar, newRightVar, newParentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
-    for (ExpressionNode e : expressions) {
-      binaryRuleBuilder.setWeight(1.0, e, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
-          e, ParametricCfgAlignmentModel.SKIP_RULE);
-      binaryRuleBuilder.setWeight(1.0, ParametricCfgAlignmentModel.SKIP_EXPRESSION, e,
-          e, ParametricCfgAlignmentModel.SKIP_RULE);
-    }
-
     populateBinaryRuleDistribution(example.getTree(), binaryRuleBuilder);
     TableFactor binaryDistribution = binaryRuleBuilder.build();
 
@@ -171,9 +164,12 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
         newTerminalFactor.setWeight(a, prob);
       }
     }
-    
+
+    Assignment skipAssignment = parentVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.SKIP_EXPRESSION)
+        .union(ruleVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.TERMINAL));
+
     return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
-        binaryDistribution, newTerminalFactor.build(), -1, false);
+        binaryDistribution, newTerminalFactor.build(), -1, true, skipAssignment);
   }
 
   private void populateBinaryRuleDistribution(ExpressionTree tree, TableFactorBuilder builder) {

@@ -54,9 +54,11 @@ public class CfgParser implements Serializable {
   // If greater than 0, this parser performs a beam search over trees,
   // maintaining up to beamSize trees at each chart node.
   private final int beamSize;
+
   // If true, the parser is allowed to skip portions of the terminal symbols
   // during parsing.
   private final boolean canSkipTerminals;
+  private final Assignment skipSymbol;
 
   /**
    * If {@code beamSize > 0}, this parser will initialize and cache information
@@ -71,12 +73,13 @@ public class CfgParser implements Serializable {
    * @param binaryDistribution
    * @param terminalDistribution
    * @param beamSize
-   * @param canSkipTerminals if {@code true}, the parser may skip terminal
-   * symbols during the parse. Only implemented for beam searches.
+   * @param canSkipTerminals
+   * @param skipSymbol
    */
   public CfgParser(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar,
       VariableNumMap terminalVar, VariableNumMap ruleTypeVar, DiscreteFactor binaryDistribution,
-      DiscreteFactor terminalDistribution, int beamSize, boolean canSkipTerminals) {
+      DiscreteFactor terminalDistribution, int beamSize, boolean canSkipTerminals,
+      Assignment skipSymbol) {
     Preconditions.checkArgument(parentVar.size() == 1 && leftVar.size() == 1
         && rightVar.size() == 1 && terminalVar.size() == 1 && ruleTypeVar.size() == 1);
     Preconditions.checkArgument(binaryDistribution.getVars().equals(VariableNumMap.unionAll(
@@ -100,6 +103,7 @@ public class CfgParser implements Serializable {
 
     this.beamSize = beamSize;
     this.canSkipTerminals = canSkipTerminals;
+    this.skipSymbol = skipSymbol;
   }
 
   public Factor getBinaryDistribution() {
@@ -124,9 +128,10 @@ public class CfgParser implements Serializable {
    * 
    * @return
    */
-  public CfgParser setParameters(int newBeamSize, boolean newCanSkipTerminals) {
+  public CfgParser setParameters(int newBeamSize, boolean newCanSkipTerminals,
+      Assignment skipSymbol) {
     return new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, binaryDistribution,
-        terminalDistribution, newBeamSize, newCanSkipTerminals);
+        terminalDistribution, newBeamSize, newCanSkipTerminals, skipSymbol);
   }
 
   // //////////////////////////////////////////////////////////////////////
@@ -413,9 +418,6 @@ public class CfgParser implements Serializable {
    */
   private CfgParseChart marginal(CfgParseChart chart, List<?> terminals,
       Factor rootDist) {
-    Preconditions.checkArgument(canSkipTerminals == false,
-        "Terminal skipping is not properly implemented for exact inference. Just build a grammar with a skip nonterminal.");
-
     initializeChart(chart, terminals);
     upwardChartPass(chart);
     // Set the initial outside probabilities
@@ -537,21 +539,80 @@ public class CfgParser implements Serializable {
   private void initializeChart(CfgParseChart chart, List<?> terminals) {
     Variable terminalListValue = terminalVar.getOnlyVariable();
 
+    // Calcuate the probability of skipping each individual word,
+    // if that operation is permitted.
+    double[] skipProbs = null;
+    if (canSkipTerminals) {
+      skipProbs = calculateSkipProbabilities(terminals);
+    }
+
     for (int i = 0; i < terminals.size(); i++) {
       for (int j = i; j < terminals.size(); j++) {
         if (terminalListValue.canTakeValue(terminals.subList(i, j + 1))) {
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, j + 1));
 
-          Factor terminalRules = terminalDistribution.conditional(assignment);
-          chart.updateInsideEntryTerminal(i, j, terminalRules);
+          DiscreteFactor terminalRules = terminalDistribution.conditional(assignment);
+          chart.updateInsideEntryTerminal(i, j, i, j, terminalRules);
+          
+          if (canSkipTerminals) {
+            if (i != 0) {
+              DiscreteFactor skipTerminals = getWordSkipTerminalDistribution(terminalRules, 0, j,
+                  i, j, skipProbs);
+              chart.updateInsideEntryTerminal(0, j, i, j, skipTerminals);
+            }
+
+            for (int k = j + 1; k < terminals.size(); k++) {
+              DiscreteFactor skipTerminals = getWordSkipTerminalDistribution(terminalRules, i, k,
+                  i, j, skipProbs);
+              chart.updateInsideEntryTerminal(i, k, i, j, skipTerminals);
+              if (i != 0) {
+                skipTerminals = getWordSkipTerminalDistribution(terminalRules, 0, k,
+                  i, j, skipProbs);
+                chart.updateInsideEntryTerminal(0, k, i, j, skipTerminals);
+              }
+            }
+          }
         }
       }
     }
+  }
+  
+  private DiscreteFactor getWordSkipTerminalDistribution(DiscreteFactor terminalConditional,
+      int spanStart, int spanEnd, int terminalSpanStart, int terminalSpanEnd, double[] skipProbs) {
+    terminalConditional = terminalConditional.add(terminalConditional.product(
+        TableFactor.pointDistribution(parentVar.union(ruleTypeVar), skipSymbol).product(-1.0)));
+
+    double prob = 1.0;
+    for (int i = spanStart; i < terminalSpanStart; i++) {
+      prob *= skipProbs[i];
+    }
+    
+    for (int i = terminalSpanEnd + 1; i <= spanEnd; i++) {
+      prob *= skipProbs[i];
+    }
+    
+    return terminalConditional.product(prob);
+  }
+  
+  private double[] calculateSkipProbabilities(List<?> terminals) {
+    double[] probs = new double[terminals.size()];
+    for (int i = 0; i < terminals.size(); i++) {
+      Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, i + 1));
+      probs[i] = terminalDistribution.getUnnormalizedProbability(assignment.union(skipSymbol));
+    }
+    return probs;
   }
 
   private void updateTerminalRuleCounts(CfgParseChart chart) {
     Variable terminalListValue = terminalVar.getOnlyVariable();
     List<?> terminals = chart.getTerminals();
+    
+    // Calcuate the probability of skipping each individual word,
+    // if that operation is permitted.
+    double[] skipProbs = null;
+    if (canSkipTerminals) {
+      skipProbs = calculateSkipProbabilities(terminals);
+    }
 
     for (int i = 0; i < terminals.size(); i++) {
       for (int j = i; j < terminals.size(); j++) {
@@ -559,13 +620,51 @@ public class CfgParser implements Serializable {
           Assignment assignment = terminalVar.outcomeArrayToAssignment(terminals
               .subList(i, j + 1));
 
-          Factor terminalRuleMarginal = terminalDistribution.product(
+          DiscreteFactor terminalRuleConditional = terminalDistribution.product(
               TableFactor.pointDistribution(terminalVar, assignment));
-          terminalRuleMarginal = terminalRuleMarginal.product(chart.getOutsideEntries(i, j));
-
+          Factor terminalRuleMarginal = terminalRuleConditional.product(chart.getOutsideEntries(i, j));
           chart.updateTerminalRuleExpectations(terminalRuleMarginal);
+          
+          if (canSkipTerminals) {
+            if (i != 0) {
+              updateTerminalRuleCountsWordSkip(terminalRuleConditional, chart, terminals, 0, j, i, j, skipProbs);
+            }
+
+            for (int k = j + 1; k < terminals.size(); k++) {
+              updateTerminalRuleCountsWordSkip(terminalRuleConditional, chart, terminals, i, k, i, j, skipProbs);
+              if (i != 0) {
+                updateTerminalRuleCountsWordSkip(terminalRuleConditional, chart, terminals, 0, k, i, j, skipProbs);
+              }
+            }
+          }
         }
       }
+    }
+  }
+  
+  private void updateTerminalRuleCountsWordSkip(DiscreteFactor terminalConditional, CfgParseChart chart,
+      List<?> terminals, int spanStart, int spanEnd, int terminalSpanStart, int terminalSpanEnd,
+      double[] skipProbs) {
+    DiscreteFactor skipConditional = getWordSkipTerminalDistribution(terminalConditional,
+        spanStart, spanEnd, terminalSpanStart, terminalSpanEnd, skipProbs);
+    DiscreteFactor terminalRuleMarginal = skipConditional.product(chart.getOutsideEntries(spanStart, spanEnd));
+    chart.updateTerminalRuleExpectations(terminalRuleMarginal);
+    
+    double skipProb = terminalRuleMarginal.getTotalUnnormalizedProbability();
+
+    VariableNumMap terminalVars = VariableNumMap.unionAll(terminalVar, parentVar, ruleTypeVar);
+    for (int i = spanStart; i < terminalSpanStart; i++) {
+      Assignment terminalSkipAssignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, i + 1))
+          .union(skipSymbol);
+      chart.updateTerminalRuleExpectations(TableFactor.pointDistribution(
+          terminalVars, terminalSkipAssignment).product(skipProb));
+    }
+
+    for (int i = terminalSpanEnd + 1; i <= spanEnd; i++) {
+      Assignment terminalSkipAssignment = terminalVar.outcomeArrayToAssignment(terminals.subList(i, i + 1))
+          .union(skipSymbol);
+      chart.updateTerminalRuleExpectations(TableFactor.pointDistribution(
+          terminalVars, terminalSkipAssignment).product(skipProb));
     }
   }
 

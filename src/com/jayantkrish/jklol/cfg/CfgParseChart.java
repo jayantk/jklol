@@ -161,7 +161,8 @@ public class CfgParseChart {
    * type of the chart, this performs either a sum or max over productions of
    * the same type in the same entry.
    */
-  public void updateInsideEntryTerminal(int spanStart, int spanEnd, Factor factor) {
+  public void updateInsideEntryTerminal(int spanStart, int spanEnd,
+      int terminalSpanStart, int terminalSpanEnd, Factor factor) {
     Preconditions.checkArgument(factor.getVars().size() == 2);
     // The first entry initializes the chart at this span.
     if (sumProduct) {
@@ -171,7 +172,7 @@ public class CfgParseChart {
       Tensor weights = factor.coerceToDiscrete().getWeights();
 
       // Negative split indexes are used to represent terminal rules.
-      int splitInd = -1 * (spanStart * numTerminals + spanEnd + 1); 
+      int splitInd = -1 * (terminalSpanStart * numTerminals + terminalSpanEnd + 1); 
       updateInsideEntryMaxProduct(spanStart, spanEnd, weights.getValues(), weights, splitInd);
     }
   }
@@ -325,14 +326,18 @@ public class CfgParseChart {
     if (splitInd < 0) {
       long terminalKey = backpointers[spanStart][spanEnd][rootNonterminalNum];
       
+      int positiveSplitInd = (-1 * splitInd) - 1;
+      int terminalSpanStart = positiveSplitInd / numTerminals;
+      int terminalSpanEnd = positiveSplitInd % numTerminals;
+      
       // This is a really sucky way to transform the keys back to objects.
       VariableNumMap vars = parentVar.union(ruleTypeVar);
       int[] dimKey = TableFactor.zero(vars).getWeights().keyNumToDimKey(terminalKey);
       Assignment a = vars.intArrayToAssignment(dimKey);
       Object ruleType = a.getValue(ruleTypeVar.getOnlyVariableNum());
-      
+
       List<Object> terminalList = Lists.newArrayList();
-      terminalList.addAll(terminals.subList(spanStart, spanEnd + 1));
+      terminalList.addAll(terminals.subList(terminalSpanStart, terminalSpanEnd + 1));
       return new CfgParseTree(root, ruleType, terminalList, prob, spanStart, spanEnd);
     } else {
       long binaryRuleKey = backpointers[spanStart][spanEnd][rootNonterminalNum];

@@ -59,7 +59,8 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
 
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
         (DiscreteFactor) nonterminalFactor.getModelFromParameters(nonterminalStatistics),
-        (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics), beamSize, canSkipTerminals);
+        (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics), beamSize,
+        canSkipTerminals, null);
     return parser;
   }
 

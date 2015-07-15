@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -141,7 +142,7 @@ public class AlignedExpressionTree {
       right.getWordAlignmentsHelper(map);
     }
   }
-  
+
   public LexiconEntryLabels getLexiconEntryLabels(AlignmentExample example) {
     Multimap<List<String>, AlignedExpression> alignments = getWordAlignments();
     List<Integer> spanStarts = Lists.newArrayList();
@@ -165,7 +166,6 @@ public class AlignedExpressionTree {
       if (!mapped) {
         spanStarts.add(j);
         spanEnds.add(j);
-        lexiconEntries.add(ParametricCfgAlignmentModel.SKIP_EXPRESSION.getExpression());
       }
     }
 
@@ -207,42 +207,36 @@ public class AlignedExpressionTree {
         returnType = returnType.getReturnType();
       }
       Collections.reverse(argumentTypes);
-      
-      Set<String> freeVars = Sets.newHashSet(StaticAnalysis.getFreeVariables(getExpression()));
-      // TODO: don't leave this here
-      freeVars.remove("and:<t*,t>");
 
       // Build a syntactic category for the expression based on the 
       // number of arguments it accepted in the sentence. Simultaneously
       // generate its dependencies and head assignment.
-      // String head = getWord();
-      for (String head : freeVars) {
-        // TODO: move the normalization elsewhere:
-        head = head.replaceAll(" ", "_");
-        
-        List<String> subjects = Lists.newArrayList();
-        List<Integer> argumentNums = Lists.newArrayList();
-        List<Integer> objects = Lists.newArrayList();
-        List<Set<String>> assignments = Lists.newArrayList();
-        assignments.add(Sets.newHashSet(head));
-        HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N:" + returnType + "{0}");
-        for (int i = 0; i < getNumAppliedArguments(); i++) {
-          HeadedSyntacticCategory argSyntax = HeadedSyntacticCategory
-              .parseFrom("N:" + argumentTypes.get(i) + "{" + (i + 1) +"}");
-          syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
+      String head = Joiner.on("_").join(getWords()) + "#" + getExpression().toString();
+      // TODO: move the normalization elsewhere:
+      head = head.replaceAll(" ", "_");
 
-          subjects.add(head);
-          argumentNums.add(i + 1);
-          objects.add(i + 1);
-          assignments.add(Collections.<String>emptySet());
-        }
+      List<String> subjects = Lists.newArrayList();
+      List<Integer> argumentNums = Lists.newArrayList();
+      List<Integer> objects = Lists.newArrayList();
+      List<Set<String>> assignments = Lists.newArrayList();
+      assignments.add(Sets.newHashSet(head));
+      HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N:" + returnType + "{0}");
+      for (int i = 0; i < getNumAppliedArguments(); i++) {
+        HeadedSyntacticCategory argSyntax = HeadedSyntacticCategory
+            .parseFrom("N:" + argumentTypes.get(i) + "{" + (i + 1) +"}");
+        syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
 
-        CcgCategory ccgCategory = new CcgCategory(syntax, getExpression(), subjects,
-            argumentNums, objects, assignments);
-        LexiconEntry entry = new LexiconEntry(words, ccgCategory);
-
-        lexiconEntries.add(entry);
+        subjects.add(head);
+        argumentNums.add(i + 1);
+        objects.add(i + 1);
+        assignments.add(Collections.<String>emptySet());
       }
+
+      CcgCategory ccgCategory = new CcgCategory(syntax, getExpression(), subjects,
+          argumentNums, objects, assignments);
+      LexiconEntry entry = new LexiconEntry(words, ccgCategory);
+
+      lexiconEntries.add(entry);
     } else {      
       left.generateLexiconEntriesHelper(typeReplacements, Collections.<AlignedExpressionTree>emptyList(),
           lexiconEntries);

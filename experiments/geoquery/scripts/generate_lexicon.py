@@ -10,11 +10,11 @@ import re
 entity_types='experiments/geoquery/uwspf_data/entity_types.txt'
 predicate_types='experiments/geoquery/uwspf_data/predicate_types.txt'
 
-entity_format = '"%(name)s","N_e{0}","%(entity)s","0 %(entity)s"'
+entity_format = '"%(name)s","N:e{0}","%(entity)s","0 entity:%(type)s"'
 
-predicate_patterns = [('<[a-z]*,t>', '"%(name)s","N_s{0}","(lambda e (%(predicate)s e))","0 %(predicate)s"'),
-                      ('<[a-z]*,[^t]>', '"%(name)s","(N_e{1}/N_e{1}){0}","(lambda e (%(predicate)s e))","0 %(predicate)s","%(predicate)s 1 1"'),
-                      ('<[a-z]*,<[a-z]*,t>>', '"%(name)s","((N_s{1}\N_s{1})/N_e{2}){0}","(lambda x f e (and:<t*,t> (f e) (%(predicate)s e x)))","0 %(predicate)s","%(predicate)s 1 1","%(predicate)s 2 2"')]
+predicate_patterns = [('<[a-z]*,t>', '"%(name)s","N:s{0}","(lambda e (%(predicate)s e))","0 %(predicate)s"'),
+                      ('<[a-z]*,[^t]>', '"%(name)s","(N:e{1}/N:e{1}){0}","(lambda e (%(predicate)s e))","0 %(predicate)s","%(predicate)s 1 1"'),
+                      ('<[a-z]*,<[a-z]*,t>>', '"%(name)s","((N:s{1}\N:s{1})/N:e{2}){0}","(lambda x f e (and:<t*,t> (f e) (%(predicate)s e x)))","0 %(predicate)s","%(predicate)s 1 1","%(predicate)s 2 2"')]
 
 predicate_synonyms = {'city' : ['cities'],
                       'state' : ['states'],
@@ -31,14 +31,15 @@ with open(entity_types, 'r') as f:
 
         # Determine the entity's name based on its type.
         entity_names = [entity.replace("_", " ")]
-        if type == "c":
-            # cities have states appended, so remove those.
+        if type == "c" or type == "r":
+            # cities have states appended, and rivers have
+            # "river" appended
             parts = entity.split("_")
-            entity_names = [" ".join(parts[:-1])]
+            entity_names.extend([" ".join(parts[:-1])])
         
         entity = line.strip()
         for entity_name in entity_names:    
-            print entity_format % {'name' : entity_name, 'entity' : entity}
+            print entity_format % {'name' : entity_name, 'entity' : entity, 'type' : type}
 
 '''
 with open(predicate_types, 'r') as f:

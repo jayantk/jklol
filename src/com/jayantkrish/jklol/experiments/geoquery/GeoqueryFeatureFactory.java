@@ -158,8 +158,6 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
 
     DiscreteLogLinearFactor additionalFeatures = new DiscreteLogLinearFactor(terminalVars, featureVar,
         featureBuilder.build(), lexiconIndicatorFactor);
-    
-    System.out.println(featureBuilder.build().getParameterDescription());
 
     ParametricFactor terminalParametricFactor = new CombiningParametricFactor(terminalVars,
         Arrays.asList("indicators", "features"), Arrays.asList(terminalIndicatorFactor, additionalFeatures), false);

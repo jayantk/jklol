@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -35,10 +34,10 @@ public class UnknownWordLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posSequence,
-      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence) {
+  public void getLexiconEntries(List<String> wordSequence, List<String> posSequence,
+      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence,
+      List<LexiconEntry> accumulator, List<Double> probAccumulator) {
 
-    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
     if (alreadyGenerated.size() == 0 && posSequence.size() == 1) {
       String pos = posSequence.get(0);
       Assignment assignment = posVar.outcomeArrayToAssignment(pos);
@@ -49,21 +48,9 @@ public class UnknownWordLexicon extends AbstractCcgLexicon {
         CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
             ccgCategoryVar.getOnlyVariableNum());
 
-        lexiconEntries.add(new LexiconEntry(wordSequence, ccgCategory));
+        accumulator.add(new LexiconEntry(wordSequence, ccgCategory));
+        probAccumulator.add(bestOutcome.getProbability());
       }
     }
-    return lexiconEntries;
-  }
-
-  @Override
-  public double getCategoryWeight(List<String> wordSequence, List<String> posSequence,
-      CcgCategory category) {
-    Preconditions.checkArgument(posSequence.size() == 1);
-    String pos = posSequence.get(0);
-
-    Assignment terminalAssignment = posVar.outcomeArrayToAssignment(pos);
-    Assignment categoryAssignment = ccgCategoryVar.outcomeArrayToAssignment(category);
-    Assignment a = terminalAssignment.union(categoryAssignment);
-    return posCategoryDistribution.getUnnormalizedProbability(a);
   }
 }

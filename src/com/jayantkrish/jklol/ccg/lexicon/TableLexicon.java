@@ -4,7 +4,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -39,23 +38,11 @@ public class TableLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags,
-      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence) {
-    return TableLexicon.getLexiconEntriesFromFactor(wordSequence, terminalDistribution,
-        terminalVar, ccgCategoryVar);
-  }
-
-  @Override
-  public double getCategoryWeight(List<String> wordSequence, 
-      List<String> posTags, CcgCategory category) {
-    Assignment terminalAssignment = terminalVar.outcomeArrayToAssignment(wordSequence);
-    Assignment categoryAssignment = ccgCategoryVar.outcomeArrayToAssignment(category);
-    Assignment a = terminalAssignment.union(categoryAssignment);
-    if (terminalDistribution.getVars().isValidAssignment(a)) {
-      return terminalDistribution.getUnnormalizedProbability(a);
-    } else {
-      return 1.0;
-    }
+  public void getLexiconEntries(List<String> wordSequence, List<String> posTags,
+      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence,
+      List<LexiconEntry> accumulator, List<Double> probAccumulator) {
+    TableLexicon.getLexiconEntriesFromFactor(wordSequence, terminalDistribution,
+        terminalVar, ccgCategoryVar, accumulator, probAccumulator);
   }
 
   /**
@@ -67,11 +54,13 @@ public class TableLexicon extends AbstractCcgLexicon {
    * @param terminalDistribution
    * @param terminalVar
    * @param ccgCategoryVar
+   * @param accumulator list that generated entries are added to.
+   * @param probAccumulator probabilities of the generated entries.
    * @return
    */
-  private static List<LexiconEntry> getLexiconEntriesFromFactor(List<String> wordSequence,
-      DiscreteFactor terminalDistribution, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar) {
-    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
+  private static void getLexiconEntriesFromFactor(List<String> wordSequence,
+      DiscreteFactor terminalDistribution, VariableNumMap terminalVar, VariableNumMap ccgCategoryVar,
+      List<LexiconEntry> accumulator, List<Double> probAccumulator) {
     if (terminalVar.isValidOutcomeArray(wordSequence)) {
       Assignment assignment = terminalVar.outcomeArrayToAssignment(wordSequence);
 
@@ -81,9 +70,9 @@ public class TableLexicon extends AbstractCcgLexicon {
         CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
             ccgCategoryVar.getOnlyVariableNum());
 
-        lexiconEntries.add(new LexiconEntry(wordSequence, ccgCategory));
+        accumulator.add(new LexiconEntry(wordSequence, ccgCategory));
+        probAccumulator.add(bestOutcome.getProbability());
       }
     }
-    return lexiconEntries;
   }
 }

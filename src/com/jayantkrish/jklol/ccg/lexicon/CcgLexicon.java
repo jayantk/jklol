@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.ccg.lexicon;
 import java.io.Serializable;
 import java.util.List;
 
-import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -33,21 +32,12 @@ public interface CcgLexicon extends Serializable {
    * @param spanStart
    * @param spanEnd
    * @param sentence
+   * @param accumulator list that generated lexicon entries are added to  
+   * @param probAccumulator probabilities for the generated entries
    * @return
    */
-  List<LexiconEntry> getLexiconEntries(List<String> wordSequence,
+  void getLexiconEntries(List<String> wordSequence,
       List<String> posSequence, List<LexiconEntry> alreadyGenerated,
-      int spanStart, int spanEnd, AnnotatedSentence sentence);
-
-  /**
-   * Gets the unnormalized probability of generating {@code category}
-   * for {@code wordSequence} and {@code posSequence}.
-   * 
-   * @param wordSequence
-   * @param posSequence
-   * @param category
-   * @return
-   */
-  double getCategoryWeight(List<String> wordSequence, List<String> posSequence,
-      CcgCategory category);
+      int spanStart, int spanEnd, AnnotatedSentence sentence,
+      List<LexiconEntry> accumulator, List<Double> probAccumulator);
 }

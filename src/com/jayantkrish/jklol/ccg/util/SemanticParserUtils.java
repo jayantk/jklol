@@ -6,6 +6,7 @@ import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplificationException;
@@ -30,6 +31,7 @@ public class SemanticParserUtils {
   public static SemanticParserLoss testSemanticParser(List<CcgExample> testExamples, CcgParser parser,
       CcgInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator) {
     int numCorrect = 0;
+    int numCorrectLfPossible = 0;
     int numParsed = 0;
 
     LogFunction log = new NullLogFunction();
@@ -38,9 +40,10 @@ public class SemanticParserUtils {
       System.out.println("====");
       System.out.println("SENT: " + example.getSentence().getWords());
       if (parse != null) {
-        int correct = 0; 
+        int correct = 0;
+        int correctLfPossible = 0;
         Expression2 lf = null;
-        Expression2 correctLf = simplifier.apply(example.getLogicalForm()); 
+        Expression2 correctLf = simplifier.apply(example.getLogicalForm());
 
         try {
           lf = simplifier.apply(parse.getLogicalForm());
@@ -49,13 +52,27 @@ public class SemanticParserUtils {
           // Make lf print out as null.
           lf = Expression2.constant("null");
         }
+        
+        CcgParse conditionalParse = inferenceAlg.getBestConditionalParse(parser,
+            example.getSentence(), null, log, null, null, null, correctLf);
+        Expression2 conditionalLf = null;
+        if (conditionalParse != null) {
+          conditionalLf = conditionalParse.getLogicalForm();
+          correctLfPossible = 1;
+        }
 
         System.out.println("PREDICTED: " + lf);
         System.out.println("TRUE:      " + correctLf);
         System.out.println("DEPS: " + parse.getAllDependencies());
         System.out.println("CORRECT: " + correct);
+        System.out.println("LICENSED: " + correctLfPossible);
+        System.out.println("LEX: ");
+        for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {
+          System.out.println("   " + entry);
+        }
 
         numCorrect += correct;
+        numCorrectLfPossible += correctLfPossible;
         numParsed++;
       } else {
         System.out.println("NO PARSE");
@@ -64,8 +81,11 @@ public class SemanticParserUtils {
 
     double precision = ((double) numCorrect) / numParsed;
     double recall = ((double) numCorrect) / testExamples.size();
+    double licensedRecall = ((double) numCorrectLfPossible) / testExamples.size();
+
     System.out.println("\nPrecision: " + precision);
     System.out.println("Recall: " + recall);
+    System.out.println("Licensed Recall: " + licensedRecall);
 
     return new SemanticParserLoss(testExamples.size(), numParsed, numCorrect);
   }

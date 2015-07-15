@@ -66,6 +66,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public static ParametricCfgAlignmentModel buildAlignmentModel(Collection<AlignmentExample> examples,
       FeatureVectorGenerator<Expression2> featureVectorGenerator, Set<List<String>> terminalVarValues) {
     Set<ExpressionNode> expressions = Sets.newHashSet();
+    expressions.add(SKIP_EXPRESSION);
 
     System.out.println("num terminals: " + terminalVarValues.size());
     System.out.println(terminalVarValues);
@@ -78,7 +79,6 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     for (AlignmentExample example : examples) {
       example.getTree().getAllExpressionNodes(expressions);
     }
-    expressions.add(SKIP_EXPRESSION);
 
     DiscreteVariable expressionVarType = new DiscreteVariable("expressions", expressions);
     DiscreteVariable terminalVarType = new DiscreteVariable("words", terminalVarValues);
@@ -94,16 +94,36 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     DiscreteFactor sparsityFactor = TableFactor.unity(parentVar.union(terminalVar))
         .outerProduct(TableFactor.pointDistribution(ruleVar, ruleVar.outcomeArrayToAssignment(TERMINAL)));
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
-    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar), terminalVar,
-        sparsityFactor, constantFactor);
+    // TODO: There should probably be special handling for the SKIP symbol
+    // Maximize P(logical form | word)
+    /*
+    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
+        parentVar, sparsityFactor, constantFactor);
+        */
+    // Maximize P(word | logical form). This works better.
+    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+        terminalVar, sparsityFactor, constantFactor);
+
+    /*
+    CombiningParametricFactor terminalFactor = new CombiningParametricFactor(
+        VariableNumMap.unionAll(terminalVar, parentVar, ruleVar),
+        Arrays.asList("l_given_w", "w_given_l"),
+        Arrays.asList(logicalFormGivenWord, wordGivenLogicalForm), false);
+     */
+    
+    /*
+    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(VariableNumMap.EMPTY,
+        VariableNumMap.unionAll(parentVar, ruleVar, terminalVar), sparsityFactor, constantFactor);
+        */    
 
     /*
     VariableNumMap vars = VariableNumMap.unionAll(parentVar, ruleVar, terminalVar);
     int featureVarNum = Ints.max(vars.getVariableNumsArray()) + 1;
     VariableNumMap featureVar = VariableNumMap.singleton(featureVarNum, "features",
         featureVectorGenerator.getFeatureDictionary());
-    DiscreteLogLinearFactor terminalFactor = new DiscreteLogLinearFactor(vars, featureVar,
-        featureValues);
+    ParametricLinearClassifierFactor terminalFactor = new ParametricLinearClassifierFactor(
+        parentVar, terminalVar.union(ruleVar), VariableNumMap.EMPTY,
+        featureVectorGenerator.getFeatureDictionary(), null, true);
         */
 
     return new ParametricCfgAlignmentModel(terminalFactor, terminalVar, leftVar, rightVar,

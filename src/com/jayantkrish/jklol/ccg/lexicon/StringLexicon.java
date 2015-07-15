@@ -6,7 +6,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -61,9 +60,9 @@ public class StringLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags, 
-      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence) {
-    List<LexiconEntry> entries = Lists.newArrayList();
+  public void getLexiconEntries(List<String> wordSequence, List<String> posTags,
+      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd,
+      AnnotatedSentence sentence, List<LexiconEntry> accumulator, List<Double> probs) {
     List<String> sentenceWords = sentence.getWords();
     for (int i = 0; i < categories.size(); i++) {
       CcgCategory category = categories.get(i);
@@ -73,14 +72,9 @@ public class StringLexicon extends AbstractCcgLexicon {
         Expression2 wordSequenceExpression = detokenizer.apply(sentenceWords.subList(spanStart, spanEnd + 1)); 
         Expression2 newLf = Expression2.nested(category.getLogicalForm(), wordSequenceExpression);
         CcgCategory newCategory = category.replaceLogicalForm(newLf);
-        entries.add(new LexiconEntry(wordSequence, newCategory));
+        accumulator.add(new LexiconEntry(wordSequence, newCategory));
+        probs.add(1.0);
       }
     }
-    return entries;
-  }
-
-  @Override
-  public double getCategoryWeight(List<String> wordSequence, List<String> posTags, CcgCategory category) {
-    return 1.0;
   }
 }

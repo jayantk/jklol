@@ -87,6 +87,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     typeReplacements.put("p", "e");
   }
   
+  private static final String START_SYMBOL = "**start**";
+  
   public LexiconInductionCrossValidation() {
     super(CommonOptions.MAP_REDUCE);
   }
@@ -172,6 +174,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     Collection<LexiconEntry> allEntries = alignments.getKeyValueMultimap().values();
     List<String> lexiconEntryLines = Lists.newArrayList();
     lexiconEntryLines.addAll(additionalLexiconEntries);
+    lexiconEntryLines.add(START_SYMBOL + "," + ParametricCcgParser.START_CAT + ",**skip**");
     for (LexiconEntry lexiconEntry : allEntries) {
       lexiconEntryLines.add(lexiconEntry.toCsvString());
     }
@@ -186,11 +189,12 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       lexiconEntryLines.add(entry.toCsvString());
     }
     Collections.sort(lexiconEntryLines);
+
     IoUtils.writeLines(lexiconOutputFilename, lexiconEntryLines);
     IoUtils.serializeObjectToFile(model, alignmentModelOutputFilename);
     
     // Initialize CCG parser components.
-    List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData, model);
+    List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData, null);
     List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
     // CcgFeatureFactory featureFactory = new SemanticParserFeatureFactory(true, true);
     CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true);
@@ -291,7 +295,9 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Convert data to CCG training data.
     List<CcgExample> ccgExamples = Lists.newArrayList();
     for (AlignmentExample example : alignmentExamples) {
-      List<String> words = example.getWords();
+      List<String> words = Lists.newArrayList();
+      words.add(START_SYMBOL);
+      words.addAll(example.getWords());
       List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);
 

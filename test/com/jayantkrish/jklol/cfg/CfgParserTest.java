@@ -13,6 +13,7 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.util.Assignment;
 
 public class CfgParserTest extends TestCase {
 
@@ -24,7 +25,7 @@ public class CfgParserTest extends TestCase {
 
 	public void setUp() {
 	  DiscreteVariable nonterm = new DiscreteVariable("nonterminals", Arrays.asList(
-	      "N", "V", "S", "S2", "NP", "VP", "foo", "R", "bar", "barP", "A"));
+	      "N", "V", "S", "S2", "NP", "VP", "foo", "R", "bar", "barP", "A", "**skip**"));
 	  DiscreteVariable terms = new DiscreteVariable("terminals", listifyWords(Arrays.asList(
 	      "gretzky", "plays", "ice", "hockey", "ice hockey", "baz", "bbb", 
 	      "baz bbb", "a", "b", "c")));
@@ -68,9 +69,17 @@ public class CfgParserTest extends TestCase {
 		binary = binaryBuilder.build();
 		terminal = terminalBuilder.build();
 		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binary, terminal, 10, false);
+		    binary, terminal, 10, false, null);
+
+		Assignment skipAssignment = parentVar.outcomeArrayToAssignment("**skip**")
+		    .union(ruleVar.outcomeArrayToAssignment("rule1"));
+		for (Object terminal : terms.getValues()) {
+		  Assignment a = termVar.outcomeArrayToAssignment(terminal).union(skipAssignment);
+		  terminalBuilder.setWeight(a, 1.0);
+		}
+		
 		p2 = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binary, terminal, 10, true);
+		    binaryBuilder.build(), terminalBuilder.build(), 10, true, skipAssignment);
 	}
 	
 	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
@@ -134,6 +143,29 @@ public class CfgParserTest extends TestCase {
 
 		Factor nProductions = c.getMarginalEntries(2, 3);
 		assertEquals(1.0, nProductions.getUnnormalizedProbability("N") / c.getPartitionFunction());
+	}
+
+	public void testParseMarginalWordSkip() {
+	  CfgParseChart c = p2.parseMarginal(Arrays.asList("plays", "hockey"), true);
+
+		Factor rootProductions = c.getMarginalEntries(0, 1);
+		assertEquals(3, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
+		assertEquals(1.0 / 6.0, rootProductions.getUnnormalizedProbability("N") / c.getPartitionFunction());
+		assertEquals(4.0 / 6.0, rootProductions.getUnnormalizedProbability("V") / c.getPartitionFunction());
+		assertEquals(1.0 / 6.0, rootProductions.getUnnormalizedProbability("VP") / c.getPartitionFunction());
+
+		Factor terminalExpectations = c.getTerminalRuleExpectations();
+		assertEquals(4, terminalExpectations.coerceToDiscrete().getNonzeroAssignments().size());
+		assertEquals(2.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("hockey"), "N", "rule1") / c.getPartitionFunction());
+		assertEquals(4.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("hockey"), "**skip**", "rule1") / c.getPartitionFunction());
+		assertEquals(5.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("plays"), "V", "rule1") / c.getPartitionFunction());
+		assertEquals(1.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("plays"), "**skip**", "rule1") / c.getPartitionFunction());
+
+		c = p2.parseMarginal(Arrays.asList("plays", "hockey"), false);
+		CfgParseTree bestParse = c.getBestParseTree();
+		assertTrue(bestParse.isTerminal());
+		assertEquals("V", bestParse.getRoot());
+		assertEquals(Arrays.asList("plays"), bestParse.getTerminalProductions());
 	}
 
 	public void testRuleCounts() {
@@ -209,7 +241,8 @@ public class CfgParserTest extends TestCase {
 
 	  
 	  // Make sure that the beam truncates the less probable tree.
-	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary, terminal, 1, false);
+	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary,
+	      terminal, 1, false, null);
 	  trees = newParser.beamSearch(Arrays.asList("baz", "bbb"));
 	  assertEquals(1, trees.size());
 	  bestTree = trees.get(0);

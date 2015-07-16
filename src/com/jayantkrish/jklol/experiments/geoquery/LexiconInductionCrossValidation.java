@@ -16,7 +16,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
-import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgInference;
@@ -87,8 +86,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     typeReplacements.put("p", "e");
   }
   
-  private static final String START_SYMBOL = "**start**";
-  
   public LexiconInductionCrossValidation() {
     super(CommonOptions.MAP_REDUCE);
   }
@@ -154,7 +151,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       int emIterations, double smoothingAmount, int nGramLength, int sgdIterations, double l2Regularization, int beamSize,
       List<String> additionalLexiconEntries, String lexiconOutputFilename, String alignmentModelOutputFilename,
       String parserModelOutputFilename) {
-    
+
     // Find all entity names in the given lexicon entries
     Set<List<String>> entityNames = Sets.newHashSet();
     for (LexiconEntry lexiconEntry : LexiconEntry.parseLexiconEntries(additionalLexiconEntries)) {
@@ -174,19 +171,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     Collection<LexiconEntry> allEntries = alignments.getKeyValueMultimap().values();
     List<String> lexiconEntryLines = Lists.newArrayList();
     lexiconEntryLines.addAll(additionalLexiconEntries);
-    lexiconEntryLines.add(START_SYMBOL + "," + ParametricCcgParser.START_CAT + ",**skip**");
     for (LexiconEntry lexiconEntry : allEntries) {
       lexiconEntryLines.add(lexiconEntry.toCsvString());
-    }
-    List<Set<String>> assignment = Lists.newArrayList();
-    assignment.add(Sets.newHashSet(ParametricCcgParser.SKIP_PREDICATE));
-    CcgCategory skipCcgCategory = new CcgCategory(ParametricCcgParser.SKIP_CAT,
-        ParametricCcgParser.SKIP_LF, Collections.<String>emptyList(),
-        Collections.<Integer>emptyList(), Collections.<Integer>emptyList(), assignment);
-    
-    for (List<String> terminal : model.getTerminalVarValues()) {
-      LexiconEntry entry = new LexiconEntry(terminal, skipCcgCategory);
-      lexiconEntryLines.add(entry.toCsvString());
     }
     Collections.sort(lexiconEntryLines);
 
@@ -295,9 +281,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Convert data to CCG training data.
     List<CcgExample> ccgExamples = Lists.newArrayList();
     for (AlignmentExample example : alignmentExamples) {
-      List<String> words = Lists.newArrayList();
-      words.add(START_SYMBOL);
-      words.addAll(example.getWords());
+      List<String> words = example.getWords();
       List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);
 

@@ -14,7 +14,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
@@ -85,7 +84,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
   private final ParametricFactor rootSyntaxFamily;
   private final ParametricFactor headedRootSyntaxFamily;
 
-  private final boolean allowWordSkipping;
   private final boolean normalFormOnly;
 
   /**
@@ -127,15 +125,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * Default part-of-speech tags that qualify as verbs.
    */
   public static final Set<String> DEFAULT_VERB_TAGS = Sets.newHashSet("VB", "VBD", "VBG", "VBN", "VBP", "VBZ");
-  
-  /**
-   * Syntactic categories added for word skipping
-   */
-  public static final HeadedSyntacticCategory SKIP_CAT = HeadedSyntacticCategory.parseFrom("SKIP{0}");
-  public static final HeadedSyntacticCategory START_CAT = HeadedSyntacticCategory.parseFrom("START{0}");
-  public static final Expression2 SKIP_LF = Expression2.constant("**skip**");
-  public static final String SKIP_PREDICATE = "**skip**";
-  
+
   private static final IndexedList<String> STATISTIC_NAME_LIST = IndexedList.create(Arrays.asList(
       LEXICON_PARAMETERS,LEXICON_SCORER_PARAMETERS,DEPENDENCY_PARAMETERS, WORD_DISTANCE_PARAMETERS,
       PUNC_DISTANCE_PARAMETERS, VERB_DISTANCE_PARAMETERS, SYNTAX_PARAMETERS,
@@ -157,7 +147,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       ParametricFactor headedBinaryRuleFamily,
       VariableNumMap searchMoveVar, DiscreteFactor compiledSyntaxDistribution,
       VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar, VariableNumMap rootPosVar,
-      ParametricFactor rootSyntaxFamily, ParametricFactor headedRootSyntaxFamily, boolean allowWordSkipping,
+      ParametricFactor rootSyntaxFamily, ParametricFactor headedRootSyntaxFamily,
       boolean normalFormOnly) {
     this.lexiconFamilies = ImmutableList.copyOf(lexiconFamilies);
     this.lexiconScorerFamilies = ImmutableList.copyOf(lexiconScorerFamilies);
@@ -201,7 +191,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     this.rootSyntaxFamily = Preconditions.checkNotNull(rootSyntaxFamily);
     this.headedRootSyntaxFamily = Preconditions.checkNotNull(headedRootSyntaxFamily);
 
-    this.allowWordSkipping = allowWordSkipping;
     this.normalFormOnly = normalFormOnly;
   }
 
@@ -442,7 +431,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parametricUnaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
         headedBinaryRuleFamily, searchMoveVar, compiledSyntaxDistribution,
         leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar, parametricRootDistribution,
-        parametricHeadedRootDistribution, false, normalFormOnly);
+        parametricHeadedRootDistribution, normalFormOnly);
   }
 
   /**
@@ -581,7 +570,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution,
         headedBinaryRulePredicateVar, headedBinaryRulePosVar, headedSyntaxDistribution, searchMoveVar,
         compiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar, rootPosVar, rootSyntaxDistribution,
-        headedRootSyntaxDistribution, allowWordSkipping, normalFormOnly);
+        headedRootSyntaxDistribution, normalFormOnly);
   }
 
   /**

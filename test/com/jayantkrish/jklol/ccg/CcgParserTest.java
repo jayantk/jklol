@@ -30,6 +30,7 @@ import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon.SkipTrigger;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon.CategorySpanConfig;
 import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
@@ -555,8 +556,12 @@ public class CcgParserTest extends TestCase {
     List<String> words = Arrays.asList("green", "green", "i");
     CcgParse bestParse = parse(parserWordSkip, words);
 
-    assertEquals(2, bestParse.getSpanStart());
+    System.out.println(bestParse);
+    System.out.println(bestParse.getLogicalForm());
+    
+    assertEquals(0, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
+    assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconTrigger()).getTrigger());
     assertEquals(1.5, bestParse.getSubtreeProbability());
   }
 
@@ -1205,13 +1210,13 @@ public class CcgParserTest extends TestCase {
     // Distribution over syntactic categories assigned to each word.
     VariableNumMap terminalSyntaxVars = terminalVar.union(terminalSyntaxVar);
     DiscreteFactor terminalSyntaxDistribution = TableFactor.unity(terminalSyntaxVars);
-    terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
+     terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
         terminalSyntaxVars, terminalSyntaxVars.outcomeArrayToAssignment(Arrays.asList("i"),
             HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
     terminalSyntaxDistribution = terminalSyntaxDistribution.add(TableFactor.pointDistribution(
         terminalSyntaxVars, terminalSyntaxVars.outcomeArrayToAssignment(Arrays.asList("blue"),
             HeadedSyntacticCategory.parseFrom("N{0}"))).product(2.0));
-
+ 
     // Distribution over predicate-argument distances.
     VariableNumMap distancePredicateVars = VariableNumMap.unionAll(semanticHeadVar, semanticSyntaxVar, semanticArgNumVar, semanticHeadPosVar);
     VariableNumMap wordDistanceVar = VariableNumMap.singleton(6, "wordDistance", CcgParser.wordDistanceVarType);
@@ -1262,8 +1267,8 @@ public class CcgParserTest extends TestCase {
 
     List<CcgLexicon> lexicons = Lists.newArrayList();
     if (allowWordSkipping) {
-      lexicons.add(new SkipLexicon(lexiconFactor));
-      lexicons.add(new SkipLexicon(unknownWordLexicon));
+      lexicons.add(new SkipLexicon(lexiconFactor, TableFactor.unity(terminalVar)));
+      lexicons.add(new SkipLexicon(unknownWordLexicon, TableFactor.unity(terminalVar)));
     } else {
       lexicons.add(lexiconFactor);
       lexicons.add(unknownWordLexicon);
@@ -1290,7 +1295,7 @@ public class CcgParserTest extends TestCase {
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
         headedBinaryRuleFactor, searchMoveVar, compiledSyntaxDistribution, leftSyntaxVar,
-        headedRootPredicateVar, headedRootPosVar, rootDistribution, headedRootDistribution, false, normalFormOnly);
+        headedRootPredicateVar, headedRootPosVar, rootDistribution, headedRootDistribution, normalFormOnly);
   }
 
   private static class TestChartFilter implements ChartCost {

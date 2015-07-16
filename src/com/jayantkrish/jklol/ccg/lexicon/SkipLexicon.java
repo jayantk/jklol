@@ -8,8 +8,10 @@ import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Lexicon for performing word skipping in the CCG parser.
@@ -29,11 +31,12 @@ public class SkipLexicon implements CcgLexicon {
 
   private final VariableNumMap terminalVar;
   private final CcgLexicon lexicon;
-  // private final TableFactor skipProbs;
+  private final DiscreteFactor skipWeights;
 
-  public SkipLexicon(CcgLexicon lexicon) {
+  public SkipLexicon(CcgLexicon lexicon, DiscreteFactor skipWeights) {
     this.terminalVar = lexicon.getTerminalVar();
     this.lexicon = Preconditions.checkNotNull(lexicon);
+    this.skipWeights = Preconditions.checkNotNull(skipWeights);
   }
 
   @Override
@@ -58,6 +61,17 @@ public class SkipLexicon implements CcgLexicon {
   @Override
   public void initializeChart(CcgChart chart, AnnotatedSentence sentence,
       CcgParser parser, int lexiconNum) {
+    List<String> lcWords = sentence.getWordsLowercase();
+    double[] skipProbs = new double[sentence.size()];
+    for (int i = 0; i < lcWords.size(); i++) {
+      Assignment assignment = terminalVar.outcomeArrayToAssignment(lcWords.subList(i, i + 1));
+      if (terminalVar.isValidAssignment(assignment)) {
+        skipProbs[i] = skipWeights.getUnnormalizedProbability(assignment);
+      } else {
+        skipProbs[i] = 1.0;
+      }
+    }
+
     for (int i = 0; i < sentence.size(); i++) {
       for (int j = i; j < sentence.size(); j++) {
         ChartEntry[] previousEntries = chart.getChartEntriesForSpan(i, j);
@@ -77,16 +91,26 @@ public class SkipLexicon implements CcgLexicon {
           double prob = probAccumulator.get(n);
           parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, j, sentence, lexiconNum);
 
+          double rightProb = prob;
           for (int k = j + 1; k < sentence.size(); k++) {
             // Skip any number of words to the right.
-            parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, k, sentence, lexiconNum);
+            rightProb *= skipProbs[k];
+            parser.addLexiconEntryToChart(chart, trigger, entry, rightProb, i, k, sentence, lexiconNum);
           }
-          
+
           if (i != 0) {
+            double rightLeftProb = 1.0;
+            for (int k = 0; k < i; k++) {
+              rightLeftProb *= skipProbs[k];
+            }
+
             for (int k = j; k < sentence.size(); k++) {
               // Skip all words to the left AND any number of words to
               // the right.
-              parser.addLexiconEntryToChart(chart, trigger, entry, prob, 0, k, sentence, lexiconNum);
+              if (k != j) {
+                rightLeftProb *= skipProbs[k];
+              }
+              parser.addLexiconEntryToChart(chart, trigger, entry, rightLeftProb, 0, k, sentence, lexiconNum);
             }
           }
         }
@@ -121,6 +145,11 @@ public class SkipLexicon implements CcgLexicon {
 
     public int getTriggerSpanEnd() {
       return triggerSpanEnd;
+    }
+ 
+    @Override
+    public String toString() {
+      return trigger.toString();
     }
   }
 }

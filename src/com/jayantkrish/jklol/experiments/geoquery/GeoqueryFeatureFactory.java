@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricSkipLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricUnknownWordLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -163,7 +164,9 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
         Arrays.asList("indicators", "features"), Arrays.asList(terminalIndicatorFactor, additionalFeatures), false);
 
     List<ParametricCcgLexicon> lexicons = Lists.newArrayList();
-    lexicons.add(new ParametricTableLexicon(terminalWordVar, ccgCategoryVar, terminalParametricFactor));
+    lexicons.add(new ParametricSkipLexicon(new ParametricTableLexicon(
+        terminalWordVar, ccgCategoryVar, terminalParametricFactor),
+        new DenseIndicatorLogLinearFactor(terminalWordVar, false)));
     
     if (unknownLexiconEntries.size() > 0) {
       ParametricFactor unknownTerminalFamily = new IndicatorLogLinearFactor(
@@ -171,7 +174,8 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
       ParametricCcgLexicon unknownLexicon = new ParametricUnknownWordLexicon(terminalWordVar,
           terminalPosVar, ccgCategoryVar, unknownTerminalFamily);
      
-      lexicons.add(unknownLexicon);
+      lexicons.add(new ParametricSkipLexicon(unknownLexicon,
+          new DenseIndicatorLogLinearFactor(terminalWordVar, false)));
     }
     return lexicons;
   }

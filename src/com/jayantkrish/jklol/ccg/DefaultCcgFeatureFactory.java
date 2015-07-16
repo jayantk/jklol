@@ -205,7 +205,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
     if (allowWordSkipping) {
       List<ParametricCcgLexicon> newLexicons = Lists.newArrayList();
       for (ParametricCcgLexicon lexicon : lexicons) {
-        newLexicons.add(new ParametricSkipLexicon(lexicon));
+        newLexicons.add(new ParametricSkipLexicon(lexicon, new DenseIndicatorLogLinearFactor(terminalWordVar, false)));
       }
       lexicons = newLexicons;
     }

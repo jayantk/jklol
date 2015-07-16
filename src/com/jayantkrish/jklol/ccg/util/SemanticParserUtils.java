@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.ccg.util;
 
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
@@ -67,7 +66,7 @@ public class SemanticParserUtils {
         System.out.println("LICENSED: " + correctLfPossible);
         System.out.println("LEX: ");
         
-        List<Object> triggers = Lists.newArrayList();
+        List<Object> triggers = parse.getSpannedLexiconTriggers();
         List<CcgCategory> entries = parse.getSpannedLexiconCategories();
         for (int i = 0; i < entries.size(); i++) {
           System.out.println("   " + triggers.get(i) + " " + entries.get(i));

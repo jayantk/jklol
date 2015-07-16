@@ -31,11 +31,11 @@ with open(entity_types, 'r') as f:
 
         # Determine the entity's name based on its type.
         entity_names = [entity.replace("_", " ")]
-        if type == "c" or type == "r":
+        if type == "c":
             # cities have states appended, and rivers have
             # "river" appended
             parts = entity.split("_")
-            entity_names.extend([" ".join(parts[:-1])])
+            entity_names = [" ".join(parts[:-1])]
         
         entity = line.strip()
         for entity_name in entity_names:    

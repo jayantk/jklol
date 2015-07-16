@@ -280,7 +280,6 @@ public class TestSyntacticCcgParser extends AbstractCli {
     AnnotatedSentence sentence = parseResult.getSentence();
     List<SyntacticCategory> predictedSyntacticCategories = Lists.newArrayList();
     List<String> words = example.getSentence().getWords();
-    List<String> posTags = example.getSentence().getPosTags();
     for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {
       predictedSyntacticCategories.add(entry.getCategory().getSyntax().getSyntax().discardFeaturePassingMarkup());
     }
@@ -303,16 +302,9 @@ public class TestSyntacticCcgParser extends AbstractCli {
             TrainSyntacticCcgParser.SUPERTAG_ANNOTATION_NAME);
         List<SyntacticCategory> supertags = HeadedSyntacticCategory.convertToCcgbank(
             supertagAnnotation.getSupertags().get(i));
-        List<SyntacticCategory> possibleLexiconEntries = Lists.newArrayList();
-        for (LexiconEntry lexiconEntry : parser.getLexiconEntries(words.get(i), posTags.get(i))) {
-          possibleLexiconEntries.add(lexiconEntry.getCategory().getSyntax().getSyntax().discardFeaturePassingMarkup());
-        }
         if (!supertags.contains(actual)) {
           supertaggerErrors++;
           sb.append ("SUPERTAG");
-        } else if (!possibleLexiconEntries.contains(actual)) {
-          lexiconErrors++;
-          sb.append ("LEXICON");
         } else {
           parserErrors++;
           sb.append ("PARSER");

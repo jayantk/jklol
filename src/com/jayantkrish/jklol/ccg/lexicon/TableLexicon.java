@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -39,8 +40,9 @@ public class TableLexicon extends AbstractCcgLexicon {
 
   @Override
   public void getLexiconEntries(List<String> wordSequence, List<String> posTags,
-      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<LexiconEntry> accumulator, List<Double> probAccumulator) {
+      ChartEntry[] alreadyGenerated, int numAlreadyGenerated, int spanStart,
+      int spanEnd, AnnotatedSentence sentence, List<LexiconEntry> accumulator,
+      List<Double> probAccumulator) {
     TableLexicon.getLexiconEntriesFromFactor(wordSequence, terminalDistribution,
         terminalVar, ccgCategoryVar, accumulator, probAccumulator);
   }

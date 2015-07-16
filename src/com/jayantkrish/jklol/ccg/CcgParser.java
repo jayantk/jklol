@@ -1054,24 +1054,6 @@ public class CcgParser implements Serializable {
       allowWordSkipping, normalFormOnly);
   }
 
-  public List<LexiconEntry> getLexiconEntries(List<String> wordSequence, List<String> posTags) {
-    List<LexiconEntry> allLexiconEntries = Lists.newArrayList();
-    for (int k = 0; k < lexicons.size(); k++) {
-      CcgLexicon lexicon = lexicons.get(k);
-      List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-      List<Double> probs = Lists.newArrayList();
-      lexicon.getLexiconEntries(preprocessInput(wordSequence), posTags, allLexiconEntries,
-          0, wordSequence.size() - 1, new AnnotatedSentence(wordSequence, posTags),
-          lexiconEntries, probs);
-      allLexiconEntries.addAll(lexiconEntries);
-    }
-    return allLexiconEntries;
-  }
-
-  public List<LexiconEntry> getLexiconEntries(String word, String pos) {
-    return getLexiconEntries(Arrays.asList(word), Arrays.asList(pos));
-  }
-
   public boolean isPossibleDependencyStructure(DependencyStructure dependency, List<String> posTags) {
     return getDependencyStructureLogProbability(dependency, posTags) != Double.NEGATIVE_INFINITY;
   }
@@ -1312,46 +1294,48 @@ public class CcgParser implements Serializable {
   }
   
   private void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
-    List<String> terminals = sentence.getWords();
-    List<String> preprocessedTerminals = preprocessInput(terminals);
-    List<String> posTags = sentence.getPosTags();
+    List<String> preprocessedTerminals = preprocessInput(sentence.getWords());
+
+    for (int k = 0; k < lexicons.size(); k++) {
+      CcgLexicon lexicon = lexicons.get(k);
+      lexicon.initializeChart(chart, sentence, preprocessedTerminals, this, k);
+    }
 
     for (int i = 0; i < preprocessedTerminals.size(); i++) {
       for (int j = i; j < preprocessedTerminals.size(); j++) {
-        List<String> terminalValue = preprocessedTerminals.subList(i, j + 1);
-        List<String> posTagValue = posTags.subList(i, j + 1);
-
-        List<LexiconEntry> allLexiconEntries = Lists.newArrayList();
-        List<LexiconEntry> accumulator = Lists.newArrayList();
-        List<Double> probAccumulator = Lists.newArrayList();
-        for (int k = 0; k < lexicons.size(); k++) {
-          CcgLexicon lexicon = lexicons.get(k);
-          
-          accumulator.clear();
-          probAccumulator.clear();
-          lexicon.getLexiconEntries(terminalValue, posTagValue, allLexiconEntries,
-              i, j, sentence, accumulator, probAccumulator);
-          Preconditions.checkState(accumulator.size() == probAccumulator.size());
-          allLexiconEntries.addAll(accumulator);
-
-          for (int n = 0; n < accumulator.size(); n++) {
-            LexiconEntry lexiconEntry = accumulator.get(n);
-            CcgCategory category = lexiconEntry.getCategory();
-            double subclassProb = probAccumulator.get(n);
-
-            for (LexiconScorer lexiconScorer : lexiconScorers) {
-              subclassProb *= lexiconScorer.getCategoryWeight(i, j, sentence, terminalValue,
-                  posTagValue, category);
-            }
-
-            // Add all possible chart entries to the ccg chart.
-            ChartEntry entry = ccgCategoryToChartEntry(terminalValue, category, i, j, k);
-            chart.addChartEntryForSpan(entry, subclassProb, i, j, syntaxVarType);
-          }
-        }
-        chart.doneAddingChartEntriesForSpan(i, j);
+        
       }
     }
+  }
+  
+  /**
+   * Adds a lexicon entry to {@code chart}. This method should be used by 
+   * instances of {@code CcgLexicon} to initialize the lexicon entries of
+   * the parser.
+   *  
+   * @param chart
+   * @param entry
+   * @param lexiconProb
+   * @param i
+   * @param j
+   * @param lexiconNum
+   * @param sentence
+   * @param terminalValue
+   * @param posTagValue
+   */
+  public void addLexiconEntryToChart(CcgChart chart, LexiconEntry entry, double lexiconProb,
+      int i, int j, int lexiconNum, AnnotatedSentence sentence, List<String> terminalValue,
+      List<String> posTagValue) {
+
+    CcgCategory category = entry.getCategory();
+    for (LexiconScorer lexiconScorer : lexiconScorers) {
+      lexiconProb *= lexiconScorer.getCategoryWeight(i, j, sentence, terminalValue,
+          posTagValue, category);
+    }
+
+    // Add all possible chart entries to the ccg chart.
+    ChartEntry chartEntry = ccgCategoryToChartEntry(terminalValue, category, i, j, lexiconNum);
+    chart.addChartEntryForSpan(chartEntry, lexiconProb, i, j, syntaxVarType);
   }
 
   private List<String> preprocessInput(List<String> terminals) {
@@ -1362,7 +1346,7 @@ public class CcgParser implements Serializable {
     return preprocessedTerminals;
   }
 
-  public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
+  private ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
       int spanStart, int spanEnd, int lexiconIndex) {
     // Assign each predicate in this category a unique word index.
     List<Long> assignments = Lists.newArrayList();

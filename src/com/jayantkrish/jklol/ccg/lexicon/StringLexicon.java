@@ -8,6 +8,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -61,7 +62,7 @@ public class StringLexicon extends AbstractCcgLexicon {
 
   @Override
   public void getLexiconEntries(List<String> wordSequence, List<String> posTags,
-      List<LexiconEntry> alreadyGenerated, int spanStart, int spanEnd,
+      ChartEntry[] alreadyGenerated, int numAlreadyGenerated, int spanStart, int spanEnd,
       AnnotatedSentence sentence, List<LexiconEntry> accumulator, List<Double> probs) {
     List<String> sentenceWords = sentence.getWords();
     for (int i = 0; i < categories.size(); i++) {

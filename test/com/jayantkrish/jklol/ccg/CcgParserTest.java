@@ -29,6 +29,7 @@ import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
+import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon.CategorySpanConfig;
 import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
@@ -540,12 +541,20 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(6, parses.size());
     assertTrue(Ordering.natural().reverse().isOrdered(Doubles.asList(probs)));
+
+    words = Arrays.asList("green", "green", "green", "i");
+    parses = beamSearch(parserWordSkip, words, 30);
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+    }
+
+    assertEquals(11, parses.size());
   }
 
   public void testParseWordSkipExact() {
     List<String> words = Arrays.asList("green", "green", "i");
     CcgParse bestParse = parse(parserWordSkip, words);
-    
+
     assertEquals(2, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
     assertEquals(1.5, bestParse.getSubtreeProbability());
@@ -1246,14 +1255,19 @@ public class CcgParserTest extends TestCase {
     }
     DiscreteFactor headedBinaryRuleFactor = headedBinaryFactorBuilder.buildSparseInLogSpace();
 
-    List<CcgLexicon> lexicons = Lists.newArrayList();
     CcgLexicon lexiconFactor = new TableLexicon(terminalVar, ccgCategoryVar,
         terminalBuilder.build());
-    lexicons.add(lexiconFactor);
- 
     CcgLexicon unknownWordLexicon = new UnknownWordLexicon(terminalVar, posTagVar,
         ccgCategoryVar, unknownTerminalBuilder.build());
-    lexicons.add(unknownWordLexicon);
+
+    List<CcgLexicon> lexicons = Lists.newArrayList();
+    if (allowWordSkipping) {
+      lexicons.add(new SkipLexicon(lexiconFactor));
+      lexicons.add(new SkipLexicon(unknownWordLexicon));
+    } else {
+      lexicons.add(lexiconFactor);
+      lexicons.add(unknownWordLexicon);
+    }
 
     if (useStringLexicon) {
       CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda $0 $0),0 special:string");
@@ -1276,7 +1290,7 @@ public class CcgParserTest extends TestCase {
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, syntaxDistribution, unaryRuleInputVar,
         unaryRuleVar, unaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
         headedBinaryRuleFactor, searchMoveVar, compiledSyntaxDistribution, leftSyntaxVar,
-        headedRootPredicateVar, headedRootPosVar, rootDistribution, headedRootDistribution, allowWordSkipping, normalFormOnly);
+        headedRootPredicateVar, headedRootPosVar, rootDistribution, headedRootDistribution, false, normalFormOnly);
   }
 
   private static class TestChartFilter implements ChartCost {

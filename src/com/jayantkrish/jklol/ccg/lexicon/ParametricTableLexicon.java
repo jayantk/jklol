@@ -1,13 +1,12 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -63,9 +62,9 @@ public class ParametricTableLexicon implements ParametricCcgLexicon {
 
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      SufficientStatistics currentParameters, List<String> wordSequence,
-      List<String> posSequence, CcgCategory category, double count) {
-    Assignment assignment = Assignment.unionAll(terminalVar.outcomeArrayToAssignment(wordSequence),
+      SufficientStatistics currentParameters, int spanStart, int spanEnd,
+      AnnotatedSentence sentence, Object trigger, CcgCategory category, double count) {
+    Assignment assignment = Assignment.unionAll(terminalVar.outcomeArrayToAssignment(trigger),
         ccgCategoryVar.outcomeArrayToAssignment(category));
     terminalFamily.incrementSufficientStatisticsFromAssignment(gradient,
         currentParameters, assignment, count);

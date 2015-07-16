@@ -1,47 +1,49 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.Collections;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
-import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
+import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon.SkipTrigger;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
-public class ConstantParametricLexicon implements ParametricCcgLexicon {
+public class ParametricSkipLexicon implements ParametricCcgLexicon {
   private static final long serialVersionUID = 1L;
-  
-  private final CcgLexicon lexicon;
-  
-  public ConstantParametricLexicon(CcgLexicon lexicon) {
+
+  private final ParametricCcgLexicon lexicon;
+
+  public ParametricSkipLexicon(ParametricCcgLexicon lexicon) {
     this.lexicon = Preconditions.checkNotNull(lexicon);
   }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    return new ListSufficientStatistics(Collections.<String>emptyList(),
-        Collections.<SufficientStatistics>emptyList());
+    return lexicon.getNewSufficientStatistics();
   }
 
   @Override
   public CcgLexicon getModelFromParameters(SufficientStatistics parameters) {
-    return lexicon;
+    return new SkipLexicon(lexicon.getModelFromParameters(parameters));
   }
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters) {
-    return getParameterDescription(parameters, -1);
+    return lexicon.getParameterDescription(parameters);
   }
 
   @Override
-  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    return "";
+  public String getParameterDescription(SufficientStatistics parameters,
+      int numFeatures) {
+    return lexicon.getParameterDescription(parameters, numFeatures);
   }
-
+  
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
       SufficientStatistics currentParameters, int spanStart, int spanEnd,
       AnnotatedSentence sentence, Object trigger, CcgCategory category, double count) {
-    // Don't need to do anything.
+    SkipTrigger skipTrigger = (SkipTrigger) trigger;
+    
+    lexicon.incrementLexiconSufficientStatistics(gradient, currentParameters,
+        skipTrigger.getTriggerSpanStart(), skipTrigger.getTriggerSpanEnd(),
+        sentence, skipTrigger.getTrigger(), category, count);
   }
 }

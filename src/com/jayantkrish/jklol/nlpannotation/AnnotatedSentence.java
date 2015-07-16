@@ -7,6 +7,7 @@ import java.util.Map;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 
@@ -20,12 +21,14 @@ import com.jayantkrish.jklol.ccg.supertag.WordAndPos;
 public class AnnotatedSentence {
 
   private final List<String> words;
+  private final List<String> lowercaseWords;
   private final List<String> posTags;
   private final Map<String, Object> annotations;
 
   public AnnotatedSentence(List<String> words, List<String> posTags,
       Map<String, Object> annotations) {
     this.words = ImmutableList.copyOf(words);
+    this.lowercaseWords = lowercaseInput(words);
     this.posTags = ImmutableList.copyOf(posTags);
     Preconditions.checkArgument(words.size() == posTags.size());
     this.annotations = Preconditions.checkNotNull(annotations);
@@ -33,6 +36,7 @@ public class AnnotatedSentence {
 
   public AnnotatedSentence(List<String> words, List<String> posTags) {
     this.words = ImmutableList.copyOf(words);
+    this.lowercaseWords = lowercaseInput(words);
     this.posTags = ImmutableList.copyOf(posTags);
     Preconditions.checkArgument(words.size() == posTags.size());
     this.annotations = Collections.emptyMap();
@@ -46,7 +50,11 @@ public class AnnotatedSentence {
   public List<String> getWords() {
     return words;
   }
-  
+
+  public List<String> getWordsLowercase() {
+    return lowercaseWords;
+  }
+
   /**
    * Gets the part-of-speech tags of the words. Returns
    * a list of the same length as {@link getWords()}.
@@ -73,7 +81,7 @@ public class AnnotatedSentence {
   public Object getAnnotation(String annotationName) {
     return annotations.get(annotationName);
   }
-  
+
   /**
    * Gets a copy of this annotated sentence containing the
    * provided annotation in addition to the annotations on
@@ -95,5 +103,13 @@ public class AnnotatedSentence {
   @Override
   public String toString() {
     return Joiner.on(" ").join(getWordsAndPosTags());
+  }
+
+  private static List<String> lowercaseInput(List<String> terminals) {
+    List<String> preprocessedTerminals = Lists.newArrayList();
+    for (String terminal : terminals) {
+      preprocessedTerminals.add(terminal.toLowerCase());
+    }
+    return preprocessedTerminals;
   }
 }

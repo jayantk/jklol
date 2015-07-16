@@ -3,8 +3,8 @@ package com.jayantkrish.jklol.ccg.lexicon;
 import java.io.Serializable;
 import java.util.List;
 
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -28,22 +28,21 @@ public interface CcgLexicon extends Serializable {
    * can be used in this parser. {@code alreadyGenerated} is a collection
    * of lexicon entries that have already been created for
    * {@code wordSequence}. 
-   * 
-   * @param wordSequence
-   * @param posSequence
-   * @param alreadyGenerated
-   * @param numAlreadyGenerated
+   *
    * @param spanStart
    * @param spanEnd
    * @param sentence
+   * @param alreadyGenerated
+   * @param numAlreadyGenerated
+   * @param triggerAccumulator list of triggers for lexicon entries
    * @param accumulator list that generated lexicon entries are added to  
    * @param probAccumulator probabilities for the generated entries
    * @return
    */
-  void getLexiconEntries(List<String> wordSequence, List<String> posSequence,
+  void getLexiconEntries(int spanStart, int spanEnd, AnnotatedSentence sentence,
       ChartEntry[] alreadyGenerated, int numAlreadyGenerated,
-      int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<LexiconEntry> accumulator, List<Double> probAccumulator);
+      List<Object> triggerAccumulator, List<CcgCategory> accumulator,
+      List<Double> probAccumulator);
 
   /**
    * Initializes {@code CcgChart} with lexicon entries from this
@@ -51,10 +50,9 @@ public interface CcgLexicon extends Serializable {
    * 
    * @param chart
    * @param sentence
-   * @param preprocessedTerminals
    * @param parser
    * @param lexiconNum
    */
   void initializeChart(CcgChart chart, AnnotatedSentence sentence,
-      List<String> preprocessedTerminals, CcgParser parser, int lexiconNum);
+      CcgParser parser, int lexiconNum);
 }

@@ -50,8 +50,8 @@ public class CcgPatternTest extends TestCase {
 
   public void setUp() {
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(unknownLexicon),
-        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(true),
-        Sets.newHashSet(ParametricCcgParser.DEFAULT_POS_TAG), true, null, false, false);
+        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(true, false),
+        Sets.newHashSet(ParametricCcgParser.DEFAULT_POS_TAG), true, null, false);
     parameters = family.getNewSufficientStatistics();
     parser = family.getModelFromParameters(parameters);
   }

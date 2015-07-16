@@ -271,7 +271,7 @@ public abstract class AbstractCcgChart implements CcgChart {
     if (entry.isTerminal()) {
       List<String> terminals = getWords();
       List<String> posTags = getPosTags();
-      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTriggerWords(),
+      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTrigger(),
           entry.getLexiconIndex(), posTags.subList(spanStart, spanEnd + 1),
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),

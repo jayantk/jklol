@@ -7,7 +7,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.ccg.CcgCategory;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -61,19 +60,22 @@ public class StringLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  public void getLexiconEntries(List<String> wordSequence, List<String> posTags,
-      ChartEntry[] alreadyGenerated, int numAlreadyGenerated, int spanStart, int spanEnd,
-      AnnotatedSentence sentence, List<LexiconEntry> accumulator, List<Double> probs) {
+  public void getLexiconEntries(int spanStart, int spanEnd, AnnotatedSentence sentence,
+      ChartEntry[] alreadyGenerated, int numAlreadyGenerated, List<Object> triggerAccumulator,
+      List<CcgCategory> accumulator, List<Double> probs) {
     List<String> sentenceWords = sentence.getWords();
     for (int i = 0; i < categories.size(); i++) {
       CcgCategory category = categories.get(i);
       CategorySpanConfig config = spanConfig.get(i);
       if (config == CategorySpanConfig.ALL_SPANS || (config == CategorySpanConfig.WHOLE_SENTENCE
           && spanStart == 0 && spanEnd == sentenceWords.size() - 1)) {
-        Expression2 wordSequenceExpression = detokenizer.apply(sentenceWords.subList(spanStart, spanEnd + 1)); 
+        List<String> triggerWords = sentenceWords.subList(spanStart, spanEnd + 1);
+        Expression2 wordSequenceExpression = detokenizer.apply(triggerWords); 
         Expression2 newLf = Expression2.nested(category.getLogicalForm(), wordSequenceExpression);
         CcgCategory newCategory = category.replaceLogicalForm(newLf);
-        accumulator.add(new LexiconEntry(wordSequence, newCategory));
+
+        triggerAccumulator.add(triggerWords);
+        accumulator.add(newCategory);
         probs.add(1.0);
       }
     }

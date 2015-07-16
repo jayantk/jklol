@@ -30,17 +30,18 @@ public class FeaturizedLexiconScorerTest extends TestCase {
   private static final String[] lexicon = {
       "block,N{0},(lambda x (pred:block x)),0 pred:block",
       "block,NP{0},(lambda x (pred:object x)),0 pred:object",
-      "**start**,START{0},**skip**"
+      "foo,ABC{0},(lambda x (pred:object x)),0 pred:object",
+      "bar,ABCD{0},(lambda x (pred:object x)),0 pred:object",
   };
   
   private static final String[] unknownLexicon = {};
-  private static final String[] ruleArray = {"ABC{0} ABCD{0}"};
-  
+  private static final String[] ruleArray = {"ABC{0} ABCD{0}", "ABC{0} ABC{0} ABCD{0}"};
+
   private static final String[] trainingData = {
-      "**start** red block#########(lambda x (pred:block x))",
-      "**start** block red#########(lambda x (pred:object x))",
-      "**start** block block red#########(lambda x (pred:object x))",
-      "**start** block block red#########(lambda x (pred:object x))",
+      "red block#########(lambda x (pred:block x))",
+      "block red#########(lambda x (pred:object x))",
+      "block block red#########(lambda x (pred:object x))",
+      "block block red#########(lambda x (pred:object x))",
   };
   
   private ParametricCcgParser family;
@@ -85,8 +86,8 @@ public class FeaturizedLexiconScorerTest extends TestCase {
     
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
         Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory("features", featureVectorGen.getFeatureDictionary(), true, null),
-        posTags, true, null, true, false);
+        new DefaultCcgFeatureFactory("features", featureVectorGen.getFeatureDictionary(), true, true, null),
+        posTags, true, null, false);
   }
 
   public void testTraining() {

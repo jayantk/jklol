@@ -90,10 +90,12 @@ public class ParametricSyntaxLexiconScorer implements ParametricLexiconScorer {
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
       SufficientStatistics currentParameters, int spanStart, int spanEnd,
-      AnnotatedSentence sentence, List<String> sentencePreprocessedWords,
-      List<String> wordSequence, List<String> posSequence, CcgCategory category, double count) {
-    incrementPosSufficientStatistics(gradient, currentParameters,
-        posSequence.get(posSequence.size() - 1), category.getSyntax(), count);
+      AnnotatedSentence sentence, CcgCategory category, double count) {
+    String posTag = sentence.getPosTags().get(spanEnd);
+    List<String> wordSequence = sentence.getWordsLowercase().subList(spanStart, spanEnd + 1);
+
+    incrementPosSufficientStatistics(gradient, currentParameters, posTag,
+        category.getSyntax(), count);
     incrementLexiconSyntaxSufficientStatistics(gradient, currentParameters,
         wordSequence, category.getSyntax(), count);
   }

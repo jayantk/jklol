@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
@@ -35,13 +34,12 @@ public class UnknownWordLexicon extends AbstractCcgLexicon {
   }
 
   @Override
-  public void getLexiconEntries(List<String> wordSequence, List<String> posSequence,
-      ChartEntry[] alreadyGenerated, int numAlreadyGenerated, int spanStart,
-      int spanEnd, AnnotatedSentence sentence, List<LexiconEntry> accumulator,
-      List<Double> probAccumulator) {
+  public void getLexiconEntries(int spanStart, int spanEnd, AnnotatedSentence sentence,
+      ChartEntry[] alreadyGenerated, int numAlreadyGenerated,  List<Object> triggerAccumulator,
+      List<CcgCategory> accumulator, List<Double> probAccumulator) {
 
-    if (numAlreadyGenerated == 0 && posSequence.size() == 1) {
-      String pos = posSequence.get(0);
+    if (numAlreadyGenerated == 0 && spanEnd == spanStart) {
+      String pos = sentence.getPosTags().get(spanStart);
       Assignment assignment = posVar.outcomeArrayToAssignment(pos);
 
       Iterator<Outcome> iterator = posCategoryDistribution.outcomePrefixIterator(assignment);
@@ -50,7 +48,8 @@ public class UnknownWordLexicon extends AbstractCcgLexicon {
         CcgCategory ccgCategory = (CcgCategory) bestOutcome.getAssignment().getValue(
             ccgCategoryVar.getOnlyVariableNum());
 
-        accumulator.add(new LexiconEntry(wordSequence, ccgCategory));
+        triggerAccumulator.add(pos);
+        accumulator.add(ccgCategory);
         probAccumulator.add(bestOutcome.getProbability());
       }
     }

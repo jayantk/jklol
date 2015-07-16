@@ -182,8 +182,8 @@ public class CcgParserTest extends TestCase {
     CcgParse parse = parses.get(0);
     assertEquals(6.0, parse.getSubtreeProbability());
     assertEquals("N", parse.getSyntacticCategory().getValue());
-    assertEquals(Arrays.asList("not_in_lexicon"), parse.getLexiconTriggerWords());
-    assertEquals(Arrays.asList("not_in_lexicon"), parse.getSpannedLexiconEntries().get(0).getWords());
+    assertEquals("NN", parse.getLexiconTrigger());
+    assertEquals("NN", parse.getSpannedLexiconTriggers().get(0));
 
     // No backoff should happen if the word is in the lexicon.
     parses = beamSearch(parser, Arrays.asList("a"), Arrays.asList("NN"), 10);
@@ -191,8 +191,8 @@ public class CcgParserTest extends TestCase {
     parse = parses.get(0);
     assertEquals(1.0, parse.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
-    assertEquals(Arrays.asList("a"), parse.getLexiconTriggerWords());
-    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getWords());
+    assertEquals(Arrays.asList("a"), parse.getLexiconTrigger());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconTriggers().get(0));
 
     // Capitalization doesn't affect whether the word is in the lexicon or not.
     parses = beamSearch(parser, Arrays.asList("A"), Arrays.asList("NN"), 10);
@@ -200,8 +200,8 @@ public class CcgParserTest extends TestCase {
     parse = parses.get(0);
     assertEquals(1.0, parse.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
-    assertEquals(Arrays.asList("a"), parse.getLexiconTriggerWords());
-    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getWords());
+    assertEquals(Arrays.asList("a"), parse.getLexiconTrigger());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconTriggers().get(0));
   }
 
   public void testSyntacticCategoryBackoff() {

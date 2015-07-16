@@ -2,11 +2,12 @@ package com.jayantkrish.jklol.ccg.util;
 
 import java.util.List;
 
+import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplificationException;
@@ -55,9 +56,7 @@ public class SemanticParserUtils {
         
         CcgParse conditionalParse = inferenceAlg.getBestConditionalParse(parser,
             example.getSentence(), null, log, null, null, null, correctLf);
-        Expression2 conditionalLf = null;
         if (conditionalParse != null) {
-          conditionalLf = conditionalParse.getLogicalForm();
           correctLfPossible = 1;
         }
 
@@ -67,8 +66,11 @@ public class SemanticParserUtils {
         System.out.println("CORRECT: " + correct);
         System.out.println("LICENSED: " + correctLfPossible);
         System.out.println("LEX: ");
-        for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {
-          System.out.println("   " + entry);
+        
+        List<Object> triggers = Lists.newArrayList();
+        List<CcgCategory> entries = parse.getSpannedLexiconCategories();
+        for (int i = 0; i < entries.size(); i++) {
+          System.out.println("   " + triggers.get(i) + " " + entries.get(i));
         }
 
         numCorrect += correct;

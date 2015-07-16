@@ -216,7 +216,7 @@ public class TrainSemanticParser extends AbstractCli {
   }
 
   private ParametricCcgParser createCcgParser(OptionSet parsedOptions) {
-    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(false);
+    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(false, parsedOptions.has(skipWords));
     // Read in the lexicon to instantiate the model.
     List<String> lexiconEntries = IoUtils.readLines(parsedOptions.valueOf(ccgLexicon));
     List<String> unknownLexiconEntries = parsedOptions.has(ccgUnknownLexicon) ?
@@ -226,7 +226,7 @@ public class TrainSemanticParser extends AbstractCli {
 
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, unknownLexiconEntries, ruleEntries,
         featureFactory, null, !parsedOptions.has(ccgApplicationOnly), null,
-        parsedOptions.has(skipWords), parsedOptions.has(ccgNormalFormOnly));
+        parsedOptions.has(ccgNormalFormOnly));
   }
 
   public static void main(String[] args) {

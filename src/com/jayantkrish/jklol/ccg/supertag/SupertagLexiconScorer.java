@@ -27,7 +27,7 @@ public class SupertagLexiconScorer implements LexiconScorer {
 
   @Override
   public double getCategoryWeight(int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<String> terminalValue, List<String> posTags, CcgCategory category) {
+      CcgCategory category) {
 
     SupertagAnnotation annotation = (SupertagAnnotation) sentence
       .getAnnotation(supertagAnnotationName);

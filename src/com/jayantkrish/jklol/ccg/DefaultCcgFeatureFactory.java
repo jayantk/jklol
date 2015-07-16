@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.ccg.lexicon.ConstantParametricLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricSkipLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricSyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricUnknownWordLexicon;
@@ -39,6 +40,7 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
   private final String lexiconFeatureAnnotationName;
   private final DiscreteVariable lexiconFeatureVariable;
   private final boolean usePosFeatures;
+  private final boolean allowWordSkipping;
   private final String supertagAnnotationName;
   
   /**
@@ -48,14 +50,16 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
    * sets.
    *      
    * @param usePosFeatures
+   * @param allowWordSkipping
    */
-  public DefaultCcgFeatureFactory(boolean usePosFeatures) {
+  public DefaultCcgFeatureFactory(boolean usePosFeatures, boolean allowWordSkipping) {
     this.lexiconFeatureAnnotationName = null;
     this.lexiconFeatureVariable = null;
     // Both must be null or non-null
     Preconditions.checkArgument(!(lexiconFeatureVariable == null ^ lexiconFeatureAnnotationName == null));
 
     this.usePosFeatures = usePosFeatures;
+    this.allowWordSkipping = allowWordSkipping;
     this.supertagAnnotationName = null;
   }
 
@@ -67,17 +71,19 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
    * @param lexiconFeatureAnnotationName
    * @param lexiconFeatureVariable
    * @param usePosFeatures
+   * @param allowWordSkipping
    * @param supertagAnnotationName
    */
   public DefaultCcgFeatureFactory(String lexiconFeatureAnnotationName,
       DiscreteVariable lexiconFeatureVariable, boolean usePosFeatures,
-      String supertagAnnotationName) {
+      boolean allowWordSkipping, String supertagAnnotationName) {
     this.lexiconFeatureAnnotationName = lexiconFeatureAnnotationName;
     this.lexiconFeatureVariable = lexiconFeatureVariable;
     // Both must be null or non-null
     Preconditions.checkArgument(!(lexiconFeatureVariable == null ^ lexiconFeatureAnnotationName == null));
     
     this.usePosFeatures = usePosFeatures;
+    this.allowWordSkipping = allowWordSkipping;
     this.supertagAnnotationName = supertagAnnotationName;
   }
 
@@ -194,6 +200,14 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
           terminalPosVar, ccgCategoryVar, unknownTerminalFamily);
      
       lexicons.add(unknownLexicon);
+    }
+
+    if (allowWordSkipping) {
+      List<ParametricCcgLexicon> newLexicons = Lists.newArrayList();
+      for (ParametricCcgLexicon lexicon : lexicons) {
+        newLexicons.add(new ParametricSkipLexicon(lexicon));
+      }
+      lexicons = newLexicons;
     }
     return lexicons;
   }

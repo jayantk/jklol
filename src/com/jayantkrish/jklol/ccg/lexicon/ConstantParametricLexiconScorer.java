@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
@@ -9,7 +7,8 @@ import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 /**
- * Lexicon scorer with no parameters.
+ * Wrapper for including lexicon scorers with no parameters
+ * in a CCG parser.
  *  
  * @author jayantk
  *
@@ -46,9 +45,8 @@ public class ConstantParametricLexiconScorer implements ParametricLexiconScorer{
 
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      SufficientStatistics currentParameters, int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<String> sentencePreprocessedWords, List<String> lexiconEntryWords,
-      List<String> lexiconEntryPos, CcgCategory lexiconEntryCategory, double count) {
+      SufficientStatistics currentParameters, int spanStart, int spanEnd,
+      AnnotatedSentence sentence, CcgCategory lexiconEntryCategory, double count) {
     // Don't need to do anything.
   }
 }

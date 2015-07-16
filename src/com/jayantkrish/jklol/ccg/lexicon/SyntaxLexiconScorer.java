@@ -72,8 +72,11 @@ public class SyntaxLexiconScorer implements LexiconScorer {
 
   @Override
   public double getCategoryWeight(int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<String> wordSequence, List<String> posTags, CcgCategory category) {
-    double posProb = getTerminalPosProbability(posTags.get(posTags.size() - 1), category.getSyntax());
+      CcgCategory category) {
+    String posTag = sentence.getPosTags().get(spanEnd);
+    List<String> wordSequence = sentence.getWordsLowercase().subList(spanStart, spanEnd + 1);
+
+    double posProb = getTerminalPosProbability(posTag, category.getSyntax());
     double syntaxProb = getTerminalSyntaxProbability(wordSequence, category.getSyntax());
     return posProb * syntaxProb;
   }

@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.Arrays;
-import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
@@ -65,10 +64,10 @@ public class ChartEntry {
   // is saved to track which lexicon entries are used in a parse,
   // for parameter estimation purposes.
   private final CcgCategory lexiconEntry;
-  // If this is a terminal, this contains the words used to trigger
-  // the category. This may be different from the words in the
-  // sentence, if the original words were not part of the lexicon.
-  private final List<String> lexiconTriggerWords;
+  // If this is a terminal, this contains the information used by
+  // the lexicon that caused this lexicon entry to be created.
+  // For example, it could be the words in the sentence. 
+  private final Object lexiconTrigger;
   // Index of the CCG lexicon in the parser that generated this entry.
   private final int lexiconIndex;
 
@@ -131,7 +130,7 @@ public class ChartEntry {
         isProducedByConjunction);
 
     this.lexiconEntry = null;
-    this.lexiconTriggerWords = null;
+    this.lexiconTrigger = null;
     this.lexiconIndex = -1;
     this.deps = Preconditions.checkNotNull(deps);
 
@@ -166,7 +165,7 @@ public class ChartEntry {
    * @param spanEnd
    */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, CcgCategory ccgCategory,
-      List<String> terminalWords, int lexiconIndex, UnaryCombinator rootUnaryRule, int[] assignmentVarIndex,
+      Object lexiconTrigger, int lexiconIndex, UnaryCombinator rootUnaryRule, int[] assignmentVarIndex,
       long[] assignments, int[] unfilledDependencyVarIndex, long[] unfilledDependencies,
       long[] deps, int spanStart, int spanEnd) {
     this.syntax = syntax;
@@ -184,7 +183,7 @@ public class ChartEntry {
     this.syntaxHeadHashCode = computeSyntaxHeadHashCode(syntax, assignments, unfilledDependencies, false);
 
     this.lexiconEntry = ccgCategory;
-    this.lexiconTriggerWords = terminalWords;
+    this.lexiconTrigger = lexiconTrigger;
     this.lexiconIndex = lexiconIndex;
     this.deps = Preconditions.checkNotNull(deps);
 
@@ -205,12 +204,6 @@ public class ChartEntry {
     return syntax;
   }
 
-  /*
-  public int[] getHeadedSyntaxUniqueVars() {
-    return syntaxUniqueVars;
-  }
-  */
-  
   public int getHeadVariable() {
     return syntaxHeadVar;
   }
@@ -342,8 +335,8 @@ public class ChartEntry {
     return lexiconEntry;
   }
 
-  public List<String> getLexiconTriggerWords() {
-    return lexiconTriggerWords;
+  public Object getLexiconTrigger() {
+    return lexiconTrigger;
   }
   
   public int getLexiconIndex() {
@@ -396,7 +389,7 @@ public class ChartEntry {
       long[] newFilledDeps) {
     Preconditions.checkState(rootUnaryRule == null);
     if (isTerminal()) {
-      return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, lexiconEntry, lexiconTriggerWords,
+      return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, lexiconEntry, lexiconTrigger,
           lexiconIndex, unaryRuleCombinator, newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex,
           newUnfilledDeps, newFilledDeps, leftSpanStart, leftSpanEnd);
     } else {

@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
 import java.io.Serializable;
-import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -15,5 +14,5 @@ import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 public interface LexiconScorer extends Serializable {
 
   double getCategoryWeight(int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<String> terminalValue, List<String> posTags, CcgCategory category);
+      CcgCategory category);
 }

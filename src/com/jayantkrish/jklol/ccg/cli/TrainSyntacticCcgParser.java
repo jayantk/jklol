@@ -144,7 +144,8 @@ public class TrainSyntacticCcgParser extends AbstractCli {
 
     // Create the CCG parser from the provided options.
     System.out.println("Creating ParametricCcgParser.");
-    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, null, true, SUPERTAG_ANNOTATION_NAME);
+    CcgFeatureFactory featureFactory = new DefaultCcgFeatureFactory(null, null, true, false,
+        SUPERTAG_ANNOTATION_NAME);
     List<String> lexiconEntries = IoUtils.readLines(options.valueOf(ccgLexicon));
     List<String> unknownLexiconEntries = options.has(ccgUnknownLexicon) ?
         IoUtils.readLines(options.valueOf(ccgUnknownLexicon)) : Collections.<String>emptyList();
@@ -152,7 +153,7 @@ public class TrainSyntacticCcgParser extends AbstractCli {
         : Collections.<String> emptyList();
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntries,
         unknownLexiconEntries, ruleEntries, featureFactory, posTags,
-        !options.has(ccgApplicationOnly), observedRules, false, options.has(ccgNormalFormOnly));
+        !options.has(ccgApplicationOnly), observedRules, options.has(ccgNormalFormOnly));
     
     System.out.println("Done creating ParametricCcgParser.");
 

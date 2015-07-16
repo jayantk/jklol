@@ -1,13 +1,12 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class ParametricUnknownWordLexicon implements ParametricCcgLexicon {
@@ -51,12 +50,9 @@ public class ParametricUnknownWordLexicon implements ParametricCcgLexicon {
 
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
-      SufficientStatistics currentParameters, List<String> wordSequence, List<String> posSequence,
-      CcgCategory category, double count) {
-    Preconditions.checkArgument(posSequence.size() == 1);
-    String pos = posSequence.get(0);
-
-    Assignment a = posVar.outcomeArrayToAssignment(pos).union(
+      SufficientStatistics currentParameters, int spanStart, int spanEnd,
+      AnnotatedSentence sentence, Object trigger, CcgCategory category, double count) {
+    Assignment a = posVar.outcomeArrayToAssignment(trigger).union(
         ccgCategoryVar.outcomeArrayToAssignment(category));
     posCategoryFamily.incrementSufficientStatisticsFromAssignment(gradient, currentParameters, a,
         count);

@@ -27,10 +27,8 @@ public class CcgParse {
   // The lexicon entry used to create this parse.
   // Non-null only when this is a terminal.
   private final CcgCategory lexiconEntry;
-  // The words in the terminal distribution that triggered lexiconEntry.
-  // May be different from spannedWords if spannedWords is not in
-  // the parser's lexicon.
-  private final List<String> lexiconTriggerWords;
+  // The reason why this lexicon entry was created.
+  private final Object lexiconTrigger;
   // Which lexicon in the CCG parser that this lexicon entry came from.
   private final int lexiconIndex;
 
@@ -75,7 +73,7 @@ public class CcgParse {
    * 
    * @param syntax
    * @param lexiconEntry
-   * @param lexiconTriggerWords
+   * @param lexiconTrigger
    * @param lexiconIndex
    * @param spannedWords
    * @param posTags
@@ -90,13 +88,13 @@ public class CcgParse {
    * @param spanEnd
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> lexiconTriggerWords, int lexiconIndex, List<String> spannedWords,
-      List<String> posTags, Set<IndexedPredicate> heads,
-      List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
-      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
+      Object lexiconTrigger, int lexiconIndex, List<String> spannedWords,
+      List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> dependencies,
+      double probability, CcgParse left, CcgParse right, Combinator combinator,
+      UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
-    this.lexiconTriggerWords = lexiconTriggerWords;
+    this.lexiconTrigger = lexiconTrigger;
     this.lexiconIndex = lexiconIndex;
     this.spannedWords = spannedWords;
     this.posTags = posTags;
@@ -131,7 +129,7 @@ public class CcgParse {
    *
    * @param syntax
    * @param lexiconEntry
-   * @param lexiconTriggerWords
+   * @param lexiconTrigger
    * @param lexiconIndex
    * @param posTags
    * @param heads
@@ -144,11 +142,11 @@ public class CcgParse {
    * @return
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> lexiconTriggerWords, int lexiconIndex, List<String> posTags,
+      Object lexiconTrigger, int lexiconIndex, List<String> posTags,
       Set<IndexedPredicate> heads, List<DependencyStructure> deps,
       List<String> spannedWords, double probability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd) {
-    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, lexiconIndex, spannedWords,
+    return new CcgParse(syntax, lexiconEntry, lexiconTrigger, lexiconIndex, spannedWords,
         posTags, heads, deps, probability, null, null, null, unaryRule, spanStart, spanEnd);
   }
 
@@ -394,22 +392,22 @@ public class CcgParse {
   }
 
   /**
-   * Get the words mapped to this node of the parse tree in 
-   * the CCG parse, as they appear in the lexicon entry. The
-   * returned words are not directly taken from the sentence,
-   * and include normalization.
-   * 
+   * Gets the "trigger" in the lexicon that caused this 
+   * lexicon entry to be created and added to the parse. The
+   * trigger is usually the words in the sentence (or some 
+   * processed version of that), but could be something else.
+   * <p> 
    * The result is null unless this node is a terminal. See
-   * {@link getSpannedLexiconTriggerWords} to get all of the
-   * lexicon trigger words spanned by a node, i.e., the words
-   * from every terminal child of the node. 
+   * {@link getSpannedLexiconTriggers} to get all of the
+   * lexicon triggers spanned by a node, i.e., the triggers
+   * for every terminal child of the node. 
    * 
    * @return
    */
-  public List<String> getLexiconTriggerWords() {
-    return lexiconTriggerWords;
+  public Object getLexiconTrigger() {
+    return lexiconTrigger;
   }
-  
+
   /**
    * Gets the part-of-speech tags mapped to this node in the
    * parse tree.
@@ -438,24 +436,6 @@ public class CcgParse {
       List<String> words = Lists.newArrayList();
       words.addAll(left.getSpannedWords());
       words.addAll(right.getSpannedWords());
-      return words;
-    }
-  }
-
-  /**
-   * Gets all of the words spanned by this node of the parse tree,
-   * in sentence order. The returned words include any normalization
-   * performed to map them to lexicon entries.
-   * 
-   * @return
-   */
-  public List<String> getSpannedLexiconTriggerWords() {
-    if (isTerminal()) {
-      return lexiconTriggerWords;
-    } else {
-      List<String> words = Lists.newArrayList();
-      words.addAll(left.getSpannedLexiconTriggerWords());
-      words.addAll(right.getSpannedLexiconTriggerWords());
       return words;
     }
   }
@@ -496,22 +476,39 @@ public class CcgParse {
   }
 
   /**
-   * Gets the CCG lexicon entries used for the words in this parse, in
-   * left-to-right order.
+   * Gets the CCG categories from the lexicon used in this
+   * parse, in left-to-right order.
    * 
    * @return
    */
-  public List<LexiconEntry> getSpannedLexiconEntries() {
+  public List<CcgCategory> getSpannedLexiconCategories() {
     if (isTerminal()) {
-      return Arrays.asList(new LexiconEntry(lexiconTriggerWords, lexiconEntry));
+      return Arrays.asList(lexiconEntry);
     } else {
-      List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-      lexiconEntries.addAll(left.getSpannedLexiconEntries());
-      lexiconEntries.addAll(right.getSpannedLexiconEntries());
+      List<CcgCategory> lexiconEntries = Lists.newArrayList();
+      lexiconEntries.addAll(left.getSpannedLexiconCategories());
+      lexiconEntries.addAll(right.getSpannedLexiconCategories());
       return lexiconEntries;
     }
   }
-  
+
+  /**
+   * Gets the trigger for every lexicon entry in this parse tree,
+   * in left-to-right sentence order.
+   * 
+   * @return
+   */
+  public List<Object> getSpannedLexiconTriggers() {
+    if (isTerminal()) {
+      return Arrays.asList(lexiconTrigger);
+    } else {
+      List<Object> triggers = Lists.newArrayList();
+      triggers.addAll(left.getSpannedLexiconTriggers());
+      triggers.addAll(right.getSpannedLexiconTriggers());
+      return triggers;
+    }
+  }
+
   public List<Integer> getSpannedLexiconEntryIndexes() {
     if (isTerminal()) {
       return Arrays.asList(lexiconIndex);
@@ -717,7 +714,7 @@ public class CcgParse {
   }
 
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
-    return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, lexiconIndex, spannedWords,
+    return new CcgParse(newSyntax, lexiconEntry, lexiconTrigger, lexiconIndex, spannedWords,
         posTags, heads, dependencies, probability, left, right, combinator, rule, spanStart,
         spanEnd);
   }

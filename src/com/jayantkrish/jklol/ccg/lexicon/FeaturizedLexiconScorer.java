@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.models.ClassifierFactor;
@@ -38,11 +36,11 @@ public class FeaturizedLexiconScorer implements LexiconScorer {
 
   @Override
   public double getCategoryWeight(int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<String> terminalValue, List<String> posTags, CcgCategory category) {
+      CcgCategory category) {
     SpanFeatureAnnotation annotation = (SpanFeatureAnnotation) sentence.getAnnotation(
         featureVectorAnnotationName);
     Preconditions.checkNotNull(annotation, "Sentence was not annotated with features: " + sentence);
-    
+
     Tensor featureVector = annotation.getFeatureVector(spanStart, spanEnd);
 
     Assignment syntaxAssignment = syntaxVar.outcomeArrayToAssignment(category.getSyntax());

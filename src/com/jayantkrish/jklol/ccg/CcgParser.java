@@ -1292,61 +1292,41 @@ public class CcgParser implements Serializable {
     // Sparsifying the dependencies actually slows the code down.
     // sparsifyDependencyDistribution(chart);
   }
-  
-  private void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
-    List<String> preprocessedTerminals = preprocessInput(sentence.getWords());
 
+  private void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
-      lexicon.initializeChart(chart, sentence, preprocessedTerminals, this, k);
-    }
-
-    for (int i = 0; i < preprocessedTerminals.size(); i++) {
-      for (int j = i; j < preprocessedTerminals.size(); j++) {
-        
-      }
+      lexicon.initializeChart(chart, sentence, this, k);
     }
   }
-  
+
   /**
-   * Adds a lexicon entry to {@code chart}. This method should be used by 
-   * instances of {@code CcgLexicon} to initialize the lexicon entries of
-   * the parser.
+   * Adds lexicon entry {@code category} to {@code chart}. This
+   * method should be used by instances of {@code CcgLexicon}
+   * to initialize the lexicon entries of the parser.
    *  
    * @param chart
-   * @param entry
+   * @param trigger
+   * @param category
    * @param lexiconProb
-   * @param i
-   * @param j
-   * @param lexiconNum
+   * @param spanStart
+   * @param spanEnd
    * @param sentence
-   * @param terminalValue
-   * @param posTagValue
+   * @param lexiconNum
    */
-  public void addLexiconEntryToChart(CcgChart chart, LexiconEntry entry, double lexiconProb,
-      int i, int j, int lexiconNum, AnnotatedSentence sentence, List<String> terminalValue,
-      List<String> posTagValue) {
+  public void addLexiconEntryToChart(CcgChart chart, Object trigger, CcgCategory category,
+      double lexiconProb, int spanStart, int spanEnd, AnnotatedSentence sentence, int lexiconNum) {
 
-    CcgCategory category = entry.getCategory();
     for (LexiconScorer lexiconScorer : lexiconScorers) {
-      lexiconProb *= lexiconScorer.getCategoryWeight(i, j, sentence, terminalValue,
-          posTagValue, category);
+      lexiconProb *= lexiconScorer.getCategoryWeight(spanStart, spanEnd, sentence, category);
     }
 
     // Add all possible chart entries to the ccg chart.
-    ChartEntry chartEntry = ccgCategoryToChartEntry(terminalValue, category, i, j, lexiconNum);
-    chart.addChartEntryForSpan(chartEntry, lexiconProb, i, j, syntaxVarType);
+    ChartEntry chartEntry = ccgCategoryToChartEntry(trigger, category, spanStart, spanEnd, lexiconNum);
+    chart.addChartEntryForSpan(chartEntry, lexiconProb, spanStart, spanEnd, syntaxVarType);
   }
 
-  private List<String> preprocessInput(List<String> terminals) {
-    List<String> preprocessedTerminals = Lists.newArrayList();
-    for (String terminal : terminals) {
-      preprocessedTerminals.add(terminal.toLowerCase());
-    }
-    return preprocessedTerminals;
-  }
-
-  private ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
+  private ChartEntry ccgCategoryToChartEntry(Object trigger, CcgCategory result,
       int spanStart, int spanEnd, int lexiconIndex) {
     // Assign each predicate in this category a unique word index.
     List<Long> assignments = Lists.newArrayList();
@@ -1382,7 +1362,7 @@ public class CcgParser implements Serializable {
     int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
     int syntaxHeadVar = result.getSyntax().getHeadVariable();
     return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), syntaxHeadVar, 
-        result, terminalWords, lexiconIndex, null, assignmentVarIndex, Longs.toArray(assignments),
+        result, trigger, lexiconIndex, null, assignmentVarIndex, Longs.toArray(assignments),
         unfilledDependencyVarIndex, unfilledDepArray, depArray, spanStart, spanEnd);
   }
 

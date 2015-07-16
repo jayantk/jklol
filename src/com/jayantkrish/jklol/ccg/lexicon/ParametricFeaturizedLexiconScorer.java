@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
@@ -65,8 +63,7 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
   @Override
   public void incrementLexiconSufficientStatistics(SufficientStatistics gradient,
       SufficientStatistics currentParameters, int spanStart, int spanEnd,
-      AnnotatedSentence sentence, List<String> sentencePreprocessedWords,
-      List<String> wordSequence, List<String> posSequence, CcgCategory category, double count) {
+      AnnotatedSentence sentence, CcgCategory category, double count) {
 
     SpanFeatureAnnotation annotation = (SpanFeatureAnnotation) sentence
         .getAnnotation(featureVectorAnnotationName);

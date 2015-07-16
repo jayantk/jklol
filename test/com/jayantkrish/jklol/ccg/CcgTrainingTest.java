@@ -134,11 +134,11 @@ public class CcgTrainingTest extends TestCase {
 
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
         Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(true), posTags, true, null, false, false);
+        new DefaultCcgFeatureFactory(true, false), posTags, true, null, false);
     
     wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
         Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(true), posTags, true, null, true, false);
+        new DefaultCcgFeatureFactory(true, true), posTags, true, null, false);
   }
   
   public void testSyntacticChartFilter1() {

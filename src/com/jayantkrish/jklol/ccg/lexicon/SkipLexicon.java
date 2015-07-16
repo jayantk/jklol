@@ -4,8 +4,8 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -42,69 +42,85 @@ public class SkipLexicon implements CcgLexicon {
   }
 
   @Override
-  public void getLexiconEntries(List<String> wordSequence, List<String> posSequence,
+  public void getLexiconEntries(int spanStart, int spanEnd, AnnotatedSentence sentence,
       ChartEntry[] alreadyGenerated, int numAlreadyGenerated,
-      int spanStart, int spanEnd, AnnotatedSentence sentence,
-      List<LexiconEntry> accumulator, List<Double> probAccumulator) {
+      List<Object> triggerAccumulator, List<CcgCategory> accumulator, List<Double> probAccumulator) {
     // TODO: this method doesn't totally do the right thing.
 
-    for (int i = 0; i < wordSequence.size(); i++) {
-      for (int j = i; j < wordSequence.size(); j++) {
-        List<String> subwords = wordSequence.subList(i, j + 1);
-        List<String> subpos = posSequence.subList(i, j + 1);
-        lexicon.getLexiconEntries(subwords, subpos, alreadyGenerated, numAlreadyGenerated,
-            spanStart + i, spanStart + j, sentence, accumulator, probAccumulator);
+    for (int i = spanStart; i <= spanEnd; i++) {
+      for (int j = i; j <= spanEnd; j++) {
+        lexicon.getLexiconEntries(i, j, sentence, alreadyGenerated, numAlreadyGenerated,
+            triggerAccumulator, accumulator, probAccumulator);
       }
     }
   }
 
   @Override
   public void initializeChart(CcgChart chart, AnnotatedSentence sentence,
-      List<String> preprocessedTerminals, CcgParser parser, int lexiconNum) {
-    List<String> posTags = sentence.getPosTags();
-
-    for (int i = 0; i < preprocessedTerminals.size(); i++) {
-      for (int j = i; j < preprocessedTerminals.size(); j++) {
-        List<String> terminalValue = preprocessedTerminals.subList(i, j + 1);
-        List<String> posTagValue = posTags.subList(i, j + 1);
-
+      CcgParser parser, int lexiconNum) {
+    for (int i = 0; i < sentence.size(); i++) {
+      for (int j = i; j < sentence.size(); j++) {
         ChartEntry[] previousEntries = chart.getChartEntriesForSpan(i, j);
         int numAlreadyGenerated = chart.getNumChartEntriesForSpan(i, j);
 
-        List<LexiconEntry> accumulator = Lists.newArrayList();
+        List<Object> triggerAccumulator = Lists.newArrayList();
+        List<CcgCategory> accumulator = Lists.newArrayList();
         List<Double> probAccumulator = Lists.newArrayList();
-        lexicon.getLexiconEntries(terminalValue, posTagValue, previousEntries,
-            numAlreadyGenerated, i, j, sentence, accumulator, probAccumulator);
+        lexicon.getLexiconEntries(i, j, sentence, previousEntries, numAlreadyGenerated,
+            triggerAccumulator, accumulator, probAccumulator);
         Preconditions.checkState(accumulator.size() == probAccumulator.size());
-
+        Preconditions.checkState(accumulator.size() == triggerAccumulator.size());
+        
         for (int n = 0; n < accumulator.size(); n++) {
-          LexiconEntry entry = accumulator.get(n);
+          Object trigger = new SkipTrigger(triggerAccumulator.get(n), i, j);
+          CcgCategory entry = accumulator.get(n);
           double prob = probAccumulator.get(n);
-          parser.addLexiconEntryToChart(chart, entry, prob, i, j, lexiconNum, sentence,
-              terminalValue, posTagValue);
+          parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, j, sentence, lexiconNum);
 
-          for (int k = j + 1; k < preprocessedTerminals.size(); k++) {
+          for (int k = j + 1; k < sentence.size(); k++) {
             // Skip any number of words to the right.
-            parser.addLexiconEntryToChart(chart, entry, prob, i, k, lexiconNum, sentence,
-              terminalValue, posTagValue);
+            parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, k, sentence, lexiconNum);
           }
           
           if (i != 0) {
-            for (int k = j; k < preprocessedTerminals.size(); k++) {
+            for (int k = j; k < sentence.size(); k++) {
               // Skip all words to the left AND any number of words to
               // the right.
-              parser.addLexiconEntryToChart(chart, entry, prob, 0, k, lexiconNum, sentence,
-                  terminalValue, posTagValue);
+              parser.addLexiconEntryToChart(chart, trigger, entry, prob, 0, k, sentence, lexiconNum);
             }
           }
         }
       }
     }
 
-    for (int i = 0; i < preprocessedTerminals.size(); i++) {
-      for (int j = i; j < preprocessedTerminals.size(); j++) {
+    for (int i = 0; i < sentence.size(); i++) {
+      for (int j = i; j < sentence.size(); j++) {
         chart.doneAddingChartEntriesForSpan(i, j);
       }
+    }
+  }
+  
+  public static class SkipTrigger {
+    private final Object trigger;
+    private final int triggerSpanStart;
+    private final int triggerSpanEnd;
+
+    public SkipTrigger(Object trigger, int triggerSpanStart, int triggerSpanEnd) {
+      this.trigger = trigger;
+      this.triggerSpanStart = triggerSpanStart;
+      this.triggerSpanEnd = triggerSpanEnd;
+    }
+
+    public Object getTrigger() {
+      return trigger;
+    }
+
+    public int getTriggerSpanStart() {
+      return triggerSpanStart;
+    }
+
+    public int getTriggerSpanEnd() {
+      return triggerSpanEnd;
     }
   }
 }

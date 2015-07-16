@@ -15,6 +15,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
@@ -24,7 +25,6 @@ import com.jayantkrish.jklol.ccg.CcgParserUtils;
 import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
@@ -192,7 +192,7 @@ public class TestSyntacticCcgParser extends AbstractCli {
         }
 
         System.out.println("DEPS: " + parses.get(i).getAllDependencies());
-        System.out.println("LEX: " + parses.get(i).getSpannedLexiconEntries());
+        System.out.println("LEX: " + parses.get(i).getSpannedLexiconCategories());
         System.out.println("PROB: " + parses.get(i).getSubtreeProbability());
         numPrinted++;
       }
@@ -280,8 +280,8 @@ public class TestSyntacticCcgParser extends AbstractCli {
     AnnotatedSentence sentence = parseResult.getSentence();
     List<SyntacticCategory> predictedSyntacticCategories = Lists.newArrayList();
     List<String> words = example.getSentence().getWords();
-    for (LexiconEntry entry : parse.getSpannedLexiconEntries()) {
-      predictedSyntacticCategories.add(entry.getCategory().getSyntax().getSyntax().discardFeaturePassingMarkup());
+    for (CcgCategory entry : parse.getSpannedLexiconCategories()) {
+      predictedSyntacticCategories.add(entry.getSyntax().getSyntax().discardFeaturePassingMarkup());
     }
     List<SyntacticCategory> actualSyntacticCategories = example.getSyntacticParse().getAllSpannedLexiconEntries();
     Preconditions.checkArgument(predictedSyntacticCategories.size() == actualSyntacticCategories.size());

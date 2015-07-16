@@ -14,7 +14,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
@@ -223,15 +222,13 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
    * @param allowComposition allow function composition in addition to
    * other CCG rules.
    * @param allowedCombinationRules
-   * @param allowWordSkipping
    * @param normalFormOnly
    * @return
    */
   public static ParametricCcgParser parseFromLexicon(Iterable<String> unfilteredLexiconLines,
       Iterable<String> unknownWordLexiconLines, Iterable<String> unfilteredRuleLines,
       CcgFeatureFactory featureFactory, Set<String> posTagSet, boolean allowComposition,
-      Iterable<CcgRuleSchema> allowedCombinationRules, boolean allowWordSkipping,
-      boolean normalFormOnly) {
+      Iterable<CcgRuleSchema> allowedCombinationRules, boolean normalFormOnly) {
     Preconditions.checkNotNull(featureFactory);
 
     // System.out.println("Reading lexicon and rules...");
@@ -243,14 +240,14 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     List<LexiconEntry> unknownLexiconEntries = LexiconEntry.parseLexiconEntries(unknownWordLexiconLines);
     return ParametricCcgParser.parseFromLexicon(lexiconEntries, unknownLexiconEntries, binaryRules,
         unaryRules, featureFactory, posTagSet, allowComposition, allowedCombinationRules,
-        allowWordSkipping, normalFormOnly);
+        normalFormOnly);
   }
 
   public static ParametricCcgParser parseFromLexicon(Collection<LexiconEntry> lexiconEntries,
       Collection<LexiconEntry> unknownLexiconEntries, List<CcgBinaryRule> binaryRules,
       List<CcgUnaryRule> unaryRules, CcgFeatureFactory featureFactory,
       Set<String> posTagSet, boolean allowComposition, Iterable<CcgRuleSchema> allowedCombinationRules,
-      boolean allowWordSkipping, boolean normalFormOnly) {
+      boolean normalFormOnly) {
 
     // Parse out all of the categories, words, and semanticPredicates
     // from the lexicon.
@@ -305,57 +302,6 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     }
     
     syntacticCategories = CcgParser.getSyntacticCategoryClosure(syntacticCategories);
-
-    if (allowWordSkipping) {
-      // Generate a SKIP syntactic category and binary rules that absorb them.
-      Expression2 skipLeftExp = ExpressionParser.expression2().parseSingleExpression("(lambda $L $R $R)");
-      Expression2 skipRightExp = ExpressionParser.expression2().parseSingleExpression("(lambda $L $R $L)");
-      List<String> subjects = Collections.emptyList();
-      List<HeadedSyntacticCategory> subjectSyntaxes = Collections.emptyList();
-      List<Integer> argumentNumbers = Collections.emptyList();
-      List<Integer> objects = Collections.emptyList(); 
-
-      // Allow categories to absorb SKIP_CAT on the right.
-      Set<HeadedSyntacticCategory> categoriesExceptSkippable = Sets.newHashSet(syntacticCategories);
-      categoriesExceptSkippable.remove(SKIP_CAT);
-      categoriesExceptSkippable.remove(START_CAT);
-      HeadedSyntacticCategory ruleSkipCat = SKIP_CAT.relabelVariables(new int[] {0}, new int[] {100});
-      for (HeadedSyntacticCategory cat : categoriesExceptSkippable) {
-        binaryRules.add(new CcgBinaryRule(cat, ruleSkipCat, cat, skipRightExp,
-            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
-      }
-      // START_CAT can also absorb SKIP_CAT on the right
-      binaryRules.add(new CcgBinaryRule(START_CAT, ruleSkipCat, START_CAT, skipRightExp,
-            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
-
-      // START_CAT can be absorbed on the left by any non-SKIP_CAT category.
-      HeadedSyntacticCategory ruleStartCat = START_CAT.relabelVariables(new int[] {0}, new int[] {100});
-      for (HeadedSyntacticCategory cat : categoriesExceptSkippable) {
-        binaryRules.add(new CcgBinaryRule(ruleStartCat, cat, cat, skipLeftExp,
-            subjects, subjectSyntaxes, argumentNumbers, objects, Combinator.Type.OTHER));
-      }
-
-      syntacticCategories.add(SKIP_CAT);
-      syntacticCategories.add(START_CAT);
-      
-      List<Set<String>> assignment = Lists.newArrayList();
-      assignment.add(Sets.newHashSet(SKIP_PREDICATE));
-      semanticPredicates.add(SKIP_PREDICATE);
-      CcgCategory ccgCategory = new CcgCategory(SKIP_CAT, SKIP_LF, subjects,
-            argumentNumbers, objects, assignment);
-      categories.add(ccgCategory);
-      for (List<String> word : words.items()) {
-        LexiconEntry entry = new LexiconEntry(word, ccgCategory);
-        lexiconEntries.add(entry);
-      }
-
-      for (String posTag : posTagSet) {
-        LexiconEntry entry = new LexiconEntry(Arrays.asList(posTag), ccgCategory);
-        unknownLexiconEntries.add(entry);
-      }
-
-      allowWordSkipping = false;
-    }
 
     // Create features over ways to combine syntactic categories.
     // System.out.println("Building syntactic distribution...");
@@ -496,7 +442,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parametricUnaryRuleDistribution, headedBinaryRulePredicateVar, headedBinaryRulePosVar,
         headedBinaryRuleFamily, searchMoveVar, compiledSyntaxDistribution,
         leftSyntaxVar, headedBinaryRulePredicateVar, headedBinaryRulePosVar, parametricRootDistribution,
-        parametricHeadedRootDistribution, allowWordSkipping, normalFormOnly);
+        parametricHeadedRootDistribution, false, normalFormOnly);
   }
 
   /**
@@ -791,16 +737,16 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     List<SufficientStatistics> lexiconScorerParameterList = parameters.coerceToList()
         .getStatisticByName(LEXICON_SCORER_PARAMETERS).coerceToList().getStatistics();
 
-    List<String> sentencePreprocessedWords = parse.getLexiconTriggerWords();
-        
-    List<LexiconEntry> lexiconEntries = parse.getSpannedLexiconEntries();
+    List<CcgCategory> lexiconEntries = parse.getSpannedLexiconCategories();
+    List<Object> lexiconTriggers = parse.getSpannedLexiconTriggers();
     List<Integer> lexiconEntryIndexes = parse.getSpannedLexiconEntryIndexes();
     List<List<String>> posTags = parse.getSpannedPosTagsByLexiconEntry();
     Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
     int numEntries = lexiconEntries.size();
     int numTokensProcessed = 0;
     for (int i = 0; i < numEntries; i++) {
-      LexiconEntry lexiconEntry = lexiconEntries.get(i);
+      CcgCategory lexiconEntry = lexiconEntries.get(i);
+      Object trigger = lexiconTriggers.get(i);
       int lexiconIndex = lexiconEntryIndexes.get(i);
       int spanStart = numTokensProcessed;
       int spanEnd = numTokensProcessed + posTags.get(i).size() - 1;
@@ -809,13 +755,12 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
 
       lexiconFamilies.get(lexiconIndex).incrementLexiconSufficientStatistics(
           lexiconGradientList.get(lexiconIndex), lexiconParameterList.get(lexiconIndex),
-          lexiconEntry.getWords(), posTags.get(i), lexiconEntry.getCategory(), count);
+          spanStart, spanEnd, sentence, trigger, lexiconEntry, count);
 
       for (int j = 0; j < lexiconScorerFamilies.size(); j++) {
         lexiconScorerFamilies.get(j).incrementLexiconSufficientStatistics(
           lexiconScorerGradientList.get(j), lexiconScorerParameterList.get(j),
-          spanStart, spanEnd, sentence, sentencePreprocessedWords,
-          lexiconEntry.getWords(), posTags.get(i), lexiconEntry.getCategory(), count);
+          spanStart, spanEnd, sentence, lexiconEntry, count);
       }
     }
   }

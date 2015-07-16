@@ -45,7 +45,7 @@ public class NoExportHelpers {
 
     ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
         Arrays.asList(lexicon), Collections.<String>emptyList(), Arrays.asList(rules),
-        null, null, false, null, false, false);
+        null, null, false, null, false);
     CcgParser parser = ccgFamily.getModelFromParameters(
         ccgFamily.getNewSufficientStatistics());
 

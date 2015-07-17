@@ -1301,19 +1301,22 @@ public class CcgParser implements Serializable {
    * @param lexiconNum
    */
   public void addLexiconEntryToChart(CcgChart chart, Object trigger, CcgCategory category,
-      double lexiconProb, int spanStart, int spanEnd, AnnotatedSentence sentence, int lexiconNum) {
+      double lexiconProb, int spanStart, int spanEnd, int triggerSpanStart, int triggerSpanEnd,
+      AnnotatedSentence sentence, int lexiconNum) {
 
     for (LexiconScorer lexiconScorer : lexiconScorers) {
+      // TODO: fixme.
       lexiconProb *= lexiconScorer.getCategoryWeight(spanStart, spanEnd, sentence, category);
     }
 
     // Add all possible chart entries to the ccg chart.
-    ChartEntry chartEntry = ccgCategoryToChartEntry(trigger, category, spanStart, spanEnd, lexiconNum);
+    ChartEntry chartEntry = ccgCategoryToChartEntry(trigger, category, spanStart, spanEnd,
+        triggerSpanStart, triggerSpanEnd, lexiconNum);
     chart.addChartEntryForSpan(chartEntry, lexiconProb, spanStart, spanEnd, syntaxVarType);
   }
 
   private ChartEntry ccgCategoryToChartEntry(Object trigger, CcgCategory result,
-      int spanStart, int spanEnd, int lexiconIndex) {
+      int spanStart, int spanEnd, int triggerSpanStart, int triggerSpanEnd, int lexiconIndex) {
     // Assign each predicate in this category a unique word index.
     List<Long> assignments = Lists.newArrayList();
     List<Set<String>> values = result.getAssignment();
@@ -1328,7 +1331,7 @@ public class CcgParser implements Serializable {
       Preconditions.checkState(semanticVariables[i] == i);
       for (String value : values.get(i)) {
         long assignment = marshalAssignment(semanticVariables[i],
-            dependencyHeadType.getValueIndex(value), spanEnd);
+            dependencyHeadType.getValueIndex(value), triggerSpanEnd);
         assignments.add(assignment);
         numFilled++;
       }
@@ -1336,7 +1339,7 @@ public class CcgParser implements Serializable {
     assignmentVarIndex[assignmentVarIndex.length - 1] = numFilled;
 
     List<UnfilledDependency> filledDepsAccumulator = Lists.newArrayList();
-    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, filledDepsAccumulator);
+    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(triggerSpanEnd, filledDepsAccumulator);
 
     long[] unfilledDepsOrig = unfilledDependencyArrayToLongArray(unfilledDeps);
     long[] depArray = unfilledDependencyArrayToLongArray(filledDepsAccumulator);

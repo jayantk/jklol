@@ -563,6 +563,9 @@ public class CcgParserTest extends TestCase {
     assertEquals(2, bestParse.getSpanEnd());
     assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconTrigger()).getTrigger());
     assertEquals(1.5, bestParse.getSubtreeProbability());
+
+    // TODO: test that dependencies are projected from the spans of the original
+    // lexicon entries.
   }
 
   public void testParseHeadedSyntaxWeights() {

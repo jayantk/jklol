@@ -51,7 +51,7 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
           Object trigger = triggerAccumulator.get(n);
           CcgCategory entry = accumulator.get(n);
           double prob = probAccumulator.get(n);
-          parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, j, sentence, lexiconNum);
+          parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, j, i, j, sentence, lexiconNum);
         }
         chart.doneAddingChartEntriesForSpan(i, j);
       }

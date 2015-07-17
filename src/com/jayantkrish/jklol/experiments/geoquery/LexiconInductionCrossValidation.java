@@ -19,8 +19,8 @@ import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgInference;
+import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.LexiconEntryLabels;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
@@ -196,7 +196,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
     List<String> unknownLexiconEntryLines = Lists.newArrayList();
     CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
-        unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm,
+        unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
         sgdIterations, l2Regularization);
 
     IoUtils.serializeObjectToFile(ccgParser, parserModelOutputFilename);
@@ -258,12 +258,16 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   public static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,
       List<String> lexiconEntryLines, List<String> unknownLexiconEntryLines,
       List<String> ruleEntries, CcgFeatureFactory featureFactory,
-      CcgInference inferenceAlgorithm, int iterations, double l2Penalty) {
+      CcgInference inferenceAlgorithm, ExpressionComparator comparator,
+      int iterations, double l2Penalty) {
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, null, true, null, false);
 
+    /*
     GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family,
         inferenceAlgorithm, 0.0);
+        */
+    GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family, comparator, 100);
 
     int numIterations = trainingExamples.size() * iterations;
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(numIterations, 1,

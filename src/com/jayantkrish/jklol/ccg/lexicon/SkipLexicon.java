@@ -89,13 +89,13 @@ public class SkipLexicon implements CcgLexicon {
           Object trigger = new SkipTrigger(triggerAccumulator.get(n), i, j);
           CcgCategory entry = accumulator.get(n);
           double prob = probAccumulator.get(n);
-          parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, j, sentence, lexiconNum);
+          parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, j, i, j, sentence, lexiconNum);
 
           double rightProb = prob;
           for (int k = j + 1; k < sentence.size(); k++) {
             // Skip any number of words to the right.
             rightProb *= skipProbs[k];
-            parser.addLexiconEntryToChart(chart, trigger, entry, rightProb, i, k, sentence, lexiconNum);
+            parser.addLexiconEntryToChart(chart, trigger, entry, rightProb, i, k, i, j, sentence, lexiconNum);
           }
 
           if (i != 0) {
@@ -110,7 +110,7 @@ public class SkipLexicon implements CcgLexicon {
               if (k != j) {
                 rightLeftProb *= skipProbs[k];
               }
-              parser.addLexiconEntryToChart(chart, trigger, entry, rightLeftProb, 0, k, sentence, lexiconNum);
+              parser.addLexiconEntryToChart(chart, trigger, entry, rightLeftProb, 0, k, i, j, sentence, lexiconNum);
             }
           }
         }

@@ -18,6 +18,8 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.Scope;
+import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.SubsetIterator;
@@ -346,6 +348,48 @@ public class ExpressionTree {
       sum += rights.get(i).size();
     }
     return sum;
+  }
+
+  public void populateBinaryRuleDistribution(TableFactorBuilder builder, DiscreteFactor binaryRuleProbs) {
+    ExpressionNode root = getExpressionNode();
+    if (hasChildren()) {
+      List<ExpressionTree> argChildren = getLeftChildren();
+      List<ExpressionTree> funcChildren = getRightChildren();
+      for (int i = 0; i < argChildren.size(); i++) {
+        ExpressionTree arg = argChildren.get(i);
+        ExpressionTree func = funcChildren.get(i);
+
+        // Add binary rule for this combination of expressions. Note
+        // that the expressions can occur in either order in the sentence.
+        double prob = binaryRuleProbs.getUnnormalizedProbability(arg.getExpressionNode(),
+            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
+        builder.setWeight(prob, arg.getExpressionNode(),
+            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
+        prob = binaryRuleProbs.getUnnormalizedProbability(func.getExpressionNode(),
+            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
+        builder.setWeight(prob, func.getExpressionNode(),
+            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
+
+        // Populate children
+        arg.populateBinaryRuleDistribution(builder, binaryRuleProbs);
+        func.populateBinaryRuleDistribution(builder, binaryRuleProbs);
+      }
+    }
+
+    // Add word-skipping rules.
+    double prob = binaryRuleProbs.getUnnormalizedProbability(ParametricCfgAlignmentModel.SKIP_EXPRESSION, root,
+         root, ParametricCfgAlignmentModel.SKIP_RULE);
+    builder.setWeight(prob, ParametricCfgAlignmentModel.SKIP_EXPRESSION, root,
+         root, ParametricCfgAlignmentModel.SKIP_RULE);
+    prob = binaryRuleProbs.getUnnormalizedProbability(root, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
+        root, ParametricCfgAlignmentModel.SKIP_RULE);
+    builder.setWeight(prob, root, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
+        root, ParametricCfgAlignmentModel.SKIP_RULE);
+
+    List<ExpressionTree> substitutions = getSubstitutions();
+    for (int i = 0; i < substitutions.size(); i++) {
+      substitutions.get(i).populateBinaryRuleDistribution(builder, binaryRuleProbs);
+    }
   }
 
   @Override

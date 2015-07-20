@@ -220,15 +220,18 @@ public class AlignedExpressionTree {
       List<Integer> objects = Lists.newArrayList();
       List<Set<String>> assignments = Lists.newArrayList();
       assignments.add(Sets.newHashSet(head));
-      HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N:" + returnType + "{0}");
+      HeadedSyntacticCategory syntax = typeToSyntax(returnType, 0);
       for (int i = 0; i < getNumAppliedArguments(); i++) {
-        HeadedSyntacticCategory argSyntax = HeadedSyntacticCategory
-            .parseFrom("N:" + argumentTypes.get(i) + "{" + (i + 1) +"}");
+        int nextVar = Ints.max(syntax.getUniqueVariables()) + 1;
+        HeadedSyntacticCategory argSyntax = typeToSyntax(argumentTypes.get(i), nextVar);
         syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
 
         subjects.add(head);
         argumentNums.add(i + 1);
-        objects.add(i + 1);
+        objects.add(nextVar);
+      }
+
+      for (int i = 0; i < syntax.getUniqueVariables().length - 1; i++) {
         assignments.add(Collections.<String>emptySet());
       }
 
@@ -244,6 +247,19 @@ public class AlignedExpressionTree {
       List<AlignedExpressionTree> newArgs = Lists.newArrayList(argumentStack);
       newArgs.add(left);
       right.generateLexiconEntriesHelper(typeReplacements, newArgs, lexiconEntries);
+    }
+  }
+  
+  private static HeadedSyntacticCategory typeToSyntax(Type type, int nextHeadNum) {
+    // return HeadedSyntacticCategory.parseFrom("N:" + type + "{" + nextHeadNum + "}");
+    if (type.isAtomic()) {
+      return HeadedSyntacticCategory.parseFrom("N:" + type.getAtomicTypeName() + "{" + nextHeadNum + "}");
+    } else {
+      HeadedSyntacticCategory returnCat = typeToSyntax(type.getReturnType(), nextHeadNum);
+      int nextNum = Ints.max(returnCat.getUniqueVariables()) + 1;
+      HeadedSyntacticCategory argCat = typeToSyntax(type.getArgumentType(), nextNum);
+      nextNum = Ints.max(argCat.getUniqueVariables()) + 1;
+      return returnCat.addArgument(argCat, Direction.BOTH, nextHeadNum);
     }
   }
 

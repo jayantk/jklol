@@ -311,7 +311,6 @@ public class CfgParseChart {
   public CfgParseTree getBestParseTreeWithSpan(Object root, int spanStart,
       int spanEnd) {
     Preconditions.checkState(!sumProduct);
-    // System.out.println(root);
 
     Assignment rootAssignment = parentVar.outcomeArrayToAssignment(root); 
     int rootNonterminalNum = parentVar.assignmentToIntArray(rootAssignment)[0];
@@ -321,7 +320,7 @@ public class CfgParseChart {
     if (prob == 0.0) {
       return null;
     }
-    
+
     int splitInd = splitBackpointers[spanStart][spanEnd][rootNonterminalNum];
     if (splitInd < 0) {
       long terminalKey = backpointers[spanStart][spanEnd][rootNonterminalNum];
@@ -349,6 +348,8 @@ public class CfgParseChart {
       Object rightRoot = best.getValue(rightVar.getOnlyVariableNum());
       Object ruleType = best.getValue(ruleTypeVar.getOnlyVariableNum());
 
+      Preconditions.checkArgument(spanStart + splitInd != spanEnd,
+          "CFG parse decoding error: %s %s %s", spanStart, spanEnd, splitInd);
       CfgParseTree leftTree = getBestParseTreeWithSpan(leftRoot, spanStart, spanStart + splitInd);
       CfgParseTree rightTree = getBestParseTreeWithSpan(rightRoot, spanStart + splitInd + 1, spanEnd);
       

@@ -61,6 +61,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   
   private OptionSpec<String> foldNameOpt;
   
+  private OptionSpec<Integer> unknownWordThreshold;
+  
   // Configuration for the alignment model
   private OptionSpec<Integer> emIterations;
   private OptionSpec<Double> smoothingParam;
@@ -99,6 +101,10 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Optional option to only run one fold
     foldNameOpt = parser.accepts("foldName").withRequiredArg().ofType(String.class);
     
+    // Word count below which the word is mapped to the "unknown" symbol.
+    unknownWordThreshold = parser.accepts("unknownWordThreshold").withRequiredArg()
+        .ofType(Integer.class).defaultsTo(0);
+    
     // Optional arguments
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
@@ -120,8 +126,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     
     FoldRunner runner = new FoldRunner(foldNames, folds, options.valueOf(emIterations),
         options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(sgdIterations),
-        options.valueOf(l2Regularization), options.valueOf(beamSize), additionalLexiconEntries,
-        options.valueOf(outputDir));
+        options.valueOf(l2Regularization), options.valueOf(beamSize), options.valueOf(unknownWordThreshold),
+        additionalLexiconEntries, options.valueOf(outputDir));
     
     // MapReduceExecutor executor = new LocalMapReduceExecutor(1, 1);
     List<SemanticParserLoss> losses = Lists.newArrayList();
@@ -149,8 +155,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
       int emIterations, double smoothingAmount, int nGramLength, int sgdIterations, double l2Regularization, int beamSize,
-      List<String> additionalLexiconEntries, String lexiconOutputFilename, String alignmentModelOutputFilename,
-      String parserModelOutputFilename) {
+      int unknownWordThreshold, List<String> additionalLexiconEntries, String lexiconOutputFilename,
+      String alignmentModelOutputFilename, String parserModelOutputFilename) {
 
     // Find all entity names in the given lexicon entries
     Set<List<String>> entityNames = Sets.newHashSet();
@@ -166,17 +172,42 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // alignment model's predictions.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = AlignmentLexiconInduction
         .generateLexiconFromAlignmentModel(model, trainingData, typeReplacements);
+    
+    CountAccumulator<String> wordCounts = CountAccumulator.create();
+    for (AlignmentExample trainingExample : trainingData) {
+      wordCounts.incrementByOne(trainingExample.getWords());
+    }
 
     // Log the generated lexicon and model.
     Collection<LexiconEntry> allEntries = alignments.getKeyValueMultimap().values();
     List<String> lexiconEntryLines = Lists.newArrayList();
+    List<String> unknownLexiconEntryLines = Lists.newArrayList();
     lexiconEntryLines.addAll(additionalLexiconEntries);
     for (LexiconEntry lexiconEntry : allEntries) {
-      lexiconEntryLines.add(lexiconEntry.toCsvString());
-    }
-    Collections.sort(lexiconEntryLines);
+      Expression2 lf = lexiconEntry.getCategory().getLogicalForm();
+      if (lf.isConstant()) {
+        // Edit the semantics of entities
+        String type = lf.getConstant().split(":")[1];
+        String newHead = "entity:" + type;
+        String lexString = lexiconEntry.toCsvString().replace(lexiconEntry.getCategory().getSemanticHeads().get(0), newHead);
+        lexiconEntryLines.add(lexString);
+      } else if (lexiconEntry.getWords().size() == 1 &&
+          wordCounts.getCount(lexiconEntry.getWords().get(0)) <= unknownWordThreshold) {
+        // Note that all generated entries have only one word.
 
-    IoUtils.writeLines(lexiconOutputFilename, lexiconEntryLines);
+        String lexString = lexiconEntry.toCsvString();
+        lexString = lexString.replace("\"" + lexiconEntry.getWords().get(0) + "\"", "\"" + ParametricCcgParser.DEFAULT_POS_TAG + "\"");
+        lexString = lexString.replace(lexiconEntry.getWords().get(0) + "#", ParametricCcgParser.DEFAULT_POS_TAG + "#");
+        unknownLexiconEntryLines.add(lexString);
+      } else {
+        lexiconEntryLines.add(lexiconEntry.toCsvString());
+      }
+    }
+    Collections.sort(Lists.newArrayList(Sets.newHashSet(lexiconEntryLines)));
+
+    List<String> allLexiconEntries = Lists.newArrayList(lexiconEntryLines);
+    allLexiconEntries.addAll(unknownLexiconEntryLines);
+    IoUtils.writeLines(lexiconOutputFilename, allLexiconEntries);
     IoUtils.serializeObjectToFile(model, alignmentModelOutputFilename);
     
     // Initialize CCG parser components.
@@ -194,7 +225,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator, beamSize,
         -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), false);
 
-    List<String> unknownLexiconEntryLines = Lists.newArrayList();
     CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
         sgdIterations, l2Regularization);
@@ -248,6 +278,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
     SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
         initial, trainingData);
+
+    System.out.println(pam.getParameterDescription(trainedParameters));
 
     // Get the trained model.
     CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
@@ -332,12 +364,13 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     private final int sgdIterations;
     private final double l2Regularization;
     private final int beamSize;
+    private final int unknownWordThreshold;
     private final List<String> additionalLexiconEntries;
     private final String outputDir;
     
     public FoldRunner(List<String> foldNames, List<List<AlignmentExample>> folds,
         int emIterations, double smoothing, int nGramLength, int sgdIterations, double l2Regularization,
-        int beamSize, List<String> additionalLexiconEntries, String outputDir) {
+        int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries, String outputDir) {
       this.foldNames = foldNames;
       this.folds = folds;
       
@@ -347,6 +380,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       this.sgdIterations = sgdIterations;
       this.l2Regularization = l2Regularization;
       this.beamSize = beamSize;
+      this.unknownWordThreshold = unknownWordThreshold;
       this.additionalLexiconEntries = additionalLexiconEntries;
       this.outputDir = outputDir;
     }
@@ -372,7 +406,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       // System.setOut()
       
       return runFold(trainingData, heldOut, emIterations, smoothing, nGramLength,
-          sgdIterations, l2Regularization, beamSize, additionalLexiconEntries,
+          sgdIterations, l2Regularization, beamSize, unknownWordThreshold, additionalLexiconEntries, 
           lexiconOutputFilename, alignmentModelOutputFilename, parserModelOutputFilename);
     }
   }

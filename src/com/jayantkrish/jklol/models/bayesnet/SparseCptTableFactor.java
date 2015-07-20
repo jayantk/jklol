@@ -122,8 +122,12 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
     
     VariableRelabeling parentIdentity = VariableRelabeling.identity(parentVars);
     int nextVarNum = Ints.max(parentVars.getVariableNumsArray()) + 1;
+    int[] relabeledChildNums = new int[childVars.size()];
+    for (int i = 0; i < childVars.size(); i++) {
+      relabeledChildNums[i] = nextVarNum + i;
+    }
     VariableRelabeling childToEnd = VariableRelabeling.createFromVariables(childVars, 
-        childVars.relabelVariableNums(new int[] {nextVarNum}));
+        childVars.relabelVariableNums(relabeledChildNums));
     factor = (DiscreteFactor) factor.relabelVariables(parentIdentity.union(childToEnd));
     if (numFeatures >= 0) {
       return factor.describeAssignments(factor.getMostLikelyAssignments(numFeatures));

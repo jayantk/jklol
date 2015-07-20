@@ -25,6 +25,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class CfgAlignmentModel implements AlignmentModelInterface, Serializable {
   private static final long serialVersionUID = 1L;
 
+  private final DiscreteFactor nonterminalFactor;
   private final DiscreteFactor terminalFactor;
 
   private final VariableNumMap terminalVar;
@@ -37,10 +38,16 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
 
   private static final double EPSILON = 0.0001;
   
-  public CfgAlignmentModel(DiscreteFactor terminalFactor, VariableNumMap terminalVar,
-      VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
+  public CfgAlignmentModel(DiscreteFactor nonterminalFactor, DiscreteFactor terminalFactor,
+      VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
       VariableNumMap ruleVar, int nGramLength) {
+    this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
+    Preconditions.checkArgument(nonterminalFactor.getVars().equals(
+        VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar)));
     this.terminalFactor = Preconditions.checkNotNull(terminalFactor);
+    Preconditions.checkArgument(terminalFactor.getVars().equals(
+        VariableNumMap.unionAll(terminalVar, parentVar, ruleVar)));
+
     this.terminalVar = Preconditions.checkNotNull(terminalVar);
     this.leftVar = Preconditions.checkNotNull(leftVar);
     this.rightVar = Preconditions.checkNotNull(rightVar);
@@ -150,8 +157,9 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     VariableNumMap binaryRuleVars = VariableNumMap.unionAll(newLeftVar, newRightVar, newParentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
-    populateBinaryRuleDistribution(example.getTree(), binaryRuleBuilder);
-    TableFactor binaryDistribution = binaryRuleBuilder.build();
+    example.getTree().populateBinaryRuleDistribution(binaryRuleBuilder, nonterminalFactor);
+    // DiscreteFactor binaryDistribution = binaryRuleBuilder.build().product(1.0 - EPSILON);
+    DiscreteFactor binaryDistribution = binaryRuleBuilder.build();
 
     // Build a new terminal distribution over only these expressions.
     VariableNumMap newVars = VariableNumMap.unionAll(newTerminalVar, newParentVar, ruleVar);
@@ -165,42 +173,9 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
       }
     }
 
-    Assignment skipAssignment = parentVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.SKIP_EXPRESSION)
-        .union(ruleVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.TERMINAL));
-
     return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
-        binaryDistribution, newTerminalFactor.build(), -1, true, skipAssignment);
-  }
-
-  private void populateBinaryRuleDistribution(ExpressionTree tree, TableFactorBuilder builder) {
-    if (tree.hasChildren()) {
-      ExpressionNode root = tree.getExpressionNode();
-
-      List<ExpressionTree> argChildren = tree.getLeftChildren();
-      List<ExpressionTree> funcChildren = tree.getRightChildren();
-      for (int i = 0; i < argChildren.size(); i++) {
-        ExpressionTree arg = argChildren.get(i);
-        ExpressionTree func = funcChildren.get(i);
-
-        // Add binary rule for this combination of expressions. Note
-        // that the expressions can occur in either order in the sentence.
-        builder.setWeight(1 - EPSILON, arg.getExpressionNode(),
-            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
-        builder.setWeight(1 - EPSILON, func.getExpressionNode(),
-            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
-        
-        // Populate children
-        populateBinaryRuleDistribution(arg, builder);
-        populateBinaryRuleDistribution(func, builder);
-      }
-    }
-    
-    List<ExpressionTree> substitutions = tree.getSubstitutions();
-    for (int i = 0; i < substitutions.size(); i++) {
-      populateBinaryRuleDistribution(substitutions.get(i), builder);
-    }
-  }
-  
+        binaryDistribution, newTerminalFactor.build(), -1, false, null);
+  }  
 
   /**
    * This method is a hack that enables the use of the "substitutions"

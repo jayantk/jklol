@@ -561,6 +561,8 @@ public class CcgParserTest extends TestCase {
     
     assertEquals(0, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
+    // This fails because the features aren't applied to the same spans
+    // anymore with word skipping.
     assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconTrigger()).getTrigger());
     assertEquals(1.5, bestParse.getSubtreeProbability());
 

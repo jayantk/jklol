@@ -8,8 +8,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.ArrayUtils;
 import com.jayantkrish.jklol.util.HeapUtils;
 import com.jayantkrish.jklol.util.IntMultimap;
@@ -40,7 +40,7 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
    * @param posTags
    * @param beamSize
    */
-  public CcgBeamSearchChart(SupertaggedSentence sentence, int maxChartSize, int beamSize) {
+  public CcgBeamSearchChart(AnnotatedSentence sentence, int maxChartSize, int beamSize) {
     super(sentence, maxChartSize);
     this.beamSize = beamSize;
 
@@ -179,8 +179,9 @@ public class CcgBeamSearchChart extends AbstractCcgChart {
   @Override
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
+
     if (entryFilter != null) {
-      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType));
+      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, numTerminals, syntaxVarType));
     }
 
     if (probability != 0.0) {

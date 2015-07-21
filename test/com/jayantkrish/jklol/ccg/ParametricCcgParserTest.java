@@ -8,8 +8,8 @@ import junit.framework.TestCase;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 public class ParametricCcgParserTest extends TestCase {
 
@@ -33,10 +33,13 @@ public class ParametricCcgParserTest extends TestCase {
     "\"#\",(N{1}/N{1}){0},,0 #,# 1 1",
     "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
     "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo",
-    "unk-jj,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
-    "unk-jj,N{0},,0 pred:unk-jj",
-    "unk-jj,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
     "that,((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0},,0 that,that 1 1,that 2 2"
+  };
+  
+  private static final String[] unknownLexicon = {
+    "JJ,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
+    "JJ,N{0},,0 pred:unk-jj",
+    "JJ,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
   };
 
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
@@ -50,14 +53,16 @@ public class ParametricCcgParserTest extends TestCase {
   private static final double TOLERANCE = 1e-10;
   
   public void setUp() {
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(null, true), posTags, true, null, false, false);
+    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
+        Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
+        new DefaultCcgFeatureFactory(true, false), posTags, true, null, false);
     parameters = family.getNewSufficientStatistics();
     parser = family.getModelFromParameters(parameters);
   }
 
   public void testTerminals() {
-    List<CcgParse> parses = beamSearch(parser, Arrays.asList("Green"), Arrays.asList("NN"), 10);
+    AnnotatedSentence sentence = new AnnotatedSentence(Arrays.asList("Green"), Arrays.asList("NN"));
+    List<CcgParse> parses = parser.beamSearch(sentence, 10);
 
     CcgParse nounParse = null;
     CcgParse adjParse = null;
@@ -74,7 +79,9 @@ public class ParametricCcgParserTest extends TestCase {
     Preconditions.checkState(nounParse != null);
     Preconditions.checkState(adjParse != null);
 
-    parses = beamSearch(parser, Arrays.asList("unknown_adjective"), Arrays.asList("JJ"), 10);
+    AnnotatedSentence unknownSentence = new AnnotatedSentence(
+        Arrays.asList("unknown_adjective"), Arrays.asList("JJ"));
+    parses = parser.beamSearch(unknownSentence, 10);
     CcgParse unknownAdjParse = null;
     for (CcgParse parse : parses) {
       if (parse.getSyntacticCategory().equals(adjCat)) {
@@ -83,9 +90,9 @@ public class ParametricCcgParserTest extends TestCase {
     }
     Preconditions.checkState(unknownAdjParse != null);
 
-    family.incrementSufficientStatistics(parameters, parameters, nounParse, 1.0);
-    family.incrementSufficientStatistics(parameters, parameters, adjParse, -0.5);
-    family.incrementSufficientStatistics(parameters, parameters, unknownAdjParse, 0.75);
+    family.incrementSufficientStatistics(parameters, parameters, sentence, nounParse, 1.0);
+    family.incrementSufficientStatistics(parameters, parameters, sentence, adjParse, -0.5);
+    family.incrementSufficientStatistics(parameters, parameters, unknownSentence, unknownAdjParse, 0.75);
     CcgParser newParser = family.getModelFromParameters(parameters);
 
     System.out.println(family.getParameterDescription(parameters));
@@ -94,10 +101,6 @@ public class ParametricCcgParserTest extends TestCase {
     // NN -> N{0} parameter and root N{0} parameter.
     parses = beamSearch(newParser, Arrays.asList("BLOCK"), Arrays.asList("NN"), 10);
     assertEquals(2, parses.size());
-    for (CcgParse parse : parses) {
-      System.out.println(parse);
-    }
-
     assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
     assertEquals(nounCat, parses.get(0).getSyntacticCategory());
     // This parse only triggers the lexicon parameter.
@@ -107,6 +110,10 @@ public class ParametricCcgParserTest extends TestCase {
     // green -> N{0} root and N{0} root parameters. 
     parses = beamSearch(newParser, Arrays.asList("green"), Arrays.asList("JJ"), 10);
     assertEquals(3, parses.size());
+    for (CcgParse parse : parses) {
+      System.out.println(parse);
+    }
+
     assertEquals(3.0, Math.log(parses.get(0).getSubtreeProbability()), TOLERANCE);
     assertEquals(nounCat, parses.get(0).getSyntacticCategory());
     assertEquals(1.0, Math.log(parses.get(1).getSubtreeProbability()), TOLERANCE);
@@ -126,8 +133,7 @@ public class ParametricCcgParserTest extends TestCase {
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
-        posTags), beamSize);
+    return parser.beamSearch(new AnnotatedSentence(words, posTags), beamSize);
   }
 }
 

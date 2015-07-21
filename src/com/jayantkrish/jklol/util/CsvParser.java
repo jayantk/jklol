@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.util;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.Lists;
 
@@ -25,7 +27,7 @@ public class CsvParser {
     this.quote = quote;
     this.escape = escape;
   }
-  
+
   public static CsvParser defaultParser() {
     return new CsvParser(',', '\"', '\\');
   }
@@ -60,5 +62,31 @@ public class CsvParser {
     parts.add(sb.toString());
 
     return parts.toArray(new String[0]);
+  }
+
+  public String toCsv(List<String> parts) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0 ; i < parts.size(); i++) {
+      if (i > 0) {
+        sb.append(separator);
+      }
+      sb.append(quote);
+      sb.append(escape(parts.get(i)));
+      sb.append(quote);
+    }
+    return sb.toString();
+  }
+  
+  public String escape(String input) {
+    String escapeStr = Character.toString(escape);
+    String quoteStr = Character.toString(quote);
+    String separatorStr = Character.toString(separator);
+
+    // This requires regex escaping.
+    input = input.replaceAll(Pattern.quote(escapeStr), Matcher.quoteReplacement(escapeStr + escapeStr));
+    input = input.replaceAll(Pattern.quote(quoteStr), Matcher.quoteReplacement(escapeStr + quoteStr));
+    input = input.replaceAll(Pattern.quote(separatorStr), Matcher.quoteReplacement(escapeStr + separatorStr));
+
+    return input;
   }
 }

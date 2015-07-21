@@ -8,7 +8,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.util.CsvParser;
 
 /**
@@ -38,7 +39,7 @@ public class CcgBinaryRule implements Serializable {
 
   // Logical form for this rule. The logical form is a function of
   // type (left lf -> (right lf -> result))
-  private final LambdaExpression logicalForm;
+  private final Expression2 logicalForm;
 
   // Unfilled dependencies created by this rule.
   private final String[] subjects;
@@ -50,7 +51,7 @@ public class CcgBinaryRule implements Serializable {
   private final Combinator.Type type;
 
   public CcgBinaryRule(HeadedSyntacticCategory leftSyntax, HeadedSyntacticCategory rightSyntax,
-      HeadedSyntacticCategory returnSyntax, LambdaExpression logicalForm, List<String> subjects,
+      HeadedSyntacticCategory returnSyntax, Expression2 logicalForm, List<String> subjects,
       List<HeadedSyntacticCategory> subjectSyntaxes, List<Integer> argumentNumbers,
       List<Integer> objects, Combinator.Type type) {
     this.leftSyntax = leftSyntax;
@@ -58,6 +59,9 @@ public class CcgBinaryRule implements Serializable {
     this.parentSyntax = returnSyntax;
 
     this.logicalForm = logicalForm;
+    Preconditions.checkArgument(logicalForm == null || 
+        StaticAnalysis.isLambda(logicalForm, 0) && StaticAnalysis.getLambdaArguments(logicalForm, 0).size() >= 2, 
+          "Illegal logical form for binary rule: " + logicalForm);
 
     this.subjects = subjects.toArray(new String[0]);
     this.subjectSyntacticCategories = subjectSyntaxes.toArray(new HeadedSyntacticCategory[0]);
@@ -98,11 +102,9 @@ public class CcgBinaryRule implements Serializable {
     HeadedSyntacticCategory rightSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[1]);
     HeadedSyntacticCategory returnSyntax = HeadedSyntacticCategory.parseFrom(syntacticParts[2]);
 
-    LambdaExpression logicalForm = null;
+    Expression2 logicalForm = null;
     if (chunks.length >= 2 && chunks[1].trim().length() > 0) {
-      logicalForm = (LambdaExpression) ExpressionParser.lambdaCalculus().parseSingleExpression(chunks[1]);
-      Preconditions.checkArgument(logicalForm.getArguments().size() == 2, 
-          "Illegal logical form for binary rule: " + logicalForm);
+      logicalForm = ExpressionParser.expression2().parseSingleExpression(chunks[1]);
     }
 
     // Parse the type of combinator, if one is given.
@@ -193,7 +195,7 @@ public class CcgBinaryRule implements Serializable {
    * 
    * @return
    */
-  public LambdaExpression getLogicalForm() {
+  public Expression2 getLogicalForm() {
     return logicalForm;
   }
 

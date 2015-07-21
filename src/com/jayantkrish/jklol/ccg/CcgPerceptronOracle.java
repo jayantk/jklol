@@ -50,7 +50,7 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     CcgParse bestPredictedParse = inferenceAlgorithm.getBestParse(instantiatedParser, example.getSentence(),
         maxMarginCost, log);
     if (bestPredictedParse == null) {
-      System.out.println("Search error (Predicted): " + example.getSentence());
+      // System.out.println("Search error (Predicted): " + example.getSentence());
       log.stopTimer("update_gradient/unconditional_max_marginal");
       throw new ZeroProbabilityError();
     }
@@ -61,11 +61,12 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     log.startTimer("update_gradient/conditional_max_marginal");
     CcgParse bestCorrectParse = inferenceAlgorithm.getBestConditionalParse(instantiatedParser,
         example.getSentence(), null, log, example.getSyntacticParse(),
-        example.getDependencies(), example.getLogicalForm());
+        example.getLexiconEntries(), example.getDependencies(), example.getLogicalForm());
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
-      System.out.println("Search error (Correct): " + example.getSentence());
-      System.out.println("Expected tree: " + example.getSyntacticParse());
+      System.out.println("Search error (Correct): " + example.getSentence() + " " + example.getLogicalForm());
+      System.out.println("predicted: " + bestPredictedParse.getLogicalForm());
+      // System.out.println("Expected tree: " + example.getSyntacticParse());
       // System.out.println("Search error cause: " + conditionalChartFilter.analyzeParseFailure());
       log.stopTimer("update_gradient/conditional_max_marginal");
       throw new ZeroProbabilityError();
@@ -77,9 +78,11 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the predicted feature counts.
-    family.incrementSufficientStatistics(gradient, currentParameters, bestPredictedParse, -1.0);
+    family.incrementSufficientStatistics(gradient, currentParameters,
+        example.getSentence(), bestPredictedParse, -1.0);
     // Add the feature counts of best correct parse.
-    family.incrementSufficientStatistics(gradient, currentParameters, bestCorrectParse, 1.0);
+    family.incrementSufficientStatistics(gradient, currentParameters,
+        example.getSentence(), bestCorrectParse, 1.0);
     log.stopTimer("update_gradient/increment_gradient");
 
     // Return the amount by which the predicted parse's score exceeds the

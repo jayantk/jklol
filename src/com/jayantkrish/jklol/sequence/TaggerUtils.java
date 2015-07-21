@@ -24,7 +24,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.DynamicVariableSet;
 import com.jayantkrish.jklol.models.dynamic.ReplicatedFactor;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -253,8 +253,8 @@ public class TaggerUtils {
         Arrays.asList(INPUT_FEATURES_PATTERN, OUTPUT_PATTERN), Arrays.<Variable> asList(inputVectorType, labelType));
     VariableNumMap wordVectorVar = classifierVars.getVariablesByName(INPUT_FEATURES_PATTERN);
     VariableNumMap posVar = classifierVars.getVariablesByName(OUTPUT_PATTERN);
-    ConditionalLogLinearFactor wordClassifier = new ConditionalLogLinearFactor(wordVectorVar, posVar,
-        VariableNumMap.EMPTY, featureDictionary);
+    ParametricLinearClassifierFactor wordClassifier = new ParametricLinearClassifierFactor(wordVectorVar, posVar,
+        VariableNumMap.EMPTY, featureDictionary, null, false);
 
     // Create a constant factor for encoding label restrictions.
     VariableNumMap restrictionVars = new VariableNumMap(Ints.asList(2, 4),

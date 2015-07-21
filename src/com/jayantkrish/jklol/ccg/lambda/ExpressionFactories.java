@@ -5,6 +5,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -25,6 +26,10 @@ public class ExpressionFactories {
   public static ExpressionFactory<SExpression> getSExpressionFactory(
       IndexedList<String> symbolTable) {
     return new SExpressionFactory(symbolTable);
+  }
+  
+  public static ExpressionFactory<Expression2> getExpression2Factory() {
+    return new Expression2Factory();
   }
 
   public static ExpressionFactory<Type> getTypeFactory() {
@@ -104,6 +109,8 @@ public class ExpressionFactories {
           }
           Expression body = remaining.get(remaining.size() - 1).getExpression();
           return new TypedExpression(new LambdaExpression(variables, argTypes, body), null);
+        } else if (firstTermName.equals("and")) {
+          return new TypedExpression(new CommutativeOperator(firstTerm, TypedExpression.getExpressions(remaining)), null);
         } else {
           return new TypedExpression(new ApplicationExpression(subexpressions), null);
         }
@@ -216,6 +223,21 @@ public class ExpressionFactories {
       return SExpression.nested(subexpressions);
     }
   }
+
+  private static class Expression2Factory implements ExpressionFactory<Expression2> {
+
+    public Expression2Factory() {
+    }
+
+    public Expression2 createTokenExpression(String token) {
+      return Expression2.constant(token);
+    }
+
+    public Expression2 createExpression(List<Expression2> subexpressions) {
+      return Expression2.nested(subexpressions);
+    }
+  }
+
 
   private ExpressionFactories() {
     // Prevent instantiation.

@@ -5,8 +5,8 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 /**
  * A training example for training a CCG parser. The input
@@ -22,7 +22,7 @@ public class CcgExample {
 
   // The sentence to parse, along with part-of-speech tags for each word
   // and optional supertags (syntactic categories to consider for each word).
-  private final SupertaggedSentence sentence;
+  private final AnnotatedSentence sentence;
 
   // May be null, in which case the true dependencies are
   // unobserved.
@@ -32,7 +32,10 @@ public class CcgExample {
   private final CcgSyntaxTree syntacticParse;
   // Expected logical form for the parse. May be null,
   // in which case the true logical form is unobserved.
-  private final Expression logicalForm;
+  private final Expression2 logicalForm;
+  // Lexicon entries to use in the correct parse. May be null,
+  // in which case they are unobserved.
+  private final LexiconEntryLabels lexiconEntries;
 
   /**
    * Create a new training example for a CCG parser.
@@ -47,13 +50,15 @@ public class CcgExample {
    * @param logicalForm The logical form of the correct CCG parse of
    * {@code words}. May be {@code null}, in which case the correct
    * value is treated as unobserved.
+   * @param lexiconEntries
    */
-  public CcgExample(SupertaggedSentence sentence, Set<DependencyStructure> dependencies,
-      CcgSyntaxTree syntacticParse, Expression logicalForm) {
+  public CcgExample(AnnotatedSentence sentence, Set<DependencyStructure> dependencies,
+      CcgSyntaxTree syntacticParse, Expression2 logicalForm, LexiconEntryLabels lexiconEntries) {
     this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
     this.logicalForm = logicalForm;
+    this.lexiconEntries = lexiconEntries;
 
     if (syntacticParse != null) {
       List<String> syntaxWords = syntacticParse.getAllSpannedWords();
@@ -78,7 +83,7 @@ public class CcgExample {
     return posTagVocabulary;
   }
 
-  public SupertaggedSentence getSentence() {
+  public AnnotatedSentence getSentence() {
     return sentence;
   }
 
@@ -108,8 +113,16 @@ public class CcgExample {
     return logicalForm != null;
   }
 
-  public Expression getLogicalForm() {
+  public Expression2 getLogicalForm() {
     return logicalForm;
+  }
+  
+  public boolean hasLexiconEntries() {
+    return lexiconEntries != null;
+  }
+
+  public LexiconEntryLabels getLexiconEntries() {
+    return lexiconEntries;
   }
 
   @Override

@@ -12,11 +12,11 @@ import com.jayantkrish.jklol.ccg.CcgSyntaxTree;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.data.LineDataFormat;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.CsvParser;
 
 public class CcgExampleFormat extends LineDataFormat<CcgExample> {
@@ -68,17 +68,17 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample> {
     }
 
     // Parse out a logical form, if one is provided.
-    Expression logicalForm = null;
+    Expression2 logicalForm = null;
     if (parts.length >= 4 && parts[3].length() > 0) {
-      logicalForm = ExpressionParser.lambdaCalculus().parseSingleExpression(parts[3]);
+      logicalForm = ExpressionParser.expression2().parseSingleExpression(parts[3]);
     }
 
     if (!ignoreSemantics) {
-      return new CcgExample(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags),
-          dependencies, tree, logicalForm);
+      return new CcgExample(new AnnotatedSentence(words, posTags), dependencies, tree,
+          logicalForm, null);
     } else {
-      return new CcgExample(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags),
-          null, tree, logicalForm);
+      return new CcgExample(new AnnotatedSentence(words, posTags), null, tree,
+          logicalForm, null);
     }
   }
 }

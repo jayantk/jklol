@@ -19,7 +19,7 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.SyntacticCategory;
-import com.jayantkrish.jklol.ccg.cli.TrainCcg;
+import com.jayantkrish.jklol.ccg.cli.TrainSyntacticCcgParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.evaluation.Example;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -109,7 +109,7 @@ public class TrainSupertagger extends AbstractCli {
     // Read in the training data as sentences, to use for
     // feature generation.
     System.out.println("Reading training data...");
-    List<CcgExample> ccgExamples = TrainCcg.readTrainingData(
+    List<CcgExample> ccgExamples = TrainSyntacticCcgParser.readTrainingData(
         options.valueOf(trainingFilename), true, true, options.valueOf(syntaxMap));
     System.out.println("Reformatting training data...");
     List<TaggedSequence<WordAndPos, HeadedSyntacticCategory>> trainingData =

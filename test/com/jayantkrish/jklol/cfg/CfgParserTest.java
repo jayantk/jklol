@@ -13,18 +13,19 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.util.Assignment;
 
 public class CfgParserTest extends TestCase {
 
   DiscreteFactor binary;
   DiscreteFactor terminal;
-	CfgParser p;
+	CfgParser p, p2;
 	
 	VariableNumMap parentVar, leftVar, rightVar, termVar, ruleVar;
 
 	public void setUp() {
 	  DiscreteVariable nonterm = new DiscreteVariable("nonterminals", Arrays.asList(
-	      "N", "V", "S", "S2", "NP", "VP", "foo", "R", "bar", "barP", "A"));
+	      "N", "V", "S", "S2", "NP", "VP", "foo", "R", "bar", "barP", "A", "**skip**"));
 	  DiscreteVariable terms = new DiscreteVariable("terminals", listifyWords(Arrays.asList(
 	      "gretzky", "plays", "ice", "hockey", "ice hockey", "baz", "bbb", 
 	      "baz bbb", "a", "b", "c")));
@@ -68,7 +69,17 @@ public class CfgParserTest extends TestCase {
 		binary = binaryBuilder.build();
 		terminal = terminalBuilder.build();
 		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binary, terminal, 10, false);
+		    binary, terminal, 10, false, null);
+
+		Assignment skipAssignment = parentVar.outcomeArrayToAssignment("**skip**")
+		    .union(ruleVar.outcomeArrayToAssignment("rule1"));
+		for (Object terminal : terms.getValues()) {
+		  Assignment a = termVar.outcomeArrayToAssignment(terminal).union(skipAssignment);
+		  terminalBuilder.setWeight(a, 1.0);
+		}
+		
+		p2 = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
+		    binaryBuilder.build(), terminalBuilder.build(), 10, true, skipAssignment);
 	}
 	
 	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
@@ -96,27 +107,27 @@ public class CfgParserTest extends TestCase {
 	  }
 	  return wordSequences;
 	}
-	
-	public void testParseInsideMarginal() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
 
+	public void testParseInsideMarginal() {
+		CfgParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
+		
 		Factor rootProductions = c.getInsideEntries(0, 3);
-		assertEquals(2.0, rootProductions.size());
+		assertEquals(2, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(0.25 * .25, rootProductions.getUnnormalizedProbability("S"));
 		assertEquals(0.25 * .25, rootProductions.getUnnormalizedProbability("S2"));
 
 		Factor nounProductions = c.getInsideEntries(2, 3);
-		assertEquals(3.0, nounProductions.size());
+		assertEquals(3, nounProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(.25, nounProductions.getUnnormalizedProbability("N"));
 		assertEquals(.25 * .25, nounProductions.getUnnormalizedProbability("NP"));
 		assertEquals(.5 * .25 * .25, nounProductions.getUnnormalizedProbability("foo"));
 	}
 
 	public void testParseOutsideMarginal() {
-		ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
+		CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor rootProductions = c.getOutsideEntries(0, 3);
-		assertEquals(1.0, rootProductions.size());
+		assertEquals(1, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(1.0, rootProductions.getUnnormalizedProbability("S"));
 
 		Factor vpProductions = c.getOutsideEntries(1, 3);
@@ -124,20 +135,44 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testParseMarginal() {
-	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor rootProductions = c.getMarginalEntries(0, 3);
-		assertEquals(1.0, rootProductions.size());
+		assertEquals(1, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(1.0, rootProductions.getUnnormalizedProbability("S") / c.getPartitionFunction());
 
 		Factor nProductions = c.getMarginalEntries(2, 3);
 		assertEquals(1.0, nProductions.getUnnormalizedProbability("N") / c.getPartitionFunction());
 	}
 
+	public void testParseMarginalWordSkip() {
+	  CfgParseChart c = p2.parseMarginal(Arrays.asList("plays", "hockey"), true);
+
+		Factor rootProductions = c.getMarginalEntries(0, 1);
+		assertEquals(3, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
+		assertEquals(1.0 / 6.0, rootProductions.getUnnormalizedProbability("N") / c.getPartitionFunction());
+		assertEquals(4.0 / 6.0, rootProductions.getUnnormalizedProbability("V") / c.getPartitionFunction());
+		assertEquals(1.0 / 6.0, rootProductions.getUnnormalizedProbability("VP") / c.getPartitionFunction());
+
+		Factor terminalExpectations = c.getTerminalRuleExpectations();
+		assertEquals(4, terminalExpectations.coerceToDiscrete().getNonzeroAssignments().size());
+		assertEquals(2.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("hockey"), "N", "rule1") / c.getPartitionFunction());
+		assertEquals(4.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("hockey"), "**skip**", "rule1") / c.getPartitionFunction());
+		assertEquals(5.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("plays"), "V", "rule1") / c.getPartitionFunction());
+		assertEquals(1.0 / 6.0, terminalExpectations.getUnnormalizedProbability(Arrays.asList("plays"), "**skip**", "rule1") / c.getPartitionFunction());
+
+		c = p2.parseMarginal(Arrays.asList("plays", "hockey"), false);
+		CfgParseTree bestParse = c.getBestParseTree();
+		assertTrue(bestParse.isTerminal());
+		assertEquals("V", bestParse.getRoot());
+		assertEquals(Arrays.asList("plays"), bestParse.getTerminalProductions());
+	}
+
 	public void testRuleCounts() {
-	  ParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), "S", true);
 
 		Factor ruleCounts = c.getBinaryRuleExpectations();
+		// System.out.println(ruleCounts.getParameterDescription());
 		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S2", "rule1"));
 		assertEquals(1.0, ruleCounts.getUnnormalizedProbability("N", "VP", "S", "rule1") / c.getPartitionFunction());
 		assertEquals(0.0, ruleCounts.getUnnormalizedProbability("N", "N", "NP", "rule1"));
@@ -150,7 +185,7 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testAmbiguous() {
-	  ParseChart c = p.parseMarginal(Arrays.asList("a", "b", "c"), "A", true);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("a", "b", "c"), "A", true);
 
 		Factor leftProds = c.getMarginalEntries(0, 1);
 		assertEquals(0.5, leftProds.getUnnormalizedProbability("A") / c.getPartitionFunction());
@@ -166,75 +201,39 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testParseMaxMarginal() {
-		ParseChart c = p.parseMarginal(Arrays.asList("baz", "bbb"), "barP", false);
+		CfgParseChart c = p.parseMarginal(Arrays.asList("baz", "bbb"), "barP", false);
 		Factor prods = c.getInsideEntries(0, 1);
-		assertEquals(1.0, prods.size());
+		assertEquals(1, prods.coerceToDiscrete().getNonzeroAssignments().size());
 		assertEquals(.5, prods.getUnnormalizedProbability("barP"));	
 	}
 
-	// These methods are no longer implemented.
-	/*
 	public void testParseMaxMarginalTree() {
-		ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false); 
-		    
-		ParseTree t = c.getBestParseTrees("S", 1).get(0);
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false); 
+
+		CfgParseTree t = c.getBestParseTree("S");
 		assertEquals("S", t.getRoot());
 		assertEquals("N", t.getLeft().getRoot());
 		assertEquals("VP", t.getRight().getRoot());
 		assertEquals("V", t.getRight().getLeft().getRoot());
 	}
-	
-	public void testParseMaxMarginalTreeDist() {
-	  ParseChart c = p.parseInsideMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), false);
-		
-		Factor rootProbabilities = TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S")).product(0.5)
-		    .add(TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S2")));
-		
-		List<ParseTree> trees = c.getBestParseTrees(rootProbabilities, 2);
-		ParseTree best = trees.get(0);
-		assertEquals("S2", best.getRoot());
-		assertEquals("N", best.getLeft().getRoot());
-		assertEquals("VP", best.getRight().getRoot());
-		assertEquals("V", best.getRight().getLeft().getRoot());
-		
-		ParseTree second = trees.get(1);
-		assertEquals("S", second.getRoot());
-		assertEquals("N", second.getLeft().getRoot());
-		assertEquals("VP", second.getRight().getRoot());
-		assertEquals("V", second.getRight().getLeft().getRoot());
-	}
 
-	public void testMostLikelyProductions() {
-		ParseChart c = p.mostLikelyProductions("barP", 2, 2);
-
-		List<ParseTree> trees = c.getBestParseTrees("barP", 2);
-		assertEquals(0.5, trees.get(0).getProbability());
-		assertTrue(trees.get(0).isTerminal());
-		assertEquals(Arrays.asList("baz", "bbb"),
-				trees.get(0).getTerminalProductions());
-		assertEquals(0.125, trees.get(1).getProbability());
-		assertEquals("bar", trees.get(1).getLeft().getRoot());
-		assertEquals("bar", trees.get(1).getRight().getRoot());
-	}
-	*/
-	
 	public void testBeamSearch() {
-	  List<ParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
+	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
 	  assertEquals(3, trees.size());
 	  
-	  ParseTree bestTree = trees.get(0);
+	  CfgParseTree bestTree = trees.get(0);
 	  assertEquals("barP", bestTree.getRoot());
 	  assertEquals("rule1", bestTree.getRuleType());
 	  assertTrue(bestTree.isTerminal());
 	  assertEquals(0.5, bestTree.getProbability());
 	  
-	  ParseTree secondBestTree = trees.get(1);
+	  CfgParseTree secondBestTree = trees.get(1);
 	  assertEquals("barP", secondBestTree.getRoot());
 	  assertEquals("rule1", secondBestTree.getRuleType());
 	  assertFalse(secondBestTree.isTerminal());
 	  assertEquals(0.125, secondBestTree.getProbability());
 	  
-	  ParseTree thirdBestTree = trees.get(2);
+	  CfgParseTree thirdBestTree = trees.get(2);
 	  assertEquals("barP", thirdBestTree.getRoot());
 	  assertEquals("rule2", thirdBestTree.getRuleType());
 	  assertFalse(thirdBestTree.isTerminal());
@@ -242,7 +241,8 @@ public class CfgParserTest extends TestCase {
 
 	  
 	  // Make sure that the beam truncates the less probable tree.
-	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary, terminal, 1, false);
+	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary,
+	      terminal, 1, false, null);
 	  trees = newParser.beamSearch(Arrays.asList("baz", "bbb"));
 	  assertEquals(1, trees.size());
 	  bestTree = trees.get(0);
@@ -252,10 +252,10 @@ public class CfgParserTest extends TestCase {
 	}
 	
 	public void testBeamSearch2() {
-	  List<ParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"));
+	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"));
 	  assertEquals(5, trees.size());
 	  
-	  for (ParseTree tree : trees) {
+	  for (CfgParseTree tree : trees) {
 	    assertEquals("A", tree.getRoot());
 	    assertEquals("rule1", tree.getRuleType());
 	    assertFalse(tree.isTerminal());

@@ -4,8 +4,8 @@ import java.util.Arrays;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
@@ -15,6 +15,8 @@ import com.jayantkrish.jklol.util.IntMultimap;
  */
 public class CcgExactChart extends AbstractCcgChart {
 
+  private final int numTerminals;
+  
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
   private final int[][] chartSizes;
@@ -23,9 +25,9 @@ public class CcgExactChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 100;
 
-  public CcgExactChart(SupertaggedSentence input, int maxChartSize) {
+  public CcgExactChart(AnnotatedSentence input, int maxChartSize) {
     super(input, maxChartSize);
-    int numTerminals = input.size();
+    numTerminals = input.size();
     this.chart = new ChartEntry[numTerminals][numTerminals][];
     this.probabilities = new double[numTerminals][numTerminals][];
     this.chartSizes = new int[numTerminals][numTerminals];
@@ -103,7 +105,7 @@ public class CcgExactChart extends AbstractCcgChart {
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
     if (entryFilter != null) {
-      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType));
+      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, numTerminals, syntaxVarType));
     }
 
     if (probability != 0.0) {

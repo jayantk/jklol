@@ -4,8 +4,6 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -28,14 +26,10 @@ public class DefaultLogFunction extends AbstractLogFunction {
   private final int modelSerializationInterval;
   private final String modelSerializationDir;
 
-  // Print asynchronously for speed.
-  private final ExecutorService printExecutor;
-
   public DefaultLogFunction() {
     super();
     this.logInterval = 1;
     this.showExamples = true;
-    this.printExecutor = Executors.newSingleThreadExecutor();
     
     this.statistics = Maps.newHashMap();
     
@@ -47,7 +41,6 @@ public class DefaultLogFunction extends AbstractLogFunction {
     super();
     this.logInterval = logInterval;
     this.showExamples = showExamples;
-    this.printExecutor = Executors.newSingleThreadExecutor();
     
     this.statistics = Maps.newHashMap();
     
@@ -60,7 +53,6 @@ public class DefaultLogFunction extends AbstractLogFunction {
     super();
     this.logInterval = logInterval;
     this.showExamples = showExamples;
-    this.printExecutor = Executors.newSingleThreadExecutor();
 
     this.statistics = Maps.newHashMap();
 
@@ -147,20 +139,6 @@ public class DefaultLogFunction extends AbstractLogFunction {
       long invocations = getTimerInvocations(timer);
       double average = total / invocations;
       print(String.format("%s: %.3f sec (%.3f ms * %d)", timer, (total / 1000), average, invocations));
-    }
-  }
-  
-  private static class PrintTask implements Runnable {
-
-    private final String toPrint;
-    
-    public PrintTask(String toPrint) { 
-      this.toPrint = toPrint;
-    }
-
-    @Override
-    public void run() {
-      System.out.println(toPrint);      
     }
   }
 }

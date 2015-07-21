@@ -4,9 +4,9 @@ import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IntMultimap;
 
@@ -24,7 +24,7 @@ public interface CcgChart {
    * 
    * @return
    */
-  public SupertaggedSentence getInput();
+  public AnnotatedSentence getInput();
 
   /**
    * Gets the maximum number of chart entries for this parse. This

@@ -7,27 +7,45 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
- * Trains a CCG from observed CCG dependency structures.
+ * Trains a CCG from observed CCG dependency structures 
+ * or logical forms using a loglikelihood objective function
+ * with approximate inference (beam search). 
  * 
  * @author jayant
  */
 public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExample> {
 
   private final ParametricCcgParser family;
+  
+  // Function for comparing the equality of logical forms.
+  private final ExpressionComparator comparator;
 
   // Size of the beam used during inference (which uses beam search).
   private final int beamSize;
 
-  public CcgLoglikelihoodOracle(ParametricCcgParser family, int beamSize) {
+  /**
+   * 
+   * @param family
+   * @param comparator may be {@code null} if logical forms are not
+   * to be used for training.
+   * @param beamSize
+   */
+  public CcgLoglikelihoodOracle(ParametricCcgParser family,
+      ExpressionComparator comparator, int beamSize) {
     this.family = Preconditions.checkNotNull(family);
+    this.comparator = comparator;
     this.beamSize = beamSize;
   }
 
@@ -45,36 +63,63 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   public double accumulateGradient(SufficientStatistics gradient,
       SufficientStatistics currentParameters, CcgParser instantiatedParser,
       CcgExample example, LogFunction log) {
+    AnnotatedSentence sentence = example.getSentence();
+
     // Gradient is the feature expectations of all correct CCG parses, minus all
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
     // Calculate the unconditional distribution over CCG parses.
-    List<CcgParse> parses = instantiatedParser.beamSearch(example.getSentence(), 
-        beamSize, log);
+    List<CcgParse> parses = instantiatedParser.beamSearch(sentence, beamSize,
+        null, log, -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
+        
     if (parses.size() == 0) {
       // Search error: couldn't find any parses.
+      System.out.println("Search error (Predicted): " + sentence + " " + example.getLogicalForm());
       throw new ZeroProbabilityError();      
     }
     log.stopTimer("update_gradient/input_marginal");
 
     // Find parses with the correct syntactic structure and dependencies.
     log.startTimer("update_gradient/condition_parses_on_dependencies");
-    // Condition parses on provided syntactic information, if any is provided.
-    List<CcgParse> possibleParses = null;
+    // Condition parses on provided syntactic / lexicon information,
+    // if any is provided.
+    ChartCost syntacticCost = null;
+    ChartCost lexiconCost = null;
     if (example.hasSyntacticParse()) {
-      ChartCost conditionalChartFilter = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
-      possibleParses = instantiatedParser.beamSearch(example.getSentence(), beamSize,
-        conditionalChartFilter, log, -1, Integer.MAX_VALUE, 1);
+      syntacticCost = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
+    }
+    if (example.hasLexiconEntries()) {
+      lexiconCost = new LexiconChartCost(example.getLexiconEntries());
+    }
+    ChartCost cost = SumChartCost.create(syntacticCost, lexiconCost);
+
+    List<CcgParse> possibleParses = null;
+    if (cost != null) {
+      possibleParses = instantiatedParser.beamSearch(sentence, beamSize,
+        cost, log, -1, Integer.MAX_VALUE, 1);
     } else {
       possibleParses = Lists.newArrayList(parses);
     }
 
-    // Condition on true dependency structures, if provided.
-    List<CcgParse> correctParses = filterSemanticallyCompatibleParses(example.getDependencies(),
-        example.getLogicalForm(), possibleParses);
+    List<CcgParse> correctParses = possibleParses;
+    // Condition on correct dependency structures, if provided.
+    if (example.getDependencies() != null) {
+      correctParses = filterParsesByDependencies(example.getDependencies(),
+          correctParses);
+    }
+    // Condition on correct logical form, if provided.
+    if (example.hasLogicalForm()) {
+      correctParses = filterParsesByLogicalForm(example.getLogicalForm(), comparator, correctParses);
+    }
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
+      System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
+      /*
+      for (CcgParse parse : possibleParses) {
+        System.out.println(parse.getLogicalForm());
+      }
+      */
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/condition_parses_on_dependencies");
@@ -83,14 +128,14 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Subtract the unconditional expected feature counts.
     double unconditionalPartitionFunction = getPartitionFunction(parses);
     for (CcgParse parse : parses) {
-      family.incrementSufficientStatistics(gradient, currentParameters, parse, -1.0 * 
+      family.incrementSufficientStatistics(gradient, currentParameters, sentence, parse, -1.0 * 
           parse.getSubtreeProbability() / unconditionalPartitionFunction);
     }
 
     // Add conditional expected feature counts.
     double conditionalPartitionFunction = getPartitionFunction(correctParses);
     for (CcgParse parse : correctParses) {
-      family.incrementSufficientStatistics(gradient, currentParameters, parse,
+      family.incrementSufficientStatistics(gradient, currentParameters, sentence, parse,
           parse.getSubtreeProbability() / conditionalPartitionFunction);
     }
     log.stopTimer("update_gradient/increment_gradient");
@@ -100,26 +145,27 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
   }
 
-  public static List<CcgParse> filterSemanticallyCompatibleParses(Set<DependencyStructure> observedDependencies,
-      Expression observedLogicalForm, Iterable<CcgParse> parses) {
+  public static List<CcgParse> filterParsesByDependencies(Set<DependencyStructure> observedDependencies,
+      Iterable<CcgParse> parses) {
     List<CcgParse> correctParses = Lists.newArrayList();
     
     for (CcgParse parse : parses) {
-      boolean compatible = true;
-      if (observedDependencies != null && !Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
-        compatible = false;
-      }
-      if (observedLogicalForm != null) {
-        Expression predictedLogicalForm = parse.getLogicalForm();
-        
-        if (predictedLogicalForm == null || !predictedLogicalForm.simplify().functionallyEquals(observedLogicalForm.simplify())) {
-          compatible = false;
-        }
-      }
-
-      if (compatible) {
+      if (Sets.newHashSet(parse.getAllDependencies()).equals(observedDependencies)) {
         correctParses.add(parse);
       }
+    }
+    return correctParses;
+  }
+  
+  public static List<CcgParse> filterParsesByLogicalForm(Expression2 observedLogicalForm,
+    ExpressionComparator comparator, Iterable<CcgParse> parses) {
+    List<CcgParse> correctParses = Lists.newArrayList();
+    for (CcgParse parse : parses) {
+      Expression2 predictedLogicalForm = parse.getLogicalForm();
+
+      if (predictedLogicalForm != null && comparator.equals(predictedLogicalForm, observedLogicalForm)) {
+        correctParses.add(parse);
+      } 
     }
     return correctParses;
   }

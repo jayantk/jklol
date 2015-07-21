@@ -51,7 +51,7 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
     super(variables);
     this.initialWeights = Preconditions.checkNotNull(initialWeights);
     
-    List<Assignment> assignments = initialWeights.getNonzeroAssignments();    
+    List<Assignment> assignments = initialWeights.getNonzeroAssignments();
     DiscreteVariable featureNameDictionary = new DiscreteVariable("indicator features", assignments);
     this.featureVars = VariableNumMap.singleton(0, "features", featureNameDictionary);  
   }
@@ -129,18 +129,19 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
           TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
           .product(marginal);
 
+      Tensor weightTensor = initialWeights.getWeights();
       Tensor productFactorWeights = productFactor.getWeights();
       double[] productFactorValues = productFactorWeights.getValues();
       int tensorSize = productFactorWeights.size();
       double multiplier = count / partitionFunction;
       TensorSufficientStatistics tensorGradient = (TensorSufficientStatistics) gradient;
       for (int i = 0; i < tensorSize; i++) {
-        int builderIndex = (int) productFactorWeights.indexToKeyNum(i);
+        int builderIndex = weightTensor.keyNumToIndex(productFactorWeights.indexToKeyNum(i));
         tensorGradient.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
       }
     }
   }
-  
+
   private Tensor getFeatureWeights(SufficientStatistics parameters) {
     TensorSufficientStatistics featureParameters = (TensorSufficientStatistics) parameters;
     // Check that the parameters are a vector of the appropriate size.

@@ -15,9 +15,9 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.IndexedPredicate;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.probdb.DbAssignment;
 import com.jayantkrish.jklol.probdb.JoinQuery;
 import com.jayantkrish.jklol.probdb.Query;
@@ -44,14 +44,14 @@ public class NoExportHelpers {
     String[] rules = {"FOO{0} FOO{1} FOO{1}", "FOO{0} FOO{0}"};
 
     ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(
-        Arrays.asList(lexicon), Arrays.asList(rules), null, null, false, null, false, false);
+        Arrays.asList(lexicon), Collections.<String>emptyList(), Arrays.asList(rules),
+        null, null, false, null, false);
     CcgParser parser = ccgFamily.getModelFromParameters(
         ccgFamily.getNewSufficientStatistics());
 
     List<String> words = Arrays.asList(input.split(" "));
     List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
-    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
-        words, posTags), 10);
+    List<CcgParse> parses = parser.beamSearch(new AnnotatedSentence(words, posTags), 10);
     return parses.get(0);
   }
 

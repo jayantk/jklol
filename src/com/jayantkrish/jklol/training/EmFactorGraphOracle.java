@@ -1,7 +1,5 @@
 package com.jayantkrish.jklol.training;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.inference.MarginalCalculator;
 import com.jayantkrish.jklol.inference.MarginalSet;
@@ -18,8 +16,8 @@ import com.jayantkrish.jklol.util.Assignment;
  * 
  * @author jayantk
  */
-public class EmFactorGraphOracle implements EmOracle<DynamicFactorGraph,
-    DynamicAssignment, SufficientStatistics> {
+public class EmFactorGraphOracle extends AbstractEmOracle<DynamicFactorGraph,
+    DynamicAssignment> {
 
   private final ParametricFactorGraph parametricModel;
   private final MarginalCalculator marginalCalculator;
@@ -36,10 +34,16 @@ public class EmFactorGraphOracle implements EmOracle<DynamicFactorGraph,
   public DynamicFactorGraph instantiateModel(SufficientStatistics parameters) {
     return parametricModel.getModelFromParameters(parameters);
   }
+  
+  @Override
+  public SufficientStatistics getInitialExpectationAccumulator() {
+    return parametricModel.getNewSufficientStatistics();
+  }
 
   @Override
   public SufficientStatistics computeExpectations(DynamicFactorGraph model,
-      SufficientStatistics currentParameters, DynamicAssignment example, LogFunction log) {
+      SufficientStatistics currentParameters, DynamicAssignment example,
+      SufficientStatistics accumulator, LogFunction log) {
 
     log.startTimer("sufficientStatistics/getFactorGraph");
     FactorGraph factorGraph = model.getFactorGraph(example);
@@ -55,21 +59,16 @@ public class EmFactorGraphOracle implements EmOracle<DynamicFactorGraph,
     MarginalSet marginals = marginalCalculator.computeMarginals(conditionalFactorGraph);
     log.stopTimer("sufficientStatistics/marginals");
 
-    SufficientStatistics statistics = parametricModel.getNewSufficientStatistics();
-    parametricModel.incrementSufficientStatistics(statistics, currentParameters, marginals, 1.0);
-    return statistics;
+    parametricModel.incrementSufficientStatistics(accumulator, currentParameters, marginals, 1.0);
+    return accumulator;
   }
 
   @Override
-  public SufficientStatistics maximizeParameters(
-      List<SufficientStatistics> expectations, SufficientStatistics currentParameters, LogFunction log) {
-
+  public SufficientStatistics maximizeParameters(SufficientStatistics expectations,
+      SufficientStatistics currentParameters, LogFunction log) {
     SufficientStatistics aggregate = parametricModel.getNewSufficientStatistics();
     aggregate.increment(smoothing, 1.0);
-    
-    for (SufficientStatistics expectation : expectations) {
-      aggregate.increment(expectation, 1.0);
-    }
+    aggregate.increment(expectations, 1.0);
     
     return aggregate;
   }

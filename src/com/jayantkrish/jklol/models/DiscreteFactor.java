@@ -331,11 +331,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     return this;
   }
 
-  @Override
-  public DiscreteObjectFactor coerceToDiscreteObject() {
-    throw new UnsupportedOperationException("Not yet implemented");
-  }
-
   /**
    * Prints out this factor as a comma-separated values file, suitable for
    * reading using {@link TableFactor#fromDelimitedFile}.
@@ -375,17 +370,32 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   /**
    * Gets a string description of {@code assignments} and their weights in
-   * {@code this}.
+   * {@code this}. Zero-weight assignments are included.
    * 
    * @param assignments
    * @return
    */
   public String describeAssignments(List<Assignment> assignments) {
+    return describeAssignments(assignments, true);
+  }
+
+  /**
+   * Gets a string description of {@code assignments} and their weights in
+   * {@code this}.
+   * 
+   * @param assignments
+   * @param includeZeros if {@code false}, zero weight assignments are omitted.
+   * @return
+   */
+  public String describeAssignments(List<Assignment> assignments, boolean includeZeros) {
     StringBuilder sb = new StringBuilder();
     for (Assignment assignment : assignments) {
-      Outcome outcome = new Outcome(assignment, getUnnormalizedProbability(assignment));
-      sb.append(outcome.toString());
-      sb.append("\n");
+      double unnormalizedProb = getUnnormalizedProbability(assignment);
+      if (unnormalizedProb != 0.0 || includeZeros) {
+        Outcome outcome = new Outcome(assignment, unnormalizedProb);
+        sb.append(outcome.toString());
+        sb.append("\n");
+      }
     }
     return sb.toString();
   }

@@ -125,6 +125,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       // Compute the average of the parameter values from each iteration  
       // by tracking the sum of the parameters, then dividing.
       averagedParameters = oracle.initializeGradient();
+      averagedParameters.increment(initialParameters, 1.0);
     }
     
     SufficientStatistics gradientSumSquares = null;

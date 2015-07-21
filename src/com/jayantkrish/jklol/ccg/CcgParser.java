@@ -16,6 +16,7 @@ import java.util.concurrent.Future;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -31,12 +32,13 @@ import com.jayantkrish.jklol.ccg.chart.CcgExactHashTableChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
@@ -107,7 +109,8 @@ public class CcgParser implements Serializable {
   // Member variables ////////////////////////////////////
 
   // Weights on lexicon entries
-  private final CcgLexicon lexicon; 
+  private final List<CcgLexicon> lexicons;
+  private final List<LexiconScorer> lexiconScorers;
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -211,10 +214,10 @@ public class CcgParser implements Serializable {
   // All predicates used in CCG rules.
   private final Set<Long> predicatesInRules;
 
-  private final boolean allowWordSkipping;
   private final boolean normalFormOnly;
 
-  public CcgParser(CcgLexicon lexicon, VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
+  public CcgParser(List<CcgLexicon> lexicons, List<LexiconScorer> lexiconScorers,
+      VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar,
       DiscreteFactor dependencyDistribution, VariableNumMap wordDistanceVar,
@@ -228,8 +231,9 @@ public class CcgParser implements Serializable {
       VariableNumMap searchMoveVar, DiscreteFactor compiledSyntaxDistribution,
       VariableNumMap rootSyntaxVar, VariableNumMap rootPredicateVar, VariableNumMap rootPosVar, 
       DiscreteFactor rootSyntaxDistribution, DiscreteFactor headedRootSyntaxDistribution,
-      boolean allowWordSkipping, boolean normalFormOnly) {
-    this.lexicon = Preconditions.checkNotNull(lexicon);
+      boolean normalFormOnly) {
+    this.lexicons = ImmutableList.copyOf(lexicons);
+    this.lexiconScorers = ImmutableList.copyOf(lexiconScorers);
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(VariableNumMap.unionAll(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
@@ -360,7 +364,6 @@ public class CcgParser implements Serializable {
       }
     }
 
-    this.allowWordSkipping = allowWordSkipping;
     this.normalFormOnly = normalFormOnly;
 
     // Check that the encoding used for dependencies has enough capacity
@@ -369,7 +372,8 @@ public class CcgParser implements Serializable {
     Preconditions.checkArgument(dependencySyntaxType.numValues() < MAX_SYNTACTIC_CATEGORIES);
   }
 
-  public static DiscreteVariable buildSyntacticCategoryDictionary(Iterable<HeadedSyntacticCategory> syntacticCategories) {
+  public static Set<HeadedSyntacticCategory> getSyntacticCategoryClosure(
+      Iterable<HeadedSyntacticCategory> syntacticCategories) {
     Set<String> featureValues = Sets.newHashSet();
     for (HeadedSyntacticCategory cat : syntacticCategories) {
       getAllFeatureValues(cat.getSyntax(), featureValues);
@@ -388,8 +392,7 @@ public class CcgParser implements Serializable {
         cat = cat.getReturnType();
       }
     }
-    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategory", allCategories);
-    return syntaxType;
+    return allCategories;
   }
 
   public static DiscreteFactor buildRestrictedBinaryDistribution(DiscreteVariable syntaxType,
@@ -502,23 +505,29 @@ public class CcgParser implements Serializable {
 
   private static void appendApplicationRules(HeadedSyntacticCategory functionCat, HeadedSyntacticCategory argumentCat,
       DiscreteVariable syntaxType, Set<List<Object>> validOutcomes, Set<Combinator> combinators) {
+
     if (!functionCat.isAtomic() && functionCat.getArgumentType().isUnifiableWith(argumentCat)) {
       Direction direction = functionCat.getSyntax().getDirection();
+      Preconditions.checkState(direction == Direction.RIGHT || direction == Direction.LEFT
+          || direction == Direction.BOTH, "Unsupported direction %s", direction);
+
       Combinator combinator;
       List<Object> outcome;
-      if (direction.equals(Direction.LEFT)) {
+      if (direction.equals(Direction.LEFT) || direction.equals(Direction.BOTH)) {
         combinator = getApplicationCombinator(functionCat, argumentCat, true, syntaxType);
         outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
-      } else if (direction.equals(Direction.RIGHT)) {
+
+        combinators.add(combinator);
+        validOutcomes.add(outcome);
+      } 
+
+      if (direction.equals(Direction.RIGHT) || direction.equals(Direction.BOTH)) {
         combinator = getApplicationCombinator(functionCat, argumentCat, false, syntaxType);
         outcome = Arrays.<Object> asList(functionCat, argumentCat, combinator);
-      } else {
-        // Forward compatible error message, for handling
-        // Direction.BOTH if added.
-        throw new IllegalArgumentException("Unknown direction type: " + direction);
+        
+        combinators.add(combinator);
+        validOutcomes.add(outcome);
       }
-      validOutcomes.add(outcome);
-      combinators.add(combinator);
     }
   }
 
@@ -539,9 +548,12 @@ public class CcgParser implements Serializable {
         // that fails, to try the left word.
         if (functionCat.getArgumentType().isUnifiableWith(returnType)) {
           Direction direction = functionCat.getSyntax().getDirection();
-          Combinator combinator;
-          List<Object> outcome;
-          if (direction.equals(Direction.LEFT)) {
+          Preconditions.checkState(direction == Direction.RIGHT || direction == Direction.LEFT
+              || direction == Direction.BOTH, "Unsupported direction %s", direction);
+
+          Combinator combinator = null;
+          List<Object> outcome = null;
+          if (direction.equals(Direction.LEFT) || direction.equals(Direction.BOTH)) {
             combinator = getCompositionCombinator(functionCat, argumentCat, returnType, depth,
                 true, false, syntaxType);
             if (combinator == null) {
@@ -549,7 +561,17 @@ public class CcgParser implements Serializable {
                 true, true, syntaxType);
             }
             outcome = Arrays.<Object> asList(argumentCat, functionCat, combinator);
-          } else if (direction.equals(Direction.RIGHT)) {
+          }
+
+          if (combinator != null) {
+            // It is possible for function composition to return syntactic categories
+            // which are not members of the parser's set of valid syntactic categories.
+            // Such composition rules are discarded.
+            validOutcomes.add(outcome);
+            combinators.add(combinator);
+          }
+
+          if (direction.equals(Direction.RIGHT) || direction.equals(Direction.BOTH)) {
             combinator = getCompositionCombinator(functionCat, argumentCat, returnType, depth,
                 false, true, syntaxType);
             if (combinator == null) {
@@ -557,18 +579,10 @@ public class CcgParser implements Serializable {
                   false, false, syntaxType);
             }
             outcome = Arrays.<Object> asList(functionCat, argumentCat, combinator);
-          } else {
-            // Forward compatible error message, for handling
-            // Direction.BOTH if added.
-            throw new IllegalArgumentException("Unknown direction type: " + direction);
           }
-
+          
           if (combinator != null) {
-            // It is possible for function composition to
-            // return syntactic categories
-            // which are not members of the parser's set of
-            // valid syntactic categories.
-            // Such composition rules are discarded.
+            // See comment in the equivalent if statement above.
             validOutcomes.add(outcome);
             combinators.add(combinator);
           }
@@ -1011,8 +1025,31 @@ public class CcgParser implements Serializable {
         newRightRelabeling, newRightInverseRelabeling, newRightToReturnInverseRelabeling, newRightDepRelabeling);
   }
 
-  public CcgLexicon getLexicon() {
-    return lexicon;
+  public List<CcgLexicon> getLexicons() {
+    return lexicons;
+  }
+  
+  /**
+   * Creates a new CCG parser by replacing a lexicon of
+   * this parser with {@code newLexicon}.
+   * 
+   * @param index
+   * @param newLexicon
+   * @return
+   */
+  public CcgParser replaceLexicon(int index, CcgLexicon newLexicon) {
+    List<CcgLexicon> newLexicons = Lists.newArrayList(lexicons);
+    newLexicons.set(index, newLexicon);
+
+    return new CcgParser(newLexicons, lexiconScorers, dependencyHeadVar, dependencySyntaxVar,
+      dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar,
+      dependencyDistribution, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
+      puncDistanceFactor, puncTagSet, verbDistanceVar, verbDistanceFactor, verbTagSet,
+      leftSyntaxVar, rightSyntaxVar, combinatorVar, binaryRuleDistribution, unaryRuleInputVar,
+      unaryRuleVar, unaryRuleFactor, headedBinaryPredicateVar, headedBinaryPosVar,
+      headedBinaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
+      rootSyntaxVar, rootPredicateVar, rootPosVar, rootSyntaxDistribution, headedRootSyntaxDistribution,
+      normalFormOnly);
   }
 
   public boolean isPossibleDependencyStructure(DependencyStructure dependency, List<String> posTags) {
@@ -1069,22 +1106,18 @@ public class CcgParser implements Serializable {
   }
 
   public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
-    return new CcgParser(lexicon, dependencyHeadVar, dependencySyntaxVar,
+    return new CcgParser(lexicons, lexiconScorers, dependencyHeadVar, dependencySyntaxVar,
         dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
         binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, 
         headedBinaryPredicateVar, headedBinaryPosVar, headedBinaryRuleDistribution,
         searchMoveVar, newCompiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar, rootPosVar, 
-        rootSyntaxDistribution, headedRootSyntaxDistribution, allowWordSkipping, normalFormOnly);
+        rootSyntaxDistribution, headedRootSyntaxDistribution, normalFormOnly);
   }
 
   public DiscreteFactor getBinaryRuleDistribution() {
     return binaryRuleDistribution;
-  }
-  
-  public boolean allowsWordSkipping() {
-    return allowWordSkipping;
   }
 
   public boolean isNormalFormOnly() {
@@ -1103,11 +1136,11 @@ public class CcgParser implements Serializable {
    * @param log
    * @return {@code beamSize} best parses for {@code terminals}.
    */
-  public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize, LogFunction log) {
+  public List<CcgParse> beamSearch(AnnotatedSentence input, int beamSize, LogFunction log) {
     return beamSearch(input, beamSize, null, log, -1, Integer.MAX_VALUE, 1);
   }
 
-  public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize) {
+  public List<CcgParse> beamSearch(AnnotatedSentence input, int beamSize) {
     return beamSearch(input, beamSize, new NullLogFunction());
   }
 
@@ -1125,20 +1158,14 @@ public class CcgParser implements Serializable {
    * parsing.
    * @return
    */
-  public List<CcgParse> beamSearch(SupertaggedSentence input, int beamSize, ChartCost beamFilter,
+  public List<CcgParse> beamSearch(AnnotatedSentence input, int beamSize, ChartCost beamFilter,
       LogFunction log, long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgBeamSearchChart chart = new CcgBeamSearchChart(input, maxChartSize, beamSize);
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
-
+    
     if (chart.isFinishedParsing()) {
-      if (allowWordSkipping) {
-        return addSentenceToParses(chart.decodeBestParsesForSubspan(
-            0, chart.size() - 1, beamSize, this), chart);
-      } else {
-        int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
-        return addSentenceToParses(chart.decodeBestParsesForSpan(
-            0, chart.size() - 1, numParses, this), chart);
-      }
+      int numParses = Math.min(beamSize, chart.getNumChartEntriesForSpan(0, chart.size() - 1));
+      return chart.decodeBestParsesForSpan(0, chart.size() - 1, numParses, this);
     } else {
       System.out.println("CCG Parser Timeout");
       return Lists.newArrayList();
@@ -1157,50 +1184,38 @@ public class CcgParser implements Serializable {
    * @param numThreads number of threads to use for parsing.
    * @return
    */
-  public CcgParse parse(SupertaggedSentence input, ChartCost beamFilter, LogFunction log,
+  public CcgParse parse(AnnotatedSentence input, ChartCost beamFilter, LogFunction log,
       long maxParseTimeMillis, int maxChartSize, int numThreads) {
     CcgExactHashTableChart chart = new CcgExactHashTableChart(input, maxChartSize);
     parseCommon(chart, input, beamFilter, log, maxParseTimeMillis, numThreads);
 
     if (chart.isFinishedParsing()) {
-      if (allowWordSkipping) {
-        return addSentenceToParse(chart.decodeBestParseForSubspan(
-            0, chart.size() - 1, this), chart);
-      } else {
-        return addSentenceToParse(chart.decodeBestParseForSpan(
-            0, chart.size() - 1, this), chart);
-      }
+      return chart.decodeBestParseForSpan(0, chart.size() - 1, this);
     } else {
       System.out.println("CCG Parser Timeout");
       return null;
     }
   }
   
-  public static final CcgParse addSentenceToParse(CcgParse parse, CcgChart chart) {
-    if (parse == null) {
-      return null;
-    } else {
-      return parse.addSentence(chart.getWords(), chart.getPosTags());
-    }
+  /**
+   * Simplified version of {@link #parse} with sane default arguments.
+   *  
+   * @param input
+   * @return
+   */
+  public CcgParse parse(AnnotatedSentence input) {
+    return parse(input, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 1);
   }
 
-  public static final List<CcgParse> addSentenceToParses(List<CcgParse> parses, CcgChart chart) {
-    List<CcgParse> newParses = Lists.newArrayList();
-    for (CcgParse parse : parses) {
-      newParses.add(addSentenceToParse(parse, chart));
-    }
-    return newParses;
-  }
-
-  public void parseCommon(CcgChart chart, SupertaggedSentence input, ChartCost beamFilter,
+  public void parseCommon(CcgChart chart, AnnotatedSentence input, ChartCost beamFilter,
       LogFunction log, long maxParseTimeMillis, int numThreads) {
     if (log == null) {
       log = new NullLogFunction();
     }
-    
+
     log.startTimer("initialize_chart");
     initializeChart(chart, input, beamFilter);
-    lexicon.initializeChartTerminals(input, chart, this);
+    initializeChartTerminals(chart, input);
     log.stopTimer("initialize_chart");
 
     log.startTimer("calculate_inside_beam");
@@ -1220,7 +1235,7 @@ public class CcgParser implements Serializable {
     chart.setFinishedParsing(finishedParsing);
   }
 
-  public void initializeChart(CcgChart chart, SupertaggedSentence input, ChartCost chartFilter) {
+  public void initializeChart(CcgChart chart, AnnotatedSentence input, ChartCost chartFilter) {
     int numWords = input.size();
     int[] puncCounts = computeDistanceCounts(input.getPosTags(), puncTagSet);
     int[] verbCounts = computeDistanceCounts(input.getPosTags(), verbTagSet);
@@ -1261,12 +1276,47 @@ public class CcgParser implements Serializable {
     chart.setSyntaxDistribution(compiledSyntaxDistribution);
 
     // Sparsifying the dependencies actually slows the code down.
-    // (Possibly a cache issue?)
     // sparsifyDependencyDistribution(chart);
   }
 
-  public ChartEntry ccgCategoryToChartEntry(List<String> terminalWords, CcgCategory result,
-      int spanStart, int spanEnd) {
+  private void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
+    for (int k = 0; k < lexicons.size(); k++) {
+      CcgLexicon lexicon = lexicons.get(k);
+      lexicon.initializeChart(chart, sentence, this, k);
+    }
+  }
+
+  /**
+   * Adds lexicon entry {@code category} to {@code chart}. This
+   * method should be used by instances of {@code CcgLexicon}
+   * to initialize the lexicon entries of the parser.
+   *  
+   * @param chart
+   * @param trigger
+   * @param category
+   * @param lexiconProb
+   * @param spanStart
+   * @param spanEnd
+   * @param sentence
+   * @param lexiconNum
+   */
+  public void addLexiconEntryToChart(CcgChart chart, Object trigger, CcgCategory category,
+      double lexiconProb, int spanStart, int spanEnd, int triggerSpanStart, int triggerSpanEnd,
+      AnnotatedSentence sentence, int lexiconNum) {
+
+    for (LexiconScorer lexiconScorer : lexiconScorers) {
+      // TODO: fixme.
+      lexiconProb *= lexiconScorer.getCategoryWeight(spanStart, spanEnd, sentence, category);
+    }
+
+    // Add all possible chart entries to the ccg chart.
+    ChartEntry chartEntry = ccgCategoryToChartEntry(trigger, category, spanStart, spanEnd,
+        triggerSpanStart, triggerSpanEnd, lexiconNum);
+    chart.addChartEntryForSpan(chartEntry, lexiconProb, spanStart, spanEnd, syntaxVarType);
+  }
+
+  private ChartEntry ccgCategoryToChartEntry(Object trigger, CcgCategory result,
+      int spanStart, int spanEnd, int triggerSpanStart, int triggerSpanEnd, int lexiconIndex) {
     // Assign each predicate in this category a unique word index.
     List<Long> assignments = Lists.newArrayList();
     List<Set<String>> values = result.getAssignment();
@@ -1281,7 +1331,7 @@ public class CcgParser implements Serializable {
       Preconditions.checkState(semanticVariables[i] == i);
       for (String value : values.get(i)) {
         long assignment = marshalAssignment(semanticVariables[i],
-            dependencyHeadType.getValueIndex(value), spanEnd);
+            dependencyHeadType.getValueIndex(value), triggerSpanEnd);
         assignments.add(assignment);
         numFilled++;
       }
@@ -1289,7 +1339,7 @@ public class CcgParser implements Serializable {
     assignmentVarIndex[assignmentVarIndex.length - 1] = numFilled;
 
     List<UnfilledDependency> filledDepsAccumulator = Lists.newArrayList();
-    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(spanEnd, filledDepsAccumulator);
+    List<UnfilledDependency> unfilledDeps = result.createUnfilledDependencies(triggerSpanEnd, filledDepsAccumulator);
 
     long[] unfilledDepsOrig = unfilledDependencyArrayToLongArray(unfilledDeps);
     long[] depArray = unfilledDependencyArrayToLongArray(filledDepsAccumulator);
@@ -1301,7 +1351,7 @@ public class CcgParser implements Serializable {
     int syntaxAsInt = syntaxVarType.getValueIndex(result.getSyntax());
     int syntaxHeadVar = result.getSyntax().getHeadVariable();
     return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), syntaxHeadVar, 
-        result, terminalWords, null, assignmentVarIndex, Longs.toArray(assignments),
+        result, trigger, lexiconIndex, null, assignmentVarIndex, Longs.toArray(assignments),
         unfilledDependencyVarIndex, unfilledDepArray, depArray, spanStart, spanEnd);
   }
 
@@ -1463,6 +1513,10 @@ public class CcgParser implements Serializable {
             return false;
           }
         }
+        
+        if (chart.getTotalNumChartEntries() > chart.getMaxChartEntries()) {
+          return false;
+        }        
       }
     } catch (InterruptedException e) {
       e.printStackTrace();
@@ -1563,347 +1617,344 @@ public class CcgParser implements Serializable {
 
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j only gets used if we allow the skipping of terminals.
-      int maxInd = allowWordSkipping ? 1 + spanEnd - spanStart : i + 2;
-      for (int j = i + 1; j < maxInd; j++) {
-        ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
-        double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
-        IntMultimap leftTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart, spanStart + i);
+      ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
+      double[] leftProbs = chart.getChartEntryProbsForSpan(spanStart, spanStart + i);
+      IntMultimap leftTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart, spanStart + i);
 
-        ChartEntry[] rightTrees = chart.getChartEntriesForSpan(spanStart + j, spanEnd);
-        double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + j, spanEnd);
-        IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + j, spanEnd);
-        
-        if (leftTypes == null || rightTypes == null) {
-          // At least one of the partial spans has no possible parses. This may
-          // happen if some single-word spans have no lexicon entries.
+      ChartEntry[] rightTrees = chart.getChartEntriesForSpan(spanStart + i + 1, spanEnd);
+      double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + i + 1, spanEnd);
+      IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + i + 1, spanEnd);
+
+      if (leftTypes == null || rightTypes == null) {
+        // At least one of the partial spans has no possible parses. This may
+        // happen if some single-word spans have no lexicon entries.
+        continue;
+      }
+
+      // log.startTimer("ccg_parse/beam_loop");
+      for (int leftType : leftTypes.keySetArray()) {
+        long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
+        int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
+        if (index == -1 || index >= tensorSize) {
           continue;
         }
+        long maxKeyNum = keyNumPrefix + dimensionOffsets[0];
+        long curKeyNum = syntaxKeyNums[index];
 
-        // log.startTimer("ccg_parse/beam_loop");
-        for (int leftType : leftTypes.keySetArray()) {
-          long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
-          int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
-          if (index == -1 || index >= tensorSize) {
-            continue;
-          }
-          long maxKeyNum = keyNumPrefix + dimensionOffsets[0];
-          long curKeyNum = syntaxKeyNums[index];
+        while (curKeyNum < maxKeyNum && index < tensorSize) {
+          int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
+          if (rightTypes.containsKey(rightType)) {
+            // Get the operation we're supposed to apply at this chart entry.
+            CcgSearchMove searchMove = (CcgSearchMove) searchMoveType.getValue(
+                (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
+            Combinator resultCombinator = searchMove.getBinaryCombinator();
 
-          while (curKeyNum < maxKeyNum && index < tensorSize) {
-            int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
-            if (rightTypes.containsKey(rightType)) {
-              // Get the operation we're supposed to apply at this chart entry.
-              CcgSearchMove searchMove = (CcgSearchMove) searchMoveType.getValue(
-                  (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
-              Combinator resultCombinator = searchMove.getBinaryCombinator();
+            // Apply the binary rule.
+            double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
+            int resultSyntax = resultCombinator.getSyntax();
+            int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
+            int resultSyntaxHead = resultCombinator.getSyntaxHeadVar();
 
-              // Apply the binary rule.
-              double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
-              int resultSyntax = resultCombinator.getSyntax();
-              int[] resultSyntaxUniqueVars = resultCombinator.getSyntaxUniqueVars();
-              int resultSyntaxHead = resultCombinator.getSyntaxHeadVar();
+            for (int leftIndex : leftTypes.getArray(leftType)) {
+              ChartEntry leftRoot = leftTrees[leftIndex];
+              double leftProb = leftProbs[leftIndex];
 
-              for (int leftIndex : leftTypes.getArray(leftType)) {
-                ChartEntry leftRoot = leftTrees[leftIndex];
-                double leftProb = leftProbs[leftIndex];
+              long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
+              if (leftUnaryKeyNum != -1) {
+                leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
+              }
 
-                long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
-                if (leftUnaryKeyNum != -1) {
-                  leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
+              deploop: for (int rightIndex : rightTypes.getArray(rightType)) {
+                ChartEntry rightRoot = rightTrees[rightIndex];
+                double rightProb = rightProbs[rightIndex];
+
+                // Determine if these chart entries can be combined under the
+                // normal form constraints. Normal form constraints state that 
+                // the result of a forward (backward) composition cannot be the
+                // left (right) element of a forward (backward) combinator.
+                boolean isProducedByConjunction = false;
+                if (normalFormOnly) {
+                  Combinator.Type leftCombinator = leftRoot.getDerivingCombinatorType();
+                  Combinator.Type resultCombinatorType = resultCombinator.getType();
+                  if (leftCombinator == Combinator.Type.FORWARD_COMPOSITION
+                      && searchMove.getLeftUnaryKeyNum() == -1
+                      && (resultCombinatorType == Combinator.Type.FORWARD_APPLICATION
+                      || resultCombinatorType == Combinator.Type.FORWARD_COMPOSITION)) {
+                    continue;
+                  }
+
+                  Combinator.Type rightCombinator = rightRoot.getDerivingCombinatorType();
+                  if (rightCombinator == Combinator.Type.BACKWARD_COMPOSITION
+                      && searchMove.getRightUnaryKeyNum() == -1
+                      && (resultCombinator.getType() == Combinator.Type.BACKWARD_APPLICATION
+                      || resultCombinator.getType() == Combinator.Type.BACKWARD_COMPOSITION)) {
+                    continue;
+                  }
+
+                  // Restrict the syntactic parses of conjunctions to permit only
+                  // right branching analyses.
+                  if (rightCombinator == Combinator.Type.CONJUNCTION
+                      && resultCombinatorType == Combinator.Type.BACKWARD_APPLICATION) {
+                    if (leftRoot.isProducedByConjunction()) {
+                      continue;
+                    } else {
+                      isProducedByConjunction = true;
+                    }
+                  }
                 }
 
-                deploop: for (int rightIndex : rightTypes.getArray(rightType)) {
-                  ChartEntry rightRoot = rightTrees[rightIndex];
-                  double rightProb = rightProbs[rightIndex];
+                long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
+                if (rightUnaryKeyNum != -1) {
+                  rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
+                }
 
-                  // Determine if these chart entries can be combined under the
-                  // normal form constraints. Normal form constraints state that 
-                  // the result of a forward (backward) composition cannot be the
-                  // left (right) element of a forward (backward) combinator.
-                  boolean isProducedByConjunction = false;
-                  if (normalFormOnly) {
-                    Combinator.Type leftCombinator = leftRoot.getDerivingCombinatorType();
-                    Combinator.Type resultCombinatorType = resultCombinator.getType();
-                    if (leftCombinator == Combinator.Type.FORWARD_COMPOSITION
-                        && searchMove.getLeftUnaryKeyNum() == -1
-                        && (resultCombinatorType == Combinator.Type.FORWARD_APPLICATION
-                        || resultCombinatorType == Combinator.Type.FORWARD_COMPOSITION)) {
-                      continue;
-                    }
+                // log.startTimer("ccg_parse/beam_loop/fill_dependencies");
+                // Fill dependencies based on the current assignment.
+                // (Filling dependencies takes a trivial amount of time.) 
+                int numFilledDeps = 0;
+                numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
+                    rightRoot.getUnfilledDependencyVarIndex(), rightRoot.getUnfilledDependencies(), 
+                    searchMove.getRightDepRelabeling(), filledDepAccumulator, numFilledDeps);
+                numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
+                    leftRoot.getUnfilledDependencyVarIndex(), leftRoot.getUnfilledDependencies(), 
+                    searchMove.getLeftDepRelabeling(), filledDepAccumulator, numFilledDeps);
 
-                    Combinator.Type rightCombinator = rightRoot.getDerivingCombinatorType();
-                    if (rightCombinator == Combinator.Type.BACKWARD_COMPOSITION
-                        && searchMove.getRightUnaryKeyNum() == -1
-                        && (resultCombinator.getType() == Combinator.Type.BACKWARD_APPLICATION
-                        || resultCombinator.getType() == Combinator.Type.BACKWARD_COMPOSITION)) {
-                      continue;
-                    }
+                // Fill dependencies created by the binary rule.
+                long[] combinatorUnfilledDeps = null;
+                int[] combinatorUnfilledDepsVarIndex = null;
+                if (resultCombinator.hasUnfilledDependencies()) {
+                  List<UnfilledDependency> unfilledDeps = resultCombinator.getUnfilledDependencies(spanEnd);
+                  long[] unfilledDepsOrig = unfilledDependencyArrayToLongArray(unfilledDeps);
 
-                    // Restrict the syntactic parses of conjunctions to permit only
-                    // right branching analyses.
-                    if (rightCombinator == Combinator.Type.CONJUNCTION
-                        && resultCombinatorType == Combinator.Type.BACKWARD_APPLICATION) {
-                      if (leftRoot.isProducedByConjunction()) {
-                        continue;
-                      } else {
-                        isProducedByConjunction = true;
-                      }
-                    }
-                  }
+                  int maxVarNum = Ints.max(Ints.max(resultCombinator.getLeftVariableRelabeling()),
+                      Ints.max(resultCombinator.getRightVariableRelabeling()));
+                  combinatorUnfilledDeps = new long[unfilledDepsOrig.length];
+                  combinatorUnfilledDepsVarIndex = new int[maxVarNum + 2];
+                  orderUnfilledDependencies(unfilledDepsOrig, combinatorUnfilledDeps, combinatorUnfilledDepsVarIndex);
 
-                  long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
-                  if (rightUnaryKeyNum != -1) {
-                    rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
-                  }
-
-                  // log.startTimer("ccg_parse/beam_loop/fill_dependencies");
-                  // Fill dependencies based on the current assignment.
-                  // (Filling dependencies takes a trivial amount of time.) 
-                  int numFilledDeps = 0;
                   numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
-                      rightRoot.getUnfilledDependencyVarIndex(), rightRoot.getUnfilledDependencies(), 
-                      searchMove.getRightDepRelabeling(), filledDepAccumulator, numFilledDeps);
+                      combinatorUnfilledDepsVarIndex, combinatorUnfilledDeps, searchMove.getLeftInverseRelabeling(),
+                      filledDepAccumulator, numFilledDeps);
                   numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
-                      leftRoot.getUnfilledDependencyVarIndex(), leftRoot.getUnfilledDependencies(), 
-                      searchMove.getLeftDepRelabeling(), filledDepAccumulator, numFilledDeps);
+                      combinatorUnfilledDepsVarIndex, combinatorUnfilledDeps, searchMove.getRightInverseRelabeling(),
+                      filledDepAccumulator, numFilledDeps);
+                }
+                // log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
 
-                  // Fill dependencies created by the binary rule.
-                  long[] combinatorUnfilledDeps = null;
-                  int[] combinatorUnfilledDepsVarIndex = null;
-                  if (resultCombinator.hasUnfilledDependencies()) {
-                    List<UnfilledDependency> unfilledDeps = resultCombinator.getUnfilledDependencies(spanEnd);
-                    long[] unfilledDepsOrig = unfilledDependencyArrayToLongArray(unfilledDeps);
+                if (numFilledDeps == -1) { 
+                  continue deploop; 
+                }
 
-                    int maxVarNum = Ints.max(Ints.max(resultCombinator.getLeftVariableRelabeling()),
-                        Ints.max(resultCombinator.getRightVariableRelabeling()));
-                    combinatorUnfilledDeps = new long[unfilledDepsOrig.length];
-                    combinatorUnfilledDepsVarIndex = new int[maxVarNum + 2];
-                    orderUnfilledDependencies(unfilledDepsOrig, combinatorUnfilledDeps, combinatorUnfilledDepsVarIndex);
+                // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
+                // Determine the variable assignments for the result syntactic
+                // category.
+                int[] leftInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
+                int[] rightInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
+                int numResultVars = leftInverseRelabeling.length;
 
-                    numFilledDeps = fillDependencies(leftRoot.getAssignmentVarIndex(), leftRoot.getAssignments(),
-                        combinatorUnfilledDepsVarIndex, combinatorUnfilledDeps, searchMove.getLeftInverseRelabeling(),
-                        filledDepAccumulator, numFilledDeps);
-                    numFilledDeps = fillDependencies(rightRoot.getAssignmentVarIndex(), rightRoot.getAssignments(),
-                        combinatorUnfilledDepsVarIndex, combinatorUnfilledDeps, searchMove.getRightInverseRelabeling(),
-                        filledDepAccumulator, numFilledDeps);
-                  }
-                  // log.stopTimer("ccg_parse/beam_loop/fill_dependencies");
+                int[] leftAssignmentVarIndex = leftRoot.getAssignmentVarIndex();
+                long[] leftAssignment = leftRoot.getAssignments();
+                int[] rightAssignmentVarIndex = rightRoot.getAssignmentVarIndex();
+                long[] rightAssignment = rightRoot.getAssignments();
 
-                  if (numFilledDeps == -1) { 
-                    continue deploop; 
-                  }
-
-                  // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
-                  // Determine the variable assignments for the result syntactic
-                  // category.
-                  int[] leftInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
-                  int[] rightInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
-                  int numResultVars = leftInverseRelabeling.length;
-
-                  int[] leftAssignmentVarIndex = leftRoot.getAssignmentVarIndex();
-                  long[] leftAssignment = leftRoot.getAssignments();
-                  int[] rightAssignmentVarIndex = rightRoot.getAssignmentVarIndex();
-                  long[] rightAssignment = rightRoot.getAssignments();
-
-                  int numAssignments = 0;
-                  for (int k = 0; k < numResultVars; k++) {
-                    assignmentVarIndexAccumulator[k] = numAssignments;
-                    int leftVarNum = leftInverseRelabeling[k];
-                    if (leftVarNum != -1) {
-                      int startIndex = leftAssignmentVarIndex[leftVarNum];
-                      int endIndex = leftAssignmentVarIndex[leftVarNum + 1];
-                      for (int l = startIndex; l < endIndex; l++) {
-                        if (numAssignments >= assignmentAccumulator.length) {
-                          continue deploop;
-                        }
-                        assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(leftAssignment[l],
-                            leftVarNum, k);
-                        numAssignments++;
-                      }
-                    }
-
-                    int rightVarNum = rightInverseRelabeling[k];
-                    if (rightVarNum != -1) {
-                      int startIndex = rightAssignmentVarIndex[rightVarNum];
-                      int endIndex = rightAssignmentVarIndex[rightVarNum + 1];
-                      for (int l = startIndex; l < endIndex; l++) {
-                        if (numAssignments >= assignmentAccumulator.length) {
-                          continue deploop;
-                        }
-                        assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(rightAssignment[l],
-                            rightVarNum, k);
-                        numAssignments++;
-                      }
-                    }
-                  }
-                  assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
-                  // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
-
-                  // Determine which unfilled dependencies should be propagated to
-                  // the result.
-                  // log.startTimer("ccg_parse/beam_loop/propagate_dependencies");
-                  int[] leftUnfilledDepsVarIndex = leftRoot.getUnfilledDependencyVarIndex();
-                  long[] leftUnfilledDeps = leftRoot.getUnfilledDependencies();
-                  int[] rightUnfilledDepsVarIndex = rightRoot.getUnfilledDependencyVarIndex();
-                  long[] rightUnfilledDeps = rightRoot.getUnfilledDependencies();
-                  int[] leftToReturnInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
-                  int[] rightToReturnInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
-                  int[] combinatorToReturnInverseRelabeling = null;
-                  if (combinatorUnfilledDeps != null) {
-                    combinatorToReturnInverseRelabeling = searchMove.getBinaryCombinator().getResultInverseRelabeling();
-                  }
-                  int numVars = searchMove.getLeftToReturnInverseRelabeling().length;
-                  int numUnfilledDeps = 0;
-                  for (int k = 0; k < numVars; k++) {
-                    unfilledDepVarIndexAccumulator[k] = numUnfilledDeps;
-                    if (assignmentVarIndexAccumulator[k] != assignmentVarIndexAccumulator[k + 1]) {
-                      // This variable has an assignment in the result, meaning any
-                      // dependencies on this variable have already been filled.
-                      continue;
-                    }
-                    
-                    // Unfilled dependencies are copied (with possible variable 
-                    // relabeling) from the left and right chart entries, and
-                    // also the combinator (if it creates new dependencies). 
-                    numUnfilledDeps = propagateUnfilledDependencies(leftUnfilledDeps, leftUnfilledDepsVarIndex, 
-                        leftToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
-                    if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                      continue deploop;
-                    }
-                    numUnfilledDeps = propagateUnfilledDependencies(rightUnfilledDeps, rightUnfilledDepsVarIndex, 
-                        rightToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
-                    if (numUnfilledDeps >= unfilledDepAccumulator.length) {
-                      continue deploop;
-                    }
-
-                    if (combinatorUnfilledDeps != null) {
-                      numUnfilledDeps = propagateUnfilledDependencies(combinatorUnfilledDeps, combinatorUnfilledDepsVarIndex, 
-                          combinatorToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
-                      if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                int numAssignments = 0;
+                for (int k = 0; k < numResultVars; k++) {
+                  assignmentVarIndexAccumulator[k] = numAssignments;
+                  int leftVarNum = leftInverseRelabeling[k];
+                  if (leftVarNum != -1) {
+                    int startIndex = leftAssignmentVarIndex[leftVarNum];
+                    int endIndex = leftAssignmentVarIndex[leftVarNum + 1];
+                    for (int l = startIndex; l < endIndex; l++) {
+                      if (numAssignments >= assignmentAccumulator.length) {
                         continue deploop;
                       }
+                      assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(leftAssignment[l],
+                          leftVarNum, k);
+                      numAssignments++;
                     }
                   }
-                  unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
-                  // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
 
-                  // log.startTimer("ccg_parse/beam_loop/copy_stuff");
-                  long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
-                  int[] unfilledDepVarIndex = Arrays.copyOf(unfilledDepVarIndexAccumulator, numVars + 1);
-                  long[] unfilledDepArray = Arrays.copyOf(unfilledDepAccumulator, numUnfilledDeps);
-
-                  int[] newAssignmentVarIndex = Arrays.copyOfRange(assignmentVarIndexAccumulator, 0,
-                      searchMove.getLeftToReturnInverseRelabeling().length + 1);
-                  long[] newAssignments = Arrays.copyOfRange(assignmentAccumulator, 0, numAssignments);
-
-                  ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars, resultSyntaxHead,
-                      null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVarIndex, newAssignments,
-                      unfilledDepVarIndex, unfilledDepArray, filledDepArray, spanStart, spanStart + i,
-                      leftIndex, spanStart + j, spanEnd, rightIndex, resultCombinator, isProducedByConjunction);
-                  // log.stopTimer("ccg_parse/beam_loop/copy_stuff");
-
-                  // Get the weights of applying this syntactic combination rule 
-                  // given the word and POS tag of the result's head.
-                  // log.startTimer("ccg_parse/beam_loop/headed_rule_weights");
-                  double headedRuleProb = 1.0;
-                  long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
-                      * headedBinaryRuleCombinatorOffset;
-                  int syntaxStartIndex = newAssignmentVarIndex[resultSyntaxHead];
-                  int syntaxEndIndex = newAssignmentVarIndex[resultSyntaxHead + 1];
-                  for (int assignmentIndex = syntaxStartIndex; assignmentIndex < syntaxEndIndex; assignmentIndex++) {
-                    long assignment = newAssignments[assignmentIndex];
-                    long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
-                    int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
-                    int posTag = currentPosTags[wordIndex];
-
-                    long combinatorWordPosKeyNum = binaryCombinatorKeyNumWithOffset 
-                        + (predicate * headedBinaryRulePredicateOffset)
-                        + (posTag * headedBinaryRulePosOffset);
-                    headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
-                  }
-                  // log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
-
-                  // log.startTimer("ccg_parse/beam_loop/dependencies");
-                  // Get the weights of the generated dependencies.
-                  double depProb = 1.0;
-                  double curDepProb = 1.0;
-                  int filledDepArrayLength = filledDepArray.length;
-                  for (int depIndex = 0; depIndex < filledDepArrayLength; depIndex++) {
-                    // The contents of this loop takes ~1/3 of all parsing time.
-                    long depLong = filledDepArray[depIndex];
-                    if (depLong == depCache) {
-                      depProb *= depProbCache;
-                      continue;
+                  int rightVarNum = rightInverseRelabeling[k];
+                  if (rightVarNum != -1) {
+                    int startIndex = rightAssignmentVarIndex[rightVarNum];
+                    int endIndex = rightAssignmentVarIndex[rightVarNum + 1];
+                    for (int l = startIndex; l < endIndex; l++) {
+                      if (numAssignments >= assignmentAccumulator.length) {
+                        continue deploop;
+                      }
+                      assignmentAccumulator[numAssignments] = replaceAssignmentVarNum(rightAssignment[l],
+                          rightVarNum, k);
+                      numAssignments++;
                     }
-
-                    // Compute the keyNum containing the weight for
-                    // depLong in dependencyTensor.
-                    int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
-                    int headSyntaxNum = (int) ((depLong >> SYNTACTIC_CATEGORY_OFFSET) & SYNTACTIC_CATEGORY_MASK);
-                    int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
-                    int argNumNum = (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
-                    int subjectWordIndex = (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
-                    int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
-
-                    int headPosNum = currentPosTags[subjectWordIndex];
-                    int objectPosNum = currentPosTags[objectWordIndex];
-
-                    long depNum = (headNum * dependencyHeadOffset) + (headSyntaxNum * dependencySyntaxOffset) 
-                        + (argNumNum * dependencyArgNumOffset) + (objectNum * dependencyObjectOffset)
-                        + (headPosNum * dependencyHeadPosOffset) + (objectPosNum * dependencyObjectPosOffset);
-
-                    // Get the probability of this
-                    // predicate-argument combination.
-                    // log.startTimer("chart_entry/dependency_prob");
-                    curDepProb = currentDependencyTensor.get(depNum);
-                    // log.stopTimer("chart_entry/dependency_prob");
-
-                    // Compute distance features.
-                    // log.startTimer("chart_entry/compute_distance");
-                    int distanceIndex = (subjectWordIndex * numTerminals) + objectWordIndex;
-                    int wordDistance = wordDistances[distanceIndex];
-                    int puncDistance = puncDistances[distanceIndex];
-                    int verbDistance = verbDistances[distanceIndex];
-                    // log.stopTimer("chart_entry/compute_distance");
-
-                    // log.startTimer("chart_entry/lookup_distance");
-                    long distanceKeyNumBase = (headNum * distanceHeadOffset) 
-                        + (headSyntaxNum * distanceSyntaxOffset) + (argNumNum * distanceArgNumOffset)
-                        + (headPosNum * distanceHeadPosOffset);
-                    long wordDistanceKeyNum = distanceKeyNumBase + (wordDistance * distanceDistanceOffset);
-                    curDepProb *= currentWordTensor.get(wordDistanceKeyNum);
-                    long puncDistanceKeyNum = distanceKeyNumBase + (puncDistance * distanceDistanceOffset);
-                    curDepProb *= currentPuncTensor.get(puncDistanceKeyNum);
-                    long verbDistanceKeyNum = distanceKeyNumBase + (verbDistance * distanceDistanceOffset);
-                    curDepProb *= currentVerbTensor.get(verbDistanceKeyNum);
-                    // log.stopTimer("chart_entry/lookup_distance");
-                    // System.out.println(longToUnfilledDependency(depLong)
-                    // + " " + depProb);
-
-                    depProb *= curDepProb;
-
-                    depCache = depLong;
-                    depProbCache = curDepProb;
                   }
-                  // log.stopTimer("ccg_parse/beam_loop/dependencies");
-
-                  // log.startTimer("chart_entry/add_chart_entry");
-                  double totalProb = ruleProb * headedRuleProb * leftProb * rightProb * depProb;
-                  chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
-                  // log.stopTimer("chart_entry/add_chart_entry");
                 }
+                assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
+                // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
+
+                // Determine which unfilled dependencies should be propagated to
+                // the result.
+                // log.startTimer("ccg_parse/beam_loop/propagate_dependencies");
+                int[] leftUnfilledDepsVarIndex = leftRoot.getUnfilledDependencyVarIndex();
+                long[] leftUnfilledDeps = leftRoot.getUnfilledDependencies();
+                int[] rightUnfilledDepsVarIndex = rightRoot.getUnfilledDependencyVarIndex();
+                long[] rightUnfilledDeps = rightRoot.getUnfilledDependencies();
+                int[] leftToReturnInverseRelabeling = searchMove.getLeftToReturnInverseRelabeling();
+                int[] rightToReturnInverseRelabeling = searchMove.getRightToReturnInverseRelabeling();
+                int[] combinatorToReturnInverseRelabeling = null;
+                if (combinatorUnfilledDeps != null) {
+                  combinatorToReturnInverseRelabeling = searchMove.getBinaryCombinator().getResultInverseRelabeling();
+                }
+                int numVars = searchMove.getLeftToReturnInverseRelabeling().length;
+                int numUnfilledDeps = 0;
+                for (int k = 0; k < numVars; k++) {
+                  unfilledDepVarIndexAccumulator[k] = numUnfilledDeps;
+                  if (assignmentVarIndexAccumulator[k] != assignmentVarIndexAccumulator[k + 1]) {
+                    // This variable has an assignment in the result, meaning any
+                    // dependencies on this variable have already been filled.
+                    continue;
+                  }
+
+                  // Unfilled dependencies are copied (with possible variable 
+                  // relabeling) from the left and right chart entries, and
+                  // also the combinator (if it creates new dependencies). 
+                  numUnfilledDeps = propagateUnfilledDependencies(leftUnfilledDeps, leftUnfilledDepsVarIndex, 
+                      leftToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
+                  if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                    continue deploop;
+                  }
+                  numUnfilledDeps = propagateUnfilledDependencies(rightUnfilledDeps, rightUnfilledDepsVarIndex, 
+                      rightToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
+                  if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                    continue deploop;
+                  }
+
+                  if (combinatorUnfilledDeps != null) {
+                    numUnfilledDeps = propagateUnfilledDependencies(combinatorUnfilledDeps, combinatorUnfilledDepsVarIndex, 
+                        combinatorToReturnInverseRelabeling, k, unfilledDepAccumulator, numUnfilledDeps);
+                    if (numUnfilledDeps >= unfilledDepAccumulator.length) {
+                      continue deploop;
+                    }
+                  }
+                }
+                unfilledDepVarIndexAccumulator[numVars] = numUnfilledDeps;
+                // log.stopTimer("ccg_parse/beam_loop/propagate_dependencies");
+
+                // log.startTimer("ccg_parse/beam_loop/copy_stuff");
+                long[] filledDepArray = Arrays.copyOf(filledDepAccumulator, numFilledDeps);
+                int[] unfilledDepVarIndex = Arrays.copyOf(unfilledDepVarIndexAccumulator, numVars + 1);
+                long[] unfilledDepArray = Arrays.copyOf(unfilledDepAccumulator, numUnfilledDeps);
+
+                int[] newAssignmentVarIndex = Arrays.copyOfRange(assignmentVarIndexAccumulator, 0,
+                    searchMove.getLeftToReturnInverseRelabeling().length + 1);
+                long[] newAssignments = Arrays.copyOfRange(assignmentAccumulator, 0, numAssignments);
+
+                ChartEntry result = new ChartEntry(resultSyntax, resultSyntaxUniqueVars, resultSyntaxHead,
+                    null, searchMove.getLeftUnary(), searchMove.getRightUnary(), newAssignmentVarIndex, newAssignments,
+                    unfilledDepVarIndex, unfilledDepArray, filledDepArray, spanStart, spanStart + i,
+                    leftIndex, spanStart + i + 1, spanEnd, rightIndex, resultCombinator, isProducedByConjunction);
+                // log.stopTimer("ccg_parse/beam_loop/copy_stuff");
+
+                // Get the weights of applying this syntactic combination rule 
+                // given the word and POS tag of the result's head.
+                // log.startTimer("ccg_parse/beam_loop/headed_rule_weights");
+                double headedRuleProb = 1.0;
+                long binaryCombinatorKeyNumWithOffset = searchMove.getBinaryCombinatorKeyNum()
+                    * headedBinaryRuleCombinatorOffset;
+                int syntaxStartIndex = newAssignmentVarIndex[resultSyntaxHead];
+                int syntaxEndIndex = newAssignmentVarIndex[resultSyntaxHead + 1];
+                for (int assignmentIndex = syntaxStartIndex; assignmentIndex < syntaxEndIndex; assignmentIndex++) {
+                  long assignment = newAssignments[assignmentIndex];
+                  long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
+                  int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
+                  int posTag = currentPosTags[wordIndex];
+
+                  long combinatorWordPosKeyNum = binaryCombinatorKeyNumWithOffset 
+                      + (predicate * headedBinaryRulePredicateOffset)
+                      + (posTag * headedBinaryRulePosOffset);
+                  headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
+                }
+                // log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
+
+                // log.startTimer("ccg_parse/beam_loop/dependencies");
+                // Get the weights of the generated dependencies.
+                double depProb = 1.0;
+                double curDepProb = 1.0;
+                int filledDepArrayLength = filledDepArray.length;
+                for (int depIndex = 0; depIndex < filledDepArrayLength; depIndex++) {
+                  // The contents of this loop takes ~1/3 of all parsing time.
+                  long depLong = filledDepArray[depIndex];
+                  if (depLong == depCache) {
+                    depProb *= depProbCache;
+                    continue;
+                  }
+
+                  // Compute the keyNum containing the weight for
+                  // depLong in dependencyTensor.
+                  int headNum = (int) ((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+                  int headSyntaxNum = (int) ((depLong >> SYNTACTIC_CATEGORY_OFFSET) & SYNTACTIC_CATEGORY_MASK);
+                  int objectNum = (int) ((depLong >> OBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM;
+                  int argNumNum = (int) ((depLong >> ARG_NUM_OFFSET) & ARG_NUM_MASK);
+                  int subjectWordIndex = (int) ((depLong >> SUBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+                  int objectWordIndex = (int) ((depLong >> OBJECT_WORD_IND_OFFSET) & WORD_IND_MASK);
+
+                  int headPosNum = currentPosTags[subjectWordIndex];
+                  int objectPosNum = currentPosTags[objectWordIndex];
+
+                  long depNum = (headNum * dependencyHeadOffset) + (headSyntaxNum * dependencySyntaxOffset) 
+                      + (argNumNum * dependencyArgNumOffset) + (objectNum * dependencyObjectOffset)
+                      + (headPosNum * dependencyHeadPosOffset) + (objectPosNum * dependencyObjectPosOffset);
+
+                  // Get the probability of this
+                  // predicate-argument combination.
+                  // log.startTimer("chart_entry/dependency_prob");
+                  curDepProb = currentDependencyTensor.get(depNum);
+                  // log.stopTimer("chart_entry/dependency_prob");
+
+                  // Compute distance features.
+                  // log.startTimer("chart_entry/compute_distance");
+                  int distanceIndex = (subjectWordIndex * numTerminals) + objectWordIndex;
+                  int wordDistance = wordDistances[distanceIndex];
+                  int puncDistance = puncDistances[distanceIndex];
+                  int verbDistance = verbDistances[distanceIndex];
+                  // log.stopTimer("chart_entry/compute_distance");
+
+                  // log.startTimer("chart_entry/lookup_distance");
+                  long distanceKeyNumBase = (headNum * distanceHeadOffset) 
+                      + (headSyntaxNum * distanceSyntaxOffset) + (argNumNum * distanceArgNumOffset)
+                      + (headPosNum * distanceHeadPosOffset);
+                  long wordDistanceKeyNum = distanceKeyNumBase + (wordDistance * distanceDistanceOffset);
+                  curDepProb *= currentWordTensor.get(wordDistanceKeyNum);
+                  long puncDistanceKeyNum = distanceKeyNumBase + (puncDistance * distanceDistanceOffset);
+                  curDepProb *= currentPuncTensor.get(puncDistanceKeyNum);
+                  long verbDistanceKeyNum = distanceKeyNumBase + (verbDistance * distanceDistanceOffset);
+                  curDepProb *= currentVerbTensor.get(verbDistanceKeyNum);
+                  // log.stopTimer("chart_entry/lookup_distance");
+                  // System.out.println(longToUnfilledDependency(depLong)
+                  // + " " + depProb);
+
+                  depProb *= curDepProb;
+
+                  depCache = depLong;
+                  depProbCache = curDepProb;
+                }
+                // log.stopTimer("ccg_parse/beam_loop/dependencies");
+
+                // log.startTimer("chart_entry/add_chart_entry");
+                double totalProb = ruleProb * headedRuleProb * leftProb * rightProb * depProb;
+                chart.addChartEntryForSpan(result, totalProb, spanStart, spanEnd, syntaxVarType);
+                // log.stopTimer("chart_entry/add_chart_entry");
               }
             }
+          }
 
-            // Advance the iterator over rules.
-            index++;
-            if (index < tensorSize) {
-              curKeyNum = syntaxKeyNums[index];
-            }
+          // Advance the iterator over rules.
+          index++;
+          if (index < tensorSize) {
+            curKeyNum = syntaxKeyNums[index];
           }
         }
-        // log.stopTimer("ccg_parse/beam_loop");
       }
+      // log.stopTimer("ccg_parse/beam_loop");
     }
 
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);

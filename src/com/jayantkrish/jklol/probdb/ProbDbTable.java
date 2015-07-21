@@ -30,14 +30,4 @@ public class ProbDbTable {
     return logWeights.elementwiseProduct(assignment.getIndicators())
         .sumOutDimensions(logWeights.getDimensionNumbers()).getByDimKey();
   }
-  
-  /*
-  public TableAssignment getMostLikelyAssignment() {
-
-  }
-
-  public ProbDbTable product(ProbDbTable other) {
-		
-  }
-  */
 }

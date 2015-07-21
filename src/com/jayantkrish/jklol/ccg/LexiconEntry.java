@@ -1,7 +1,12 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.io.IOException;
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -47,8 +52,7 @@ public class LexiconEntry {
    * @return
    */
   public static LexiconEntry parseLexiconEntry(String lexiconLine) {
-    String[] parts = new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, 
-        '~').parseLine(lexiconLine);
+    String[] parts = getCsvParser().parseLine(lexiconLine);
 
     // Add the lexicon word sequence to the lexicon.
     String wordPart = parts[0];
@@ -59,6 +63,36 @@ public class LexiconEntry {
     }
 
     CcgCategory category = CcgCategory.parseFrom(ArrayUtils.copyOfRange(parts, 1, parts.length));
+    return new LexiconEntry(words, category);
+  }
+  
+  public static CsvParser getCsvParser() {
+    return new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, '~');
+  }
+
+  public static LexiconEntry parseFromJson(String line) {
+    try {
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode root = mapper.readTree(line);
+      return LexiconEntry.parseFromJson(root);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
+  public static LexiconEntry parseFromJson(JsonNode root) {
+    JsonNode wordsNode = root.get("words");
+    Preconditions.checkState(wordsNode.isArray());
+    List<String> words = Lists.newArrayList();
+    for (JsonNode word : wordsNode) {
+      words.add(word.asText().intern());
+    }
+
+    JsonNode ccgCategoryNode = root.get("ccgCategory");
+    CcgCategory category = CcgCategory.parseFromJson(ccgCategoryNode);
+
     return new LexiconEntry(words, category);
   }
   
@@ -75,6 +109,17 @@ public class LexiconEntry {
     for (String lexiconLine : lexiconLines) {
       // Create the CCG category.
       lexiconEntries.add(LexiconEntry.parseLexiconEntry(lexiconLine));
+    }
+    return lexiconEntries;
+  }
+
+  public static List<LexiconEntry> parseLexiconEntriesJson(Iterable<String> lexiconLines) {
+    // Remove comments, which are lines that begin with "#".
+    List<LexiconEntry> lexiconEntries = Lists.newArrayList();
+    for (String line : lexiconLines) {
+      if (!line.startsWith("#")) {
+        lexiconEntries.add(LexiconEntry.parseFromJson(line));
+      }
     }
     return lexiconEntries;
   }
@@ -96,6 +141,11 @@ public class LexiconEntry {
    */
   public CcgCategory getCategory() {
     return category;
+  }
+
+  public String toCsvString() {
+    return "\"" + getCsvParser().escape(Joiner.on(" ").join(words))
+        + "\"," + category.toCsvString();  
   }
 
   @Override

@@ -12,8 +12,8 @@ import com.google.common.base.Preconditions;
  */
 public class SExpression {
 
-  // Null unless this expression is a constant.
   private final String constantName;
+  
   // Unique index in the symbol table containing the string
   // constantName.
   private final int constantNameIndex;
@@ -21,8 +21,7 @@ public class SExpression {
   // If the constant is a primitive type (such as an integer
   // or double), this variable contains its value.
   private final Object primitiveValue;
-
-  // Null unless this expression is not a constant. 
+  
   private final List<SExpression> subexpressions;
 
   private SExpression(String constantName, int constantNameIndex, Object primitiveValue,
@@ -46,7 +45,7 @@ public class SExpression {
   public boolean isConstant() {
     return constantName != null;
   }
-  
+
   public String getConstant() {
     return constantName;
   }
@@ -58,11 +57,11 @@ public class SExpression {
   public Object getConstantPrimitiveValue() {
     return primitiveValue;
   }
-
+  
   public List<SExpression> getSubexpressions() {
     return subexpressions;
   }
-  
+
   @Override
   public String toString() {
     if (isConstant()) {

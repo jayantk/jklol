@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
 public class CcgLogicalFormPattern implements CcgPattern {
   private final String lfRegex;
@@ -18,7 +18,7 @@ public class CcgLogicalFormPattern implements CcgPattern {
 
   @Override
   public List<CcgParse> match(CcgParse parse) {
-    Expression lf = parse.getLogicalForm(false);
+    Expression2 lf = parse.getLogicalForm();
     if (lf != null && Pattern.matches(lfRegex, lf.toString())) {
       return Arrays.asList(parse);
     } else {

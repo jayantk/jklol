@@ -14,6 +14,7 @@ public class TypedExpression {
     this.type = type;
   }
 
+
   public Expression getExpression() {
     return expression;
   }

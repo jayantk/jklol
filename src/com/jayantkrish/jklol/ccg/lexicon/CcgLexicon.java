@@ -3,12 +3,12 @@ package com.jayantkrish.jklol.ccg.lexicon;
 import java.io.Serializable;
 import java.util.List;
 
+import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
+import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 /**
  * The lexicon of a CCG parser which determines the initial 
@@ -21,25 +21,38 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 public interface CcgLexicon extends Serializable {
   public static final String UNKNOWN_WORD_PREFIX = "UNK-";
 
-  void initializeChartTerminals(SupertaggedSentence input, CcgChart chart, CcgParser parser);
-
   VariableNumMap getTerminalVar();
-  
+
   /**
    * Gets the possible lexicon entries for {@code wordSequence} that
-   * can be used in this parser. The returned entries do not include
-   * lexicon entries for unknown words, which may occur in the parse
-   * if {@code wordSequence} is unrecognized.
-   * 
-   * @param wordSequence
+   * can be used in this parser. {@code alreadyGenerated} is a collection
+   * of lexicon entries that have already been created for
+   * {@code wordSequence}. 
+   *
+   * @param spanStart
+   * @param spanEnd
+   * @param sentence
+   * @param alreadyGenerated
+   * @param numAlreadyGenerated
+   * @param triggerAccumulator list of triggers for lexicon entries
+   * @param accumulator list that generated lexicon entries are added to  
+   * @param probAccumulator probabilities for the generated entries
    * @return
    */
-  List<LexiconEntry> getLexiconEntries(List<String> wordSequence);
-  
-  List<LexiconEntry> getLexiconEntriesWithUnknown(String word, String posTag);
-  
-  List<LexiconEntry> getLexiconEntriesWithUnknown(List<String> originalWords, List<String> posTags);
-  
-  boolean isPossibleLexiconEntry(List<String> originalWords, List<String> posTags,
-      HeadedSyntacticCategory category);
+  void getLexiconEntries(int spanStart, int spanEnd, AnnotatedSentence sentence,
+      ChartEntry[] alreadyGenerated, int numAlreadyGenerated,
+      List<Object> triggerAccumulator, List<CcgCategory> accumulator,
+      List<Double> probAccumulator);
+
+  /**
+   * Initializes {@code CcgChart} with lexicon entries from this
+   * lexicon.
+   * 
+   * @param chart
+   * @param sentence
+   * @param parser
+   * @param lexiconNum
+   */
+  void initializeChart(CcgChart chart, AnnotatedSentence sentence,
+      CcgParser parser, int lexiconNum);
 }

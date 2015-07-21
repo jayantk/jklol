@@ -4,14 +4,15 @@ import java.util.Arrays;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.supertag.SupertaggedSentence;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 public class CcgExactHashTableChart extends AbstractCcgChart {
 
   // A hash table for storing chart entries as they are inserted.
   // The indexes store which entries of the hash table have been used.
+  private final int numTerminals;
   private final ChartEntry[][][] chart;
   private final double[][][] probabilities;
   private final int[][][] populatedIndexes;
@@ -28,9 +29,9 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
 
   private static final int NUM_INITIAL_SPAN_ENTRIES = 1000;
 
-  public CcgExactHashTableChart(SupertaggedSentence input, int maxChartSize) {
+  public CcgExactHashTableChart(AnnotatedSentence input, int maxChartSize) {
     super(input, maxChartSize);
-    int numTerminals = input.size();
+    numTerminals = input.size();
 
     this.chart = new ChartEntry[numTerminals][numTerminals][NUM_INITIAL_SPAN_ENTRIES];
     this.probabilities = new double[numTerminals][numTerminals][NUM_INITIAL_SPAN_ENTRIES];
@@ -124,7 +125,7 @@ public class CcgExactHashTableChart extends AbstractCcgChart {
   public void addChartEntryForSpan(ChartEntry entry, double probability, int spanStart,
       int spanEnd, DiscreteVariable syntaxVarType) {
     if (entryFilter != null) {
-      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, syntaxVarType));
+      probability *= Math.exp(entryFilter.apply(entry, spanStart, spanEnd, numTerminals, syntaxVarType));
     }
 
     if (probability != 0.0) {

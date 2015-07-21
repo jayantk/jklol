@@ -43,10 +43,11 @@ public class SumChartCost implements ChartCost {
   }
 
   @Override
-  public double apply(ChartEntry entry, int spanStart, int spanEnd, DiscreteVariable syntaxVarType) {
+  public double apply(ChartEntry entry, int spanStart, int spanEnd,
+      int sentenceLength, DiscreteVariable syntaxVarType) {
     double value = 0.0;
     for (ChartCost filter : filters) {
-      value += filter.apply(entry, spanStart, spanEnd, syntaxVarType);
+      value += filter.apply(entry, spanStart, spanEnd, sentenceLength, syntaxVarType);
     }
     return value;
   }

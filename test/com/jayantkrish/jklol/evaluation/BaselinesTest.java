@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.evaluation;
 
 import junit.framework.TestCase;
 
-import com.jayantkrish.jklol.testing.ExampleUtils;
 
 /**
  * Unit tests for {@link Baselines}.

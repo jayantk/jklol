@@ -18,7 +18,7 @@ import com.jayantkrish.jklol.models.dynamic.DynamicAssignment;
 import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
-import com.jayantkrish.jklol.models.loglinear.ConditionalLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
@@ -55,8 +55,8 @@ public class SequenceModelTest extends TestCase {
         Arrays.asList("plateVar/?(0)/x", "plateVar/?(0)/y"), Arrays.asList(tensorVar, outputVar));
     x = all.getVariablesByName("plateVar/?(0)/x");
     y = all.getVariablesByName("plateVar/?(0)/y");
-    ConditionalLogLinearFactor f = new ConditionalLogLinearFactor(x, y, VariableNumMap.EMPTY, 
-        DiscreteVariable.sequence("foo", 4));
+    ParametricLinearClassifierFactor f = new ParametricLinearClassifierFactor(x, y, VariableNumMap.EMPTY, 
+        DiscreteVariable.sequence("foo", 4), null, false);
     builder.addFactor("classifier", f, VariableNumPattern.fromTemplateVariables(all,
         VariableNumMap.EMPTY, builder.getDynamicVariableSet()));
 

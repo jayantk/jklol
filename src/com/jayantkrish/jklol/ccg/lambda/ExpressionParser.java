@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Chars;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -75,6 +76,12 @@ public class ExpressionParser<T> {
     return new ExpressionParser<TypedExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
         DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
         ExpressionFactories.getTypedLambdaCalculusFactory());
+  }
+
+  public static ExpressionParser<Expression2> expression2() {
+    return new ExpressionParser<Expression2>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
+        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
+        ExpressionFactories.getExpression2Factory());
   }
 
   public static ExpressionParser<SExpression> sExpression(IndexedList<String> symbolTable) {
@@ -155,7 +162,8 @@ public class ExpressionParser<T> {
 
   public T parseSingleExpression(List<String> tokenizedExpressionString) {
     List<T> expressions = parse(tokenizedExpressionString);
-    Preconditions.checkState(expressions.size() == 1, "Illegal input string: " + tokenizedExpressionString);
+    Preconditions.checkState(expressions.size() == 1, "Illegal input string: %s, %s",
+        tokenizedExpressionString, expressions);
     return expressions.get(0);
   }
 

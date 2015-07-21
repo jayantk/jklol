@@ -12,8 +12,8 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 public class CcgPatternTest extends TestCase {
   
@@ -37,11 +37,10 @@ public class CcgPatternTest extends TestCase {
     "\"#\",(N{1}/N{1}){0},,0 #,# 1 1",
     "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
     "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo",
-    "unk-jj,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
-    "unk-jj,N{0},,0 pred:unk-jj",
-    "unk-jj,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
     "that,((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0},,0 that,that 1 1,that 2 2"
   };
+  
+  private static final String[] unknownLexicon = {};
 
   private static final String[] ruleArray = {"N{0} (S{1}/(S{1}\\N{0}){1}){1}", "ABC{0} ABCD{0}"};
   
@@ -50,9 +49,9 @@ public class CcgPatternTest extends TestCase {
   private CcgParser parser;
 
   public void setUp() {
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(null, true), Sets.newHashSet(ParametricCcgParser.DEFAULT_POS_TAG),
-        true, null, false, false);
+    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(unknownLexicon),
+        Arrays.asList(ruleArray), new DefaultCcgFeatureFactory(true, false),
+        Sets.newHashSet(ParametricCcgParser.DEFAULT_POS_TAG), true, null, false);
     parameters = family.getNewSufficientStatistics();
     parser = family.getModelFromParameters(parameters);
   }
@@ -125,7 +124,7 @@ public class CcgPatternTest extends TestCase {
   }
 
   private CcgParse parse(CcgParser parser, List<String> words) {
-    return parser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.parse(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG)), null, null,
         -1L, Integer.MAX_VALUE, 1);
   }

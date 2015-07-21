@@ -88,6 +88,17 @@ public interface TensorBase {
   double getLogByIndex(int index);
 
   int[] keyNumToDimKey(long keyNum);
+  
+  
+  /**
+   * Gets the {@code dimIndex}'th element of the dimension
+   * key corresponding to keyNum.
+   * 
+   * @param keyNum
+   * @param dimIndex
+   * @return
+   */
+  int keyNumToPartialDimKey(long keyNum, int dimIndex);
 
   /**
    * Same as {@link #keyNumToDimKey(long)}, except that {@code dimKey} is
@@ -107,6 +118,8 @@ public interface TensorBase {
   int keyNumToIndex(long keyNum);
 
   long indexToKeyNum(int index);
+  
+  int indexToPartialDimKey(int index, int dimIndex);
 
   /**
    * Gets an iterator over all keys and values of {@code this} whose associated

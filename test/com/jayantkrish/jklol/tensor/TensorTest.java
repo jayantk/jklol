@@ -357,7 +357,7 @@ public abstract class TensorTest extends TestCase {
       Tensor expected = simpleMultiply(emptyInputTable, emptyTable);
       Tensor actual = emptyInputTable.elementwiseProduct(emptyTable);
 
-      assertEquals(expected, actual);
+      assertTensorEquals(expected, actual, 0.0);
     }
   }
 

@@ -30,6 +30,10 @@ public class Type implements Serializable {
       boolean acceptRepeatedArguments) {
     return new Type(null, argType, returnType, acceptRepeatedArguments);
   }
+  
+  public static Type parseFrom(String spec) {
+    return ExpressionParser.typeParser().parseSingleExpression(spec);
+  }
 
   public boolean isAtomic() {
     return atomicType != null;
@@ -49,6 +53,10 @@ public class Type implements Serializable {
 
   public Type getReturnType() {
     return returnType;
+  }
+  
+  public Type addArgument(Type arg) {
+    return Type.createFunctional(arg, this, false);
   }
 
   public boolean acceptsRepeatedArguments() {

@@ -12,9 +12,14 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
+import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.data.DataFormat;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 
@@ -36,39 +41,42 @@ public class CcgTrainingTest extends TestCase {
       "green,N{0},(lambda x (pred:green x)),0 pred:green", 
       "the,(N{1}/N{1}){0},(lambda $1 $1),0 the", 
       "a,(N{1}/N{1}){0},(lambda $1 $1),0 the",
-      "near,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda x (exists y (and ($1 x) (pred:close x y) ($2 y))))),0 pred:close,pred:close 1 1,pred:close 2 2",
-      "near,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda x (exists y (and ($1 x) (pred:near x y) ($2 y))))),0 pred:near,pred:near 1 1,pred:near 2 2",
-      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},(lambda $2 $1 ($1 (lambda x (exists y (and (pred:near x y) ($2 y)))))),0 pred:near,pred:near 2 2",
+      "near,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda x (exists (lambda y (and ($1 x) (pred:close x y) ($2 y)))))),0 pred:close,pred:close 1 1,pred:close 2 2",
+      "near,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda x (exists (lambda y (and ($1 x) (pred:near x y) ($2 y)))))),0 pred:near,pred:near 1 1,pred:near 2 2",
+      "near,((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0},(lambda $2 $1 ($1 (lambda x (exists (lambda y (and (pred:near x y) ($2 y))))))),0 pred:near,pred:near 2 2",
       "near,(PP{0}/N{1}){0},(lambda $1 $1),0 pred:near,pred:near 2 1",
-      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},(lambda $1 (lambda x ((pred:almost $1) x))),0 pred:almost,pred:almost 1 2",
-      "is,((S{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists x y (and ($1 x) (pred:equals x y) ($2 y)))),0 pred:equals,pred:equals 1 1,pred:equals 2 2",
+      "kinda,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},(lambda $1 $2 (lambda x ((pred:almost $1) x))),0 pred:almost,pred:almost 1 2",
+      "is,((S{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists (lambda x (and ($1 x) ($2 x))))),0 pred:equals,pred:equals 1 1,pred:equals 2 2",
       "\",\",((N{1}\\N{1}){0}/N{2}){0},(lambda $1 $2 (lambda x (and ($1 x) ($2 x)))),\"0 ,\",\", 1 1\",\", 2 2\"",
       "2,N{0},pred:num,0 NUM", 
       "2,(N{1}/N{1}){0},,0 NUM,NUM 1 1",
       "\"#\",(N{1}/N{1}){0},,0 #,# 1 1",
       "\"#\",((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 #,# 1 2",
       "foo,ABC{0},,0 foo", "foo,ABCD{0},,0 foo",
-      "unk-jj,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
-      "unk-jj,N{0},,0 pred:unk-jj",
-      "unk-jj,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
       "that,((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0},,0 that,that 1 1,that 2 2"
+  };
+  
+  private static final String[] unknownLexicon = {
+      "JJ,(N{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
+      "JJ,N{0},,0 pred:unk-jj",
+      "JJ,(PP{1}/N{1}){0},,0 pred:unk-jj,pred:unk-jj 1 1",
   };
 
   private static final String[] trainingData = {
       "red block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1######(lambda x (and (pred:red x) (pred:block x)))",
       "red green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 2,pred:green (N{1}/N{1}){0} 1 1 pred:block 2######(lambda x (and (pred:red x) (pred:green x) (pred:block x)))",
-      "red object near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:object 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:object 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:object x) (pred:near x y) (pred:green y) (pred:block y))))",
-      "red block near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:block 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5######(lambda x (exists y (and (pred:red x) (pred:block x) (pred:near x y) (pred:green y) (pred:block y))))",
+      "red object near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:object 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:object 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5######(lambda x (exists (lambda y (and (pred:red x) (pred:object x) (pred:near x y) (pred:green y) (pred:block y)))))",
+      "red block near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:block 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5######(lambda x (exists (lambda y (and (pred:red x) (pred:block x) (pred:near x y) (pred:green y) (pred:block y)))))",
       "the kinda red block###pred:red (N{1}/N{1}){0} 2 1 pred:block 3,pred:almost ((N{1}/N{1}){2}/(N{1}/N{1}){2}){0} 1 1 pred:red 2######(lambda x (and (pred:block x) ((pred:almost pred:red) x)))",
-      "near the object is the red block###pred:near ((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0} 0 2 pred:object 2,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 1 pred:near 0,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 2 pred:block 6,pred:red (N{1}/N{1}){0} 5 1 pred:block 6######(exists x y z (and (pred:object x) (pred:near y x) (pred:equals y z) (pred:red z) (pred:block z)))",
+      "near the object is the red block###pred:near ((S{1}/(S{1}\\N{0}){1}){0}/N{2}){0} 0 2 pred:object 2,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 1 pred:near 0,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 2 pred:block 6,pred:red (N{1}/N{1}){0} 5 1 pred:block 6######(exists (lambda y (and (exists (lambda x (and (pred:object x) (pred:near y x)))) (pred:red y) (pred:block y))))",
       "block , object###\", ((N{1}\\N{1}){0}/N{2}){0} 1 1 pred:block 0\",\", ((N{1}\\N{1}){0}/N{2}){0} 1 2 pred:object 2\"######(lambda x (and (pred:block x) (pred:object x)))",
   };
 
   private static final String[] trainingDataWithSyntax = {
+    "the red block###pred:red (N{1}/N{1}){0} 1 1 pred:block 2###<N <(N/N) DT the> <N <(N/N) JJ red> <N NN block>>>",
     "the block is green###pred:equals ((S{0}\\N{1}){0}/N{2}){0} 2 1 pred:block 1,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 2 2 pred:green 3###<S <N <(N/N) DT the> <N NN block>> <(S\\N) <(S\\N)/N VB is> <N NN green>>>",
     "block that block is###that ((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0} 1 1 pred:block 0,that ((N{1}\\N{1}){0}/(S{2}/N{1}){2}){0} 1 2 pred:equals 3,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 1 pred:block 2,pred:equals ((S{0}\\N{1}){0}/N{2}){0} 3 2 pred:block 0###"
         + "<N <N NN block> <(N\\N) <((N\\N)/(S/N)) NN that> <(S/N) <(S/(S\\N)_N NN block> <(S\\N)/N VB is>>>> ",
-    "red block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1###<N <(N/N) JJ red> <N NN block>>",
     "red green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 2,pred:green (N{1}/N{1}){0} 1 1 pred:block 2###<N <(N/N) JJ red> <N <(N/N) JJ green> <N NN block>>>",
     "red block near the green block###pred:red (N{1}/N{1}){0} 0 1 pred:block 1,pred:green (N{1}/N{1}){0} 4 1 pred:block 5,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 1 pred:block 1,pred:near ((N{1}\\N{1}){0}/N{2}){0} 2 2 pred:block 5###"
         + "<N <N <(N/N) JJ red> <N NN block>> <N\\N <(N\\N)/N IN near> <N <N/N DT the> <N <(N/N) JJ green> <N NN block>>>>>",
@@ -101,14 +109,14 @@ public class CcgTrainingTest extends TestCase {
     
     trainingExamplesLfOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
-      trainingExamplesLfOnly.add(new CcgExample(example.getSentence().removeSupertags(), null,
-          null, example.getLogicalForm()));
+      trainingExamplesLfOnly.add(new CcgExample(example.getSentence(), null,
+          null, example.getLogicalForm(), null));
     }
     
     trainingExamplesDepsOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
-      trainingExamplesDepsOnly.add(new CcgExample(example.getSentence().removeSupertags(),
-          example.getDependencies(), null, null));
+      trainingExamplesDepsOnly.add(new CcgExample(example.getSentence(),
+          example.getDependencies(), null, null, null));
     }
 
     trainingExamplesWithSyntax = Lists.newArrayList();
@@ -120,17 +128,17 @@ public class CcgTrainingTest extends TestCase {
 
     trainingExamplesSyntaxOnly = Lists.newArrayList();
     for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
-      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence().removeSupertags(), 
-          null, syntaxExample.getSyntacticParse(), null));
+      trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence(), 
+          null, syntaxExample.getSyntacticParse(), null, null));
     }
 
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax), true),
-        posTags, true, null, false, false);
+    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
+        Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
+        new DefaultCcgFeatureFactory(true, false), posTags, true, null, false);
     
-    wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(ruleArray),
-        new DefaultCcgFeatureFactory(DefaultCcgFeatureFactory.getPosFeatureGenerator(trainingExamplesWithSyntax), true),
-        posTags, true, null, true, false);
+    wordSkipFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
+        Arrays.asList(unknownLexicon), Arrays.asList(ruleArray),
+        new DefaultCcgFeatureFactory(true, true), posTags, true, null, false);
   }
   
   public void testSyntacticChartFilter1() {
@@ -281,9 +289,17 @@ public class CcgTrainingTest extends TestCase {
     CcgParser parser = trainLoglikelihoodParser(wordSkipFamily, trainingExamplesWithSyntax);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
   }
+  
+  private static ExpressionSimplifier getExpressionSimplifier() {
+    List<ExpressionReplacementRule> rules = Lists.newArrayList(ExpressionSimplifier
+        .lambdaCalculus().getReplacementRules());
+    rules.add(new ConjunctionReplacementRule("and"));
+    return new ExpressionSimplifier(rules);
+  }
 
   private CcgParser trainLoglikelihoodParser(ParametricCcgParser family, List<CcgExample> examples) {
-    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, 100);
+    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family,
+        new SimplificationComparator(getExpressionSimplifier()), 100);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
         true, false, 0.1, new DefaultLogFunction());
 
@@ -298,7 +314,8 @@ public class CcgTrainingTest extends TestCase {
     if (exactInference) {
       inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE, 1);
     } else {
-      inferenceAlg = new CcgBeamSearchInference(null, 100, -1, Integer.MAX_VALUE, 1, true);
+      ExpressionComparator comparator = new SimplificationComparator(getExpressionSimplifier());
+      inferenceAlg = new CcgBeamSearchInference(null, comparator, 100, -1, Integer.MAX_VALUE, 1, true);
     }
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(
         family, inferenceAlg, maxMargin ? 1.0 : 0.0);
@@ -313,7 +330,7 @@ public class CcgTrainingTest extends TestCase {
 
   private void assertTrainedParserUsesSyntax(CcgParser parser) {
     List<CcgParse> parses = filterNonAtomicParses(beamSearch(parser, Arrays.asList("the", "red", "block"), 
-        Arrays.asList("DT", "NN", "NN"), 10));
+        Arrays.asList("DT", "JJ", "NN"), 10));
 
     // Check that syntactic information is being used in the learned
     // parser.
@@ -358,6 +375,7 @@ public class CcgTrainingTest extends TestCase {
     // Test that zero training error is achieved.
     for (CcgExample example : examples) {
       List<CcgParse> parses = beamSearch(parser, example.getSentence().getWords(), example.getSentence().getPosTags(), 100);
+      assertTrue(parses.size() > 0);
       CcgParse bestParse = parses.get(0);
 
       System.out.println(example.getSentence().getWords() + " " + bestParse);
@@ -369,14 +387,13 @@ public class CcgTrainingTest extends TestCase {
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words,
+    return parser.beamSearch(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG)), beamSize);
   }
 
   private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
-    return parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(words, 
-        posTags), beamSize);
+    return parser.beamSearch(new AnnotatedSentence(words, posTags), beamSize);
   }
 
   private List<CcgParse> filterNonAtomicParses(List<CcgParse> parses) {

@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.cvsm;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -9,18 +8,16 @@ import junit.framework.TestCase;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
-import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.supertag.ListSupertaggedSentence;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmHingeElementwiseLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmKlElementwiseLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmSquareLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmValueLoss;
+import com.jayantkrish.jklol.cvsm.lrt.LrtFamily;
+import com.jayantkrish.jklol.cvsm.lrt.OpLrtFamily;
+import com.jayantkrish.jklol.cvsm.lrt.TensorLrtFamily;
 import com.jayantkrish.jklol.cvsm.tree.CvsmTree;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -38,17 +35,6 @@ import com.jayantkrish.jklol.util.Pseudorandom;
  * @author jayantk
  */
 public class CvsmTrainingTest extends TestCase {
-
-  private static final String[] lexicon = {
-      "block,N{0},vec:block,0 block",
-      "table,N{0},vec:table,0 table",
-      "red,(N{1}/N{1}){0},(lambda $1 (logit (mul mat:red $1))),0 red,red 1 1",
-      "on,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (logit (plus (mul mat:on:1 $1) (mul mat:on:2 $2)))),0 on,on 1 1,on 2 2"
-  };
-
-  private static final String[] rules = {
-      "FOO{0} FOO{0}"
-  };
 
   private static final String[] vectorNames = {
       "vec:block",
@@ -213,16 +199,9 @@ public class CvsmTrainingTest extends TestCase {
 
   private static final int NUM_DIMS = 3;
 
-  private ParametricCcgParser family;
-  private CcgParser parser;
-
   private CvsmFamily cvsmFamily, lowRankCvsmFamily, diagCvsmFamily;
 
   public void setUp() {
-    family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon), Arrays.asList(rules),
-        new DefaultCcgFeatureFactory(null, true), null, true, null, false, false);
-    parser = family.getModelFromParameters(family.getNewSufficientStatistics());
-
     DiscreteVariable dimType = DiscreteVariable.sequence("seq", NUM_DIMS);
     VariableNumMap vectorVars = VariableNumMap.singleton(0, "dim-0", dimType);
     VariableNumMap matrixVars = new VariableNumMap(Ints.asList(0, 1),
@@ -258,13 +237,6 @@ public class CvsmTrainingTest extends TestCase {
     cvsmFamily = new CvsmFamily(tensorNames, tensorDims);
     lowRankCvsmFamily = new CvsmFamily(tensorNames, lrtTensorDims);
     diagCvsmFamily = new CvsmFamily(tensorNames, diagTensorDims);
-  }
-
-  public void testParse() {
-    List<CcgParse> parses = parser.beamSearch(ListSupertaggedSentence.createWithUnobservedSupertags(
-        Arrays.asList("red", "block", "on", "table"), Collections.nCopies(4, ParametricCcgParser.DEFAULT_POS_TAG)), 10);
-
-    System.out.println(parses.get(0).getLogicalForm(false).simplify());
   }
 
   public void testCvsmAffineTraining() {

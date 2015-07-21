@@ -10,11 +10,15 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
-import com.jayantkrish.jklol.ccg.lambda.LambdaExpression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
+/**
+ * A syntactic and semantic parse of a text.
+ *  
+ * @author jayant
+ *
+ */
 public class CcgParse {
 
   // Syntactic category at the root of the parse tree.
@@ -23,10 +27,11 @@ public class CcgParse {
   // The lexicon entry used to create this parse.
   // Non-null only when this is a terminal.
   private final CcgCategory lexiconEntry;
-  // The words in the terminal distribution that triggered lexiconEntry.
-  // May be different from spannedWords if spannedWords is not in
-  // the parser's lexicon.
-  private final List<String> lexiconTriggerWords;
+  // The reason why this lexicon entry was created.
+  private final Object lexiconTrigger;
+  // Which lexicon in the CCG parser that this lexicon entry came from.
+  private final int lexiconIndex;
+
   // The words spanned by this portion of the parse tree.
   // Non-null only when this is a terminal.
   private final List<String> spannedWords;
@@ -62,19 +67,14 @@ public class CcgParse {
   // has spanStart == spanEnd).
   private final int spanStart;
   private final int spanEnd;
-  
-  // If this parse is a complete parse of a sentence, the words and 
-  // part-of-speech tags spanned by the parse. These values may
-  // differ from the values returned by getSpannedPosTags() if the
-  // parser skipped words during parsing. Only non-null at the
-  // root node of a complete parse of a sentence.
-  private final List<String> originalSentenceWords;
-  private final List<String> originalSentencePosTags;
+
 
   /**
    * 
    * @param syntax
    * @param lexiconEntry
+   * @param lexiconTrigger
+   * @param lexiconIndex
    * @param spannedWords
    * @param posTags
    * @param heads
@@ -82,15 +82,20 @@ public class CcgParse {
    * @param probability
    * @param left
    * @param right
+   * @param combinator
+   * @param unaryRule
+   * @param spanStart
+   * @param spanEnd
    */
   private CcgParse(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> lexiconTriggerWords, List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
-      List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
-      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd,
-      List<String> originalSentenceWords, List<String> originalSentencePosTags) {
+      Object lexiconTrigger, int lexiconIndex, List<String> spannedWords,
+      List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> dependencies,
+      double probability, CcgParse left, CcgParse right, Combinator combinator,
+      UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
-    this.lexiconTriggerWords = lexiconTriggerWords;
+    this.lexiconTrigger = lexiconTrigger;
+    this.lexiconIndex = lexiconIndex;
     this.spannedWords = spannedWords;
     this.posTags = posTags;
     this.heads = Preconditions.checkNotNull(heads);
@@ -115,39 +120,41 @@ public class CcgParse {
     } else {
       this.subtreeProbability = probability;
     }
-
-    this.originalSentenceWords = originalSentenceWords;
-    this.originalSentencePosTags = originalSentencePosTags;
   }
 
   /**
    * Create a CCG parse for a terminal of the CCG parse tree. This
    * terminal parse represents using {@code lexiconEntry} as the
    * initial CCG category for {@code spannedWords}.
-   * 
+   *
    * @param syntax
    * @param lexiconEntry
-   * @param lexiconTriggerWords
+   * @param lexiconTrigger
+   * @param lexiconIndex
    * @param posTags
    * @param heads
    * @param deps
    * @param spannedWords
    * @param probability
+   * @param unaryRule
+   * @param spanStart
+   * @param spanEnd
    * @return
    */
   public static CcgParse forTerminal(HeadedSyntacticCategory syntax, CcgCategory lexiconEntry,
-      List<String> lexiconTriggerWords, List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
+      Object lexiconTrigger, int lexiconIndex, List<String> posTags,
+      Set<IndexedPredicate> heads, List<DependencyStructure> deps,
       List<String> spannedWords, double probability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd) {
-    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, deps,
-        probability, null, null, null, unaryRule, spanStart, spanEnd, null, null);
+    return new CcgParse(syntax, lexiconEntry, lexiconTrigger, lexiconIndex, spannedWords,
+        posTags, heads, deps, probability, null, null, null, unaryRule, spanStart, spanEnd);
   }
 
   public static CcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left,
       CcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
-    return new CcgParse(syntax, null, null, null, null, heads, dependencies, probability, left,
-        right, combinator, unaryRule, spanStart, spanEnd, null, null);
+    return new CcgParse(syntax, null, null, -1, null, null, heads, dependencies, probability, left,
+        right, combinator, unaryRule, spanStart, spanEnd);
   }
 
   /**
@@ -241,22 +248,17 @@ public class CcgParse {
    * 
    * @return
    */
-  @Deprecated
-  public Expression getLogicalForm() {
-    return getLogicalForm(true);
-  }
-
-  public Expression getLogicalForm(boolean induceLogicalForms) {
-    Expression preUnaryLogicalForm = getPreUnaryLogicalForm(induceLogicalForms);
+  public Expression2 getLogicalForm() {
+    Expression2 preUnaryLogicalForm = getPreUnaryLogicalForm();
     if (unaryRule == null) {
       return preUnaryLogicalForm;
     } else if (preUnaryLogicalForm == null || unaryRule.getUnaryRule().getLogicalForm() == null) {
       return null;
     } else {
-      return unaryRule.getUnaryRule().getLogicalForm().reduce(Arrays.asList(preUnaryLogicalForm));
+      return Expression2.nested(unaryRule.getUnaryRule().getLogicalForm(), preUnaryLogicalForm);
     }
   }
-  
+
   /**
    * Returns the logical form for the smallest subtree of the parse which
    * completely contains the given span.
@@ -267,7 +269,7 @@ public class CcgParse {
    */
   public SpannedExpression getLogicalFormForSpan(int spanStart, int spanEnd) {
     CcgParse spanningParse = getParseForSpan(spanStart, spanEnd);
-    Expression lf = spanningParse.getPreUnaryLogicalForm(true);
+    Expression2 lf = spanningParse.getPreUnaryLogicalForm();
     if (lf != null) {
       return new SpannedExpression(spanningParse.getHeadedSyntacticCategory(),
           spanningParse.getLogicalForm(), spanningParse.getSpanStart(), spanningParse.getSpanEnd());
@@ -283,43 +285,27 @@ public class CcgParse {
    * 
    * @return
    */
-  public List<SpannedExpression> getSpannedLogicalForms(boolean induceLogicalForms) {
+  public List<SpannedExpression> getSpannedLogicalForms() {
     List<SpannedExpression> spannedExpressions = Lists.newArrayList();
-    getSpannedLogicalFormsHelper(spannedExpressions, false, induceLogicalForms);
+    getSpannedLogicalFormsHelper(spannedExpressions);
     return spannedExpressions;
   }
 
-  /**
-   * Gets the logical forms for the maximal subspans of this sentence
-   * for which logical forms exist. None of the returned logical forms
-   * combine with each other in this parse.
-   * 
-   * @return
-   */
-  public List<SpannedExpression> getMaximalSpannedLogicalForms(boolean induceLogicalForms) {
-    List<SpannedExpression> spannedExpressions = Lists.newArrayList();
-    getSpannedLogicalFormsHelper(spannedExpressions, true, induceLogicalForms);
-    return spannedExpressions;
-  }
-
-  private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions,
-      boolean onlyMaximal, boolean induceLogicalForms) {
-    Expression logicalForm = getLogicalForm(induceLogicalForms);
+  private void getSpannedLogicalFormsHelper(List<SpannedExpression> spannedExpressions) {
+    Expression2 logicalForm = getLogicalForm();
     if (logicalForm != null) {
-      spannedExpressions.add(new SpannedExpression(syntax, logicalForm.simplify(), spanStart, spanEnd));
-      if (onlyMaximal) { return; }
+      spannedExpressions.add(new SpannedExpression(syntax, logicalForm, spanStart, spanEnd));
     } 
-    Expression preUnaryLogicalForm = getPreUnaryLogicalForm(true);
+    Expression2 preUnaryLogicalForm = getPreUnaryLogicalForm();
 
     if (preUnaryLogicalForm != null && unaryRule != null) {
       spannedExpressions.add(new SpannedExpression(unaryRule.getInputType().getCanonicalForm(),
-          preUnaryLogicalForm.simplify(), spanStart, spanEnd));
-      if (onlyMaximal) { return; }
+          preUnaryLogicalForm, spanStart, spanEnd));
     }
 
     if (!isTerminal()) {
-      left.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal, induceLogicalForms);
-      right.getSpannedLogicalFormsHelper(spannedExpressions, onlyMaximal, induceLogicalForms);
+      left.getSpannedLogicalFormsHelper(spannedExpressions);
+      right.getSpannedLogicalFormsHelper(spannedExpressions);
     }
   }
 
@@ -329,122 +315,120 @@ public class CcgParse {
    * 
    * @return
    */
-  private Expression getPreUnaryLogicalForm(boolean induceLogicalForms) {
+  private Expression2 getPreUnaryLogicalForm() {
     if (isTerminal()) {
-      Expression logicalForm = lexiconEntry.getLogicalForm();
-      if (logicalForm == null && induceLogicalForms) { 
-        // Try and guess a suitable logical form based on the syntactic category.
-        // This method also returns null on failure. 
-        logicalForm = CcgCategory.induceLogicalFormFromSyntax(lexiconEntry.getSyntax());
-      }
+      Expression2 logicalForm = lexiconEntry.getLogicalForm();
       return logicalForm;
     } else {
-      Expression leftLogicalForm = left.getLogicalForm(induceLogicalForms);
-      Expression rightLogicalForm = right.getLogicalForm(induceLogicalForms);
+      Expression2 leftLogicalForm = left.getLogicalForm();
+      Expression2 rightLogicalForm = right.getLogicalForm();
 
-      Expression result = null;
+      if (leftLogicalForm == null || rightLogicalForm == null) {
+        return null;
+      }
+
       if (combinator.getBinaryRule() != null) {
-        // Binary rules may not require both argument logical forms to be
-        // defined in order to produce the logical form for the phrase.
-        LambdaExpression combinatorExpression = combinator.getBinaryRule().getLogicalForm();
+        // Binary rules have a two-argument function that is applied to the 
+        // left and right logical forms to produce the answer.
+        Expression2 combinatorExpression = combinator.getBinaryRule().getLogicalForm();
         if (combinatorExpression != null) {
-          // Technically, we should just be able to apply the logical form for the
-          // binary rule to the logical form for the left and right arguments.
-          // However, there's an additional hack: If the body of the rule is missing either argument,
-          // we can assign an arbitrary value to the argument and still get the
-          // correct logical form. for the entire phrase.
-          List<ConstantExpression> argumentVars = combinatorExpression.getArguments().subList(0, 2);
-          List<Expression> argValues = Lists.newArrayList(leftLogicalForm, rightLogicalForm);
-          Expression body = combinatorExpression.getBody();
-          if (!body.getFreeVariables().contains(argumentVars.get(0))) {
-            argValues.set(0, new ConstantExpression("**null**"));
-          }
-          if (!body.getFreeVariables().contains(argumentVars.get(1))) {
-            argValues.set(1, new ConstantExpression("**null**"));
-          }
-
-          if (argValues.get(0) != null && argValues.get(1) != null) {
-            result = combinatorExpression.reduce(argValues);
-          }
+          return Expression2.nested(Expression2.nested(combinatorExpression, leftLogicalForm),
+              rightLogicalForm);
         }
+
       } else if (leftLogicalForm != null && rightLogicalForm != null) {
         // Function application or composition.
-        Expression functionLogicalForm = null;
-        Expression argumentLogicalForm = null;
-        CcgParse functionParse = null;
+        Expression2 functionLogicalForm = null;
+        Expression2 argumentLogicalForm = null;
         if (combinator.isArgumentOnLeft()) {
           functionLogicalForm = rightLogicalForm;
-          functionParse = right;
           argumentLogicalForm = leftLogicalForm;
         } else {
           functionLogicalForm = leftLogicalForm;
-          functionParse = left;
           argumentLogicalForm = rightLogicalForm;
         }
 
-        Expression simplifiedFunction = functionLogicalForm.simplify();
-        Preconditions.checkState(simplifiedFunction instanceof LambdaExpression,
-            "Not a function: %s for parse %s", simplifiedFunction, functionParse);
-        LambdaExpression functionAsLambda = (LambdaExpression) simplifiedFunction;
         int numArgsToKeep = combinator.getArgumentReturnDepth();
         if (numArgsToKeep == 0) {
-          // Function application.
-          int numArguments = functionAsLambda.getArguments().size(); 
-          if (numArguments > 1) {
-            List<ConstantExpression> remainingArguments = ConstantExpression.generateUniqueVariables(numArguments - 1);
-            List<Expression> arguments = Lists.newArrayList(argumentLogicalForm);
-            arguments.addAll(remainingArguments);
-            result = new LambdaExpression(remainingArguments, new ApplicationExpression(functionAsLambda, arguments));
-          } else {
-            result = new ApplicationExpression(functionAsLambda, Arrays.asList(argumentLogicalForm));
-          }
+          // Function application
+          return Expression2.nested(functionLogicalForm, argumentLogicalForm);
         } else {
           // Composition.
-          LambdaExpression argumentAsLambda = (LambdaExpression) (argumentLogicalForm.simplify());
-          Preconditions.checkArgument(argumentAsLambda.getArguments().size() >= numArgsToKeep,
-              "Invalid logical form for category: " + argumentAsLambda);
+          List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(argumentLogicalForm, numArgsToKeep);
+          List<Expression2> remainingArgExpressions = Expression2.constants(remainingArgsRenamed);
+          List<Expression2> applicationExpressions = Lists.newArrayList(argumentLogicalForm);
+          applicationExpressions.addAll(remainingArgExpressions);
+          Expression2 argumentApplication = Expression2.nested(applicationExpressions);
 
-          List<ConstantExpression> remainingArgs = argumentAsLambda.getArguments().subList(0, numArgsToKeep);
-          List<ConstantExpression> remainingArgsRenamed = ConstantExpression.generateUniqueVariables(remainingArgs.size());
-
-          List<Expression> functionArguments = Lists.newArrayList();
-          functionArguments.add(new ApplicationExpression(argumentAsLambda, remainingArgsRenamed));
-          List<ConstantExpression> newFunctionArgs = ConstantExpression.generateUniqueVariables(functionAsLambda.getArguments().size() - 1);
-          functionArguments.addAll(newFunctionArgs);
-
-          result = new ApplicationExpression(functionAsLambda, functionArguments);
-          if (newFunctionArgs.size() > 0) {
-            result = new LambdaExpression(newFunctionArgs, result);
-          }
-          result = new LambdaExpression(remainingArgsRenamed, result);
+          Expression2 body = Expression2.nested(functionLogicalForm, argumentApplication);
+          List<Expression2> functionExpressions = Lists.newArrayList();
+          functionExpressions.add(Expression2.constant("lambda"));
+          functionExpressions.addAll(remainingArgExpressions);
+          functionExpressions.add(body);
+          return Expression2.nested(functionExpressions);
         }
       }
-      // System.out.println("result: " + result);
-      return result;
+
+      // Unknown combinator.
+      return null;
     }
   }
 
   /**
-   * The result is null unless this is a terminal in the parse tree.
+   * Get the words mapped to this node of the parse tree in 
+   * the CCG parse. The returned words are taken directly from
+   * the input sentence, without any normalization that may
+   * have been performed to map the words to a lexicon entry. 
+   * 
+   * The result is null unless this node is a terminal. See
+   * {@link getSpannedWords} to get all of the words spanned
+   * by a node, i.e., the words from every terminal child of
+   * the node. 
    * 
    * @return
    */
   public List<String> getWords() {
     return spannedWords;
   }
-  
+
+  /**
+   * Gets the "trigger" in the lexicon that caused this 
+   * lexicon entry to be created and added to the parse. The
+   * trigger is usually the words in the sentence (or some 
+   * processed version of that), but could be something else.
+   * <p> 
+   * The result is null unless this node is a terminal. See
+   * {@link getSpannedLexiconTriggers} to get all of the
+   * lexicon triggers spanned by a node, i.e., the triggers
+   * for every terminal child of the node. 
+   * 
+   * @return
+   */
+  public Object getLexiconTrigger() {
+    return lexiconTrigger;
+  }
+
+  /**
+   * Gets the part-of-speech tags mapped to this node in the
+   * parse tree.
+   * 
+   * The result is null unless this node is a terminal. See
+   * {@link getSpannedLexiconPosTags} to get all of the
+   * part-of-speech tags spanned by a node, i.e., the tags
+   * from every terminal child of the node.
+   * 
+   * @return
+   */
   public List<String> getPosTags() {
     return posTags;
   }
-  
+
   /**
-   * The result is null unless this is a terminal in the parse tree.
-   * @return 
+   * Gets all of the words spanned by this node of the parse tree,
+   * in sentence order.
+   * 
+   * @return
    */
-  public List<String> getLexiconTriggerWords() {
-    return lexiconTriggerWords;
-  }
-  
   public List<String> getSpannedWords() {
     if (isTerminal()) {
       return spannedWords;
@@ -456,17 +440,12 @@ public class CcgParse {
     }
   }
 
-  public List<String> getSpannedLexiconTriggerWords() {
-    if (isTerminal()) {
-      return lexiconTriggerWords;
-    } else {
-      List<String> words = Lists.newArrayList();
-      words.addAll(left.getSpannedLexiconTriggerWords());
-      words.addAll(right.getSpannedLexiconTriggerWords());
-      return words;
-    }
-  }
-
+  /**
+   * Gets all of the part-of-speech tags spanned by this node of
+   * the parse tree, in sentence order.
+   * 
+   * @return
+   */
   public List<String> getSpannedPosTags() {
     if (isTerminal()) {
       return posTags;
@@ -479,18 +458,17 @@ public class CcgParse {
   }
 
   /**
-   * Returns one POS tag per lexicon entry. Differs from
+   * Returns the POS tags spanned by each lexicon entry. Differs from
    * {@link #getSpannedPosTags()} because lexicon entries may span
-   * multiple words. In these cases, only the last tag in the spanned
-   * sequence is included in the returned list.
+   * multiple words.
    * 
    * @return
    */
-  public List<String> getSpannedPosTagsByLexiconEntry() {
+  public List<List<String>> getSpannedPosTagsByLexiconEntry() {
     if (isTerminal()) {
-      return Arrays.asList(posTags.get(posTags.size() - 1));
+      return Arrays.<List<String>>asList(posTags);
     } else {
-      List<String> tags = Lists.newArrayList();
+      List<List<String>> tags = Lists.newArrayList();
       tags.addAll(left.getSpannedPosTagsByLexiconEntry());
       tags.addAll(right.getSpannedPosTagsByLexiconEntry());
       return tags;
@@ -498,19 +476,47 @@ public class CcgParse {
   }
 
   /**
-   * Gets the CCG lexicon entries used for the words in this parse, in
-   * left-to-right order.
+   * Gets the CCG categories from the lexicon used in this
+   * parse, in left-to-right order.
    * 
    * @return
    */
-  public List<LexiconEntry> getSpannedLexiconEntries() {
+  public List<CcgCategory> getSpannedLexiconCategories() {
     if (isTerminal()) {
-      return Arrays.asList(new LexiconEntry(lexiconTriggerWords, lexiconEntry));
+      return Arrays.asList(lexiconEntry);
     } else {
-      List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-      lexiconEntries.addAll(left.getSpannedLexiconEntries());
-      lexiconEntries.addAll(right.getSpannedLexiconEntries());
+      List<CcgCategory> lexiconEntries = Lists.newArrayList();
+      lexiconEntries.addAll(left.getSpannedLexiconCategories());
+      lexiconEntries.addAll(right.getSpannedLexiconCategories());
       return lexiconEntries;
+    }
+  }
+
+  /**
+   * Gets the trigger for every lexicon entry in this parse tree,
+   * in left-to-right sentence order.
+   * 
+   * @return
+   */
+  public List<Object> getSpannedLexiconTriggers() {
+    if (isTerminal()) {
+      return Arrays.asList(lexiconTrigger);
+    } else {
+      List<Object> triggers = Lists.newArrayList();
+      triggers.addAll(left.getSpannedLexiconTriggers());
+      triggers.addAll(right.getSpannedLexiconTriggers());
+      return triggers;
+    }
+  }
+
+  public List<Integer> getSpannedLexiconEntryIndexes() {
+    if (isTerminal()) {
+      return Arrays.asList(lexiconIndex);
+    } else {
+      List<Integer> lexiconEntryIndexes = Lists.newArrayList();
+      lexiconEntryIndexes.addAll(left.getSpannedLexiconEntryIndexes());
+      lexiconEntryIndexes.addAll(right.getSpannedLexiconEntryIndexes());
+      return lexiconEntryIndexes;
     }
   }
   
@@ -526,36 +532,16 @@ public class CcgParse {
   }
 
   /**
-   * Gets the list of words in the sentence being parsed. Non-null
-   * only if this is the root node of a sentence's parse tree. The
-   * returned list may include words that were skipped during
-   * parsing.
-   * 
-   * @return
-   */
-  public List<String> getSentenceWords() {
-    return originalSentenceWords;
-  }
-
-  /**
-   * Gets the list of POS tags in the sentence being parsed. Non-null
-   * only if this is the root node of a sentence's parse tree. The
-   * returned list may include pos tags that were skipped during
-   * parsing.
-   * 
-   * @return
-   */
-  public List<String> getSentencePosTags() {
-    return originalSentencePosTags;
-  }
-
-  /**
    * The result is null unless this is a terminal in the parse tree.
    * 
    * @return
    */
   public CcgCategory getLexiconEntry() {
     return lexiconEntry;
+  }
+
+  public int getLexiconIndex() {
+    return lexiconIndex;
   }
 
   public CcgCategory getLexiconEntryForWordIndex(int index) {
@@ -726,28 +712,11 @@ public class CcgParse {
     }
     return filteredDeps;
   }
-  
-  
 
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
-    return new CcgParse(newSyntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
-        dependencies, probability, left, right, combinator, rule, spanStart, spanEnd,
-        originalSentenceWords, originalSentencePosTags);
-  }
-
-  /**
-   * Adds information about the full sentence parsed. This
-   * information should be attached to the root of every 
-   * complete parse tree of a sentence.
-   * 
-   * @param words
-   * @param posTags
-   * @return
-   */
-  public CcgParse addSentence(List<String> words, List<String> posTags) {
-    return new CcgParse(syntax, lexiconEntry, lexiconTriggerWords, spannedWords, posTags, heads, 
-        dependencies, probability, left, right, combinator, unaryRule, spanStart, spanEnd, words,
-        posTags);
+    return new CcgParse(newSyntax, lexiconEntry, lexiconTrigger, lexiconIndex, spannedWords,
+        posTags, heads, dependencies, probability, left, right, combinator, rule, spanStart,
+        spanEnd);
   }
 
   /**
@@ -763,8 +732,9 @@ public class CcgParse {
   
   private void toHtmlStringHelper(StringBuilder sb) {
     String syntaxString = syntax.getSyntax().toString();
-    Expression logicalForm = getLogicalForm();
-    String lfString = logicalForm != null ? logicalForm.simplify().toString() : "";
+    Expression2 logicalForm = getLogicalForm();
+    // TODO: static analysis simplification here.
+    String lfString = logicalForm != null ? logicalForm.toString() : "";
 
     /*
     if (unaryRule != null) {
@@ -826,11 +796,11 @@ public class CcgParse {
   
   public static class SpannedExpression {
     private final HeadedSyntacticCategory syntax;
-    private final Expression expression;
+    private final Expression2 expression;
     private final int spanStart;
     private final int spanEnd;
 
-    public SpannedExpression(HeadedSyntacticCategory syntax, Expression expression, int spanStart,
+    public SpannedExpression(HeadedSyntacticCategory syntax, Expression2 expression, int spanStart,
         int spanEnd) {
       this.syntax = Preconditions.checkNotNull(syntax);
       this.expression = Preconditions.checkNotNull(expression);
@@ -842,7 +812,7 @@ public class CcgParse {
       return syntax;
     }
     
-    public Expression getExpression() {
+    public Expression2 getExpression() {
       return expression;
     }
     

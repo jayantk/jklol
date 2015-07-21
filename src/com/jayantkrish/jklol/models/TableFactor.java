@@ -264,7 +264,8 @@ public class TableFactor extends DiscreteFactor {
 
   @Override
   public double getUnnormalizedProbability(Assignment a) {
-    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()));
+    Preconditions.checkArgument(a.containsAll(getVars().getVariableNumsArray()),
+        "Illegal assignment: %s to vars: %s", a, getVars());
     return weights.getByDimKey(getVars().assignmentToIntArray(a));
   }
 

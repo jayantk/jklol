@@ -24,6 +24,14 @@ public class Backpointers {
     this.oldKeyNums = ArrayUtils.copyOf(oldKeyNums, size);
     this.oldTensor = oldTensor;
   }
+  
+  public long[] getNewKeyNums() {
+    return newKeyNums;
+  }
+
+  public long[] getOldKeyNums() {
+    return oldKeyNums;
+  }
 
   /**
    * Gets the old key associated with {@code newKeyNum} in this.

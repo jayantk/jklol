@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.models.dynamic;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -98,12 +99,27 @@ public class DynamicFactorGraph implements Serializable {
     return factorGraph; 
   }
 
+  public DynamicFactorGraph addPlateFactor(PlateFactor factor, String factorName) {
+    return addPlateFactors(Arrays.asList(factor), Arrays.asList(factorName));
+  }
+  
   public DynamicFactorGraph addPlateFactors(List<PlateFactor> factors, List<String> newFactorNames) {
     List<PlateFactor> allFactors = Lists.newArrayList(plateFactors);
     allFactors.addAll(factors);
     List<String> allNames = Lists.newArrayList(factorNames);
     allNames.addAll(newFactorNames);
     return new DynamicFactorGraph(getVariables(), allFactors, allNames);
+  }
+  
+  /**
+   * Constructs a {@code DynamicFactorGraphBuilder} containing the
+   * same factor graph as this. This method is useful for efficiently
+   * making a large number of additions to this factor graph.
+   * 
+   * @return
+   */
+  public DynamicFactorGraphBuilder toBuilder() {
+    return new DynamicFactorGraphBuilder(variables, plateFactors, factorNames);
   }
 
   /**

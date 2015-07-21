@@ -66,18 +66,6 @@ public class ExpressionParser<T> {
     this.closeParenExpression = factory.createTokenExpression(Character.toString(closeParen));
   }
 
-  public static ExpressionParser<Expression> lambdaCalculus() {
-    return new ExpressionParser<Expression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0], 
-        ExpressionFactories.getLambdaCalculusFactory());
-  }
-
-  public static ExpressionParser<TypedExpression> typedLambdaCalculus() {
-    return new ExpressionParser<TypedExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
-        ExpressionFactories.getTypedLambdaCalculusFactory());
-  }
-
   public static ExpressionParser<Expression2> expression2() {
     return new ExpressionParser<Expression2>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
         DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],

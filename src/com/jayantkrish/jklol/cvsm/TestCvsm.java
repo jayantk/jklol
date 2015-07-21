@@ -8,8 +8,8 @@ import joptsimple.OptionSpec;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.cvsm.tree.CvsmKlLossTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmSquareLossTree;
@@ -103,9 +103,9 @@ public class TestCvsm extends AbstractCli {
       }
       System.out.println("AVERAGE LOSS: " + (loss / examples.size()) + " (" + loss + " / " + examples.size() + ")");
     } else if (options.has(vectorDumpFilename)) {
-      ExpressionParser<Expression> parser = ExpressionParser.lambdaCalculus(); 
+      ExpressionParser<Expression2> parser = ExpressionParser.expression2(); 
       for (String line : IoUtils.readLines(options.valueOf(vectorDumpFilename))) {
-        Expression lf = parser.parseSingleExpression(line);
+        Expression2 lf = parser.parseSingleExpression(line);
         Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
         Preconditions.checkState(tensor.getDimensionNumbers().length == 1);
 
@@ -116,7 +116,7 @@ public class TestCvsm extends AbstractCli {
         System.out.print("\n");
       }
     } else {
-      Expression lf = ExpressionParser.lambdaCalculus().parseSingleExpression(
+      Expression2 lf = ExpressionParser.expression2().parseSingleExpression(
           Joiner.on(" ").join(options.nonOptionArguments()));
 
       Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();

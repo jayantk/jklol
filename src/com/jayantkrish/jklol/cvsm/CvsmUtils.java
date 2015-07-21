@@ -3,8 +3,8 @@ package com.jayantkrish.jklol.cvsm;
 import java.util.List;
 
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.CsvParser;
@@ -15,7 +15,7 @@ public class CvsmUtils {
   public static List<CvsmExample> readTrainingData(String filename) {
     List<CvsmExample> examples = Lists.newArrayList();
     CsvParser csv = new CsvParser(',', '"', CsvParser.NULL_ESCAPE);
-    ExpressionParser<Expression> exp = ExpressionParser.lambdaCalculus();
+    ExpressionParser<Expression2> exp = ExpressionParser.expression2();
     List<String> lines = IoUtils.readLines(filename);
     for (String line : lines) {
       if (line.trim().startsWith("#")) {
@@ -27,7 +27,7 @@ public class CvsmUtils {
         continue;
       }
 
-      Expression logicalForm = exp.parseSingleExpression(parts[0]);
+      Expression2 logicalForm = exp.parseSingleExpression(parts[0]);
 
       Tensor target = null;
       if (parts.length > 1) {

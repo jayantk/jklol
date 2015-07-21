@@ -7,9 +7,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
-import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
-import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.cvsm.lrt.LowRankTensor;
 import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.cvsm.tree.CvsmAdditionTree;
@@ -53,9 +51,9 @@ public class Cvsm implements Serializable {
     return tensors.get(index);
   }
 
-  public CvsmTree getInterpretationTree(Expression logicalForm) {
-    if (logicalForm instanceof ConstantExpression) {
-      String value = ((ConstantExpression) logicalForm).getName();
+  public CvsmTree getInterpretationTree(Expression2 logicalForm) {
+    if (logicalForm.isConstant()) {
+      String value = logicalForm.getConstant();
       if (tensorNames.contains(value)) {
         return new CvsmTensorTree(value, getTensor(value));
       } else {
@@ -66,10 +64,10 @@ public class Cvsm implements Serializable {
           throw new IllegalArgumentException("Unknown parameter name: " + value);
         }
       } 
-    } else if (logicalForm instanceof ApplicationExpression) {
-      ApplicationExpression app = ((ApplicationExpression) logicalForm);
-      String functionName = ((ConstantExpression) app.getFunction()).getName();
-      List<Expression> args = app.getArguments();
+    } else {
+      List<Expression2> subexpressions = logicalForm.getSubexpressions();
+      String functionName = subexpressions.get(0).getConstant();
+      List<Expression2> args = subexpressions.subList(1, subexpressions.size());
       if (functionName.equals("op:matvecmul")) {
         // Tensor-vector multiplication. First argument is tensor, remaining arguments are
         // multiplied into the the first.
@@ -128,8 +126,6 @@ public class Cvsm implements Serializable {
       }
 
       throw new IllegalArgumentException("Unknown function name: " + functionName);
-    } else {
-      throw new IllegalArgumentException("Unknown expression type: " + logicalForm);
     }
   }
   

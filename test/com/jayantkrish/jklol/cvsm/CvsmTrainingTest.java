@@ -8,8 +8,8 @@ import junit.framework.TestCase;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.lambda.Expression;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmHingeElementwiseLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmKlElementwiseLoss;
 import com.jayantkrish.jklol.cvsm.CvsmLoglikelihoodOracle.CvsmLoss;
@@ -28,6 +28,7 @@ import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.Pseudorandom;
+;
 
 /**
  * Regression tests for training compositional vector space models.
@@ -371,7 +372,7 @@ public class CvsmTrainingTest extends TestCase {
 
   private static List<CvsmExample> parseExamples(String[] examples, double[][] targets) {
     Preconditions.checkArgument(examples.length == targets.length);
-    ExpressionParser<Expression> exp = ExpressionParser.lambdaCalculus();
+    ExpressionParser<Expression2> exp = ExpressionParser.expression2();
 
     List<CvsmExample> cvsmExamples = Lists.newArrayList();
     for (int i = 0; i < examples.length; i++) {

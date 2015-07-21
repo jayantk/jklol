@@ -17,8 +17,8 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
+import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
@@ -101,7 +101,9 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     VariableNumMap ruleVar = VariableNumMap.singleton(4, "rule", ruleVarType);
     
     // Probability distribution over the different CFG rule types
-    CptTableFactor ruleFactor = new CptTableFactor(parentVar, ruleVar);
+    // CptTableFactor ruleFactor = new CptTableFactor(parentVar, ruleVar);
+    ParametricFactor ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
+        TableFactor.unity(parentVar.union(ruleVar)));
 
     VariableNumMap nonterminalVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
     TableFactor ones = TableFactor.logUnity(nonterminalVars);
@@ -112,9 +114,12 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     }
 
     DiscreteFactor nonterminalSparsityFactor = nonterminalBuilder.build();
+    /*
     DiscreteFactor nonterminalConstantFactor = TableFactor.zero(nonterminalVars);
     SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
         leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
+        */
+    ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
 
     DiscreteFactor sparsityFactor = TableFactor.unity(parentVar.union(terminalVar))
         .outerProduct(TableFactor.pointDistribution(ruleVar, ruleVar.outcomeArrayToAssignment(TERMINAL)));

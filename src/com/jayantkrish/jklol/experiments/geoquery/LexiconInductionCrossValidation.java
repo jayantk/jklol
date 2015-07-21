@@ -279,7 +279,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
         initial, trainingData);
 
-    System.out.println(pam.getParameterDescription(trainedParameters));
+    // System.out.println(pam.getParameterDescription(trainedParameters));
 
     // Get the trained model.
     CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);

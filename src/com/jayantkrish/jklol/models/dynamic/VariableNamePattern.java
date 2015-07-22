@@ -6,14 +6,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
-import com.google.gwt.regexp.shared.MatchResult;
-import com.google.gwt.regexp.shared.RegExp;
 import com.jayantkrish.jklol.models.VariableNumMap;
 
 /**
@@ -182,10 +182,10 @@ public class VariableNamePattern extends AbstractVariablePattern {
      * @return
      */
     public Collection<Integer> getMatchedIndices(String variableName) {
-      RegExp regexp = RegExp.compile(pattern);
-      MatchResult m = regexp.exec(variableName);
-      if (m != null) {
-        int originalIndex = Integer.parseInt(m.getGroup(1));
+      Pattern regexp = Pattern.compile(pattern);
+      Matcher matcher = regexp.matcher(variableName);
+      if (matcher.find()) {
+        int originalIndex = Integer.parseInt(matcher.group(1));
         return Ints.asList(originalIndex - indexOffset);
       }
       return Collections.emptyList();

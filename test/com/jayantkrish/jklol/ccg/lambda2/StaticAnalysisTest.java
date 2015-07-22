@@ -104,6 +104,16 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest(expression, "i");
   }
   
+  public void testTypeInferenceNestedLambdaFunction() {
+    String expression = "(lambda $0 (count:<<e,t>,i> $0))";
+    runTypeInferenceTest(expression, "<<e,t>,i>");
+  }
+  
+  public void testTypeInferenceNestedLambdaFunction2() {
+    String expression = "(lambda $0 (lambda $1 (cause:<e,<e,t>> $0 ($1 foo:a))))";
+    runTypeInferenceTest(expression, "<e,<<a,e>,t>>");
+  }
+  
   public void testRepeatedArguments() {
     runTypeInferenceTest("(lambda $0 $1 (and:<t*,t> (bar:<e,t> $0) ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
   }

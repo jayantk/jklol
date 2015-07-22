@@ -175,20 +175,20 @@ public class AlignedExpressionTree {
   public List<LexiconEntry> generateLexiconEntries(Map<String, String> typeReplacements) {
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
     generateLexiconEntriesHelper(typeReplacements, Collections.<AlignedExpressionTree>emptyList(),
-        lexiconEntries);
+        Collections.<Type>emptyList(), null, lexiconEntries);
     return lexiconEntries;
   }
 
-  private void generateLexiconEntriesHelper(Map<String, String> typeReplacements,
-      List<AlignedExpressionTree> argumentStack, List<LexiconEntry> lexiconEntries) {
+  private Type generateLexiconEntriesHelper(Map<String, String> typeReplacements,
+      List<AlignedExpressionTree> argumentStack, List<Type> argumentTypeStack,
+      AlignedExpressionTree func, List<LexiconEntry> lexiconEntries) {
     if (isLeaf()) {
       Type type = Type.createAtomic("unknown");
       List<Direction> argDirs = Lists.newArrayList();
       for (int i = 0; i < argumentStack.size(); i++) {
-        Expression2 arg = argumentStack.get(i).getExpression();
-        Type argType = StaticAnalysis.inferType(arg, typeReplacements);
+        Type argType = argumentTypeStack.get(i);
         type = type.addArgument(argType);
-        
+
         if (argumentStack.get(i).getSpanStarts()[0] < getSpanStarts()[0]) {
           argDirs.add(Direction.LEFT);
         } else if (argumentStack.get(i).getSpanEnds()[0] > getSpanEnds()[0]) {
@@ -199,8 +199,16 @@ public class AlignedExpressionTree {
         }
       }
 
+      if (func != null) {
+        Type funcType = StaticAnalysis.inferType(func.getExpression(), typeReplacements);
+        type = StaticAnalysis.unify(type, funcType.getArgumentType());
+      }
+
       Type initialType = StaticAnalysis.inferType(getExpression(), typeReplacements);
+      System.out.println("initial type: " +  initialType);
       Type returnType = StaticAnalysis.inferType(getExpression(), StaticAnalysis.unify(initialType, type), typeReplacements);
+      Type completeType = returnType;
+      System.out.println("return type: " + returnType);
       List<Type> argumentTypes = Lists.newArrayList();
       for (int i = 0; i < getNumAppliedArguments(); i++) {
         argumentTypes.add(returnType.getArgumentType());
@@ -240,13 +248,21 @@ public class AlignedExpressionTree {
       LexiconEntry entry = new LexiconEntry(words, ccgCategory);
 
       lexiconEntries.add(entry);
+      return completeType;
     } else {      
-      left.generateLexiconEntriesHelper(typeReplacements, Collections.<AlignedExpressionTree>emptyList(),
-          lexiconEntries);
+      Type leftType = left.generateLexiconEntriesHelper(typeReplacements,
+          Collections.<AlignedExpressionTree>emptyList(), Collections.<Type>emptyList(),
+          right, lexiconEntries);
 
       List<AlignedExpressionTree> newArgs = Lists.newArrayList(argumentStack);
       newArgs.add(left);
-      right.generateLexiconEntriesHelper(typeReplacements, newArgs, lexiconEntries);
+      List<Type> newArgTypes = Lists.newArrayList(argumentTypeStack);
+      newArgTypes.add(leftType);
+
+      Type rightType = right.generateLexiconEntriesHelper(typeReplacements, newArgs,
+          newArgTypes, null, lexiconEntries);
+      System.out.println("righttype:" + rightType);
+      return rightType.getReturnType();
     }
   }
   

@@ -178,6 +178,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
       System.out.println(tree);
 
       for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
+        System.out.println("   " + entry.toCsvString());
         alignments.incrementOutcome(entry.getWords(), entry, 1);
       }
     }

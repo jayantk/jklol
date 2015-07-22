@@ -50,7 +50,8 @@ public class ListSufficientStatistics implements SufficientStatistics {
    * @return
    */
   public static ListSufficientStatistics empty() {
-    return new ListSufficientStatistics(Lists.newArrayList(), Lists.newArrayList());
+    return new ListSufficientStatistics(Lists.<String>newArrayList(),
+        Lists.<SufficientStatistics>newArrayList());
   }
 
   /**

@@ -35,7 +35,7 @@ public class ExpectationMaximization {
       log.stopTimer("instantiate_model");
       log.startTimer("e_step");
       A expectations = executor.mapReduce(trainingDataList, 
-          Mappers.identity(), new ExpectationReducer<M, E, O, A>(model, parameters, oracle, log));
+          Mappers.<E>identity(), new ExpectationReducer<M, E, O, A>(model, parameters, oracle, log));
       log.stopTimer("e_step");
 
       log.startTimer("m_step");

@@ -358,6 +358,8 @@ public class CvsmTrainingTest extends TestCase {
         double squareLoss = augmentedTree.getLoss();
         // System.out.println(example.getLogicalForm() + " loss: " + squareLoss);
         // System.out.println(Arrays.toString(tree.getValue().getTensor().getValues()));
+        // System.out.println(Arrays.toString(augmentedTree.getValue().getTensor().getValues()));
+        // System.out.println(Arrays.toString(example.getTargets().getValues()));
         assertTrue(squareLoss <= 0.1);
       }
     }

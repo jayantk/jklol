@@ -68,8 +68,9 @@ public class SemanticParserUtils {
         
         List<Object> triggers = parse.getSpannedLexiconTriggers();
         List<CcgCategory> entries = parse.getSpannedLexiconCategories();
+        List<Integer> entryIndexes = parse.getWordIndexesWithLexiconEntries();
         for (int i = 0; i < entries.size(); i++) {
-          System.out.println("   " + triggers.get(i) + " " + entries.get(i));
+          System.out.println("   " + entryIndexes.get(i) + " " + triggers.get(i) + " " + entries.get(i));
         }
 
         numCorrect += correct;

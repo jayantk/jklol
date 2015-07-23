@@ -205,10 +205,8 @@ public class AlignedExpressionTree {
       }
 
       Type initialType = StaticAnalysis.inferType(getExpression(), typeReplacements);
-      System.out.println("initial type: " +  initialType);
       Type returnType = StaticAnalysis.inferType(getExpression(), StaticAnalysis.unify(initialType, type), typeReplacements);
       Type completeType = returnType;
-      System.out.println("return type: " + returnType);
       List<Type> argumentTypes = Lists.newArrayList();
       for (int i = 0; i < getNumAppliedArguments(); i++) {
         argumentTypes.add(returnType.getArgumentType());
@@ -261,7 +259,6 @@ public class AlignedExpressionTree {
 
       Type rightType = right.generateLexiconEntriesHelper(typeReplacements, newArgs,
           newArgTypes, null, lexiconEntries);
-      System.out.println("righttype:" + rightType);
       return rightType.getReturnType();
     }
   }

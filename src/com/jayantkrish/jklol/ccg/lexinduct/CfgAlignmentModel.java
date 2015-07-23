@@ -35,8 +35,6 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   private final VariableNumMap ruleVar;
   
   private final int nGramLength;
-
-  private static final double EPSILON = 0.0001;
   
   public CfgAlignmentModel(DiscreteFactor nonterminalFactor, DiscreteFactor terminalFactor,
       VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
@@ -158,7 +156,6 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
     example.getTree().populateBinaryRuleDistribution(binaryRuleBuilder, nonterminalFactor);
-    // DiscreteFactor binaryDistribution = binaryRuleBuilder.build().product(1.0 - EPSILON);
     DiscreteFactor binaryDistribution = binaryRuleBuilder.build();
 
     // Build a new terminal distribution over only these expressions.

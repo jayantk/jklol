@@ -139,18 +139,19 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       }
     }
     
-    SemanticParserLoss overall = new SemanticParserLoss(0, 0, 0);
+    SemanticParserLoss overall = new SemanticParserLoss(0, 0, 0, 0);
     for (int i = 0; i < losses.size(); i++) {
       System.out.println(foldNames.get(i));
       System.out.println("PRECISION: " + losses.get(i).getPrecision());
       System.out.println("RECALL: " + losses.get(i).getRecall());
-      
+      System.out.println("LEXICON RECALL: " + losses.get(i).getLexiconRecall());
       overall = overall.add(losses.get(i));
     }
     
     System.out.println("== Overall ==");
     System.out.println("PRECISION: " + overall.getPrecision());
     System.out.println("RECALL: " + overall.getRecall());
+    System.out.println("LEXICON RECALL: " + overall.getLexiconRecall());
   }
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,

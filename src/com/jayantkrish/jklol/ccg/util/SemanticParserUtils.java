@@ -89,7 +89,8 @@ public class SemanticParserUtils {
     System.out.println("Recall: " + recall);
     System.out.println("Licensed Recall: " + licensedRecall);
 
-    return new SemanticParserLoss(testExamples.size(), numParsed, numCorrect);
+    return new SemanticParserLoss(testExamples.size(), numParsed,
+        numCorrect, numCorrectLfPossible);
   }
   
   private SemanticParserUtils() {
@@ -100,11 +101,14 @@ public class SemanticParserUtils {
     private final int numExamples;
     private final int numParsed;
     private final int numParsedCorrectly;
+    private final int numPossibleToParseCorrectly;
     
-    public SemanticParserLoss(int numExamples, int numParsed, int numParsedCorrectly) {
+    public SemanticParserLoss(int numExamples, int numParsed,
+        int numParsedCorrectly, int numPossibleToParseCorrectly) {
       this.numExamples = numExamples;
       this.numParsed = numParsed;
       this.numParsedCorrectly = numParsedCorrectly;
+      this.numPossibleToParseCorrectly = numPossibleToParseCorrectly;
     }
     
     public double getPrecision() {
@@ -115,9 +119,20 @@ public class SemanticParserUtils {
       return ((double) numParsedCorrectly) / numExamples;
     }
     
+    /**
+     * Gets the maximum recall possible under the given lexicon
+     * and grammar.
+     * 
+     * @return
+     */
+    public double getLexiconRecall() {
+      return ((double) numPossibleToParseCorrectly) / numExamples;
+    }
+    
     public SemanticParserLoss add(SemanticParserLoss o) {
       return new SemanticParserLoss(numExamples + o.numExamples,
-          numParsed + o.numParsed, numParsedCorrectly + o.numParsedCorrectly);
+          numParsed + o.numParsed, numParsedCorrectly + o.numParsedCorrectly,
+          numPossibleToParseCorrectly + o.numPossibleToParseCorrectly);
     }
   }
 }

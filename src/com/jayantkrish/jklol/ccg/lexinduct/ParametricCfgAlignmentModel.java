@@ -114,12 +114,12 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     }
 
     DiscreteFactor nonterminalSparsityFactor = nonterminalBuilder.build();
-    /*
     DiscreteFactor nonterminalConstantFactor = TableFactor.zero(nonterminalVars);
     SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
         leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
-        */
-    ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+
+    // Assign all binary rules probability 1
+    // ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
 
     DiscreteFactor sparsityFactor = TableFactor.unity(parentVar.union(terminalVar))
         .outerProduct(TableFactor.pointDistribution(ruleVar, ruleVar.outcomeArrayToAssignment(TERMINAL)));

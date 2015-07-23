@@ -169,7 +169,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     for (ExpressionNode expression : expressions) {
       for (int i = 0; i < exampleWords.size(); i++) {
         double prob = 1.0;
-        for (int j = i; j < exampleWords.size() + 1; j++) {
+        for (int j = i; j < exampleWords.size(); j++) {
           Assignment a = terminalFactor.getVars().outcomeArrayToAssignment(exampleWords.subList(j, j + 1),
               expression, ParametricCfgAlignmentModel.TERMINAL);
           prob *= terminalFactor.getUnnormalizedProbability(a);
@@ -180,6 +180,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
         }
       }
     }
+    // System.out.println(newTerminalFactor.build().getParameterDescription());
 
     return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
         binaryDistribution, newTerminalFactor.build(), -1, false, null);

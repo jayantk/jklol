@@ -35,6 +35,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   private final VariableNumMap ruleVar;
   
   private final int nGramLength;
+  private final boolean terminalsGenerateManyWords;
   
   public CfgAlignmentModel(DiscreteFactor nonterminalFactor, DiscreteFactor terminalFactor,
       VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
@@ -52,6 +53,8 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     this.parentVar = Preconditions.checkNotNull(parentVar);
     this.ruleVar = Preconditions.checkNotNull(ruleVar);
     this.nGramLength = nGramLength;
+    // TODO: make a parameter
+    this.terminalsGenerateManyWords = true;
   }
 
   public List<List<String>> getTerminalVarValues() {
@@ -141,8 +144,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     expressions.add(ParametricCfgAlignmentModel.SKIP_EXPRESSION);
 
     Set<List<String>> words = Sets.newHashSet();
-    words.addAll(example.getNGrams(nGramLength));
-    words.retainAll(terminalVar.getDiscreteVariables().get(0).getValues());
+    words.addAll(example.getNGrams(example.getWords().size()));
 
     // Build a new CFG parser restricted to these logical forms:
     DiscreteVariable expressionVar = new DiscreteVariable("new-expressions", expressions);
@@ -162,14 +164,20 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     VariableNumMap newVars = VariableNumMap.unionAll(newTerminalVar, newParentVar, ruleVar);
     TableFactorBuilder newTerminalFactor = new TableFactorBuilder(newVars,
         DenseTensorBuilder.getFactory());
-    for (List<String> word : words) {
-      for (ExpressionNode expression : expressions) {
-        Assignment originalAssignment = terminalFactor.getVars().outcomeArrayToAssignment(word,
-            expression, ParametricCfgAlignmentModel.TERMINAL);
-        double prob = terminalFactor.getUnnormalizedProbability(originalAssignment);
-        Assignment terminalAssignment = newVars.outcomeArrayToAssignment(word,
-            expression, ParametricCfgAlignmentModel.TERMINAL);
-        newTerminalFactor.setWeight(terminalAssignment, prob);
+
+    List<String> exampleWords = example.getWords();
+    for (ExpressionNode expression : expressions) {
+      for (int i = 0; i < exampleWords.size(); i++) {
+        double prob = 1.0;
+        for (int j = i; j < exampleWords.size() + 1; j++) {
+          Assignment a = terminalFactor.getVars().outcomeArrayToAssignment(exampleWords.subList(j, j + 1),
+              expression, ParametricCfgAlignmentModel.TERMINAL);
+          prob *= terminalFactor.getUnnormalizedProbability(a);
+          
+          Assignment terminalAssignment = newVars.outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
+              expression, ParametricCfgAlignmentModel.TERMINAL);
+          newTerminalFactor.setWeight(terminalAssignment, prob);
+        }
       }
     }
 

@@ -193,10 +193,17 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       Outcome o = iter.next();
       Assignment a = o.getAssignment();
       double amount = count * o.getProbability() / partitionFunction;
-      terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
-          parameterList.get(2), a, amount);
+
       ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
           parameterList.get(0), a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
+
+      List<?> words = (List<?>) a.getValue(terminalVar.getOnlyVariableNum());
+      Assignment remainder = a.removeAll(terminalVar.getOnlyVariableNum());
+      for (Object word : words) {
+        Assignment toIncrement = remainder.union(terminalVar.outcomeArrayToAssignment(Arrays.asList(word)));
+        terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
+          parameterList.get(2), toIncrement, amount);
+      }
     }
 
     DiscreteFactor nonterminalExpectations = chart.getBinaryRuleExpectations().coerceToDiscrete();

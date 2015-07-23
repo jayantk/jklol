@@ -164,9 +164,12 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
         DenseTensorBuilder.getFactory());
     for (List<String> word : words) {
       for (ExpressionNode expression : expressions) {
-        Assignment a = newVars.outcomeArrayToAssignment(word, expression, ParametricCfgAlignmentModel.TERMINAL);
-        double prob = terminalFactor.getUnnormalizedProbability(a);
-        newTerminalFactor.setWeight(a, prob);
+        Assignment originalAssignment = terminalFactor.getVars().outcomeArrayToAssignment(word,
+            expression, ParametricCfgAlignmentModel.TERMINAL);
+        double prob = terminalFactor.getUnnormalizedProbability(originalAssignment);
+        Assignment terminalAssignment = newVars.outcomeArrayToAssignment(word,
+            expression, ParametricCfgAlignmentModel.TERMINAL);
+        newTerminalFactor.setWeight(terminalAssignment, prob);
       }
     }
 

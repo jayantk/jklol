@@ -10,7 +10,7 @@ import re
 entity_types='experiments/geoquery/uwspf_data/entity_types.txt'
 predicate_types='experiments/geoquery/uwspf_data/predicate_types.txt'
 
-entity_format = '"%(name)s","N:e{0}","%(entity)s","0 entity:%(type)s"'
+entity_format = '"%(name)s","N:e{0}","%(entity)s","0 entity:%(type)s","0 %(entity)s"'
 
 predicate_patterns = [('<[a-z]*,t>', '"%(name)s","N:s{0}","(lambda e (%(predicate)s e))","0 %(predicate)s"'),
                       ('<[a-z]*,[^t]>', '"%(name)s","(N:e{1}/N:e{1}){0}","(lambda e (%(predicate)s e))","0 %(predicate)s","%(predicate)s 1 1"'),

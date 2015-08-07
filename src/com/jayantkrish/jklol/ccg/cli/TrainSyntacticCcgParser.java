@@ -190,7 +190,7 @@ public class TrainSyntacticCcgParser extends AbstractCli {
     if (options.has(maxMargin)) {
       oracle = new CcgPerceptronOracle(family, inferenceAlgorithm, options.valueOf(maxMargin));
     } else {
-      oracle = new CcgLoglikelihoodOracle(family, comparator, options.valueOf(beamSize));
+      oracle = new CcgLoglikelihoodOracle(family, comparator, (CcgBeamSearchInference) inferenceAlgorithm);
     }
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),

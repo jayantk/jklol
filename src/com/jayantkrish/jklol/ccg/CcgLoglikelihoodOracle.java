@@ -31,22 +31,21 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   
   // Function for comparing the equality of logical forms.
   private final ExpressionComparator comparator;
-
-  // Size of the beam used during inference (which uses beam search).
-  private final int beamSize;
+  
+  private final CcgBeamSearchInference inference;
 
   /**
    * 
    * @param family
    * @param comparator may be {@code null} if logical forms are not
    * to be used for training.
-   * @param beamSize
+   * @param inference
    */
-  public CcgLoglikelihoodOracle(ParametricCcgParser family,
-      ExpressionComparator comparator, int beamSize) {
+  public CcgLoglikelihoodOracle(ParametricCcgParser family, ExpressionComparator comparator, 
+      CcgBeamSearchInference inference) {
     this.family = Preconditions.checkNotNull(family);
     this.comparator = comparator;
-    this.beamSize = beamSize;
+    this.inference = inference;
   }
 
   @Override
@@ -69,8 +68,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");
     // Calculate the unconditional distribution over CCG parses.
-    List<CcgParse> parses = instantiatedParser.beamSearch(sentence, beamSize,
-        null, log, -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
+    List<CcgParse> parses = inference.beamSearch(instantiatedParser, sentence, null, log);
         
     if (parses.size() == 0) {
       // Search error: couldn't find any parses.
@@ -95,8 +93,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
     List<CcgParse> possibleParses = null;
     if (cost != null) {
-      possibleParses = instantiatedParser.beamSearch(sentence, beamSize,
-        cost, log, -1, Integer.MAX_VALUE, 1);
+      possibleParses = inference.beamSearch(instantiatedParser, sentence, cost, log);
     } else {
       possibleParses = Lists.newArrayList(parses);
     }

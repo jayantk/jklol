@@ -97,7 +97,6 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   
   @Override
   public Tensor findKeysLargerThan(double thresholdValue) {
-    Preconditions.checkArgument(thresholdValue > 0.0);
     long[] resultKeyNums = new long[values.length];
     
     int resultInd = 0;    

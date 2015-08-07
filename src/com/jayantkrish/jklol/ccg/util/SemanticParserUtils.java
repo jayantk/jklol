@@ -1,18 +1,28 @@
 package com.jayantkrish.jklol.ccg.util;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplificationException;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
+import com.jayantkrish.jklol.util.IoUtils;
 
 public class SemanticParserUtils {
 
@@ -26,16 +36,21 @@ public class SemanticParserUtils {
    * @param inferenceAlg
    * @param simplifier
    * @param comparator
+   * @param exampleLossAccumulator if non-null, the predictions for each example are
+   * added to this list.
    * @return
    */
   public static SemanticParserLoss testSemanticParser(List<CcgExample> testExamples, CcgParser parser,
-      CcgInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator) {
+      CcgInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
+      List<SemanticParserExampleLoss> exampleLossAccumulator) {
     int numCorrect = 0;
     int numCorrectLfPossible = 0;
     int numParsed = 0;
 
     LogFunction log = new NullLogFunction();
     for (CcgExample example : testExamples) {
+      Expression2 correctLf = simplifier.apply(example.getLogicalForm());
+
       CcgParse parse = inferenceAlg.getBestParse(parser, example.getSentence(), null, log);
       System.out.println("====");
       System.out.println("SENT: " + example.getSentence().getWords());
@@ -43,7 +58,6 @@ public class SemanticParserUtils {
         int correct = 0;
         int correctLfPossible = 0;
         Expression2 lf = null;
-        Expression2 correctLf = simplifier.apply(example.getLogicalForm());
 
         try {
           lf = simplifier.apply(parse.getLogicalForm());
@@ -58,10 +72,12 @@ public class SemanticParserUtils {
         if (conditionalParse != null) {
           correctLfPossible = 1;
         }
+        
+        List<DependencyStructure> deps = parse.getAllDependencies();
 
         System.out.println("PREDICTED: " + lf);
         System.out.println("TRUE:      " + correctLf);
-        System.out.println("DEPS: " + parse.getAllDependencies());
+        System.out.println("DEPS: " + deps);
         System.out.println("CORRECT: " + correct);
         System.out.println("LICENSED: " + correctLfPossible);
         System.out.println("LEX: ");
@@ -76,8 +92,19 @@ public class SemanticParserUtils {
         numCorrect += correct;
         numCorrectLfPossible += correctLfPossible;
         numParsed++;
+        
+        if (exampleLossAccumulator != null) {
+          exampleLossAccumulator.add(new SemanticParserExampleLoss(example, lf, deps,
+              entryIndexes, triggers, entries, correctLf, true, correct > 0, correctLfPossible > 0));
+        }
       } else {
         System.out.println("NO PARSE");
+
+        if (exampleLossAccumulator != null) {
+          exampleLossAccumulator.add(new SemanticParserExampleLoss(example, null, Collections.emptyList(),
+              Collections.emptyList(), Collections.emptyList(), Collections.emptyList(),
+              correctLf, false, false, false));
+        }
       }
     }
 

@@ -110,7 +110,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     AlignmentModelInterface model = null;
     if (options.has(useCfg)) {
       ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-          examples, vectorGenerator, options.valueOf(nGramLength));
+          examples, vectorGenerator, options.valueOf(nGramLength), false);
       SufficientStatistics smoothing = pam.getNewSufficientStatistics();
       smoothing.increment(options.valueOf(smoothingParam));
 

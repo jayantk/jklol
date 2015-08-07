@@ -11,6 +11,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
+import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -40,6 +41,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   private final VariableNumMap ruleVar;
   
   private final int nGramLength;
+  private final boolean terminalsGenerateManyWords;
 
   public static final String TERMINAL = "terminal";
   public static final String FORWARD_APPLICATION = "fa";
@@ -49,7 +51,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
   public ParametricCfgAlignmentModel(ParametricFactor ruleFactor, ParametricFactor nonterminalFactor,
       ParametricFactor terminalFactor, VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
-      VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength) {
+      VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength, boolean terminalsGenerateManyWords) {
     this.ruleFactor = Preconditions.checkNotNull(ruleFactor);
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     this.terminalFactor = Preconditions.checkNotNull(terminalFactor);
@@ -61,19 +63,21 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     this.ruleVar = Preconditions.checkNotNull(ruleVar);
     
     this.nGramLength = nGramLength;
+    this.terminalsGenerateManyWords = terminalsGenerateManyWords;
   }
-  
+
   public static ParametricCfgAlignmentModel buildAlignmentModelWithNGrams(Collection<AlignmentExample> examples,
-      FeatureVectorGenerator<Expression2> featureVectorGenerator, int nGramLength) {
+      FeatureVectorGenerator<Expression2> featureVectorGenerator, int nGramLength, boolean terminalsGenerateManyWords) {
     Set<List<String>> terminalVarValues = Sets.newHashSet();
     for (AlignmentExample example : examples) {
       terminalVarValues.addAll(example.getNGrams(nGramLength));
     }
-    return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues);
+    return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues, terminalsGenerateManyWords);
   }
   
   public static ParametricCfgAlignmentModel buildAlignmentModel(Collection<AlignmentExample> examples,
-      FeatureVectorGenerator<Expression2> featureVectorGenerator, Set<List<String>> terminalVarValues) {
+      FeatureVectorGenerator<Expression2> featureVectorGenerator, Set<List<String>> terminalVarValues,
+      boolean terminalsGenerateManyWords) {
     Set<ExpressionNode> expressions = Sets.newHashSet();
     expressions.add(SKIP_EXPRESSION);
 
@@ -157,7 +161,11 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         */
 
     return new ParametricCfgAlignmentModel(ruleFactor, nonterminalFactor, terminalFactor,
-        terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength);
+        terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength, terminalsGenerateManyWords);
+  }
+
+  public VariableNumMap getNonterminalVar() {
+    return parentVar;
   }
 
   @Override
@@ -178,7 +186,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         .coerceToDiscrete().product(rules);
 
     return new CfgAlignmentModel(ntf, tf, terminalVar, leftVar, rightVar, parentVar, ruleVar,
-        nGramLength);
+        nGramLength, terminalsGenerateManyWords);
   }
 
   public void incrementSufficientStatistics(SufficientStatistics statistics,
@@ -197,12 +205,20 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
           parameterList.get(0), a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
 
-      List<?> words = (List<?>) a.getValue(terminalVar.getOnlyVariableNum());
-      Assignment remainder = a.removeAll(terminalVar.getOnlyVariableNum());
-      for (Object word : words) {
-        Assignment toIncrement = remainder.union(terminalVar.outcomeArrayToAssignment(Arrays.asList(word)));
+      if (terminalsGenerateManyWords) {
+        List<?> words = (List<?>) a.getValue(terminalVar.getOnlyVariableNum());
+        Assignment remainder = a.removeAll(terminalVar.getOnlyVariableNum());
+        for (Object word : words) {
+          Assignment toIncrement = remainder.union(terminalVar.outcomeArrayToAssignment(Arrays.asList(word)));
+          terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
+              parameterList.get(2), toIncrement, amount);
+        }
+      } else {
+        Preconditions.checkState(terminalVar.isValidAssignment(
+            a.intersection(terminalVar.getOnlyVariableNum())),
+            "Invalid parse of sentence %s, %s", chart.getTerminals(), a);
         terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
-          parameterList.get(2), toIncrement, amount);
+            parameterList.get(2), a, amount);
       }
     }
 
@@ -216,6 +232,49 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
           parameterList.get(1), a, amount);
       ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
           parameterList.get(0), a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
+    }
+  }
+
+  public void incrementSufficientStatistics(SufficientStatistics statistics,
+      SufficientStatistics currentParameters, CfgParseTree tree, double count) {
+    List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
+    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
+    
+    if (tree.isTerminal()) {
+      Object root = tree.getRoot();
+      Object rule = tree.getRuleType();
+      Assignment rootAndRule = parentVar.outcomeArrayToAssignment(root).union(
+          ruleVar.outcomeArrayToAssignment(rule));
+      
+      ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
+          parameterList.get(0), rootAndRule.intersection(ruleFactor.getVars().getVariableNumsArray()),
+          count);
+      
+      List<Object> terminals = tree.getTerminalProductions();
+      for (Object terminal : terminals) {
+        Assignment a = terminalVar.outcomeArrayToAssignment(Arrays.asList(terminal)).union(rootAndRule);
+        terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
+            parameterList.get(2), a, count);
+      }
+    } else {
+      Object root = tree.getRoot();
+      Object left = tree.getLeft().getRoot();
+      Object right = tree.getRight().getRoot();
+      Object rule = tree.getRuleType();
+
+      Assignment a = Assignment.unionAll(parentVar.outcomeArrayToAssignment(root),
+          leftVar.outcomeArrayToAssignment(left), rightVar.outcomeArrayToAssignment(right),
+          ruleVar.outcomeArrayToAssignment(rule));
+              
+      ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
+          parameterList.get(0), a.intersection(ruleFactor.getVars().getVariableNumsArray()),
+          count);
+      
+      nonterminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(1),
+          parameterList.get(1), a, count);
+      
+      incrementSufficientStatistics(statistics, currentParameters, tree.getLeft(), count);
+      incrementSufficientStatistics(statistics, currentParameters, tree.getRight(), count);
     }
   }
 

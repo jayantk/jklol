@@ -214,38 +214,53 @@ public class AlignedExpressionTree {
       }
       Collections.reverse(argumentTypes);
 
+      // Generate a list of possible words that could be mapped
+      // to this syntactic category and logical form.
+      List<List<String>> possibleWords = Lists.newArrayList();
+      possibleWords.add(words);
+      /*
+      if (words.size() > 1) {
+        for (String word : words) {
+          possibleWords.add(Arrays.asList(word));
+        }
+      }
+      */
+
       // Build a syntactic category for the expression based on the 
       // number of arguments it accepted in the sentence. Simultaneously
       // generate its dependencies and head assignment.
-      String head = Joiner.on("_").join(getWords()) + "#" + getExpression().toString();
-      // TODO: move the normalization elsewhere:
-      head = head.replaceAll(" ", "_");
+      for (List<String> curWords : possibleWords) {
+        String head = Joiner.on("_").join(curWords) + "#" + getExpression().toString();
+        // TODO: move the normalization elsewhere:
+        head = head.replaceAll(" ", "_");
 
-      List<String> subjects = Lists.newArrayList();
-      List<Integer> argumentNums = Lists.newArrayList();
-      List<Integer> objects = Lists.newArrayList();
-      List<Set<String>> assignments = Lists.newArrayList();
-      assignments.add(Sets.newHashSet(head));
-      HeadedSyntacticCategory syntax = typeToSyntax(returnType, 0);
-      for (int i = 0; i < getNumAppliedArguments(); i++) {
-        int nextVar = Ints.max(syntax.getUniqueVariables()) + 1;
-        HeadedSyntacticCategory argSyntax = typeToSyntax(argumentTypes.get(i), nextVar);
-        syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
+        List<String> subjects = Lists.newArrayList();
+        List<Integer> argumentNums = Lists.newArrayList();
+        List<Integer> objects = Lists.newArrayList();
+        List<Set<String>> assignments = Lists.newArrayList();
+        assignments.add(Sets.newHashSet(head));
+        HeadedSyntacticCategory syntax = typeToSyntax(returnType, 0);
+        for (int i = 0; i < getNumAppliedArguments(); i++) {
+          int nextVar = Ints.max(syntax.getUniqueVariables()) + 1;
+          HeadedSyntacticCategory argSyntax = typeToSyntax(argumentTypes.get(i), nextVar);
+          syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
 
-        subjects.add(head);
-        argumentNums.add(i + 1);
-        objects.add(nextVar);
+          subjects.add(head);
+          argumentNums.add(i + 1);
+          objects.add(nextVar);
+        }
+
+        for (int i = 0; i < syntax.getUniqueVariables().length - 1; i++) {
+          assignments.add(Collections.<String>emptySet());
+        }
+
+        CcgCategory ccgCategory = new CcgCategory(syntax, getExpression(), subjects,
+            argumentNums, objects, assignments);
+        LexiconEntry entry = new LexiconEntry(curWords, ccgCategory);
+
+        lexiconEntries.add(entry);
       }
 
-      for (int i = 0; i < syntax.getUniqueVariables().length - 1; i++) {
-        assignments.add(Collections.<String>emptySet());
-      }
-
-      CcgCategory ccgCategory = new CcgCategory(syntax, getExpression(), subjects,
-          argumentNums, objects, assignments);
-      LexiconEntry entry = new LexiconEntry(words, ccgCategory);
-
-      lexiconEntries.add(entry);
       return completeType;
     } else {      
       Type leftType = left.generateLexiconEntriesHelper(typeReplacements,

@@ -7,6 +7,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgExactInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
@@ -18,6 +19,7 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
+import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -27,6 +29,7 @@ public class TestSemanticParser extends AbstractCli {
   private OptionSpec<String> testData;
   private OptionSpec<String> model;
   
+  private OptionSpec<String> errorJson;
   private OptionSpec<Void> skipWords;
 
   @Override
@@ -34,7 +37,9 @@ public class TestSemanticParser extends AbstractCli {
     // Required arguments.
     testData = parser.accepts("testData").withRequiredArg().ofType(String.class).required();
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
-    
+
+    // If provided, outputs a log of errors in JSON format to the given file.
+    errorJson = parser.accepts("errorJson").withRequiredArg().ofType(String.class);
     // FIXME: eliminate this option when refactoring the word skipping behavior.
     skipWords = parser.accepts("skipWords", "Allow the parser to skip words in the parse");
   }
@@ -52,8 +57,14 @@ public class TestSemanticParser extends AbstractCli {
             new VariableCanonicalizationReplacementRule(),
             new ConjunctionReplacementRule("and:<t*,t>")));
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
+    
+    List<SemanticParserExampleLoss> exampleLosses = Lists.newArrayList();
+    SemanticParserUtils.testSemanticParser(testExamples, parser, inferenceAlg, simplifier,
+        comparator, exampleLosses);
 
-    SemanticParserUtils.testSemanticParser(testExamples, parser, inferenceAlg, simplifier, comparator);
+    if (options.has(errorJson)) {
+      SemanticParserExampleLoss.writeJsonToFile(options.valueOf(errorJson), exampleLosses);
+    }
   }
 
   public static void main(String[] args) {

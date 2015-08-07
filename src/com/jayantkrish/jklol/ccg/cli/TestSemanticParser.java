@@ -30,7 +30,6 @@ public class TestSemanticParser extends AbstractCli {
   private OptionSpec<String> model;
   
   private OptionSpec<String> errorJson;
-  private OptionSpec<Void> skipWords;
 
   @Override
   public void initializeOptions(OptionParser parser) {
@@ -40,14 +39,12 @@ public class TestSemanticParser extends AbstractCli {
 
     // If provided, outputs a log of errors in JSON format to the given file.
     errorJson = parser.accepts("errorJson").withRequiredArg().ofType(String.class);
-    // FIXME: eliminate this option when refactoring the word skipping behavior.
-    skipWords = parser.accepts("skipWords", "Allow the parser to skip words in the parse");
   }
 
   @Override
   public void run(OptionSet options) {
-    List<CcgExample> testExamples = TrainSemanticParser.readCcgExamples(
-        options.valueOf(testData), null, options.has(skipWords));
+    List<CcgExample> testExamples = TrainSemanticParser.readCcgExamples(options.valueOf(testData),
+        null);
     System.out.println("Read " + testExamples.size() + " test examples");
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);

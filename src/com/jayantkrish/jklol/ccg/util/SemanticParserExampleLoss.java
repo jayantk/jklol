@@ -115,7 +115,7 @@ public class SemanticParserExampleLoss {
     Map<String, Object> jsonDict = Maps.newHashMap();
     jsonDict.put("sentence", Joiner.on(" ").join(example.getSentence().getWords()));
     jsonDict.put("pos", Joiner.on(" ").join(example.getSentence().getPosTags()));
-    jsonDict.put("predicted_lf", predictedLf);
+    jsonDict.put("predicted_lf", predictedLf == null ? null : predictedLf.toString());
 
     List<String> depStrings = Lists.newArrayList();
     for (DependencyStructure dep : predictedDeps) {
@@ -135,10 +135,10 @@ public class SemanticParserExampleLoss {
     }
     jsonDict.put("lexicon_entries", lexiconDicts);
 
-    jsonDict.put("correct_lf", correctLf);
-    jsonDict.put("parsable", parsable);
-    jsonDict.put("correct", correct);
-    jsonDict.put("correct_lf_possible", correctLfPossible);
+    jsonDict.put("correct_lf", correctLf.toString());
+    jsonDict.put("parsable", parsable ? 1 : 0);
+    jsonDict.put("correct", correct ? 1 : 0);
+    jsonDict.put("correct_lf_possible", correctLfPossible ? 1 : 0);
 
     ObjectMapper mapper = new ObjectMapper();
     String s = null;

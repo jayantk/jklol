@@ -16,7 +16,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
@@ -224,7 +224,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule(),
-            new ConjunctionReplacementRule("and:<t*,t>")));
+            new CommutativeReplacementRule("and:<t*,t>")));
     Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
 
     return ExpressionTree.fromExpression(expression, simplifier, typeReplacements,

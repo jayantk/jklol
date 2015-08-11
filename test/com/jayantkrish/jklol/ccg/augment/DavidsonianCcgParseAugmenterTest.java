@@ -7,7 +7,7 @@ import junit.framework.TestCase;
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
@@ -24,7 +24,7 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
   public void setUp() {
     simplifier = new ExpressionSimplifier(Arrays.<ExpressionReplacementRule>asList(
         new LambdaApplicationReplacementRule(), new VariableCanonicalizationReplacementRule(),
-        new ConjunctionReplacementRule("and")));
+        new CommutativeReplacementRule("and")));
     comparator = new SimplificationComparator(simplifier);
   }
   

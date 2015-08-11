@@ -19,7 +19,7 @@ public class ExpressionSimplifierTest extends TestCase {
     conjunction = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule(),
-            new ConjunctionReplacementRule("and:<t*,t>")));
+            new CommutativeReplacementRule("and:<t*,t>")));
   }
   
   public void testSimplifyLambda() {

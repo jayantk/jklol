@@ -12,7 +12,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.data.CcgExampleFormat;
 import com.jayantkrish.jklol.ccg.data.CcgSyntaxTreeFormat;
-import com.jayantkrish.jklol.ccg.lambda2.ConjunctionReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
@@ -293,7 +293,7 @@ public class CcgTrainingTest extends TestCase {
   private static ExpressionSimplifier getExpressionSimplifier() {
     List<ExpressionReplacementRule> rules = Lists.newArrayList(ExpressionSimplifier
         .lambdaCalculus().getReplacementRules());
-    rules.add(new ConjunctionReplacementRule("and"));
+    rules.add(new CommutativeReplacementRule("and"));
     return new ExpressionSimplifier(rules);
   }
 

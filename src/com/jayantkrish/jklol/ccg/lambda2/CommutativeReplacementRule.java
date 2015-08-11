@@ -5,11 +5,18 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 
-public class ConjunctionReplacementRule implements ExpressionReplacementRule {
+/**
+ * Replacement rule for handling commutative operations, such
+ * as AND and OR.
+ * 
+ * @author jayantk
+ *
+ */
+public class CommutativeReplacementRule implements ExpressionReplacementRule {
   
   private final String conjunctionPred;
   
-  public ConjunctionReplacementRule(String conjunctionPred) {
+  public CommutativeReplacementRule(String conjunctionPred) {
     this.conjunctionPred = conjunctionPred;
   }
 

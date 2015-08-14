@@ -130,13 +130,14 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
     // TODO: There should probably be special handling for the SKIP symbol
     // Maximize P(logical form | word)
-    /*
     SparseCptTableFactor terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
         parentVar, sparsityFactor, constantFactor);
-        */
+
     // Maximize P(word | logical form). This works better.
+    /*
     SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
         terminalVar, sparsityFactor, constantFactor);
+    */
 
     /*
     CombiningParametricFactor terminalFactor = new CombiningParametricFactor(

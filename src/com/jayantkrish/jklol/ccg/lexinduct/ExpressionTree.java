@@ -55,6 +55,11 @@ public class ExpressionTree {
         Collections.<String, String>emptyMap(), Collections.<String>emptySet(), 0, 2, 2);
   }
 
+  public static ExpressionTree fromExpression(Expression2 expression, int numAppliedArguments) {
+    return fromExpression(expression, ExpressionSimplifier.lambdaCalculus(),
+        Collections.<String, String>emptyMap(), Collections.<String>emptySet(), numAppliedArguments, 2, 2);
+  }
+
   public static ExpressionTree fromExpression(Expression2 expression,
       ExpressionSimplifier simplifier, Map<String, String> typeReplacements,
       Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth, int maxAppliedArguments) {

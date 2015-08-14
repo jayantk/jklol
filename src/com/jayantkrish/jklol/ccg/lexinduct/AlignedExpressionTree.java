@@ -234,20 +234,25 @@ public class AlignedExpressionTree {
         // TODO: move the normalization elsewhere:
         head = head.replaceAll(" ", "_");
 
-        List<String> subjects = Lists.newArrayList();
-        List<Integer> argumentNums = Lists.newArrayList();
-        List<Integer> objects = Lists.newArrayList();
-        List<Set<String>> assignments = Lists.newArrayList();
-        assignments.add(Sets.newHashSet(head));
         HeadedSyntacticCategory syntax = typeToSyntax(returnType, 0);
         for (int i = 0; i < getNumAppliedArguments(); i++) {
           int nextVar = Ints.max(syntax.getUniqueVariables()) + 1;
           HeadedSyntacticCategory argSyntax = typeToSyntax(argumentTypes.get(i), nextVar);
           syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
-
+        }
+        
+        // Create a dependency for each argument of the syntactic category.
+        List<String> subjects = Lists.newArrayList();
+        List<Integer> argumentNums = Lists.newArrayList();
+        List<Integer> objects = Lists.newArrayList();
+        List<Set<String>> assignments = Lists.newArrayList();
+        assignments.add(Sets.newHashSet(head));
+        List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList(syntax.getArgumentTypes());
+        Collections.reverse(argumentCats);
+        for (int i = 0; i < argumentCats.size(); i++) {
           subjects.add(head);
           argumentNums.add(i + 1);
-          objects.add(nextVar);
+          objects.add(argumentCats.get(i).getHeadVariable());
         }
 
         for (int i = 0; i < syntax.getUniqueVariables().length - 1; i++) {

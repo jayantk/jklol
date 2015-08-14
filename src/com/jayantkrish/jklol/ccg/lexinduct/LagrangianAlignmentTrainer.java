@@ -19,10 +19,8 @@ import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.AbstractEmOracle;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.util.Pair;
 
 public class LagrangianAlignmentTrainer {
   
@@ -37,7 +35,7 @@ public class LagrangianAlignmentTrainer {
 
   public ParametersAndLagrangeMultipliers train(ParametricCfgAlignmentModel pam,
       SufficientStatistics initialParameters, SufficientStatistics smoothing, List<AlignmentExample> trainingData) {
-    double terminalProbability = 0.01;
+    double terminalProbability = 0.001;
     
     DiscreteVariable terminalVar = (DiscreteVariable) pam.getNonterminalVar().getOnlyVariable();
     // A number of examples by number of nonterminals matrix holding the
@@ -141,12 +139,10 @@ public class LagrangianAlignmentTrainer {
     }
   }
 
-  private static SufficientStatistics runEm(ParametricCfgAlignmentModel pam, SufficientStatistics smoothing,
+  private SufficientStatistics runEm(ParametricCfgAlignmentModel pam, SufficientStatistics smoothing,
       SufficientStatistics currentParameters, List<AlignmentExample> trainingData,
       DenseTensor lagrangeMultipliers, int numEmIterations) {
 
-    ExpectationMaximization em = new ExpectationMaximization(numEmIterations,
-        new DefaultLogFunction(1, false));
     LagrangeEmOracle oracle = new LagrangeEmOracle(pam, smoothing, trainingData,
         lagrangeMultipliers);
     

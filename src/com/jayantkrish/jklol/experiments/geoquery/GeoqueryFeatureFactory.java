@@ -173,7 +173,7 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
           terminalPosVar.union(ccgCategoryVar), unknownLexiconIndicatorFactor);
       ParametricCcgLexicon unknownLexicon = new ParametricUnknownWordLexicon(terminalWordVar,
           terminalPosVar, ccgCategoryVar, unknownTerminalFamily);
-     
+      
       lexicons.add(new ParametricSkipLexicon(unknownLexicon,
           new DenseIndicatorLogLinearFactor(terminalWordVar, false)));
     }

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -71,7 +72,7 @@ public class SkipLexicon implements CcgLexicon {
         skipProbs[i] = 1.0;
       }
     }
-
+    
     for (int i = 0; i < sentence.size(); i++) {
       for (int j = i; j < sentence.size(); j++) {
         ChartEntry[] previousEntries = chart.getChartEntriesForSpan(i, j);
@@ -84,7 +85,7 @@ public class SkipLexicon implements CcgLexicon {
             triggerAccumulator, accumulator, probAccumulator);
         Preconditions.checkState(accumulator.size() == probAccumulator.size());
         Preconditions.checkState(accumulator.size() == triggerAccumulator.size());
-        
+
         for (int n = 0; n < accumulator.size(); n++) {
           Object trigger = new SkipTrigger(triggerAccumulator.get(n), i, j);
           CcgCategory entry = accumulator.get(n);
@@ -99,7 +100,7 @@ public class SkipLexicon implements CcgLexicon {
           }
 
           if (i != 0) {
-            double rightLeftProb = 1.0;
+            double rightLeftProb = prob;
             for (int k = 0; k < i; k++) {
               rightLeftProb *= skipProbs[k];
             }

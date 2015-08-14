@@ -558,6 +558,7 @@ public class CcgParserTest extends TestCase {
 
     System.out.println(bestParse);
     System.out.println(bestParse.getLogicalForm());
+    System.out.println(bestParse.getSubtreeProbability());
     
     assertEquals(0, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());

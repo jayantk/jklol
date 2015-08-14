@@ -1297,6 +1297,8 @@ public class CcgParser implements Serializable {
    * @param lexiconProb
    * @param spanStart
    * @param spanEnd
+   * @param triggerSpanStart
+   * @param triggerSpanEnd
    * @param sentence
    * @param lexiconNum
    */
@@ -1305,8 +1307,7 @@ public class CcgParser implements Serializable {
       AnnotatedSentence sentence, int lexiconNum) {
 
     for (LexiconScorer lexiconScorer : lexiconScorers) {
-      // TODO: fixme.
-      lexiconProb *= lexiconScorer.getCategoryWeight(spanStart, spanEnd, sentence, category);
+      lexiconProb *= lexiconScorer.getCategoryWeight(triggerSpanStart, triggerSpanEnd, sentence, category);
     }
 
     // Add all possible chart entries to the ccg chart.

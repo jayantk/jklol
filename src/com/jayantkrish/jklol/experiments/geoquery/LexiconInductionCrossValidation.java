@@ -32,6 +32,8 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
+import com.jayantkrish.jklol.ccg.lexicon.SpanFeatureAnnotation;
+import com.jayantkrish.jklol.ccg.lexicon.StringContext;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
@@ -47,6 +49,8 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.parallel.Mapper;
+import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
@@ -93,6 +97,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     typeReplacements.put("m", "e");
     typeReplacements.put("p", "e");
   }
+  
+  private static final String FEATURE_ANNOTATION_NAME = "features"; 
   
   public LexiconInductionCrossValidation() {
     super(CommonOptions.MAP_REDUCE);
@@ -225,8 +231,11 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Initialize CCG parser components.
     List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData, null);
     List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
-    // CcgFeatureFactory featureFactory = new SemanticParserFeatureFactory(true, true);
-    CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true);
+
+    FeatureVectorGenerator<StringContext> featureGen = getCcgFeatureFactory(ccgTrainingExamples);
+    ccgTrainingExamples = featurizeExamples(ccgTrainingExamples, featureGen);
+    CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true,
+        FEATURE_ANNOTATION_NAME, featureGen.getFeatureDictionary());
 
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
@@ -249,6 +258,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
     List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData, null);
+    ccgTestExamples = featurizeExamples(ccgTestExamples, featureGen);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
         inferenceAlgorithm, simplifier, comparator, testExampleLosses);
@@ -388,6 +398,27 @@ public class LexiconInductionCrossValidation extends AbstractCli {
           example.getTree().getExpression(), ccgLexiconEntries));
     }
     return ccgExamples;
+  }
+  
+  private static FeatureVectorGenerator<StringContext> getCcgFeatureFactory(List<CcgExample> examples) {
+    List<StringContext> contexts = StringContext.getContextsFromExamples(examples);
+    FeatureGenerator<StringContext, String> featureGen = new GeoqueryFeatureGenerator();
+    return DictionaryFeatureVectorGenerator.createFromData(contexts, featureGen, true);
+  }
+
+  private static List<CcgExample> featurizeExamples(List<CcgExample> examples,
+      FeatureVectorGenerator<StringContext> featureGen) {
+    List<CcgExample> newExamples = Lists.newArrayList();
+    for (CcgExample example : examples) {
+      AnnotatedSentence sentence = example.getSentence();
+      SpanFeatureAnnotation annotation = SpanFeatureAnnotation.annotate(sentence, featureGen);
+      
+      AnnotatedSentence annotatedSentence = sentence.addAnnotation(FEATURE_ANNOTATION_NAME, annotation);
+      
+      newExamples.add(new CcgExample(annotatedSentence, example.getDependencies(),
+          example.getSyntacticParse(), example.getLogicalForm(), example.getLexiconEntries()));
+    }
+    return newExamples;
   }
 
   private static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds) {

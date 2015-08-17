@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -26,6 +27,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.DenseIndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -36,10 +38,15 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
 
   private final boolean useDependencyFeatures;
   private final boolean useSyntacticFeatures;
+  private final String lexiconFeatureAnnotationName;
+  private final DiscreteVariable lexiconFeatureDictionary;
   
-  public GeoqueryFeatureFactory(boolean useDependencyFeatures, boolean useSyntacticFeatures) {
+  public GeoqueryFeatureFactory(boolean useDependencyFeatures, boolean useSyntacticFeatures,
+      String lexiconFeatureAnnotationName, DiscreteVariable lexiconFeatureDictionary) {
     this.useDependencyFeatures = useDependencyFeatures;
     this.useSyntacticFeatures = useSyntacticFeatures;
+    this.lexiconFeatureAnnotationName = lexiconFeatureAnnotationName;
+    this.lexiconFeatureDictionary = lexiconFeatureDictionary;
   }
 
   @Override
@@ -77,8 +84,11 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
     if (useDependencyFeatures) {
       ParametricFactor wordDistanceFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
           dependencyHeadVar, headSyntaxVar, dependencyArgNumVar, distanceVar), true);
-      return new CombiningParametricFactor(allVars, Arrays.asList("distance", "allVars"),
-          Arrays.asList(wordDistanceFactor, onesFactor), true);
+      ParametricFactor syntaxDistanceFactor = new DenseIndicatorLogLinearFactor(VariableNumMap.unionAll(
+          headSyntaxVar, dependencyArgNumVar, distanceVar), true);
+      
+      return new CombiningParametricFactor(allVars, Arrays.asList("distance", "syntaxDistance", "allVars"),
+          Arrays.asList(wordDistanceFactor, syntaxDistanceFactor, onesFactor), true);
     } else {
       return onesFactor;
     }
@@ -185,9 +195,20 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
   public List<ParametricLexiconScorer> getLexiconScorers(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar) {
-    // new ParametricFeaturizedLexiconScorer("features", syntaxVar, featureVectorVar, classifierFamily)
+    if (lexiconFeatureAnnotationName != null) {
+      VariableNumMap featureVar = VariableNumMap.singleton(ccgCategoryVar.getOnlyVariableNum() - 1,
+          lexiconFeatureAnnotationName, lexiconFeatureDictionary);
+      ParametricLinearClassifierFactor classifierFamily = new ParametricLinearClassifierFactor(
+          featureVar, ccgCategoryVar, VariableNumMap.EMPTY,
+          lexiconFeatureDictionary, null, false);
 
-    return Collections.emptyList();
+      ParametricLexiconScorer scorer = new ParametricFeaturizedLexiconScorer("features",
+          ccgCategoryVar, featureVar, classifierFamily, Functions.identity());
+
+      return Lists.newArrayList(scorer);
+    } else {
+      return Collections.emptyList();
+    }
   }
 
   @Override

@@ -18,7 +18,7 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
   private final VariableNumMap labelVar;
   private final VariableNumMap featureVectorVar;
   private final ParametricLinearClassifierFactor classifierFamily;
-  private final Function<CcgCategory, Object> categoryToLabel;
+  private final Function<CcgCategory, ?> categoryToLabel;
 
   /**
    * Names of the parameter vectors governing each factor in the lexicon
@@ -31,7 +31,7 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
 
   public ParametricFeaturizedLexiconScorer(String featureVectorAnnotationName,
       VariableNumMap labelVar, VariableNumMap featureVectorVar,
-      ParametricLinearClassifierFactor classifierFamily, Function<CcgCategory, Object> categoryToLabel) {
+      ParametricLinearClassifierFactor classifierFamily, Function<CcgCategory, ?> categoryToLabel) {
     this.featureVectorAnnotationName = Preconditions.checkNotNull(featureVectorAnnotationName);
     this.labelVar = Preconditions.checkNotNull(labelVar);
     this.featureVectorVar = Preconditions.checkNotNull(featureVectorVar);

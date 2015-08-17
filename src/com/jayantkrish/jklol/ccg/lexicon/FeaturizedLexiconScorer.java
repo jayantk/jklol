@@ -25,11 +25,11 @@ public class FeaturizedLexiconScorer implements LexiconScorer {
   private final VariableNumMap labelVar;
   private final VariableNumMap featureVectorVar;
   private final ClassifierFactor featureWeights;
-  private final Function<CcgCategory, Object> categoryToLabel;
+  private final Function<CcgCategory, ?> categoryToLabel;
 
   public FeaturizedLexiconScorer(String featureVectorAnnotationName, VariableNumMap labelVar,
       VariableNumMap featureVectorVar, ClassifierFactor featureWeights,
-      Function<CcgCategory, Object> categoryToLabel) {
+      Function<CcgCategory, ?> categoryToLabel) {
     this.featureVectorAnnotationName = Preconditions.checkNotNull(featureVectorAnnotationName);
 
     this.labelVar = Preconditions.checkNotNull(labelVar);

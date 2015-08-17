@@ -54,6 +54,7 @@ import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.LbfgsConvergenceError;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -353,10 +354,15 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         trainingExamples.size(), 1, 1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
     SufficientStatistics sgdParameters = sgdTrainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
-    
-    GradientOptimizer trainer = new Lbfgs(iterations, 50, l2Penalty, new DefaultLogFunction(1, false));
-    SufficientStatistics parameters = trainer.train(oracle, sgdParameters,
-        trainingExamples);
+
+    SufficientStatistics parameters = null;
+    try {
+      GradientOptimizer trainer = new Lbfgs(iterations, 50, l2Penalty, 1e-4,
+          0.005, new DefaultLogFunction(1, false));
+      parameters = trainer.train(oracle, sgdParameters, trainingExamples);
+    } catch (LbfgsConvergenceError e) {
+      parameters = e.getFinalParameters();
+    }
 
     System.out.println(family.getParameterDescription(parameters));
 

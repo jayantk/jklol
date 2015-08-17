@@ -29,20 +29,36 @@ public class Lbfgs implements GradientOptimizer {
   private final double l2Regularization;
 
   private final LogFunction log;
+  
+  private final double minStepSize;
+  private final double gradientConvergenceThreshold;
 
   private static final double LINE_SEARCH_CONSTANT = 0.5;
-  private static final double MIN_STEP_SIZE = 1e-20;
 
   private static final double WOLFE_CONDITION_C1 = 1e-4;
   private static final double WOLFE_CONDITION_C2 = 0.9;
-
-  private static final double GRADIENT_CONVERGENCE_THRESHOLD = 1e-6;
 
   public Lbfgs(int maxIterations, int numVectorsInApproximation,
       double l2Regularization, LogFunction log) {
     this.maxIterations = maxIterations;
     this.numVectorsInApproximation = numVectorsInApproximation;
     this.l2Regularization = l2Regularization;
+    
+    this.minStepSize = 1e-20;
+    this.gradientConvergenceThreshold = 1e-6;
+
+    this.log = Preconditions.checkNotNull(log);
+  }
+  
+  public Lbfgs(int maxIterations, int numVectorsInApproximation,
+      double l2Regularization, double minStepSize, double gradientConvergenceThreshold,
+      LogFunction log) {
+    this.maxIterations = maxIterations;
+    this.numVectorsInApproximation = numVectorsInApproximation;
+    this.l2Regularization = l2Regularization;
+    
+    this.minStepSize = minStepSize;
+    this.gradientConvergenceThreshold = gradientConvergenceThreshold;
 
     this.log = Preconditions.checkNotNull(log);
   }
@@ -98,7 +114,7 @@ public class Lbfgs implements GradientOptimizer {
       SufficientStatistics gradient = gradientEvaluation.getGradient();
       
       double gradientL2Norm = gradient.getL2Norm();
-      if (gradientL2Norm < GRADIENT_CONVERGENCE_THRESHOLD) {
+      if (gradientL2Norm < gradientConvergenceThreshold) {
         return currentParameters;
       }
 
@@ -181,12 +197,12 @@ public class Lbfgs implements GradientOptimizer {
         cond1Rhs = currentObjectiveValue - (WOLFE_CONDITION_C1 * stepSize * curInnerProd);
         cond2Rhs = -1.0 * WOLFE_CONDITION_C2 * curInnerProd;
       } while ((nextObjectiveValue <= cond1Rhs || Double.isNaN(cond1Rhs) || Double.isNaN(nextObjectiveValue))
-          && stepSize > MIN_STEP_SIZE);
+          && stepSize > minStepSize);
 
       log.logStatistic(i, "step size", stepSize);
       log.stopTimer("compute_step_size");
 
-      if (stepSize <= MIN_STEP_SIZE) {
+      if (stepSize <= minStepSize) {
         throw new LbfgsConvergenceError("L-BFGS could not find a suitable step size.",
             currentParameters, direction, stepSize, i);
       }

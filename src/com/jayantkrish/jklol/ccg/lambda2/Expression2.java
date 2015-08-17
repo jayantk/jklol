@@ -278,12 +278,12 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
     if (getClass() != obj.getClass())
       return false;
     Expression2 other = (Expression2) obj;
+    if (size != other.size)
+      return false;
     if (constantName == null) {
       if (other.constantName != null)
         return false;
     } else if (!constantName.equals(other.constantName))
-      return false;
-    if (size != other.size)
       return false;
     if (subexpressions == null) {
       if (other.subexpressions != null)

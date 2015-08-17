@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lexicon.ConstantParametricLexiconScorer;
@@ -244,7 +245,12 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
           lexiconFeatureVariable, null, false);
 
       scorers.add(new ParametricFeaturizedLexiconScorer(lexiconFeatureAnnotationName,
-          terminalSyntaxVar, featureVar, featureFamily));
+          terminalSyntaxVar, featureVar, featureFamily, new Function<CcgCategory, Object>() {
+            @Override
+            public Object apply(CcgCategory category) {
+              return category.getSyntax();
+            }
+          }));
     }
 
     return scorers;

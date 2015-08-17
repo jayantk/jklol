@@ -43,7 +43,9 @@ public class ExpressionSimplifier {
     boolean changed = true;
     while (changed) {
       // Iterate backward to not have to worry about the
-      // expression getting shorter on each pass.
+      // expression getting shorter on each pass. This order
+      // also first performs replacement on the most deeply
+      // nested expressions, moving up the expression tree.
       changed = false;
       for (ExpressionReplacementRule rule : rules) {
         for (int i = expression.size() - 1; i >= 0; i--) {

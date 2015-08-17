@@ -35,8 +35,8 @@ public class LagrangianAlignmentTrainer {
 
   public ParametersAndLagrangeMultipliers train(ParametricCfgAlignmentModel pam,
       SufficientStatistics initialParameters, SufficientStatistics smoothing, List<AlignmentExample> trainingData) {
-    double terminalProbability = 0.001;
-    
+    double terminalProbability = 0.01;
+
     DiscreteVariable terminalVar = (DiscreteVariable) pam.getNonterminalVar().getOnlyVariable();
     // A number of examples by number of nonterminals matrix holding the
     // lagrange multiplier for downweighting terminal symbol probabilities

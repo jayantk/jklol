@@ -13,6 +13,7 @@ import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
+import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricSkipLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
@@ -184,6 +185,8 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
   public List<ParametricLexiconScorer> getLexiconScorers(VariableNumMap terminalWordVar,
       VariableNumMap ccgCategoryVar, VariableNumMap terminalPosVar,
       VariableNumMap terminalSyntaxVar) {
+    // new ParametricFeaturizedLexiconScorer("features", syntaxVar, featureVectorVar, classifierFamily)
+
     return Collections.emptyList();
   }
 

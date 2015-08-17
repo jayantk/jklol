@@ -162,7 +162,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
       if (predictedLogicalForm != null && comparator.equals(predictedLogicalForm, observedLogicalForm)) {
         correctParses.add(parse);
-      } 
+      }
     }
     return correctParses;
   }

@@ -53,6 +53,7 @@ import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -73,7 +74,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   private OptionSpec<Integer> nGramLength;
   
   // Configuration for the semantic parser.
-  private OptionSpec<Integer> sgdIterations;
+  private OptionSpec<Integer> parserIterations;
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Double> l2Regularization;
   private OptionSpec<String> additionalLexicon;
@@ -114,7 +115,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
     nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     
-    sgdIterations = parser.accepts("sgdIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
+    parserIterations = parser.accepts("parserIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
     l2Regularization = parser.accepts("l2Regularization").withRequiredArg().ofType(Double.class).defaultsTo(0.0);
     additionalLexicon = parser.accepts("additionalLexicon").withRequiredArg().ofType(String.class);
@@ -129,7 +130,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
     
     FoldRunner runner = new FoldRunner(foldNames, folds, options.valueOf(emIterations),
-        options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(sgdIterations),
+        options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(parserIterations),
         options.valueOf(l2Regularization), options.valueOf(beamSize), options.valueOf(unknownWordThreshold),
         additionalLexiconEntries, options.valueOf(outputDir));
     
@@ -159,7 +160,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   }
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
-      int emIterations, double smoothingAmount, int nGramLength, int sgdIterations, double l2Regularization, int beamSize,
+      int emIterations, double smoothingAmount, int nGramLength, int parserIterations, double l2Regularization, int beamSize,
       int unknownWordThreshold, List<String> additionalLexiconEntries, String lexiconOutputFilename,
       String trainingErrorOutputFilename, String testErrorOutputFilename, String alignmentModelOutputFilename,
       String parserModelOutputFilename) {
@@ -237,7 +238,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
     CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
-        sgdIterations, l2Regularization);
+        parserIterations, l2Regularization);
 
     IoUtils.serializeObjectToFile(ccgParser, parserModelOutputFilename);
     
@@ -342,10 +343,19 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         */
     GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family, comparator, inferenceAlgorithm);
 
+    /*
     int numIterations = trainingExamples.size() * iterations;
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(numIterations, 1,
         1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
-    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
+        */
+    
+    GradientOptimizer sgdTrainer = StochasticGradientTrainer.createWithL2Regularization(
+        trainingExamples.size(), 1, 1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
+    SufficientStatistics sgdParameters = sgdTrainer.train(oracle, oracle.initializeGradient(),
+        trainingExamples);
+    
+    GradientOptimizer trainer = new Lbfgs(iterations, 50, l2Penalty, new DefaultLogFunction(1, false));
+    SufficientStatistics parameters = trainer.train(oracle, sgdParameters,
         trainingExamples);
 
     System.out.println(family.getParameterDescription(parameters));
@@ -402,7 +412,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     private final int emIterations;
     private final double smoothing;
     private final int nGramLength;
-    private final int sgdIterations;
+    private final int parserIterations;
     private final double l2Regularization;
     private final int beamSize;
     private final int unknownWordThreshold;
@@ -410,7 +420,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     private final String outputDir;
     
     public FoldRunner(List<String> foldNames, List<List<AlignmentExample>> folds,
-        int emIterations, double smoothing, int nGramLength, int sgdIterations, double l2Regularization,
+        int emIterations, double smoothing, int nGramLength, int parserIterations, double l2Regularization,
         int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries, String outputDir) {
       this.foldNames = foldNames;
       this.folds = folds;
@@ -418,7 +428,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       this.emIterations = emIterations;
       this.smoothing = smoothing;
       this.nGramLength = nGramLength;
-      this.sgdIterations = sgdIterations;
+      this.parserIterations = parserIterations;
       this.l2Regularization = l2Regularization;
       this.beamSize = beamSize;
       this.unknownWordThreshold = unknownWordThreshold;
@@ -447,7 +457,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       String testErrorOutputFilename = outputDir + "/test_error." + item + ".json";
 
       return runFold(trainingData, heldOut, emIterations, smoothing, nGramLength,
-          sgdIterations, l2Regularization, beamSize, unknownWordThreshold, additionalLexiconEntries, 
+          parserIterations, l2Regularization, beamSize, unknownWordThreshold, additionalLexiconEntries, 
           lexiconOutputFilename, trainingErrorOutputFilename, testErrorOutputFilename,
           alignmentModelOutputFilename, parserModelOutputFilename);
     }

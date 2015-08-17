@@ -1,8 +1,8 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.models.ClassifierFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
@@ -15,9 +15,10 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
   private static final long serialVersionUID = 2L;
 
   private final String featureVectorAnnotationName;
-  private final VariableNumMap syntaxVar;
+  private final VariableNumMap labelVar;
   private final VariableNumMap featureVectorVar;
   private final ParametricLinearClassifierFactor classifierFamily;
+  private final Function<CcgCategory, Object> categoryToLabel;
 
   /**
    * Names of the parameter vectors governing each factor in the lexicon
@@ -29,12 +30,13 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
   public static final String TERMINAL_FEATURE_VAR_NAME = "terminalFeaturesVar";
 
   public ParametricFeaturizedLexiconScorer(String featureVectorAnnotationName,
-      VariableNumMap syntaxVar, VariableNumMap featureVectorVar,
-      ParametricLinearClassifierFactor classifierFamily) {
+      VariableNumMap labelVar, VariableNumMap featureVectorVar,
+      ParametricLinearClassifierFactor classifierFamily, Function<CcgCategory, Object> categoryToLabel) {
     this.featureVectorAnnotationName = Preconditions.checkNotNull(featureVectorAnnotationName);
-    this.syntaxVar = Preconditions.checkNotNull(syntaxVar);
+    this.labelVar = Preconditions.checkNotNull(labelVar);
     this.featureVectorVar = Preconditions.checkNotNull(featureVectorVar);
     this.classifierFamily = Preconditions.checkNotNull(classifierFamily);
+    this.categoryToLabel = categoryToLabel;
   }
 
   @Override
@@ -46,8 +48,8 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
   public FeaturizedLexiconScorer getModelFromParameters(SufficientStatistics parameters) {
     ClassifierFactor classifier = classifierFamily.getModelFromParameters(parameters);
 
-   return new FeaturizedLexiconScorer(featureVectorAnnotationName, syntaxVar,
-       featureVectorVar, classifier);
+   return new FeaturizedLexiconScorer(featureVectorAnnotationName, labelVar,
+       featureVectorVar, classifier, categoryToLabel);
   }
 
   @Override
@@ -68,12 +70,13 @@ public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScore
     SpanFeatureAnnotation annotation = (SpanFeatureAnnotation) sentence
         .getAnnotation(featureVectorAnnotationName);
     Tensor featureVector = annotation.getFeatureVector(spanStart, spanEnd);
-    HeadedSyntacticCategory syntax = category.getSyntax();
-    
-    Assignment assignment = syntaxVar.outcomeArrayToAssignment(syntax)
-        .union(featureVectorVar.outcomeArrayToAssignment(featureVector));
+    Object label = categoryToLabel.apply(category);
 
-    classifierFamily.incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
-        assignment, count);
+    if (labelVar.isValidOutcomeArray(label)) {
+      Assignment assignment = labelVar.outcomeArrayToAssignment(label)
+          .union(featureVectorVar.outcomeArrayToAssignment(featureVector));
+      classifierFamily.incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
+          assignment, count);
+    }
   }
 }

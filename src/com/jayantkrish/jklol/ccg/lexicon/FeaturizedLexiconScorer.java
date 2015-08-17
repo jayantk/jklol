@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.models.ClassifierFactor;
@@ -21,17 +22,20 @@ public class FeaturizedLexiconScorer implements LexiconScorer {
 
   private final String featureVectorAnnotationName;
   
-  private final VariableNumMap syntaxVar;
+  private final VariableNumMap labelVar;
   private final VariableNumMap featureVectorVar;
   private final ClassifierFactor featureWeights;
+  private final Function<CcgCategory, Object> categoryToLabel;
 
-  public FeaturizedLexiconScorer(String featureVectorAnnotationName,
-      VariableNumMap syntaxVar, VariableNumMap featureVectorVar, ClassifierFactor featureWeights) {
+  public FeaturizedLexiconScorer(String featureVectorAnnotationName, VariableNumMap labelVar,
+      VariableNumMap featureVectorVar, ClassifierFactor featureWeights,
+      Function<CcgCategory, Object> categoryToLabel) {
     this.featureVectorAnnotationName = Preconditions.checkNotNull(featureVectorAnnotationName);
 
-    this.syntaxVar = Preconditions.checkNotNull(syntaxVar);
+    this.labelVar = Preconditions.checkNotNull(labelVar);
     this.featureVectorVar = Preconditions.checkNotNull(featureVectorVar);
     this.featureWeights = Preconditions.checkNotNull(featureWeights);
+    this.categoryToLabel = categoryToLabel;
   }
 
   @Override
@@ -43,9 +47,13 @@ public class FeaturizedLexiconScorer implements LexiconScorer {
 
     Tensor featureVector = annotation.getFeatureVector(spanStart, spanEnd);
 
-    Assignment syntaxAssignment = syntaxVar.outcomeArrayToAssignment(category.getSyntax());
-    Assignment assignment = featureVectorVar.outcomeArrayToAssignment(featureVector)
-        .union(syntaxAssignment);
-    return featureWeights.getUnnormalizedProbability(assignment);
+    Assignment labelAssignment = labelVar.outcomeArrayToAssignment(categoryToLabel.apply(category));
+    if (labelVar.isValidAssignment(labelAssignment)) {
+      Assignment assignment = featureVectorVar.outcomeArrayToAssignment(featureVector)
+          .union(labelAssignment);
+      return featureWeights.getUnnormalizedProbability(assignment);
+    } else {
+      return 1.0;
+    }
   }
 }

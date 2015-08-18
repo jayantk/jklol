@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -219,7 +218,6 @@ public class AlignedExpressionTree {
       // to this syntactic category and logical form.
       List<List<String>> possibleWords = Lists.newArrayList();
       possibleWords.add(words);
-      possibleWords.add(Arrays.asList(""));
       /*
       if (words.size() > 1) {
         for (String word : words) {

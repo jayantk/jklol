@@ -138,6 +138,11 @@ public class LocalMapReduceExecutor implements MapReduceExecutor {
     return executor;
   }
 
+  /*
+  private static class MapReduceThread<A, B, C> extends Thread {
+  }
+  */
+
   /**
    * A single batch of items to be processed (mapped and reduced).
    * 
